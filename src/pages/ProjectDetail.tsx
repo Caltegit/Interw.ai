@@ -6,11 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import { Copy, Plus } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -20,10 +17,6 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showInvite, setShowInvite] = useState(false);
-  const [candidateName, setCandidateName] = useState("");
-  const [candidateEmail, setCandidateEmail] = useState("");
-  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -41,29 +34,10 @@ export default function ProjectDetail() {
     });
   }, [id]);
 
-  const copySessionLink = (token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${token}`);
+  const copyProjectLink = () => {
+    if (!project?.slug) return;
+    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}`);
     toast({ title: "Lien copié !" });
-  };
-
-  const inviteCandidate = async () => {
-    if (!candidateName.trim() || !candidateEmail.trim()) return;
-    setInviting(true);
-    const { data, error } = await supabase
-      .from("sessions")
-      .insert({ project_id: id!, candidate_name: candidateName, candidate_email: candidateEmail })
-      .select()
-      .single();
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } else {
-      setSessions((prev) => [data, ...prev]);
-      toast({ title: "Candidat invité", description: "Le lien a été créé. Copiez-le depuis la liste des sessions." });
-      setCandidateName("");
-      setCandidateEmail("");
-      setShowInvite(false);
-    }
-    setInviting(false);
   };
 
   if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
@@ -80,6 +54,9 @@ export default function ProjectDetail() {
         </div>
         <div className="flex gap-2">
           <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
+          <Button variant="outline" size="sm" onClick={copyProjectLink}>
+            <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
+          </Button>
         </div>
       </div>
 
@@ -98,30 +75,16 @@ export default function ProjectDetail() {
               <p><strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}</p>
               <p><strong>Persona IA :</strong> {project.ai_persona_name}</p>
               <p><strong>Durée max :</strong> {project.max_duration_minutes} min</p>
-              <p><strong>Audio :</strong> {project.record_audio ? "Oui" : "Non"}</p>
-              <p><strong>Vidéo :</strong> {project.record_video ? "Oui" : "Non"}</p>
+              <p><strong>Lien candidat :</strong>{" "}
+                <code className="text-xs bg-muted px-2 py-1 rounded">{window.location.origin}/interview/{project.slug}</code>
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4">
-          <div className="flex justify-end">
-            <Dialog open={showInvite} onOpenChange={setShowInvite}>
-              <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-1 h-4 w-4" /> Inviter un candidat</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Inviter un candidat</DialogTitle></DialogHeader>
-                <div className="space-y-3">
-                  <div><Label>Nom</Label><Input value={candidateName} onChange={(e) => setCandidateName(e.target.value)} /></div>
-                  <div><Label>Email</Label><Input type="email" value={candidateEmail} onChange={(e) => setCandidateEmail(e.target.value)} /></div>
-                  <Button onClick={inviteCandidate} disabled={inviting} className="w-full">{inviting ? "..." : "Créer la session"}</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
           {sessions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aucune session</p>
+            <p className="text-muted-foreground text-sm">Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -142,11 +105,6 @@ export default function ProjectDetail() {
                       <td className="py-3"><SessionStatusBadge status={s.status} /></td>
                       <td className="py-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString("fr-FR")}</td>
                       <td className="py-3">
-                        {["pending", "video_viewed"].includes(s.status) && (
-                          <Button variant="ghost" size="sm" onClick={() => copySessionLink(s.token)}>
-                            <Copy className="mr-1 h-3 w-3" /> Copier le lien
-                          </Button>
-                        )}
                         {s.status === "completed" && (
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/sessions/${s.id}`}>Voir</Link>

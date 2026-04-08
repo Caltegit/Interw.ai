@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function InterviewStart() {
-  const { token } = useParams();
+  const { slug, token } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
@@ -33,7 +33,7 @@ export default function InterviewStart() {
         .eq("token", token)
         .limit(1);
       const sess = sessions?.[0];
-      if (!sess) { navigate(`/interview/${token}`); return; }
+      if (!sess) { navigate(`/interview/${slug}`); return; }
 
       setSession(sess);
       const { data: proj } = await supabase.from("projects").select("*").eq("id", sess.project_id).single();
@@ -41,18 +41,15 @@ export default function InterviewStart() {
       const { data: qs } = await supabase.from("questions").select("*").eq("project_id", sess.project_id).order("order_index");
       setQuestions(qs ?? []);
 
-      // Mark session as in_progress via edge function or direct update
-      // For MVP, we'll note consent given
       setLoading(false);
 
-      // Start with first AI message
       if (qs && qs.length > 0) {
         const greeting = `Bonjour ${sess.candidate_name}, je suis ${proj?.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${proj?.job_title}. Commençons avec la première question : ${qs[0].content}`;
         setMessages([{ role: "ai", content: greeting }]);
       }
     };
     load();
-  }, [token, navigate]);
+  }, [token, slug, navigate]);
 
   const startRecording = async () => {
     try {
@@ -60,12 +57,10 @@ export default function InterviewStart() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
-
-      mediaRecorder.start(5000); // chunk every 5s
+      mediaRecorder.start(5000);
       setIsRecording(true);
     } catch {
       toast({ title: "Erreur", description: "Impossible d'accéder au microphone.", variant: "destructive" });
@@ -81,7 +76,6 @@ export default function InterviewStart() {
   };
 
   const simulateResponse = () => {
-    // For MVP, simulate AI response progression
     setIsProcessing(true);
     setTimeout(() => {
       const nextIndex = currentQuestionIndex + 1;
@@ -103,14 +97,13 @@ export default function InterviewStart() {
   };
 
   const handleSendResponse = () => {
-    // In the real version, this would send audio to STT, then to AI conversation turn
     setMessages((prev) => [...prev, { role: "candidate", content: "[Réponse audio enregistrée]" }]);
     simulateResponse();
   };
 
   const endInterview = () => {
     stopRecording();
-    navigate(`/interview/${token}/complete`);
+    navigate(`/interview/${slug}/complete`);
   };
 
   useEffect(() => {
@@ -123,7 +116,6 @@ export default function InterviewStart() {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="mx-auto max-w-5xl">
-        {/* Progress */}
         <div className="mb-4 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             Question {currentQuestionIndex + 1} / {questions.length}
@@ -137,7 +129,6 @@ export default function InterviewStart() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-5">
-          {/* Avatar IA */}
           <div className="lg:col-span-2 flex flex-col items-center gap-4">
             <div className="relative w-48 h-64 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
               {project?.avatar_image_url ? (
@@ -156,7 +147,6 @@ export default function InterviewStart() {
             )}
           </div>
 
-          {/* Chat area */}
           <div className="lg:col-span-3 flex flex-col">
             <Card className="flex-1 mb-4">
               <CardContent className="p-4 max-h-96 overflow-y-auto space-y-3">
@@ -172,11 +162,7 @@ export default function InterviewStart() {
             </Card>
 
             <div className="flex gap-2">
-              <Button
-                variant={isMuted ? "destructive" : "outline"}
-                size="icon"
-                onClick={() => setIsMuted(!isMuted)}
-              >
+              <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
                 {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </Button>
               <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
