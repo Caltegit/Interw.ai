@@ -71,6 +71,7 @@ export default function ProjectNew() {
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
+          organization_id: "a0000000-0000-0000-0000-000000000001",
           created_by: user.id,
           title,
           job_title: jobTitle,
