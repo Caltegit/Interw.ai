@@ -47,7 +47,7 @@ export default function ProjectNew() {
   const [maxDuration, setMaxDuration] = useState(30);
   const [recordAudio, setRecordAudio] = useState(true);
   const [recordVideo, setRecordVideo] = useState(false);
-  const [status, setStatus] = useState<"draft" | "active">("draft");
+  const [status, setStatus] = useState<"draft" | "active">("active");
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
