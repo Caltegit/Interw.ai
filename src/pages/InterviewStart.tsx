@@ -159,12 +159,37 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
+  // Start video recording
+  const startVideoRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      recordedChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+      };
+      mediaRecorder.start(1000); // collect chunks every second
+    } catch (err) {
+      console.error("Camera access error:", err);
+      toast({ title: "Caméra inaccessible", description: "Veuillez autoriser l'accès à la caméra.", variant: "destructive" });
+    }
+  }, [toast]);
+
   // Generate and speak initial greeting
   useEffect(() => {
     if (loading || !session || !project || questions.length === 0) return;
 
     // Mark session as in_progress
     supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
+
+    // Start recording video
+    startVideoRecording();
 
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
