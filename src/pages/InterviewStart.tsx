@@ -282,8 +282,33 @@ export default function InterviewStart() {
     window.speechSynthesis?.cancel();
 
     if (session?.id) {
+      // Stop video recording and upload
+      let videoUrl: string | null = null;
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        await new Promise<void>((resolve) => {
+          mediaRecorderRef.current!.onstop = () => resolve();
+          mediaRecorderRef.current!.stop();
+        });
+
+        if (recordedChunksRef.current.length > 0) {
+          const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+          const fileName = `interviews/${session.id}.webm`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("media")
+            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
+            videoUrl = urlData.publicUrl;
+          }
+        }
+      }
+
+      // Stop camera stream
+      streamRef.current?.getTracks().forEach(t => t.stop());
+
       // Save all messages to session_messages
-      const messagesToSave = messages.map((m, i) => ({
+      const messagesToSave = messages.map((m) => ({
         session_id: session.id,
         role: m.role === "ai" ? "ai" as const : "candidate" as const,
         content: m.content,
@@ -295,10 +320,11 @@ export default function InterviewStart() {
         await supabase.from("session_messages").insert(messagesToSave);
       }
 
-      // Update session status to completed
+      // Update session status to completed with video URL
       await supabase.from("sessions").update({
         status: "completed" as any,
         completed_at: new Date().toISOString(),
+        ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
     }
 
@@ -310,6 +336,7 @@ export default function InterviewStart() {
     return () => {
       stopListening();
       window.speechSynthesis?.cancel();
+      streamRef.current?.getTracks().forEach(t => t.stop());
     };
   }, [stopListening]);
 
