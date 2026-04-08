@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import defaultAiAvatar from "@/assets/ai-avatar.jpg";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -360,34 +361,36 @@ export default function InterviewStart() {
 
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-2 flex flex-col items-center gap-4">
-            {/* Candidate video preview */}
-            <div className="relative w-full aspect-video rounded-xl bg-muted overflow-hidden">
-              <video ref={videoRef} muted playsInline className="w-full h-full object-cover" />
+            {/* AI Avatar - large display */}
+            <div className={`relative w-full aspect-square rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
+              <img
+                src={project?.avatar_image_url || defaultAiAvatar}
+                alt={project?.ai_persona_name || "IA"}
+                className="w-full h-full object-cover"
+              />
+              {isSpeaking && (
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex items-end justify-center gap-1">
+                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
+                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
+                  <span className="h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+                </div>
+              )}
+              <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-0.5 rounded text-xs font-medium">
+                {project?.ai_persona_name || "Sophie"} — IA
+              </div>
+            </div>
+
+            {/* Candidate video preview - small pip */}
+            <div className="relative w-full aspect-video rounded-lg bg-muted overflow-hidden ring-1 ring-border">
+              <video ref={videoRef} muted playsInline className="w-full h-full object-cover mirror" style={{ transform: "scaleX(-1)" }} />
               <div className="absolute top-2 right-2 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-2 py-0.5 rounded text-xs">
                 <span className="h-2 w-2 rounded-full bg-destructive-foreground animate-pulse" />
                 REC
               </div>
-            </div>
-
-            {/* AI persona */}
-            <div className={`flex items-center gap-3 p-3 rounded-lg w-full transition-all ${isSpeaking ? "bg-primary/10 ring-2 ring-primary/30" : "bg-muted/50"}`}>
-              <div className="relative w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                {project?.avatar_image_url ? (
-                  <img src={project.avatar_image_url} alt={project.ai_persona_name} className="w-full h-full object-cover" />
-                ) : (
-                  <User className="h-5 w-5 text-muted-foreground" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{project?.ai_persona_name} — IA</p>
-                {isSpeaking && (
-                  <div className="flex gap-0.5 mt-1">
-                    <span className="h-2 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-3 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "100ms" }} />
-                    <span className="h-2 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms" }} />
-                    <span className="h-3 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                )}
+              <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-0.5 rounded text-xs">
+                Vous
               </div>
             </div>
 
