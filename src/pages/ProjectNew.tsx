@@ -59,8 +59,8 @@ export default function ProjectNew() {
   };
 
   const handleSave = async () => {
-    if (!profile?.organization_id || !user) {
-      toast({ title: "Erreur", description: "Vous devez être connecté et rattaché à une organisation.", variant: "destructive" });
+    if (!user) {
+      toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
       return;
     }
 
@@ -71,7 +71,7 @@ export default function ProjectNew() {
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
-          organization_id: profile.organization_id!,
+          organization_id: 'a0000000-0000-0000-0000-000000000001',
           created_by: user.id,
           title,
           job_title: jobTitle,

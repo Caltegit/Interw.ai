@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: { id: string; full_name: string; email: string; organization_id: string | null } | null;
+  profile: { id: string; full_name: string; email: string } | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     supabase
       .from("profiles")
-      .select("id, full_name, email, organization_id")
+      .select("id, full_name, email")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
