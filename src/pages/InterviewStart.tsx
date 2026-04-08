@@ -21,6 +21,7 @@ export default function InterviewStart() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [interviewFinished, setInterviewFinished] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
