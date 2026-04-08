@@ -360,33 +360,43 @@ export default function InterviewStart() {
 
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-2 flex flex-col items-center gap-4">
-            <div className={`relative w-48 h-64 rounded-xl bg-muted flex items-center justify-center overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2" : ""}`}>
-              {project?.avatar_image_url ? (
-                <img src={project.avatar_image_url} alt={project.ai_persona_name} className="w-full h-full object-cover" />
-              ) : (
-                <User className="h-20 w-20 text-muted-foreground" />
-              )}
-              {isSpeaking && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-4 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "100ms" }} />
-                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms" }} />
-                  <span className="h-5 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "400ms" }} />
-                </div>
-              )}
+            {/* Candidate video preview */}
+            <div className="relative w-full aspect-video rounded-xl bg-muted overflow-hidden">
+              <video ref={videoRef} muted playsInline className="w-full h-full object-cover" />
+              <div className="absolute top-2 right-2 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-2 py-0.5 rounded text-xs">
+                <span className="h-2 w-2 rounded-full bg-destructive-foreground animate-pulse" />
+                REC
+              </div>
             </div>
-            <p className="text-sm font-medium">{project?.ai_persona_name} — IA Recruteuse</p>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTtsEnabled(!ttsEnabled)}
-              className="text-xs text-muted-foreground"
-            >
-              {ttsEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
-              {ttsEnabled ? "Son activé" : "Son coupé"}
-            </Button>
+            {/* AI persona */}
+            <div className={`flex items-center gap-3 p-3 rounded-lg w-full transition-all ${isSpeaking ? "bg-primary/10 ring-2 ring-primary/30" : "bg-muted/50"}`}>
+              <div className="relative w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                {project?.avatar_image_url ? (
+                  <img src={project.avatar_image_url} alt={project.ai_persona_name} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{project?.ai_persona_name} — IA</p>
+                {isSpeaking && (
+                  <div className="flex gap-0.5 mt-1">
+                    <span className="h-2 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-3 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "100ms" }} />
+                    <span className="h-2 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms" }} />
+                    <span className="h-3 w-0.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 w-full">
+              <Button variant="ghost" size="sm" onClick={() => setTtsEnabled(!ttsEnabled)} className="text-xs text-muted-foreground flex-1">
+                {ttsEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
+                {ttsEnabled ? "Son activé" : "Son coupé"}
+              </Button>
+            </div>
 
             {isProcessing && (
               <div className="flex gap-1">
