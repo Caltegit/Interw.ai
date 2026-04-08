@@ -159,6 +159,9 @@ export default function InterviewStart() {
   useEffect(() => {
     if (loading || !session || !project || questions.length === 0) return;
 
+    // Mark session as in_progress
+    supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
+
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
@@ -245,9 +248,31 @@ export default function InterviewStart() {
     }
   };
 
-  const endInterview = () => {
+  const endInterview = async () => {
     stopListening();
     window.speechSynthesis?.cancel();
+
+    if (session?.id) {
+      // Save all messages to session_messages
+      const messagesToSave = messages.map((m, i) => ({
+        session_id: session.id,
+        role: m.role === "ai" ? "ai" as const : "candidate" as const,
+        content: m.content,
+        question_id: null,
+        is_follow_up: false,
+      }));
+
+      if (messagesToSave.length > 0) {
+        await supabase.from("session_messages").insert(messagesToSave);
+      }
+
+      // Update session status to completed
+      await supabase.from("sessions").update({
+        status: "completed" as any,
+        completed_at: new Date().toISOString(),
+      }).eq("id", session.id);
+    }
+
     navigate(`/interview/${slug}/complete`);
   };
 
