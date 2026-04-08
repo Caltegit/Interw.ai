@@ -58,7 +58,7 @@ export default function ProjectDetail() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       setSessions((prev) => [data, ...prev]);
-      toast({ title: "Candidat invité", description: `Lien : /interview/${data.token}` });
+      toast({ title: "Candidat invité", description: "Le lien a été créé. Copiez-le depuis la liste des sessions." });
       setCandidateName("");
       setCandidateEmail("");
       setShowInvite(false);
