@@ -89,9 +89,9 @@ export default function InterviewStart() {
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: "ai", content: "Merci beaucoup pour vos réponses. L'entretien est maintenant terminé." },
+          { role: "ai", content: "Merci beaucoup pour vos réponses. Toutes les questions ont été posées. Vous pouvez terminer l'entretien quand vous êtes prêt." },
         ]);
-        setTimeout(() => endInterview(), 2000);
+        setInterviewFinished(true);
       }
       setIsProcessing(false);
     }, 1500);
