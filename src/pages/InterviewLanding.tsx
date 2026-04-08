@@ -3,52 +3,69 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Clock, Globe, Mic, CheckCircle } from "lucide-react";
 
 export default function InterviewLanding() {
-  const { token } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const [session, setSession] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
-  const [org, setOrg] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [videoEnded, setVideoEnded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [candidateName, setCandidateName] = useState("");
+  const [candidateEmail, setCandidateEmail] = useState("");
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!slug) return;
     const load = async () => {
-      const { data: sessions } = await supabase
-        .from("sessions")
+      const { data: proj } = await supabase
+        .from("projects")
         .select("*")
-        .eq("token", token)
-        .limit(1);
+        .eq("slug", slug)
+        .eq("status", "active")
+        .single();
 
-      const sess = sessions?.[0];
-      if (!sess) { setError("Ce lien est invalide."); setLoading(false); return; }
-      if (sess.status === "completed") { setError("Vous avez déjà passé cet entretien."); setLoading(false); return; }
-      if (sess.status === "expired") { setError("Ce lien n'est plus actif."); setLoading(false); return; }
-
-      setSession(sess);
-
-      const { data: proj } = await supabase.from("projects").select("*").eq("id", sess.project_id).single();
-      if (proj) {
-        setProject(proj);
-        if (proj.expires_at && new Date(proj.expires_at) < new Date()) {
-          setError("Ce lien n'est plus actif.");
-          setLoading(false);
-          return;
-        }
-        const { data: orgData } = await supabase.from("organizations").select("*").eq("id", proj.organization_id).single();
-        setOrg(orgData);
+      if (!proj) {
+        setError("Ce lien est invalide ou le projet n'est plus actif.");
+        setLoading(false);
+        return;
       }
+
+      if (proj.expires_at && new Date(proj.expires_at) < new Date()) {
+        setError("Ce lien n'est plus actif.");
+        setLoading(false);
+        return;
+      }
+
+      setProject(proj);
       setLoading(false);
     };
     load();
-  }, [token]);
+  }, [slug]);
 
-  const handleStart = () => {
-    navigate(`/interview/${token}/start`);
+  const handleStart = async () => {
+    if (!candidateName.trim() || !candidateEmail.trim() || !project) return;
+    setStarting(true);
+
+    const { data: session, error: err } = await supabase
+      .from("sessions")
+      .insert({
+        project_id: project.id,
+        candidate_name: candidateName.trim(),
+        candidate_email: candidateEmail.trim(),
+      })
+      .select()
+      .single();
+
+    if (err || !session) {
+      setError("Impossible de démarrer l'entretien. Réessayez.");
+      setStarting(false);
+      return;
+    }
+
+    navigate(`/interview/${slug}/start/${session.token}`);
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
@@ -68,9 +85,6 @@ export default function InterviewLanding() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-xl space-y-6">
-        {org?.logo_url && <img src={org.logo_url} alt={org.name} className="h-10 mx-auto" />}
-        {org && <p className="text-center text-sm text-muted-foreground">{org.name}</p>}
-
         <h1 className="text-xl font-bold text-center">
           Entretien pour le poste de {project?.job_title}
         </h1>
@@ -93,24 +107,31 @@ export default function InterviewLanding() {
         {project?.presentation_video_url && (
           <div>
             <p className="text-sm text-muted-foreground mb-2">Regardez cette vidéo avant de commencer :</p>
-            <video
-              src={project.presentation_video_url}
-              controls
-              className="w-full rounded-lg"
-              onEnded={() => setVideoEnded(true)}
-            />
+            <video src={project.presentation_video_url} controls className="w-full rounded-lg" />
           </div>
         )}
 
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={handleStart}
-          disabled={project?.presentation_video_url && !videoEnded}
-        >
-          <CheckCircle className="mr-2 h-5 w-5" />
-          Commencer l'entretien
-        </Button>
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Votre nom complet *</Label>
+              <Input id="name" placeholder="Jean Dupont" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Votre email *</Label>
+              <Input id="email" type="email" placeholder="jean@exemple.com" value={candidateEmail} onChange={(e) => setCandidateEmail(e.target.value)} />
+            </div>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleStart}
+              disabled={!candidateName.trim() || !candidateEmail.trim() || starting}
+            >
+              <CheckCircle className="mr-2 h-5 w-5" />
+              {starting ? "Démarrage..." : "Commencer l'entretien"}
+            </Button>
+          </CardContent>
+        </Card>
 
         <p className="text-xs text-center text-muted-foreground">
           Cet entretien sera enregistré, transcrit et analysé par intelligence artificielle.
