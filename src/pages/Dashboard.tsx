@@ -8,24 +8,22 @@ import { Plus, FolderKanban, Users, CheckCircle, TrendingUp } from "lucide-react
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 
 export default function Dashboard() {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState({ projects: 0, pending: 0, completed: 0, avgScore: 0 });
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!profile?.organization_id) return;
+    if (!user) return;
 
     const loadData = async () => {
       const { count: projectCount } = await supabase
         .from("projects")
         .select("*", { count: "exact", head: true })
-        .eq("organization_id", profile.organization_id!)
         .eq("status", "active");
 
       const { data: sessions } = await supabase
         .from("sessions")
-        .select("*, projects!inner(title, job_title, organization_id)")
-        .eq("projects.organization_id", profile.organization_id!)
+        .select("*, projects!inner(title, job_title)")
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -55,7 +53,7 @@ export default function Dashboard() {
     };
 
     loadData();
-  }, [profile]);
+  }, [user]);
 
   const statCards = [
     { label: "Projets actifs", value: stats.projects, icon: FolderKanban, color: "text-primary" },

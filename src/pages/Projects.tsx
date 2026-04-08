@@ -14,22 +14,21 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Projects() {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!profile?.organization_id) return;
+    if (!user) return;
     supabase
       .from("projects")
       .select("*")
-      .eq("organization_id", profile.organization_id!)
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProjects(data ?? []);
         setLoading(false);
       });
-  }, [profile]);
+  }, [user]);
 
   if (loading) {
     return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
