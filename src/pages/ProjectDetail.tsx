@@ -41,9 +41,8 @@ export default function ProjectDetail() {
     });
   }, [id]);
 
-  const copyLink = () => {
-    if (!project?.slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}`);
+  const copySessionLink = (token: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/interview/${token}`);
     toast({ title: "Lien copié !" });
   };
 
@@ -59,7 +58,7 @@ export default function ProjectDetail() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       setSessions((prev) => [data, ...prev]);
-      toast({ title: "Candidat invité", description: `Lien : /interview/${data.token}` });
+      toast({ title: "Candidat invité", description: "Le lien a été créé. Copiez-le depuis la liste des sessions." });
       setCandidateName("");
       setCandidateEmail("");
       setShowInvite(false);
@@ -81,9 +80,6 @@ export default function ProjectDetail() {
         </div>
         <div className="flex gap-2">
           <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
-          <Button variant="outline" size="sm" onClick={copyLink}>
-            <Copy className="mr-1 h-4 w-4" /> Copier le lien
-          </Button>
         </div>
       </div>
 
@@ -146,6 +142,11 @@ export default function ProjectDetail() {
                       <td className="py-3"><SessionStatusBadge status={s.status} /></td>
                       <td className="py-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString("fr-FR")}</td>
                       <td className="py-3">
+                        {["pending", "video_viewed"].includes(s.status) && (
+                          <Button variant="ghost" size="sm" onClick={() => copySessionLink(s.token)}>
+                            <Copy className="mr-1 h-3 w-3" /> Copier le lien
+                          </Button>
+                        )}
                         {s.status === "completed" && (
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/sessions/${s.id}`}>Voir</Link>
