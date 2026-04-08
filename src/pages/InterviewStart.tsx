@@ -163,15 +163,23 @@ export default function InterviewStart() {
             </Card>
 
             <div className="flex gap-2">
-              <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
-                {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </Button>
-              <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
-                {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
-              </Button>
-              <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
-                <PhoneOff className="h-5 w-5" />
-              </Button>
+              {interviewFinished ? (
+                <Button className="flex-1" variant="destructive" onClick={endInterview}>
+                  Terminer l'entretien
+                </Button>
+              ) : (
+                <>
+                  <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
+                    {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
+                  <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
+                    {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
+                  </Button>
+                  <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
+                    <PhoneOff className="h-5 w-5" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
