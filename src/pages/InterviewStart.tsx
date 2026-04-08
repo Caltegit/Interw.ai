@@ -1,11 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+// Extend window for webkitSpeechRecognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
 
 export default function InterviewStart() {
   const { slug, token } = useParams();
@@ -16,15 +24,116 @@ export default function InterviewStart() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+  const [aiMessages, setAiMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [interviewFinished, setInterviewFinished] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const recognitionRef = useRef<any>(null);
+  const candidateTranscriptRef = useRef("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // TTS: speak text aloud
+  const speak = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!ttsEnabled || !window.speechSynthesis) {
+        resolve();
+        return;
+      }
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "fr-FR";
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      // Try to pick a French voice
+      const voices = window.speechSynthesis.getVoices();
+      const frenchVoice = voices.find(v => v.lang.startsWith("fr"));
+      if (frenchVoice) utterance.voice = frenchVoice;
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => { setIsSpeaking(false); resolve(); };
+      utterance.onerror = () => { setIsSpeaking(false); resolve(); };
+
+      window.speechSynthesis.speak(utterance);
+    });
+  }, [ttsEnabled]);
+
+  // STT: start listening
+  const startListening = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast({ title: "Erreur", description: "La reconnaissance vocale n'est pas supportée par ce navigateur.", variant: "destructive" });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognitionRef.current = recognition;
+
+    candidateTranscriptRef.current = "";
+    setLiveTranscript("");
+
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      let final = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcript + " ";
+        } else {
+          interim += transcript;
+        }
+      }
+      if (final) {
+        candidateTranscriptRef.current += final;
+      }
+      setLiveTranscript(candidateTranscriptRef.current + interim);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error !== "no-speech") {
+        setIsListening(false);
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still listening
+      if (isListening && recognitionRef.current) {
+        try { recognitionRef.current.start(); } catch {}
+      }
+    };
+
+    recognition.start();
+    setIsListening(true);
+  }, [isListening, toast]);
+
+  // STT: stop listening
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  }, []);
+
+  // Load session data
   useEffect(() => {
     if (!token) return;
     const load = async () => {
@@ -41,76 +150,114 @@ export default function InterviewStart() {
       setProject(proj);
       const { data: qs } = await supabase.from("questions").select("*").eq("project_id", sess.project_id).order("order_index");
       setQuestions(qs ?? []);
-
       setLoading(false);
-
-      if (qs && qs.length > 0) {
-        const greeting = `Bonjour ${sess.candidate_name}, je suis ${proj?.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${proj?.job_title}. Commençons avec la première question : ${qs[0].content}`;
-        setMessages([{ role: "ai", content: greeting }]);
-      }
     };
     load();
   }, [token, slug, navigate]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mediaRecorder.start(5000);
-      setIsRecording(true);
-    } catch {
-      toast({ title: "Erreur", description: "Impossible d'accéder au microphone.", variant: "destructive" });
-    }
-  };
+  // Generate and speak initial greeting
+  useEffect(() => {
+    if (loading || !session || !project || questions.length === 0) return;
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
-    }
-    setIsRecording(false);
-  };
+    const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
-  const simulateResponse = () => {
+    const aiMsg = { role: "assistant" as const, content: greeting };
+    setMessages([{ role: "ai", content: greeting }]);
+    setAiMessages([aiMsg]);
+
+    // Speak the greeting, then start listening
+    speak(greeting).then(() => {
+      startListening();
+    });
+  }, [loading, session, project, questions]);
+
+  // Send candidate response to AI
+  const handleSendResponse = async () => {
+    stopListening();
+    const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
+
+    if (!transcript) {
+      toast({ title: "Aucune réponse", description: "Veuillez parler avant d'envoyer votre réponse.", variant: "destructive" });
+      startListening();
+      return;
+    }
+
+    // Add candidate message to UI
+    setMessages((prev) => [...prev, { role: "candidate", content: transcript }]);
+    setLiveTranscript("");
+    candidateTranscriptRef.current = "";
+
+    // Build conversation history for AI
+    const updatedAiMessages: { role: "user" | "assistant"; content: string }[] = [
+      ...aiMessages,
+      { role: "user" as const, content: transcript },
+    ];
+    setAiMessages(updatedAiMessages);
+
     setIsProcessing(true);
-    setTimeout(() => {
-      const nextIndex = currentQuestionIndex + 1;
-      if (nextIndex < questions.length) {
-        setCurrentQuestionIndex(nextIndex);
-        setMessages((prev) => [
-          ...prev,
-          { role: "ai", content: `Merci pour votre réponse. Question suivante : ${questions[nextIndex].content}` },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: "ai", content: "Merci beaucoup pour vos réponses. Toutes les questions ont été posées. Vous pouvez terminer l'entretien quand vous êtes prêt." },
-        ]);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
+        body: {
+          messages: updatedAiMessages,
+          projectContext: {
+            aiPersonaName: project?.ai_persona_name ?? "Sophie",
+            jobTitle: project?.job_title ?? "",
+            questions: questions.map(q => ({ content: q.content, type: q.type })),
+            currentQuestionNumber: currentQuestionIndex + 1,
+            totalQuestions: questions.length,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      const aiResponse = data.message;
+
+      // Add AI message
+      setMessages((prev) => [...prev, { role: "ai", content: aiResponse }]);
+      setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
+
+      // Check if interview is over (AI says "terminé" in response)
+      const isOver = aiResponse.toLowerCase().includes("terminé") && currentQuestionIndex >= questions.length - 1;
+
+      if (isOver) {
         setInterviewFinished(true);
       }
-      setIsProcessing(false);
-    }, 1500);
-  };
 
-  const handleSendResponse = () => {
-    setMessages((prev) => [...prev, { role: "candidate", content: "[Réponse audio enregistrée]" }]);
-    simulateResponse();
+      // Advance question counter
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      }
+
+      setIsProcessing(false);
+
+      // Speak AI response, then resume listening
+      await speak(aiResponse);
+      if (!isOver) {
+        startListening();
+      }
+    } catch (e: any) {
+      console.error("AI conversation error:", e);
+      setIsProcessing(false);
+      toast({ title: "Erreur", description: "Impossible de contacter l'IA. Veuillez réessayer.", variant: "destructive" });
+      startListening();
+    }
   };
 
   const endInterview = () => {
-    stopRecording();
+    stopListening();
+    window.speechSynthesis?.cancel();
     navigate(`/interview/${slug}/complete`);
   };
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (!loading && session) startRecording();
-    return () => stopRecording();
-  }, [loading]);
+    return () => {
+      stopListening();
+      window.speechSynthesis?.cancel();
+    };
+  }, [stopListening]);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
 
@@ -122,7 +269,8 @@ export default function InterviewStart() {
             Question {currentQuestionIndex + 1} / {questions.length}
           </span>
           <div className="flex items-center gap-2">
-            {isRecording && <span className="flex items-center gap-1 text-xs text-destructive"><span className="h-2 w-2 rounded-full bg-destructive animate-pulse" /> Enregistrement</span>}
+            {isSpeaking && <span className="flex items-center gap-1 text-xs text-primary"><Volume2 className="h-3 w-3 animate-pulse" /> L'IA parle...</span>}
+            {isListening && !isSpeaking && <span className="flex items-center gap-1 text-xs text-destructive"><span className="h-2 w-2 rounded-full bg-destructive animate-pulse" /> Écoute en cours</span>}
           </div>
         </div>
         <div className="mb-6 h-2 rounded-full bg-muted">
@@ -131,14 +279,34 @@ export default function InterviewStart() {
 
         <div className="grid gap-6 lg:grid-cols-5">
           <div className="lg:col-span-2 flex flex-col items-center gap-4">
-            <div className="relative w-48 h-64 rounded-xl bg-muted flex items-center justify-center overflow-hidden">
+            <div className={`relative w-48 h-64 rounded-xl bg-muted flex items-center justify-center overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2" : ""}`}>
               {project?.avatar_image_url ? (
                 <img src={project.avatar_image_url} alt={project.ai_persona_name} className="w-full h-full object-cover" />
               ) : (
                 <User className="h-20 w-20 text-muted-foreground" />
               )}
+              {isSpeaking && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-4 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "100ms" }} />
+                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms" }} />
+                  <span className="h-5 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="h-3 w-1 rounded-full bg-primary animate-bounce" style={{ animationDelay: "400ms" }} />
+                </div>
+              )}
             </div>
             <p className="text-sm font-medium">{project?.ai_persona_name} — IA Recruteuse</p>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTtsEnabled(!ttsEnabled)}
+              className="text-xs text-muted-foreground"
+            >
+              {ttsEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
+              {ttsEnabled ? "Son activé" : "Son coupé"}
+            </Button>
+
             {isProcessing && (
               <div className="flex gap-1">
                 <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -159,6 +327,16 @@ export default function InterviewStart() {
                     <p className="mt-1">{m.content}</p>
                   </div>
                 ))}
+
+                {/* Live transcript preview */}
+                {isListening && liveTranscript && (
+                  <div className="p-3 rounded-lg text-sm bg-muted/50 ml-8 border border-dashed border-muted-foreground/30">
+                    <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
+                    <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
               </CardContent>
             </Card>
 
@@ -169,10 +347,19 @@ export default function InterviewStart() {
                 </Button>
               ) : (
                 <>
-                  <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
-                    {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  <Button
+                    variant={isListening ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => isListening ? stopListening() : startListening()}
+                    disabled={isSpeaking || isProcessing}
+                  >
+                    {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
                   </Button>
-                  <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSendResponse}
+                    disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
+                  >
                     {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
                   </Button>
                   <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
