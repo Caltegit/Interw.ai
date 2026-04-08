@@ -38,6 +38,10 @@ export default function InterviewStart() {
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Auto-scroll messages
   useEffect(() => {
