@@ -31,9 +31,9 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/interview/:token" element={<InterviewLanding />} />
-            <Route path="/interview/:token/start" element={<InterviewStart />} />
-            <Route path="/interview/:token/complete" element={<InterviewComplete />} />
+            <Route path="/interview/:slug" element={<InterviewLanding />} />
+            <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
+            <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
 
             {/* Protected RH routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
