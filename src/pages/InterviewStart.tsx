@@ -21,6 +21,7 @@ export default function InterviewStart() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [interviewFinished, setInterviewFinished] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -88,9 +89,9 @@ export default function InterviewStart() {
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: "ai", content: "Merci beaucoup pour vos réponses. L'entretien est maintenant terminé." },
+          { role: "ai", content: "Merci beaucoup pour vos réponses. Toutes les questions ont été posées. Vous pouvez terminer l'entretien quand vous êtes prêt." },
         ]);
-        setTimeout(() => endInterview(), 2000);
+        setInterviewFinished(true);
       }
       setIsProcessing(false);
     }, 1500);
@@ -162,15 +163,23 @@ export default function InterviewStart() {
             </Card>
 
             <div className="flex gap-2">
-              <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
-                {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-              </Button>
-              <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
-                {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
-              </Button>
-              <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
-                <PhoneOff className="h-5 w-5" />
-              </Button>
+              {interviewFinished ? (
+                <Button className="flex-1" variant="destructive" onClick={endInterview}>
+                  Terminer l'entretien
+                </Button>
+              ) : (
+                <>
+                  <Button variant={isMuted ? "destructive" : "outline"} size="icon" onClick={() => setIsMuted(!isMuted)}>
+                    {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
+                  <Button className="flex-1" onClick={handleSendResponse} disabled={isProcessing}>
+                    {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
+                  </Button>
+                  <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
+                    <PhoneOff className="h-5 w-5" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
