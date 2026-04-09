@@ -233,6 +233,38 @@ export default function SessionDetail() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="videos" className="mt-4 space-y-4">
+              {(() => {
+                const candidateVideos = messages.filter((m: any) => m.role === "candidate" && m.video_segment_url);
+                if (candidateVideos.length === 0) {
+                  return (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <Video className="h-12 w-12 mx-auto mb-2 opacity-30 text-muted-foreground" />
+                        <p className="text-muted-foreground text-sm">Aucune vidéo par question disponible pour cette session.</p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                return candidateVideos.map((m: any, i: number) => (
+                  <Card key={m.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Play className="h-4 w-4 text-primary" />
+                        Question {i + 1}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="rounded-lg overflow-hidden bg-muted aspect-video">
+                        <video src={m.video_segment_url} controls preload="metadata" className="w-full h-full object-contain" />
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{m.content}</p>
+                    </CardContent>
+                  </Card>
+                ));
+              })()}
+            </TabsContent>
+
             <TabsContent value="report" className="mt-4 space-y-4">
               {report ? (
                 <>
