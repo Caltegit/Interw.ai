@@ -53,18 +53,24 @@ export default function InterviewStart() {
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
 
   // Helper: persist a single message to DB immediately
-  const persistMessage = useCallback(async (sessionId: string, role: "ai" | "candidate", content: string) => {
-    try {
-      const { error } = await supabase.from("session_messages").insert({
-        session_id: sessionId,
-        role,
-        content,
-        question_id: null,
-        is_follow_up: false,
-      });
-      if (error) console.error("Failed to persist message:", error);
-    } catch (e) {
-      console.error("persistMessage exception:", e);
+  const persistMessage = useCallback(async (
+    sessionId: string,
+    role: "ai" | "candidate",
+    content: string,
+    options?: { questionId?: string | null; videoSegmentUrl?: string | null }
+  ) => {
+    const { error } = await supabase.from("session_messages").insert({
+      session_id: sessionId,
+      role,
+      content,
+      question_id: options?.questionId ?? null,
+      is_follow_up: false,
+      video_segment_url: options?.videoSegmentUrl ?? null,
+    });
+
+    if (error) {
+      console.error("Failed to persist message:", error);
+      throw error;
     }
   }, []);
 
