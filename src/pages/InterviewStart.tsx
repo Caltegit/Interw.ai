@@ -217,12 +217,58 @@ export default function InterviewStart() {
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunksRef.current.push(e.data);
       };
-      mediaRecorder.start(1000); // collect chunks every second
+      mediaRecorder.start(1000);
     } catch (err) {
       console.error("Camera access error:", err);
       toast({ title: "Caméra inaccessible", description: "Veuillez autoriser l'accès à la caméra.", variant: "destructive" });
     }
   }, [toast]);
+
+  // Start a per-question video recorder (uses same stream)
+  const startQuestionRecording = useCallback(() => {
+    if (!streamRef.current) return;
+    questionVideoChunksRef.current = [];
+    try {
+      const recorder = new MediaRecorder(streamRef.current, { mimeType: "video/webm" });
+      questionRecorderRef.current = recorder;
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) questionVideoChunksRef.current.push(e.data);
+      };
+      recorder.start(500);
+    } catch (e) {
+      console.error("Question recorder error:", e);
+    }
+  }, []);
+
+  // Stop per-question recorder and upload the video segment
+  const stopAndUploadQuestionVideo = useCallback(async (sessionId: string, questionIndex: number): Promise<string | null> => {
+    const recorder = questionRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return null;
+    
+    await new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+      recorder.stop();
+    });
+    questionRecorderRef.current = null;
+
+    if (questionVideoChunksRef.current.length === 0) return null;
+
+    const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
+    questionVideoChunksRef.current = [];
+    const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+    
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+      if (uploadError) { console.error("Question video upload error:", uploadError); return null; }
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
+      return urlData.publicUrl;
+    } catch (e) {
+      console.error("Question video upload exception:", e);
+      return null;
+    }
+  }, []);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
