@@ -237,6 +237,20 @@ export default function InterviewStart() {
     }, MAX_DURATION_MS);
     resetSilenceTimer();
 
+    // Play intro audio from recruiter if available (before AI greeting)
+    if (project.intro_audio_url) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const audio = new Audio(project.intro_audio_url);
+          audio.onended = () => resolve();
+          audio.onerror = () => resolve(); // continue even if playback fails
+          audio.play().catch(() => resolve());
+        });
+      } catch {
+        // Continue even if intro audio fails
+      }
+    }
+
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
