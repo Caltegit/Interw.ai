@@ -206,15 +206,24 @@ export default function InterviewStart() {
     }
   }, [toast]);
 
-  // Generate and speak initial greeting
-  useEffect(() => {
-    if (loading || !session || !project || questions.length === 0) return;
+  // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
+  const beginInterview = async () => {
+    if (!session || !project || questions.length === 0) return;
+
+    // Warm up speech synthesis with a silent utterance (mobile requires gesture)
+    if (window.speechSynthesis) {
+      const warmup = new SpeechSynthesisUtterance("");
+      warmup.volume = 0;
+      window.speechSynthesis.speak(warmup);
+    }
+
+    setReadyToStart(true);
 
     // Mark session as in_progress
     supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
 
     // Start recording video
-    startVideoRecording();
+    await startVideoRecording();
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
@@ -235,11 +244,10 @@ export default function InterviewStart() {
     messagesRef.current = [{ role: "ai", content: greeting }];
     setAiMessages([aiMsg]);
 
-    // Speak the greeting, then start listening
-    speak(greeting).then(() => {
-      startListening();
-    });
-  }, [loading, session, project, questions]);
+    // Speak the greeting (now in user gesture context — works on mobile)
+    await speak(greeting);
+    startListening();
+  };
 
   // Send candidate response to AI
   const handleSendResponse = async () => {
