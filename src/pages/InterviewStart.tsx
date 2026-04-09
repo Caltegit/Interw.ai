@@ -50,6 +50,22 @@ export default function InterviewStart() {
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
 
+  // Helper: persist a single message to DB immediately
+  const persistMessage = useCallback(async (sessionId: string, role: "ai" | "candidate", content: string) => {
+    try {
+      const { error } = await supabase.from("session_messages").insert({
+        session_id: sessionId,
+        role,
+        content,
+        question_id: null,
+        is_follow_up: false,
+      });
+      if (error) console.error("Failed to persist message:", error);
+    } catch (e) {
+      console.error("persistMessage exception:", e);
+    }
+  }, []);
+
   const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
   const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
   // Reset silence timer (called on any activity)
@@ -244,6 +260,9 @@ export default function InterviewStart() {
     messagesRef.current = [{ role: "ai", content: greeting }];
     setAiMessages([aiMsg]);
 
+    // Persist greeting to DB immediately
+    persistMessage(session.id, "ai", greeting);
+
     // Speak the greeting (now in user gesture context — works on mobile)
     await speak(greeting);
     startListening();
@@ -266,6 +285,8 @@ export default function InterviewStart() {
       messagesRef.current = updated;
       return updated;
     });
+    // Persist candidate message immediately
+    if (session?.id) persistMessage(session.id, "candidate", transcript);
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
@@ -302,6 +323,8 @@ export default function InterviewStart() {
         messagesRef.current = updated;
         return updated;
       });
+      // Persist AI response immediately
+      if (session?.id) persistMessage(session.id, "ai", aiResponse);
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
       // Check if interview is over (AI says "terminé" in response)
@@ -364,22 +387,7 @@ export default function InterviewStart() {
       // Stop camera stream
       streamRef.current?.getTracks().forEach(t => t.stop());
 
-      // Save all messages to session_messages — use ref to avoid stale closure
-      const currentMessages = messagesRef.current;
-      const messagesToSave = currentMessages.map((m) => ({
-        session_id: session.id,
-        role: m.role === "ai" ? "ai" as const : "candidate" as const,
-        content: m.content,
-        question_id: null,
-        is_follow_up: false,
-      }));
-
-      if (messagesToSave.length > 0) {
-        const { error: msgError } = await supabase.from("session_messages").insert(messagesToSave);
-        if (msgError) {
-          console.error("Failed to save messages:", msgError);
-        }
-      }
+      // Messages already persisted in real-time — no batch save needed
 
       // Calculate duration
       const durationSeconds = interviewStartTimeRef.current
@@ -394,16 +402,14 @@ export default function InterviewStart() {
         ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
 
-      // Trigger report generation — AWAIT to ensure it completes before navigation
-      if (messagesToSave.length > 0) {
-        try {
-          const { error: reportError } = await supabase.functions.invoke("generate-report", {
-            body: { session_id: session.id },
-          });
-          if (reportError) console.error("Report generation error:", reportError);
-        } catch (e) {
-          console.error("Report generation exception:", e);
-        }
+      // Trigger report generation — messages already saved in real-time
+      try {
+        const { error: reportError } = await supabase.functions.invoke("generate-report", {
+          body: { session_id: session.id },
+        });
+        if (reportError) console.error("Report generation error:", reportError);
+      } catch (e) {
+        console.error("Report generation exception:", e);
       }
     }
 
