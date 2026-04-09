@@ -402,16 +402,14 @@ export default function InterviewStart() {
         ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
 
-      // Trigger report generation — AWAIT to ensure it completes before navigation
-      if (messagesToSave.length > 0) {
-        try {
-          const { error: reportError } = await supabase.functions.invoke("generate-report", {
-            body: { session_id: session.id },
-          });
-          if (reportError) console.error("Report generation error:", reportError);
-        } catch (e) {
-          console.error("Report generation exception:", e);
-        }
+      // Trigger report generation — messages already saved in real-time
+      try {
+        const { error: reportError } = await supabase.functions.invoke("generate-report", {
+          body: { session_id: session.id },
+        });
+        if (reportError) console.error("Report generation error:", reportError);
+      } catch (e) {
+        console.error("Report generation exception:", e);
       }
     }
 
