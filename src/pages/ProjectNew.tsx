@@ -32,6 +32,8 @@ export default function ProjectNew() {
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Sophie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Step 3
   const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
