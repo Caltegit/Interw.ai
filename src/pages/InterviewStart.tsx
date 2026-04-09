@@ -396,6 +396,9 @@ export default function InterviewStart() {
           console.error("Report generation exception:", e);
         }
       }
+    }
+
+    navigate(`/interview/${slug}/complete`);
   };
 
   // Keep endInterviewRef in sync
