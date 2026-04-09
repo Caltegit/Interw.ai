@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { StepQuestions } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
+import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 
 const STEPS = ["Informations", "Médias", "Questions", "Critères", "Publication"];
 
