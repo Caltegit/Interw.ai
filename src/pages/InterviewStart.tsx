@@ -207,8 +207,8 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
-  // Start video recording
-  const startVideoRecording = useCallback(async () => {
+  // Start camera stream (no global recorder — only per-question recorders)
+  const startVideoStream = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
@@ -216,13 +216,6 @@ export default function InterviewStart() {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       }
-      recordedChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
-      };
-      mediaRecorder.start(1000);
     } catch (err) {
       console.error("Camera access error:", err);
       toast({ title: "Caméra inaccessible", description: "Veuillez autoriser l'accès à la caméra.", variant: "destructive" });
