@@ -146,10 +146,14 @@ export default function Dashboard() {
                              <AlertDialogFooter>
                                <AlertDialogCancel>Annuler</AlertDialogCancel>
                                <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
-                                 await supabase.from("session_messages").delete().eq("session_id", session.id);
-                                 await supabase.from("reports").delete().eq("session_id", session.id);
-                                 await supabase.from("transcripts").delete().eq("session_id", session.id);
-                                 await supabase.from("sessions").delete().eq("id", session.id);
+                                  const { data: reports } = await supabase.from("reports").select("id").eq("session_id", session.id);
+                                  if (reports && reports.length > 0) {
+                                    await supabase.from("report_shares").delete().in("report_id", reports.map(r => r.id));
+                                  }
+                                  await supabase.from("session_messages").delete().eq("session_id", session.id);
+                                  await supabase.from("reports").delete().eq("session_id", session.id);
+                                  await supabase.from("transcripts").delete().eq("session_id", session.id);
+                                  await supabase.from("sessions").delete().eq("id", session.id);
                                  setRecentSessions(prev => prev.filter(s => s.id !== session.id));
                                  toast({ title: "Entretien supprimé" });
                                }}>Supprimer</AlertDialogAction>
