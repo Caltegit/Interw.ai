@@ -284,8 +284,8 @@ export default function InterviewStart() {
     // Mark session as in_progress
     supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
 
-    // Start recording video
-    await startVideoRecording();
+    // Start camera stream
+    await startVideoStream();
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
@@ -442,29 +442,7 @@ export default function InterviewStart() {
     window.speechSynthesis?.cancel();
 
     if (session?.id) {
-      // Stop video recording and upload
-      let videoUrl: string | null = null;
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        await new Promise<void>((resolve) => {
-          mediaRecorderRef.current!.onstop = () => resolve();
-          mediaRecorderRef.current!.stop();
-        });
-
-        if (recordedChunksRef.current.length > 0) {
-          const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-          const fileName = `interviews/${session.id}.webm`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("media")
-            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
-
-          if (!uploadError && uploadData) {
-            const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-            videoUrl = urlData.publicUrl;
-          }
-        }
-      }
-
-      // Stop per-question recorder if still running
+      // Stop per-question recorder if still running and upload last segment
       if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
         await stopAndUploadQuestionVideo(session.id, currentQuestionIndex);
       }
