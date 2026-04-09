@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderKanban, Users, CheckCircle, TrendingUp } from "lucide-react";
+import { Plus, FolderKanban, Users, CheckCircle, TrendingUp, Trash2 } from "lucide-react";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ projects: 0, pending: 0, completed: 0, avgScore: 0 });
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
 
@@ -121,12 +124,38 @@ export default function Dashboard() {
                        <td className="py-3 text-muted-foreground">
                          {new Date(session.created_at).toLocaleDateString("fr-FR")}
                        </td>
-                       <td className="py-3">
+                       <td className="py-3 flex gap-1">
                          {session.status === "completed" && (
                            <Button variant="ghost" size="sm" asChild>
                              <Link to={`/sessions/${session.id}`}>Voir</Link>
                            </Button>
                          )}
+                         <AlertDialog>
+                           <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                               <Trash2 className="h-3 w-3" />
+                             </Button>
+                           </AlertDialogTrigger>
+                           <AlertDialogContent>
+                             <AlertDialogHeader>
+                               <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                               <AlertDialogDescription>
+                                 Cette action supprimera l'entretien de {session.candidate_name} et toutes les données associées. Irréversible.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter>
+                               <AlertDialogCancel>Annuler</AlertDialogCancel>
+                               <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
+                                 await supabase.from("session_messages").delete().eq("session_id", session.id);
+                                 await supabase.from("reports").delete().eq("session_id", session.id);
+                                 await supabase.from("transcripts").delete().eq("session_id", session.id);
+                                 await supabase.from("sessions").delete().eq("id", session.id);
+                                 setRecentSessions(prev => prev.filter(s => s.id !== session.id));
+                                 toast({ title: "Entretien supprimé" });
+                               }}>Supprimer</AlertDialogAction>
+                             </AlertDialogFooter>
+                           </AlertDialogContent>
+                         </AlertDialog>
                        </td>
                     </tr>
                   ))}
