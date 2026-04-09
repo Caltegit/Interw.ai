@@ -215,6 +215,40 @@ export default function ProjectNew() {
                 <Input placeholder="Sophie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
               <div>
+                <Label>Photo de l'avatar</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  {avatarPreview ? (
+                    <div className="relative">
+                      <img src={avatarPreview} alt="Avatar" className="h-20 w-20 rounded-full object-cover border-2 border-border" />
+                      <button
+                        type="button"
+                        onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}
+                        className="absolute -top-1 -right-1 rounded-full bg-destructive text-destructive-foreground p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border hover:border-primary transition-colors">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setAvatarFile(file);
+                            setAvatarPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                  <p className="text-sm text-muted-foreground">JPG, PNG — affiché pendant l'entretien candidat</p>
+                </div>
+              </div>
+              <div>
                 <Label>Voix IA</Label>
                 <Select value={aiVoice} onValueChange={setAiVoice}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -226,7 +260,7 @@ export default function ProjectNew() {
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-sm text-muted-foreground">L'upload de vidéo et d'avatar sera disponible prochainement.</p>
+              <p className="text-sm text-muted-foreground">L'upload de vidéo de présentation sera disponible prochainement.</p>
             </div>
           )}
 
