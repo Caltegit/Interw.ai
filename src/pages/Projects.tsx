@@ -33,6 +33,16 @@ export default function Projects() {
       });
   }, [user]);
 
+  const handleDelete = async (projectId: string) => {
+    const { error } = await supabase.from("projects").delete().eq("id", projectId);
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+    } else {
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      toast({ title: "Projet supprimé" });
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   }
