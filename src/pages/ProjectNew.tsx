@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { StepQuestions } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 
@@ -32,6 +32,8 @@ export default function ProjectNew() {
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Sophie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Step 3
   const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
@@ -68,6 +70,17 @@ export default function ProjectNew() {
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now().toString(36);
 
+      // Upload avatar if provided
+      let avatarUrl: string | null = null;
+      if (avatarFile) {
+        const ext = avatarFile.name.split(".").pop() || "png";
+        const path = `avatars/${slug}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("media").upload(path, avatarFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        avatarUrl = urlData.publicUrl;
+      }
+
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -84,6 +97,7 @@ export default function ProjectNew() {
           record_video: recordVideo,
           status,
           slug,
+          avatar_image_url: avatarUrl,
         })
         .select()
         .single();
@@ -213,6 +227,40 @@ export default function ProjectNew() {
                 <Input placeholder="Sophie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
               <div>
+                <Label>Photo de l'avatar</Label>
+                <div className="flex items-center gap-4 mt-2">
+                  {avatarPreview ? (
+                    <div className="relative">
+                      <img src={avatarPreview} alt="Avatar" className="h-20 w-20 rounded-full object-cover border-2 border-border" />
+                      <button
+                        type="button"
+                        onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}
+                        className="absolute -top-1 -right-1 rounded-full bg-destructive text-destructive-foreground p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border hover:border-primary transition-colors">
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setAvatarFile(file);
+                            setAvatarPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                  <p className="text-sm text-muted-foreground">JPG, PNG — affiché pendant l'entretien candidat</p>
+                </div>
+              </div>
+              <div>
                 <Label>Voix IA</Label>
                 <Select value={aiVoice} onValueChange={setAiVoice}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -224,7 +272,7 @@ export default function ProjectNew() {
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-sm text-muted-foreground">L'upload de vidéo et d'avatar sera disponible prochainement.</p>
+              <p className="text-sm text-muted-foreground">L'upload de vidéo de présentation sera disponible prochainement.</p>
             </div>
           )}
 
