@@ -362,6 +362,17 @@ export default function InterviewStart() {
           questionId: questions[questionIdx]?.id || null,
           videoSegmentUrl: questionVideoUrl,
         });
+
+        if (questionVideoUrl && !session.video_recording_url) {
+          const { error: sessionVideoError } = await supabase
+            .from("sessions")
+            .update({ video_recording_url: questionVideoUrl })
+            .eq("id", session.id);
+
+          if (!sessionVideoError) {
+            setSession((prev: any) => prev ? { ...prev, video_recording_url: questionVideoUrl } : prev);
+          }
+        }
       } catch {
         toast({ title: "Erreur", description: "Impossible d'enregistrer votre réponse.", variant: "destructive" });
         startQuestionRecording();
