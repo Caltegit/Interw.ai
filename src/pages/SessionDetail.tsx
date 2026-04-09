@@ -41,6 +41,10 @@ export default function SessionDetail() {
 
       if (cancelled) return;
 
+      console.log("[SessionDetail] messages loaded:", mRes.data?.length, "errors:", mRes.error);
+      console.log("[SessionDetail] candidate videos:", mRes.data?.filter((m: any) => m.role === "candidate" && m.video_segment_url).length);
+      if (mRes.error) console.error("[SessionDetail] messages error:", mRes.error);
+
       setSession(sRes.data);
       setReport(rRes.data ?? null);
       setMessages(mRes.data ?? []);
