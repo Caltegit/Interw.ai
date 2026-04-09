@@ -231,6 +231,7 @@ export default function InterviewStart() {
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     setMessages([{ role: "ai", content: greeting }]);
+    messagesRef.current = [{ role: "ai", content: greeting }];
     setAiMessages([aiMsg]);
 
     // Speak the greeting, then start listening
@@ -251,7 +252,11 @@ export default function InterviewStart() {
     }
 
     // Add candidate message to UI
-    setMessages((prev) => [...prev, { role: "candidate", content: transcript }]);
+    setMessages((prev) => {
+      const updated = [...prev, { role: "candidate", content: transcript }];
+      messagesRef.current = updated;
+      return updated;
+    });
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
@@ -283,7 +288,11 @@ export default function InterviewStart() {
       const aiResponse = data.message;
 
       // Add AI message
-      setMessages((prev) => [...prev, { role: "ai", content: aiResponse }]);
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: aiResponse }];
+        messagesRef.current = updated;
+        return updated;
+      });
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
       // Check if interview is over (AI says "terminé" in response)
