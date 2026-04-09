@@ -42,8 +42,6 @@ export default function InterviewStart() {
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,6 +49,7 @@ export default function InterviewStart() {
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
+  const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
 
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (
@@ -208,8 +207,8 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
-  // Start video recording
-  const startVideoRecording = useCallback(async () => {
+  // Start camera stream (no global recorder — only per-question recorders)
+  const startVideoStream = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
@@ -217,13 +216,6 @@ export default function InterviewStart() {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       }
-      recordedChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunksRef.current.push(e.data);
-      };
-      mediaRecorder.start(1000);
     } catch (err) {
       console.error("Camera access error:", err);
       toast({ title: "Caméra inaccessible", description: "Veuillez autoriser l'accès à la caméra.", variant: "destructive" });
@@ -231,11 +223,22 @@ export default function InterviewStart() {
   }, [toast]);
 
   // Start a per-question video recorder (uses same stream)
+  // Detect supported mime type for MediaRecorder
+  const getSupportedMimeType = useCallback(() => {
+    const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return undefined; // browser default
+  }, []);
+
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
     questionVideoChunksRef.current = [];
     try {
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: "video/webm" });
+      const mimeType = getSupportedMimeType();
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) questionVideoChunksRef.current.push(e.data);
@@ -244,7 +247,7 @@ export default function InterviewStart() {
     } catch (e) {
       console.error("Question recorder error:", e);
     }
-  }, []);
+  }, [getSupportedMimeType]);
 
   // Stop per-question recorder and upload the video segment
   const stopAndUploadQuestionVideo = useCallback(async (sessionId: string, questionIndex: number): Promise<string | null> => {
@@ -292,8 +295,8 @@ export default function InterviewStart() {
     // Mark session as in_progress
     supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
 
-    // Start recording video
-    await startVideoRecording();
+    // Start camera stream
+    await startVideoStream();
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
@@ -450,29 +453,7 @@ export default function InterviewStart() {
     window.speechSynthesis?.cancel();
 
     if (session?.id) {
-      // Stop video recording and upload
-      let videoUrl: string | null = null;
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        await new Promise<void>((resolve) => {
-          mediaRecorderRef.current!.onstop = () => resolve();
-          mediaRecorderRef.current!.stop();
-        });
-
-        if (recordedChunksRef.current.length > 0) {
-          const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
-          const fileName = `interviews/${session.id}.webm`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("media")
-            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
-
-          if (!uploadError && uploadData) {
-            const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-            videoUrl = urlData.publicUrl;
-          }
-        }
-      }
-
-      // Stop per-question recorder if still running
+      // Stop per-question recorder if still running and upload last segment
       if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
         await stopAndUploadQuestionVideo(session.id, currentQuestionIndex);
       }
@@ -487,12 +468,11 @@ export default function InterviewStart() {
         ? Math.round((Date.now() - interviewStartTimeRef.current) / 1000)
         : null;
 
-      // Update session status to completed with video URL
+      // Update session status to completed
       await supabase.from("sessions").update({
         status: "completed" as any,
         completed_at: new Date().toISOString(),
         ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-        ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
 
       // Trigger report generation — messages already saved in real-time
