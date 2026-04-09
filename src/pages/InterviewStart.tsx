@@ -315,7 +315,11 @@ export default function InterviewStart() {
     setAiMessages([aiMsg]);
 
     // Persist greeting to DB immediately
-    persistMessage(session.id, "ai", greeting);
+    try {
+      await persistMessage(session.id, "ai", greeting);
+    } catch {
+      toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
+    }
 
     // Speak the greeting (now in user gesture context — works on mobile)
     await speak(greeting);
@@ -337,9 +341,9 @@ export default function InterviewStart() {
 
     // Stop question video recording and upload in background
     const questionIdx = currentQuestionIndex;
-    let questionVideoPromise: Promise<string | null> = Promise.resolve(null);
+    let questionVideoUrl: string | null = null;
     if (session?.id) {
-      questionVideoPromise = stopAndUploadQuestionVideo(session.id, questionIdx);
+      questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
     }
 
     // Add candidate message to UI
@@ -348,26 +352,20 @@ export default function InterviewStart() {
       messagesRef.current = updated;
       return updated;
     });
-    // Persist candidate message with video URL (will be updated after upload)
-    const persistAndAttachVideo = async () => {
-      const videoUrl = await questionVideoPromise;
-      if (session?.id) {
-        try {
-          const { error } = await supabase.from("session_messages").insert({
-            session_id: session.id,
-            role: "candidate" as any,
-            content: transcript,
-            question_id: questions[questionIdx]?.id || null,
-            is_follow_up: false,
-            video_segment_url: videoUrl,
-          });
-          if (error) console.error("Failed to persist candidate message:", error);
-        } catch (e) {
-          console.error("persistMessage exception:", e);
-        }
+
+    if (session?.id) {
+      try {
+        await persistMessage(session.id, "candidate", transcript, {
+          questionId: questions[questionIdx]?.id || null,
+          videoSegmentUrl: questionVideoUrl,
+        });
+      } catch {
+        toast({ title: "Erreur", description: "Impossible d'enregistrer votre réponse.", variant: "destructive" });
+        startQuestionRecording();
+        startListening();
+        return;
       }
-    };
-    persistAndAttachVideo();
+    }
 
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
@@ -406,7 +404,13 @@ export default function InterviewStart() {
         return updated;
       });
       // Persist AI response immediately
-      if (session?.id) persistMessage(session.id, "ai", aiResponse);
+      if (session?.id) {
+        try {
+          await persistMessage(session.id, "ai", aiResponse);
+        } catch {
+          toast({ title: "Erreur", description: "Impossible d'enregistrer la réponse de l'IA.", variant: "destructive" });
+        }
+      }
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
       // Check if interview is over

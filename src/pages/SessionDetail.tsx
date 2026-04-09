@@ -29,18 +29,24 @@ export default function SessionDetail() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
-      supabase.from("sessions").select("*, projects(*)").eq("id", id).single(),
-      supabase.from("reports").select("*").eq("session_id", id).single(),
-      supabase.from("session_messages").select("*").eq("session_id", id).order("timestamp"),
-    ]).then(([sRes, rRes, mRes]) => {
+
+    let cancelled = false;
+
+    const loadSessionDetail = async () => {
+      const [sRes, rRes, mRes] = await Promise.all([
+        supabase.from("sessions").select("*, projects(*)").eq("id", id).single(),
+        supabase.from("reports").select("*").eq("session_id", id).maybeSingle(),
+        supabase.from("session_messages").select("*").eq("session_id", id).order("timestamp"),
+      ]);
+
+      if (cancelled) return;
+
       setSession(sRes.data);
-      setReport(rRes.data);
+      setReport(rRes.data ?? null);
       setMessages(mRes.data ?? []);
       setRecruiterNotes(rRes.data?.recruiter_notes ?? "");
       setLoading(false);
 
-      // Check existing share link
       if (rRes.data?.id) {
         supabase
           .from("report_shares" as any)
@@ -49,12 +55,20 @@ export default function SessionDetail() {
           .eq("is_active", true)
           .limit(1)
           .then(({ data: shares }: any) => {
-            if (shares?.[0]) {
+            if (!cancelled && shares?.[0]) {
               setShareUrl(`${window.location.origin}/shared-report/${shares[0].share_token}`);
             }
           });
       }
-    });
+    };
+
+    loadSessionDetail();
+
+    const poll = window.setInterval(loadSessionDetail, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(poll);
+    };
   }, [id]);
 
   useEffect(() => {
