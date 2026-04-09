@@ -89,9 +89,39 @@ export default function Projects() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {new Date(project.created_at).toLocaleDateString("fr-FR")}
-                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(project.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                      <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                          <Link to={`/projects/${project.id}/edit`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(project.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>
