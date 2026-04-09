@@ -457,12 +457,11 @@ export default function InterviewStart() {
         ? Math.round((Date.now() - interviewStartTimeRef.current) / 1000)
         : null;
 
-      // Update session status to completed with video URL
+      // Update session status to completed
       await supabase.from("sessions").update({
         status: "completed" as any,
         completed_at: new Date().toISOString(),
         ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-        ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
 
       // Trigger report generation — messages already saved in real-time
