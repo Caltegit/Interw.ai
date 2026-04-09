@@ -327,7 +327,13 @@ export default function InterviewStart() {
         completed_at: new Date().toISOString(),
         ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
-    }
+
+      // Trigger report generation (async, don't block navigation)
+      supabase.functions.invoke("generate-report", {
+        body: { session_id: session.id },
+      }).then(({ error }) => {
+        if (error) console.error("Report generation error:", error);
+      });
 
     navigate(`/interview/${slug}/complete`);
   };
