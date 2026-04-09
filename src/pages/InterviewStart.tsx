@@ -49,6 +49,8 @@ export default function InterviewStart() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
+  const questionVideoChunksRef = useRef<Blob[]>([]);
+  const questionRecorderRef = useRef<MediaRecorder | null>(null);
 
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (sessionId: string, role: "ai" | "candidate", content: string) => {
@@ -215,12 +217,58 @@ export default function InterviewStart() {
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunksRef.current.push(e.data);
       };
-      mediaRecorder.start(1000); // collect chunks every second
+      mediaRecorder.start(1000);
     } catch (err) {
       console.error("Camera access error:", err);
       toast({ title: "Caméra inaccessible", description: "Veuillez autoriser l'accès à la caméra.", variant: "destructive" });
     }
   }, [toast]);
+
+  // Start a per-question video recorder (uses same stream)
+  const startQuestionRecording = useCallback(() => {
+    if (!streamRef.current) return;
+    questionVideoChunksRef.current = [];
+    try {
+      const recorder = new MediaRecorder(streamRef.current, { mimeType: "video/webm" });
+      questionRecorderRef.current = recorder;
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) questionVideoChunksRef.current.push(e.data);
+      };
+      recorder.start(500);
+    } catch (e) {
+      console.error("Question recorder error:", e);
+    }
+  }, []);
+
+  // Stop per-question recorder and upload the video segment
+  const stopAndUploadQuestionVideo = useCallback(async (sessionId: string, questionIndex: number): Promise<string | null> => {
+    const recorder = questionRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return null;
+    
+    await new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve();
+      recorder.stop();
+    });
+    questionRecorderRef.current = null;
+
+    if (questionVideoChunksRef.current.length === 0) return null;
+
+    const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
+    questionVideoChunksRef.current = [];
+    const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+    
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from("media")
+        .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+      if (uploadError) { console.error("Question video upload error:", uploadError); return null; }
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
+      return urlData.publicUrl;
+    } catch (e) {
+      console.error("Question video upload exception:", e);
+      return null;
+    }
+  }, []);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
@@ -265,6 +313,8 @@ export default function InterviewStart() {
 
     // Speak the greeting (now in user gesture context — works on mobile)
     await speak(greeting);
+    // Start recording video for question 1
+    startQuestionRecording();
     startListening();
   };
 
@@ -279,14 +329,40 @@ export default function InterviewStart() {
       return;
     }
 
+    // Stop question video recording and upload in background
+    const questionIdx = currentQuestionIndex;
+    let questionVideoPromise: Promise<string | null> = Promise.resolve(null);
+    if (session?.id) {
+      questionVideoPromise = stopAndUploadQuestionVideo(session.id, questionIdx);
+    }
+
     // Add candidate message to UI
     setMessages((prev) => {
       const updated = [...prev, { role: "candidate", content: transcript }];
       messagesRef.current = updated;
       return updated;
     });
-    // Persist candidate message immediately
-    if (session?.id) persistMessage(session.id, "candidate", transcript);
+    // Persist candidate message with video URL (will be updated after upload)
+    const persistAndAttachVideo = async () => {
+      const videoUrl = await questionVideoPromise;
+      if (session?.id) {
+        try {
+          const { error } = await supabase.from("session_messages").insert({
+            session_id: session.id,
+            role: "candidate" as any,
+            content: transcript,
+            question_id: questions[questionIdx]?.id || null,
+            is_follow_up: false,
+            video_segment_url: videoUrl,
+          });
+          if (error) console.error("Failed to persist candidate message:", error);
+        } catch (e) {
+          console.error("persistMessage exception:", e);
+        }
+      }
+    };
+    persistAndAttachVideo();
+
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
@@ -327,7 +403,7 @@ export default function InterviewStart() {
       if (session?.id) persistMessage(session.id, "ai", aiResponse);
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
-      // Check if interview is over (AI says "terminé" in response)
+      // Check if interview is over
       const isOver = aiResponse.toLowerCase().includes("terminé") && currentQuestionIndex >= questions.length - 1;
 
       if (isOver) {
@@ -341,15 +417,17 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI response, then resume listening
+      // Speak AI response, then resume listening + start new question recording
       await speak(aiResponse);
       if (!isOver) {
+        startQuestionRecording();
         startListening();
       }
     } catch (e: any) {
       console.error("AI conversation error:", e);
       setIsProcessing(false);
       toast({ title: "Erreur", description: "Impossible de contacter l'IA. Veuillez réessayer.", variant: "destructive" });
+      startQuestionRecording();
       startListening();
     }
   };
@@ -382,6 +460,11 @@ export default function InterviewStart() {
             videoUrl = urlData.publicUrl;
           }
         }
+      }
+
+      // Stop per-question recorder if still running
+      if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+        await stopAndUploadQuestionVideo(session.id, currentQuestionIndex);
       }
 
       // Stop camera stream

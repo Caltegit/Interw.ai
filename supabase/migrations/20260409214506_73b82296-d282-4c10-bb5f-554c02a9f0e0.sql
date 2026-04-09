@@ -1,0 +1,1 @@
+ALTER TABLE public.session_messages ADD COLUMN video_segment_url text DEFAULT NULL;

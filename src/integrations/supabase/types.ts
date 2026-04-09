@@ -351,6 +351,7 @@ export type Database = {
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
           timestamp: string
+          video_segment_url: string | null
         }
         Insert: {
           audio_segment_url?: string | null
@@ -361,6 +362,7 @@ export type Database = {
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
           timestamp?: string
+          video_segment_url?: string | null
         }
         Update: {
           audio_segment_url?: string | null
@@ -371,6 +373,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["message_role"]
           session_id?: string
           timestamp?: string
+          video_segment_url?: string | null
         }
         Relationships: [
           {
