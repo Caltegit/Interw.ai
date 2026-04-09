@@ -5,8 +5,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FolderKanban, Users, CheckCircle, TrendingUp } from "lucide-react";
+import { Plus, FolderKanban, Users, CheckCircle, TrendingUp, Trash2 } from "lucide-react";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export default function Dashboard() {
   const { user } = useAuth();
