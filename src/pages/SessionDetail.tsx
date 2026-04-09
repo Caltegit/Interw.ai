@@ -41,10 +41,6 @@ export default function SessionDetail() {
 
       if (cancelled) return;
 
-      console.log("[SessionDetail] messages loaded:", mRes.data?.length, "errors:", mRes.error);
-      console.log("[SessionDetail] candidate videos:", mRes.data?.filter((m: any) => m.role === "candidate" && m.video_segment_url).length);
-      if (mRes.error) console.error("[SessionDetail] messages error:", mRes.error);
-
       setSession(sRes.data);
       setReport(rRes.data ?? null);
       setMessages(mRes.data ?? []);
@@ -167,7 +163,7 @@ export default function SessionDetail() {
               {primaryVideoUrl ? (
                 <div className="space-y-3">
                   <div className="relative rounded-lg overflow-hidden bg-muted aspect-video">
-                    <video src={primaryVideoUrl} controls className="w-full h-full object-contain" preload="metadata" />
+                    <video src={primaryVideoUrl} controls playsInline className="w-full h-full object-contain" preload="metadata" />
                   </div>
                   {!session.video_recording_url && candidateVideos.length > 0 && (
                     <p className="text-xs text-muted-foreground">
@@ -216,15 +212,15 @@ export default function SessionDetail() {
 
         <div>
           <Tabs defaultValue="transcript">
-            <TabsList className="w-full">
-              <TabsTrigger value="transcript" className="flex-1">
-                <MessageSquare className="h-4 w-4 mr-1" /> Transcription ({messages.length})
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="transcript" className="flex items-center justify-center gap-1">
+                <MessageSquare className="h-4 w-4" /> <span>Transcription ({messages.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="videos" className="flex-1">
-                <Play className="h-4 w-4 mr-1" /> Vidéos
+              <TabsTrigger value="videos" className="flex items-center justify-center gap-1">
+                <Play className="h-4 w-4" /> <span>Vidéos</span>
               </TabsTrigger>
-              <TabsTrigger value="report" className="flex-1">
-                📊 Rapport
+              <TabsTrigger value="report" className="flex items-center justify-center gap-1">
+                <span>📊</span> <span>Rapport</span>
               </TabsTrigger>
             </TabsList>
 
@@ -279,7 +275,7 @@ export default function SessionDetail() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div className="rounded-lg overflow-hidden bg-muted aspect-video">
-                        <video src={m.video_segment_url} controls preload="metadata" className="w-full h-full object-contain" />
+                        <video src={m.video_segment_url} controls playsInline preload="metadata" className="w-full h-full object-contain" />
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2">{m.content}</p>
                     </CardContent>
