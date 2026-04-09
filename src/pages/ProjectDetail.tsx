@@ -52,11 +52,41 @@ export default function ProjectDetail() {
           <h1 className="text-2xl font-bold">{project.title}</h1>
           <p className="text-muted-foreground">{project.job_title}</p>
         </div>
-        <div className="flex gap-2">
-          <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
-          <Button variant="outline" size="sm" onClick={copyProjectLink}>
-            <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2 items-center">
+            <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
+            <Button variant="outline" size="sm" onClick={copyProjectLink}>
+              <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/projects/${project.id}/edit`}>
+                <Pencil className="mr-1 h-4 w-4" /> Modifier
+              </Link>
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-1 h-4 w-4" /> Supprimer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
