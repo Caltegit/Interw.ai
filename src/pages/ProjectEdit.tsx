@@ -149,6 +149,15 @@ export default function ProjectEdit() {
               </SelectContent>
             </Select>
           </div>
+
+          {id && (
+            <IntroAudioRecorder
+              projectId={id}
+              existingUrl={introAudioUrl}
+              onUploaded={setIntroAudioUrl}
+            />
+          )}
+
           <div>
             <Label>Durée maximale : {maxDuration} min</Label>
             <input type="range" min={15} max={60} value={maxDuration} onChange={(e) => setMaxDuration(Number(e.target.value))} className="w-full" />
