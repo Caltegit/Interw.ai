@@ -131,7 +131,7 @@ export default function SharedReport() {
                 <ul className="space-y-1">
                   {(report.strengths as string[]).map((s: string, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-green-600 mt-0.5">✓</span> {s}
+                      <span className="text-success mt-0.5">✓</span> {s}
                     </li>
                   ))}
                 </ul>
@@ -146,7 +146,7 @@ export default function SharedReport() {
                 <ul className="space-y-1">
                   {(report.areas_for_improvement as string[]).map((s: string, i: number) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-amber-500 mt-0.5">⚠</span> {s}
+                      <span className="text-warning mt-0.5">⚠</span> {s}
                     </li>
                   ))}
                 </ul>
