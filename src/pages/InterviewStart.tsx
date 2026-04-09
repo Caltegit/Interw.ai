@@ -42,8 +42,6 @@ export default function InterviewStart() {
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,6 +49,7 @@ export default function InterviewStart() {
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
+  const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
 
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (
