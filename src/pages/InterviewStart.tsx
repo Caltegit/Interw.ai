@@ -32,6 +32,7 @@ export default function InterviewStart() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [readyToStart, setReadyToStart] = useState(false);
   const [interviewFinished, setInterviewFinished] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
