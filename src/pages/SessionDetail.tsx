@@ -323,6 +323,36 @@ export default function SessionDetail() {
                     </Card>
                   )}
 
+                  {/* Évaluations par question avec vidéo */}
+                  {report.question_evaluations && Object.keys(report.question_evaluations as Record<string, any>).length > 0 && (
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">Évaluations par question</CardTitle></CardHeader>
+                      <CardContent className="space-y-6">
+                        {Object.entries(report.question_evaluations as Record<string, any>).map(([key, val]: [string, any]) => {
+                          // Find matching candidate message with video for this question index
+                          const qIndex = parseInt(key);
+                          const candidateVideos = messages.filter((m: any) => m.role === "candidate" && m.video_segment_url);
+                          const matchingVideo = candidateVideos[qIndex] || candidateVideos[qIndex - 1];
+
+                          return (
+                            <div key={key} className="space-y-2 pb-4 border-b last:border-0 last:pb-0">
+                              <div className="flex justify-between items-start gap-2">
+                                <p className="text-sm font-medium flex-1">{val.question || `Question ${parseInt(key) + 1}`}</p>
+                                <Badge variant="outline" className="shrink-0">{val.score}/10</Badge>
+                              </div>
+                              {matchingVideo?.video_segment_url && (
+                                <div className="rounded-lg overflow-hidden bg-muted aspect-video max-w-sm">
+                                  <video src={matchingVideo.video_segment_url} controls preload="metadata" className="w-full h-full object-contain" />
+                                </div>
+                              )}
+                              {val.comment && <p className="text-xs text-muted-foreground">{val.comment}</p>}
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  )
+
                   <Card>
                     <CardHeader><CardTitle className="text-base">Notes recruteur</CardTitle></CardHeader>
                     <CardContent>
