@@ -50,8 +50,23 @@ export default function InterviewStart() {
 
   const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
   const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
+  // Reset silence timer (called on any activity)
+  const resetSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        console.log("Auto-ending interview: 45s silence");
+        toast({ title: "Entretien terminé", description: "Fin automatique après 45 secondes de silence." });
+        endInterviewRef.current?.();
+      }
+    }, SILENCE_TIMEOUT_MS);
+  }, [toast]);
 
-  // Auto-scroll messages
+  // Ref to endInterview so timers can call it without stale closures
+  const endInterviewRef = useRef<(() => void) | null>(null);
+
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
