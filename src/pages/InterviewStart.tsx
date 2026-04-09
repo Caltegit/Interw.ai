@@ -376,12 +376,33 @@ export default function InterviewStart() {
     navigate(`/interview/${slug}/complete`);
   };
 
+  // Keep endInterviewRef in sync
+  useEffect(() => {
+    endInterviewRef.current = endInterview;
+  });
+
+  // Reset silence timer on candidate speech activity
+  useEffect(() => {
+    if (liveTranscript) {
+      resetSilenceTimer();
+    }
+  }, [liveTranscript, resetSilenceTimer]);
+
+  // Also reset silence timer when AI speaks or processing
+  useEffect(() => {
+    if (isSpeaking || isProcessing) {
+      resetSilenceTimer();
+    }
+  }, [isSpeaking, isProcessing, resetSilenceTimer]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopListening();
       window.speechSynthesis?.cancel();
       streamRef.current?.getTracks().forEach(t => t.stop());
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     };
   }, [stopListening]);
 
