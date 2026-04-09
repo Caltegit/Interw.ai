@@ -17,6 +17,13 @@ export default function InterviewLanding() {
   const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
 
+  // Intro audio intermediate screen state
+  const [showIntroAudio, setShowIntroAudio] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [audioFinished, setAudioFinished] = useState(false);
+  const introAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     if (!slug) return;
     const load = async () => {
@@ -65,7 +72,34 @@ export default function InterviewLanding() {
       return;
     }
 
-    navigate(`/interview/${slug}/start/${session.token}`);
+    // If project has intro audio, show intermediate screen
+    if (project.intro_audio_url) {
+      setSessionToken(session.token);
+      setShowIntroAudio(true);
+      setStarting(false);
+    } else {
+      navigate(`/interview/${slug}/start/${session.token}`);
+    }
+  };
+
+  const handlePlayIntroAudio = () => {
+    if (!introAudioRef.current) return;
+    introAudioRef.current.play().catch(() => {
+      // If playback fails, let them proceed anyway
+      setAudioFinished(true);
+    });
+    setAudioPlaying(true);
+  };
+
+  const handleAudioEnded = () => {
+    setAudioPlaying(false);
+    setAudioFinished(true);
+  };
+
+  const handleProceedToInterview = () => {
+    if (sessionToken) {
+      navigate(`/interview/${slug}/start/${sessionToken}`);
+    }
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
@@ -76,6 +110,66 @@ export default function InterviewLanding() {
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12">
             <p className="text-lg font-medium text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Intermediate screen: intro audio from recruiter
+  if (showIntroAudio) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-10 space-y-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+              <Volume2 className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold">Message du recruteur</h2>
+              <p className="text-sm text-muted-foreground">
+                Écoutez ce message avant de commencer votre entretien.
+              </p>
+            </div>
+
+            <audio
+              ref={introAudioRef}
+              src={project.intro_audio_url}
+              onEnded={handleAudioEnded}
+              className="hidden"
+            />
+
+            {!audioPlaying && !audioFinished && (
+              <Button size="lg" className="w-full" onClick={handlePlayIntroAudio}>
+                <Play className="mr-2 h-5 w-5" />
+                Écouter le message
+              </Button>
+            )}
+
+            {audioPlaying && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-2 text-primary">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                  <span className="text-sm font-medium">Lecture en cours...</span>
+                </div>
+                <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "100%" }} />
+                </div>
+              </div>
+            )}
+
+            {audioFinished && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="text-sm font-medium">Message écouté</span>
+                </div>
+                <Button size="lg" className="w-full" onClick={handleProceedToInterview}>
+                  <Mic className="mr-2 h-5 w-5" />
+                  Commencer l'entretien
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -111,21 +205,6 @@ export default function InterviewLanding() {
           </div>
         )}
 
-        {(project as any)?.intro_audio_url && (
-          <Card>
-            <CardContent className="py-4">
-              <div className="flex items-center gap-3">
-                <Volume2 className="h-5 w-5 text-primary shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Message du recruteur</p>
-                  <p className="text-xs text-muted-foreground">Écoutez ce message avant de commencer</p>
-                </div>
-              </div>
-              <audio src={(project as any).intro_audio_url} controls className="w-full mt-3" />
-            </CardContent>
-          </Card>
-        )}
-
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="space-y-2">
@@ -143,7 +222,7 @@ export default function InterviewLanding() {
               disabled={!candidateName.trim() || !candidateEmail.trim() || starting}
             >
               <CheckCircle className="mr-2 h-5 w-5" />
-              {starting ? "Démarrage..." : "Commencer l'entretien"}
+              {starting ? "Démarrage..." : "Continuer"}
             </Button>
           </CardContent>
         </Card>
