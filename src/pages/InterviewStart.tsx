@@ -475,9 +475,51 @@ export default function InterviewStart() {
             )}
           </div>
 
-          <div className="lg:col-span-3 flex flex-col">
-            <Card className="flex-1 mb-4">
-              <CardContent className="p-4 max-h-96 overflow-y-auto space-y-3">
+          <div className="lg:col-span-3 flex flex-col justify-center">
+            {/* Action button - centered */}
+            <div className="flex flex-col items-center gap-4 mb-6">
+              {interviewFinished ? (
+                <Button className="w-full max-w-sm" size="lg" variant="destructive" onClick={endInterview}>
+                  Terminer l'entretien
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    className="w-full max-w-sm h-14 text-base"
+                    size="lg"
+                    onClick={handleSendResponse}
+                    disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
+                  >
+                    {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={isListening ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => isListening ? stopListening() : startListening()}
+                      disabled={isSpeaking || isProcessing}
+                    >
+                      {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
+                      <PhoneOff className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Live transcript preview */}
+            {isListening && liveTranscript && (
+              <div className="p-3 rounded-lg text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-4">
+                <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
+                <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
+              </div>
+            )}
+
+            {/* Conversation history - scrollable below */}
+            <Card>
+              <CardContent className="p-4 max-h-48 overflow-y-auto space-y-3">
                 {messages.map((m, i) => (
                   <div key={i} className={`p-3 rounded-lg text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-8"}`}>
                     <span className="text-xs font-medium text-muted-foreground">
@@ -486,47 +528,9 @@ export default function InterviewStart() {
                     <p className="mt-1">{m.content}</p>
                   </div>
                 ))}
-
-                {/* Live transcript preview */}
-                {isListening && liveTranscript && (
-                  <div className="p-3 rounded-lg text-sm bg-muted/50 ml-8 border border-dashed border-muted-foreground/30">
-                    <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
-                    <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
-                  </div>
-                )}
-
                 <div ref={messagesEndRef} />
               </CardContent>
             </Card>
-
-            <div className="flex gap-2">
-              {interviewFinished ? (
-                <Button className="flex-1" variant="destructive" onClick={endInterview}>
-                  Terminer l'entretien
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    variant={isListening ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => isListening ? stopListening() : startListening()}
-                    disabled={isSpeaking || isProcessing}
-                  >
-                    {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    onClick={handleSendResponse}
-                    disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
-                  >
-                    {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
-                  </Button>
-                  <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
-                    <PhoneOff className="h-5 w-5" />
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
         </div>
       </div>
