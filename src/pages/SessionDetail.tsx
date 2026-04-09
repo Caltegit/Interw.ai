@@ -351,7 +351,7 @@ export default function SessionDetail() {
                         })}
                       </CardContent>
                     </Card>
-                  )
+                  )}
 
                   <Card>
                     <CardHeader><CardTitle className="text-base">Notes recruteur</CardTitle></CardHeader>
