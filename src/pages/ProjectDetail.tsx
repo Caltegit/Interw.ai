@@ -42,6 +42,16 @@ export default function ProjectDetail() {
     toast({ title: "Lien copié !" });
   };
 
+  const handleDelete = async () => {
+    const { error } = await supabase.from("projects").delete().eq("id", id!);
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+    } else {
+      toast({ title: "Projet supprimé" });
+      navigate("/projects");
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!project) return <p>Projet introuvable</p>;
 
