@@ -235,6 +235,44 @@ export type Database = {
           },
         ]
       }
+      report_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          report_id: string
+          share_token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          report_id: string
+          share_token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          report_id?: string
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_shares_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           areas_for_improvement: string[] | null
