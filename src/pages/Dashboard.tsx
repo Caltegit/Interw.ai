@@ -102,12 +102,13 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 font-medium">Candidat</th>
-                    <th className="pb-2 font-medium">Poste</th>
-                    <th className="pb-2 font-medium">Statut</th>
-                    <th className="pb-2 font-medium">Date</th>
-                  </tr>
+                   <tr className="border-b text-left text-muted-foreground">
+                     <th className="pb-2 font-medium">Candidat</th>
+                     <th className="pb-2 font-medium">Poste</th>
+                     <th className="pb-2 font-medium">Statut</th>
+                     <th className="pb-2 font-medium">Date</th>
+                     <th className="pb-2 font-medium"></th>
+                   </tr>
                 </thead>
                 <tbody>
                   {recentSessions.map((session) => (
@@ -117,9 +118,16 @@ export default function Dashboard() {
                       <td className="py-3">
                         <SessionStatusBadge status={session.status} />
                       </td>
-                      <td className="py-3 text-muted-foreground">
-                        {new Date(session.created_at).toLocaleDateString("fr-FR")}
-                      </td>
+                       <td className="py-3 text-muted-foreground">
+                         {new Date(session.created_at).toLocaleDateString("fr-FR")}
+                       </td>
+                       <td className="py-3">
+                         {session.status === "completed" && (
+                           <Button variant="ghost" size="sm" asChild>
+                             <Link to={`/sessions/${session.id}`}>Voir</Link>
+                           </Button>
+                         )}
+                       </td>
                     </tr>
                   ))}
                 </tbody>
