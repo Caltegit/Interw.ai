@@ -193,6 +193,9 @@ export default function SessionDetail() {
               <TabsTrigger value="transcript" className="flex-1">
                 <MessageSquare className="h-4 w-4 mr-1" /> Transcription ({messages.length})
               </TabsTrigger>
+              <TabsTrigger value="videos" className="flex-1">
+                <Play className="h-4 w-4 mr-1" /> Vidéos
+              </TabsTrigger>
               <TabsTrigger value="report" className="flex-1">
                 📊 Rapport
               </TabsTrigger>
