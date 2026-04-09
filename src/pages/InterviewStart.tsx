@@ -50,6 +50,22 @@ export default function InterviewStart() {
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
 
+  // Helper: persist a single message to DB immediately
+  const persistMessage = useCallback(async (sessionId: string, role: "ai" | "candidate", content: string) => {
+    try {
+      const { error } = await supabase.from("session_messages").insert({
+        session_id: sessionId,
+        role,
+        content,
+        question_id: null,
+        is_follow_up: false,
+      });
+      if (error) console.error("Failed to persist message:", error);
+    } catch (e) {
+      console.error("persistMessage exception:", e);
+    }
+  }, []);
+
   const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
   const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
   // Reset silence timer (called on any activity)
