@@ -244,6 +244,9 @@ export default function InterviewStart() {
     messagesRef.current = [{ role: "ai", content: greeting }];
     setAiMessages([aiMsg]);
 
+    // Persist greeting to DB immediately
+    persistMessage(session.id, "ai", greeting);
+
     // Speak the greeting (now in user gesture context — works on mobile)
     await speak(greeting);
     startListening();
