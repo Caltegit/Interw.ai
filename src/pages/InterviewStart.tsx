@@ -462,6 +462,11 @@ export default function InterviewStart() {
         }
       }
 
+      // Stop per-question recorder if still running
+      if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+        await stopAndUploadQuestionVideo(session.id, currentQuestionIndex);
+      }
+
       // Stop camera stream
       streamRef.current?.getTracks().forEach(t => t.stop());
 
