@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ALTER COLUMN status SET DEFAULT 'active'::project_status;
