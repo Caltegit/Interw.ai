@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import { ArrowLeft, Clock, Calendar, Video, MessageSquare, Share2, Copy, Check } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, Video, MessageSquare, Share2, Copy, Check, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SessionDetail() {
