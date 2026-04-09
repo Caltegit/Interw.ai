@@ -355,8 +355,9 @@ export default function InterviewStart() {
       // Stop camera stream
       streamRef.current?.getTracks().forEach(t => t.stop());
 
-      // Save all messages to session_messages
-      const messagesToSave = messages.map((m) => ({
+      // Save all messages to session_messages — use ref to avoid stale closure
+      const currentMessages = messagesRef.current;
+      const messagesToSave = currentMessages.map((m) => ({
         session_id: session.id,
         role: m.role === "ai" ? "ai" as const : "candidate" as const,
         content: m.content,
@@ -365,25 +366,36 @@ export default function InterviewStart() {
       }));
 
       if (messagesToSave.length > 0) {
-        await supabase.from("session_messages").insert(messagesToSave);
+        const { error: msgError } = await supabase.from("session_messages").insert(messagesToSave);
+        if (msgError) {
+          console.error("Failed to save messages:", msgError);
+        }
       }
+
+      // Calculate duration
+      const durationSeconds = interviewStartTimeRef.current
+        ? Math.round((Date.now() - interviewStartTimeRef.current) / 1000)
+        : null;
 
       // Update session status to completed with video URL
       await supabase.from("sessions").update({
         status: "completed" as any,
         completed_at: new Date().toISOString(),
+        ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
         ...(videoUrl ? { video_recording_url: videoUrl } : {}),
       }).eq("id", session.id);
 
-      // Trigger report generation (async, don't block navigation)
-      supabase.functions.invoke("generate-report", {
-        body: { session_id: session.id },
-      }).then(({ error }) => {
-        if (error) console.error("Report generation error:", error);
-      });
-    }
-
-    navigate(`/interview/${slug}/complete`);
+      // Trigger report generation — AWAIT to ensure it completes before navigation
+      if (messagesToSave.length > 0) {
+        try {
+          const { error: reportError } = await supabase.functions.invoke("generate-report", {
+            body: { session_id: session.id },
+          });
+          if (reportError) console.error("Report generation error:", reportError);
+        } catch (e) {
+          console.error("Report generation exception:", e);
+        }
+      }
   };
 
   // Keep endInterviewRef in sync
