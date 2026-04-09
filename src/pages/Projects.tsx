@@ -17,6 +17,7 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 
 export default function Projects() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
