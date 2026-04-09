@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 import { StepQuestions } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
+import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 
 const STEPS = ["Informations", "Médias", "Questions", "Critères", "Publication"];
 
@@ -34,6 +35,8 @@ export default function ProjectNew() {
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
+  const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);
 
   // Step 3
   const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
@@ -70,7 +73,6 @@ export default function ProjectNew() {
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now().toString(36);
 
-      // Upload avatar if provided
       let avatarUrl: string | null = null;
       if (avatarFile) {
         const ext = avatarFile.name.split(".").pop() || "png";
@@ -91,20 +93,39 @@ export default function ProjectNew() {
           description,
           language,
           ai_persona_name: aiPersonaName,
-          ai_voice: aiVoice as any,
+          ai_voice: aiVoice as never,
           max_duration_minutes: maxDuration,
           record_audio: recordAudio,
           record_video: recordVideo,
           status,
           slug,
           avatar_image_url: avatarUrl,
+          intro_audio_url: null,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Insert questions
+      if (introAudioBlob) {
+        const introPath = `intro/${project.id}.webm`;
+        const { error: introUploadError } = await supabase.storage
+          .from("media")
+          .upload(introPath, introAudioBlob, { contentType: "audio/webm", upsert: true });
+
+        if (introUploadError) throw introUploadError;
+
+        const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
+        const introAudioUrl = introUrlData.publicUrl;
+
+        const { error: introUpdateError } = await supabase
+          .from("projects")
+          .update({ intro_audio_url: introAudioUrl } as never)
+          .eq("id", project.id);
+
+        if (introUpdateError) throw introUpdateError;
+      }
+
       const validQuestions = questions.filter((q) => q.content.trim());
       if (validQuestions.length > 0) {
         await supabase.from("questions").insert(
@@ -112,14 +133,13 @@ export default function ProjectNew() {
             project_id: project.id,
             order_index: i,
             content: q.content,
-            type: q.type as any,
+            type: q.type as never,
             follow_up_enabled: q.follow_up_enabled,
             max_follow_ups: q.max_follow_ups,
           }))
         );
       }
 
-      // Insert criteria
       const validCriteria = criteria.filter((c) => c.label.trim());
       if (validCriteria.length > 0) {
         await supabase.from("evaluation_criteria").insert(
@@ -129,14 +149,13 @@ export default function ProjectNew() {
             label: c.label,
             description: c.description,
             weight: c.weight,
-            scoring_scale: c.scoring_scale as any,
+            scoring_scale: c.scoring_scale as never,
             anchors: c.anchors,
-            applies_to: c.applies_to as any,
+            applies_to: c.applies_to as never,
           }))
         );
       }
 
-      // Vérification que le lien candidat est fonctionnel
       const { data: check } = await supabase
         .from("projects")
         .select("id, status, slug")
@@ -166,7 +185,6 @@ export default function ProjectNew() {
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold">Nouveau projet</h1>
 
-      {/* Stepper */}
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
           <div key={s} className="flex items-center gap-2">
@@ -176,13 +194,13 @@ export default function ProjectNew() {
                 i === step
                   ? "bg-primary text-primary-foreground"
                   : i < step
-                  ? "bg-primary/20 text-primary cursor-pointer"
-                  : "bg-muted text-muted-foreground"
+                    ? "cursor-pointer bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
               }`}
             >
               {i + 1}
             </button>
-            <span className={`text-sm hidden sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>{s}</span>
+            <span className={`hidden text-sm sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>{s}</span>
             {i < STEPS.length - 1 && <div className="h-px w-4 bg-border sm:w-8" />}
           </div>
         ))}
@@ -190,7 +208,6 @@ export default function ProjectNew() {
 
       <Card>
         <CardContent className="pt-6">
-          {/* Step 1: General Info */}
           {step === 0 && (
             <div className="space-y-4">
               <div>
@@ -204,7 +221,7 @@ export default function ProjectNew() {
               <div>
                 <Label>Description du poste</Label>
                 <Textarea placeholder="Décrivez le poste..." value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
-                <p className="text-xs text-muted-foreground mt-1">{description.length}/500</p>
+                <p className="mt-1 text-xs text-muted-foreground">{description.length}/500</p>
               </div>
               <div>
                 <Label>Langue de l'entretien</Label>
@@ -219,29 +236,32 @@ export default function ProjectNew() {
             </div>
           )}
 
-          {/* Step 2: Media */}
           {step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label>Nom du persona IA</Label>
                 <Input placeholder="Sophie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
+
               <div>
                 <Label>Photo de l'avatar</Label>
-                <div className="flex items-center gap-4 mt-2">
+                <div className="mt-2 flex items-center gap-4">
                   {avatarPreview ? (
                     <div className="relative">
-                      <img src={avatarPreview} alt="Avatar" className="h-20 w-20 rounded-full object-cover border-2 border-border" />
+                      <img src={avatarPreview} alt="Avatar" className="h-20 w-20 rounded-full border-2 border-border object-cover" />
                       <button
                         type="button"
-                        onClick={() => { setAvatarFile(null); setAvatarPreview(null); }}
-                        className="absolute -top-1 -right-1 rounded-full bg-destructive text-destructive-foreground p-0.5"
+                        onClick={() => {
+                          setAvatarFile(null);
+                          setAvatarPreview(null);
+                        }}
+                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
                       >
                         <X className="h-3 w-3" />
                       </button>
                     </div>
                   ) : (
-                    <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border hover:border-primary transition-colors">
+                    <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border transition-colors hover:border-primary">
                       <Upload className="h-6 w-6 text-muted-foreground" />
                       <input
                         type="file"
@@ -260,6 +280,7 @@ export default function ProjectNew() {
                   <p className="text-sm text-muted-foreground">JPG, PNG — affiché pendant l'entretien candidat</p>
                 </div>
               </div>
+
               <div>
                 <Label>Voix IA</Label>
                 <Select value={aiVoice} onValueChange={setAiVoice}>
@@ -272,21 +293,25 @@ export default function ProjectNew() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="rounded-lg border border-border p-4">
+                <IntroAudioRecorder
+                  existingUrl={introAudioPreviewUrl}
+                  onAudioReady={({ blob, previewUrl }) => {
+                    setIntroAudioBlob(blob);
+                    setIntroAudioPreviewUrl(previewUrl);
+                  }}
+                />
+              </div>
+
               <p className="text-sm text-muted-foreground">L'upload de vidéo de présentation sera disponible prochainement.</p>
             </div>
           )}
 
-          {/* Step 3: Questions */}
-          {step === 2 && (
-            <StepQuestions questions={questions} setQuestions={setQuestions} />
-          )}
+          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
 
-          {/* Step 4: Criteria */}
-          {step === 3 && (
-            <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />
-          )}
+          {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
-          {/* Step 5: Settings */}
           {step === 4 && (
             <div className="space-y-4">
               <div>
@@ -312,10 +337,9 @@ export default function ProjectNew() {
                 </Select>
               </div>
 
-              {/* Summary */}
               <Card className="bg-muted/50">
                 <CardHeader><CardTitle className="text-sm">Récapitulatif</CardTitle></CardHeader>
-                <CardContent className="text-sm space-y-1">
+                <CardContent className="space-y-1 text-sm">
                   <p><strong>Titre :</strong> {title}</p>
                   <p><strong>Poste :</strong> {jobTitle}</p>
                   <p><strong>Langue :</strong> {language === "fr" ? "Français" : "English"}</p>
@@ -323,6 +347,7 @@ export default function ProjectNew() {
                   <p><strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}</p>
                   <p><strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}</p>
                   <p><strong>Durée max :</strong> {maxDuration} min</p>
+                  <p><strong>Message vocal :</strong> {introAudioPreviewUrl ? "Oui" : "Non"}</p>
                 </CardContent>
               </Card>
             </div>
@@ -330,7 +355,6 @@ export default function ProjectNew() {
         </CardContent>
       </Card>
 
-      {/* Navigation */}
       <div className="flex justify-between">
         <Button variant="outline" onClick={() => setStep(step - 1)} disabled={step === 0}>
           <ChevronLeft className="mr-2 h-4 w-4" /> Précédent

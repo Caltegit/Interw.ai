@@ -6,21 +6,29 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic, Square, Trash2, Play, Pause, Upload } from "lucide-react";
 
 interface IntroAudioRecorderProps {
-  projectId: string;
-  existingUrl: string | null;
-  onUploaded: (url: string | null) => void;
+  projectId?: string;
+  existingUrl?: string | null;
+  onUploaded?: (url: string | null) => void;
+  onAudioReady?: (audio: { blob: Blob | null; previewUrl: string | null }) => void;
 }
 
-export function IntroAudioRecorder({ projectId, existingUrl, onUploaded }: IntroAudioRecorderProps) {
+export function IntroAudioRecorder({
+  projectId,
+  existingUrl = null,
+  onUploaded,
+  onAudioReady,
+}: IntroAudioRecorderProps) {
   const { toast } = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(existingUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+
+  const isPersistedMode = Boolean(projectId);
 
   useEffect(() => {
     setAudioUrl(existingUrl);
@@ -38,11 +46,12 @@ export function IntroAudioRecorder({ projectId, existingUrl, onUploaded }: Intro
       };
 
       mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const previewUrl = URL.createObjectURL(blob);
         setRecordedBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+        setAudioUrl(previewUrl);
+        onAudioReady?.({ blob, previewUrl });
       };
 
       mediaRecorder.start(500);
@@ -58,7 +67,8 @@ export function IntroAudioRecorder({ projectId, existingUrl, onUploaded }: Intro
   };
 
   const uploadAudio = async () => {
-    if (!recordedBlob) return;
+    if (!recordedBlob || !projectId) return;
+
     setUploading(true);
     try {
       const fileName = `intro/${projectId}.webm`;
@@ -73,14 +83,15 @@ export function IntroAudioRecorder({ projectId, existingUrl, onUploaded }: Intro
 
       const { error: updateError } = await supabase
         .from("projects")
-        .update({ intro_audio_url: publicUrl } as any)
+        .update({ intro_audio_url: publicUrl } as never)
         .eq("id", projectId);
 
       if (updateError) throw updateError;
 
       setAudioUrl(publicUrl);
       setRecordedBlob(null);
-      onUploaded(publicUrl);
+      onUploaded?.(publicUrl);
+      onAudioReady?.({ blob: null, previewUrl: publicUrl });
       toast({ title: "Message vocal enregistré !" });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
@@ -91,79 +102,101 @@ export function IntroAudioRecorder({ projectId, existingUrl, onUploaded }: Intro
 
   const deleteAudio = async () => {
     try {
-      await supabase.storage.from("media").remove([`intro/${projectId}.webm`]);
-      await supabase.from("projects").update({ intro_audio_url: null } as any).eq("id", projectId);
+      if (projectId) {
+        await supabase.storage.from("media").remove([`intro/${projectId}.webm`]);
+        await supabase.from("projects").update({ intro_audio_url: null } as never).eq("id", projectId);
+      }
+
+      if (audioUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(audioUrl);
+      }
+
       setAudioUrl(null);
       setRecordedBlob(null);
-      onUploaded(null);
+      setIsPlaying(false);
+      onUploaded?.(null);
+      onAudioReady?.({ blob: null, previewUrl: null });
       toast({ title: "Message vocal supprimé" });
     } catch {
       toast({ title: "Erreur lors de la suppression", variant: "destructive" });
     }
   };
 
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (!audioRef.current) return;
+
     if (isPlaying) {
       audioRef.current.pause();
-    } else {
-      audioRef.current.play();
+      setIsPlaying(false);
+      return;
     }
-    setIsPlaying(!isPlaying);
+
+    try {
+      await audioRef.current.play();
+      setIsPlaying(true);
+    } catch {
+      toast({ title: "Lecture impossible", variant: "destructive" });
+    }
   };
 
   return (
     <div className="space-y-3">
-      <Label>Message vocal d'introduction (optionnel)</Label>
-      <p className="text-xs text-muted-foreground">
-        Enregistrez un message qui sera joué au candidat avant le début de l'entretien.
-      </p>
+      <div className="space-y-1">
+        <Label>Message vocal d'introduction (optionnel)</Label>
+        <p className="text-xs text-muted-foreground">
+          Enregistrez un message qui sera lu au candidat avant le début de l'entretien.
+        </p>
+      </div>
 
       {audioUrl && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <audio
             ref={audioRef}
             src={audioUrl}
             onEnded={() => setIsPlaying(false)}
             className="hidden"
           />
-          <Button variant="outline" size="sm" onClick={togglePlay}>
-            {isPlaying ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+          <Button type="button" variant="outline" size="sm" onClick={togglePlay}>
+            {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
             {isPlaying ? "Pause" : "Écouter"}
           </Button>
-          <Button variant="destructive" size="sm" onClick={deleteAudio}>
-            <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+          <Button type="button" variant="destructive" size="sm" onClick={deleteAudio}>
+            <Trash2 className="mr-1 h-4 w-4" /> Supprimer
           </Button>
         </div>
       )}
 
       {!audioUrl && !isRecording && (
-        <Button variant="outline" size="sm" onClick={startRecording}>
-          <Mic className="h-4 w-4 mr-1" /> Enregistrer un message
+        <Button type="button" variant="outline" size="sm" onClick={startRecording}>
+          <Mic className="mr-1 h-4 w-4" /> Enregistrer un message
         </Button>
       )}
 
       {isRecording && (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1 text-sm text-destructive">
-            <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
             Enregistrement...
           </span>
-          <Button variant="destructive" size="sm" onClick={stopRecording}>
-            <Square className="h-4 w-4 mr-1" /> Arrêter
+          <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
+            <Square className="mr-1 h-4 w-4" /> Arrêter
           </Button>
         </div>
       )}
 
-      {recordedBlob && !uploading && (
-        <Button size="sm" onClick={uploadAudio}>
-          <Upload className="h-4 w-4 mr-1" /> Sauvegarder le message
+      {isPersistedMode && recordedBlob && !uploading && (
+        <Button type="button" size="sm" onClick={uploadAudio}>
+          <Upload className="mr-1 h-4 w-4" /> Sauvegarder le message
         </Button>
       )}
 
-      {uploading && (
-        <span className="text-sm text-muted-foreground">Upload en cours...</span>
+      {!isPersistedMode && recordedBlob && (
+        <p className="text-xs text-muted-foreground">
+          Ce message sera attaché automatiquement quand vous créerez le projet.
+        </p>
       )}
+
+      {uploading && <span className="text-sm text-muted-foreground">Upload en cours...</span>}
     </div>
   );
 }
