@@ -387,22 +387,7 @@ export default function InterviewStart() {
       // Stop camera stream
       streamRef.current?.getTracks().forEach(t => t.stop());
 
-      // Save all messages to session_messages — use ref to avoid stale closure
-      const currentMessages = messagesRef.current;
-      const messagesToSave = currentMessages.map((m) => ({
-        session_id: session.id,
-        role: m.role === "ai" ? "ai" as const : "candidate" as const,
-        content: m.content,
-        question_id: null,
-        is_follow_up: false,
-      }));
-
-      if (messagesToSave.length > 0) {
-        const { error: msgError } = await supabase.from("session_messages").insert(messagesToSave);
-        if (msgError) {
-          console.error("Failed to save messages:", msgError);
-        }
-      }
+      // Messages already persisted in real-time — no batch save needed
 
       // Calculate duration
       const durationSeconds = interviewStartTimeRef.current
