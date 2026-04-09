@@ -32,6 +32,7 @@ export default function InterviewStart() {
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [readyToStart, setReadyToStart] = useState(false);
   const [interviewFinished, setInterviewFinished] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -205,15 +206,24 @@ export default function InterviewStart() {
     }
   }, [toast]);
 
-  // Generate and speak initial greeting
-  useEffect(() => {
-    if (loading || !session || !project || questions.length === 0) return;
+  // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
+  const beginInterview = async () => {
+    if (!session || !project || questions.length === 0) return;
+
+    // Warm up speech synthesis with a silent utterance (mobile requires gesture)
+    if (window.speechSynthesis) {
+      const warmup = new SpeechSynthesisUtterance("");
+      warmup.volume = 0;
+      window.speechSynthesis.speak(warmup);
+    }
+
+    setReadyToStart(true);
 
     // Mark session as in_progress
     supabase.from("sessions").update({ status: "in_progress" as any, started_at: new Date().toISOString() }).eq("id", session.id);
 
     // Start recording video
-    startVideoRecording();
+    await startVideoRecording();
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
@@ -234,11 +244,10 @@ export default function InterviewStart() {
     messagesRef.current = [{ role: "ai", content: greeting }];
     setAiMessages([aiMsg]);
 
-    // Speak the greeting, then start listening
-    speak(greeting).then(() => {
-      startListening();
-    });
-  }, [loading, session, project, questions]);
+    // Speak the greeting (now in user gesture context — works on mobile)
+    await speak(greeting);
+    startListening();
+  };
 
   // Send candidate response to AI
   const handleSendResponse = async () => {
@@ -432,6 +441,35 @@ export default function InterviewStart() {
   }, [stopListening]);
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+
+  // Show "ready to start" screen — user must click to enable TTS on mobile
+  if (!readyToStart) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="py-12 space-y-6">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+              <Mic className="h-10 w-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold">Prêt à démarrer ?</h1>
+              <p className="text-muted-foreground text-sm">
+                L'entretien va commencer avec {project?.ai_persona_name || "l'IA"}. 
+                Assurez-vous que votre micro et vos haut-parleurs fonctionnent.
+              </p>
+            </div>
+            <Button size="lg" className="w-full" onClick={beginInterview}>
+              <Volume2 className="mr-2 h-5 w-5" />
+              Lancer l'entretien
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              L'IA vous parlera et écoutera vos réponses en temps réel.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
