@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
 import { ScoreCircle } from "@/components/ScoreCircle";
@@ -9,16 +10,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import { ArrowLeft, Play, Clock, Calendar, Video, MessageSquare } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, Video, MessageSquare, Share2, Copy, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SessionDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const [report, setReport] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -32,6 +39,21 @@ export default function SessionDetail() {
       setMessages(mRes.data ?? []);
       setRecruiterNotes(rRes.data?.recruiter_notes ?? "");
       setLoading(false);
+
+      // Check existing share link
+      if (rRes.data?.id) {
+        supabase
+          .from("report_shares" as any)
+          .select("share_token, is_active")
+          .eq("report_id", rRes.data.id)
+          .eq("is_active", true)
+          .limit(1)
+          .then(({ data: shares }: any) => {
+            if (shares?.[0]) {
+              setShareUrl(`${window.location.origin}/shared-report/${shares[0].share_token}`);
+            }
+          });
+      }
     });
   }, [id]);
 
@@ -42,6 +64,36 @@ export default function SessionDetail() {
     }, 1000);
     return () => clearTimeout(timeout);
   }, [recruiterNotes, report?.id]);
+
+  const handleShare = async () => {
+    if (!report?.id || !user) return;
+    setSharing(true);
+    try {
+      const { data, error } = await (supabase.from("report_shares" as any) as any)
+        .insert({ report_id: report.id, created_by: user.id })
+        .select("share_token")
+        .single();
+
+      if (error) throw error;
+
+      const url = `${window.location.origin}/shared-report/${data.share_token}`;
+      setShareUrl(url);
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Lien de partage créé et copié !" });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Lien copié !" });
+  };
 
   if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!session) return <p>Session introuvable</p>;
@@ -58,7 +110,6 @@ export default function SessionDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
@@ -84,9 +135,7 @@ export default function SessionDetail() {
         </div>
       </div>
 
-      {/* Main content: Video + Transcript side by side */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left: Video */}
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
@@ -97,12 +146,7 @@ export default function SessionDetail() {
             <CardContent>
               {session.video_recording_url ? (
                 <div className="relative rounded-lg overflow-hidden bg-muted aspect-video">
-                  <video
-                    src={session.video_recording_url}
-                    controls
-                    className="w-full h-full object-contain"
-                    preload="metadata"
-                  />
+                  <video src={session.video_recording_url} controls className="w-full h-full object-contain" preload="metadata" />
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -113,21 +157,36 @@ export default function SessionDetail() {
             </CardContent>
           </Card>
 
-          {/* Score + Recommendation (if report exists) */}
           {report && (
             <Card>
-              <CardContent className="pt-6 flex items-center justify-center gap-6">
-                <ScoreCircle score={Number(report.overall_score)} />
-                <div className="space-y-2">
-                  <RecommendationBadge recommendation={report.recommendation} />
-                  {report.overall_grade && <Badge variant="outline">{report.overall_grade}</Badge>}
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-6">
+                  <ScoreCircle score={Number(report.overall_score)} />
+                  <div className="space-y-2">
+                    <RecommendationBadge recommendation={report.recommendation} />
+                    {report.overall_grade && <Badge variant="outline">{report.overall_grade}</Badge>}
+                  </div>
+                </div>
+
+                {/* Share button */}
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {shareUrl ? (
+                    <Button variant="outline" size="sm" onClick={copyShareUrl}>
+                      {copied ? <Check className="mr-1 h-4 w-4" /> : <Copy className="mr-1 h-4 w-4" />}
+                      {copied ? "Copié !" : "Copier le lien de partage"}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing}>
+                      <Share2 className="mr-1 h-4 w-4" />
+                      {sharing ? "Génération..." : "Partager ce rapport"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
 
-        {/* Right: Transcript / Report tabs */}
         <div>
           <Tabs defaultValue="transcript">
             <TabsList className="w-full">

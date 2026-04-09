@@ -13,11 +13,13 @@ import Projects from "./pages/Projects";
 import ProjectNew from "./pages/ProjectNew";
 import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
+import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
+import SharedReport from "./pages/SharedReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,7 @@ const App = () => (
             <Route path="/interview/:slug" element={<InterviewLanding />} />
             <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
             <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
+            <Route path="/shared-report/:token" element={<SharedReport />} />
 
             {/* Protected RH routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
@@ -44,6 +47,7 @@ const App = () => (
               <Route path="/projects/new" element={<ProjectNew />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
+              <Route path="/projects/:id/compare" element={<ProjectCompare />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
