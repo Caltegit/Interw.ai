@@ -43,6 +43,13 @@ export default function InterviewStart() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const interviewStartTimeRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoEndTriggeredRef = useRef(false);
+
+  const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
 
   // Auto-scroll messages
   useEffect(() => {
