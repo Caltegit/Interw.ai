@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import { Copy } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Copy, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -40,6 +42,16 @@ export default function ProjectDetail() {
     toast({ title: "Lien copié !" });
   };
 
+  const handleDelete = async () => {
+    const { error } = await supabase.from("projects").delete().eq("id", id!);
+    if (error) {
+      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+    } else {
+      toast({ title: "Projet supprimé" });
+      navigate("/projects");
+    }
+  };
+
   if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!project) return <p>Projet introuvable</p>;
 
@@ -52,11 +64,41 @@ export default function ProjectDetail() {
           <h1 className="text-2xl font-bold">{project.title}</h1>
           <p className="text-muted-foreground">{project.job_title}</p>
         </div>
-        <div className="flex gap-2">
-          <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
-          <Button variant="outline" size="sm" onClick={copyProjectLink}>
-            <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2 items-center">
+            <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
+            <Button variant="outline" size="sm" onClick={copyProjectLink}>
+              <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
+            </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/projects/${project.id}/edit`}>
+                <Pencil className="mr-1 h-4 w-4" /> Modifier
+              </Link>
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-1 h-4 w-4" /> Supprimer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </div>
 
