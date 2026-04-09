@@ -280,6 +280,33 @@ export default function ProjectDetail() {
                             <Copy className="mr-1 h-3 w-3" /> Relancer
                           </Button>
                         )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription, le rapport et les vidéos associées. Cette action est irréversible.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
+                                // Delete related data then session
+                                await supabase.from("session_messages").delete().eq("session_id", s.id);
+                                await supabase.from("reports").delete().eq("session_id", s.id);
+                                await supabase.from("transcripts").delete().eq("session_id", s.id);
+                                await supabase.from("sessions").delete().eq("id", s.id);
+                                setSessions(prev => prev.filter(ss => ss.id !== s.id));
+                                toast({ title: "Entretien supprimé" });
+                              }}>Supprimer</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </td>
                     </tr>
                   ))}
