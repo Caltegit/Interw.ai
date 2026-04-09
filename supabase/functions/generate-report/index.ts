@@ -61,18 +61,26 @@ serve(async (req) => {
 
     const wordCount = fullText.split(/\s+/).length;
 
-    // Save transcript
-    const { error: transcriptError } = await supabase.from("transcripts").insert({
+    // Save transcript (upsert to avoid duplicate constraint errors)
+    const { error: transcriptError } = await supabase.from("transcripts").upsert({
       session_id,
       full_text: fullText,
       formatted_text: fullText,
       word_count: wordCount,
       language: project.language || "fr",
       duration_seconds: session.duration_seconds || 0,
-    });
+    }, { onConflict: "session_id" });
 
     if (transcriptError) {
       console.error("Transcript insert error:", transcriptError);
+    }
+
+    // Check if report already exists for this session
+    const { data: existingReport } = await supabase.from("reports").select("id").eq("session_id", session_id).maybeSingle();
+    if (existingReport) {
+      return new Response(JSON.stringify({ success: true, message: "Report already exists" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Build criteria description for AI
