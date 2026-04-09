@@ -127,6 +127,7 @@ export type Database = {
           description: string
           expires_at: string | null
           id: string
+          intro_audio_url: string | null
           job_title: string
           language: Database["public"]["Enums"]["project_language"]
           max_duration_minutes: number
@@ -147,6 +148,7 @@ export type Database = {
           description?: string
           expires_at?: string | null
           id?: string
+          intro_audio_url?: string | null
           job_title?: string
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number
@@ -167,6 +169,7 @@ export type Database = {
           description?: string
           expires_at?: string | null
           id?: string
+          intro_audio_url?: string | null
           job_title?: string
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number

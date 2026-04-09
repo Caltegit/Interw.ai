@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN intro_audio_url text DEFAULT NULL;

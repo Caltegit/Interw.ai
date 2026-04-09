@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save } from "lucide-react";
+import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 
 export default function ProjectEdit() {
   const { id } = useParams();
@@ -30,6 +31,7 @@ export default function ProjectEdit() {
   const [recordAudio, setRecordAudio] = useState(true);
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active" | "archived">("active");
+  const [introAudioUrl, setIntroAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +56,7 @@ export default function ProjectEdit() {
         setRecordAudio(data.record_audio);
         setRecordVideo(data.record_video);
         setStatus(data.status as "draft" | "active" | "archived");
+        setIntroAudioUrl((data as any).intro_audio_url || null);
         setLoading(false);
       });
   }, [id, navigate, toast]);
@@ -169,6 +172,14 @@ export default function ProjectEdit() {
               </SelectContent>
             </Select>
           </div>
+
+          {id && (
+            <IntroAudioRecorder
+              projectId={id}
+              existingUrl={introAudioUrl}
+              onUploaded={setIntroAudioUrl}
+            />
+          )}
         </CardContent>
       </Card>
 

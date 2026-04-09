@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Globe, Mic, CheckCircle } from "lucide-react";
+import { Clock, Globe, Mic, CheckCircle, Play, Pause, Volume2 } from "lucide-react";
 
 export default function InterviewLanding() {
   const { slug } = useParams();
@@ -109,6 +109,21 @@ export default function InterviewLanding() {
             <p className="text-sm text-muted-foreground mb-2">Regardez cette vidéo avant de commencer :</p>
             <video src={project.presentation_video_url} controls className="w-full rounded-lg" />
           </div>
+        )}
+
+        {(project as any)?.intro_audio_url && (
+          <Card>
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Volume2 className="h-5 w-5 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Message du recruteur</p>
+                  <p className="text-xs text-muted-foreground">Écoutez ce message avant de commencer</p>
+                </div>
+              </div>
+              <audio src={(project as any).intro_audio_url} controls className="w-full mt-3" />
+            </CardContent>
+          </Card>
         )}
 
         <Card>
