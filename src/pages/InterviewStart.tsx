@@ -49,6 +49,8 @@ export default function InterviewStart() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
+  const questionVideoChunksRef = useRef<Blob[]>([]);
+  const questionRecorderRef = useRef<MediaRecorder | null>(null);
 
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (sessionId: string, role: "ai" | "candidate", content: string) => {
