@@ -70,6 +70,17 @@ export default function ProjectNew() {
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now().toString(36);
 
+      // Upload avatar if provided
+      let avatarUrl: string | null = null;
+      if (avatarFile) {
+        const ext = avatarFile.name.split(".").pop() || "png";
+        const path = `avatars/${slug}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("media").upload(path, avatarFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        avatarUrl = urlData.publicUrl;
+      }
+
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
@@ -86,6 +97,7 @@ export default function ProjectNew() {
           record_video: recordVideo,
           status,
           slug,
+          avatar_image_url: avatarUrl,
         })
         .select()
         .single();
