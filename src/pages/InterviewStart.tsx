@@ -329,14 +329,40 @@ export default function InterviewStart() {
       return;
     }
 
+    // Stop question video recording and upload in background
+    const questionIdx = currentQuestionIndex;
+    let questionVideoPromise: Promise<string | null> = Promise.resolve(null);
+    if (session?.id) {
+      questionVideoPromise = stopAndUploadQuestionVideo(session.id, questionIdx);
+    }
+
     // Add candidate message to UI
     setMessages((prev) => {
       const updated = [...prev, { role: "candidate", content: transcript }];
       messagesRef.current = updated;
       return updated;
     });
-    // Persist candidate message immediately
-    if (session?.id) persistMessage(session.id, "candidate", transcript);
+    // Persist candidate message with video URL (will be updated after upload)
+    const persistAndAttachVideo = async () => {
+      const videoUrl = await questionVideoPromise;
+      if (session?.id) {
+        try {
+          const { error } = await supabase.from("session_messages").insert({
+            session_id: session.id,
+            role: "candidate" as any,
+            content: transcript,
+            question_id: questions[questionIdx]?.id || null,
+            is_follow_up: false,
+            video_segment_url: videoUrl,
+          });
+          if (error) console.error("Failed to persist candidate message:", error);
+        } catch (e) {
+          console.error("persistMessage exception:", e);
+        }
+      }
+    };
+    persistAndAttachVideo();
+
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
@@ -377,7 +403,7 @@ export default function InterviewStart() {
       if (session?.id) persistMessage(session.id, "ai", aiResponse);
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
-      // Check if interview is over (AI says "terminé" in response)
+      // Check if interview is over
       const isOver = aiResponse.toLowerCase().includes("terminé") && currentQuestionIndex >= questions.length - 1;
 
       if (isOver) {
@@ -391,15 +417,17 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI response, then resume listening
+      // Speak AI response, then resume listening + start new question recording
       await speak(aiResponse);
       if (!isOver) {
+        startQuestionRecording();
         startListening();
       }
     } catch (e: any) {
       console.error("AI conversation error:", e);
       setIsProcessing(false);
       toast({ title: "Erreur", description: "Impossible de contacter l'IA. Veuillez réessayer.", variant: "destructive" });
+      startQuestionRecording();
       startListening();
     }
   };
