@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState({ projects: 0, pending: 0, completed: 0, avgScore: 0 });
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
 
