@@ -214,6 +214,18 @@ export default function InterviewStart() {
     // Start recording video
     startVideoRecording();
 
+    // Start auto-end timers
+    interviewStartTimeRef.current = Date.now();
+    maxDurationTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        console.log("Auto-ending interview: 10min max duration");
+        toast({ title: "Entretien terminé", description: "La durée maximale de 10 minutes a été atteinte." });
+        endInterviewRef.current?.();
+      }
+    }, MAX_DURATION_MS);
+    resetSilenceTimer();
+
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
