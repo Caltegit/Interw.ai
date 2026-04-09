@@ -442,6 +442,35 @@ export default function InterviewStart() {
 
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
 
+  // Show "ready to start" screen — user must click to enable TTS on mobile
+  if (!readyToStart) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="py-12 space-y-6">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+              <Mic className="h-10 w-10 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-xl font-bold">Prêt à démarrer ?</h1>
+              <p className="text-muted-foreground text-sm">
+                L'entretien va commencer avec {project?.ai_persona_name || "l'IA"}. 
+                Assurez-vous que votre micro et vos haut-parleurs fonctionnent.
+              </p>
+            </div>
+            <Button size="lg" className="w-full" onClick={beginInterview}>
+              <Volume2 className="mr-2 h-5 w-5" />
+              Lancer l'entretien
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              L'IA vous parlera et écoutera vos réponses en temps réel.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="mx-auto max-w-5xl">
