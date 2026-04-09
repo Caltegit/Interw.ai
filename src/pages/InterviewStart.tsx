@@ -223,11 +223,22 @@ export default function InterviewStart() {
   }, [toast]);
 
   // Start a per-question video recorder (uses same stream)
+  // Detect supported mime type for MediaRecorder
+  const getSupportedMimeType = useCallback(() => {
+    const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return undefined; // browser default
+  }, []);
+
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
     questionVideoChunksRef.current = [];
     try {
-      const recorder = new MediaRecorder(streamRef.current, { mimeType: "video/webm" });
+      const mimeType = getSupportedMimeType();
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) questionVideoChunksRef.current.push(e.data);
@@ -236,7 +247,7 @@ export default function InterviewStart() {
     } catch (e) {
       console.error("Question recorder error:", e);
     }
-  }, []);
+  }, [getSupportedMimeType]);
 
   // Stop per-question recorder and upload the video segment
   const stopAndUploadQuestionVideo = useCallback(async (sessionId: string, questionIndex: number): Promise<string | null> => {
