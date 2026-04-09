@@ -76,55 +76,59 @@ export default function Projects() {
           {projects.map((project) => {
             const status = statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
             return (
-              <Link key={project.id} to={`/projects/${project.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{project.title}</CardTitle>
-                        <CardDescription>{project.job_title}</CardDescription>
-                      </div>
-                      <Badge variant={status.variant}>{status.label}</Badge>
+              <Card key={project.id} className="h-full transition-shadow hover:shadow-md">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-lg">
+                        <Link to={`/projects/${project.id}`} className="hover:underline">
+                          {project.title}
+                        </Link>
+                      </CardTitle>
+                      <CardDescription>{project.job_title}</CardDescription>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(project.created_at).toLocaleDateString("fr-FR")}
-                      </p>
-                      <div className="flex gap-1" onClick={(e) => e.preventDefault()}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                          <Link to={`/projects/${project.id}/edit`}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(project.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                Supprimer
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(project.created_at).toLocaleDateString("fr-FR")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={`/projects/${project.id}/edit`}>
+                          <Pencil className="h-4 w-4" />
+                          Modifier
+                        </Link>
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                            Supprimer
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(project.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
