@@ -122,7 +122,24 @@ export default function ProjectNew() {
         );
       }
 
-      toast({ title: "Projet créé !" });
+      // Vérification que le lien candidat est fonctionnel
+      const { data: check } = await supabase
+        .from("projects")
+        .select("id, status, slug")
+        .eq("slug", slug)
+        .eq("status", "active")
+        .single();
+
+      if (!check) {
+        toast({
+          title: "Projet créé mais lien candidat non fonctionnel",
+          description: "Le projet a été créé mais le lien public ne semble pas accessible. Vérifiez le statut du projet.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Projet créé !", description: "Le lien candidat est fonctionnel ✓" });
+      }
+
       navigate(`/projects/${project.id}`);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
