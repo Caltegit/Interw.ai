@@ -182,13 +182,6 @@ export default function ProjectEdit() {
             </Select>
           </div>
 
-          {id && (
-            <IntroAudioRecorder
-              projectId={id}
-              existingUrl={introAudioUrl}
-              onUploaded={setIntroAudioUrl}
-            />
-          )}
         </CardContent>
       </Card>
 
