@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectNew from "./pages/ProjectNew";
+import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/new" element={<ProjectNew />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
+              <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
