@@ -124,12 +124,38 @@ export default function Dashboard() {
                        <td className="py-3 text-muted-foreground">
                          {new Date(session.created_at).toLocaleDateString("fr-FR")}
                        </td>
-                       <td className="py-3">
+                       <td className="py-3 flex gap-1">
                          {session.status === "completed" && (
                            <Button variant="ghost" size="sm" asChild>
                              <Link to={`/sessions/${session.id}`}>Voir</Link>
                            </Button>
                          )}
+                         <AlertDialog>
+                           <AlertDialogTrigger asChild>
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                               <Trash2 className="h-3 w-3" />
+                             </Button>
+                           </AlertDialogTrigger>
+                           <AlertDialogContent>
+                             <AlertDialogHeader>
+                               <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                               <AlertDialogDescription>
+                                 Cette action supprimera l'entretien de {session.candidate_name} et toutes les données associées. Irréversible.
+                               </AlertDialogDescription>
+                             </AlertDialogHeader>
+                             <AlertDialogFooter>
+                               <AlertDialogCancel>Annuler</AlertDialogCancel>
+                               <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
+                                 await supabase.from("session_messages").delete().eq("session_id", session.id);
+                                 await supabase.from("reports").delete().eq("session_id", session.id);
+                                 await supabase.from("transcripts").delete().eq("session_id", session.id);
+                                 await supabase.from("sessions").delete().eq("id", session.id);
+                                 setRecentSessions(prev => prev.filter(s => s.id !== session.id));
+                                 toast({ title: "Entretien supprimé" });
+                               }}>Supprimer</AlertDialogAction>
+                             </AlertDialogFooter>
+                           </AlertDialogContent>
+                         </AlertDialog>
                        </td>
                     </tr>
                   ))}
