@@ -313,6 +313,8 @@ export default function InterviewStart() {
 
     // Speak the greeting (now in user gesture context — works on mobile)
     await speak(greeting);
+    // Start recording video for question 1
+    startQuestionRecording();
     startListening();
   };
 
