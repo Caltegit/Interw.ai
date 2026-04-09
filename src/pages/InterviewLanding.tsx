@@ -122,11 +122,19 @@ export default function InterviewLanding() {
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="max-w-md w-full">
           <CardContent className="py-10 space-y-6 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Volume2 className="h-8 w-8 text-primary" />
-            </div>
+            {project.avatar_image_url ? (
+              <img
+                src={project.avatar_image_url}
+                alt={project.ai_persona_name || "Recruteur"}
+                className={`mx-auto h-24 w-24 rounded-full object-cover border-4 ${audioPlaying ? "border-primary animate-pulse" : "border-muted"}`}
+              />
+            ) : (
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Volume2 className="h-8 w-8 text-primary" />
+              </div>
+            )}
             <div className="space-y-2">
-              <h2 className="text-xl font-bold">Message du recruteur</h2>
+              <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
               <p className="text-sm text-muted-foreground">
                 Écoutez ce message avant de commencer votre entretien.
               </p>
