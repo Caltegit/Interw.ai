@@ -301,6 +301,9 @@ export default function InterviewStart() {
   };
 
   const endInterview = async () => {
+    // Clear all auto-end timers
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     stopListening();
     window.speechSynthesis?.cancel();
 
