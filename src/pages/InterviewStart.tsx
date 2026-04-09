@@ -285,6 +285,8 @@ export default function InterviewStart() {
       messagesRef.current = updated;
       return updated;
     });
+    // Persist candidate message immediately
+    if (session?.id) persistMessage(session.id, "candidate", transcript);
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
@@ -321,6 +323,8 @@ export default function InterviewStart() {
         messagesRef.current = updated;
         return updated;
       });
+      // Persist AI response immediately
+      if (session?.id) persistMessage(session.id, "ai", aiResponse);
       setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
 
       // Check if interview is over (AI says "terminé" in response)
