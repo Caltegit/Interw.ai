@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Copy, Pencil, Trash2 } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, Send, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [project, setProject] = useState<any>(null);
@@ -19,6 +21,7 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicating, setDuplicating] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -42,6 +45,81 @@ export default function ProjectDetail() {
     toast({ title: "Lien copié !" });
   };
 
+  const copyCandidateLink = (token: string) => {
+    if (!project?.slug) return;
+    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}/start/${token}`);
+    toast({ title: "Lien de relance copié !" });
+  };
+
+  const handleDuplicate = async () => {
+    if (!project || !user) return;
+    setDuplicating(true);
+    try {
+      const slug = project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-copy-" + Date.now().toString(36);
+
+      const { data: newProject, error } = await supabase
+        .from("projects")
+        .insert({
+          organization_id: project.organization_id,
+          created_by: user.id,
+          title: `${project.title} (copie)`,
+          job_title: project.job_title,
+          description: project.description,
+          language: project.language,
+          ai_persona_name: project.ai_persona_name,
+          ai_voice: project.ai_voice,
+          max_duration_minutes: project.max_duration_minutes,
+          record_audio: project.record_audio,
+          record_video: project.record_video,
+          status: "draft" as never,
+          slug,
+          avatar_image_url: project.avatar_image_url,
+          intro_audio_url: project.intro_audio_url,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Duplicate questions
+      if (questions.length > 0) {
+        await supabase.from("questions").insert(
+          questions.map((q) => ({
+            project_id: newProject.id,
+            order_index: q.order_index,
+            content: q.content,
+            type: q.type,
+            follow_up_enabled: q.follow_up_enabled,
+            max_follow_ups: q.max_follow_ups,
+          }))
+        );
+      }
+
+      // Duplicate criteria
+      if (criteria.length > 0) {
+        await supabase.from("evaluation_criteria").insert(
+          criteria.map((c) => ({
+            project_id: newProject.id,
+            order_index: c.order_index,
+            label: c.label,
+            description: c.description,
+            weight: c.weight,
+            scoring_scale: c.scoring_scale,
+            anchors: c.anchors,
+            applies_to: c.applies_to,
+          }))
+        );
+      }
+
+      toast({ title: "Projet dupliqué !", description: "Le nouveau projet a été créé en brouillon." });
+      navigate(`/projects/${newProject.id}`);
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const handleDelete = async () => {
     const { error } = await supabase.from("projects").delete().eq("id", id!);
     if (error) {
@@ -56,6 +134,8 @@ export default function ProjectDetail() {
   if (!project) return <p>Projet introuvable</p>;
 
   const statusLabel = { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+  const pendingSessions = sessions.filter((s) => s.status === "pending");
+  const completedSessions = sessions.filter((s) => s.status === "completed");
 
   return (
     <div className="space-y-6">
@@ -65,13 +145,23 @@ export default function ProjectDetail() {
           <p className="text-muted-foreground">{project.job_title}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
             <Button variant="outline" size="sm" onClick={copyProjectLink}>
-              <Copy className="mr-1 h-4 w-4" /> Copier le lien candidat
+              <Copy className="mr-1 h-4 w-4" /> Lien candidat
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={duplicating}>
+              <CopyPlus className="mr-1 h-4 w-4" /> {duplicating ? "Duplication..." : "Dupliquer"}
             </Button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {completedSessions.length >= 2 && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/projects/${project.id}/compare`}>
+                  <BarChart3 className="mr-1 h-4 w-4" /> Comparer les candidats
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild>
               <Link to={`/projects/${project.id}/edit`}>
                 <Pencil className="mr-1 h-4 w-4" /> Modifier
@@ -125,6 +215,39 @@ export default function ProjectDetail() {
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4">
+          {/* Pending sessions alert */}
+          {pendingSessions.length > 0 && (
+            <Card className="border-warning/50 bg-warning/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Send className="h-4 w-4 text-warning" />
+                  {pendingSessions.length} candidat(s) en attente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Ces candidats n'ont pas encore commencé leur entretien. Copiez leur lien pour les relancer.
+                </p>
+                <div className="space-y-2">
+                  {pendingSessions.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{s.candidate_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span>depuis {Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000)}j</span>
+                        <Button variant="outline" size="sm" onClick={() => copyCandidateLink(s.token)}>
+                          <Copy className="mr-1 h-3 w-3" /> Relancer
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {sessions.length === 0 ? (
             <p className="text-muted-foreground text-sm">Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.</p>
           ) : (
@@ -146,10 +269,15 @@ export default function ProjectDetail() {
                       <td className="py-3">{s.candidate_email}</td>
                       <td className="py-3"><SessionStatusBadge status={s.status} /></td>
                       <td className="py-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString("fr-FR")}</td>
-                      <td className="py-3">
+                      <td className="py-3 flex gap-1">
                         {s.status === "completed" && (
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/sessions/${s.id}`}>Voir</Link>
+                          </Button>
+                        )}
+                        {s.status === "pending" && (
+                          <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(s.token)}>
+                            <Copy className="mr-1 h-3 w-3" /> Relancer
                           </Button>
                         )}
                       </td>
