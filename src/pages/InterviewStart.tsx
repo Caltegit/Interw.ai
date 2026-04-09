@@ -334,6 +334,7 @@ export default function InterviewStart() {
       }).then(({ error }) => {
         if (error) console.error("Report generation error:", error);
       });
+    }
 
     navigate(`/interview/${slug}/complete`);
   };
