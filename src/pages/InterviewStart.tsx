@@ -43,8 +43,30 @@ export default function InterviewStart() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const interviewStartTimeRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoEndTriggeredRef = useRef(false);
 
-  // Auto-scroll messages
+  const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
+  // Reset silence timer (called on any activity)
+  const resetSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        console.log("Auto-ending interview: 45s silence");
+        toast({ title: "Entretien terminé", description: "Fin automatique après 45 secondes de silence." });
+        endInterviewRef.current?.();
+      }
+    }, SILENCE_TIMEOUT_MS);
+  }, [toast]);
+
+  // Ref to endInterview so timers can call it without stale closures
+  const endInterviewRef = useRef<(() => void) | null>(null);
+
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -192,6 +214,18 @@ export default function InterviewStart() {
     // Start recording video
     startVideoRecording();
 
+    // Start auto-end timers
+    interviewStartTimeRef.current = Date.now();
+    maxDurationTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        console.log("Auto-ending interview: 10min max duration");
+        toast({ title: "Entretien terminé", description: "La durée maximale de 10 minutes a été atteinte." });
+        endInterviewRef.current?.();
+      }
+    }, MAX_DURATION_MS);
+    resetSilenceTimer();
+
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
@@ -279,6 +313,9 @@ export default function InterviewStart() {
   };
 
   const endInterview = async () => {
+    // Clear all auto-end timers
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     stopListening();
     window.speechSynthesis?.cancel();
 
@@ -339,12 +376,33 @@ export default function InterviewStart() {
     navigate(`/interview/${slug}/complete`);
   };
 
+  // Keep endInterviewRef in sync
+  useEffect(() => {
+    endInterviewRef.current = endInterview;
+  });
+
+  // Reset silence timer on candidate speech activity
+  useEffect(() => {
+    if (liveTranscript) {
+      resetSilenceTimer();
+    }
+  }, [liveTranscript, resetSilenceTimer]);
+
+  // Also reset silence timer when AI speaks or processing
+  useEffect(() => {
+    if (isSpeaking || isProcessing) {
+      resetSilenceTimer();
+    }
+  }, [isSpeaking, isProcessing, resetSilenceTimer]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopListening();
       window.speechSynthesis?.cancel();
       streamRef.current?.getTracks().forEach(t => t.stop());
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     };
   }, [stopListening]);
 
