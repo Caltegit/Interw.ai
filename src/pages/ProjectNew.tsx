@@ -10,10 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
 import { StepQuestions } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
+import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 
 const STEPS = ["Informations", "Médias", "Questions", "Critères", "Publication"];
 
@@ -35,8 +36,11 @@ export default function ProjectNew() {
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [introType, setIntroType] = useState<"audio" | "video">("audio");
   const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
   const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);
+  const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
+  const [introVideoPreviewUrl, setIntroVideoPreviewUrl] = useState<string | null>(null);
 
   // Step 3
   const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
@@ -294,17 +298,47 @@ export default function ProjectNew() {
                 </Select>
               </div>
 
-              <div className="rounded-lg border border-border p-4">
-                <IntroAudioRecorder
-                  existingUrl={introAudioPreviewUrl}
-                  onAudioReady={({ blob, previewUrl }) => {
-                    setIntroAudioBlob(blob);
-                    setIntroAudioPreviewUrl(previewUrl);
-                  }}
-                />
+              <div>
+                <Label>Message de présentation</Label>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant={introType === "audio" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIntroType("audio")}
+                  >
+                    <Mic className="mr-1 h-4 w-4" /> Audio
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={introType === "video" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIntroType("video")}
+                  >
+                    <Video className="mr-1 h-4 w-4" /> Vidéo
+                  </Button>
+                </div>
               </div>
 
-              <p className="text-sm text-muted-foreground">L'upload de vidéo de présentation sera disponible prochainement.</p>
+              <div className="rounded-lg border border-border p-4">
+                {introType === "audio" ? (
+                  <IntroAudioRecorder
+                    existingUrl={introAudioPreviewUrl}
+                    onAudioReady={({ blob, previewUrl }) => {
+                      setIntroAudioBlob(blob);
+                      setIntroAudioPreviewUrl(previewUrl);
+                    }}
+                  />
+                ) : (
+                  <IntroVideoRecorder
+                    existingUrl={introVideoPreviewUrl}
+                    onVideoReady={({ file, previewUrl }) => {
+                      setIntroVideoFile(file);
+                      setIntroVideoPreviewUrl(previewUrl);
+                    }}
+                  />
+                )}
+              </div>
             </div>
           )}
 
