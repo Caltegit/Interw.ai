@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Globe, Mic, CheckCircle, Play, Pause, Volume2 } from "lucide-react";
+import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video } from "lucide-react";
 
 export default function InterviewLanding() {
   const { slug } = useParams();
@@ -17,12 +17,14 @@ export default function InterviewLanding() {
   const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
 
-  // Intro audio intermediate screen state
-  const [showIntroAudio, setShowIntroAudio] = useState(false);
+  // Intermediate media screen state
+  const [showIntroMedia, setShowIntroMedia] = useState(false);
+  const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioFinished, setAudioFinished] = useState(false);
+  const [mediaPlaying, setMediaPlaying] = useState(false);
+  const [mediaFinished, setMediaFinished] = useState(false);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
+  const introVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -72,28 +74,35 @@ export default function InterviewLanding() {
       return;
     }
 
-    // If project has intro audio, show intermediate screen
-    if (project.intro_audio_url) {
+    // Show intermediate media screen if project has video or audio
+    if (project.presentation_video_url) {
       setSessionToken(session.token);
-      setShowIntroAudio(true);
+      setIntroMediaType("video");
+      setShowIntroMedia(true);
+      setStarting(false);
+    } else if (project.intro_audio_url) {
+      setSessionToken(session.token);
+      setIntroMediaType("audio");
+      setShowIntroMedia(true);
       setStarting(false);
     } else {
       navigate(`/interview/${slug}/start/${session.token}`);
     }
   };
 
-  const handlePlayIntroAudio = () => {
-    if (!introAudioRef.current) return;
-    introAudioRef.current.play().catch(() => {
-      // If playback fails, let them proceed anyway
-      setAudioFinished(true);
-    });
-    setAudioPlaying(true);
+  const handlePlayMedia = () => {
+    if (introMediaType === "audio" && introAudioRef.current) {
+      introAudioRef.current.play().catch(() => setMediaFinished(true));
+      setMediaPlaying(true);
+    } else if (introMediaType === "video" && introVideoRef.current) {
+      introVideoRef.current.play().catch(() => setMediaFinished(true));
+      setMediaPlaying(true);
+    }
   };
 
-  const handleAudioEnded = () => {
-    setAudioPlaying(false);
-    setAudioFinished(true);
+  const handleMediaEnded = () => {
+    setMediaPlaying(false);
+    setMediaFinished(true);
   };
 
   const handleProceedToInterview = () => {
@@ -116,45 +125,65 @@ export default function InterviewLanding() {
     );
   }
 
-  // Intermediate screen: intro audio from recruiter
-  if (showIntroAudio) {
+  // Intermediate screen: intro media from recruiter
+  if (showIntroMedia) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="max-w-md w-full">
           <CardContent className="py-10 space-y-6 text-center">
-            {project.avatar_image_url ? (
+            {introMediaType === "video" ? (
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Video className="h-8 w-8 text-primary" />
+              </div>
+            ) : project.avatar_image_url ? (
               <img
                 src={project.avatar_image_url}
                 alt={project.ai_persona_name || "Recruteur"}
-                className={`mx-auto h-24 w-24 rounded-full object-cover border-4 ${audioPlaying ? "border-primary animate-pulse" : "border-muted"}`}
+                className={`mx-auto h-24 w-24 rounded-full object-cover border-4 ${mediaPlaying ? "border-primary animate-pulse" : "border-muted"}`}
               />
             ) : (
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <Volume2 className="h-8 w-8 text-primary" />
               </div>
             )}
+
             <div className="space-y-2">
               <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
               <p className="text-sm text-muted-foreground">
-                Écoutez ce message avant de commencer votre entretien.
+                {introMediaType === "video"
+                  ? "Regardez cette vidéo avant de commencer votre entretien."
+                  : "Écoutez ce message avant de commencer votre entretien."}
               </p>
             </div>
 
-            <audio
-              ref={introAudioRef}
-              src={project.intro_audio_url}
-              onEnded={handleAudioEnded}
-              className="hidden"
-            />
+            {introMediaType === "audio" && (
+              <audio
+                ref={introAudioRef}
+                src={project.intro_audio_url}
+                onEnded={handleMediaEnded}
+                className="hidden"
+              />
+            )}
 
-            {!audioPlaying && !audioFinished && (
-              <Button size="lg" className="w-full" onClick={handlePlayIntroAudio}>
+            {introMediaType === "video" && (
+              <video
+                ref={introVideoRef}
+                src={project.presentation_video_url}
+                onEnded={handleMediaEnded}
+                controls={mediaPlaying}
+                playsInline
+                className="w-full rounded-lg border border-border"
+              />
+            )}
+
+            {!mediaPlaying && !mediaFinished && (
+              <Button size="lg" className="w-full" onClick={handlePlayMedia}>
                 <Play className="mr-2 h-5 w-5" />
-                Écouter le message
+                {introMediaType === "video" ? "Regarder la vidéo" : "Écouter le message"}
               </Button>
             )}
 
-            {audioPlaying && (
+            {mediaPlaying && introMediaType === "audio" && (
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-center gap-2 text-primary">
                   <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
@@ -166,11 +195,13 @@ export default function InterviewLanding() {
               </div>
             )}
 
-            {audioFinished && (
+            {mediaFinished && (
               <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
                   <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">Message écouté</span>
+                  <span className="text-sm font-medium">
+                    {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
+                  </span>
                 </div>
                 <Button size="lg" className="w-full" onClick={handleProceedToInterview}>
                   <Mic className="mr-2 h-5 w-5" />
@@ -205,13 +236,6 @@ export default function InterviewLanding() {
             <span className="text-sm">Entretien IA</span>
           </div>
         </div>
-
-        {project?.presentation_video_url && (
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Regardez cette vidéo avant de commencer :</p>
-            <video src={project.presentation_video_url} controls className="w-full rounded-lg" />
-          </div>
-        )}
 
         <Card>
           <CardContent className="pt-6 space-y-4">
