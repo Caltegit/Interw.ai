@@ -105,13 +105,14 @@ export default function ProjectNew() {
           slug,
           avatar_image_url: avatarUrl,
           intro_audio_url: null,
+          presentation_video_url: null,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      if (introAudioBlob) {
+      if (introType === "audio" && introAudioBlob) {
         const introPath = `intro/${project.id}.webm`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
@@ -128,6 +129,24 @@ export default function ProjectNew() {
           .eq("id", project.id);
 
         if (introUpdateError) throw introUpdateError;
+      }
+
+      if (introType === "video" && introVideoFile) {
+        const videoPath = `presentation/${project.id}.webm`;
+        const { error: videoUploadError } = await supabase.storage
+          .from("media")
+          .upload(videoPath, introVideoFile, { contentType: introVideoFile.type, upsert: true });
+
+        if (videoUploadError) throw videoUploadError;
+
+        const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
+
+        const { error: videoUpdateError } = await supabase
+          .from("projects")
+          .update({ presentation_video_url: videoUrlData.publicUrl } as never)
+          .eq("id", project.id);
+
+        if (videoUpdateError) throw videoUpdateError;
       }
 
       const validQuestions = questions.filter((q) => q.content.trim());
