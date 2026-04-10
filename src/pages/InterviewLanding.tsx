@@ -267,8 +267,6 @@ export default function InterviewLanding() {
     </div>
   );
 }
-  const navigate = useNavigate();
-  const [project, setProject] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [candidateName, setCandidateName] = useState("");
