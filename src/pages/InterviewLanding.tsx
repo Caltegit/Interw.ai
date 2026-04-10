@@ -267,7 +267,6 @@ export default function InterviewLanding() {
     </div>
   );
 }
-  const { slug } = useParams();
   const navigate = useNavigate();
   const [project, setProject] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
