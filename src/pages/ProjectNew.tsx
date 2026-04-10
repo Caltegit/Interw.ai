@@ -400,7 +400,7 @@ export default function ProjectNew() {
                   <p><strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}</p>
                   <p><strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}</p>
                   <p><strong>Durée max :</strong> {maxDuration} min</p>
-                  <p><strong>Message vocal :</strong> {introAudioPreviewUrl ? "Oui" : "Non"}</p>
+                  <p><strong>Présentation :</strong> {introType === "audio" ? (introAudioPreviewUrl ? "Audio ✓" : "Audio — non défini") : (introVideoPreviewUrl ? "Vidéo ✓" : "Vidéo — non définie")}</p>
                 </CardContent>
               </Card>
             </div>
