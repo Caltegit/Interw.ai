@@ -107,6 +107,7 @@ export default function SharedReport() {
 
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
   const project = (session as any)?.projects;
+  const videoUrl = session?.video_recording_url || (session as any)?._fallback_video || null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
