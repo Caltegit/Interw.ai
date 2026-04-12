@@ -121,8 +121,10 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
           <video
             ref={previewRef}
             muted
+            autoPlay
             playsInline
             className="w-full max-w-md rounded-lg border border-border bg-black"
+            style={{ minHeight: "240px" }}
           />
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-sm text-destructive">
