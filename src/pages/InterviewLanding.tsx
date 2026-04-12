@@ -217,7 +217,7 @@ export default function InterviewLanding() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <CandidateLayout>
       <div className="w-full max-w-xl space-y-6">
         <h1 className="text-xl font-bold text-center">
           Entretien pour le poste de {project?.job_title}
@@ -265,6 +265,6 @@ export default function InterviewLanding() {
           En continuant, vous acceptez ces conditions.
         </p>
       </div>
-    </div>
+    </CandidateLayout>
   );
 }

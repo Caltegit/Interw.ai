@@ -7,7 +7,7 @@ export default function InterviewComplete() {
   const { token } = useParams();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <CandidateLayout>
       <Card className="max-w-md w-full text-center">
         <CardContent className="py-12 space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
@@ -19,6 +19,6 @@ export default function InterviewComplete() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </CandidateLayout>
   );
 }
