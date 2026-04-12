@@ -7,6 +7,7 @@ import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/ai-avatar.jpg";
+import CandidateLayout from "@/components/CandidateLayout";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -535,7 +536,7 @@ export default function InterviewStart() {
   // Show "ready to start" screen — user must click to enable TTS on mobile
   if (!readyToStart) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <CandidateLayout>
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-6">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
@@ -557,12 +558,12 @@ export default function InterviewStart() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </CandidateLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <CandidateLayout minimal>
       <div className="mx-auto max-w-5xl">
         <div className="mb-4 flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
@@ -698,6 +699,6 @@ export default function InterviewStart() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </CandidateLayout>
   );
 }
