@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ScoreCircle";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
+import { Video } from "lucide-react";
 
 export default function SharedReport() {
   const { token } = useParams();
