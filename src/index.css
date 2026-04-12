@@ -108,3 +108,88 @@
     font-family: 'Inter', sans-serif;
   }
 }
+
+/* Morning-branded candidate pages */
+.candidate-layout {
+  background-color: #1a1a1a;
+  color: #f5f0e8;
+}
+
+.candidate-header {
+  border-bottom: 1px solid rgba(245, 240, 232, 0.1);
+}
+
+.candidate-header-tagline {
+  color: #d4a574;
+}
+
+.candidate-footer {
+  border-top: 1px solid rgba(245, 240, 232, 0.08);
+  color: #f5f0e8;
+}
+
+.candidate-layout .card,
+.candidate-layout [data-slot="card"] {
+  background-color: #262626;
+  border-color: rgba(245, 240, 232, 0.1);
+  color: #f5f0e8;
+}
+
+.candidate-layout input,
+.candidate-layout textarea,
+.candidate-layout select {
+  background-color: #333333 !important;
+  border-color: rgba(245, 240, 232, 0.15) !important;
+  color: #f5f0e8 !important;
+}
+
+.candidate-layout input::placeholder,
+.candidate-layout textarea::placeholder {
+  color: rgba(245, 240, 232, 0.4) !important;
+}
+
+.candidate-layout label {
+  color: #f5f0e8;
+}
+
+.candidate-layout .text-muted-foreground {
+  color: rgba(245, 240, 232, 0.6) !important;
+}
+
+.candidate-layout .text-destructive {
+  color: #ef4444 !important;
+}
+
+.candidate-layout .bg-primary {
+  background-color: #d4a574 !important;
+}
+
+.candidate-layout .text-primary {
+  color: #d4a574 !important;
+}
+
+.candidate-layout .bg-primary\/10 {
+  background-color: rgba(212, 165, 116, 0.1) !important;
+}
+
+.candidate-layout button[class*="bg-primary"] {
+  background-color: #d4a574 !important;
+  color: #1a1a1a !important;
+}
+
+.candidate-layout button[class*="bg-primary"]:hover {
+  background-color: #c4955e !important;
+}
+
+.candidate-layout .border-primary {
+  border-color: #d4a574 !important;
+}
+
+.candidate-layout .bg-success\/10 {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+.candidate-layout .text-success {
+  color: #22c55e !important;
+}
+
