@@ -58,9 +58,24 @@ export default function SharedReport() {
       // Load session info
       const { data: sessionData } = await supabase
         .from("sessions")
-        .select("candidate_name, candidate_email, created_at, duration_seconds, projects(title, job_title)")
+        .select("candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, projects(title, job_title)")
         .eq("id", reportData.session_id)
         .single();
+
+      // Load candidate video segments if no main recording
+      if (sessionData && !sessionData.video_recording_url) {
+        const { data: msgs } = await supabase
+          .from("session_messages")
+          .select("video_segment_url")
+          .eq("session_id", reportData.session_id)
+          .eq("role", "candidate" as any)
+          .not("video_segment_url", "is", null)
+          .order("timestamp")
+          .limit(1);
+        if (msgs?.[0]?.video_segment_url) {
+          (sessionData as any)._fallback_video = msgs[0].video_segment_url;
+        }
+      }
 
       setReport(reportData);
       setSession(sessionData);
