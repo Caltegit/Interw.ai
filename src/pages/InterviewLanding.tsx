@@ -116,20 +116,20 @@ export default function InterviewLanding() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <CandidateLayout>
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12">
             <p className="text-lg font-medium text-destructive">{error}</p>
           </CardContent>
         </Card>
-      </div>
+      </CandidateLayout>
     );
   }
 
   // Intermediate screen: intro media from recruiter
   if (showIntroMedia) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <CandidateLayout>
         <Card className="max-w-md w-full">
           <CardContent className="py-10 space-y-6 text-center">
             {introMediaType === "video" ? (
@@ -212,7 +212,7 @@ export default function InterviewLanding() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </CandidateLayout>
     );
   }
 
