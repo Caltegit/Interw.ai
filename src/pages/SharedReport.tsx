@@ -124,6 +124,21 @@ export default function SharedReport() {
         )}
       </div>
 
+      {videoUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Video className="h-4 w-4" /> Enregistrement vidéo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg overflow-hidden bg-muted aspect-video">
+              <video src={videoUrl} controls playsInline className="w-full h-full object-contain" preload="metadata" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {report && (
         <>
           <Card>
