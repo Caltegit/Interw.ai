@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video } from "lucide-react";
+import CandidateLayout from "@/components/CandidateLayout";
 
 export default function InterviewLanding() {
   const { slug } = useParams();

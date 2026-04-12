@@ -1,6 +1,7 @@
 import { CheckCircle } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import CandidateLayout from "@/components/CandidateLayout";
 
 export default function InterviewComplete() {
   const { token } = useParams();
