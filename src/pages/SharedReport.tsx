@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScoreCircle } from "@/components/ScoreCircle";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
+import { Video } from "lucide-react";
 
 export default function SharedReport() {
   const { token } = useParams();
@@ -57,9 +58,24 @@ export default function SharedReport() {
       // Load session info
       const { data: sessionData } = await supabase
         .from("sessions")
-        .select("candidate_name, candidate_email, created_at, duration_seconds, projects(title, job_title)")
+        .select("candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, projects(title, job_title)")
         .eq("id", reportData.session_id)
         .single();
+
+      // Load candidate video segments if no main recording
+      if (sessionData && !sessionData.video_recording_url) {
+        const { data: msgs } = await supabase
+          .from("session_messages")
+          .select("video_segment_url")
+          .eq("session_id", reportData.session_id)
+          .eq("role", "candidate" as any)
+          .not("video_segment_url", "is", null)
+          .order("timestamp")
+          .limit(1);
+        if (msgs?.[0]?.video_segment_url) {
+          (sessionData as any)._fallback_video = msgs[0].video_segment_url;
+        }
+      }
 
       setReport(reportData);
       setSession(sessionData);
@@ -91,6 +107,7 @@ export default function SharedReport() {
 
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
   const project = (session as any)?.projects;
+  const videoUrl = session?.video_recording_url || (session as any)?._fallback_video || null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
@@ -106,6 +123,21 @@ export default function SharedReport() {
           </div>
         )}
       </div>
+
+      {videoUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Video className="h-4 w-4" /> Enregistrement vidéo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg overflow-hidden bg-muted aspect-video">
+              <video src={videoUrl} controls playsInline className="w-full h-full object-contain" preload="metadata" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {report && (
         <>
