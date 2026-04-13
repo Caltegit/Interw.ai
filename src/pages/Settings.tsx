@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Lock, User, Building2 } from "lucide-react";
+import { OrgMembers } from "@/components/OrgMembers";
 
 export default function Settings() {
   const { profile, user } = useAuth();
@@ -164,11 +165,11 @@ export default function Settings() {
               </div>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            La gestion des membres de l'organisation sera disponible prochainement.
-          </p>
         </CardContent>
       </Card>
+
+      {/* Members */}
+      {orgId && <OrgMembers orgId={orgId} />}
     </div>
   );
 }
