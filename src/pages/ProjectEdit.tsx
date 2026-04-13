@@ -25,7 +25,7 @@ export default function ProjectEdit() {
   const [jobTitle, setJobTitle] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
-  const [aiPersonaName, setAiPersonaName] = useState("Sophie");
+  const [aiPersonaName, setAiPersonaName] = useState("Marie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [maxDuration, setMaxDuration] = useState(30);
   const [recordAudio, setRecordAudio] = useState(true);

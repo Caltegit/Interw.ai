@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import defaultAiAvatar from "@/assets/ai-avatar.jpg";
+import defaultAiAvatar from "@/assets/ai-avatar-marie.png";
 import CandidateLayout from "@/components/CandidateLayout";
 
 // Extend window for webkitSpeechRecognition
@@ -404,7 +404,7 @@ export default function InterviewStart() {
         body: {
           messages: updatedAiMessages,
           projectContext: {
-            aiPersonaName: project?.ai_persona_name ?? "Sophie",
+            aiPersonaName: project?.ai_persona_name ?? "Marie",
             jobTitle: project?.job_title ?? "",
             questions: questions.map(q => ({ content: q.content, type: q.type })),
             currentQuestionNumber: currentQuestionIndex + 1,
@@ -602,7 +602,7 @@ export default function InterviewStart() {
                 </div>
               )}
               <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-0.5 rounded text-xs font-medium">
-                {project?.ai_persona_name || "Sophie"} — IA
+                {project?.ai_persona_name || "Marie"} — IA
               </div>
             </div>
 
