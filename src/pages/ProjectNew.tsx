@@ -324,7 +324,7 @@ export default function ProjectNew() {
                     type="button"
                     variant={introType === "audio" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setIntroType("audio")}
+                    onClick={() => { setIntroType("audio"); setIntroVideoFile(null); setIntroVideoPreviewUrl(null); }}
                   >
                     <Mic className="mr-1 h-4 w-4" /> Audio
                   </Button>
