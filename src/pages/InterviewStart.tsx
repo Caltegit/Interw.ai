@@ -109,12 +109,17 @@ export default function InterviewStart() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "fr-FR";
       utterance.rate = 0.95;
-      utterance.pitch = 1.0;
+      utterance.pitch = 1.1;
 
-      // Try to pick a French voice
+      // Pick a French female voice specifically
       const voices = window.speechSynthesis.getVoices();
-      const frenchVoice = voices.find(v => v.lang.startsWith("fr"));
-      if (frenchVoice) utterance.voice = frenchVoice;
+      const femaleVoice = voices.find(v =>
+        v.lang.startsWith("fr") && /female|femme|amelie|marie|thomas/i.test(v.name) === false &&
+        /amelie|audrey|marie|céline|léa|sophie|virginie|siri.*female|google.*fr/i.test(v.name)
+      ) || voices.find(v =>
+        v.lang.startsWith("fr") && (/female/i.test(v.name) || v.name.toLowerCase().includes("amelie") || v.name.toLowerCase().includes("audrey"))
+      ) || voices.find(v => v.lang.startsWith("fr"));
+      if (femaleVoice) utterance.voice = femaleVoice;
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = () => { setIsSpeaking(false); resolve(); };
