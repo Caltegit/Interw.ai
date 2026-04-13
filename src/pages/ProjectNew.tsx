@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
-import { StepQuestions } from "@/components/project/StepQuestions";
+import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
@@ -43,9 +43,9 @@ export default function ProjectNew() {
   const [introVideoPreviewUrl, setIntroVideoPreviewUrl] = useState<string | null>(null);
 
   // Step 3
-  const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
-    { content: "Comment ça va aujourd'hui ?", type: "open", follow_up_enabled: false, max_follow_ups: 0 },
-    { content: "Tu penses quoi de Morning ?", type: "open", follow_up_enabled: false, max_follow_ups: 0 },
+  const [questions, setQuestions] = useState<Question[]>([
+    { ...createEmptyQuestion(), content: "Comment ça va aujourd'hui ?" },
+    { ...createEmptyQuestion(), content: "Tu penses quoi de Morning ?" },
   ]);
 
   // Step 4
