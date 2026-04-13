@@ -304,18 +304,7 @@ export default function ProjectNew() {
                 </div>
               </div>
 
-              <div>
-                <Label>Voix IA</Label>
-                <Select value={aiVoice} onValueChange={setAiVoice}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="female_fr">Femme FR</SelectItem>
-                    <SelectItem value="male_fr">Homme FR</SelectItem>
-                    <SelectItem value="female_en">Femme EN</SelectItem>
-                    <SelectItem value="male_en">Homme EN</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Voix IA fixée à female_fr — pas de sélecteur */}
 
               <div>
                 <Label>Message de présentation</Label>
