@@ -478,8 +478,16 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI response, then resume listening + start new question recording
-      await speak(aiResponse);
+      // Speak AI response, then play next question media if available
+      const nextQIdx = currentQuestionIndex + 1;
+      const nextQuestion = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
+      if (nextQuestion && (nextQuestion.audio_url || nextQuestion.video_url)) {
+        // Speak AI transition text, then play question media
+        await speak(aiResponse);
+        await speakOrPlayQuestion(nextQuestion.content, nextQuestion);
+      } else {
+        await speak(aiResponse);
+      }
       if (!isOver) {
         startQuestionRecording();
         startListening();
