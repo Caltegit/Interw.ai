@@ -112,7 +112,12 @@ export default function InterviewLanding() {
     }
   };
 
-  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (loading)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
 
   if (error) {
     return (
@@ -158,12 +163,7 @@ export default function InterviewLanding() {
             </div>
 
             {introMediaType === "audio" && (
-              <audio
-                ref={introAudioRef}
-                src={project.intro_audio_url}
-                onEnded={handleMediaEnded}
-                className="hidden"
-              />
+              <audio ref={introAudioRef} src={project.intro_audio_url} onEnded={handleMediaEnded} className="hidden" />
             )}
 
             {introMediaType === "video" && (
@@ -219,9 +219,7 @@ export default function InterviewLanding() {
   return (
     <CandidateLayout>
       <div className="w-full max-w-xl space-y-6">
-        <h1 className="text-xl font-bold text-center">
-          Entretien pour le poste de {project?.job_title}
-        </h1>
+        <h1 className="text-xl font-bold text-center">Entretien pour le poste de {project?.job_title}</h1>
 
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col items-center gap-1 text-center">
@@ -241,12 +239,23 @@ export default function InterviewLanding() {
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Votre nom complet *</Label>
-              <Input id="name" placeholder="Jean Dupont" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
+              <Label htmlFor="name">Votre nom *</Label>
+              <Input
+                id="name"
+                placeholder="Jean Dupont"
+                value={candidateName}
+                onChange={(e) => setCandidateName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Votre email *</Label>
-              <Input id="email" type="email" placeholder="jean@exemple.com" value={candidateEmail} onChange={(e) => setCandidateEmail(e.target.value)} />
+              <Input
+                id="email"
+                type="email"
+                placeholder="jean@exemple.com"
+                value={candidateEmail}
+                onChange={(e) => setCandidateEmail(e.target.value)}
+              />
             </div>
             <Button
               className="w-full"
@@ -261,8 +270,8 @@ export default function InterviewLanding() {
         </Card>
 
         <p className="text-xs text-center text-muted-foreground">
-          Cet entretien sera enregistré, transcrit et analysé par intelligence artificielle.
-          En continuant, vous acceptez ces conditions.
+          Cet entretien sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
+          acceptez ces conditions.
         </p>
       </div>
     </CandidateLayout>
