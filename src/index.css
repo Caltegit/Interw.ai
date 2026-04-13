@@ -152,6 +152,18 @@
   color: #f5f0e8;
 }
 
+.candidate-layout .card h1,
+.candidate-layout .card h2,
+.candidate-layout .card h3,
+.candidate-layout .card p,
+.candidate-layout .card span,
+.candidate-layout [data-slot="card"] h1,
+.candidate-layout [data-slot="card"] h2,
+.candidate-layout [data-slot="card"] h3,
+.candidate-layout [data-slot="card"] p,
+.candidate-layout [data-slot="card"] span {
+  color: #f5f0e8;
+}
 .candidate-layout input,
 .candidate-layout textarea,
 .candidate-layout select {
