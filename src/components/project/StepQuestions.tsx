@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 
 interface Question {
@@ -27,6 +28,13 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     setQuestions(updated);
   };
 
+  const toggleFollowUp = (index: number) => {
+    const updated = [...questions];
+    const enabled = !updated[index].follow_up_enabled;
+    updated[index] = { ...updated[index], follow_up_enabled: enabled, max_follow_ups: enabled ? 2 : 0 };
+    setQuestions(updated);
+  };
+
   const removeQuestion = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
@@ -45,17 +53,25 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
 
       <div className="space-y-3">
         {questions.map((q, i) => (
-          <div key={i} className="flex gap-2 items-center rounded-lg border p-3">
-            <GripVertical className="h-5 w-5 text-muted-foreground shrink-0 cursor-grab" />
-            <Input
-              className="flex-1"
-              placeholder={`Question ${i + 1}...`}
-              value={q.content}
-              onChange={(e) => updateQuestion(i, e.target.value)}
-            />
-            <Button variant="ghost" size="icon" onClick={() => removeQuestion(i)} disabled={questions.length <= 1}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div key={i} className="rounded-lg border p-3 space-y-2">
+            <div className="flex gap-2 items-center">
+              <GripVertical className="h-5 w-5 text-muted-foreground shrink-0 cursor-grab" />
+              <Input
+                className="flex-1"
+                placeholder={`Question ${i + 1}...`}
+                value={q.content}
+                onChange={(e) => updateQuestion(i, e.target.value)}
+              />
+              <Button variant="ghost" size="icon" onClick={() => removeQuestion(i)} disabled={questions.length <= 1}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 pl-7">
+              <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(i)} id={`followup-${i}`} />
+              <Label htmlFor={`followup-${i}`} className="text-sm text-muted-foreground cursor-pointer">
+                Relance IA
+              </Label>
+            </div>
           </div>
         ))}
       </div>
