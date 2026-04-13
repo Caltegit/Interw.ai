@@ -353,8 +353,16 @@ export default function InterviewStart() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
     }
 
-    // Speak the greeting (now in user gesture context — works on mobile)
-    await speak(greeting);
+    // Speak the greeting, then play question media if available
+    const firstQ = questions[0];
+    if (firstQ?.audio_url || firstQ?.video_url) {
+      // Speak intro text via TTS, then play question media
+      const introText = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Écoutez la première question :`;
+      await speak(introText);
+      await speakOrPlayQuestion(firstQ.content, firstQ);
+    } else {
+      await speak(greeting);
+    }
     // Start recording video for question 1
     startQuestionRecording();
     startListening();
