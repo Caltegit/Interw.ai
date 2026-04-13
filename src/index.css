@@ -115,6 +115,16 @@
   color: #f5f0e8;
 }
 
+.candidate-layout h1,
+.candidate-layout h2,
+.candidate-layout h3,
+.candidate-layout h4,
+.candidate-layout p,
+.candidate-layout span,
+.candidate-layout div {
+  color: inherit;
+}
+
 .candidate-header {
   border-bottom: 1px solid rgba(245, 240, 232, 0.1);
 }
@@ -125,13 +135,20 @@
 
 .candidate-footer {
   border-top: 1px solid rgba(245, 240, 232, 0.08);
-  color: #f5f0e8;
+  color: rgba(245, 240, 232, 0.5);
 }
 
 .candidate-layout .card,
 .candidate-layout [data-slot="card"] {
   background-color: #262626;
-  border-color: rgba(245, 240, 232, 0.1);
+  border-color: rgba(245, 240, 232, 0.12);
+  color: #f5f0e8;
+}
+
+.candidate-layout [data-slot="card-content"],
+.candidate-layout [data-slot="card-header"],
+.candidate-layout [data-slot="card-title"],
+.candidate-layout [data-slot="card-description"] {
   color: #f5f0e8;
 }
 
@@ -139,25 +156,36 @@
 .candidate-layout textarea,
 .candidate-layout select {
   background-color: #333333 !important;
-  border-color: rgba(245, 240, 232, 0.15) !important;
+  border-color: rgba(245, 240, 232, 0.2) !important;
   color: #f5f0e8 !important;
 }
 
 .candidate-layout input::placeholder,
 .candidate-layout textarea::placeholder {
-  color: rgba(245, 240, 232, 0.4) !important;
+  color: rgba(245, 240, 232, 0.45) !important;
 }
 
 .candidate-layout label {
-  color: #f5f0e8;
+  color: #f5f0e8 !important;
 }
 
 .candidate-layout .text-muted-foreground {
-  color: rgba(245, 240, 232, 0.6) !important;
+  color: rgba(245, 240, 232, 0.65) !important;
 }
 
 .candidate-layout .text-destructive {
-  color: #ef4444 !important;
+  color: #f87171 !important;
+}
+
+.candidate-layout .text-sm,
+.candidate-layout .text-xs {
+  color: rgba(245, 240, 232, 0.75);
+}
+
+.candidate-layout .font-bold,
+.candidate-layout .font-semibold,
+.candidate-layout .font-medium {
+  color: #f5f0e8;
 }
 
 .candidate-layout .bg-primary {
@@ -169,15 +197,18 @@
 }
 
 .candidate-layout .bg-primary\/10 {
-  background-color: rgba(212, 165, 116, 0.1) !important;
+  background-color: rgba(212, 165, 116, 0.15) !important;
 }
 
-.candidate-layout button[class*="bg-primary"] {
+.candidate-layout button[class*="bg-primary"],
+.candidate-layout button.bg-primary {
   background-color: #d4a574 !important;
   color: #1a1a1a !important;
+  font-weight: 600;
 }
 
-.candidate-layout button[class*="bg-primary"]:hover {
+.candidate-layout button[class*="bg-primary"]:hover,
+.candidate-layout button.bg-primary:hover {
   background-color: #c4955e !important;
 }
 
@@ -186,10 +217,25 @@
 }
 
 .candidate-layout .bg-success\/10 {
-  background-color: rgba(34, 197, 94, 0.1) !important;
+  background-color: rgba(34, 197, 94, 0.15) !important;
 }
 
 .candidate-layout .text-success {
-  color: #22c55e !important;
+  color: #4ade80 !important;
+}
+
+/* Emerald colors used on media screen */
+.candidate-layout .text-emerald-600,
+.candidate-layout .text-emerald-400 {
+  color: #4ade80 !important;
+}
+
+/* Opacity overrides — ensure text is always readable */
+.candidate-layout .opacity-70 {
+  opacity: 0.8;
+}
+
+.candidate-layout .opacity-50 {
+  opacity: 0.6;
 }
 
