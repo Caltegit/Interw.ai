@@ -3,13 +3,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, GripVertical } from "lucide-react";
+import { QuestionMediaRecorder } from "./QuestionMediaRecorder";
 
-interface Question {
+export interface Question {
   content: string;
   type: string;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  audioBlob: Blob | null;
+  audioPreviewUrl: string | null;
+  videoBlob: Blob | null;
+  videoPreviewUrl: string | null;
 }
+
+export const createEmptyQuestion = (): Question => ({
+  content: "",
+  type: "open",
+  follow_up_enabled: false,
+  max_follow_ups: 0,
+  audioBlob: null,
+  audioPreviewUrl: null,
+  videoBlob: null,
+  videoPreviewUrl: null,
+});
 
 interface StepQuestionsProps {
   questions: Question[];
@@ -19,7 +35,7 @@ interface StepQuestionsProps {
 export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const addQuestion = () => {
     if (questions.length >= 15) return;
-    setQuestions([...questions, { content: "", type: "open", follow_up_enabled: false, max_follow_ups: 0 }]);
+    setQuestions([...questions, createEmptyQuestion()]);
   };
 
   const updateQuestion = (index: number, content: string) => {
@@ -32,6 +48,18 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     const updated = [...questions];
     const enabled = !updated[index].follow_up_enabled;
     updated[index] = { ...updated[index], follow_up_enabled: enabled, max_follow_ups: enabled ? 2 : 0 };
+    setQuestions(updated);
+  };
+
+  const updateAudio = (index: number, data: { blob: Blob | null; previewUrl: string | null }) => {
+    const updated = [...questions];
+    updated[index] = { ...updated[index], audioBlob: data.blob, audioPreviewUrl: data.previewUrl };
+    setQuestions(updated);
+  };
+
+  const updateVideo = (index: number, data: { blob: Blob | null; previewUrl: string | null }) => {
+    const updated = [...questions];
+    updated[index] = { ...updated[index], videoBlob: data.blob, videoPreviewUrl: data.previewUrl };
     setQuestions(updated);
   };
 
@@ -71,6 +99,16 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
               <Label htmlFor={`followup-${i}`} className="text-sm text-muted-foreground cursor-pointer">
                 Relance IA
               </Label>
+            </div>
+            <div className="pl-7">
+              <QuestionMediaRecorder
+                audioBlob={q.audioBlob}
+                audioPreviewUrl={q.audioPreviewUrl}
+                videoBlob={q.videoBlob}
+                videoPreviewUrl={q.videoPreviewUrl}
+                onAudioChange={(data) => updateAudio(i, data)}
+                onVideoChange={(data) => updateVideo(i, data)}
+              />
             </div>
           </div>
         ))}

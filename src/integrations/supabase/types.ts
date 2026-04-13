@@ -234,6 +234,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          audio_url: string | null
           content: string
           created_at: string
           follow_up_enabled: boolean
@@ -243,8 +244,10 @@ export type Database = {
           project_id: string
           scoring_criteria_ids: string[] | null
           type: Database["public"]["Enums"]["question_type"]
+          video_url: string | null
         }
         Insert: {
+          audio_url?: string | null
           content: string
           created_at?: string
           follow_up_enabled?: boolean
@@ -254,8 +257,10 @@ export type Database = {
           project_id: string
           scoring_criteria_ids?: string[] | null
           type?: Database["public"]["Enums"]["question_type"]
+          video_url?: string | null
         }
         Update: {
+          audio_url?: string | null
           content?: string
           created_at?: string
           follow_up_enabled?: boolean
@@ -265,6 +270,7 @@ export type Database = {
           project_id?: string
           scoring_criteria_ids?: string[] | null
           type?: Database["public"]["Enums"]["question_type"]
+          video_url?: string | null
         }
         Relationships: [
           {
