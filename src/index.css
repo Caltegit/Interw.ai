@@ -138,31 +138,37 @@
   color: rgba(245, 240, 232, 0.5);
 }
 
-.candidate-layout .card,
+.candidate-layout .bg-card,
+.candidate-layout .rounded-lg.border,
 .candidate-layout [data-slot="card"] {
-  background-color: #262626;
-  border-color: rgba(245, 240, 232, 0.12);
-  color: #f5f0e8;
+  background-color: #262626 !important;
+  border-color: rgba(245, 240, 232, 0.12) !important;
+  color: #f5f0e8 !important;
 }
 
 .candidate-layout [data-slot="card-content"],
 .candidate-layout [data-slot="card-header"],
 .candidate-layout [data-slot="card-title"],
 .candidate-layout [data-slot="card-description"] {
-  color: #f5f0e8;
+  color: #f5f0e8 !important;
 }
 
-.candidate-layout .card h1,
-.candidate-layout .card h2,
-.candidate-layout .card h3,
-.candidate-layout .card p,
-.candidate-layout .card span,
+.candidate-layout .bg-card h1,
+.candidate-layout .bg-card h2,
+.candidate-layout .bg-card h3,
+.candidate-layout .bg-card p,
+.candidate-layout .bg-card span,
+.candidate-layout .rounded-lg.border h1,
+.candidate-layout .rounded-lg.border h2,
+.candidate-layout .rounded-lg.border h3,
+.candidate-layout .rounded-lg.border p,
+.candidate-layout .rounded-lg.border span,
 .candidate-layout [data-slot="card"] h1,
 .candidate-layout [data-slot="card"] h2,
 .candidate-layout [data-slot="card"] h3,
 .candidate-layout [data-slot="card"] p,
 .candidate-layout [data-slot="card"] span {
-  color: #f5f0e8;
+  color: #f5f0e8 !important;
 }
 .candidate-layout input,
 .candidate-layout textarea,
