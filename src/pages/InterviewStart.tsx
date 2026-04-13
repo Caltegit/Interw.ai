@@ -569,9 +569,10 @@ export default function InterviewStart() {
 
   return (
     <CandidateLayout minimal>
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+      <div className="mx-auto w-full max-w-5xl px-2 sm:px-4">
+        {/* Header: progress */}
+        <div className="mb-2 sm:mb-4 flex items-center justify-between">
+          <span className="text-xs sm:text-sm text-muted-foreground">
             Question {currentQuestionIndex + 1} / {questions.length}
           </span>
           <div className="flex items-center gap-2">
@@ -579,87 +580,94 @@ export default function InterviewStart() {
             {isListening && !isSpeaking && <span className="flex items-center gap-1 text-xs text-destructive"><span className="h-2 w-2 rounded-full bg-destructive animate-pulse" /> Écoute en cours</span>}
           </div>
         </div>
-        <div className="mb-6 h-2 rounded-full bg-muted">
-          <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }} />
+        <div className="mb-4 sm:mb-6 h-1.5 sm:h-2 rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-5">
-          <div className="lg:col-span-2 flex flex-col items-center gap-4">
-            {/* AI Avatar - large display */}
-            <div className={`relative w-full aspect-square rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
-              <img
-                src={project?.avatar_image_url || defaultAiAvatar}
-                alt={project?.ai_persona_name || "IA"}
-                className="w-full h-full object-cover"
-              />
-              {isSpeaking && (
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-3 flex items-end justify-center gap-1">
-                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
-                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
-                  <span className="h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+        {/* Mobile: stacked layout / Desktop: side-by-side */}
+        <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 sm:gap-6">
+
+          {/* Videos section */}
+          <div className="lg:col-span-2 flex flex-col gap-3 sm:gap-4">
+            {/* Mobile: AI avatar + candidate side by side / Desktop: stacked */}
+            <div className="flex gap-3 lg:flex-col lg:gap-4">
+              {/* AI Avatar */}
+              <div className={`relative flex-1 lg:flex-none lg:w-full aspect-square rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
+                <img
+                  src={project?.avatar_image_url || defaultAiAvatar}
+                  alt={project?.ai_persona_name || "IA"}
+                  className="w-full h-full object-cover"
+                />
+                {isSpeaking && (
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 flex items-end justify-center gap-1">
+                    <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-5 sm:h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
+                    <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
+                    <span className="h-5 sm:h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+                  </div>
+                )}
+                <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium">
+                  {project?.ai_persona_name || "Marie"} — IA
                 </div>
-              )}
-              <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-0.5 rounded text-xs font-medium">
-                {project?.ai_persona_name || "Marie"} — IA
+              </div>
+
+              {/* Candidate video preview */}
+              <div className="relative flex-1 lg:flex-none lg:w-full aspect-video rounded-lg bg-muted overflow-hidden ring-1 ring-border">
+                <video ref={videoRef} muted playsInline className="w-full h-full object-cover" style={{ transform: "scaleX(-1)" }} />
+                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs">
+                  <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-destructive-foreground animate-pulse" />
+                  REC
+                </div>
+                <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs">
+                  Vous
+                </div>
               </div>
             </div>
 
-            {/* Candidate video preview - small pip */}
-            <div className="relative w-full aspect-video rounded-lg bg-muted overflow-hidden ring-1 ring-border">
-              <video ref={videoRef} muted playsInline className="w-full h-full object-cover mirror" style={{ transform: "scaleX(-1)" }} />
-              <div className="absolute top-2 right-2 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-2 py-0.5 rounded text-xs">
-                <span className="h-2 w-2 rounded-full bg-destructive-foreground animate-pulse" />
-                REC
-              </div>
-              <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-0.5 rounded text-xs">
-                Vous
-              </div>
-            </div>
-
-            <div className="flex gap-2 w-full">
+            {/* Sound toggle + processing */}
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setTtsEnabled(!ttsEnabled)} className="text-xs text-muted-foreground flex-1">
                 {ttsEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
                 {ttsEnabled ? "Son activé" : "Son coupé"}
               </Button>
+              {isProcessing && (
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              )}
             </div>
-
-            {isProcessing && (
-              <div className="flex gap-1">
-                <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            )}
           </div>
 
-          <div className="lg:col-span-3 flex flex-col">
-            {/* 1) Conversation history - top */}
-            <Card className="mb-4">
-              <CardContent className="p-4 max-h-64 overflow-y-auto space-y-3">
+          {/* Conversation + controls */}
+          <div className="lg:col-span-3 flex flex-col min-h-0">
+            {/* 1) Conversation history */}
+            <Card className="mb-3 sm:mb-4 flex-1 min-h-0">
+              <CardContent className="p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto space-y-2 sm:space-y-3">
                 {messages.map((m, i) => (
-                  <div key={i} className={`p-3 rounded-lg text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-8"}`}>
-                    <span className="text-xs font-medium text-muted-foreground">
+                  <div key={i} className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-4 sm:ml-8"}`}>
+                    <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
                       {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
                     </span>
-                    <p className="mt-1">{m.content}</p>
+                    <p className="mt-0.5 sm:mt-1">{m.content}</p>
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
               </CardContent>
             </Card>
 
-            {/* 2) Live transcript preview */}
+            {/* 2) Live transcript */}
             {isListening && liveTranscript && (
-              <div className="p-3 rounded-lg text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-4">
-                <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
-                <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
+              <div className="p-2 sm:p-3 rounded-lg text-xs sm:text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-3 sm:mb-4">
+                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
+                <p className="mt-0.5 sm:mt-1 text-muted-foreground italic">{liveTranscript}</p>
               </div>
             )}
 
-            {/* 3) Action button - bottom */}
-            <div className="flex flex-col items-center gap-4 mt-auto">
+            {/* 3) Action buttons */}
+            <div className="flex flex-col items-center gap-3 sm:gap-4">
               {interviewFinished ? (
                 <Button className="w-full max-w-sm" size="lg" variant="destructive" onClick={endInterview}>
                   Terminer l'entretien
@@ -667,7 +675,7 @@ export default function InterviewStart() {
               ) : (
                 <>
                   <Button
-                    className="w-full max-w-sm h-14 text-base"
+                    className="w-full max-w-sm h-12 sm:h-14 text-sm sm:text-base"
                     size="lg"
                     onClick={handleSendResponse}
                     disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
