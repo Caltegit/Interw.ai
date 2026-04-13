@@ -50,7 +50,9 @@ export default function ProjectNew() {
 
   // Step 4
   const [criteria, setCriteria] = useState<{ label: string; description: string; weight: number; scoring_scale: string; anchors: Record<string, string>; applies_to: string }[]>([
-    { label: "", description: "", weight: 100, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
+    { label: "Entrepreneur de son périmètre", description: "Capacité à s'approprier son rôle, prendre des décisions de façon autonome et en assumer la responsabilité. Situations concrètes où le candidat a pris des initiatives sans y être explicitement invité.", weight: 35, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
+    { label: "Résilience au changement", description: "Capacité à s'adapter, faire évoluer son rôle et rester efficace dans un environnement qui bouge vite, sans avoir besoin de cases fixes ni de process très définis.", weight: 35, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
+    { label: "Fit culturel & envie sincère", description: "Alignement réel avec les valeurs et l'ambiance Morning. Capacité à dire ce qu'on a vraiment envie de faire, au-delà du discours poli d'entretien.", weight: 30, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
   ]);
 
   // Step 5
