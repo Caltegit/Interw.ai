@@ -32,7 +32,7 @@ export default function ProjectNew() {
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   // Step 2
-  const [aiPersonaName, setAiPersonaName] = useState("Sophie");
+  const [aiPersonaName, setAiPersonaName] = useState("Marie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -263,7 +263,7 @@ export default function ProjectNew() {
             <div className="space-y-5">
               <div>
                 <Label>Nom du persona IA</Label>
-                <Input placeholder="Sophie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
+                <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
               <div>
