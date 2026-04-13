@@ -154,7 +154,7 @@ export default function ProjectNew() {
 
       const validQuestions = questions.filter((q) => q.content.trim());
       if (validQuestions.length > 0) {
-        await supabase.from("questions").insert(
+        const insertedQuestions = await supabase.from("questions").insert(
           validQuestions.map((q, i) => ({
             project_id: project.id,
             order_index: i,
@@ -163,7 +163,41 @@ export default function ProjectNew() {
             follow_up_enabled: q.follow_up_enabled,
             max_follow_ups: q.max_follow_ups,
           }))
-        );
+        ).select();
+
+        if (insertedQuestions.data) {
+          for (let i = 0; i < insertedQuestions.data.length; i++) {
+            const q = validQuestions[i];
+            const qId = insertedQuestions.data[i].id;
+            const updates: Record<string, string> = {};
+
+            if (q.audioBlob) {
+              const audioPath = `questions/${qId}.webm`;
+              const { error: aErr } = await supabase.storage
+                .from("media")
+                .upload(audioPath, q.audioBlob, { contentType: "audio/webm", upsert: true });
+              if (!aErr) {
+                const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
+                updates.audio_url = aUrl.publicUrl;
+              }
+            }
+
+            if (q.videoBlob) {
+              const videoPath = `questions/${qId}.webm`;
+              const { error: vErr } = await supabase.storage
+                .from("media")
+                .upload(videoPath, q.videoBlob, { contentType: "video/webm", upsert: true });
+              if (!vErr) {
+                const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
+                updates.video_url = vUrl.publicUrl;
+              }
+            }
+
+            if (Object.keys(updates).length > 0) {
+              await supabase.from("questions").update(updates as never).eq("id", qId);
+            }
+          }
+        }
       }
 
       const validCriteria = criteria.filter((c) => c.label.trim());
