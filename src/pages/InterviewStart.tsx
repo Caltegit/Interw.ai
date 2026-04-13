@@ -97,6 +97,16 @@ export default function InterviewStart() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Play a media URL and return a promise that resolves when it ends
+  const playMediaUrl = useCallback((url: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const el = new Audio(url);
+      el.onended = () => resolve();
+      el.onerror = () => resolve();
+      el.play().catch(() => resolve());
+    });
+  }, []);
+
   // TTS: speak text aloud
   const speak = useCallback((text: string): Promise<void> => {
     return new Promise((resolve) => {
@@ -104,14 +114,12 @@ export default function InterviewStart() {
         resolve();
         return;
       }
-      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "fr-FR";
       utterance.rate = 0.95;
       utterance.pitch = 1.1;
 
-      // Pick a French female voice specifically
       const voices = window.speechSynthesis.getVoices();
       const femaleVoice = voices.find(v =>
         v.lang.startsWith("fr") && /female|femme|amelie|marie|thomas/i.test(v.name) === false &&
@@ -128,6 +136,21 @@ export default function InterviewStart() {
       window.speechSynthesis.speak(utterance);
     });
   }, [ttsEnabled]);
+
+  // Play question media (audio_url or video_url) if available, otherwise use TTS
+  const speakOrPlayQuestion = useCallback(async (text: string, question?: any) => {
+    if (question?.video_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.video_url);
+      setIsSpeaking(false);
+    } else if (question?.audio_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.audio_url);
+      setIsSpeaking(false);
+    } else {
+      await speak(text);
+    }
+  }, [playMediaUrl, speak]);
 
   // STT: start listening
   const startListening = useCallback(() => {
@@ -330,8 +353,16 @@ export default function InterviewStart() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
     }
 
-    // Speak the greeting (now in user gesture context — works on mobile)
-    await speak(greeting);
+    // Speak the greeting, then play question media if available
+    const firstQ = questions[0];
+    if (firstQ?.audio_url || firstQ?.video_url) {
+      // Speak intro text via TTS, then play question media
+      const introText = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Écoutez la première question :`;
+      await speak(introText);
+      await speakOrPlayQuestion(firstQ.content, firstQ);
+    } else {
+      await speak(greeting);
+    }
     // Start recording video for question 1
     startQuestionRecording();
     startListening();
@@ -447,8 +478,16 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI response, then resume listening + start new question recording
-      await speak(aiResponse);
+      // Speak AI response, then play next question media if available
+      const nextQIdx = currentQuestionIndex + 1;
+      const nextQuestion = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
+      if (nextQuestion && (nextQuestion.audio_url || nextQuestion.video_url)) {
+        // Speak AI transition text, then play question media
+        await speak(aiResponse);
+        await speakOrPlayQuestion(nextQuestion.content, nextQuestion);
+      } else {
+        await speak(aiResponse);
+      }
       if (!isOver) {
         startQuestionRecording();
         startListening();
