@@ -332,7 +332,7 @@ export default function ProjectNew() {
                     type="button"
                     variant={introType === "video" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setIntroType("video")}
+                    onClick={() => { setIntroType("video"); setIntroAudioBlob(null); setIntroAudioPreviewUrl(null); }}
                   >
                     <Video className="mr-1 h-4 w-4" /> Vidéo
                   </Button>
