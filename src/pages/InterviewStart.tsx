@@ -97,6 +97,39 @@ export default function InterviewStart() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Play a media URL (audio or video) and return a promise that resolves when it ends
+  const playMediaUrl = useCallback((url: string, type: "audio" | "video"): Promise<void> => {
+    return new Promise((resolve) => {
+      if (type === "video") {
+        // We'll create a temporary audio element for video URLs too (play audio track)
+        const el = new Audio(url);
+        el.onended = () => resolve();
+        el.onerror = () => resolve();
+        el.play().catch(() => resolve());
+      } else {
+        const el = new Audio(url);
+        el.onended = () => resolve();
+        el.onerror = () => resolve();
+        el.play().catch(() => resolve());
+      }
+    });
+  }, []);
+
+  // Play question media (audio_url or video_url) if available, otherwise use TTS
+  const speakOrPlayQuestion = useCallback(async (text: string, question?: any) => {
+    if (question?.video_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.video_url, "video");
+      setIsSpeaking(false);
+    } else if (question?.audio_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.audio_url, "audio");
+      setIsSpeaking(false);
+    } else {
+      await speak(text);
+    }
+  }, [playMediaUrl, speak]);
+
   // TTS: speak text aloud
   const speak = useCallback((text: string): Promise<void> => {
     return new Promise((resolve) => {
