@@ -634,9 +634,32 @@ export default function InterviewStart() {
             )}
           </div>
 
-          <div className="lg:col-span-3 flex flex-col justify-center">
-            {/* Action button - centered */}
-            <div className="flex flex-col items-center gap-4 mb-6">
+          <div className="lg:col-span-3 flex flex-col">
+            {/* 1) Conversation history - top */}
+            <Card className="mb-4">
+              <CardContent className="p-4 max-h-64 overflow-y-auto space-y-3">
+                {messages.map((m, i) => (
+                  <div key={i} className={`p-3 rounded-lg text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-8"}`}>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
+                    </span>
+                    <p className="mt-1">{m.content}</p>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </CardContent>
+            </Card>
+
+            {/* 2) Live transcript preview */}
+            {isListening && liveTranscript && (
+              <div className="p-3 rounded-lg text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-4">
+                <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
+                <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
+              </div>
+            )}
+
+            {/* 3) Action button - bottom */}
+            <div className="flex flex-col items-center gap-4 mt-auto">
               {interviewFinished ? (
                 <Button className="w-full max-w-sm" size="lg" variant="destructive" onClick={endInterview}>
                   Terminer l'entretien
@@ -667,29 +690,6 @@ export default function InterviewStart() {
                 </>
               )}
             </div>
-
-            {/* Live transcript preview */}
-            {isListening && liveTranscript && (
-              <div className="p-3 rounded-lg text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-4">
-                <span className="text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
-                <p className="mt-1 text-muted-foreground italic">{liveTranscript}</p>
-              </div>
-            )}
-
-            {/* Conversation history - scrollable below */}
-            <Card>
-              <CardContent className="p-4 max-h-48 overflow-y-auto space-y-3">
-                {messages.map((m, i) => (
-                  <div key={i} className={`p-3 rounded-lg text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-8"}`}>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
-                    </span>
-                    <p className="mt-1">{m.content}</p>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
