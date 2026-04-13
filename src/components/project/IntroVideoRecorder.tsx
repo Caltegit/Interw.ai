@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -21,15 +21,18 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
   const streamRef = useRef<MediaStream | null>(null);
   const previewRef = useRef<HTMLVideoElement | null>(null);
 
+  // Once isRecording becomes true and the preview element mounts, attach the stream
+  useEffect(() => {
+    if (isRecording && previewRef.current && streamRef.current) {
+      previewRef.current.srcObject = streamRef.current;
+      previewRef.current.play().catch(() => {});
+    }
+  }, [isRecording]);
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
-
-      if (previewRef.current) {
-        previewRef.current.srcObject = stream;
-        previewRef.current.play();
-      }
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
       mediaRecorderRef.current = mediaRecorder;
@@ -52,6 +55,7 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
       };
 
       mediaRecorder.start(500);
+      // Set recording AFTER stream is ready — the useEffect will attach srcObject once the element mounts
       setIsRecording(true);
     } catch {
       toast({ title: "Erreur", description: "Impossible d'accéder à la caméra.", variant: "destructive" });
