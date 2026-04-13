@@ -97,38 +97,15 @@ export default function InterviewStart() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Play a media URL (audio or video) and return a promise that resolves when it ends
-  const playMediaUrl = useCallback((url: string, type: "audio" | "video"): Promise<void> => {
+  // Play a media URL and return a promise that resolves when it ends
+  const playMediaUrl = useCallback((url: string): Promise<void> => {
     return new Promise((resolve) => {
-      if (type === "video") {
-        // We'll create a temporary audio element for video URLs too (play audio track)
-        const el = new Audio(url);
-        el.onended = () => resolve();
-        el.onerror = () => resolve();
-        el.play().catch(() => resolve());
-      } else {
-        const el = new Audio(url);
-        el.onended = () => resolve();
-        el.onerror = () => resolve();
-        el.play().catch(() => resolve());
-      }
+      const el = new Audio(url);
+      el.onended = () => resolve();
+      el.onerror = () => resolve();
+      el.play().catch(() => resolve());
     });
   }, []);
-
-  // Play question media (audio_url or video_url) if available, otherwise use TTS
-  const speakOrPlayQuestion = useCallback(async (text: string, question?: any) => {
-    if (question?.video_url) {
-      setIsSpeaking(true);
-      await playMediaUrl(question.video_url, "video");
-      setIsSpeaking(false);
-    } else if (question?.audio_url) {
-      setIsSpeaking(true);
-      await playMediaUrl(question.audio_url, "audio");
-      setIsSpeaking(false);
-    } else {
-      await speak(text);
-    }
-  }, [playMediaUrl, speak]);
 
   // TTS: speak text aloud
   const speak = useCallback((text: string): Promise<void> => {
@@ -137,14 +114,12 @@ export default function InterviewStart() {
         resolve();
         return;
       }
-      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "fr-FR";
       utterance.rate = 0.95;
       utterance.pitch = 1.1;
 
-      // Pick a French female voice specifically
       const voices = window.speechSynthesis.getVoices();
       const femaleVoice = voices.find(v =>
         v.lang.startsWith("fr") && /female|femme|amelie|marie|thomas/i.test(v.name) === false &&
@@ -161,6 +136,21 @@ export default function InterviewStart() {
       window.speechSynthesis.speak(utterance);
     });
   }, [ttsEnabled]);
+
+  // Play question media (audio_url or video_url) if available, otherwise use TTS
+  const speakOrPlayQuestion = useCallback(async (text: string, question?: any) => {
+    if (question?.video_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.video_url);
+      setIsSpeaking(false);
+    } else if (question?.audio_url) {
+      setIsSpeaking(true);
+      await playMediaUrl(question.audio_url);
+      setIsSpeaking(false);
+    } else {
+      await speak(text);
+    }
+  }, [playMediaUrl, speak]);
 
   // STT: start listening
   const startListening = useCallback(() => {
