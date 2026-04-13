@@ -44,7 +44,8 @@ export default function ProjectNew() {
 
   // Step 3
   const [questions, setQuestions] = useState<{ content: string; type: string; follow_up_enabled: boolean; max_follow_ups: number }[]>([
-    { content: "", type: "open", follow_up_enabled: true, max_follow_ups: 2 },
+    { content: "Comment ça va aujourd'hui ?", type: "open", follow_up_enabled: false, max_follow_ups: 0 },
+    { content: "Tu penses quoi de Morning ?", type: "open", follow_up_enabled: false, max_follow_ups: 0 },
   ]);
 
   // Step 4
