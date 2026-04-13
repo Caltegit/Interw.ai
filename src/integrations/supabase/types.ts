@@ -61,6 +61,47 @@ export type Database = {
           },
         ]
       }
+      organization_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -515,6 +556,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: {
+        Args: { _token: string; _user_id: string }
+        Returns: undefined
+      }
       get_session_id_by_token: { Args: { _token: string }; Returns: string }
       get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -529,6 +574,7 @@ export type Database = {
       ai_voice_type: "female_fr" | "male_fr" | "female_en" | "male_en"
       app_role: "admin" | "recruiter" | "viewer"
       criteria_scope: "all_questions" | "specific_questions"
+      invitation_status: "pending" | "accepted" | "expired"
       message_role: "ai" | "candidate"
       project_language: "fr" | "en"
       project_status: "draft" | "active" | "archived"
@@ -671,6 +717,7 @@ export const Constants = {
       ai_voice_type: ["female_fr", "male_fr", "female_en", "male_en"],
       app_role: ["admin", "recruiter", "viewer"],
       criteria_scope: ["all_questions", "specific_questions"],
+      invitation_status: ["pending", "accepted", "expired"],
       message_role: ["ai", "candidate"],
       project_language: ["fr", "en"],
       project_status: ["draft", "active", "archived"],

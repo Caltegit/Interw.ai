@@ -16,6 +16,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
+import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
@@ -34,6 +35,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/invite/:token" element={<InviteSignup />} />
             <Route path="/interview/:slug" element={<InterviewLanding />} />
             <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
             <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
