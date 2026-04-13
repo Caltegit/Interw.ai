@@ -18,6 +18,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
 import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
+import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
 import SharedReport from "./pages/SharedReport";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/invite/:token" element={<InviteSignup />} />
             <Route path="/interview/:slug" element={<InterviewLanding />} />
+            <Route path="/interview/:slug/test/:token" element={<InterviewDeviceTest />} />
             <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
             <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
             <Route path="/shared-report/:token" element={<SharedReport />} />
