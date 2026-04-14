@@ -34,7 +34,7 @@ export default function Projects() {
   }, [user]);
 
   const handleDelete = async (projectId: string) => {
-    const { error } = await supabase.from("projects").delete().eq("id", projectId);
+    const { error } = await supabase.rpc("delete_project", { _project_id: projectId });
     if (error) {
       toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
     } else {
