@@ -200,13 +200,13 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
-    const oldIndex = ids.indexOf(activeId);
-    const newIndex = ids.indexOf(overId);
+    const oldIndex = ids.findIndex(id => id === activeId);
+    const newIndex = ids.findIndex(id => id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
     // Reorder both ids array and questions
-    const newIds = arrayMove(ids, oldIndex, newIndex);
-    itemIds.splice(0, itemIds.length, ...newIds);
-    setQuestions(arrayMove(questions, oldIndex, newIndex));
+    const reorderedIds = arrayMove([...ids], oldIndex, newIndex);
+    itemIds.splice(0, itemIds.length, ...reorderedIds);
+    setQuestions(arrayMove([...questions], oldIndex, newIndex));
   };
 
   const handleLibrarySelect = (selected: Question[]) => {
