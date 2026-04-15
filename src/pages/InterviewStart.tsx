@@ -692,6 +692,23 @@ export default function InterviewStart() {
 
           {/* Conversation + controls */}
           <div className="lg:col-span-3 flex flex-col min-h-0">
+            {/* 0) Fixed "Question en cours" zone */}
+            {questions[currentQuestionIndex] && (
+              <div className="mb-3 sm:mb-4">
+                <QuestionMediaPlayer
+                  type={
+                    questions[currentQuestionIndex].video_url ? "video"
+                    : questions[currentQuestionIndex].audio_url ? "audio"
+                    : "written"
+                  }
+                  content={questions[currentQuestionIndex].content}
+                  audioUrl={questions[currentQuestionIndex].audio_url}
+                  videoUrl={questions[currentQuestionIndex].video_url}
+                  variant="featured"
+                />
+              </div>
+            )}
+
             {/* 1) Conversation history */}
             <Card className="mb-3 sm:mb-4 flex-1 min-h-0">
               <CardContent className="p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto space-y-2 sm:space-y-3">
@@ -700,7 +717,19 @@ export default function InterviewStart() {
                     <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
                       {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
                     </span>
-                    <p className="mt-0.5 sm:mt-1">{m.content}</p>
+                    {m.role === "ai" && m.mediaType && m.mediaType !== "written" ? (
+                      <div className="mt-1.5">
+                        <QuestionMediaPlayer
+                          type={m.mediaType}
+                          content={m.content}
+                          audioUrl={m.mediaType === "audio" ? m.mediaUrl : undefined}
+                          videoUrl={m.mediaType === "video" ? m.mediaUrl : undefined}
+                          variant="inline"
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-0.5 sm:mt-1">{m.content}</p>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
