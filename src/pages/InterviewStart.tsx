@@ -54,6 +54,7 @@ export default function InterviewStart() {
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
+  const lastTranscriptChangeRef = useRef<number>(0);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
