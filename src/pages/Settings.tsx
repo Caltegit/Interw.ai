@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Lock, User, Building2 } from "lucide-react";
 import { OrgMembers } from "@/components/OrgMembers";
+import { QuestionLibraryManager } from "@/components/QuestionLibraryManager";
 
 export default function Settings() {
   const { profile, user } = useAuth();
@@ -170,6 +171,9 @@ export default function Settings() {
 
       {/* Members */}
       {orgId && <OrgMembers orgId={orgId} />}
+
+      {/* Question Library */}
+      {orgId && <QuestionLibraryManager orgId={orgId} />}
     </div>
   );
 }

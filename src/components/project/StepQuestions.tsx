@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, BookOpen } from "lucide-react";
 import { QuestionMediaRecorder } from "./QuestionMediaRecorder";
+import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
+import { useState } from "react";
 
 export interface Question {
   content: string;
@@ -33,6 +35,14 @@ interface StepQuestionsProps {
 }
 
 export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  const handleLibrarySelect = (selected: Question[]) => {
+    const remaining = 15 - questions.length;
+    const toAdd = selected.slice(0, remaining);
+    setQuestions([...questions, ...toAdd]);
+  };
+
   const addQuestion = () => {
     if (questions.length >= 15) return;
     setQuestions([...questions, createEmptyQuestion()]);
@@ -74,9 +84,14 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
           <Label className="text-base font-semibold">Questions d'entretien</Label>
           <p className="text-sm text-muted-foreground">{questions.filter((q) => q.content.trim()).length} question(s)</p>
         </div>
-        <Button variant="outline" size="sm" onClick={addQuestion} disabled={questions.length >= 15}>
-          <Plus className="mr-1 h-4 w-4" /> Ajouter
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 15}>
+            <BookOpen className="mr-1 h-4 w-4" /> Bibliothèque
+          </Button>
+          <Button variant="outline" size="sm" onClick={addQuestion} disabled={questions.length >= 15}>
+            <Plus className="mr-1 h-4 w-4" /> Ajouter
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
