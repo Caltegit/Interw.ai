@@ -708,9 +708,9 @@ export default function InterviewStart() {
               };
 
               if (questionType === "video" && q?.video_url) {
-                // VIDEO: la vidéo remplace l'avatar
+                // VIDEO: la vidéo prend toute la place, pas de titre
                 return (
-                  <div className={`relative w-full aspect-square max-h-[280px] rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
+                  <div className={`relative w-full rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
                     <QuestionMediaPlayer
                       ref={featuredPlayerRef}
                       type="video"
@@ -720,9 +720,6 @@ export default function InterviewStart() {
                       autoPlay={shouldAutoPlay}
                       onPlaybackEnd={playbackEndHandler}
                     />
-                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium z-10">
-                      {project?.ai_persona_name || "Marie"} — IA
-                    </div>
                   </div>
                 );
               }
