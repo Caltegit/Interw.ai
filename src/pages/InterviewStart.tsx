@@ -54,6 +54,7 @@ export default function InterviewStart() {
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
+  const lastTranscriptChangeRef = useRef<number>(0);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
@@ -570,56 +571,59 @@ export default function InterviewStart() {
     endInterviewRef.current = endInterview;
   });
 
-  // Reset silence timer on candidate speech activity
+  // Track transcript changes for auto-skip via ref
   useEffect(() => {
     if (liveTranscript) {
+      lastTranscriptChangeRef.current = Date.now();
       resetSilenceTimer();
       // Cancel auto-skip countdown if candidate starts speaking
-      if (autoSkipCountdown !== null) {
-        if (autoSkipTimerRef.current) clearTimeout(autoSkipTimerRef.current);
-        if (autoSkipCountdownRef.current) clearInterval(autoSkipCountdownRef.current);
-        setAutoSkipCountdown(null);
-      }
+      if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+      if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+      setAutoSkipCountdown(null);
     }
-  }, [liveTranscript, resetSilenceTimer, autoSkipCountdown]);
+  }, [liveTranscript, resetSilenceTimer]);
 
-  // Auto-skip silence: start 5s timer when listening starts and no speech detected
+  // Auto-skip silence: poll-based approach — start when listening begins
   useEffect(() => {
     const autoSkipEnabled = (project as any)?.auto_skip_silence;
+    console.log("[AutoSkip] Check:", { autoSkipEnabled, isListening, isSpeaking, isProcessing, interviewFinished });
     if (!autoSkipEnabled || !isListening || isSpeaking || isProcessing || interviewFinished) {
-      // Clear any pending auto-skip timers
       if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
       if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
       if (!isListening) setAutoSkipCountdown(null);
       return;
     }
 
-    // Start a 5s silence detection timer
-    autoSkipTimerRef.current = setTimeout(() => {
-      // After 5s of silence, start the countdown (5, 4, 3, 2, 1, 0)
-      setAutoSkipCountdown(5);
-      autoSkipCountdownRef.current = setInterval(() => {
-        setAutoSkipCountdown(prev => {
-          if (prev === null) return null;
-          if (prev <= 1) {
-            // Time's up: auto-send
+    // Mark the start of listening
+    lastTranscriptChangeRef.current = Date.now();
+
+    // Check every second if 5s of silence has elapsed
+    const pollInterval = setInterval(() => {
+      const elapsed = Date.now() - lastTranscriptChangeRef.current;
+      if (elapsed >= 5000 && autoSkipCountdown === null) {
+        // Start visual countdown
+        clearInterval(pollInterval);
+        setAutoSkipCountdown(5);
+        let count = 5;
+        autoSkipCountdownRef.current = setInterval(() => {
+          count -= 1;
+          if (count <= 0) {
             if (autoSkipCountdownRef.current) clearInterval(autoSkipCountdownRef.current);
             autoSkipCountdownRef.current = null;
-            // Trigger auto-send on next tick
-            setTimeout(() => {
-              handleSendResponse();
-            }, 0);
-            return null;
+            setAutoSkipCountdown(null);
+            handleSendResponse();
+          } else {
+            setAutoSkipCountdown(count);
           }
-          return prev - 1;
-        });
-      }, 1000);
-    }, 5000);
+        }, 1000);
+      }
+    }, 1000);
 
     return () => {
+      clearInterval(pollInterval);
       if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
     };
-  }, [isListening, isSpeaking, isProcessing, interviewFinished, project, liveTranscript]);
+  }, [isListening, isSpeaking, isProcessing, interviewFinished, project]);
 
   // Also reset silence timer when AI speaks or processing
   useEffect(() => {
