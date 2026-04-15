@@ -46,7 +46,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       if (!orgId) { setLoading(false); return; }
       supabase
         .from("question_templates")
-        .select("id, content, category, follow_up_enabled, max_follow_ups")
+        .select("id, content, category, follow_up_enabled, max_follow_ups, type, audio_url, video_url")
         .eq("organization_id", orgId)
         .order("category")
         .order("content")
