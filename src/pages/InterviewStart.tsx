@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ export default function InterviewStart() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
@@ -48,6 +50,8 @@ export default function InterviewStart() {
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
