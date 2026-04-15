@@ -496,12 +496,12 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                   <div className="flex-1 space-y-2">
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <div className="flex gap-2 items-end flex-wrap">
-                      <Select value={editCategory} onValueChange={setEditCategory}>
+                    <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : v)}>
                         <SelectTrigger className="w-[150px]">
                           <SelectValue placeholder="Catégorie" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Aucune</SelectItem>
+                          <SelectItem value="_none">Aucune</SelectItem>
                           {CATEGORIES.map((c) => (
                             <SelectItem key={c} value={c}>
                               {c}
