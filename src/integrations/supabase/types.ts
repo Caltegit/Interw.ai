@@ -162,6 +162,7 @@ export type Database = {
         Row: {
           ai_persona_name: string
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
+          auto_skip_silence: boolean
           avatar_image_url: string | null
           created_at: string
           created_by: string
@@ -183,6 +184,7 @@ export type Database = {
         Insert: {
           ai_persona_name?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
+          auto_skip_silence?: boolean
           avatar_image_url?: string | null
           created_at?: string
           created_by: string
@@ -204,6 +206,7 @@ export type Database = {
         Update: {
           ai_persona_name?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
+          auto_skip_silence?: boolean
           avatar_image_url?: string | null
           created_at?: string
           created_by?: string

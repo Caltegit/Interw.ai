@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN auto_skip_silence boolean NOT NULL DEFAULT false;

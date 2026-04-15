@@ -60,6 +60,7 @@ export default function ProjectNew() {
   const [recordAudio, setRecordAudio] = useState(true);
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active">("active");
+  const [autoSkipSilence, setAutoSkipSilence] = useState(false);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
@@ -105,6 +106,7 @@ export default function ProjectNew() {
           record_audio: recordAudio,
           record_video: recordVideo,
           status,
+          auto_skip_silence: autoSkipSilence,
           slug,
           avatar_image_url: avatarUrl,
           intro_audio_url: null,
@@ -405,6 +407,15 @@ export default function ProjectNew() {
               <div className="flex items-center justify-between">
                 <Label>Enregistrer la vidéo (RGPD)</Label>
                 <Switch checked={recordVideo} onCheckedChange={setRecordVideo} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Passage auto 5s</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est envoyée automatiquement.
+                  </p>
+                </div>
+                <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
               </div>
               <div>
                 <Label>Statut</Label>

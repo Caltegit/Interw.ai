@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Timer } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -40,6 +41,7 @@ export default function InterviewStart() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
@@ -48,6 +50,8 @@ export default function InterviewStart() {
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
@@ -570,8 +574,52 @@ export default function InterviewStart() {
   useEffect(() => {
     if (liveTranscript) {
       resetSilenceTimer();
+      // Cancel auto-skip countdown if candidate starts speaking
+      if (autoSkipCountdown !== null) {
+        if (autoSkipTimerRef.current) clearTimeout(autoSkipTimerRef.current);
+        if (autoSkipCountdownRef.current) clearInterval(autoSkipCountdownRef.current);
+        setAutoSkipCountdown(null);
+      }
     }
-  }, [liveTranscript, resetSilenceTimer]);
+  }, [liveTranscript, resetSilenceTimer, autoSkipCountdown]);
+
+  // Auto-skip silence: start 5s timer when listening starts and no speech detected
+  useEffect(() => {
+    const autoSkipEnabled = (project as any)?.auto_skip_silence;
+    if (!autoSkipEnabled || !isListening || isSpeaking || isProcessing || interviewFinished) {
+      // Clear any pending auto-skip timers
+      if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+      if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+      if (!isListening) setAutoSkipCountdown(null);
+      return;
+    }
+
+    // Start a 5s silence detection timer
+    autoSkipTimerRef.current = setTimeout(() => {
+      // After 5s of silence, start the countdown (5, 4, 3, 2, 1, 0)
+      setAutoSkipCountdown(5);
+      autoSkipCountdownRef.current = setInterval(() => {
+        setAutoSkipCountdown(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            // Time's up: auto-send
+            if (autoSkipCountdownRef.current) clearInterval(autoSkipCountdownRef.current);
+            autoSkipCountdownRef.current = null;
+            // Trigger auto-send on next tick
+            setTimeout(() => {
+              handleSendResponse();
+            }, 0);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, 5000);
+
+    return () => {
+      if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+    };
+  }, [isListening, isSpeaking, isProcessing, interviewFinished, project, liveTranscript]);
 
   // Also reset silence timer when AI speaks or processing
   useEffect(() => {
@@ -588,6 +636,8 @@ export default function InterviewStart() {
       streamRef.current?.getTracks().forEach(t => t.stop());
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      if (autoSkipTimerRef.current) clearTimeout(autoSkipTimerRef.current);
+      if (autoSkipCountdownRef.current) clearInterval(autoSkipCountdownRef.current);
     };
   }, [stopListening]);
 
@@ -718,6 +768,15 @@ export default function InterviewStart() {
               </div>
             </div>
 
+            {/* Auto-skip countdown */}
+            {autoSkipCountdown !== null && (
+              <div className="flex items-center justify-center">
+                <Badge variant="destructive" className="animate-pulse text-sm px-4 py-2 gap-2">
+                  <Timer className="h-4 w-4" />
+                  Prochaine question dans {autoSkipCountdown}s
+                </Badge>
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex flex-col items-center gap-3 sm:gap-4">
