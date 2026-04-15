@@ -367,6 +367,7 @@ export default function InterviewStart() {
     // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
     await speak(greeting);
     if (isFirstQMedia) {
+      setIsSpeaking(true);
       setShouldAutoPlay(true);
       // Don't start listening yet — onPlaybackEnd will do it
     } else {
