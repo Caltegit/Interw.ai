@@ -501,6 +501,7 @@ export default function InterviewStart() {
       await speak(aiResponse);
       if (!isOver && nextQ && (nextQ.audio_url || nextQ.video_url)) {
         // Media question: trigger auto-play, onPlaybackEnd will start listening
+        setIsSpeaking(true);
         setShouldAutoPlay(true);
       } else if (!isOver) {
         // Text question: start recording + listening immediately
