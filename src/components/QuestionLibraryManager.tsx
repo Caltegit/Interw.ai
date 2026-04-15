@@ -70,7 +70,9 @@ function MediaRecorderInline({
       mediaRecorderRef.current = mr;
       chunksRef.current = [];
 
-      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       mr.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
         if (previewStreamRef.current) previewStreamRef.current.srcObject = null;
@@ -82,7 +84,11 @@ function MediaRecorderInline({
       mr.start(500);
       setRecording(true);
     } catch {
-      toast({ title: "Erreur", description: `Impossible d'accéder au ${type === "audio" ? "micro" : "caméra"}.`, variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: `Impossible d'accéder au ${type === "audio" ? "micro" : "caméra"}.`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -94,7 +100,14 @@ function MediaRecorderInline({
   if (recording && type === "video") {
     return (
       <div className="space-y-2">
-        <video ref={previewStreamRef} muted autoPlay playsInline className="w-full max-w-xs rounded-lg border border-border bg-black" style={{ minHeight: "120px" }} />
+        <video
+          ref={previewStreamRef}
+          muted
+          autoPlay
+          playsInline
+          className="w-full max-w-xs rounded-lg border border-border bg-black"
+          style={{ minHeight: "120px" }}
+        />
         <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
           <Square className="mr-1 h-3 w-3" /> Stop
         </Button>
@@ -121,11 +134,22 @@ function MediaRecorderInline({
         <div className="flex items-center gap-2">
           <audio ref={audioRef} src={previewUrl} onEnded={() => setIsPlaying(false)} className="hidden" />
           <span className="text-xs text-muted-foreground">🎤 Audio enregistré</span>
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={async () => {
-            if (!audioRef.current) return;
-            if (isPlaying) { audioRef.current.pause(); setIsPlaying(false); }
-            else { await audioRef.current.play(); setIsPlaying(true); }
-          }}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={async () => {
+              if (!audioRef.current) return;
+              if (isPlaying) {
+                audioRef.current.pause();
+                setIsPlaying(false);
+              } else {
+                await audioRef.current.play();
+                setIsPlaying(true);
+              }
+            }}
+          >
             {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={startRecording}>
@@ -136,14 +160,31 @@ function MediaRecorderInline({
     }
     return (
       <div className="space-y-1">
-        <video ref={videoRef} src={previewUrl} onEnded={() => setIsPlaying(false)} playsInline className="w-full max-w-xs rounded-lg border border-border" />
+        <video
+          ref={videoRef}
+          src={previewUrl}
+          onEnded={() => setIsPlaying(false)}
+          playsInline
+          className="w-full max-w-xs rounded-lg border border-border"
+        />
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">🎬 Vidéo enregistrée</span>
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={async () => {
-            if (!videoRef.current) return;
-            if (isPlaying) { videoRef.current.pause(); setIsPlaying(false); }
-            else { await videoRef.current.play(); setIsPlaying(true); }
-          }}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={async () => {
+              if (!videoRef.current) return;
+              if (isPlaying) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+              } else {
+                await videoRef.current.play();
+                setIsPlaying(true);
+              }
+            }}
+          >
             {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
           <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={startRecording}>
@@ -156,7 +197,15 @@ function MediaRecorderInline({
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={startRecording}>
-      {type === "audio" ? <><Mic className="mr-1 h-3 w-3" /> Enregistrer audio</> : <><Video className="mr-1 h-3 w-3" /> Enregistrer vidéo</>}
+      {type === "audio" ? (
+        <>
+          <Mic className="mr-1 h-3 w-3" /> Enregistrer audio
+        </>
+      ) : (
+        <>
+          <Video className="mr-1 h-3 w-3" /> Enregistrer vidéo
+        </>
+      )}
     </Button>
   );
 }
@@ -228,7 +277,10 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
     if (newMediaBlob) {
       const url = await uploadMedia(newMediaBlob, newType as "audio" | "video");
-      if (!url) { setAdding(false); return; }
+      if (!url) {
+        setAdding(false);
+        return;
+      }
       if (newType === "audio") audioUrl = url;
       else videoUrl = url;
     }
@@ -314,14 +366,19 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
         <CardTitle className="flex items-center gap-2 text-lg">
           <BookOpen className="h-5 w-5" /> Bibliothèque de questions
         </CardTitle>
-        <CardDescription>Questions réutilisables pour vos entretiens ({templates.length})</CardDescription>
+        <CardDescription>Créez vos questions types ({templates.length})</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Search & Filter */}
         <div className="flex gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input
+              placeholder="Rechercher..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-[180px]">
@@ -330,7 +387,9 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             <SelectContent>
               <SelectItem value="all">Toutes</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -345,7 +404,16 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             {/* Type selector */}
             <div>
               <Label className="text-xs mb-1.5 block">Type de question</Label>
-              <ToggleGroup type="single" value={newType} onValueChange={(v) => { if (v) { setNewType(v); setNewMediaBlob(null); } }}>
+              <ToggleGroup
+                type="single"
+                value={newType}
+                onValueChange={(v) => {
+                  if (v) {
+                    setNewType(v);
+                    setNewMediaBlob(null);
+                  }
+                }}
+              >
                 <ToggleGroupItem value="written" className="text-xs gap-1">
                   <Type className="h-3.5 w-3.5" /> Écrite
                 </ToggleGroupItem>
@@ -359,7 +427,9 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             </div>
 
             <Input
-              placeholder={newType === "written" ? "Texte de la question..." : "Description / titre de la question (optionnel)..."}
+              placeholder={
+                newType === "written" ? "Texte de la question..." : "Description / titre de la question (optionnel)..."
+              }
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
             />
@@ -383,16 +453,28 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2">
                 <Switch checked={newFollowUp} onCheckedChange={setNewFollowUp} id="new-followup" />
-                <Label htmlFor="new-followup" className="text-xs cursor-pointer">Relance IA</Label>
+                <Label htmlFor="new-followup" className="text-xs cursor-pointer">
+                  Relance IA
+                </Label>
               </div>
-              <Button size="sm" onClick={handleAdd} disabled={adding || (newType === "written" && !newContent.trim()) || ((newType === "audio" || newType === "video") && !newMediaBlob && !newContent.trim())}>
+              <Button
+                size="sm"
+                onClick={handleAdd}
+                disabled={
+                  adding ||
+                  (newType === "written" && !newContent.trim()) ||
+                  ((newType === "audio" || newType === "video") && !newMediaBlob && !newContent.trim())
+                }
+              >
                 {adding ? "Ajout..." : "Enregistrer"}
               </Button>
             </div>
@@ -421,7 +503,9 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                         <SelectContent>
                           <SelectItem value="">Aucune</SelectItem>
                           {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -442,9 +526,19 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm">{t.content}</p>
                       <div className="flex gap-1.5 mt-1 flex-wrap">
-                        <Badge variant="outline" className="text-xs">{typeLabel(t.type)}</Badge>
-                        {t.category && <Badge variant="secondary" className="text-xs">{t.category}</Badge>}
-                        {t.follow_up_enabled && <Badge variant="outline" className="text-xs">Relance IA</Badge>}
+                        <Badge variant="outline" className="text-xs">
+                          {typeLabel(t.type)}
+                        </Badge>
+                        {t.category && (
+                          <Badge variant="secondary" className="text-xs">
+                            {t.category}
+                          </Badge>
+                        )}
+                        {t.follow_up_enabled && (
+                          <Badge variant="outline" className="text-xs">
+                            Relance IA
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <Button size="icon" variant="ghost" onClick={() => startEdit(t)}>
