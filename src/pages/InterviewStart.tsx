@@ -455,9 +455,15 @@ export default function InterviewStart() {
 
       const aiResponse = data.message;
 
-      // Add AI message
+      // Determine next question media info
+      const nextQIdx = currentQuestionIndex + 1;
+      const nextQ = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
+      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url ? "video" : nextQ?.audio_url ? "audio" : "written";
+      const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+
+      // Add AI message with media info
       setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: aiResponse }];
+        const updated = [...prev, { role: "ai", content: aiResponse, mediaType: nMediaType, mediaUrl: nMediaUrl }];
         messagesRef.current = updated;
         return updated;
       });
