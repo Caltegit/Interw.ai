@@ -114,11 +114,11 @@ export default function ProjectEdit() {
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div>
-            <Label>Titre du projet *</Label>
+            <Label>Titre *</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div>
-            <Label>Intitulé du poste *</Label>
+            <Label>Intitulé *</Label>
             <Input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
           </div>
           <div>

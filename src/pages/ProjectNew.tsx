@@ -280,11 +280,11 @@ export default function ProjectNew() {
           {step === 0 && (
             <div className="space-y-4">
               <div>
-                <Label>Titre du projet *</Label>
+                <Label>Titre *</Label>
                 <Input placeholder="CDI Développeur Full-Stack Paris" value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
               <div>
-                <Label>Intitulé du poste *</Label>
+                <Label>Intitulé *</Label>
                 <Input placeholder="Développeur Full-Stack" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
               </div>
               <div>
