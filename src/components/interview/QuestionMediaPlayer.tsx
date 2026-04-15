@@ -1,6 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Play, Pause, RotateCcw, FileText, Mic, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export interface QuestionMediaPlayerHandle {
+  play: () => void;
+  stop: () => void;
+}
 
 interface QuestionMediaPlayerProps {
   type: "written" | "audio" | "video";
@@ -8,6 +13,8 @@ interface QuestionMediaPlayerProps {
   audioUrl?: string | null;
   videoUrl?: string | null;
   variant: "featured" | "inline";
+  autoPlay?: boolean;
+  onPlaybackEnd?: () => void;
 }
 
 const typeConfig = {
@@ -16,13 +23,15 @@ const typeConfig = {
   video: { icon: Video, label: "Vidéo", color: "text-emerald-400" },
 };
 
-export default function QuestionMediaPlayer({
+const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaPlayerProps>(({
   type,
   content,
   audioUrl,
   videoUrl,
   variant,
-}: QuestionMediaPlayerProps) {
+  autoPlay = false,
+  onPlaybackEnd,
+}, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -32,6 +41,8 @@ export default function QuestionMediaPlayer({
 
   const { icon: Icon, label, color } = typeConfig[type];
 
+  const getEl = () => type === "video" ? videoPlayerRef.current : audioRef.current;
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -40,7 +51,7 @@ export default function QuestionMediaPlayer({
   }, []);
 
   const updateProgress = () => {
-    const el = type === "video" ? videoPlayerRef.current : audioRef.current;
+    const el = getEl();
     if (el) {
       setProgress(el.duration ? (el.currentTime / el.duration) * 100 : 0);
       if (!el.paused) {
@@ -49,37 +60,60 @@ export default function QuestionMediaPlayer({
     }
   };
 
-  const togglePlay = () => {
-    const el = type === "video" ? videoPlayerRef.current : audioRef.current;
+  const doPlay = () => {
+    const el = getEl();
     if (!el) return;
-    if (el.paused) {
-      el.play();
-      setIsPlaying(true);
-      animFrameRef.current = requestAnimationFrame(updateProgress);
-    } else {
-      el.pause();
-      setIsPlaying(false);
-    }
+    el.play().catch(() => {});
+    setIsPlaying(true);
+    animFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  const doPause = () => {
+    const el = getEl();
+    if (!el) return;
+    el.pause();
+    setIsPlaying(false);
+  };
+
+  const togglePlay = () => {
+    const el = getEl();
+    if (!el) return;
+    if (el.paused) doPlay();
+    else doPause();
   };
 
   const restart = () => {
-    const el = type === "video" ? videoPlayerRef.current : audioRef.current;
+    const el = getEl();
     if (!el) return;
     el.currentTime = 0;
-    el.play();
-    setIsPlaying(true);
+    doPlay();
     setProgress(0);
-    animFrameRef.current = requestAnimationFrame(updateProgress);
   };
 
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(100);
+    onPlaybackEnd?.();
   };
 
   const handleLoadedMetadata = (el: HTMLAudioElement | HTMLVideoElement) => {
     setDuration(el.duration);
   };
+
+  // Expose play/stop via ref
+  useImperativeHandle(ref, () => ({
+    play: () => doPlay(),
+    stop: () => doPause(),
+  }));
+
+  // Auto-play when prop changes
+  useEffect(() => {
+    if (autoPlay && type !== "written") {
+      // Small delay to ensure element is mounted
+      const timer = setTimeout(() => doPlay(), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlay, type, audioUrl, videoUrl]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -176,10 +210,7 @@ export default function QuestionMediaPlayer({
                 </button>
               )}
               {isPlaying && (
-                <button
-                  className="absolute inset-0"
-                  onClick={togglePlay}
-                />
+                <button className="absolute inset-0" onClick={togglePlay} />
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -279,4 +310,7 @@ export default function QuestionMediaPlayer({
       )}
     </div>
   );
-}
+});
+
+QuestionMediaPlayer.displayName = "QuestionMediaPlayer";
+export default QuestionMediaPlayer;

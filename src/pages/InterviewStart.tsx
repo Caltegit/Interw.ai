@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
-import QuestionMediaPlayer from "@/components/interview/QuestionMediaPlayer";
+import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/ai-avatar-marie.png";
@@ -53,7 +53,8 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
-
+  const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (
     sessionId: string,
@@ -363,16 +364,17 @@ export default function InterviewStart() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
     }
 
-    // Speak the greeting via TTS, then play question media if audio/video
+    // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
     await speak(greeting);
     if (isFirstQMedia) {
       setIsSpeaking(true);
-      await playMediaUrl(firstQMediaUrl!);
-      setIsSpeaking(false);
+      setShouldAutoPlay(true);
+      // Don't start listening yet — onPlaybackEnd will do it
+    } else {
+      // Text question: start recording + listening immediately after TTS
+      startQuestionRecording();
+      startListening();
     }
-    // Start recording video for question 1
-    startQuestionRecording();
-    startListening();
   };
 
   // Send candidate response to AI
@@ -495,14 +497,14 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI transition via TTS, then play next question media directly if audio/video
+      // Speak AI transition via TTS, then auto-play next question media
       await speak(aiResponse);
-      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      if (!isOver && nextQ && (nextQ.audio_url || nextQ.video_url)) {
+        // Media question: trigger auto-play, onPlaybackEnd will start listening
         setIsSpeaking(true);
-        await playMediaUrl(nextQ.video_url || nextQ.audio_url);
-        setIsSpeaking(false);
-      }
-      if (!isOver) {
+        setShouldAutoPlay(true);
+      } else if (!isOver) {
+        // Text question: start recording + listening immediately
         startQuestionRecording();
         startListening();
       }
@@ -700,6 +702,7 @@ export default function InterviewStart() {
             {questions[currentQuestionIndex] && (
               <div className="mb-3 sm:mb-4">
                 <QuestionMediaPlayer
+                  ref={featuredPlayerRef}
                   type={
                     questions[currentQuestionIndex].video_url ? "video"
                     : questions[currentQuestionIndex].audio_url ? "audio"
@@ -709,6 +712,13 @@ export default function InterviewStart() {
                   audioUrl={questions[currentQuestionIndex].audio_url}
                   videoUrl={questions[currentQuestionIndex].video_url}
                   variant="featured"
+                  autoPlay={shouldAutoPlay}
+                  onPlaybackEnd={() => {
+                    setShouldAutoPlay(false);
+                    setIsSpeaking(false);
+                    startQuestionRecording();
+                    startListening();
+                  }}
                 />
               </div>
             )}
