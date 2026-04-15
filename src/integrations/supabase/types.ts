@@ -234,6 +234,7 @@ export type Database = {
       }
       question_templates: {
         Row: {
+          audio_url: string | null
           category: string | null
           content: string
           created_at: string
@@ -242,8 +243,11 @@ export type Database = {
           id: string
           max_follow_ups: number
           organization_id: string
+          type: string
+          video_url: string | null
         }
         Insert: {
+          audio_url?: string | null
           category?: string | null
           content: string
           created_at?: string
@@ -252,8 +256,11 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id: string
+          type?: string
+          video_url?: string | null
         }
         Update: {
+          audio_url?: string | null
           category?: string | null
           content?: string
           created_at?: string
@@ -262,6 +269,8 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id?: string
+          type?: string
+          video_url?: string | null
         }
         Relationships: [
           {
