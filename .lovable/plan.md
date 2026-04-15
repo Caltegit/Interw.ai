@@ -1,49 +1,20 @@
 
 
-# Refonte layout entretien : 2 colonnes Interviewer / Candidat
+# Simplifier la colonne Candidat : retirer l'historique texte
 
-## Concept
+## Ce qui change
 
-Layout en deux colonnes distinctes :
+Dans la colonne droite (Candidat), on supprime :
+- Le bloc **historique conversation** (Card avec les messages texte, lignes 722-746)
+- Le bloc **transcript en direct** (zone "en cours...", lignes 748-754)
 
-```text
-┌─────────────────────────┬─────────────────────────┐
-│     INTERVIEWER         │      CANDIDAT           │
-│                         │                         │
-│  ┌───────────────────┐  │  ┌───────────────────┐  │
-│  │   Photo avatar    │  │  │   Retour vidéo    │  │
-│  │   IA / persona    │  │  │   candidat        │  │
-│  └───────────────────┘  │  └───────────────────┘  │
-│                         │                         │
-│  ┌───────────────────┐  │  ┌───────────────────┐  │
-│  │  Question en cours│  │  │  Historique chat   │  │
-│  │  (texte/audio/    │  │  │  + transcript     │  │
-│  │   vidéo player)   │  │  │  en direct        │  │
-│  └───────────────────┘  │  └───────────────────┘  │
-│                         │                         │
-│  Son activé/coupé       │  [  Envoyer ma réponse ]│
-│                         │  🎤  📞                  │
-└─────────────────────────┴─────────────────────────┘
-```
+On garde uniquement :
+- Le retour vidéo du candidat
+- Les boutons d'action (Envoyer ma réponse, Micro, Raccrocher)
 
-- **Mobile** : les deux colonnes s'empilent verticalement (interviewer en haut, candidat en dessous)
+## Fichier impacté
 
-## Modifications — un seul fichier
+**`src/pages/InterviewStart.tsx`** — suppression des lignes 721-754 (la Card conversation + le transcript live).
 
-### `src/pages/InterviewStart.tsx` (section render, lignes ~625-807)
-
-1. **Colonne gauche (Interviewer)** :
-   - Photo avatar IA (existant, déplacé)
-   - Zone "Question en cours" avec `QuestionMediaPlayer` (existant, déplacé sous l'avatar)
-   - Bouton son activé/coupé + indicateur IA parle
-
-2. **Colonne droite (Candidat)** :
-   - Retour vidéo candidat (existant, déplacé)
-   - Historique conversation (existant)
-   - Transcript live (existant)
-   - Boutons d'action : "Envoyer ma réponse", micro, raccrocher
-
-3. **Grid** : `lg:grid-cols-2` au lieu de `lg:grid-cols-5` pour un split 50/50
-
-Aucune logique métier ne change — c'est uniquement un réarrangement des blocs JSX existants.
+Le bouton "Envoyer ma réponse" reste fonctionnel — la logique de `liveTranscript` et `candidateTranscriptRef` continue de fonctionner en arrière-plan même sans affichage visuel.
 
