@@ -74,8 +74,8 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
     const questions: Question[] = templates
       .filter((t) => selected.has(t.id))
       .map((t) => ({
+        title: t.content.slice(0, 60),
         content: t.content,
-        type: "open",
         follow_up_enabled: t.follow_up_enabled,
         max_follow_ups: t.max_follow_ups,
         audioBlob: null,
