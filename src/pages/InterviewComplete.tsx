@@ -15,7 +15,7 @@ export default function InterviewComplete() {
           </div>
           <h1 className="text-xl font-bold">Entretien terminé, merci !</h1>
           <p className="text-muted-foreground">
-            Vos réponses ont été enregistrées. L'équipe de recrutement vous contactera prochainement.
+            &nbsp;
           </p>
         </CardContent>
       </Card>
