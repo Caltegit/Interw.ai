@@ -103,7 +103,7 @@ function SortableQuestion({
         >
           <GripVertical className="h-5 w-5" />
         </button>
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 space-y-3">
           {/* Type selector */}
           <div>
             <Label className="text-xs mb-1.5 block text-muted-foreground">Type de question</Label>
@@ -113,7 +113,7 @@ function SortableQuestion({
               onValueChange={(v) => { if (v) updateMediaType(index, v as "written" | "audio" | "video"); }}
             >
               <ToggleGroupItem value="written" className="text-xs gap-1">
-                <Type className="h-3.5 w-3.5" /> Texte
+                <Type className="h-3.5 w-3.5" /> Écrite
               </ToggleGroupItem>
               <ToggleGroupItem value="audio" className="text-xs gap-1">
                 <Mic className="h-3.5 w-3.5" /> Audio
@@ -124,27 +124,19 @@ function SortableQuestion({
             </ToggleGroup>
           </div>
 
-          {/* Title (required) */}
-          <div>
-            <Input
-              placeholder={`Titre de la question ${index + 1} *`}
-              value={q.title}
-              onChange={(e) => updateQuestion(index, "title", e.target.value)}
-              className="font-medium"
-            />
-            {!q.title.trim() && (q.content.trim() || q.audioBlob || q.videoBlob) && (
-              <p className="text-[10px] text-destructive mt-0.5">Le titre est obligatoire</p>
-            )}
-          </div>
-
-          {/* Content — only for written questions */}
-          {q.mediaType === "written" && (
-            <Input
-              placeholder={`Contenu de la question ${index + 1}...`}
-              value={q.content}
-              onChange={(e) => updateQuestion(index, "content", e.target.value)}
-            />
-          )}
+          {/* Single text input */}
+          <Input
+            placeholder={
+              q.mediaType === "written"
+                ? "Texte de la question..."
+                : "Titre de la question (optionnel)..."
+            }
+            value={q.content}
+            onChange={(e) => {
+              updateQuestion(index, "content", e.target.value);
+              updateQuestion(index, "title", e.target.value.slice(0, 60));
+            }}
+          />
 
           {/* Media recorder for audio/video */}
           {(q.mediaType === "audio" || q.mediaType === "video") && (
@@ -159,16 +151,18 @@ function SortableQuestion({
               />
             </div>
           )}
+
+          {/* Bottom row: follow-up toggle */}
+          <div className="flex items-center gap-2">
+            <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(index)} id={`followup-${id}`} />
+            <Label htmlFor={`followup-${id}`} className="text-xs text-muted-foreground cursor-pointer">
+              Relance IA
+            </Label>
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => removeQuestion(index)} disabled={questionsLength <= 1}>
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
-      </div>
-      <div className="flex items-center gap-2 pl-7">
-        <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(index)} id={`followup-${id}`} />
-        <Label htmlFor={`followup-${id}`} className="text-sm text-muted-foreground cursor-pointer">
-          Relance IA
-        </Label>
       </div>
     </div>
   );
