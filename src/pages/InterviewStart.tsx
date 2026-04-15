@@ -492,12 +492,9 @@ export default function InterviewStart() {
       setIsProcessing(false);
 
       // Speak AI response, then play next question media if available
-      const nextQIdx = currentQuestionIndex + 1;
-      const nextQuestion = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
-      if (nextQuestion && (nextQuestion.audio_url || nextQuestion.video_url)) {
-        // Speak AI transition text, then play question media
+      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
         await speak(aiResponse);
-        await speakOrPlayQuestion(nextQuestion.content, nextQuestion);
+        await speakOrPlayQuestion(nextQ.content, nextQ);
       } else {
         await speak(aiResponse);
       }
