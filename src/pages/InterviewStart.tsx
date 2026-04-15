@@ -586,7 +586,7 @@ export default function InterviewStart() {
   // Auto-skip silence: poll-based approach — start when listening begins
   useEffect(() => {
     const autoSkipEnabled = (project as any)?.auto_skip_silence;
-    if (!autoSkipEnabled || !isListening || isSpeaking || isProcessing || interviewFinished) {
+    console.log("[AutoSkip] Check:", { autoSkipEnabled, isListening, isSpeaking, isProcessing, interviewFinished });
       if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
       if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
       if (!isListening) setAutoSkipCountdown(null);
