@@ -77,12 +77,13 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         title: t.content.slice(0, 60),
         content: t.content,
         type: "open",
+        mediaType: (t.type === "audio" ? "audio" : t.type === "video" ? "video" : "written") as "written" | "audio" | "video",
         follow_up_enabled: t.follow_up_enabled,
         max_follow_ups: t.max_follow_ups,
         audioBlob: null,
-        audioPreviewUrl: null,
+        audioPreviewUrl: t.audio_url || null,
         videoBlob: null,
-        videoPreviewUrl: null,
+        videoPreviewUrl: t.video_url || null,
       }));
     onSelect(questions);
     onOpenChange(false);
