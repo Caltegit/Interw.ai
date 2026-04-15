@@ -341,11 +341,14 @@ export default function InterviewStart() {
     }, MAX_DURATION_MS);
     resetSilenceTimer();
 
-    const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
-
     const q0 = questions[0];
     const firstQMediaType: "written" | "audio" | "video" = q0?.video_url ? "video" : q0?.audio_url ? "audio" : "written";
     const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
+    const isFirstQMedia = firstQMediaType !== "written";
+
+    const greeting = isFirstQMedia
+      ? `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+      : `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = { role: "ai", content: greeting, mediaType: firstQMediaType, mediaUrl: firstQMediaUrl };
@@ -360,15 +363,12 @@ export default function InterviewStart() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
     }
 
-    // Speak the greeting, then play question media if available
-    const firstQ = questions[0];
-    if (firstQ?.audio_url || firstQ?.video_url) {
-      // Speak intro text via TTS, then play question media
-      const introText = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Écoutez la première question :`;
-      await speak(introText);
-      await speakOrPlayQuestion(firstQ.content, firstQ);
-    } else {
-      await speak(greeting);
+    // Speak the greeting via TTS, then play question media if audio/video
+    await speak(greeting);
+    if (isFirstQMedia) {
+      setIsSpeaking(true);
+      await playMediaUrl(firstQMediaUrl!);
+      setIsSpeaking(false);
     }
     // Start recording video for question 1
     startQuestionRecording();
@@ -444,7 +444,11 @@ export default function InterviewStart() {
           projectContext: {
             aiPersonaName: project?.ai_persona_name ?? "Marie",
             jobTitle: project?.job_title ?? "",
-            questions: questions.map(q => ({ content: q.content, type: q.type })),
+            questions: questions.map(q => ({
+              content: q.content,
+              type: q.type,
+              mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
+            })),
             currentQuestionNumber: currentQuestionIndex + 1,
             totalQuestions: questions.length,
           },
@@ -491,12 +495,12 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI response, then play next question media if available
+      // Speak AI transition via TTS, then play next question media directly if audio/video
+      await speak(aiResponse);
       if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
-        await speak(aiResponse);
-        await speakOrPlayQuestion(nextQ.content, nextQ);
-      } else {
-        await speak(aiResponse);
+        setIsSpeaking(true);
+        await playMediaUrl(nextQ.video_url || nextQ.audio_url);
+        setIsSpeaking(false);
       }
       if (!isOver) {
         startQuestionRecording();

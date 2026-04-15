@@ -18,19 +18,20 @@ serve(async (req) => {
     const systemPrompt = `Tu es ${projectContext.aiPersonaName}, recruteuse IA pour le poste "${projectContext.jobTitle}".
 
 Questions prévues :
-${projectContext.questions.map((q: any, i: number) => `${i + 1}. ${q.content}`).join("\n")}
+${projectContext.questions.map((q: any, i: number) => `${i + 1}. [${q.mediaType === "video" ? "VIDÉO" : q.mediaType === "audio" ? "AUDIO" : "TEXTE"}] ${q.content}`).join("\n")}
 
 Règles STRICTES :
 - Sois TRÈS CONCISE : maximum 1 phrase de transition avant la question suivante. Pas de longs commentaires.
 - Pose les questions une par une dans l'ordre
 - Après la réponse du candidat : un simple "Merci" ou "D'accord" suffit, puis enchaîne directement la question suivante
+- **IMPORTANT** : Si la question suivante est de type AUDIO ou VIDÉO, NE RÉPÈTE PAS le contenu de la question. Dis seulement une courte transition comme "Écoutez la question suivante" ou "Regardez la question suivante". Le média sera joué automatiquement.
+- Si la question suivante est de type TEXTE, pose-la normalement dans ta réponse.
 - Relance uniquement si la réponse est vraiment trop courte (1 mot)
 - Professionnelle mais directe, pas de bavardage
 - En français
 - Quand toutes les questions sont posées, remercie brièvement et indique que l'entretien est terminé
 - N'invente PAS de questions hors liste
 - Question actuelle : ${projectContext.currentQuestionNumber}/${projectContext.totalQuestions}`;
-
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
