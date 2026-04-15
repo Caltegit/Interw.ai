@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderKanban, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Projets", url: "/projects", icon: FolderKanban },
+  { title: "Biblio de questions", url: "/question-library", icon: BookOpen },
   { title: "Paramètres", url: "/settings", icon: Settings },
 ];
 
