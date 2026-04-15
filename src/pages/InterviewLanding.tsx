@@ -235,21 +235,6 @@ export default function InterviewLanding() {
           </p>
         </div>
 
-        {/* Info pills */}
-        <div className="flex justify-center gap-3">
-          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
-            <Clock className="h-4 w-4" style={{ color: "#d4a574" }} />
-            <span>~{project?.max_duration_minutes} min</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
-            <Globe className="h-4 w-4" style={{ color: "#d4a574" }} />
-            <span>{project?.language === "fr" ? "Français" : "English"}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
-            <Mic className="h-4 w-4" style={{ color: "#d4a574" }} />
-            <span>Entretien IA</span>
-          </div>
-        </div>
 
         {/* Form card */}
         <Card className="overflow-hidden">
