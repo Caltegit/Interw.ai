@@ -832,7 +832,7 @@ export default function InterviewStart() {
                   </div>
                 ) : (
                   <div
-                    className={`relative w-full aspect-square rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}
+                    className={`relative w-full aspect-video rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}
                   >
                     <img
                       src={project?.avatar_image_url || defaultAiAvatar}
