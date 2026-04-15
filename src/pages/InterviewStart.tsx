@@ -652,6 +652,56 @@ export default function InterviewStart() {
     endInterviewRef.current = endInterview;
   });
 
+  // Keep handleSendResponseRef in sync
+  useEffect(() => {
+    handleSendResponseRef.current = handleSendResponse;
+  });
+
+  // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
+  const clearAutoSkip = useCallback(() => {
+    if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+    if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    setAutoSkipCountdown(null);
+  }, []);
+
+  const startAutoSkipTimer = useCallback(() => {
+    if (!project?.auto_skip_silence) return;
+    clearAutoSkip();
+    // After 3s of silence, start a 3s countdown then auto-send
+    autoSkipTimerRef.current = setTimeout(() => {
+      let remaining = 3;
+      setAutoSkipCountdown(remaining);
+      autoSkipCountdownRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearAutoSkip();
+          // Auto-send response
+          handleSendResponseRef.current?.();
+        } else {
+          setAutoSkipCountdown(remaining);
+        }
+      }, 1000);
+    }, 3000);
+  }, [project?.auto_skip_silence, clearAutoSkip]);
+
+  // Reset auto-skip when candidate speaks
+  useEffect(() => {
+    if (liveTranscript && isListening) {
+      clearAutoSkip();
+      // Restart timer for next silence window
+      startAutoSkipTimer();
+    }
+  }, [liveTranscript, isListening, clearAutoSkip, startAutoSkipTimer]);
+
+  // Start auto-skip timer when listening starts, clear when it stops
+  useEffect(() => {
+    if (isListening && !isSpeaking && !isProcessing) {
+      startAutoSkipTimer();
+    } else {
+      clearAutoSkip();
+    }
+  }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
+
   // Reset silence timer on candidate speech activity
   useEffect(() => {
     if (liveTranscript) {
@@ -674,8 +724,9 @@ export default function InterviewStart() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      clearAutoSkip();
     };
-  }, [stopListening]);
+  }, [stopListening, clearAutoSkip]);
 
   if (loading)
     return (
