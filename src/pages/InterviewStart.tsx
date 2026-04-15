@@ -46,6 +46,7 @@ export default function InterviewStart() {
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,12 +55,15 @@ export default function InterviewStart() {
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(
     async (
@@ -648,6 +652,56 @@ export default function InterviewStart() {
     endInterviewRef.current = endInterview;
   });
 
+  // Keep handleSendResponseRef in sync
+  useEffect(() => {
+    handleSendResponseRef.current = handleSendResponse;
+  });
+
+  // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
+  const clearAutoSkip = useCallback(() => {
+    if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+    if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    setAutoSkipCountdown(null);
+  }, []);
+
+  const startAutoSkipTimer = useCallback(() => {
+    if (!project?.auto_skip_silence) return;
+    clearAutoSkip();
+    // After 3s of silence, start a 3s countdown then auto-send
+    autoSkipTimerRef.current = setTimeout(() => {
+      let remaining = 3;
+      setAutoSkipCountdown(remaining);
+      autoSkipCountdownRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearAutoSkip();
+          // Auto-send response
+          handleSendResponseRef.current?.();
+        } else {
+          setAutoSkipCountdown(remaining);
+        }
+      }, 1000);
+    }, 3000);
+  }, [project?.auto_skip_silence, clearAutoSkip]);
+
+  // Reset auto-skip when candidate speaks
+  useEffect(() => {
+    if (liveTranscript && isListening) {
+      clearAutoSkip();
+      // Restart timer for next silence window
+      startAutoSkipTimer();
+    }
+  }, [liveTranscript, isListening, clearAutoSkip, startAutoSkipTimer]);
+
+  // Start auto-skip timer when listening starts, clear when it stops
+  useEffect(() => {
+    if (isListening && !isSpeaking && !isProcessing) {
+      startAutoSkipTimer();
+    } else {
+      clearAutoSkip();
+    }
+  }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
+
   // Reset silence timer on candidate speech activity
   useEffect(() => {
     if (liveTranscript) {
@@ -670,8 +724,9 @@ export default function InterviewStart() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      clearAutoSkip();
     };
-  }, [stopListening]);
+  }, [stopListening, clearAutoSkip]);
 
   if (loading)
     return (
@@ -898,6 +953,16 @@ export default function InterviewStart() {
                   <div className="p-2 sm:p-3 rounded-lg text-xs sm:text-sm bg-muted/50 border border-dashed border-muted-foreground/30 mb-3 sm:mb-4">
                     <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
                     <p className="mt-0.5 sm:mt-1 text-muted-foreground italic">{liveTranscript}</p>
+                  </div>
+                )}
+
+                {/* Auto-skip countdown */}
+                {autoSkipCountdown !== null && (
+                  <div className="flex items-center justify-center gap-2 mb-2 animate-pulse">
+                    <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <span className="text-sm font-bold text-amber-500">{autoSkipCountdown}</span>
+                    </div>
+                    <span className="text-xs text-amber-500 font-medium">Passage auto dans {autoSkipCountdown}s...</span>
                   </div>
                 )}
 
