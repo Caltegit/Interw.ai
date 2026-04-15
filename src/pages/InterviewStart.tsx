@@ -600,9 +600,8 @@ export default function InterviewStart() {
     // Check every second if 3s of silence has elapsed
     const pollInterval = setInterval(() => {
       const elapsed = Date.now() - lastTranscriptChangeRef.current;
-      if (elapsed >= 3000 && autoSkipCountdown === null) {
+      if (elapsed >= 3000 && !autoSkipCountdownRef.current) {
         // Start visual countdown of 3s
-        clearInterval(pollInterval);
         setAutoSkipCountdown(3);
         let count = 3;
         autoSkipCountdownRef.current = setInterval(() => {
