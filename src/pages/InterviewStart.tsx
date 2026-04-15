@@ -587,6 +587,7 @@ export default function InterviewStart() {
   useEffect(() => {
     const autoSkipEnabled = (project as any)?.auto_skip_silence;
     console.log("[AutoSkip] Check:", { autoSkipEnabled, isListening, isSpeaking, isProcessing, interviewFinished });
+    if (!autoSkipEnabled || !isListening || isSpeaking || isProcessing || interviewFinished) {
       if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
       if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
       if (!isListening) setAutoSkipCountdown(null);
