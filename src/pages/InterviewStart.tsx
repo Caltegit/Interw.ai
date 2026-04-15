@@ -821,31 +821,29 @@ export default function InterviewStart() {
                   Terminer l'entretien
                 </Button>
               ) : (
-                <>
-                  <Button
-                    className="w-full max-w-sm h-12 sm:h-14 text-sm sm:text-base"
-                    size="lg"
-                    onClick={handleSendResponse}
-                    disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
-                  >
-                    {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
-                  </Button>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={isListening ? "default" : "outline"}
-                      size="icon"
-                      onClick={() => isListening ? stopListening() : startListening()}
-                      disabled={isSpeaking || isProcessing}
-                    >
-                      {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                    </Button>
-                    <Button variant="destructive" size="icon" onClick={() => setShowEndDialog(true)}>
-                      <PhoneOff className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </>
+                <Button
+                  className="w-full max-w-sm h-12 sm:h-14 text-sm sm:text-base"
+                  size="lg"
+                  onClick={handleSendResponse}
+                  disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
+                >
+                  {isProcessing ? "Analyse en cours..." : "Envoyer ma réponse"}
+                </Button>
               )}
             </div>
+
+            {/* Arrêter l'entretien */}
+            {!interviewFinished && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  variant="destructive"
+                  className="px-6"
+                  onClick={() => setShowEndDialog(true)}
+                >
+                  Arrêter l'entretien
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
