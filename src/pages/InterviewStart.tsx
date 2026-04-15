@@ -929,14 +929,6 @@ export default function InterviewStart() {
                       >
                         {isProcessing ? "Analyse en cours..." : "Répondre à la question"}
                       </Button>
-                      <Button
-                        variant={isListening ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => (isListening ? stopListening() : startListening())}
-                        disabled={isSpeaking || isProcessing}
-                      >
-                        {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                      </Button>
                     </>
                   )}
                 </div>
