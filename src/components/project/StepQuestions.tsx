@@ -137,12 +137,14 @@ function SortableQuestion({
             )}
           </div>
 
-          {/* Content */}
-          <Input
-            placeholder={q.mediaType === "written" ? `Contenu de la question ${index + 1}...` : "Description / contexte (optionnel)..."}
-            value={q.content}
-            onChange={(e) => updateQuestion(index, "content", e.target.value)}
-          />
+          {/* Content — only for written questions */}
+          {q.mediaType === "written" && (
+            <Input
+              placeholder={`Contenu de la question ${index + 1}...`}
+              value={q.content}
+              onChange={(e) => updateQuestion(index, "content", e.target.value)}
+            />
+          )}
 
           {/* Media recorder for audio/video */}
           {(q.mediaType === "audio" || q.mediaType === "video") && (
