@@ -16,6 +16,9 @@ interface Template {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  type: string;
+  audio_url: string | null;
+  video_url: string | null;
 }
 
 interface QuestionLibraryDialogProps {
