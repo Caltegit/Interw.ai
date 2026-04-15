@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Projets", url: "/projects", icon: FolderKanban },
+  { title: "Entretiens", url: "/projects", icon: FolderKanban },
   { title: "Questions", url: "/question-library", icon: BookOpen },
   { title: "Paramètres", url: "/settings", icon: Settings },
 ];
