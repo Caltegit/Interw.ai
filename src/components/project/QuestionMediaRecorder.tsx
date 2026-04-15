@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic, Video, Square, Trash2, Play, Pause, Upload } from "lucide-react";
 
 interface QuestionMediaRecorderProps {
+  mode: "audio" | "video";
   audioBlob: Blob | null;
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
