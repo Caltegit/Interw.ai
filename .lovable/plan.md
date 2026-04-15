@@ -1,38 +1,46 @@
 
 
-# Passage auto 5s — détection silence + décompte visuel
+# Distinguer les 3 types de questions dans la colonne Interviewer
 
 ## Concept
 
-Quand le candidat ne parle pas pendant 5 secondes après qu'une question est posée, un décompte visuel apparaît ("Prochaine question dans X s"). Si le candidat reparle pendant le décompte, celui-ci s'annule. Sinon, passage automatique à la question suivante.
+La colonne gauche (Interviewer) s'adapte dynamiquement selon le type de la question en cours :
 
-Ce comportement est configurable par projet via un toggle "Passage auto 5s" dans l'étape Publication de la création de projet.
+```text
+TEXTE                    AUDIO                    VIDEO
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│              │         │              │         │              │
+│  Photo IA    │         │  Photo IA    │         │  Vidéo de la │
+│  (avatar)    │         │  (avatar)    │         │  question    │
+│              │         │              │         │  (remplace   │
+│              │         │              │         │   l'avatar)  │
+├──────────────┤         ├──────────────┤         │              │
+│ Texte de la  │         │ Lecteur      │         │              │
+│ question     │         │ audio        │         └──────────────┘
+│ (lu par TTS) │         │ (autoplay)   │
+└──────────────┘         └──────────────┘
+```
 
 ## Modifications
 
-### 1. Migration DB — ajouter la colonne `auto_skip_silence` à `projects`
+### `src/pages/InterviewStart.tsx`
 
-```sql
-ALTER TABLE public.projects ADD COLUMN auto_skip_silence boolean NOT NULL DEFAULT false;
-```
+1. **Déterminer le type** de la question courante (déjà fait lignes 722-725)
 
-### 2. `src/pages/ProjectNew.tsx`
+2. **Conditionner l'affichage de l'avatar** : l'avatar (photo IA, lignes 698-716) ne s'affiche que pour les questions `written` et `audio`. Pour les questions `video`, il est remplacé par la vidéo de la question (plein cadre, même dimensions).
 
-- Ajouter un state `autoSkipSilence` (défaut `false`)
-- Ajouter un Switch "Passage auto 5s" dans l'étape 4 (Publication), avec description explicative
-- Passer la valeur dans l'insert du projet
+3. **Réorganiser le `QuestionMediaPlayer`** :
+   - **Texte** : pas de player média, le texte de la question s'affiche directement sous l'avatar (il est lu par le TTS existant)
+   - **Audio** : le player audio compact s'affiche sous l'avatar
+   - **Vidéo** : le player vidéo prend la place de l'avatar (aspect-square, même style avec ring, même badge nom IA)
 
-### 3. `src/pages/InterviewStart.tsx`
+4. **Supprimer le badge "Question en cours"** du `QuestionMediaPlayer` featured pour alléger — le type est évident visuellement.
 
-- Lire `project.auto_skip_silence` depuis les données chargées
-- Ajouter un state `autoSkipCountdown` (null ou nombre de secondes restantes)
-- Après que l'IA finit de parler et que le candidat peut répondre, démarrer un timer de 5s de silence
-- Détecter le silence via `liveTranscript` : si pas de changement pendant 5s → lancer le décompte (5, 4, 3, 2, 1)
-- Si `liveTranscript` change pendant le décompte → annuler le décompte, reset le timer
-- À 0 → appeler `handleSendResponse` automatiquement (ou passer directement à la question suivante si transcript vide)
-- Afficher le décompte visuellement dans la colonne candidat (badge animé "Prochaine question dans X s")
+### `src/components/interview/QuestionMediaPlayer.tsx`
 
-### 4. `src/pages/ProjectEdit.tsx`
+Aucune modification nécessaire — le composant gère déjà les 3 types. On conditionne simplement son placement et la visibilité de l'avatar dans `InterviewStart.tsx`.
 
-- Ajouter le même toggle pour la modification de projet existant
+## Résumé des changements
+
+Un seul fichier modifié : `InterviewStart.tsx`. La logique consiste à wrapper l'avatar et le player dans un conditionnel sur `questionType` pour que la vidéo remplace l'avatar quand c'est une question vidéo, et que l'avatar reste visible pour texte/audio.
 
