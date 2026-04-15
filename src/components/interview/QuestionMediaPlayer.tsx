@@ -123,6 +123,48 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
   // ─── FEATURED variant ───
   if (variant === "featured") {
+    // VIDEO featured: just the video, no wrapper/badge/description
+    if (type === "video" && videoUrl) {
+      return (
+        <div className="w-full">
+          <div className="relative w-full overflow-hidden bg-black aspect-video rounded-xl">
+            <video
+              ref={videoPlayerRef}
+              src={videoUrl}
+              onEnded={handleEnded}
+              onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
+              className="w-full h-full object-cover"
+              preload="metadata"
+            />
+            {!isPlaying && (
+              <button
+                className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
+                onClick={togglePlay}
+              >
+                <div className="h-12 w-12 rounded-full bg-emerald-500/80 flex items-center justify-center">
+                  <Play className="h-6 w-6 text-white ml-0.5" />
+                </div>
+              </button>
+            )}
+            {isPlaying && (
+              <button className="absolute inset-0" onClick={togglePlay} />
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-emerald-400 rounded-full transition-all duration-100"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={restart}>
+              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-5">
         {/* Badge */}
@@ -180,48 +222,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={restart}>
                 <RotateCcw className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {type === "video" && videoUrl && (
-          <div className="space-y-3">
-            <div className="border-l-2 border-emerald-400/40 pl-4">
-              <p className="text-sm text-muted-foreground italic mb-2">{content}</p>
-            </div>
-            <div className="relative rounded-lg overflow-hidden bg-black aspect-video max-w-sm">
-              <video
-                ref={videoPlayerRef}
-                src={videoUrl}
-                onEnded={handleEnded}
-                onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
-                className="w-full h-full object-cover"
-                preload="metadata"
-              />
-              {!isPlaying && (
-                <button
-                  className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
-                  onClick={togglePlay}
-                >
-                  <div className="h-12 w-12 rounded-full bg-emerald-500/80 flex items-center justify-center">
-                    <Play className="h-6 w-6 text-white ml-0.5" />
-                  </div>
-                </button>
-              )}
-              {isPlaying && (
-                <button className="absolute inset-0" onClick={togglePlay} />
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-emerald-400 rounded-full transition-all duration-100"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={restart}>
-                <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
               </Button>
             </div>
           </div>
