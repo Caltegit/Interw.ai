@@ -26,8 +26,9 @@ export default function InterviewStart() {
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
-  const messagesRef = useRef<{ role: string; content: string }[]>([]);
+  type ChatMessage = { role: string; content: string; mediaType?: "written" | "audio" | "video"; mediaUrl?: string | null };
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
