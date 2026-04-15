@@ -175,7 +175,7 @@ export default function ProjectNew() {
             const updates: Record<string, string> = {};
 
             if (q.audioBlob) {
-              const audioPath = `questions/${qId}.webm`;
+              const audioPath = `questions/${qId}_audio.webm`;
               const { error: aErr } = await supabase.storage
                 .from("media")
                 .upload(audioPath, q.audioBlob, { contentType: "audio/webm", upsert: true });
@@ -183,10 +183,13 @@ export default function ProjectNew() {
                 const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
                 updates.audio_url = aUrl.publicUrl;
               }
+            } else if (q.audioPreviewUrl && !q.audioPreviewUrl.startsWith("blob:")) {
+              // URL from library import — reuse directly
+              updates.audio_url = q.audioPreviewUrl;
             }
 
             if (q.videoBlob) {
-              const videoPath = `questions/${qId}.webm`;
+              const videoPath = `questions/${qId}_video.webm`;
               const { error: vErr } = await supabase.storage
                 .from("media")
                 .upload(videoPath, q.videoBlob, { contentType: "video/webm", upsert: true });
@@ -194,6 +197,9 @@ export default function ProjectNew() {
                 const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
                 updates.video_url = vUrl.publicUrl;
               }
+            } else if (q.videoPreviewUrl && !q.videoPreviewUrl.startsWith("blob:")) {
+              // URL from library import — reuse directly
+              updates.video_url = q.videoPreviewUrl;
             }
 
             if (Object.keys(updates).length > 0) {

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic, Video, Square, Trash2, Play, Pause, Upload } from "lucide-react";
 
 interface QuestionMediaRecorderProps {
+  mode: "audio" | "video";
   audioBlob: Blob | null;
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
@@ -15,6 +16,7 @@ interface QuestionMediaRecorderProps {
 type RecordingType = "audio" | "video" | null;
 
 export function QuestionMediaRecorder({
+  mode,
   audioBlob,
   audioPreviewUrl,
   videoBlob,
@@ -197,12 +199,16 @@ export function QuestionMediaRecorder({
 
       {!hasMedia && (
         <div className="flex items-center gap-1">
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("audio")}>
-            <Mic className="mr-1 h-3 w-3" /> Audio
-          </Button>
-          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("video")}>
-            <Video className="mr-1 h-3 w-3" /> Vidéo
-          </Button>
+          {mode === "audio" && (
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("audio")}>
+              <Mic className="mr-1 h-3 w-3" /> Enregistrer audio
+            </Button>
+          )}
+          {mode === "video" && (
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("video")}>
+              <Video className="mr-1 h-3 w-3" /> Enregistrer vidéo
+            </Button>
+          )}
         </div>
       )}
     </div>
