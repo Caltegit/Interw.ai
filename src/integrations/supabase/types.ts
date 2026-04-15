@@ -232,6 +232,47 @@ export type Database = {
           },
         ]
       }
+      question_templates: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string
+          follow_up_enabled: boolean
+          id: string
+          max_follow_ups: number
+          organization_id: string
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by: string
+          follow_up_enabled?: boolean
+          id?: string
+          max_follow_ups?: number
+          organization_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string
+          follow_up_enabled?: boolean
+          id?: string
+          max_follow_ups?: number
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       questions: {
         Row: {
           audio_url: string | null
