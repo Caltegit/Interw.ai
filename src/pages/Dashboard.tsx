@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, FolderKanban, Users, CheckCircle, TrendingUp, Trash2 } from "lucide-react";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -60,7 +61,26 @@ export default function Dashboard() {
 
   const statCards = [
     { label: "Projets", value: stats.projects, icon: FolderKanban, color: "text-primary" },
-...
+    { label: "En attente", value: stats.pending, icon: Users, color: "text-warning" },
+    { label: "Complétés", value: stats.completed, icon: CheckCircle, color: "text-success" },
+  ];
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="grid gap-4 md:grid-cols-3">
+        {statCards.map((card) => (
+          <Card key={card.label}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{card.label}</CardTitle>
+              <card.icon className={cn("h-4 w-4", card.color)} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{card.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Derniers entretiens</CardTitle>
