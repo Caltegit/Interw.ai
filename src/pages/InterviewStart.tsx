@@ -893,17 +893,7 @@ export default function InterviewStart() {
                   </div>
                 </div>
 
-                {/* Sound toggle */}
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setTtsEnabled(!ttsEnabled)}
-                    className="text-xs text-muted-foreground"
-                  >
-                    {ttsEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
-                    {ttsEnabled ? "Son activé" : "Son coupé"}
-                  </Button>
                   {isProcessing && (
                     <div className="flex gap-1">
                       <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
