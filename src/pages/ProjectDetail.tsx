@@ -87,6 +87,7 @@ export default function ProjectDetail() {
           questions.map((q) => ({
             project_id: newProject.id,
             order_index: q.order_index,
+            title: (q as any).title || q.content.slice(0, 60),
             content: q.content,
             type: q.type,
             follow_up_enabled: q.follow_up_enabled,

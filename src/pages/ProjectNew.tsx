@@ -44,8 +44,8 @@ export default function ProjectNew() {
 
   // Step 3
   const [questions, setQuestions] = useState<Question[]>([
-    { ...createEmptyQuestion(), content: "Comment ça va aujourd'hui ?" },
-    { ...createEmptyQuestion(), content: "Tu penses quoi de Morning ?" },
+    { ...createEmptyQuestion(), title: "Bien-être", content: "Comment ça va aujourd'hui ?" },
+    { ...createEmptyQuestion(), title: "Culture", content: "Tu penses quoi de Morning ?" },
   ]);
 
   // Step 4
@@ -158,6 +158,7 @@ export default function ProjectNew() {
           validQuestions.map((q, i) => ({
             project_id: project.id,
             order_index: i,
+            title: q.title || q.content.slice(0, 60),
             content: q.content,
             type: q.type as never,
             follow_up_enabled: q.follow_up_enabled,
