@@ -1,24 +1,45 @@
 
 
-# Restaurer les fonctionnalités validées dans InterviewStart.tsx
+# Refonte layout entretien : 2 colonnes simplifiées
 
-## Problème
-Les modifications validées (avatar remplacé par la vidéo, bouton centré) ne sont pas dans le code actuel. Probablement écrasées lors d'éditions ultérieures du fichier.
+## Layout cible
 
-## Modifications (1 fichier : `src/pages/InterviewStart.tsx`)
+```text
+┌──────────────────────────────────────────────┐
+│            [Arrêter l'entretien]             │
+├──────────────────────┬───────────────────────┤
+│   COLONNE 1 (gauche) │   COLONNE 2 (droite)  │
+│                      │                       │
+│   Photo/Vidéo IA     │   Retour vidéo        │
+│   (avatar ou player) │   candidat            │
+│                      │                       │
+│   Question texte     │   [Répondre à la      │
+│   en dessous         │    question]           │
+│                      │                       │
+└──────────────────────┴───────────────────────┘
+```
 
-### 1. Avatar conditionnel selon le type de question
-- Déterminer le `questionType` de la question courante (written/audio/video)
-- Si `video` : remplacer l'avatar IA par le `QuestionMediaPlayer` en mode featured (même cadre aspect-square, même ring, même badge nom IA)
-- Si `written` ou `audio` : garder l'avatar IA tel quel
+## Modifications (`src/pages/InterviewStart.tsx`)
 
-### 2. Supprimer le QuestionMediaPlayer featured de la colonne droite pour les vidéos
-- Le bloc "Question en cours" (lignes 828-851) ne doit afficher le player featured que pour `written` et `audio`
-- Pour `video`, le player est déjà dans la colonne gauche (à la place de l'avatar)
+### 1. Colonne gauche : Interviewer + Question
+- Avatar IA (ou vidéo player si question vidéo) — comme actuellement
+- En dessous : le texte de la question (ou le player audio/written featured)
+- Supprimer le toggle son et l'indicateur processing de cette colonne
 
-### 3. Bouton "Arrêter l'entretien" centré au-dessus des colonnes
-- Déplacer le `Button` destructive + `PhoneOff` (ligne 917) en dehors du grid, centré horizontalement entre les 2 colonnes
+### 2. Colonne droite : Retour vidéo + Bouton
+- Retour vidéo candidat (avec badge REC)
+- Bouton "Répondre à la question" en dessous (remplace "Envoyer ma réponse")
+- Bouton micro en dessous du bouton principal
+- Auto-skip countdown reste visible ici
+
+### 3. Supprimer de l'interface
+- **Historique de conversation** (la Card avec les messages scrollables) — supprimé
+- **Live transcript** (le bloc "Vous (en cours...)") — supprimé
+- Toggle son déplacé en petit sous la vidéo candidat
+
+### 4. Grid 50/50
+- Passer de `lg:grid-cols-5` à `lg:grid-cols-2` pour un layout équilibré
 
 ## Résumé
-Un seul fichier modifié avec 3 ajustements conditionnels dans le JSX de retour.
+1 fichier modifié. Simplification majeure : suppression de l'historique de conversation et du transcript live, layout 2 colonnes égales avec interviewer à gauche et candidat à droite.
 
