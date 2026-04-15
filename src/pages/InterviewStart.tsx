@@ -700,6 +700,7 @@ export default function InterviewStart() {
             {questions[currentQuestionIndex] && (
               <div className="mb-3 sm:mb-4">
                 <QuestionMediaPlayer
+                  ref={featuredPlayerRef}
                   type={
                     questions[currentQuestionIndex].video_url ? "video"
                     : questions[currentQuestionIndex].audio_url ? "audio"
@@ -709,6 +710,13 @@ export default function InterviewStart() {
                   audioUrl={questions[currentQuestionIndex].audio_url}
                   videoUrl={questions[currentQuestionIndex].video_url}
                   variant="featured"
+                  autoPlay={shouldAutoPlay}
+                  onPlaybackEnd={() => {
+                    setShouldAutoPlay(false);
+                    setIsSpeaking(false);
+                    startQuestionRecording();
+                    startListening();
+                  }}
                 />
               </div>
             )}
