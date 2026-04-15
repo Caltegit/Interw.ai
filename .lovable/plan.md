@@ -1,52 +1,50 @@
 
 
-# Bibliothèque de questions prédéfinies
+# Zone fixe "Question en cours" + Bulles enrichies dans l'historique
 
 ## Objectif
-Permettre au recruteur de maintenir une bibliothèque de questions réutilisables, et de les insérer rapidement lors de la création/édition d'un projet.
+Améliorer l'interface candidat pour distinguer visuellement les questions texte, audio et vidéo avec deux composants combinés :
+1. Une **zone fixe** au-dessus du chat affichant la question courante en grand format avec lecteur média intégré
+2. Des **bulles enrichies** dans l'historique permettant de réécouter/revoir les médias
 
-## Architecture
+## Modifications
 
-### 1. Base de données
-Nouvelle table `question_templates` :
-- `id` (uuid, PK)
-- `organization_id` (uuid, lié à l'organisation)
-- `content` (text, le texte de la question)
-- `category` (text, nullable — ex: "Motivation", "Technique", "Soft skills")
-- `follow_up_enabled` (boolean, default true)
-- `max_follow_ups` (integer, default 2)
-- `created_by` (uuid)
-- `created_at` (timestamptz)
+### 1. Zone fixe "Question en cours" (dans InterviewStart.tsx)
+Ajout d'un bandeau entre la barre de progression et la conversation :
+- **Question texte** : Affichage grand format avec icône 📝, texte en citation stylisée
+- **Question audio** : Icône 🎤 + bouton play/pause avec barre de progression animée (waveform simplifiée)
+- **Question vidéo** : Lecteur vidéo inline compact avec contrôles play/pause, dans un cadre arrondi
+- Indicateur du type de question (badge "Texte" / "Audio" / "Vidéo")
+- Bouton rejouer pour audio/vidéo
 
-RLS : accès limité aux membres de la même organisation via `get_user_organization_id()`.
+### 2. Bulles enrichies dans l'historique
+Modifier le rendu des messages AI dans la liste `messages` :
+- Stocker le type de média et l'URL associée dans chaque message (`mediaType`, `mediaUrl`)
+- **Bulle texte** : Style actuel amélioré avec icône de citation
+- **Bulle audio** : Mini lecteur audio inline (bouton play + durée)
+- **Bulle vidéo** : Thumbnail vidéo cliquable qui lance la lecture inline
 
-### 2. Gestion de la bibliothèque (Settings)
-Ajout d'un onglet "Bibliothèque de questions" dans la page Paramètres (`/settings`) :
-- Liste des questions groupées par catégorie
-- Formulaire d'ajout (contenu + catégorie)
-- Modification et suppression
-- Filtre/recherche
+### 3. Nouveau composant `QuestionMediaPlayer.tsx`
+Composant réutilisable pour la lecture des médias de question :
+- Props : `type` ("written" | "audio" | "video"), `content` (texte), `audioUrl`, `videoUrl`, `variant` ("featured" | "inline")
+- `featured` = zone fixe grande, `inline` = bulle compacte dans l'historique
+- Gestion play/pause, barre de progression pour audio
 
-### 3. Sélecteur dans le stepper (StepQuestions)
-Ajout d'un bouton "Choisir depuis la bibliothèque" à côté du bouton "Ajouter" :
-- Ouvre un dialog/popover avec la liste des templates
-- Recherche et filtre par catégorie
-- Sélection multiple possible
-- Les questions sélectionnées sont ajoutées au formulaire avec leurs paramètres (follow_up, etc.)
+### 4. Adaptation du state `messages`
+Étendre le type des messages pour inclure les infos média :
+```text
+{ role: string; content: string; mediaType?: string; mediaUrl?: string }
+```
+Quand l'IA pose une nouvelle question, on attache le `mediaType` et `mediaUrl` de la question correspondante.
 
-### 4. Fichiers impactés
+### Fichiers impactés
 
 | Fichier | Modification |
 |---|---|
-| Migration SQL | Création table `question_templates` + RLS |
-| `src/pages/Settings.tsx` | Nouvel onglet bibliothèque |
-| `src/components/project/StepQuestions.tsx` | Bouton + dialog de sélection |
-| Nouveau composant `QuestionLibraryDialog.tsx` | Dialog de sélection des templates |
-| Nouveau composant `QuestionLibraryManager.tsx` | CRUD dans Settings |
+| `src/components/interview/QuestionMediaPlayer.tsx` | Nouveau — lecteur média réutilisable (featured + inline) |
+| `src/pages/InterviewStart.tsx` | Zone fixe question en cours + bulles enrichies + state étendu |
 
-### 5. Étapes d'implémentation
-1. Migration : créer la table `question_templates` avec RLS
-2. Créer le composant de gestion dans Settings (CRUD)
-3. Créer le dialog de sélection depuis la bibliothèque
-4. Intégrer le dialog dans `StepQuestions` et `ProjectEdit`
+### Étapes
+1. Créer `QuestionMediaPlayer` avec les deux variantes (featured/inline)
+2. Modifier `InterviewStart` : étendre le type messages, ajouter la zone fixe, enrichir les bulles
 
