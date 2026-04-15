@@ -6,7 +6,24 @@ import { Plus, Trash2, GripVertical, BookOpen, Type, Mic, Video } from "lucide-r
 import { QuestionMediaRecorder } from "./QuestionMediaRecorder";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useState } from "react";
+import { useState, useId } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export interface Question {
   title: string;
@@ -34,6 +51,127 @@ export const createEmptyQuestion = (): Question => ({
   videoPreviewUrl: null,
 });
 
+interface SortableQuestionProps {
+  id: string;
+  index: number;
+  q: Question;
+  questionsLength: number;
+  updateQuestion: (index: number, field: keyof Question, value: any) => void;
+  updateMediaType: (index: number, mediaType: "written" | "audio" | "video") => void;
+  toggleFollowUp: (index: number) => void;
+  updateAudio: (index: number, data: { blob: Blob | null; previewUrl: string | null }) => void;
+  updateVideo: (index: number, data: { blob: Blob | null; previewUrl: string | null }) => void;
+  removeQuestion: (index: number) => void;
+}
+
+function SortableQuestion({
+  id,
+  index,
+  q,
+  questionsLength,
+  updateQuestion,
+  updateMediaType,
+  toggleFollowUp,
+  updateAudio,
+  updateVideo,
+  removeQuestion,
+}: SortableQuestionProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-lg border p-3 space-y-3 bg-background">
+      <div className="flex gap-2 items-start">
+        <button
+          type="button"
+          className="mt-1 shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+        <div className="flex-1 space-y-2">
+          {/* Type selector */}
+          <div>
+            <Label className="text-xs mb-1.5 block text-muted-foreground">Type de question</Label>
+            <ToggleGroup
+              type="single"
+              value={q.mediaType}
+              onValueChange={(v) => { if (v) updateMediaType(index, v as "written" | "audio" | "video"); }}
+            >
+              <ToggleGroupItem value="written" className="text-xs gap-1">
+                <Type className="h-3.5 w-3.5" /> Texte
+              </ToggleGroupItem>
+              <ToggleGroupItem value="audio" className="text-xs gap-1">
+                <Mic className="h-3.5 w-3.5" /> Audio
+              </ToggleGroupItem>
+              <ToggleGroupItem value="video" className="text-xs gap-1">
+                <Video className="h-3.5 w-3.5" /> Vidéo
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Title (required) */}
+          <div>
+            <Input
+              placeholder={`Titre de la question ${index + 1} *`}
+              value={q.title}
+              onChange={(e) => updateQuestion(index, "title", e.target.value)}
+              className="font-medium"
+            />
+            {!q.title.trim() && (q.content.trim() || q.audioBlob || q.videoBlob) && (
+              <p className="text-[10px] text-destructive mt-0.5">Le titre est obligatoire</p>
+            )}
+          </div>
+
+          {/* Content */}
+          <Input
+            placeholder={q.mediaType === "written" ? `Contenu de la question ${index + 1}...` : "Description / contexte (optionnel)..."}
+            value={q.content}
+            onChange={(e) => updateQuestion(index, "content", e.target.value)}
+          />
+
+          {/* Media recorder for audio/video */}
+          {(q.mediaType === "audio" || q.mediaType === "video") && (
+            <div className="pt-1">
+              <QuestionMediaRecorder
+                audioBlob={q.mediaType === "audio" ? q.audioBlob : null}
+                audioPreviewUrl={q.mediaType === "audio" ? q.audioPreviewUrl : null}
+                videoBlob={q.mediaType === "video" ? q.videoBlob : null}
+                videoPreviewUrl={q.mediaType === "video" ? q.videoPreviewUrl : null}
+                onAudioChange={(data) => updateAudio(index, data)}
+                onVideoChange={(data) => updateVideo(index, data)}
+              />
+            </div>
+          )}
+        </div>
+        <Button variant="ghost" size="icon" onClick={() => removeQuestion(index)} disabled={questionsLength <= 1}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-2 pl-7">
+        <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(index)} id={`followup-${id}`} />
+        <Label htmlFor={`followup-${id}`} className="text-sm text-muted-foreground cursor-pointer">
+          Relance IA
+        </Label>
+      </div>
+    </div>
+  );
+}
+
 interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
@@ -41,15 +179,46 @@ interface StepQuestionsProps {
 
 export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const dndId = useId();
+
+  // Stable IDs for sortable items
+  const [itemIds] = useState(() => questions.map(() => crypto.randomUUID()));
+  // Keep IDs in sync when questions are added/removed
+  const getIds = () => {
+    while (itemIds.length < questions.length) itemIds.push(crypto.randomUUID());
+    return itemIds.slice(0, questions.length);
+  };
+  const ids = getIds();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const oldIndex = ids.findIndex(id => id === activeId);
+    const newIndex = ids.findIndex(id => id === overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+    // Reorder both ids array and questions
+    const reorderedIds = arrayMove([...ids], oldIndex, newIndex);
+    itemIds.splice(0, itemIds.length, ...reorderedIds);
+    setQuestions(arrayMove([...questions], oldIndex, newIndex));
+  };
 
   const handleLibrarySelect = (selected: Question[]) => {
     const remaining = 15 - questions.length;
     const toAdd = selected.slice(0, remaining);
+    toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
     setQuestions([...questions, ...toAdd]);
   };
 
   const addQuestion = () => {
     if (questions.length >= 15) return;
+    itemIds.push(crypto.randomUUID());
     setQuestions([...questions, createEmptyQuestion()]);
   };
 
@@ -61,7 +230,6 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
 
   const updateMediaType = (index: number, mediaType: "written" | "audio" | "video") => {
     const updated = [...questions];
-    // Clear media when switching type
     updated[index] = {
       ...updated[index],
       mediaType,
@@ -93,6 +261,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   };
 
   const removeQuestion = (index: number) => {
+    itemIds.splice(index, 1);
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
@@ -101,7 +270,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-base font-semibold">Questions d'entretien</Label>
-          <p className="text-sm text-muted-foreground">{questions.filter((q) => q.title.trim() || q.content.trim()).length} question(s)</p>
+          <p className="text-sm text-muted-foreground">{questions.filter((q) => q.title.trim() || q.content.trim()).length} question(s) — glissez pour réordonner</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 15}>
@@ -113,79 +282,32 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {questions.map((q, i) => (
-          <div key={i} className="rounded-lg border p-3 space-y-3">
-            <div className="flex gap-2 items-start">
-              <GripVertical className="h-5 w-5 text-muted-foreground shrink-0 cursor-grab mt-1" />
-              <div className="flex-1 space-y-2">
-                {/* Type selector */}
-                <div>
-                  <Label className="text-xs mb-1.5 block text-muted-foreground">Type de question</Label>
-                  <ToggleGroup
-                    type="single"
-                    value={q.mediaType}
-                    onValueChange={(v) => { if (v) updateMediaType(i, v as "written" | "audio" | "video"); }}
-                  >
-                    <ToggleGroupItem value="written" className="text-xs gap-1">
-                      <Type className="h-3.5 w-3.5" /> Texte
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="audio" className="text-xs gap-1">
-                      <Mic className="h-3.5 w-3.5" /> Audio
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="video" className="text-xs gap-1">
-                      <Video className="h-3.5 w-3.5" /> Vidéo
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-
-                {/* Title (required) */}
-                <div>
-                  <Input
-                    placeholder={`Titre de la question ${i + 1} *`}
-                    value={q.title}
-                    onChange={(e) => updateQuestion(i, "title", e.target.value)}
-                    className="font-medium"
-                  />
-                  {!q.title.trim() && (q.content.trim() || q.audioBlob || q.videoBlob) && (
-                    <p className="text-[10px] text-destructive mt-0.5">Le titre est obligatoire</p>
-                  )}
-                </div>
-
-                {/* Content */}
-                <Input
-                  placeholder={q.mediaType === "written" ? `Contenu de la question ${i + 1}...` : "Description / contexte (optionnel)..."}
-                  value={q.content}
-                  onChange={(e) => updateQuestion(i, "content", e.target.value)}
-                />
-
-                {/* Media recorder for audio/video */}
-                {(q.mediaType === "audio" || q.mediaType === "video") && (
-                  <div className="pt-1">
-                    <QuestionMediaRecorder
-                      audioBlob={q.mediaType === "audio" ? q.audioBlob : null}
-                      audioPreviewUrl={q.mediaType === "audio" ? q.audioPreviewUrl : null}
-                      videoBlob={q.mediaType === "video" ? q.videoBlob : null}
-                      videoPreviewUrl={q.mediaType === "video" ? q.videoPreviewUrl : null}
-                      onAudioChange={(data) => updateAudio(i, data)}
-                      onVideoChange={(data) => updateVideo(i, data)}
-                    />
-                  </div>
-                )}
-              </div>
-              <Button variant="ghost" size="icon" onClick={() => removeQuestion(i)} disabled={questions.length <= 1}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 pl-7">
-              <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(i)} id={`followup-${i}`} />
-              <Label htmlFor={`followup-${i}`} className="text-sm text-muted-foreground cursor-pointer">
-                Relance IA
-              </Label>
-            </div>
+      <DndContext
+        id={dndId}
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {questions.map((q, i) => (
+              <SortableQuestion
+                key={ids[i]}
+                id={ids[i]}
+                index={i}
+                q={q}
+                questionsLength={questions.length}
+                updateQuestion={updateQuestion}
+                updateMediaType={updateMediaType}
+                toggleFollowUp={toggleFollowUp}
+                updateAudio={updateAudio}
+                updateVideo={updateVideo}
+                removeQuestion={removeQuestion}
+              />
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       <QuestionLibraryDialog
         open={libraryOpen}
