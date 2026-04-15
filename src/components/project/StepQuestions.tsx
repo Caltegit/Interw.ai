@@ -198,8 +198,10 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = ids.indexOf(active.id as string);
-    const newIndex = ids.indexOf(over.id as string);
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const oldIndex = ids.indexOf(activeId);
+    const newIndex = ids.indexOf(overId);
     if (oldIndex === -1 || newIndex === -1) return;
     // Reorder both ids array and questions
     const newIds = arrayMove(ids, oldIndex, newIndex);
