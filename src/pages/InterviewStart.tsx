@@ -496,14 +496,13 @@ export default function InterviewStart() {
 
       setIsProcessing(false);
 
-      // Speak AI transition via TTS, then play next question media directly if audio/video
+      // Speak AI transition via TTS, then auto-play next question media
       await speak(aiResponse);
-      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
-        setIsSpeaking(true);
-        await playMediaUrl(nextQ.video_url || nextQ.audio_url);
-        setIsSpeaking(false);
-      }
-      if (!isOver) {
+      if (!isOver && nextQ && (nextQ.audio_url || nextQ.video_url)) {
+        // Media question: trigger auto-play, onPlaybackEnd will start listening
+        setShouldAutoPlay(true);
+      } else if (!isOver) {
+        // Text question: start recording + listening immediately
         startQuestionRecording();
         startListening();
       }
