@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
+import QuestionMediaPlayer from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/ai-avatar-marie.png";
@@ -25,8 +26,9 @@ export default function InterviewStart() {
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
-  const messagesRef = useRef<{ role: string; content: string }[]>([]);
+  type ChatMessage = { role: string; content: string; mediaType?: "written" | "audio" | "video"; mediaUrl?: string | null };
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
   const [aiMessages, setAiMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -341,9 +343,14 @@ export default function InterviewStart() {
 
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
+    const q0 = questions[0];
+    const firstQMediaType: "written" | "audio" | "video" = q0?.video_url ? "video" : q0?.audio_url ? "audio" : "written";
+    const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
+
     const aiMsg = { role: "assistant" as const, content: greeting };
-    setMessages([{ role: "ai", content: greeting }]);
-    messagesRef.current = [{ role: "ai", content: greeting }];
+    const chatMsg: ChatMessage = { role: "ai", content: greeting, mediaType: firstQMediaType, mediaUrl: firstQMediaUrl };
+    setMessages([chatMsg]);
+    messagesRef.current = [chatMsg];
     setAiMessages([aiMsg]);
 
     // Persist greeting to DB immediately
@@ -448,9 +455,15 @@ export default function InterviewStart() {
 
       const aiResponse = data.message;
 
-      // Add AI message
+      // Determine next question media info
+      const nextQIdx = currentQuestionIndex + 1;
+      const nextQ = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
+      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url ? "video" : nextQ?.audio_url ? "audio" : "written";
+      const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+
+      // Add AI message with media info
       setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: aiResponse }];
+        const updated = [...prev, { role: "ai", content: aiResponse, mediaType: nMediaType, mediaUrl: nMediaUrl }];
         messagesRef.current = updated;
         return updated;
       });
@@ -479,12 +492,9 @@ export default function InterviewStart() {
       setIsProcessing(false);
 
       // Speak AI response, then play next question media if available
-      const nextQIdx = currentQuestionIndex + 1;
-      const nextQuestion = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
-      if (nextQuestion && (nextQuestion.audio_url || nextQuestion.video_url)) {
-        // Speak AI transition text, then play question media
+      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
         await speak(aiResponse);
-        await speakOrPlayQuestion(nextQuestion.content, nextQuestion);
+        await speakOrPlayQuestion(nextQ.content, nextQ);
       } else {
         await speak(aiResponse);
       }
@@ -682,6 +692,23 @@ export default function InterviewStart() {
 
           {/* Conversation + controls */}
           <div className="lg:col-span-3 flex flex-col min-h-0">
+            {/* 0) Fixed "Question en cours" zone */}
+            {questions[currentQuestionIndex] && (
+              <div className="mb-3 sm:mb-4">
+                <QuestionMediaPlayer
+                  type={
+                    questions[currentQuestionIndex].video_url ? "video"
+                    : questions[currentQuestionIndex].audio_url ? "audio"
+                    : "written"
+                  }
+                  content={questions[currentQuestionIndex].content}
+                  audioUrl={questions[currentQuestionIndex].audio_url}
+                  videoUrl={questions[currentQuestionIndex].video_url}
+                  variant="featured"
+                />
+              </div>
+            )}
+
             {/* 1) Conversation history */}
             <Card className="mb-3 sm:mb-4 flex-1 min-h-0">
               <CardContent className="p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto space-y-2 sm:space-y-3">
@@ -690,7 +717,19 @@ export default function InterviewStart() {
                     <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
                       {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
                     </span>
-                    <p className="mt-0.5 sm:mt-1">{m.content}</p>
+                    {m.role === "ai" && m.mediaType && m.mediaType !== "written" ? (
+                      <div className="mt-1.5">
+                        <QuestionMediaPlayer
+                          type={m.mediaType}
+                          content={m.content}
+                          audioUrl={m.mediaType === "audio" ? m.mediaUrl : undefined}
+                          videoUrl={m.mediaType === "video" ? m.mediaUrl : undefined}
+                          variant="inline"
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-0.5 sm:mt-1">{m.content}</p>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
