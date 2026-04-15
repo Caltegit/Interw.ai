@@ -597,14 +597,14 @@ export default function InterviewStart() {
     // Mark the start of listening
     lastTranscriptChangeRef.current = Date.now();
 
-    // Check every second if 5s of silence has elapsed
+    // Check every second if 3s of silence has elapsed
     const pollInterval = setInterval(() => {
       const elapsed = Date.now() - lastTranscriptChangeRef.current;
-      if (elapsed >= 5000 && autoSkipCountdown === null) {
-        // Start visual countdown
+      if (elapsed >= 3000 && autoSkipCountdown === null) {
+        // Start visual countdown of 3s
         clearInterval(pollInterval);
-        setAutoSkipCountdown(5);
-        let count = 5;
+        setAutoSkipCountdown(3);
+        let count = 3;
         autoSkipCountdownRef.current = setInterval(() => {
           count -= 1;
           if (count <= 0) {
