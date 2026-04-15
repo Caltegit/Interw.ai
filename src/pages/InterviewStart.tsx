@@ -343,9 +343,9 @@ export default function InterviewStart() {
 
     const greeting = `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
-    const firstQ = questions[0];
-    const firstQMediaType: "written" | "audio" | "video" = firstQ?.video_url ? "video" : firstQ?.audio_url ? "audio" : "written";
-    const firstQMediaUrl = firstQ?.video_url || firstQ?.audio_url || null;
+    const q0 = questions[0];
+    const firstQMediaType: "written" | "audio" | "video" = q0?.video_url ? "video" : q0?.audio_url ? "audio" : "written";
+    const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = { role: "ai", content: greeting, mediaType: firstQMediaType, mediaUrl: firstQMediaUrl };
