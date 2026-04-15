@@ -233,7 +233,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                         <Label className="text-xs">Relance</Label>
                       </div>
                       <Button size="icon" variant="ghost" onClick={handleSaveEdit}>
-                        <Check className="h-4 w-4 text-green-600" />
+                        <Check className="h-4 w-4 text-primary" />
                       </Button>
                       <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
                         <X className="h-4 w-4" />
