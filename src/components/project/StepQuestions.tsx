@@ -8,6 +8,7 @@ import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState } from "react";
 
 export interface Question {
+  title: string;
   content: string;
   type: string;
   follow_up_enabled: boolean;
@@ -19,6 +20,7 @@ export interface Question {
 }
 
 export const createEmptyQuestion = (): Question => ({
+  title: "",
   content: "",
   type: "open",
   follow_up_enabled: false,
@@ -48,9 +50,9 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     setQuestions([...questions, createEmptyQuestion()]);
   };
 
-  const updateQuestion = (index: number, content: string) => {
+  const updateQuestion = (index: number, field: "title" | "content", value: string) => {
     const updated = [...questions];
-    updated[index] = { ...updated[index], content };
+    updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
   };
 
@@ -99,12 +101,19 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
           <div key={i} className="rounded-lg border p-3 space-y-2">
             <div className="flex gap-2 items-center">
               <GripVertical className="h-5 w-5 text-muted-foreground shrink-0 cursor-grab" />
-              <Input
-                className="flex-1"
-                placeholder={`Question ${i + 1}...`}
-                value={q.content}
-                onChange={(e) => updateQuestion(i, e.target.value)}
-              />
+              <div className="flex-1 space-y-1.5">
+                <Input
+                  placeholder={`Titre de la question ${i + 1}`}
+                  value={q.title}
+                  onChange={(e) => updateQuestion(i, "title", e.target.value)}
+                  className="font-medium"
+                />
+                <Input
+                  placeholder={`Contenu de la question ${i + 1}...`}
+                  value={q.content}
+                  onChange={(e) => updateQuestion(i, "content", e.target.value)}
+                />
+              </div>
               <Button variant="ghost" size="icon" onClick={() => removeQuestion(i)} disabled={questions.length <= 1}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
