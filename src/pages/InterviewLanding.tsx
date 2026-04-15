@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video } from "lucide-react";
+import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video, ArrowRight } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
 export default function InterviewLanding() {
@@ -75,7 +75,6 @@ export default function InterviewLanding() {
       return;
     }
 
-    // Show intermediate media screen if project has video or audio
     if (project.presentation_video_url) {
       setSessionToken(session.token);
       setIntroMediaType("video");
@@ -114,19 +113,21 @@ export default function InterviewLanding() {
 
   if (loading)
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "#1a1a1a" }}>
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "#d4a574", borderTopColor: "transparent" }} />
       </div>
     );
 
   if (error) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="py-12">
-            <p className="text-lg font-medium text-destructive">{error}</p>
-          </CardContent>
-        </Card>
+        <div className="animate-fade-in">
+          <Card className="max-w-md w-full text-center">
+            <CardContent className="py-12">
+              <p className="text-lg font-medium text-destructive">{error}</p>
+            </CardContent>
+          </Card>
+        </div>
       </CandidateLayout>
     );
   }
@@ -135,141 +136,170 @@ export default function InterviewLanding() {
   if (showIntroMedia) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full">
-          <CardContent className="py-10 space-y-6 text-center">
-            {introMediaType === "video" ? (
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Video className="h-8 w-8 text-primary" />
-              </div>
-            ) : project.avatar_image_url ? (
-              <img
-                src={project.avatar_image_url}
-                alt={project.ai_persona_name || "Recruteur"}
-                className={`mx-auto h-24 w-24 rounded-full object-cover border-4 ${mediaPlaying ? "border-primary animate-pulse" : "border-muted"}`}
-              />
-            ) : (
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                <Volume2 className="h-8 w-8 text-primary" />
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
-              <p className="text-sm text-muted-foreground">
-                {introMediaType === "video"
-                  ? "Regardez cette vidéo avant de commencer votre entretien."
-                  : "Écoutez ce message avant de commencer votre entretien."}
-              </p>
-            </div>
-
-            {introMediaType === "audio" && (
-              <audio ref={introAudioRef} src={project.intro_audio_url} onEnded={handleMediaEnded} className="hidden" />
-            )}
-
-            {introMediaType === "video" && (
-              <video
-                ref={introVideoRef}
-                src={project.presentation_video_url}
-                onEnded={handleMediaEnded}
-                controls={mediaPlaying}
-                playsInline
-                className="w-full rounded-lg border border-border"
-              />
-            )}
-
-            {!mediaPlaying && !mediaFinished && (
-              <Button size="lg" className="w-full" onClick={handlePlayMedia}>
-                <Play className="mr-2 h-5 w-5" />
-                {introMediaType === "video" ? "Regarder la vidéo" : "Écouter le message"}
-              </Button>
-            )}
-
-            {mediaPlaying && introMediaType === "audio" && (
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 text-primary">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                  <span className="text-sm font-medium">Lecture en cours...</span>
+        <div className="animate-fade-in">
+          <Card className="max-w-md w-full overflow-hidden">
+            <CardContent className="py-10 space-y-6 text-center">
+              {introMediaType === "video" ? (
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
+                  <Video className="h-8 w-8" style={{ color: "#d4a574" }} />
                 </div>
-                <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "100%" }} />
+              ) : project.avatar_image_url ? (
+                <img
+                  src={project.avatar_image_url}
+                  alt={project.ai_persona_name || "Recruteur"}
+                  className={`mx-auto h-24 w-24 rounded-full object-cover border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
+                />
+              ) : (
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
+                  <Volume2 className="h-8 w-8" style={{ color: "#d4a574" }} />
                 </div>
-              </div>
-            )}
+              )}
 
-            {mediaFinished && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle className="h-5 w-5" />
-                  <span className="text-sm font-medium">
-                    {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
-                  </span>
-                </div>
-                <Button size="lg" className="w-full" onClick={handleProceedToInterview}>
-                  <Mic className="mr-2 h-5 w-5" />
-                  Commencer l'entretien
+              <div className="space-y-2">
+                <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
+                <p className="text-sm" style={{ color: "rgba(245, 240, 232, 0.65)" }}>
+                  {introMediaType === "video"
+                    ? "Regardez cette vidéo avant de commencer votre entretien."
+                    : "Écoutez ce message avant de commencer votre entretien."}
+                </p>
+              </div>
+
+              {introMediaType === "audio" && (
+                <audio ref={introAudioRef} src={project.intro_audio_url} onEnded={handleMediaEnded} className="hidden" />
+              )}
+
+              {introMediaType === "video" && (
+                <video
+                  ref={introVideoRef}
+                  src={project.presentation_video_url}
+                  onEnded={handleMediaEnded}
+                  controls={mediaPlaying}
+                  playsInline
+                  className="w-full rounded-xl border transition-all duration-300"
+                  style={{ borderColor: "rgba(245, 240, 232, 0.12)" }}
+                />
+              )}
+
+              {!mediaPlaying && !mediaFinished && (
+                <Button size="lg" className="w-full group transition-all duration-300" onClick={handlePlayMedia}>
+                  <Play className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                  {introMediaType === "video" ? "Regarder la vidéo" : "Écouter le message"}
                 </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+
+              {mediaPlaying && introMediaType === "audio" && (
+                <div className="flex flex-col items-center gap-3 animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <span className="h-2.5 w-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574" }} />
+                    <span className="h-3.5 w-3.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.2s" }} />
+                    <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.4s" }} />
+                    <span className="text-sm font-medium" style={{ color: "#d4a574" }}>Lecture en cours...</span>
+                  </div>
+                </div>
+              )}
+
+              {mediaFinished && (
+                <div className="space-y-3 animate-fade-in">
+                  <div className="flex items-center justify-center gap-2" style={{ color: "#4ade80" }}>
+                    <CheckCircle className="h-5 w-5" />
+                    <span className="text-sm font-medium">
+                      {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
+                    </span>
+                  </div>
+                  <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
+                    <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                    Commencer l'entretien
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </CandidateLayout>
     );
   }
 
   return (
     <CandidateLayout>
-      <div className="w-full max-w-xl space-y-6">
-        <h1 className="text-xl font-bold text-center">Entretien pour le poste de {project?.job_title}</h1>
+      <div className="w-full max-w-xl space-y-8 animate-fade-in">
+        {/* Hero section */}
+        <div className="text-center space-y-3">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4 animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
+            <Mic className="h-7 w-7" style={{ color: "#d4a574" }} />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Entretien pour le poste de
+          </h1>
+          <p className="text-lg font-semibold" style={{ color: "#d4a574" }}>
+            {project?.job_title}
+          </p>
+        </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center gap-1 text-center">
-            <Clock className="h-5 w-5 text-primary" />
-            <span className="text-sm">~{project?.max_duration_minutes} min</span>
+        {/* Info pills */}
+        <div className="flex justify-center gap-3">
+          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
+            <Clock className="h-4 w-4" style={{ color: "#d4a574" }} />
+            <span>~{project?.max_duration_minutes} min</span>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <Globe className="h-5 w-5 text-primary" />
-            <span className="text-sm">{project?.language === "fr" ? "Français" : "English"}</span>
+          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
+            <Globe className="h-4 w-4" style={{ color: "#d4a574" }} />
+            <span>{project?.language === "fr" ? "Français" : "English"}</span>
           </div>
-          <div className="flex flex-col items-center gap-1 text-center">
-            <Mic className="h-5 w-5 text-primary" />
-            <span className="text-sm">Entretien IA</span>
+          <div className="flex items-center gap-2 rounded-full px-4 py-2 text-sm" style={{ backgroundColor: "rgba(245, 240, 232, 0.08)", color: "rgba(245, 240, 232, 0.8)" }}>
+            <Mic className="h-4 w-4" style={{ color: "#d4a574" }} />
+            <span>Entretien IA</span>
           </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-6 space-y-4">
+        {/* Form card */}
+        <Card className="overflow-hidden">
+          <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #d4a574, #c4955e, #d4a574)" }} />
+          <CardContent className="pt-8 pb-8 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name">Votre nom *</Label>
+              <Label htmlFor="name" className="text-sm font-medium">Votre nom *</Label>
               <Input
                 id="name"
                 placeholder="Jean Dupont"
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Votre email *</Label>
+              <Label htmlFor="email" className="text-sm font-medium">Votre email *</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="jean@exemple.com"
                 value={candidateEmail}
                 onChange={(e) => setCandidateEmail(e.target.value)}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
               />
             </div>
             <Button
-              className="w-full"
+              className="w-full h-12 rounded-lg text-base font-semibold group transition-all duration-300"
               size="lg"
               onClick={handleStart}
               disabled={!candidateName.trim() || !candidateEmail.trim() || starting}
             >
-              <CheckCircle className="mr-2 h-5 w-5" />
-              {starting ? "Démarrage..." : "Continuer"}
+              {starting ? (
+                <>
+                  <div className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Démarrage...
+                </>
+              ) : (
+                <>
+                  Continuer
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
 
-        <p className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center" style={{ color: "rgba(245, 240, 232, 0.4)" }}>
           Cet entretien sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
           acceptez ces conditions.
         </p>
