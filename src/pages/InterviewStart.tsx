@@ -828,20 +828,21 @@ export default function InterviewStart() {
               )}
             </div>
 
-            {/* Arrêter l'entretien */}
-            {!interviewFinished && (
-              <div className="flex justify-center mt-4">
-                <Button
-                  variant="destructive"
-                  className="px-6"
-                  onClick={() => setShowEndDialog(true)}
-                >
-                  Arrêter l'entretien
-                </Button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Arrêter l'entretien — centré au-dessus des 2 colonnes */}
+        {!interviewFinished && (
+          <div className="flex justify-center mt-4">
+            <Button
+              variant="destructive"
+              className="px-6"
+              onClick={() => setShowEndDialog(true)}
+            >
+              Arrêter l'entretien
+            </Button>
+          </div>
+        )}
       </div>
 
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
