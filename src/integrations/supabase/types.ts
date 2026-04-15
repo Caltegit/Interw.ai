@@ -293,6 +293,7 @@ export type Database = {
           order_index: number
           project_id: string
           scoring_criteria_ids: string[] | null
+          title: string
           type: Database["public"]["Enums"]["question_type"]
           video_url: string | null
         }
@@ -306,6 +307,7 @@ export type Database = {
           order_index?: number
           project_id: string
           scoring_criteria_ids?: string[] | null
+          title?: string
           type?: Database["public"]["Enums"]["question_type"]
           video_url?: string | null
         }
@@ -319,6 +321,7 @@ export type Database = {
           order_index?: number
           project_id?: string
           scoring_criteria_ids?: string[] | null
+          title?: string
           type?: Database["public"]["Enums"]["question_type"]
           video_url?: string | null
         }

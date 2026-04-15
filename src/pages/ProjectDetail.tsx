@@ -87,6 +87,7 @@ export default function ProjectDetail() {
           questions.map((q) => ({
             project_id: newProject.id,
             order_index: q.order_index,
+            title: (q as any).title || q.content.slice(0, 60),
             content: q.content,
             type: q.type,
             follow_up_enabled: q.follow_up_enabled,
@@ -328,7 +329,8 @@ export default function ProjectDetail() {
                 <CardContent className="py-3 flex items-center gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">{i + 1}</span>
                   <div className="flex-1">
-                    <p className="text-sm">{q.content}</p>
+                    {(q as any).title && <p className="text-sm font-medium">{(q as any).title}</p>}
+                    <p className="text-sm text-muted-foreground">{q.content}</p>
                     <p className="text-xs text-muted-foreground capitalize">{q.type} {q.follow_up_enabled && "• Relances activées"}</p>
                   </div>
                 </CardContent>
