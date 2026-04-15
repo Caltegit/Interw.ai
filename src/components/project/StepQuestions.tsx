@@ -128,6 +128,12 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
           </div>
         ))}
       </div>
+
+      <QuestionLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={handleLibrarySelect}
+      />
     </div>
   );
 }
