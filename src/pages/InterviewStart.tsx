@@ -364,16 +364,16 @@ export default function InterviewStart() {
       toast({ title: "Erreur", description: "Impossible d'enregistrer le début de l'entretien.", variant: "destructive" });
     }
 
-    // Speak the greeting via TTS, then play question media if audio/video
+    // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
     await speak(greeting);
     if (isFirstQMedia) {
-      setIsSpeaking(true);
-      await playMediaUrl(firstQMediaUrl!);
-      setIsSpeaking(false);
+      setShouldAutoPlay(true);
+      // Don't start listening yet — onPlaybackEnd will do it
+    } else {
+      // Text question: start recording + listening immediately after TTS
+      startQuestionRecording();
+      startListening();
     }
-    // Start recording video for question 1
-    startQuestionRecording();
-    startListening();
   };
 
   // Send candidate response to AI
