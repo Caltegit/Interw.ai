@@ -53,7 +53,8 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
-
+  const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(async (
     sessionId: string,
