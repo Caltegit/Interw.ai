@@ -59,44 +59,11 @@ export default function Dashboard() {
   }, [user]);
 
   const statCards = [
-    { label: "Projets actifs", value: stats.projects, icon: FolderKanban, color: "text-primary" },
-    { label: "En attente", value: stats.pending, icon: Users, color: "text-warning" },
-    { label: "Complétés", value: stats.completed, icon: CheckCircle, color: "text-success" },
-    { label: "Score moyen", value: stats.avgScore ? `${stats.avgScore}%` : "—", icon: TrendingUp, color: "text-primary" },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Chouette</p>
-        </div>
-        <Button asChild>
-          <Link to="/projects/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nouveau projet
-          </Link>
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.label}</CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
+    { label: "Projets", value: stats.projects, icon: FolderKanban, color: "text-primary" },
+...
       <Card>
         <CardHeader>
-          <CardTitle>Dernières sessions</CardTitle>
+          <CardTitle>Derniers entretiens</CardTitle>
         </CardHeader>
         <CardContent>
           {recentSessions.length === 0 ? (
