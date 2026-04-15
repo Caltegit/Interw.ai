@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import defaultAiAvatar from "@/assets/ai-avatar-marie.png";
+import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
 
 // Extend window for webkitSpeechRecognition
