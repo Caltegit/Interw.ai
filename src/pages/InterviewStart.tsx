@@ -768,6 +768,15 @@ export default function InterviewStart() {
               </div>
             </div>
 
+            {/* Auto-skip countdown */}
+            {autoSkipCountdown !== null && (
+              <div className="flex items-center justify-center">
+                <Badge variant="destructive" className="animate-pulse text-sm px-4 py-2 gap-2">
+                  <Timer className="h-4 w-4" />
+                  Prochaine question dans {autoSkipCountdown}s
+                </Badge>
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex flex-col items-center gap-3 sm:gap-4">
