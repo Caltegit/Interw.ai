@@ -16,6 +16,9 @@ interface Template {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  type: string;
+  audio_url: string | null;
+  video_url: string | null;
 }
 
 interface QuestionLibraryDialogProps {
@@ -43,7 +46,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       if (!orgId) { setLoading(false); return; }
       supabase
         .from("question_templates")
-        .select("id, content, category, follow_up_enabled, max_follow_ups")
+        .select("id, content, category, follow_up_enabled, max_follow_ups, type, audio_url, video_url")
         .eq("organization_id", orgId)
         .order("category")
         .order("content")
@@ -77,12 +80,13 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         title: t.content.slice(0, 60),
         content: t.content,
         type: "open",
+        mediaType: (t.type === "audio" ? "audio" : t.type === "video" ? "video" : "written") as "written" | "audio" | "video",
         follow_up_enabled: t.follow_up_enabled,
         max_follow_ups: t.max_follow_ups,
         audioBlob: null,
-        audioPreviewUrl: null,
+        audioPreviewUrl: t.audio_url || null,
         videoBlob: null,
-        videoPreviewUrl: null,
+        videoPreviewUrl: t.video_url || null,
       }));
     onSelect(questions);
     onOpenChange(false);
