@@ -1,33 +1,49 @@
 
 
-# Fix : enchaînement questions audio/vidéo sans lecture TTS du texte
+# Refonte layout entretien : 2 colonnes Interviewer / Candidat
 
-## Problème
-Quand une question est de type audio ou vidéo, l'IA lit quand même le texte de la question via TTS **avant** de lancer le média. Résultat : le candidat entend la question deux fois (TTS + média).
+## Concept
 
-## Solution
+Layout en deux colonnes distinctes :
 
-### 1. Modifier le prompt système de l'IA (`ai-conversation-turn/index.ts`)
-- Ajouter le `mediaType` de chaque question dans le contexte envoyé à l'IA
-- Instruire l'IA : quand la question suivante est audio/vidéo, dire seulement une transition courte ("Passons à la question suivante") **sans répéter le contenu de la question**
+```text
+┌─────────────────────────┬─────────────────────────┐
+│     INTERVIEWER         │      CANDIDAT           │
+│                         │                         │
+│  ┌───────────────────┐  │  ┌───────────────────┐  │
+│  │   Photo avatar    │  │  │   Retour vidéo    │  │
+│  │   IA / persona    │  │  │   candidat        │  │
+│  └───────────────────┘  │  └───────────────────┘  │
+│                         │                         │
+│  ┌───────────────────┐  │  ┌───────────────────┐  │
+│  │  Question en cours│  │  │  Historique chat   │  │
+│  │  (texte/audio/    │  │  │  + transcript     │  │
+│  │   vidéo player)   │  │  │  en direct        │  │
+│  └───────────────────┘  │  └───────────────────┘  │
+│                         │                         │
+│  Son activé/coupé       │  [  Envoyer ma réponse ]│
+│                         │  🎤  📞                  │
+└─────────────────────────┴─────────────────────────┘
+```
 
-### 2. Modifier `InterviewStart.tsx` — flux `beginInterview`
-- Pour la première question audio/vidéo : dire l'intro ("Bonjour... bienvenue...") via TTS, puis lancer directement le média **sans lire le texte de la question**
-- Déjà partiellement fait mais le texte de la question est quand même dans le greeting
+- **Mobile** : les deux colonnes s'empilent verticalement (interviewer en haut, candidat en dessous)
 
-### 3. Modifier `InterviewStart.tsx` — flux `handleSendResponse`
-- Quand la question suivante est audio/vidéo :
-  - Parler la réponse de l'IA (transition) via TTS
-  - Puis lancer le média directement via `playMediaUrl` (pas `speakOrPlayQuestion` qui re-set isSpeaking)
-- Quand la question est texte : comportement actuel (TTS normal)
+## Modifications — un seul fichier
 
-### 4. Envoyer le `mediaType` des questions au edge function
-- Dans le body de `ai-conversation-turn`, ajouter le type de média de chaque question pour que l'IA sache ne pas répéter le texte
+### `src/pages/InterviewStart.tsx` (section render, lignes ~625-807)
 
-### Fichiers impactés
+1. **Colonne gauche (Interviewer)** :
+   - Photo avatar IA (existant, déplacé)
+   - Zone "Question en cours" avec `QuestionMediaPlayer` (existant, déplacé sous l'avatar)
+   - Bouton son activé/coupé + indicateur IA parle
 
-| Fichier | Modification |
-|---|---|
-| `src/pages/InterviewStart.tsx` | Séparer le flux TTS/média pour ne pas doubler la lecture |
-| `supabase/functions/ai-conversation-turn/index.ts` | Ajouter mediaType au prompt, instruire l'IA de ne pas lire les questions audio/vidéo |
+2. **Colonne droite (Candidat)** :
+   - Retour vidéo candidat (existant, déplacé)
+   - Historique conversation (existant)
+   - Transcript live (existant)
+   - Boutons d'action : "Envoyer ma réponse", micro, raccrocher
+
+3. **Grid** : `lg:grid-cols-2` au lieu de `lg:grid-cols-5` pour un split 50/50
+
+Aucune logique métier ne change — c'est uniquement un réarrangement des blocs JSX existants.
 
