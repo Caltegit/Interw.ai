@@ -159,10 +159,6 @@ export default function ProjectEdit() {
             <Switch checked={recordAudio} onCheckedChange={setRecordAudio} />
           </div>
           <div className="flex items-center justify-between">
-            <Label>Enregistrer la vidéo</Label>
-            <Switch checked={recordVideo} onCheckedChange={setRecordVideo} />
-          </div>
-          <div className="flex items-center justify-between">
             <div>
               <Label>Passage auto 5s</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
