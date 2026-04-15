@@ -70,7 +70,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Vue d'ensemble de votre activité</p>
+          <p className="text-muted-foreground">Chouette</p>
         </div>
         <Button asChild>
           <Link to="/projects/new">
