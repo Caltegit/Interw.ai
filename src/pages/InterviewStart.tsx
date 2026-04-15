@@ -46,6 +46,7 @@ export default function InterviewStart() {
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
+  const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -54,12 +55,15 @@ export default function InterviewStart() {
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoEndTriggeredRef = useRef(false);
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(
     async (
