@@ -956,6 +956,16 @@ export default function InterviewStart() {
                   </div>
                 )}
 
+                {/* Auto-skip countdown */}
+                {autoSkipCountdown !== null && (
+                  <div className="flex items-center justify-center gap-2 mb-2 animate-pulse">
+                    <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <span className="text-sm font-bold text-amber-500">{autoSkipCountdown}</span>
+                    </div>
+                    <span className="text-xs text-amber-500 font-medium">Passage auto dans {autoSkipCountdown}s...</span>
+                  </div>
+                )}
+
                 {/* 3) Action buttons */}
                 <div className="flex flex-col items-center gap-3 sm:gap-4">
                   {interviewFinished ? (
