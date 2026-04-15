@@ -1,0 +1,1 @@
+UPDATE sessions SET status = 'video_viewed', started_at = NULL, completed_at = NULL WHERE id = '946e9414-ac9b-4920-9445-143842e425c2'
