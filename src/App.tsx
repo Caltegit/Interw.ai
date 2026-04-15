@@ -16,6 +16,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
+import QuestionLibrary from "./pages/QuestionLibrary";
 import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
