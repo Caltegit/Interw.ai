@@ -694,49 +694,81 @@ export default function InterviewStart() {
 
           {/* ── COLONNE GAUCHE : INTERVIEWER ── */}
           <div className="flex flex-col gap-3 sm:gap-4">
-            {/* AI Avatar */}
-            <div className={`relative w-full aspect-square max-h-[280px] rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
-              <img
-                src={project?.avatar_image_url || defaultAiAvatar}
-                alt={project?.ai_persona_name || "IA"}
-                className="w-full h-full object-cover"
-              />
-              {isSpeaking && (
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 flex items-end justify-center gap-1">
-                  <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-5 sm:h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
-                  <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
-                  <span className="h-5 sm:h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
-                </div>
-              )}
-              <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium">
-                {project?.ai_persona_name || "Marie"} — IA
-              </div>
-            </div>
+            {(() => {
+              const q = questions[currentQuestionIndex];
+              const questionType = q?.video_url ? "video" : q?.audio_url ? "audio" : "written";
+              const playbackEndHandler = () => {
+                setShouldAutoPlay(false);
+                setIsSpeaking(false);
+                startQuestionRecording();
+                startListening();
+              };
 
-            {/* Question en cours */}
-            {questions[currentQuestionIndex] && (
-              <QuestionMediaPlayer
-                ref={featuredPlayerRef}
-                type={
-                  questions[currentQuestionIndex].video_url ? "video"
-                  : questions[currentQuestionIndex].audio_url ? "audio"
-                  : "written"
-                }
-                content={questions[currentQuestionIndex].content}
-                audioUrl={questions[currentQuestionIndex].audio_url}
-                videoUrl={questions[currentQuestionIndex].video_url}
-                variant="featured"
-                autoPlay={shouldAutoPlay}
-                onPlaybackEnd={() => {
-                  setShouldAutoPlay(false);
-                  setIsSpeaking(false);
-                  startQuestionRecording();
-                  startListening();
-                }}
-              />
-            )}
+              if (questionType === "video" && q?.video_url) {
+                // VIDEO: la vidéo remplace l'avatar
+                return (
+                  <div className={`relative w-full aspect-square max-h-[280px] rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
+                    <QuestionMediaPlayer
+                      ref={featuredPlayerRef}
+                      type="video"
+                      content={q.content}
+                      videoUrl={q.video_url}
+                      variant="featured"
+                      autoPlay={shouldAutoPlay}
+                      onPlaybackEnd={playbackEndHandler}
+                    />
+                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium z-10">
+                      {project?.ai_persona_name || "Marie"} — IA
+                    </div>
+                  </div>
+                );
+              }
+
+              // TEXTE & AUDIO: l'avatar reste visible
+              return (
+                <>
+                  <div className={`relative w-full aspect-square max-h-[280px] rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}>
+                    <img
+                      src={project?.avatar_image_url || defaultAiAvatar}
+                      alt={project?.ai_persona_name || "IA"}
+                      className="w-full h-full object-cover"
+                    />
+                    {isSpeaking && (
+                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 flex items-end justify-center gap-1">
+                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="h-5 sm:h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
+                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
+                        <span className="h-5 sm:h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+                      </div>
+                    )}
+                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium">
+                      {project?.ai_persona_name || "Marie"} — IA
+                    </div>
+                  </div>
+
+                  {questionType === "written" && q && (
+                    <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4">
+                      <div className="border-l-2 border-primary/40 pl-4">
+                        <p className="text-sm sm:text-base font-medium leading-relaxed">{q.content}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {questionType === "audio" && q?.audio_url && (
+                    <QuestionMediaPlayer
+                      ref={featuredPlayerRef}
+                      type="audio"
+                      content={q.content}
+                      audioUrl={q.audio_url}
+                      variant="featured"
+                      autoPlay={shouldAutoPlay}
+                      onPlaybackEnd={playbackEndHandler}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
             {/* Sound toggle + processing */}
             <div className="flex items-center gap-2">
