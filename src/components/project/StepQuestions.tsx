@@ -142,6 +142,7 @@ function SortableQuestion({
           {(q.mediaType === "audio" || q.mediaType === "video") && (
             <div className="pt-1">
               <QuestionMediaRecorder
+                mode={q.mediaType as "audio" | "video"}
                 audioBlob={q.mediaType === "audio" ? q.audioBlob : null}
                 audioPreviewUrl={q.mediaType === "audio" ? q.audioPreviewUrl : null}
                 videoBlob={q.mediaType === "video" ? q.videoBlob : null}
