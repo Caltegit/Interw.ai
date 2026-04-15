@@ -32,6 +32,7 @@ export default function ProjectEdit() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active" | "archived">("active");
   const [introAudioUrl, setIntroAudioUrl] = useState<string | null>(null);
+  const [autoSkipSilence, setAutoSkipSilence] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -57,6 +58,7 @@ export default function ProjectEdit() {
         setRecordVideo(data.record_video);
         setStatus(data.status as "draft" | "active" | "archived");
         setIntroAudioUrl((data as any).intro_audio_url || null);
+        setAutoSkipSilence((data as any).auto_skip_silence ?? false);
         setLoading(false);
       });
   }, [id, navigate, toast]);
@@ -78,6 +80,7 @@ export default function ProjectEdit() {
           record_audio: recordAudio,
           record_video: recordVideo,
           status: status as any,
+          auto_skip_silence: autoSkipSilence,
         })
         .eq("id", id);
 
@@ -158,6 +161,15 @@ export default function ProjectEdit() {
           <div className="flex items-center justify-between">
             <Label>Enregistrer la vidéo</Label>
             <Switch checked={recordVideo} onCheckedChange={setRecordVideo} />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Passage auto 5s</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Passe automatiquement à la question suivante si le candidat ne parle pas pendant 5s.
+              </p>
+            </div>
+            <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
           </div>
           <div>
             <Label>Statut</Label>
