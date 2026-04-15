@@ -718,40 +718,6 @@ export default function InterviewStart() {
               </div>
             </div>
 
-            {/* Conversation history */}
-            <Card className="flex-1 min-h-0">
-              <CardContent className="p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto space-y-2 sm:space-y-3">
-                {messages.map((m, i) => (
-                  <div key={i} className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${m.role === "ai" ? "bg-primary/5" : "bg-muted ml-4 sm:ml-8"}`}>
-                    <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                      {m.role === "ai" ? `🤖 ${project?.ai_persona_name}` : "👤 Vous"}
-                    </span>
-                    {m.role === "ai" && m.mediaType && m.mediaType !== "written" ? (
-                      <div className="mt-1.5">
-                        <QuestionMediaPlayer
-                          type={m.mediaType}
-                          content={m.content}
-                          audioUrl={m.mediaType === "audio" ? m.mediaUrl : undefined}
-                          videoUrl={m.mediaType === "video" ? m.mediaUrl : undefined}
-                          variant="inline"
-                        />
-                      </div>
-                    ) : (
-                      <p className="mt-0.5 sm:mt-1">{m.content}</p>
-                    )}
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </CardContent>
-            </Card>
-
-            {/* Live transcript */}
-            {isListening && liveTranscript && (
-              <div className="p-2 sm:p-3 rounded-lg text-xs sm:text-sm bg-muted/50 border border-dashed border-muted-foreground/30">
-                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">👤 Vous (en cours...)</span>
-                <p className="mt-0.5 sm:mt-1 text-muted-foreground italic">{liveTranscript}</p>
-              </div>
-            )}
 
             {/* Action buttons */}
             <div className="flex flex-col items-center gap-3 sm:gap-4">
