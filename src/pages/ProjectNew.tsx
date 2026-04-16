@@ -420,7 +420,7 @@ export default function ProjectNew() {
               {/* Voix IA fixée à female_fr — pas de sélecteur */}
 
               <div>
-                <Label>Message de présentation</Label>
+                <Label>Message d'intro </Label>
                 <div className="mt-2 flex gap-2">
                   <Button
                     type="button"
