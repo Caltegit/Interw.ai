@@ -1,7 +1,8 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +29,11 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut, profile } = useAuth();
+  const { isSuperAdmin } = useSuperAdmin();
+
+  const items = isSuperAdmin
+    ? [...navItems, { title: "Super Admin", url: "/admin", icon: Shield }]
+    : navItems;
 
   return (
     <Sidebar collapsible="icon">
@@ -40,7 +46,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

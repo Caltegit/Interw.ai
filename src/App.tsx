@@ -23,6 +23,8 @@ import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
 import SharedReport from "./pages/SharedReport";
+import SuperAdmin from "./pages/SuperAdmin";
+import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +58,7 @@ const App = () => (
               <Route path="/question-library" element={<QuestionLibrary />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
