@@ -134,9 +134,7 @@ function SortableQuestion({
             value={q.content}
             onChange={(e) => {
               const val = e.target.value;
-              const updated = [...questions];
-              updated[index] = { ...updated[index], content: val, title: val.slice(0, 60) };
-              setQuestions(updated);
+              updateQuestion(index, "content", val);
             }}
           />
 
