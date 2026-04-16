@@ -54,7 +54,7 @@ export function UsersTable({ refreshKey = 0, onChange }: Props) {
         supabase.from("user_roles").select("user_id, role"),
       ]);
 
-      const orgMap = new Map((orgs ?? []).map((o: any) => [o.id, o.name]));
+      const orgMap = new Map<string, string>((orgs ?? []).map((o: any) => [o.id as string, o.name as string]));
       const rolesMap = new Map<string, string[]>();
       (roles ?? []).forEach((r: any) => {
         const arr = rolesMap.get(r.user_id) ?? [];
