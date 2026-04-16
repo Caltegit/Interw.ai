@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logoMorning from "@/assets/logo-morning-white.webp";
 
 interface CandidateLayoutProps {
   children: ReactNode;
@@ -35,17 +34,18 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
     };
   }, [slug]);
 
-  const logoSrc = orgLogoUrl ?? logoMorning;
-
   return (
     <div className="candidate-layout min-h-screen flex flex-col">
-      {/* Header with Morning logo */}
       <header className={`candidate-header flex items-center ${minimal ? "justify-center py-3 px-4" : "justify-between py-5 px-6"}`}>
-        <img
-          src={logoSrc}
-          alt="Logo"
-          className={minimal ? "h-6 object-contain" : "h-8 object-contain"}
-        />
+        {orgLogoUrl ? (
+          <img
+            src={orgLogoUrl}
+            alt="Logo"
+            className={minimal ? "h-6 object-contain" : "h-8 object-contain"}
+          />
+        ) : (
+          <span />
+        )}
         {!minimal && (
           <span className="candidate-header-tagline text-sm font-light tracking-wide opacity-70">
             Recrutement
