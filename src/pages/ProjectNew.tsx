@@ -49,10 +49,43 @@ export default function ProjectNew() {
   ]);
 
   // Step 4
-  const [criteria, setCriteria] = useState<{ label: string; description: string; weight: number; scoring_scale: string; anchors: Record<string, string>; applies_to: string }[]>([
-    { label: "Entrepreneur de son périmètre", description: "Capacité à s'approprier son rôle, prendre des décisions de façon autonome et en assumer la responsabilité. Situations concrètes où le candidat a pris des initiatives sans y être explicitement invité.", weight: 35, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
-    { label: "Résilience au changement", description: "Capacité à s'adapter, faire évoluer son rôle et rester efficace dans un environnement qui bouge vite, sans avoir besoin de cases fixes ni de process très définis.", weight: 35, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
-    { label: "Fit culturel & envie sincère", description: "Alignement réel avec les valeurs et l'ambiance Morning. Capacité à dire ce qu'on a vraiment envie de faire, au-delà du discours poli d'entretien.", weight: 30, scoring_scale: "0-5", anchors: {}, applies_to: "all_questions" },
+  const [criteria, setCriteria] = useState<
+    {
+      label: string;
+      description: string;
+      weight: number;
+      scoring_scale: string;
+      anchors: Record<string, string>;
+      applies_to: string;
+    }[]
+  >([
+    {
+      label: "Entrepreneur de son périmètre",
+      description:
+        "Capacité à s'approprier son rôle, prendre des décisions de façon autonome et en assumer la responsabilité. Situations concrètes où le candidat a pris des initiatives sans y être explicitement invité.",
+      weight: 35,
+      scoring_scale: "0-5",
+      anchors: {},
+      applies_to: "all_questions",
+    },
+    {
+      label: "Résilience au changement",
+      description:
+        "Capacité à s'adapter, faire évoluer son rôle et rester efficace dans un environnement qui bouge vite, sans avoir besoin de cases fixes ni de process très définis.",
+      weight: 35,
+      scoring_scale: "0-5",
+      anchors: {},
+      applies_to: "all_questions",
+    },
+    {
+      label: "Fit culturel & envie sincère",
+      description:
+        "Alignement réel avec les valeurs et l'ambiance Morning. Capacité à dire ce qu'on a vraiment envie de faire, au-delà du discours poli d'entretien.",
+      weight: 30,
+      scoring_scale: "0-5",
+      anchors: {},
+      applies_to: "all_questions",
+    },
   ]);
 
   // Step 5
@@ -79,7 +112,13 @@ export default function ProjectNew() {
 
     setSaving(true);
     try {
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Date.now().toString(36);
+      const slug =
+        title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "") +
+        "-" +
+        Date.now().toString(36);
 
       let avatarUrl: string | null = null;
       if (avatarFile) {
@@ -156,17 +195,20 @@ export default function ProjectNew() {
 
       const validQuestions = questions.filter((q) => q.content.trim());
       if (validQuestions.length > 0) {
-        const insertedQuestions = await supabase.from("questions").insert(
-          validQuestions.map((q, i) => ({
-            project_id: project.id,
-            order_index: i,
-            title: q.title || q.content.slice(0, 60),
-            content: q.content,
-            type: q.type as never,
-            follow_up_enabled: q.follow_up_enabled,
-            max_follow_ups: q.max_follow_ups,
-          }))
-        ).select();
+        const insertedQuestions = await supabase
+          .from("questions")
+          .insert(
+            validQuestions.map((q, i) => ({
+              project_id: project.id,
+              order_index: i,
+              title: q.title || q.content.slice(0, 60),
+              content: q.content,
+              type: q.type as never,
+              follow_up_enabled: q.follow_up_enabled,
+              max_follow_ups: q.max_follow_ups,
+            })),
+          )
+          .select();
 
         if (insertedQuestions.data) {
           for (let i = 0; i < insertedQuestions.data.length; i++) {
@@ -203,7 +245,10 @@ export default function ProjectNew() {
             }
 
             if (Object.keys(updates).length > 0) {
-              await supabase.from("questions").update(updates as never).eq("id", qId);
+              await supabase
+                .from("questions")
+                .update(updates as never)
+                .eq("id", qId);
             }
           }
         }
@@ -221,7 +266,7 @@ export default function ProjectNew() {
             scoring_scale: c.scoring_scale as never,
             anchors: c.anchors,
             applies_to: c.applies_to as never,
-          }))
+          })),
         );
       }
 
@@ -235,7 +280,8 @@ export default function ProjectNew() {
       if (!check) {
         toast({
           title: "Projet créé mais lien candidat non fonctionnel",
-          description: "Le projet a été créé mais le lien public ne semble pas accessible. Vérifiez le statut du projet.",
+          description:
+            "Le projet a été créé mais le lien public ne semble pas accessible. Vérifiez le statut du projet.",
           variant: "destructive",
         });
       } else {
@@ -269,7 +315,9 @@ export default function ProjectNew() {
             >
               {i + 1}
             </button>
-            <span className={`hidden text-sm sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>{s}</span>
+            <span className={`hidden text-sm sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>
+              {s}
+            </span>
             {i < STEPS.length - 1 && <div className="h-px w-4 bg-border sm:w-8" />}
           </div>
         ))}
@@ -281,21 +329,36 @@ export default function ProjectNew() {
             <div className="space-y-4">
               <div>
                 <Label>Titre *</Label>
-                <Input placeholder="CDI Développeur Full-Stack Paris" value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Input
+                  placeholder="CDI Développeur Full-Stack Paris"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Intitulé *</Label>
-                <Input placeholder="Développeur Full-Stack" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+                <Input
+                  placeholder="Développeur Full-Stack"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Description du poste</Label>
-                <Textarea placeholder="Décrivez le poste..." value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+                <Textarea
+                  placeholder="Décrivez le poste..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  maxLength={500}
+                />
                 <p className="mt-1 text-xs text-muted-foreground">{description.length}/500</p>
               </div>
               <div>
                 <Label>Langue de l'entretien</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="fr">Français</SelectItem>
                     <SelectItem value="en">English</SelectItem>
@@ -317,7 +380,11 @@ export default function ProjectNew() {
                 <div className="mt-2 flex items-center gap-4">
                   {avatarPreview ? (
                     <div className="relative">
-                      <img src={avatarPreview} alt="Avatar" className="h-20 w-20 rounded-full border-2 border-border object-cover" />
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar"
+                        className="h-20 w-20 rounded-full border-2 border-border object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => {
@@ -359,7 +426,11 @@ export default function ProjectNew() {
                     type="button"
                     variant={introType === "audio" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => { setIntroType("audio"); setIntroVideoFile(null); setIntroVideoPreviewUrl(null); }}
+                    onClick={() => {
+                      setIntroType("audio");
+                      setIntroVideoFile(null);
+                      setIntroVideoPreviewUrl(null);
+                    }}
                   >
                     <Mic className="mr-1 h-4 w-4" /> Audio
                   </Button>
@@ -367,7 +438,11 @@ export default function ProjectNew() {
                     type="button"
                     variant={introType === "video" ? "default" : "outline"}
                     size="sm"
-                    onClick={() => { setIntroType("video"); setIntroAudioBlob(null); setIntroAudioPreviewUrl(null); }}
+                    onClick={() => {
+                      setIntroType("video");
+                      setIntroAudioBlob(null);
+                      setIntroAudioPreviewUrl(null);
+                    }}
                   >
                     <Video className="mr-1 h-4 w-4" /> Vidéo
                   </Button>
@@ -404,7 +479,14 @@ export default function ProjectNew() {
             <div className="space-y-4">
               <div>
                 <Label>Durée maximale (minutes) : {maxDuration}</Label>
-                <input type="range" min={15} max={60} value={maxDuration} onChange={(e) => setMaxDuration(Number(e.target.value))} className="w-full" />
+                <input
+                  type="range"
+                  min={15}
+                  max={60}
+                  value={maxDuration}
+                  onChange={(e) => setMaxDuration(Number(e.target.value))}
+                  className="w-full"
+                />
               </div>
               <div className="flex items-center justify-between">
                 <Label>Enregistrer l'audio</Label>
@@ -412,9 +494,10 @@ export default function ProjectNew() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Passage auto 5s</Label>
+                  <Label>Passage auto Ss</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est envoyée automatiquement.
+                    Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est
+                    envoyée automatiquement.
                   </p>
                 </div>
                 <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
@@ -422,7 +505,9 @@ export default function ProjectNew() {
               <div>
                 <Label>Statut</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Brouillon</SelectItem>
                     <SelectItem value="active">Actif</SelectItem>
@@ -431,16 +516,41 @@ export default function ProjectNew() {
               </div>
 
               <Card className="bg-muted/50">
-                <CardHeader><CardTitle className="text-sm">Récapitulatif</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-sm">Récapitulatif</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  <p><strong>Titre :</strong> {title}</p>
-                  <p><strong>Poste :</strong> {jobTitle}</p>
-                  <p><strong>Langue :</strong> {language === "fr" ? "Français" : "English"}</p>
-                  <p><strong>Persona :</strong> {aiPersonaName}</p>
-                  <p><strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}</p>
-                  <p><strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}</p>
-                  <p><strong>Durée max :</strong> {maxDuration} min</p>
-                  <p><strong>Présentation :</strong> {introType === "audio" ? (introAudioPreviewUrl ? "Audio ✓" : "Audio — non défini") : (introVideoPreviewUrl ? "Vidéo ✓" : "Vidéo — non définie")}</p>
+                  <p>
+                    <strong>Titre :</strong> {title}
+                  </p>
+                  <p>
+                    <strong>Poste :</strong> {jobTitle}
+                  </p>
+                  <p>
+                    <strong>Langue :</strong> {language === "fr" ? "Français" : "English"}
+                  </p>
+                  <p>
+                    <strong>Persona :</strong> {aiPersonaName}
+                  </p>
+                  <p>
+                    <strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}
+                  </p>
+                  <p>
+                    <strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}
+                  </p>
+                  <p>
+                    <strong>Durée max :</strong> {maxDuration} min
+                  </p>
+                  <p>
+                    <strong>Présentation :</strong>{" "}
+                    {introType === "audio"
+                      ? introAudioPreviewUrl
+                        ? "Audio ✓"
+                        : "Audio — non défini"
+                      : introVideoPreviewUrl
+                        ? "Vidéo ✓"
+                        : "Vidéo — non définie"}
+                  </p>
                 </CardContent>
               </Card>
             </div>
