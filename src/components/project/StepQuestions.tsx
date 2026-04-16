@@ -133,8 +133,8 @@ function SortableQuestion({
             }
             value={q.content}
             onChange={(e) => {
-              updateQuestion(index, "content", e.target.value);
-              updateQuestion(index, "title", e.target.value.slice(0, 60));
+              const val = e.target.value;
+              updateQuestion(index, "content", val);
             }}
           />
 
@@ -222,6 +222,9 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const updateQuestion = (index: number, field: keyof Question, value: any) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
+    if (field === "content") {
+      updated[index].title = String(value).slice(0, 60);
+    }
     setQuestions(updated);
   };
 
