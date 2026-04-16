@@ -6,59 +6,46 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Lock, User, Building2 } from "lucide-react";
+import { Save, Lock, User, Building2, ShieldAlert } from "lucide-react";
 import { OrgMembers } from "@/components/OrgMembers";
-import { QuestionLibraryManager } from "@/components/QuestionLibraryManager";
+import { OrgLogoUpload } from "@/components/OrgLogoUpload";
+import { useOrgRole } from "@/hooks/useOrgRole";
 
 export default function Settings() {
   const { profile, user } = useAuth();
   const { toast } = useToast();
+  const { isAdmin, organizationId: orgId, loading: roleLoading } = useOrgRole();
 
-  // Profile
   const [fullName, setFullName] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Organization
   const [orgName, setOrgName] = useState("");
-  const [orgLogo, setOrgLogo] = useState("");
+  const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [savingOrg, setSavingOrg] = useState(false);
-  const [orgId, setOrgId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) {
-      setFullName(profile.full_name || "");
-    }
+    if (profile) setFullName(profile.full_name || "");
   }, [profile]);
 
   useEffect(() => {
-    if (!user) return;
-    // Load organization info via function
-    supabase.rpc("get_user_organization_id", { _user_id: user.id }).then(({ data: organizationId }) => {
-      if (organizationId) {
-        setOrgId(organizationId);
-        supabase.from("organizations").select("*").eq("id", organizationId).single().then(({ data }) => {
-          if (data) {
-            setOrgName(data.name);
-            setOrgLogo(data.logo_url || "");
-          }
-        });
+    if (!orgId) return;
+    supabase.from("organizations").select("*").eq("id", orgId).single().then(({ data }) => {
+      if (data) {
+        setOrgName(data.name);
+        setOrgLogo(data.logo_url || null);
       }
     });
-  }, [user]);
+  }, [orgId]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
     setSavingProfile(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: fullName })
-        .eq("user_id", user.id);
+      const { error } = await supabase.from("profiles").update({ full_name: fullName }).eq("user_id", user.id);
       if (error) throw error;
       toast({ title: "Profil mis à jour !" });
     } catch (e: any) {
@@ -91,11 +78,24 @@ export default function Settings() {
     }
   };
 
+  const handleSaveOrg = async () => {
+    if (!orgId) return;
+    setSavingOrg(true);
+    try {
+      const { error } = await supabase.from("organizations").update({ name: orgName }).eq("id", orgId);
+      if (error) throw error;
+      toast({ title: "Organisation mise à jour !" });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingOrg(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">Paramètres</h1>
 
-      {/* Profile */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -120,7 +120,6 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Password */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -144,36 +143,49 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Organization */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Building2 className="h-5 w-5" /> Organisation
           </CardTitle>
-          <CardDescription>Informations de votre entreprise</CardDescription>
+          <CardDescription>
+            {isAdmin ? "Gérez votre organisation" : "Informations de votre organisation"}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!roleLoading && !isAdmin && (
+            <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
+              <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>Seuls les administrateurs peuvent modifier ces informations.</span>
+            </div>
+          )}
           <div>
             <Label>Nom de l'organisation</Label>
-            <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Mon entreprise" />
+            <Input
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              placeholder="Mon entreprise"
+              disabled={!isAdmin}
+            />
           </div>
-          <div>
-            <Label>URL du logo</Label>
-            <Input value={orgLogo} onChange={(e) => setOrgLogo(e.target.value)} placeholder="https://..." />
-            {orgLogo && (
-              <div className="mt-2">
-                <img src={orgLogo} alt="Logo" className="h-12 rounded object-contain border border-border p-1" />
-              </div>
-            )}
-          </div>
+          {orgId && (
+            <OrgLogoUpload
+              orgId={orgId}
+              currentLogoUrl={orgLogo}
+              canEdit={isAdmin}
+              onUploaded={(url) => setOrgLogo(url)}
+            />
+          )}
+          {isAdmin && (
+            <Button onClick={handleSaveOrg} disabled={savingOrg} size="sm">
+              <Save className="mr-2 h-4 w-4" />
+              {savingOrg ? "Enregistrement..." : "Enregistrer"}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
-      {/* Members */}
       {orgId && <OrgMembers orgId={orgId} />}
-
-      {/* Question Library */}
-      {orgId && <QuestionLibraryManager orgId={orgId} />}
     </div>
   );
 }
