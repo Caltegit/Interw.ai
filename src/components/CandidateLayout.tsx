@@ -1,6 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { ReactNode } from "react";
 
 interface CandidateLayoutProps {
   children: ReactNode;
@@ -9,43 +7,10 @@ interface CandidateLayoutProps {
 }
 
 export default function CandidateLayout({ children, minimal = false }: CandidateLayoutProps) {
-  const { slug } = useParams<{ slug?: string }>();
-  const [orgLogoUrl, setOrgLogoUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!slug) return;
-    let cancelled = false;
-    (async () => {
-      const { data: project } = await supabase
-        .from("projects")
-        .select("organization_id")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!project?.organization_id || cancelled) return;
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("logo_url")
-        .eq("id", project.organization_id)
-        .maybeSingle();
-      if (!cancelled && org?.logo_url) setOrgLogoUrl(org.logo_url);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [slug]);
-
   return (
     <div className="candidate-layout min-h-screen flex flex-col">
       <header className={`candidate-header flex items-center ${minimal ? "justify-center py-3 px-4" : "justify-between py-5 px-6"}`}>
-        {orgLogoUrl ? (
-          <img
-            src={orgLogoUrl}
-            alt="Logo"
-            className={minimal ? "h-6 object-contain" : "h-8 object-contain"}
-          />
-        ) : (
-          <span />
-        )}
+        <span />
         {!minimal && (
           <span className="candidate-header-tagline text-sm font-light tracking-wide opacity-70">
             Recrutement
