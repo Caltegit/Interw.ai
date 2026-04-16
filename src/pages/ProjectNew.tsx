@@ -504,9 +504,6 @@ export default function ProjectNew() {
                     <strong>Titre :</strong> {title}
                   </p>
                   <p>
-                    <strong>Poste :</strong> {jobTitle}
-                  </p>
-                  <p>
                     <strong>Langue :</strong> {language === "fr" ? "Français" : "English"}
                   </p>
                   <p>
