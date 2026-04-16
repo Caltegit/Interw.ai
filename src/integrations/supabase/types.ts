@@ -645,7 +645,7 @@ export type Database = {
     }
     Enums: {
       ai_voice_type: "female_fr" | "male_fr" | "female_en" | "male_en"
-      app_role: "admin" | "recruiter" | "viewer"
+      app_role: "admin" | "recruiter" | "viewer" | "super_admin"
       criteria_scope: "all_questions" | "specific_questions"
       invitation_status: "pending" | "accepted" | "expired"
       message_role: "ai" | "candidate"
@@ -788,7 +788,7 @@ export const Constants = {
   public: {
     Enums: {
       ai_voice_type: ["female_fr", "male_fr", "female_en", "male_en"],
-      app_role: ["admin", "recruiter", "viewer"],
+      app_role: ["admin", "recruiter", "viewer", "super_admin"],
       criteria_scope: ["all_questions", "specific_questions"],
       invitation_status: ["pending", "accepted", "expired"],
       message_role: ["ai", "candidate"],
