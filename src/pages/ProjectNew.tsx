@@ -27,8 +27,6 @@ export default function ProjectNew() {
 
   // Step 1
   const [title, setTitle] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   // Step 2
@@ -98,7 +96,7 @@ export default function ProjectNew() {
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
   const canProceed = () => {
-    if (step === 0) return title.trim() && jobTitle.trim();
+    if (step === 0) return title.trim();
     if (step === 2) return questions.some((q) => q.content.trim());
     if (step === 3) return criteria.some((c) => c.label.trim()) && totalWeight === 100;
     return true;
@@ -136,8 +134,8 @@ export default function ProjectNew() {
           organization_id: "a0000000-0000-0000-0000-000000000001",
           created_by: user.id,
           title,
-          job_title: jobTitle,
-          description,
+          job_title: title,
+          description: "",
           language,
           ai_persona_name: aiPersonaName,
           ai_voice: aiVoice as never,
@@ -336,24 +334,6 @@ export default function ProjectNew() {
                 />
               </div>
               <div>
-                <Label>Intitulé *</Label>
-                <Input
-                  placeholder="Développeur Full-Stack"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Description du poste</Label>
-                <Textarea
-                  placeholder="Décrivez le poste..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  maxLength={500}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">{description.length}/500</p>
-              </div>
-              <div>
                 <Label>Langue de l'entretien</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
                   <SelectTrigger>
@@ -522,9 +502,6 @@ export default function ProjectNew() {
                 <CardContent className="space-y-1 text-sm">
                   <p>
                     <strong>Titre :</strong> {title}
-                  </p>
-                  <p>
-                    <strong>Poste :</strong> {jobTitle}
                   </p>
                   <p>
                     <strong>Langue :</strong> {language === "fr" ? "Français" : "English"}
