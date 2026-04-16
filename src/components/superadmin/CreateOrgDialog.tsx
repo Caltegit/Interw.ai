@@ -46,13 +46,11 @@ export function CreateOrgDialog({ onCreated }: Props) {
       if (invErr) throw invErr;
 
       // 3. Envoyer l'email d'invitation
-      const inviteUrl = `${window.location.origin}/invite/${invitation.token}`;
       await supabase.functions.invoke("send-invitation", {
         body: {
           email: adminEmail.trim().toLowerCase(),
-          organizationName: orgName.trim(),
-          inviteUrl,
-          inviterName: adminName.trim() || "Super Admin",
+          organizationId: org.id,
+          invitationToken: invitation.token,
         },
       });
 

@@ -80,15 +80,9 @@ export default function Login() {
               {loading ? "Chargement..." : isSignUp ? "Créer le compte" : "Se connecter"}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              className="text-sm text-muted-foreground hover:text-primary underline"
-              onClick={() => setIsSignUp(!isSignUp)}
-            >
-              {isSignUp ? "Déjà un compte ? Se connecter" : "Pas de compte ? S'inscrire"}
-            </button>
-          </div>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            La création de compte se fait uniquement sur invitation.
+          </p>
         </CardContent>
       </Card>
     </div>
