@@ -222,6 +222,9 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const updateQuestion = (index: number, field: keyof Question, value: any) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
+    if (field === "content") {
+      updated[index].title = String(value).slice(0, 60);
+    }
     setQuestions(updated);
   };
 
