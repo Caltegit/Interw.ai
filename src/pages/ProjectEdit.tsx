@@ -139,7 +139,7 @@ export default function ProjectEdit() {
             </Select>
           </div>
           <div>
-            <Label>Nom du persona IA</Label>
+            <Label>Nom de l'interviewer</Label>
             <Input value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
           </div>
           {/* Voix IA fixée à female_fr — pas de sélecteur */}
