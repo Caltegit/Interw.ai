@@ -129,7 +129,9 @@ export default function ProjectEdit() {
           <div>
             <Label>Langue</Label>
             <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="fr">Français</SelectItem>
                 <SelectItem value="en">English</SelectItem>
@@ -142,17 +144,18 @@ export default function ProjectEdit() {
           </div>
           {/* Voix IA fixée à female_fr — pas de sélecteur */}
 
-          {id && (
-            <IntroAudioRecorder
-              projectId={id}
-              existingUrl={introAudioUrl}
-              onUploaded={setIntroAudioUrl}
-            />
-          )}
+          {id && <IntroAudioRecorder projectId={id} existingUrl={introAudioUrl} onUploaded={setIntroAudioUrl} />}
 
           <div>
             <Label>Durée maximale : {maxDuration} min</Label>
-            <input type="range" min={15} max={60} value={maxDuration} onChange={(e) => setMaxDuration(Number(e.target.value))} className="w-full" />
+            <input
+              type="range"
+              min={15}
+              max={60}
+              value={maxDuration}
+              onChange={(e) => setMaxDuration(Number(e.target.value))}
+              className="w-full"
+            />
           </div>
           <div className="flex items-center justify-between">
             <Label>Enregistrer l'audio</Label>
@@ -160,9 +163,9 @@ export default function ProjectEdit() {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <Label>Passage auto 5s</Label>
+              <Label>Passage auto 3s</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Passe automatiquement à la question suivante si le candidat ne parle pas pendant 5s.
+                Passe automatiquement à la question suivante si le candidat ne parle pas pendant 3s.
               </p>
             </div>
             <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
@@ -170,7 +173,9 @@ export default function ProjectEdit() {
           <div>
             <Label>Statut</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active" | "archived")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="draft">Brouillon</SelectItem>
                 <SelectItem value="active">Actif</SelectItem>
@@ -178,7 +183,6 @@ export default function ProjectEdit() {
               </SelectContent>
             </Select>
           </div>
-
         </CardContent>
       </Card>
 
