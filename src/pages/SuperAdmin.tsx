@@ -4,6 +4,7 @@ import { StatsOverview } from "@/components/superadmin/StatsOverview";
 import { OrgsTable } from "@/components/superadmin/OrgsTable";
 import { UsersTable } from "@/components/superadmin/UsersTable";
 import { CreateOrgDialog } from "@/components/superadmin/CreateOrgDialog";
+import { CreateUserDialog } from "@/components/superadmin/CreateUserDialog";
 
 export default function SuperAdmin() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -31,8 +32,11 @@ export default function SuperAdmin() {
           <OrgsTable refreshKey={refreshKey} onChange={refresh} />
         </TabsContent>
 
-        <TabsContent value="users">
-          <UsersTable />
+        <TabsContent value="users" className="space-y-4">
+          <div className="flex justify-end">
+            <CreateUserDialog onCreated={refresh} />
+          </div>
+          <UsersTable refreshKey={refreshKey} onChange={refresh} />
         </TabsContent>
       </Tabs>
     </div>
