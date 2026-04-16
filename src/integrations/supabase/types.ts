@@ -108,18 +108,21 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          owner_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           logo_url?: string | null
           name: string
+          owner_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
         }
         Relationships: []
       }
@@ -598,16 +601,19 @@ export type Database = {
       user_roles: {
         Row: {
           id: string
+          organization_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           id?: string
+          organization_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           id?: string
+          organization_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -630,6 +636,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_org_admin: {
+        Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
     }
