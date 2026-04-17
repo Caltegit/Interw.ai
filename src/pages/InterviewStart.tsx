@@ -860,19 +860,8 @@ export default function InterviewStart() {
               <span className="flex items-center gap-1 text-xs text-destructive">
                 <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" /> Écoute en cours
               </span>
-                )}
-
-                {/* Discreet "Skip question" link */}
-                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={handleSkipQuestion}
-                    className="self-start text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                  >
-                    Passer la question
-                  </button>
-                )}
-              </div>
+            )}
+          </div>
         </div>
         <div className="mb-4 sm:mb-6 h-1.5 sm:h-2 rounded-full bg-muted">
           <div
