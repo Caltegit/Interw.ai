@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
+import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/default-interviewer.png";
@@ -1070,10 +1071,7 @@ export default function InterviewStart() {
                           L'IA pose la question…
                         </span>
                       ) : isListening ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Mic className="h-3.5 w-3.5 animate-pulse" />
-                          Écoute en cours…
-                        </span>
+                        <MicVolumeMeter stream={streamRef.current} active={isListening} />
                       ) : (
                         <span>Préparation…</span>
                       )}
