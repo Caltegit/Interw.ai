@@ -1190,7 +1190,7 @@ export default function InterviewStart() {
                 />
               </div>
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1200,6 +1200,17 @@ export default function InterviewStart() {
                 <PhoneOff className="h-4 w-4" />
                 Arrêter l'entretien
               </Button>
+              {project?.allow_pause && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={pauseInterview}
+                  className="gap-2 text-muted-foreground hover:text-[#d4a574]"
+                >
+                  <Pause className="h-4 w-4" />
+                  Mettre en pause
+                </Button>
+              )}
             </div>
           </div>
         )}
