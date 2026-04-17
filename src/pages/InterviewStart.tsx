@@ -729,7 +729,13 @@ export default function InterviewStart() {
       // Stop camera stream
       streamRef.current?.getTracks().forEach((t) => t.stop());
 
-      // Messages already persisted in real-time — no batch save needed
+      // Flush in-flight background jobs (candidate inserts + AI transitions), max 3s
+      if (backgroundJobsRef.current.length > 0) {
+        const flush = Promise.allSettled(backgroundJobsRef.current);
+        const timeout = new Promise((resolve) => setTimeout(resolve, 3000));
+        await Promise.race([flush, timeout]);
+        backgroundJobsRef.current = [];
+      }
 
       // Calculate duration
       const durationSeconds = interviewStartTimeRef.current
