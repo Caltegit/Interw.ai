@@ -1,29 +1,32 @@
 
 
-## Raccourci clavier "barre d'espace" pour valider la réponse
+## Endroits où le nom "Interw.ai" devrait apparaître
 
-### Comportement
-Dans l'interface candidat (`src/pages/InterviewStart.tsx`), permettre la validation de la réponse via la touche **Espace** du clavier, en plus du bouton existant.
+J'ai cherché les occurrences visibles du nom du produit dans le code. Voici les endroits où "InterviewAI" est actuellement affiché et qu'il faudrait remplacer par **Interw.ai** :
 
-### Détails techniques
+### 1. Onglet navigateur & SEO (`index.html`)
+- `<title>` : "InterviewAI — Entretien vidéo IA pour le recrutement"
+- `<meta name="description">`
+- `<meta property="og:title">` (partage réseaux sociaux)
+- `<meta name="twitter:title">`
 
-**1. Listener clavier global**
-- Ajouter un `useEffect` qui attache un `keydown` sur `window`
-- Condition de déclenchement (mêmes conditions que le bouton "Ma réponse est terminée") :
-  - `e.code === "Space"`
-  - L'entretien est actif (pas en pause, pas terminé, pas en train de parler côté IA)
-  - Le bouton "Terminé" est actuellement actif (voix détectée / réponse en cours) — mêmes conditions que `hasVoice` côté UI
-  - La cible n'est pas un champ de saisie (`<input>`, `<textarea>`, `contentEditable`) — sécurité
-- `e.preventDefault()` pour éviter le scroll de la page
-- Appelle la même fonction que le bouton (probablement `handleAnswerComplete` ou équivalent)
-- Cleanup : retirer le listener au démontage
+### 2. Sidebar RH (`src/components/AppSidebar.tsx`)
+- Logo texte affiché en haut de la sidebar : `<span>InterviewAI</span>`
 
-**2. Texte d'aide sous le bouton**
-- Sous le bouton **"Ma réponse est terminée"**, ajouter une ligne :
-  - Texte : *"ou appuyer sur la barre d'espace du clavier"*
-  - Style : petit, discret, crème atténué (cohérent charte Morning) — ex `text-xs text-[#f5f0e8]/50 mt-2 text-center`
-- Affiché uniquement quand le bouton est visible (pas pendant la pause, pas pendant que l'IA parle)
+### 3. Memory projet (`mem://index.md`)
+- Description du projet utilisée comme référence interne pour l'IA
 
-### Fichier touché
-- `src/pages/InterviewStart.tsx` — 1 `useEffect` (listener) + 1 ligne de texte sous le bouton CTA
+### Pas concernés (à confirmer)
+- Page de login, emails transactionnels, page candidat (`CandidateLayout`) → **aucune occurrence du nom** trouvée actuellement, donc rien à changer.
+- README.md → contient juste le placeholder Lovable par défaut.
+
+### Plan d'action proposé
+Remplacer **InterviewAI** par **Interw.ai** dans :
+1. `index.html` (title + 4 meta tags)
+2. `src/components/AppSidebar.tsx` (logo sidebar)
+3. `mem://index.md` (mémoire projet)
+
+Et te rappeler de renommer aussi le projet côté Lovable (clic sur le nom en haut à gauche → "Rename project") — ça, je ne peux pas le faire pour toi.
+
+Veux-tu aussi que j'ajoute le nom **Interw.ai** quelque part où il n'apparaît pas encore (ex. header de la page candidat, page de login, page de fin d'entretien) pour renforcer la marque ?
 
