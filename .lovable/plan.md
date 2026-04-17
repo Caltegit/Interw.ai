@@ -1,27 +1,48 @@
 
 
-## Lien "Passer la question" sous la colonne recruteur
+## Renommer le bouton + améliorer l'UX de prise de parole
 
-### Comportement
+### Changement immédiat demandé
 
-Dans `src/pages/InterviewStart.tsx`, ajouter un lien discret « Passer la question » sous la colonne de gauche (côté IA/recruteur, qui contient l'avatar/vidéo IA + le bloc question), juste en dessous du `QuestionMediaPlayer`.
+Dans `src/pages/InterviewStart.tsx`, renommer le bouton **« Répondre à la question »** → **« Ma réponse est finie »**.
 
-- Style : petit lien souligné, `text-xs text-muted-foreground hover:text-foreground` — cohérent avec le lien « Passer » de l'écran de vérification technique (`InterviewDeviceTest.tsx`).
-- Aligné à gauche, avec un petit espace au-dessus.
-- Visible uniquement quand l'entretien n'est pas terminé et qu'on n'est pas en train de traiter une réponse (`!interviewFinished && !isProcessing`).
-- Désactivé/caché à la dernière question (sinon « passer » mène nulle part) — on l'affiche seulement si `currentQuestionIndex < questions.length - 1`.
+### Problème UX sous-jacent
 
-### Action au clic — `handleSkipQuestion`
+Aujourd'hui le candidat ne sait pas clairement :
+1. **Quand** il doit commencer à parler (la question vient d'être lue, est-ce à lui ?)
+2. **Que** sa voix est captée en temps réel (le micro écoute déjà)
+3. **Quand** cliquer sur le bouton (à la fin de sa réponse, pas avant)
 
-Réutiliser la logique existante de transition vers la question suivante :
+### Proposition UX (la meilleure pratique pour entretien vidéo IA)
 
-1. Stop écoute + reset transcript en cours (`stopListening()`, `candidateTranscriptRef.current = ""`, `setLiveTranscript("")`, `clearAutoSkip()`).
-2. Stop l'enregistrement vidéo de la question en cours et upload (`stopAndUploadQuestionVideo`) — comme dans `handleSendResponse`.
-3. Persister un message candidat marqueur (« [Question passée] ») lié à la question courante, avec le `videoSegmentUrl` éventuel — pour que le rapport sache que la question a été sautée.
-4. Avancer à la question suivante : `setCurrentQuestionIndex(prev => prev + 1)`, mettre à jour `messages` avec un message AI court de transition (ex : « Passons à la question suivante. ») + le contenu de la question suivante, et déclencher la lecture média/TTS comme le fait `handleSendResponse` (auto-play pour audio/vidéo, ou TTS + start listening pour écrite).
-5. Pas d'appel à l'edge function `ai-conversation-turn` — on saute directement, pas besoin de générer une relance IA.
+**1. Indicateur d'état "À vous de parler" très visible**
+
+Sous la question, afficher une zone d'état dynamique qui change selon la phase :
+
+- 🔵 **Lecture question** → « L'IA pose la question… » (pendant TTS/audio/vidéo)
+- 🟢 **Écoute active** → « 🎙️ À vous — parlez maintenant » + pulse animé sur l'icône micro + visualisation niveau audio (barre/onde qui réagit à la voix)
+- 🟡 **Traitement** → « Analyse de votre réponse… »
+
+**2. Bouton principal contextualisé**
+
+- État "écoute" : gros bouton vert proéminent **« ✓ Ma réponse est finie »** (au lieu de "Répondre à la question")
+- État "lecture" : bouton désactivé grisé **« Écoutez la question… »**
+- État "traitement" : spinner **« Traitement en cours… »**
+
+**3. Aide visuelle persistante (1 ligne sous le bouton)**
+
+> *Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.*
+
+Affichée uniquement les **2 premières questions** (puis on suppose le candidat a compris) — évite la sur-information.
+
+**4. Live transcript déjà existant** = preuve visuelle que le micro fonctionne. On le garde tel quel mais on ajoute un petit label **« Transcription en direct »** au-dessus pour que le candidat comprenne ce qu'il voit.
 
 ### Hors scope
-- Pas de confirmation modale (le lien reste discret, c'est intentionnel).
-- Pas de comptage du nombre de questions passées dans le rapport (le marqueur en DB suffit pour l'instant).
+
+- Pas de changement du flux d'auto-skip (silence détecté → passage auto), il reste comme garde-fou.
+- Pas de tutoriel modal au début (déjà couvert par l'écran de vérif technique).
+
+### Fichier modifié
+
+- `src/pages/InterviewStart.tsx` uniquement.
 
