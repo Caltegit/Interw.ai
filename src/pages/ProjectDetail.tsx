@@ -7,7 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Copy, CopyPlus, Pencil, Trash2, Send, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,7 +65,13 @@ export default function ProjectDetail() {
     if (!project || !user) return;
     setDuplicating(true);
     try {
-      const slug = project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-copy-" + Date.now().toString(36);
+      const slug =
+        project.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "") +
+        "-copy-" +
+        Date.now().toString(36);
 
       const { data: newProject, error } = await supabase
         .from("projects")
@@ -92,7 +108,7 @@ export default function ProjectDetail() {
             type: q.type,
             follow_up_enabled: q.follow_up_enabled,
             max_follow_ups: q.max_follow_ups,
-          }))
+          })),
         );
       }
 
@@ -108,7 +124,7 @@ export default function ProjectDetail() {
             scoring_scale: c.scoring_scale,
             anchors: c.anchors,
             applies_to: c.applies_to,
-          }))
+          })),
         );
       }
 
@@ -131,10 +147,16 @@ export default function ProjectDetail() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   if (!project) return <p>Projet introuvable</p>;
 
-  const statusLabel = { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+  const statusLabel =
+    { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const pendingSessions = sessions.filter((s) => s.status === "pending");
   const completedSessions = sessions.filter((s) => s.status === "completed");
 
@@ -183,7 +205,10 @@ export default function ProjectDetail() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
                     Supprimer
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -204,12 +229,23 @@ export default function ProjectDetail() {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardContent className="pt-6 space-y-2 text-sm">
-              <p><strong>Description :</strong> {project.description || "—"}</p>
-              <p><strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}</p>
-              <p><strong>Persona IA :</strong> {project.ai_persona_name}</p>
-              <p><strong>Durée max :</strong> {project.max_duration_minutes} min</p>
-              <p><strong>Lien candidat :</strong>{" "}
-                <code className="text-xs bg-muted px-2 py-1 rounded">{window.location.origin}/interview/{project.slug}</code>
+              <p>
+                <strong>Description :</strong> {project.description || "—"}
+              </p>
+              <p>
+                <strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}
+              </p>
+              <p>
+                <strong>Persona IA :</strong> {project.ai_persona_name}
+              </p>
+              <p>
+                <strong>Durée max :</strong> {project.max_duration_minutes} min
+              </p>
+              <p>
+                <strong>Lien :</strong>{" "}
+                <code className="text-xs bg-muted px-2 py-1 rounded">
+                  {window.location.origin}/interview/{project.slug}
+                </code>
               </p>
             </CardContent>
           </Card>
@@ -250,7 +286,9 @@ export default function ProjectDetail() {
           )}
 
           {sessions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.</p>
+            <p className="text-muted-foreground text-sm">
+              Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -268,8 +306,12 @@ export default function ProjectDetail() {
                     <tr key={s.id} className="border-b last:border-0">
                       <td className="py-3">{s.candidate_name}</td>
                       <td className="py-3">{s.candidate_email}</td>
-                      <td className="py-3"><SessionStatusBadge status={s.status} /></td>
-                      <td className="py-3 text-muted-foreground">{new Date(s.created_at).toLocaleDateString("fr-FR")}</td>
+                      <td className="py-3">
+                        <SessionStatusBadge status={s.status} />
+                      </td>
+                      <td className="py-3 text-muted-foreground">
+                        {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                      </td>
                       <td className="py-3 flex gap-1">
                         {s.status === "completed" && (
                           <Button variant="ghost" size="sm" asChild>
@@ -291,25 +333,40 @@ export default function ProjectDetail() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription, le rapport et les vidéos associées. Cette action est irréversible.
+                                Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription,
+                                le rapport et les vidéos associées. Cette action est irréversible.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => {
-                                // Delete related data then session
-                                // Get report ids first for report_shares cleanup
-                                const { data: reports } = await supabase.from("reports").select("id").eq("session_id", s.id);
-                                if (reports && reports.length > 0) {
-                                  await supabase.from("report_shares").delete().in("report_id", reports.map(r => r.id));
-                                }
-                                await supabase.from("session_messages").delete().eq("session_id", s.id);
-                                await supabase.from("reports").delete().eq("session_id", s.id);
-                                await supabase.from("transcripts").delete().eq("session_id", s.id);
-                                await supabase.from("sessions").delete().eq("id", s.id);
-                                setSessions(prev => prev.filter(ss => ss.id !== s.id));
-                                toast({ title: "Entretien supprimé" });
-                              }}>Supprimer</AlertDialogAction>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={async () => {
+                                  // Delete related data then session
+                                  // Get report ids first for report_shares cleanup
+                                  const { data: reports } = await supabase
+                                    .from("reports")
+                                    .select("id")
+                                    .eq("session_id", s.id);
+                                  if (reports && reports.length > 0) {
+                                    await supabase
+                                      .from("report_shares")
+                                      .delete()
+                                      .in(
+                                        "report_id",
+                                        reports.map((r) => r.id),
+                                      );
+                                  }
+                                  await supabase.from("session_messages").delete().eq("session_id", s.id);
+                                  await supabase.from("reports").delete().eq("session_id", s.id);
+                                  await supabase.from("transcripts").delete().eq("session_id", s.id);
+                                  await supabase.from("sessions").delete().eq("id", s.id);
+                                  setSessions((prev) => prev.filter((ss) => ss.id !== s.id));
+                                  toast({ title: "Entretien supprimé" });
+                                }}
+                              >
+                                Supprimer
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -327,11 +384,15 @@ export default function ProjectDetail() {
             {questions.map((q, i) => (
               <Card key={q.id}>
                 <CardContent className="py-3 flex items-center gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">{i + 1}</span>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                    {i + 1}
+                  </span>
                   <div className="flex-1">
                     {(q as any).title && <p className="text-sm font-medium">{(q as any).title}</p>}
                     <p className="text-sm text-muted-foreground">{q.content}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{q.type} {q.follow_up_enabled && "• Relances activées"}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {q.type} {q.follow_up_enabled && "• Relances activées"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
