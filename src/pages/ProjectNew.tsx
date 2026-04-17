@@ -199,8 +199,8 @@ export default function ProjectNew() {
             validQuestions.map((q, i) => ({
               project_id: project.id,
               order_index: i,
-              title: q.title || q.content.slice(0, 60),
-              content: q.content,
+              title: q.title || q.content.slice(0, 60) || `Question ${i + 1}`,
+              content: q.content.trim() || q.title || `Question ${i + 1}`,
               type: q.type as never,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
