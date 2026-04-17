@@ -41,7 +41,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>
             {!collapsed && (
-              <span className="text-lg font-bold text-primary">InterviewAI</span>
+              <span className="text-lg font-bold text-primary">Interw.ai</span>
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent>
