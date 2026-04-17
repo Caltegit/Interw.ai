@@ -64,6 +64,15 @@ export default function InterviewStart() {
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
+  // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
+  const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
+  const [backgroundSaving, setBackgroundSaving] = useState(0);
+  const trackBackground = useCallback(<T,>(p: Promise<T>): Promise<T> => {
+    setBackgroundSaving((n) => n + 1);
+    const tracked = p.finally(() => setBackgroundSaving((n) => Math.max(0, n - 1)));
+    backgroundJobsRef.current.push(tracked);
+    return p;
+  }, []);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(
     async (
