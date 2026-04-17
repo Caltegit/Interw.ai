@@ -301,7 +301,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               className="w-full h-full object-cover"
               preload="metadata"
             />
-            {!isPlaying && (
+            {!isPlaying && !hasFinished && (
               <button
                 className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40"
                 onClick={togglePlay}
@@ -313,6 +313,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             )}
             {isPlaying && (
               <button className="absolute inset-0" onClick={togglePlay} />
+            )}
+            {hasFinished && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                <span className="text-[9px] text-white/70 uppercase tracking-wide">Terminé</span>
+              </div>
             )}
           </div>
         </div>
