@@ -1071,10 +1071,7 @@ export default function InterviewStart() {
                           L'IA pose la question…
                         </span>
                       ) : isListening ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Mic className="h-3.5 w-3.5 animate-pulse" />
-                          Écoute en cours…
-                        </span>
+                        <MicVolumeMeter stream={streamRef.current} active={isListening} />
                       ) : (
                         <span>Préparation…</span>
                       )}
