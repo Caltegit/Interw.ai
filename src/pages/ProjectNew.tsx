@@ -150,7 +150,8 @@ export default function ProjectNew() {
           avatar_image_url: avatarUrl,
           intro_audio_url: null,
           presentation_video_url: null,
-        })
+          completion_message: completionMessage.trim() || null,
+        } as never)
         .select()
         .single();
 
