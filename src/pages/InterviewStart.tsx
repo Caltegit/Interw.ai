@@ -1119,18 +1119,31 @@ export default function InterviewStart() {
           );
         })()}
 
-        {/* ── Footer : Arrêter l'entretien (discret) ── */}
+        {/* ── Footer : progression + Arrêter l'entretien ── */}
         {!interviewFinished && (
-          <div className="flex justify-center py-3 sm:py-4 border-t border-border/50">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowEndDialog(true)}
-              className="gap-2 text-muted-foreground hover:text-destructive"
-            >
-              <PhoneOff className="h-4 w-4" />
-              Arrêter l'entretien
-            </Button>
+          <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">
+                Question {currentQuestionIndex + 1} / {questions.length}
+              </span>
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEndDialog(true)}
+                className="gap-2 text-muted-foreground hover:text-destructive"
+              >
+                <PhoneOff className="h-4 w-4" />
+                Arrêter l'entretien
+              </Button>
+            </div>
           </div>
         )}
       </div>
