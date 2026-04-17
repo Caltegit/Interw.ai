@@ -17,6 +17,7 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 
 const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
+const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 export default function ProjectNew() {
   const { profile, user } = useAuth();
