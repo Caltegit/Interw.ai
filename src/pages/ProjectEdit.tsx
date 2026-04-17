@@ -246,7 +246,8 @@ export default function ProjectEdit() {
           avatar_image_url: avatarUrl,
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
-        })
+          completion_message: completionMessage.trim() || null,
+        } as never)
         .eq("id", id);
 
       if (updateError) throw updateError;
