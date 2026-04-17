@@ -139,7 +139,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               className="w-full h-full object-cover"
               preload="metadata"
             />
-            {!isPlaying && (
+            {!isPlaying && !hasFinished && (
               <button
                 className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
                 onClick={togglePlay}
@@ -152,6 +152,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             {isPlaying && (
               <button className="absolute inset-0" onClick={togglePlay} />
             )}
+            {hasFinished && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                <span className="text-xs text-white/70 uppercase tracking-wide">Lecture terminée</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-2">
             <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
@@ -160,9 +165,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={restart}>
-              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
           </div>
         </div>
       );
