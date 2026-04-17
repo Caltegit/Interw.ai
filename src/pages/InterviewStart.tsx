@@ -1006,38 +1006,67 @@ export default function InterviewStart() {
                 )}
 
                 {/* Status indicator: tells the candidate what's happening */}
-                {!interviewFinished && (
-                  <div
-                    className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
-                      isProcessing
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        : isSpeaking
-                          ? "border-primary/30 bg-primary/10 text-primary"
-                          : isListening
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : "border-border bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {isProcessing ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                        Analyse de votre réponse…
-                      </span>
-                    ) : isSpeaking ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                        L'IA pose la question…
-                      </span>
-                    ) : isListening ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Mic className="h-3.5 w-3.5 animate-pulse" />
-                        À vous — parlez maintenant
-                      </span>
-                    ) : (
-                      <span>Préparation…</span>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  if (interviewFinished) return null;
+                  const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                  const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
+
+                  if (showBigCta) {
+                    return (
+                      <div className="rounded-xl border-2 border-emerald-500/50 bg-emerald-500/15 px-4 py-5 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="relative flex h-10 w-10 items-center justify-center">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/40" />
+                            <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/30">
+                              <Mic className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                            </span>
+                          </span>
+                          <span className="text-base sm:text-lg font-semibold text-emerald-700 dark:text-emerald-300">
+                            🎙️ À vous ! Parlez maintenant
+                          </span>
+                        </div>
+                        {currentQuestionIndex < 2 && (
+                          <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                            Le bouton « Ma réponse est finie » apparaîtra dès que je vous entendrai.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
+                        isProcessing
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          : isSpeaking
+                            ? "border-primary/30 bg-primary/10 text-primary"
+                            : isListening
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "border-border bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isProcessing ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                          Analyse de votre réponse…
+                        </span>
+                      ) : isSpeaking ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                          L'IA pose la question…
+                        </span>
+                      ) : isListening ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Mic className="h-3.5 w-3.5 animate-pulse" />
+                          Écoute en cours…
+                        </span>
+                      ) : (
+                        <span>Préparation…</span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Action buttons */}
                 <div className="flex flex-col items-center gap-2 sm:gap-3">
@@ -1045,31 +1074,38 @@ export default function InterviewStart() {
                     <Button className="w-full" size="lg" variant="destructive" onClick={endInterview}>
                       Terminer l'entretien
                     </Button>
-                  ) : (
-                    <>
-                      <Button
-                        className={`w-full h-12 sm:h-14 text-sm sm:text-base font-semibold ${
-                          isListening && !isProcessing && !isSpeaking
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                            : ""
-                        }`}
-                        size="lg"
-                        onClick={handleSendResponse}
-                        disabled={isProcessing || isSpeaking || (!liveTranscript && !candidateTranscriptRef.current)}
-                      >
-                        {isProcessing
-                          ? "Traitement en cours…"
-                          : isSpeaking
-                            ? "Écoutez la question…"
-                            : "✓ Ma réponse est finie"}
-                      </Button>
-                      {currentQuestionIndex < 2 && (
-                        <p className="text-xs text-muted-foreground text-center px-2">
-                          Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.
-                        </p>
-                      )}
-                    </>
-                  )}
+                  ) : (() => {
+                    const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                    // Hide button when listening but no voice detected yet — big CTA above takes over
+                    if (isListening && !isProcessing && !isSpeaking && !hasVoice) {
+                      return null;
+                    }
+                    return (
+                      <>
+                        <Button
+                          className={`w-full h-12 sm:h-14 text-sm sm:text-base font-semibold ${
+                            isListening && !isProcessing && !isSpeaking
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : ""
+                          }`}
+                          size="lg"
+                          onClick={handleSendResponse}
+                          disabled={isProcessing || isSpeaking || !hasVoice}
+                        >
+                          {isProcessing
+                            ? "Traitement en cours…"
+                            : isSpeaking
+                              ? "Écoutez la question…"
+                              : "✓ Ma réponse est finie"}
+                        </Button>
+                        {currentQuestionIndex < 2 && (
+                          <p className="text-xs text-muted-foreground text-center px-2">
+                            Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
