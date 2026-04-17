@@ -1,48 +1,45 @@
 
 
-## Renommer le bouton + améliorer l'UX de prise de parole
+## Améliorer l'UX d'écoute pendant l'entretien
 
-### Changement immédiat demandé
+### Changement 1 — Masquer le bouton tant qu'aucune voix n'est détectée
 
-Dans `src/pages/InterviewStart.tsx`, renommer le bouton **« Répondre à la question »** → **« Ma réponse est finie »**.
+Dans `src/pages/InterviewStart.tsx`, le bouton « ✓ Ma réponse est finie » est aujourd'hui **toujours affiché** (juste grisé tant que rien n'est transcrit). On le **masque complètement** tant que la reconnaissance vocale n'a rien capté.
 
-### Problème UX sous-jacent
+- Condition d'affichage : `isListening && (liveTranscript || candidateTranscriptRef.current)` → bouton vert apparaît.
+- Sinon (en écoute mais silence) : pas de bouton, à la place on montre une **invitation pleine largeur** (voir changement 2).
+- États `isSpeaking` (lecture question) et `isProcessing` (analyse) : on continue à afficher un bouton désactivé contextuel comme aujourd'hui, pour que la zone ne saute pas visuellement.
 
-Aujourd'hui le candidat ne sait pas clairement :
-1. **Quand** il doit commencer à parler (la question vient d'être lue, est-ce à lui ?)
-2. **Que** sa voix est captée en temps réel (le micro écoute déjà)
-3. **Quand** cliquer sur le bouton (à la fin de sa réponse, pas avant)
+### Changement 2 — Bandeau "À vous de répondre" beaucoup plus visible
 
-### Proposition UX (la meilleure pratique pour entretien vidéo IA)
+Quand l'IA finit de poser la question et qu'on passe en mode écoute (`isListening && !isSpeaking && !isProcessing`), on remplace le petit bandeau actuel par un **gros call-to-action vert** :
 
-**1. Indicateur d'état "À vous de parler" très visible**
+- Bandeau plus grand : padding `py-5`, fond `bg-emerald-500/15`, bordure `border-2 border-emerald-500/50`, texte `text-base sm:text-lg font-semibold`.
+- Icône micro **plus grosse** (`h-6 w-6`) avec **double pulse** (cercle d'onde animé autour) pour évoquer la captation live.
+- Texte principal : **« 🎙️ À vous ! Parlez maintenant »**
+- Sous-texte plus petit : *« Le bouton "Ma réponse est finie" apparaîtra dès que je vous entendrai. »* (visible seulement Q1-Q2, comme l'aide actuelle).
 
-Sous la question, afficher une zone d'état dynamique qui change selon la phase :
+Quand le candidat commence à parler (transcription non vide) :
+- Le bandeau **se réduit** à sa taille actuelle (status compact « Écoute en cours… »).
+- Le **bouton vert apparaît** en dessous.
 
-- 🔵 **Lecture question** → « L'IA pose la question… » (pendant TTS/audio/vidéo)
-- 🟢 **Écoute active** → « 🎙️ À vous — parlez maintenant » + pulse animé sur l'icône micro + visualisation niveau audio (barre/onde qui réagit à la voix)
-- 🟡 **Traitement** → « Analyse de votre réponse… »
+### Logique d'état (résumé)
 
-**2. Bouton principal contextualisé**
-
-- État "écoute" : gros bouton vert proéminent **« ✓ Ma réponse est finie »** (au lieu de "Répondre à la question")
-- État "lecture" : bouton désactivé grisé **« Écoutez la question… »**
-- État "traitement" : spinner **« Traitement en cours… »**
-
-**3. Aide visuelle persistante (1 ligne sous le bouton)**
-
-> *Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.*
-
-Affichée uniquement les **2 premières questions** (puis on suppose le candidat a compris) — évite la sur-information.
-
-**4. Live transcript déjà existant** = preuve visuelle que le micro fonctionne. On le garde tel quel mais on ajoute un petit label **« Transcription en direct »** au-dessus pour que le candidat comprenne ce qu'il voit.
-
-### Hors scope
-
-- Pas de changement du flux d'auto-skip (silence détecté → passage auto), il reste comme garde-fou.
-- Pas de tutoriel modal au début (déjà couvert par l'écran de vérif technique).
+```text
+Phase                              | Bandeau                          | Bouton
+-----------------------------------|----------------------------------|--------------------------------
+isSpeaking (IA parle)              | Bleu compact "L'IA pose…"        | Désactivé "Écoutez…"
+isListening + transcript vide      | GROS bandeau vert "À vous !"     | MASQUÉ
+isListening + transcript non vide  | Vert compact "Écoute en cours…"  | Vert "✓ Ma réponse est finie"
+isProcessing                       | Ambre compact "Analyse…"         | Désactivé "Traitement…"
+```
 
 ### Fichier modifié
 
-- `src/pages/InterviewStart.tsx` uniquement.
+- `src/pages/InterviewStart.tsx` (uniquement la zone JSX lignes ~1008-1073).
+
+### Hors scope
+
+- Pas d'ajout de visualisation niveau audio (barres VU-mètre) — peut être une étape suivante si tu veux.
+- Pas de modification du flux d'auto-skip.
 
