@@ -35,6 +35,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [hasFinished, setHasFinished] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>();
@@ -93,6 +94,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(100);
+    setHasFinished(true);
     onPlaybackEnd?.();
   };
 
@@ -106,10 +108,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     stop: () => doPause(),
   }));
 
-  // Auto-play when prop changes
+  // Auto-play + reset finished state when media changes
   useEffect(() => {
+    setHasFinished(false);
+    setProgress(0);
     if (autoPlay && type !== "written") {
-      // Small delay to ensure element is mounted
       const timer = setTimeout(() => doPlay(), 200);
       return () => clearTimeout(timer);
     }
@@ -136,7 +139,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               className="w-full h-full object-cover"
               preload="metadata"
             />
-            {!isPlaying && (
+            {!isPlaying && !hasFinished && (
               <button
                 className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
                 onClick={togglePlay}
@@ -149,6 +152,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             {isPlaying && (
               <button className="absolute inset-0" onClick={togglePlay} />
             )}
+            {hasFinished && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                <span className="text-xs text-white/70 uppercase tracking-wide">Lecture terminée</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-2">
             <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
@@ -157,9 +165,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={restart}>
-              <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
           </div>
         </div>
       );
@@ -188,18 +193,24 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               preload="metadata"
             />
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5 text-amber-400" />
-                ) : (
-                  <Play className="h-5 w-5 text-amber-400 ml-0.5" />
-                )}
-              </Button>
+              {!hasFinished ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
+                  onClick={togglePlay}
+                >
+                  {isPlaying ? (
+                    <Pause className="h-5 w-5 text-amber-400" />
+                  ) : (
+                    <Play className="h-5 w-5 text-amber-400 ml-0.5" />
+                  )}
+                </Button>
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-muted/40 flex items-center justify-center">
+                  <Mic className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
               <div className="flex-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
@@ -209,13 +220,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 </div>
                 {duration > 0 && (
                   <span className="text-[10px] text-muted-foreground mt-1 block">
-                    {formatTime((progress / 100) * duration)} / {formatTime(duration)}
+                    {hasFinished
+                      ? "Lecture terminée"
+                      : `${formatTime((progress / 100) * duration)} / ${formatTime(duration)}`}
                   </span>
                 )}
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={restart}>
-                <RotateCcw className="h-4 w-4 text-muted-foreground" />
-              </Button>
             </div>
           </div>
         )}
@@ -247,16 +257,22 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             preload="metadata"
           />
           <div className="flex items-center gap-2 ml-5">
-            <button
-              className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 transition-colors"
-              onClick={togglePlay}
-            >
-              {isPlaying ? (
-                <Pause className="h-3 w-3 text-amber-400" />
-              ) : (
-                <Play className="h-3 w-3 text-amber-400 ml-px" />
-              )}
-            </button>
+            {!hasFinished ? (
+              <button
+                className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 transition-colors"
+                onClick={togglePlay}
+              >
+                {isPlaying ? (
+                  <Pause className="h-3 w-3 text-amber-400" />
+                ) : (
+                  <Play className="h-3 w-3 text-amber-400 ml-px" />
+                )}
+              </button>
+            ) : (
+              <div className="h-6 w-6 rounded-full bg-muted/40 flex items-center justify-center">
+                <Mic className="h-3 w-3 text-muted-foreground" />
+              </div>
+            )}
             <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
               <div
                 className="h-full bg-amber-400 rounded-full transition-all duration-100"
@@ -264,7 +280,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               />
             </div>
             {duration > 0 && (
-              <span className="text-[9px] text-muted-foreground">{formatTime(duration)}</span>
+              <span className="text-[9px] text-muted-foreground">{hasFinished ? "terminé" : formatTime(duration)}</span>
             )}
           </div>
         </div>
@@ -285,7 +301,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               className="w-full h-full object-cover"
               preload="metadata"
             />
-            {!isPlaying && (
+            {!isPlaying && !hasFinished && (
               <button
                 className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40"
                 onClick={togglePlay}
@@ -297,6 +313,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             )}
             {isPlaying && (
               <button className="absolute inset-0" onClick={togglePlay} />
+            )}
+            {hasFinished && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                <span className="text-[9px] text-white/70 uppercase tracking-wide">Terminé</span>
+              </div>
             )}
           </div>
         </div>
