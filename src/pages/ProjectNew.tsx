@@ -191,7 +191,7 @@ export default function ProjectNew() {
         if (videoUpdateError) throw videoUpdateError;
       }
 
-      const validQuestions = questions.filter((q) => q.content.trim());
+      const validQuestions = questions.filter((q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl);
       if (validQuestions.length > 0) {
         const insertedQuestions = await supabase
           .from("questions")
