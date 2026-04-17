@@ -137,7 +137,7 @@ export default function InterviewLanding() {
     return (
       <CandidateLayout>
         <div className="animate-fade-in">
-          <Card className="max-w-md w-full overflow-hidden">
+          <Card className={`${introMediaType === "video" ? "max-w-2xl" : "max-w-md"} w-full overflow-hidden`}>
             <CardContent className="py-10 space-y-6 text-center">
               {introMediaType === "video" ? (
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
