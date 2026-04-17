@@ -96,6 +96,7 @@ export default function ProjectEdit() {
       setRecordVideo(project.record_video);
       setStatus(project.status as "draft" | "active" | "archived");
       setAutoSkipSilence(project.auto_skip_silence ?? false);
+      setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
 
