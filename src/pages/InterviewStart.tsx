@@ -810,7 +810,7 @@ export default function InterviewStart() {
       }
     }
 
-    navigate(`/interview/${slug}/complete`);
+    navigate(`/interview/${slug}/complete/${token}`);
   };
 
   // Keep endInterviewRef in sync
