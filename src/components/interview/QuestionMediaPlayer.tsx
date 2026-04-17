@@ -193,18 +193,24 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               preload="metadata"
             />
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
-                onClick={togglePlay}
-              >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5 text-amber-400" />
-                ) : (
-                  <Play className="h-5 w-5 text-amber-400 ml-0.5" />
-                )}
-              </Button>
+              {!hasFinished ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
+                  onClick={togglePlay}
+                >
+                  {isPlaying ? (
+                    <Pause className="h-5 w-5 text-amber-400" />
+                  ) : (
+                    <Play className="h-5 w-5 text-amber-400 ml-0.5" />
+                  )}
+                </Button>
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-muted/40 flex items-center justify-center">
+                  <Mic className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
               <div className="flex-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
@@ -214,13 +220,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 </div>
                 {duration > 0 && (
                   <span className="text-[10px] text-muted-foreground mt-1 block">
-                    {formatTime((progress / 100) * duration)} / {formatTime(duration)}
+                    {hasFinished
+                      ? "Lecture terminée"
+                      : `${formatTime((progress / 100) * duration)} / ${formatTime(duration)}`}
                   </span>
                 )}
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={restart}>
-                <RotateCcw className="h-4 w-4 text-muted-foreground" />
-              </Button>
             </div>
           </div>
         )}
