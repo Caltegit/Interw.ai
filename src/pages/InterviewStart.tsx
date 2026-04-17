@@ -1102,16 +1102,6 @@ export default function InterviewStart() {
                   )}
                 </div>
 
-                {/* Discreet "Skip question" link */}
-                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={handleSkipQuestion}
-                    className="self-center text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                  >
-                    Passer la question
-                  </button>
-                )}
               </div>
             </div>
           );
