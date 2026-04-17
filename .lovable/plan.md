@@ -1,82 +1,52 @@
 
 
-## Refonte UX entretien — Layout vertical une colonne
+## Avatar IA en 2/3 de l'écran — ajustement layout
 
-### Concept
+### Changement
 
-Passer du layout actuel (2 colonnes : recruteur + candidat côte à côte) à un layout vertical centré une colonne, avec hiérarchie visuelle forte sur le recruteur IA.
+Sur desktop, l'avatar IA occupe 2/3 de la largeur centrale, la zone question/CTA occupe 1/3.
 
-### Structure proposée (de haut en bas)
+### Schéma desktop (≥ 1024px)
 
 ```text
-┌─────────────────────────────────────────────┐
-│  Header compact                             │
-│  Q 2/5 · [Sauvegarde…] · [Quitter]          │
-├─────────────────────────────────────────────┤
-│                                             │
-│   ┌─────────────────────────────────────┐   │
-│   │                                     │   │
-│   │     AVATAR / VIDÉO RECRUTEUR        │   │
-│   │     (taille x2, ~480px de haut)     │   │
-│   │     "L'IA pose la question…"        │   │
-│   │                                     │   │
-│   └─────────────────────────────────────┘   │
-│                                             │
-│   Question affichée en dessous (texte/      │
-│   media player selon type)                  │
-│                                             │
-│   ┌─────────────────────────────────────┐   │
-│   │  Bandeau état (À vous / Écoute /…)  │   │
-│   └─────────────────────────────────────┘   │
-│                                             │
-│   [✓ Ma réponse est finie]  ← bouton CTA   │
-│                                             │
-│   Live transcript (gris, italique)          │
-│                                             │
-├─────────────────────────────────────────────┤
-│  Footer : retour vidéo candidat (PIP)       │
-│  ┌────┐  🔴 Caméra active                   │
-│  │ 📹 │  [👁 Masquer]                       │
-│  └────┘  140×100px, coin bas-gauche        │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│  Question 2/5  ████████░░░░  · 💾 Sauvegarde…       │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌────────────────────────────┐  ┌───────────────┐  │
+│  │                            │  │ QUESTION      │  │
+│  │                            │  │ "Parlez-moi   │  │
+│  │       AVATAR IA            │  │  de votre     │  │
+│  │       (très grand,         │  │  expérience…" │  │
+│  │        halo si parle)      │  │               │  │
+│  │                            │  │ ───────────   │  │
+│  │       ~2/3 largeur         │  │ 🎙️ À vous !  │  │
+│  │       hauteur max          │  │               │  │
+│  │       disponible           │  │ [✓ Réponse    │  │
+│  │                            │  │   finie]      │  │
+│  └────────────────────────────┘  └───────────────┘  │
+│         2/3                            1/3           │
+├──────────────────────────────────────────────────────┤
+│              [Arrêter l'entretien]                   │
+└──────────────────────────────────────────────────────┘
+PIP candidat 140×100 fixed bottom-4 left-4
 ```
 
-### Détails
+### Mobile (< 768px)
 
-**1. Bloc recruteur (focus principal)**
-- Avatar/vidéo IA agrandi : ~2× la taille actuelle (≈480px sur desktop, plein largeur card sur mobile).
-- Animation pulse subtile quand `isSpeaking`.
-- Question affichée juste en dessous (QuestionMediaPlayer existant, variant featured).
-
-**2. Zone interaction candidat (au milieu, sous la question)**
-- Bandeau d'état (déjà refondu) : "🎙️ À vous !" / "Écoute en cours…" / etc.
-- Bouton "✓ Ma réponse est finie" centré, large (h-12, px-8).
-- Live transcript en dessous, gris italique, max-h scrollable.
-
-**3. Retour vidéo candidat (PIP en bas)**
-- Mini-vidéo 140×100px ancrée en `position: fixed bottom-4 left-4`.
-- Bord arrondi `rounded-xl`, ombre `shadow-2xl`, bordure `border-2 border-emerald-500/40` quand caméra OK.
-- Indicateur "🔴 REC" en overlay coin haut-droit de la PIP.
-- Bouton œil discret pour masquer/afficher (état persistant pendant la session via `useState`).
-- Sur mobile (<640px) : encore plus petit (100×75px) ou option masquage par défaut.
-
-### Avantages UX
-
-- **Focus sur le recruteur IA** : agrandir donne du poids au "présentateur" et rend l'expérience plus humaine (comme un vrai entretien face-à-face).
-- **Flux naturel de lecture** : œil descend de l'IA → question → action → confirmation visuelle (PIP).
-- **Moins de distraction** : le candidat ne voit plus son visage en permanence dans son champ de vision direct.
-- **Mobile-friendly** : layout vertical s'adapte naturellement, pas besoin de réorganiser.
+Inchangé : empilement vertical, avatar ~180px, zone texte dessous. Le ratio 2/3-1/3 ne s'applique qu'en desktop.
 
 ### Détails techniques
 
-- `src/pages/InterviewStart.tsx` : refonte du JSX principal (zone des 2 colonnes actuelles → 1 colonne).
-- Conserver tous les `useRef` vidéo, le `MediaRecorder`, la logique de reconnaissance vocale — uniquement le layout change.
-- Ajouter un state `showSelfView` (default `true`) avec bouton toggle.
-- PIP en `fixed` pour rester visible au scroll ; z-index élevé.
+- `src/pages/InterviewStart.tsx` : grid centrale passe de `lg:grid-cols-[auto_1fr]` à `lg:grid-cols-3` avec avatar en `lg:col-span-2` et zone droite en `lg:col-span-1`.
+- Avatar : conteneur carré responsive, `aspect-square w-full max-h-[70vh] mx-auto`, cercle avec halo `ring-4 ring-primary/40 animate-pulse` quand `isSpeaking`.
+- Zone droite : `flex flex-col justify-center gap-6`, alignée verticalement avec le centre de l'avatar.
+- Header sticky + footer ghost inchangés.
+- PIP candidat inchangée.
 
 ### Hors scope
 
-- Pas de changement de la logique d'enregistrement vidéo / upload background.
-- Pas de changement du flux de questions / IA.
-- Pas de modif de l'écran de vérif technique (preview reste en grand là-bas).
+- Pas de changement logique vidéo/audio/IA
+- Pas de modif du flow questions
+- Mobile reste en empilement vertical
 
