@@ -47,6 +47,7 @@ export default function InterviewStart() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
+  const [showSelfView, setShowSelfView] = useState(true);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
