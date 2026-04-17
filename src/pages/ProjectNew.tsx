@@ -93,6 +93,7 @@ export default function ProjectNew() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
