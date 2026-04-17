@@ -167,6 +167,7 @@ export type Database = {
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
           auto_skip_silence: boolean
           avatar_image_url: string | null
+          completion_message: string | null
           created_at: string
           created_by: string
           description: string
@@ -189,6 +190,7 @@ export type Database = {
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          completion_message?: string | null
           created_at?: string
           created_by: string
           description?: string
@@ -211,6 +213,7 @@ export type Database = {
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          completion_message?: string | null
           created_at?: string
           created_by?: string
           description?: string
