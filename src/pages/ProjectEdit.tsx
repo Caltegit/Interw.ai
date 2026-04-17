@@ -66,6 +66,7 @@ export default function ProjectEdit() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active" | "archived">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
