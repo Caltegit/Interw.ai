@@ -26,7 +26,7 @@ export default function ProjectNew() {
   const [saving, setSaving] = useState(false);
 
   // Step 1
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("Candidature spontanée");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
 
   // Step 2
