@@ -474,7 +474,7 @@ export default function ProjectNew() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Passage auto Ss</Label>
+                  <Label>Passage auto 3s</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est
                     envoyée automatiquement.
