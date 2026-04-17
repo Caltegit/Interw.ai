@@ -97,7 +97,7 @@ export default function ProjectNew() {
 
   const canProceed = () => {
     if (step === 0) return title.trim();
-    if (step === 2) return questions.some((q) => q.content.trim());
+    if (step === 2) return questions.some((q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl);
     if (step === 3) return criteria.some((c) => c.label.trim()) && totalWeight === 100;
     return true;
   };
@@ -191,7 +191,7 @@ export default function ProjectNew() {
         if (videoUpdateError) throw videoUpdateError;
       }
 
-      const validQuestions = questions.filter((q) => q.content.trim());
+      const validQuestions = questions.filter((q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl);
       if (validQuestions.length > 0) {
         const insertedQuestions = await supabase
           .from("questions")
@@ -199,8 +199,8 @@ export default function ProjectNew() {
             validQuestions.map((q, i) => ({
               project_id: project.id,
               order_index: i,
-              title: q.title || q.content.slice(0, 60),
-              content: q.content,
+              title: q.title || q.content.slice(0, 60) || `Question ${i + 1}`,
+              content: q.content.trim() || q.title || `Question ${i + 1}`,
               type: q.type as never,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
