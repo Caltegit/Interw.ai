@@ -1,45 +1,56 @@
 
 
-## Améliorer l'UX d'écoute pendant l'entretien
+## Enchaîner les questions immédiatement (traitement en background)
 
-### Changement 1 — Masquer le bouton tant qu'aucune voix n'est détectée
+### Problème actuel
 
-Dans `src/pages/InterviewStart.tsx`, le bouton « ✓ Ma réponse est finie » est aujourd'hui **toujours affiché** (juste grisé tant que rien n'est transcrit). On le **masque complètement** tant que la reconnaissance vocale n'a rien capté.
+Quand le candidat clique sur « ✓ Ma réponse est finie », `handleSendResponse` dans `src/pages/InterviewStart.tsx` est `await`-é de bout en bout :
+1. Sauvegarde du message candidat en DB
+2. Appel à `ai-conversation-turn` (Lovable AI Gateway, ~2-5s)
+3. Sauvegarde du message IA
+4. Lecture TTS / média de la prochaine question
 
-- Condition d'affichage : `isListening && (liveTranscript || candidateTranscriptRef.current)` → bouton vert apparaît.
-- Sinon (en écoute mais silence) : pas de bouton, à la place on montre une **invitation pleine largeur** (voir changement 2).
-- États `isSpeaking` (lecture question) et `isProcessing` (analyse) : on continue à afficher un bouton désactivé contextuel comme aujourd'hui, pour que la zone ne saute pas visuellement.
+→ Le candidat voit un spinner « Traitement en cours… » pendant toute cette durée. Friction UX.
 
-### Changement 2 — Bandeau "À vous de répondre" beaucoup plus visible
+### Solution : fire-and-forget côté UI, pipeline en arrière-plan
 
-Quand l'IA finit de poser la question et qu'on passe en mode écoute (`isListening && !isSpeaking && !isProcessing`), on remplace le petit bandeau actuel par un **gros call-to-action vert** :
+On découple **le passage à la question suivante** (instantané, déterministe car la liste de questions est connue à l'avance via `projectContext.questions`) du **traitement IA** (transcription + analyse de la réponse, qui sert au rapport final mais pas au flux de l'entretien).
 
-- Bandeau plus grand : padding `py-5`, fond `bg-emerald-500/15`, bordure `border-2 border-emerald-500/50`, texte `text-base sm:text-lg font-semibold`.
-- Icône micro **plus grosse** (`h-6 w-6`) avec **double pulse** (cercle d'onde animé autour) pour évoquer la captation live.
-- Texte principal : **« 🎙️ À vous ! Parlez maintenant »**
-- Sous-texte plus petit : *« Le bouton "Ma réponse est finie" apparaîtra dès que je vous entendrai. »* (visible seulement Q1-Q2, comme l'aide actuelle).
+### Comportement cible
 
-Quand le candidat commence à parler (transcription non vide) :
-- Le bandeau **se réduit** à sa taille actuelle (status compact « Écoute en cours… »).
-- Le **bouton vert apparaît** en dessous.
+Au clic sur « Ma réponse est finie » :
+1. **Immédiatement** (0ms) : 
+   - Stop de la reconnaissance vocale
+   - Snapshot du transcript candidat dans une variable locale
+   - Incrément `currentQuestionIndex`
+   - Affichage de la question suivante + auto-play du média (audio/vidéo) ou TTS de transition
+   - Repassage en mode `isListening` dès que le média se termine
+2. **En tâche de fond** (non-bloquant, pas d'`await` côté UI) :
+   - `INSERT` du message candidat en DB
+   - Appel `ai-conversation-turn` (sert juste à logger la transition IA pour le rapport)
+   - `INSERT` du message IA
+   - Erreurs loggées en console + toast discret si échec critique, mais ne bloquent JAMAIS le flux
 
-### Logique d'état (résumé)
+### Cas particuliers à gérer
 
-```text
-Phase                              | Bandeau                          | Bouton
------------------------------------|----------------------------------|--------------------------------
-isSpeaking (IA parle)              | Bleu compact "L'IA pose…"        | Désactivé "Écoutez…"
-isListening + transcript vide      | GROS bandeau vert "À vous !"     | MASQUÉ
-isListening + transcript non vide  | Vert compact "Écoute en cours…"  | Vert "✓ Ma réponse est finie"
-isProcessing                       | Ambre compact "Analyse…"         | Désactivé "Traitement…"
-```
+- **Dernière question** : après la dernière réponse, on déclenche la fin de l'entretien (navigation vers `/interview/complete`) sans attendre que les jobs background finissent. Un petit `Promise.allSettled` final avec timeout de 3s côté `handleEndInterview` pour laisser une chance aux derniers `INSERT` de finir avant la redirection — sinon on redirige quand même.
+- **Question suivante de type TEXTE** : aujourd'hui le texte de transition vient de l'IA (`ai-conversation-turn`). Comme on n'attend plus l'IA, on génère localement une transition courte déterministe (ex : « Merci. Question suivante : {contenu} ») et on la lit en TTS. Le texte IA reste calculé en background pour le rapport mais n'est plus sur le chemin critique.
+- **Question suivante audio/vidéo** : encore plus simple, on joue directement le média — pas besoin de l'IA pour la transition.
+- **Ordre des messages en DB** : on utilise un compteur `messageOrderRef` incrémenté de façon synchrone à chaque snapshot, passé à l'`INSERT` en background → l'ordre est préservé même si les `INSERT` finissent dans le désordre.
+- **État `isProcessing`** : devient inutile sur le chemin candidat. On le garde uniquement pour un petit indicateur discret en haut (« Sauvegarde… ») pendant que les jobs background tournent, sans bloquer l'interaction.
+
+### Garde-fous
+
+- Si `ai-conversation-turn` échoue (429, 402, 500), on log + toast non-bloquant. Le rapport final s'appuie sur les `session_messages` candidat (sauvegardés en background) + le transcript audio — la transition IA manquante n'est pas critique.
+- Si l'`INSERT` du message candidat échoue, retry 1× après 2s. Si nouvel échec, toast d'avertissement + log. Le transcript local reste en mémoire jusqu'à la fin de l'entretien comme filet de sécurité.
 
 ### Fichier modifié
 
-- `src/pages/InterviewStart.tsx` (uniquement la zone JSX lignes ~1008-1073).
+- `src/pages/InterviewStart.tsx` uniquement (refactor de `handleSendResponse` + ajustement de `handleEndInterview` pour le flush final).
 
 ### Hors scope
 
-- Pas d'ajout de visualisation niveau audio (barres VU-mètre) — peut être une étape suivante si tu veux.
-- Pas de modification du flux d'auto-skip.
+- Pas de changement de l'edge function `ai-conversation-turn` (elle reste appelée, juste plus en `await` côté UI).
+- Pas de changement du flux d'auto-skip sur silence (reste un garde-fou).
+- Pas de changement de la génération du rapport final.
 
