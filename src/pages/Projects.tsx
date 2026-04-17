@@ -26,10 +26,7 @@ import {
 import { Plus, Pencil, Trash2, Eye, MoreHorizontal, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const statusLabels: Record<
-  string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-> = {
+const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Brouillon", variant: "secondary" },
   active: { label: "Actif", variant: "default" },
   archived: { label: "Archivé", variant: "outline" },
@@ -123,8 +120,7 @@ export default function Projects() {
               </TableHeader>
               <TableBody>
                 {projects.map((project) => {
-                  const status =
-                    statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
+                  const status = statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
                   return (
                     <TableRow
                       key={project.id}
@@ -135,15 +131,11 @@ export default function Projects() {
                         <div className="min-w-0">
                           <div className="truncate">{project.title}</div>
                           {project.description && (
-                            <div className="text-xs text-muted-foreground truncate max-w-md">
-                              {project.description}
-                            </div>
+                            <div className="text-xs text-muted-foreground truncate max-w-md">{project.description}</div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">
-                        {project.job_title}
-                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground">{project.job_title}</TableCell>
                       <TableCell>
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
@@ -160,11 +152,7 @@ export default function Projects() {
                                 <span className="sr-only sm:not-sr-only sm:ml-1">Voir</span>
                               </Link>
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyCandidateLink(project.slug)}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(project.slug)}>
                               <Link2 className="h-4 w-4" />
                               <span className="sr-only sm:not-sr-only sm:ml-1">Lien candidat</span>
                             </Button>
@@ -199,7 +187,7 @@ export default function Projects() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => copyCandidateLink(project.slug)}>
                                   <Link2 className="mr-2 h-4 w-4" />
-                                  Lien candidat
+                                  Lien
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/edit`)}>
                                   <Pencil className="mr-2 h-4 w-4" />
