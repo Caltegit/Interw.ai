@@ -135,25 +135,21 @@ export default function InterviewLanding() {
   // Intermediate screen: intro media from recruiter
   if (showIntroMedia) {
     return (
-      <CandidateLayout>
+      <CandidateLayout minimal>
         <div className="animate-fade-in">
           <Card className={`${introMediaType === "video" ? "max-w-2xl" : "max-w-md"} w-full overflow-hidden`}>
-            <CardContent className="py-10 space-y-6 text-center">
-              {introMediaType === "video" ? (
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
-                  <Video className="h-8 w-8" style={{ color: "#d4a574" }} />
-                </div>
-              ) : project.avatar_image_url ? (
+            <CardContent className="py-8 space-y-6 text-center">
+              {introMediaType === "audio" && project.avatar_image_url ? (
                 <img
                   src={project.avatar_image_url}
                   alt={project.ai_persona_name || "Recruteur"}
                   className={`mx-auto h-24 w-24 rounded-full object-cover border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
                 />
-              ) : (
+              ) : introMediaType === "audio" ? (
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
                   <Volume2 className="h-8 w-8" style={{ color: "#d4a574" }} />
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">
                 <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
