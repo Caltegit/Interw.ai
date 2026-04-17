@@ -23,14 +23,6 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
         {children}
       </main>
 
-      {/* Footer */}
-      {!minimal && (
-        <footer className="candidate-footer text-center py-4 px-4">
-          <p className="text-xs opacity-50">
-            © {new Date().getFullYear()} Morning · Propulsé par InterviewAI
-          </p>
-        </footer>
-      )}
     </div>
   );
 }
