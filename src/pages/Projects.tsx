@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Eye, MoreHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, MoreHorizontal, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const statusLabels: Record<
@@ -54,6 +54,15 @@ export default function Projects() {
         setLoading(false);
       });
   }, [user]);
+
+  const copyCandidateLink = (slug: string | null) => {
+    if (!slug) {
+      toast({ title: "Lien indisponible", description: "Ce projet n'a pas de slug défini.", variant: "destructive" });
+      return;
+    }
+    navigator.clipboard.writeText(`${window.location.origin}/interview/${slug}`);
+    toast({ title: "Lien candidat copié !" });
+  };
 
   const handleDelete = async () => {
     if (!toDelete) return;
@@ -151,6 +160,14 @@ export default function Projects() {
                                 <span className="sr-only sm:not-sr-only sm:ml-1">Voir</span>
                               </Link>
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyCandidateLink(project.slug)}
+                            >
+                              <Link2 className="h-4 w-4" />
+                              <span className="sr-only sm:not-sr-only sm:ml-1">Lien candidat</span>
+                            </Button>
                             <Button variant="ghost" size="sm" asChild>
                               <Link to={`/projects/${project.id}/edit`}>
                                 <Pencil className="h-4 w-4" />
@@ -179,6 +196,10 @@ export default function Projects() {
                                 <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
                                   <Eye className="mr-2 h-4 w-4" />
                                   Voir
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => copyCandidateLink(project.slug)}>
+                                  <Link2 className="mr-2 h-4 w-4" />
+                                  Lien candidat
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/edit`)}>
                                   <Pencil className="mr-2 h-4 w-4" />
