@@ -498,6 +498,20 @@ export default function ProjectNew() {
                 </Select>
               </div>
 
+              <div>
+                <Label>Message de fin</Label>
+                <Textarea
+                  value={completionMessage}
+                  onChange={(e) => setCompletionMessage(e.target.value)}
+                  placeholder={DEFAULT_COMPLETION_MESSAGE}
+                  rows={3}
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ce message s'affichera sur l'écran de remerciement après l'entretien.
+                </p>
+              </div>
+
               <Card className="bg-muted/50">
                 <CardHeader>
                   <CardTitle className="text-sm">Récapitulatif</CardTitle>
