@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
