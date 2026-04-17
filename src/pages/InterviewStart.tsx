@@ -1049,23 +1049,23 @@ export default function InterviewStart() {
                   if (isListening && !isProcessing && !isSpeaking && !interviewFinished) {
                     const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                     return (
-                      <div className="rounded-2xl border border-border/60 bg-card/40 p-3 sm:p-4 space-y-3 shadow-sm">
+                      <div className="rounded-2xl border border-[#d4a574]/20 bg-[#262626] p-3 sm:p-4 space-y-3 shadow-sm">
                         <div className="flex items-center justify-center py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
                         </div>
-                        <div className="h-px bg-border/60" />
+                        <div className="h-px bg-[#d4a574]/15" />
                         <Button
                           className={`w-full h-16 px-6 text-lg sm:text-xl font-semibold rounded-2xl transition-all ${
                             hasVoice
-                              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 hover:scale-[1.02] animate-pulse"
-                              : "bg-muted text-muted-foreground cursor-not-allowed"
+                              ? "bg-gradient-to-r from-[#d4a574] to-[#c4955e] hover:from-[#c4955e] hover:to-[#b48650] text-[#1a1a1a] shadow-lg shadow-[#d4a574]/40 hover:scale-[1.02] animate-pulse"
+                              : "bg-white/5 text-[#f5f0e8]/50 cursor-not-allowed"
                           }`}
                           onClick={handleSendResponse}
                           disabled={!hasVoice}
                         >
                           {hasVoice ? (
                             <span className="inline-flex items-center gap-3">
-                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1a1a1a]/15">
                                 <CheckCircle2 className="!h-5 !w-5" />
                               </span>
                               Ma réponse est terminée
