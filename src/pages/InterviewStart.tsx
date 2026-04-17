@@ -64,6 +64,15 @@ export default function InterviewStart() {
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
+  // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
+  const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
+  const [backgroundSaving, setBackgroundSaving] = useState(0);
+  const trackBackground = useCallback(<T,>(p: Promise<T>): Promise<T> => {
+    setBackgroundSaving((n) => n + 1);
+    const tracked = p.finally(() => setBackgroundSaving((n) => Math.max(0, n - 1)));
+    backgroundJobsRef.current.push(tracked);
+    return p;
+  }, []);
   // Helper: persist a single message to DB immediately
   const persistMessage = useCallback(
     async (
@@ -444,7 +453,7 @@ export default function InterviewStart() {
     }
   };
 
-  // Send candidate response to AI
+  // Send candidate response — UI advances IMMEDIATELY, persistence + AI run in background.
   const handleSendResponse = async () => {
     stopListening();
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
@@ -459,142 +468,163 @@ export default function InterviewStart() {
       return;
     }
 
-    // Stop question video recording and upload in background
+    // Snapshot context for background jobs
     const questionIdx = currentQuestionIndex;
-    let questionVideoUrl: string | null = null;
-    if (session?.id) {
-      questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
-    }
+    const sessionId = session?.id as string | undefined;
+    const questionIdSnapshot = questions[questionIdx]?.id || null;
+    const aiHistorySnapshot: { role: "user" | "assistant"; content: string }[] = [
+      ...aiMessages,
+      { role: "user", content: transcript },
+    ];
+    const isLastQuestion = questionIdx >= questions.length - 1;
 
-    // Add candidate message to UI
+    // ── 1. Update UI immediately ──
     setMessages((prev) => {
       const updated = [...prev, { role: "candidate", content: transcript }];
       messagesRef.current = updated;
       return updated;
     });
-
-    if (session?.id) {
-      try {
-        await persistMessage(session.id, "candidate", transcript, {
-          questionId: questions[questionIdx]?.id || null,
-          videoSegmentUrl: questionVideoUrl,
-        });
-
-        if (questionVideoUrl && !session.video_recording_url) {
-          const { error: sessionVideoError } = await supabase
-            .from("sessions")
-            .update({ video_recording_url: questionVideoUrl })
-            .eq("id", session.id);
-
-          if (!sessionVideoError) {
-            setSession((prev: any) => (prev ? { ...prev, video_recording_url: questionVideoUrl } : prev));
-          }
-        }
-      } catch {
-        toast({ title: "Erreur", description: "Impossible d'enregistrer votre réponse.", variant: "destructive" });
-        startQuestionRecording();
-        startListening();
-        return;
-      }
-    }
-
+    setAiMessages(aiHistorySnapshot);
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
-    // Build conversation history for AI
-    const updatedAiMessages: { role: "user" | "assistant"; content: string }[] = [
-      ...aiMessages,
-      { role: "user" as const, content: transcript },
-    ];
-    setAiMessages(updatedAiMessages);
+    // ── 2. Background: stop & upload current question video, persist candidate message ──
+    if (sessionId) {
+      const persistCandidateJob = (async () => {
+        let videoUrl: string | null = null;
+        try {
+          videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
+        } catch (e) {
+          console.error("Background video upload error:", e);
+        }
+        // Insert candidate message (1 retry on failure)
+        const insertOnce = () =>
+          persistMessage(sessionId, "candidate", transcript, {
+            questionId: questionIdSnapshot,
+            videoSegmentUrl: videoUrl,
+          });
+        try {
+          await insertOnce();
+        } catch (e) {
+          console.warn("Candidate message insert failed, retrying in 2s…", e);
+          await new Promise((r) => setTimeout(r, 2000));
+          try {
+            await insertOnce();
+          } catch (e2) {
+            console.error("Candidate message insert failed after retry:", e2);
+            toast({
+              title: "Sauvegarde échouée",
+              description: "Une réponse n'a pas pu être enregistrée. L'entretien continue.",
+              variant: "destructive",
+            });
+          }
+        }
+        // Update session video_recording_url with first video if missing
+        if (videoUrl) {
+          try {
+            const { data: sessRow } = await supabase
+              .from("sessions")
+              .select("video_recording_url")
+              .eq("id", sessionId)
+              .maybeSingle();
+            if (sessRow && !sessRow.video_recording_url) {
+              await supabase
+                .from("sessions")
+                .update({ video_recording_url: videoUrl })
+                .eq("id", sessionId);
+              setSession((prev: any) => (prev ? { ...prev, video_recording_url: videoUrl } : prev));
+            }
+          } catch (e) {
+            console.error("Session video url update error:", e);
+          }
+        }
+      })();
+      trackBackground(persistCandidateJob);
+    }
 
-    setIsProcessing(true);
+    // ── 3. Background: call AI for transition text + persist (non-blocking, used for report only) ──
+    if (sessionId) {
+      const aiJob = (async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
+            body: {
+              messages: aiHistorySnapshot,
+              projectContext: {
+                aiPersonaName: project?.ai_persona_name ?? "Marie",
+                jobTitle: project?.job_title ?? "",
+                questions: questions.map((q) => ({
+                  content: q.content,
+                  type: q.type,
+                  mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
+                })),
+                currentQuestionNumber: questionIdx + 1,
+                totalQuestions: questions.length,
+              },
+            },
+          });
+          if (error) throw error;
+          const aiResponse = data?.message;
+          if (aiResponse) {
+            try {
+              await persistMessage(sessionId, "ai", aiResponse);
+            } catch (e) {
+              console.error("AI message persist failed:", e);
+            }
+            setAiMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
+          }
+        } catch (e) {
+          console.warn("Background AI conversation turn failed (non-blocking):", e);
+        }
+      })();
+      trackBackground(aiJob);
+    }
 
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
-        body: {
-          messages: updatedAiMessages,
-          projectContext: {
-            aiPersonaName: project?.ai_persona_name ?? "Marie",
-            jobTitle: project?.job_title ?? "",
-            questions: questions.map((q) => ({
-              content: q.content,
-              type: q.type,
-              mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
-            })),
-            currentQuestionNumber: currentQuestionIndex + 1,
-            totalQuestions: questions.length,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      const aiResponse = data.message;
-
-      // Determine next question media info
-      const nextQIdx = currentQuestionIndex + 1;
-      const nextQ = nextQIdx < questions.length ? questions[nextQIdx] : undefined;
-      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
-        ? "video"
-        : nextQ?.audio_url
-          ? "audio"
-          : "written";
-      const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
-
-      // Add AI message with media info
+    // ── 4. Advance UI to next question NOW (no await on AI) ──
+    if (isLastQuestion) {
+      setInterviewFinished(true);
+      // Speak short closing then end interview
+      const closing = "Merci pour vos réponses, l'entretien est terminé.";
       setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: aiResponse, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        const updated = [...prev, { role: "ai", content: closing }];
         messagesRef.current = updated;
         return updated;
       });
-      // Persist AI response immediately
-      if (session?.id) {
-        try {
-          await persistMessage(session.id, "ai", aiResponse);
-        } catch {
-          toast({
-            title: "Erreur",
-            description: "Impossible d'enregistrer la réponse de l'IA.",
-            variant: "destructive",
-          });
-        }
-      }
-      setAiMessages((prev) => [...prev, { role: "assistant" as const, content: aiResponse }]);
+      await speak(closing);
+      // endInterview will flush background jobs with timeout
+      endInterviewRef.current?.();
+      return;
+    }
 
-      // Check if interview is over
-      const isOver = aiResponse.toLowerCase().includes("terminé") && currentQuestionIndex >= questions.length - 1;
+    const nextQIdx = questionIdx + 1;
+    const nextQ = questions[nextQIdx];
+    const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+      ? "video"
+      : nextQ?.audio_url
+        ? "audio"
+        : "written";
+    const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
-      if (isOver) {
-        setInterviewFinished(true);
-      }
+    // Local deterministic transition (no AI on critical path)
+    const transition =
+      nMediaType === "written"
+        ? `Merci. Question suivante : ${nextQ.content}`
+        : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`;
 
-      // Advance question counter
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex((prev) => prev + 1);
-      }
+    setMessages((prev) => {
+      const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+      messagesRef.current = updated;
+      return updated;
+    });
 
-      setIsProcessing(false);
+    setCurrentQuestionIndex(nextQIdx);
 
-      // Speak AI transition via TTS, then auto-play next question media
-      await speak(aiResponse);
-      if (!isOver && nextQ && (nextQ.audio_url || nextQ.video_url)) {
-        // Media question: trigger auto-play, onPlaybackEnd will start listening
-        setIsSpeaking(true);
-        setShouldAutoPlay(true);
-      } else if (!isOver) {
-        // Text question: start recording + listening immediately
-        startQuestionRecording();
-        startListening();
-      }
-    } catch (e: any) {
-      console.error("AI conversation error:", e);
-      setIsProcessing(false);
-      toast({
-        title: "Erreur",
-        description: "Impossible de contacter l'IA. Veuillez réessayer.",
-        variant: "destructive",
-      });
+    // Speak transition + auto-play next media (or start listening for written)
+    await speak(transition);
+    if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      setIsSpeaking(true);
+      setShouldAutoPlay(true);
+      // onPlaybackEnd will start recording + listening
+    } else {
       startQuestionRecording();
       startListening();
     }
@@ -699,7 +729,13 @@ export default function InterviewStart() {
       // Stop camera stream
       streamRef.current?.getTracks().forEach((t) => t.stop());
 
-      // Messages already persisted in real-time — no batch save needed
+      // Flush in-flight background jobs (candidate inserts + AI transitions), max 3s
+      if (backgroundJobsRef.current.length > 0) {
+        const flush = Promise.allSettled(backgroundJobsRef.current);
+        const timeout = new Promise((resolve) => setTimeout(resolve, 3000));
+        await Promise.race([flush, timeout]);
+        backgroundJobsRef.current = [];
+      }
 
       // Calculate duration
       const durationSeconds = interviewStartTimeRef.current
@@ -851,6 +887,12 @@ export default function InterviewStart() {
             Question {currentQuestionIndex + 1} / {questions.length}
           </span>
           <div className="flex items-center gap-2">
+            {backgroundSaving > 0 && (
+              <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+                Sauvegarde…
+              </span>
+            )}
             {isSpeaking && (
               <span className="flex items-center gap-1 text-xs text-primary">
                 <Volume2 className="h-3 w-3 animate-pulse" /> L'IA parle...
