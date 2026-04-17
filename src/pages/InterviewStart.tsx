@@ -887,6 +887,12 @@ export default function InterviewStart() {
             Question {currentQuestionIndex + 1} / {questions.length}
           </span>
           <div className="flex items-center gap-2">
+            {backgroundSaving > 0 && (
+              <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+                Sauvegarde…
+              </span>
+            )}
             {isSpeaking && (
               <span className="flex items-center gap-1 text-xs text-primary">
                 <Volume2 className="h-3 w-3 animate-pulse" /> L'IA parle...
