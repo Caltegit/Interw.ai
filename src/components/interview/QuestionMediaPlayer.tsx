@@ -108,10 +108,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     stop: () => doPause(),
   }));
 
-  // Auto-play when prop changes
+  // Auto-play + reset finished state when media changes
   useEffect(() => {
+    setHasFinished(false);
+    setProgress(0);
     if (autoPlay && type !== "written") {
-      // Small delay to ensure element is mounted
       const timer = setTimeout(() => doPlay(), 200);
       return () => clearTimeout(timer);
     }
