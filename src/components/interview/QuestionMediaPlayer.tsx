@@ -94,6 +94,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const handleEnded = () => {
     setIsPlaying(false);
     setProgress(100);
+    setHasFinished(true);
     onPlaybackEnd?.();
   };
 
