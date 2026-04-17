@@ -1,52 +1,50 @@
 
 
-## Avatar IA en 2/3 de l'écran — ajustement layout
+## Refonte du bouton "Ma réponse est finie"
 
-### Changement
+Objectif : rendre le bouton de fin de réponse beaucoup plus visible, agréable et "premium", et harmoniser visuellement la zone vu-mètre + bouton qui est aujourd'hui un peu plate.
 
-Sur desktop, l'avatar IA occupe 2/3 de la largeur centrale, la zone question/CTA occupe 1/3.
+### Changements proposés (dans `src/pages/InterviewStart.tsx`, zone CTA principal lignes ~1080-1114)
 
-### Schéma desktop (≥ 1024px)
+**1. Bouton plus grand et plus "vivant"**
+- Hauteur : `h-12` → `h-16` (même taille que le bouton "Lancer l'entretien" pour la cohérence)
+- Texte : `text-sm sm:text-base` → `text-lg sm:text-xl` + `font-semibold`
+- Coins arrondis : ajouter `rounded-2xl` (au lieu du `rounded-md` par défaut)
+- Effet visuel quand actif (en écoute avec voix détectée) :
+  - Dégradé vert : `bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700`
+  - Ombre douce colorée : `shadow-lg shadow-emerald-500/30`
+  - Légère animation pulse autour du bouton (halo) pour inviter au clic
+  - Petit effet de scale au hover : `hover:scale-[1.02] transition-transform`
+- Icône check dans un cercle blanc à gauche du texte (au lieu du simple "✓") pour un rendu plus pro :
+  ```
+  [○✓]  Ma réponse est terminée
+  ```
 
-```text
-┌──────────────────────────────────────────────────────┐
-│  Question 2/5  ████████░░░░  · 💾 Sauvegarde…       │
-├──────────────────────────────────────────────────────┤
-│                                                      │
-│  ┌────────────────────────────┐  ┌───────────────┐  │
-│  │                            │  │ QUESTION      │  │
-│  │                            │  │ "Parlez-moi   │  │
-│  │       AVATAR IA            │  │  de votre     │  │
-│  │       (très grand,         │  │  expérience…" │  │
-│  │        halo si parle)      │  │               │  │
-│  │                            │  │ ───────────   │  │
-│  │       ~2/3 largeur         │  │ 🎙️ À vous !  │  │
-│  │       hauteur max          │  │               │  │
-│  │       disponible           │  │ [✓ Réponse    │  │
-│  │                            │  │   finie]      │  │
-│  └────────────────────────────┘  └───────────────┘  │
-│         2/3                            1/3           │
-├──────────────────────────────────────────────────────┤
-│              [Arrêter l'entretien]                   │
-└──────────────────────────────────────────────────────┘
-PIP candidat 140×100 fixed bottom-4 left-4
+**2. Vu-mètre micro mieux intégré**
+- Aujourd'hui le vu-mètre est dans une "boîte" grise séparée → on l'enchâsse dans la même carte arrondie que le bouton, séparés par un fin divider, pour créer un seul bloc cohérent "je parle → je valide".
+- Container unique : `rounded-2xl border border-border/50 bg-card/40 p-3` contenant micro + bouton.
+
+**3. Texte d'aide plus discret**
+- "Cliquez dès que vous avez terminé." → garder mais en plus petit (`text-[11px]`) et avec une icône souris/clic subtile, uniquement sur les 2 premières questions (déjà le cas).
+
+**4. État "désactivé" plus clair**
+- Quand l'utilisateur n'a pas encore parlé : bouton grisé avec texte "🎤 Parlez pour répondre…" au lieu d'être juste masqué — ça évite l'effet "rien ne s'affiche".
+
+### Aperçu (texte)
+
+```
+┌─────────────────────────────────────────┐
+│   🎤  ▁▃▅▇█▇▅▃▁▁▁▁▁▁▁▁                  │   ← vu-mètre
+├─────────────────────────────────────────┤
+│                                         │
+│      ⊙✓   Ma réponse est terminée       │   ← bouton vert dégradé, h-16, halo
+│                                         │
+└─────────────────────────────────────────┘
+        Cliquez dès que vous avez terminé.
 ```
 
-### Mobile (< 768px)
+### Fichier touché
+- `src/pages/InterviewStart.tsx` (uniquement le bloc CTA, ~30 lignes)
 
-Inchangé : empilement vertical, avatar ~180px, zone texte dessous. Le ratio 2/3-1/3 ne s'applique qu'en desktop.
-
-### Détails techniques
-
-- `src/pages/InterviewStart.tsx` : grid centrale passe de `lg:grid-cols-[auto_1fr]` à `lg:grid-cols-3` avec avatar en `lg:col-span-2` et zone droite en `lg:col-span-1`.
-- Avatar : conteneur carré responsive, `aspect-square w-full max-h-[70vh] mx-auto`, cercle avec halo `ring-4 ring-primary/40 animate-pulse` quand `isSpeaking`.
-- Zone droite : `flex flex-col justify-center gap-6`, alignée verticalement avec le centre de l'avatar.
-- Header sticky + footer ghost inchangés.
-- PIP candidat inchangée.
-
-### Hors scope
-
-- Pas de changement logique vidéo/audio/IA
-- Pas de modif du flow questions
-- Mobile reste en empilement vertical
+Aucune logique métier modifiée, uniquement le style et le wording.
 
