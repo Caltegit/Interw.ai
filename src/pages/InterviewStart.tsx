@@ -868,15 +868,14 @@ export default function InterviewStart() {
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
               <Mic className="h-10 w-10 text-primary" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <h1 className="text-xl font-bold">Prêt à démarrer ?</h1>
-              <p className="text-muted-foreground text-sm"></p>
+              <p className="text-sm text-muted-foreground">Soyez naturel.le et souriez vous êtes filmé.e !</p>
             </div>
-            <Button size="lg" className="w-full" onClick={beginInterview}>
-              <Volume2 className="mr-2 h-5 w-5" />
+            <Button size="lg" className="w-full h-16 text-xl" onClick={beginInterview}>
+              <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer l'entretien
             </Button>
-            <p className="text-xs text-muted-foreground">Soyez naturel.le et souriez vous êtes filmé.e !</p>
           </CardContent>
         </Card>
       </CandidateLayout>
