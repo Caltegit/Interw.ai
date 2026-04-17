@@ -1144,12 +1144,20 @@ export default function InterviewStart() {
                             </span>
                           )}
                         </Button>
+                        {hasVoice && (
+                          <p className="text-xs text-[#f5f0e8]/50 text-center">
+                            ou appuyer sur la barre d'espace du clavier
+                          </p>
+                        )}
                         {currentQuestionIndex < 2 && hasVoice && (
                           <p className="text-[11px] text-muted-foreground text-center inline-flex items-center justify-center gap-1 w-full">
                             <MousePointerClick className="h-3 w-3" />
                             Cliquez dès que vous avez terminé.
                           </p>
                         )}
+                      </div>
+                    );
+                  }
                       </div>
                     );
                   }
