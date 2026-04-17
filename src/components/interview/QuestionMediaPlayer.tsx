@@ -257,16 +257,22 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
             preload="metadata"
           />
           <div className="flex items-center gap-2 ml-5">
-            <button
-              className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 transition-colors"
-              onClick={togglePlay}
-            >
-              {isPlaying ? (
-                <Pause className="h-3 w-3 text-amber-400" />
-              ) : (
-                <Play className="h-3 w-3 text-amber-400 ml-px" />
-              )}
-            </button>
+            {!hasFinished ? (
+              <button
+                className="h-6 w-6 rounded-full bg-amber-500/10 flex items-center justify-center hover:bg-amber-500/20 transition-colors"
+                onClick={togglePlay}
+              >
+                {isPlaying ? (
+                  <Pause className="h-3 w-3 text-amber-400" />
+                ) : (
+                  <Play className="h-3 w-3 text-amber-400 ml-px" />
+                )}
+              </button>
+            ) : (
+              <div className="h-6 w-6 rounded-full bg-muted/40 flex items-center justify-center">
+                <Mic className="h-3 w-3 text-muted-foreground" />
+              </div>
+            )}
             <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden max-w-[120px]">
               <div
                 className="h-full bg-amber-400 rounded-full transition-all duration-100"
@@ -274,7 +280,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               />
             </div>
             {duration > 0 && (
-              <span className="text-[9px] text-muted-foreground">{formatTime(duration)}</span>
+              <span className="text-[9px] text-muted-foreground">{hasFinished ? "terminé" : formatTime(duration)}</span>
             )}
           </div>
         </div>
