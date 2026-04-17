@@ -529,10 +529,7 @@ export default function InterviewStart() {
               .eq("id", sessionId)
               .maybeSingle();
             if (sessRow && !sessRow.video_recording_url) {
-              await supabase
-                .from("sessions")
-                .update({ video_recording_url: videoUrl })
-                .eq("id", sessionId);
+              await supabase.from("sessions").update({ video_recording_url: videoUrl }).eq("id", sessionId);
               setSession((prev: any) => (prev ? { ...prev, video_recording_url: videoUrl } : prev));
             }
           } catch (e) {
@@ -779,8 +776,14 @@ export default function InterviewStart() {
 
   // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
   const clearAutoSkip = useCallback(() => {
-    if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
-    if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    if (autoSkipTimerRef.current) {
+      clearTimeout(autoSkipTimerRef.current);
+      autoSkipTimerRef.current = null;
+    }
+    if (autoSkipCountdownRef.current) {
+      clearInterval(autoSkipCountdownRef.current);
+      autoSkipCountdownRef.current = null;
+    }
     setAutoSkipCountdown(null);
   }, []);
 
@@ -872,7 +875,7 @@ export default function InterviewStart() {
               <Volume2 className="mr-2 h-5 w-5" />
               Lancer l'entretien
             </Button>
-            <p className="text-xs text-muted-foreground">Souriez vous êtes filmé !.</p>
+            <p className="text-xs text-muted-foreground">Soyez naturelle et souriez vous êtes filmé !</p>
           </CardContent>
         </Card>
       </CandidateLayout>
@@ -947,11 +950,26 @@ export default function InterviewStart() {
                     />
                     {isSpeaking && (
                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 flex items-end justify-center gap-1.5">
-                        <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="h-7 sm:h-10 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
-                        <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
-                        <span className="h-8 sm:h-12 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
-                        <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+                        <span
+                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        />
+                        <span
+                          className="h-7 sm:h-10 w-1.5 rounded-full bg-white animate-bounce"
+                          style={{ animationDelay: "100ms" }}
+                        />
+                        <span
+                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
+                          style={{ animationDelay: "200ms" }}
+                        />
+                        <span
+                          className="h-8 sm:h-12 w-1.5 rounded-full bg-white animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                        <span
+                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
+                          style={{ animationDelay: "400ms" }}
+                        />
                       </div>
                     )}
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
@@ -1069,45 +1087,41 @@ export default function InterviewStart() {
                     <Button className="w-full" size="lg" variant="destructive" onClick={endInterview}>
                       Terminer l'entretien
                     </Button>
-                  ) : (() => {
-                    const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
-                    if (isListening && !isProcessing && !isSpeaking && !hasVoice) {
-                      return null;
-                    }
-                    return (
-                      <>
-                        <Button
-                          className={`w-full h-12 px-6 text-sm sm:text-base font-semibold ${
-                            isListening && !isProcessing && !isSpeaking
-                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                              : ""
-                          }`}
-                          size="lg"
-                          onClick={handleSendResponse}
-                          disabled={isProcessing || isSpeaking || !hasVoice}
-                        >
-                          {isProcessing
-                            ? "Traitement…"
-                            : isSpeaking
-                              ? "Écoutez…"
-                              : "✓ Ma réponse est finie"}
-                        </Button>
-                        {currentQuestionIndex < 2 && (
-                          <p className="text-xs text-muted-foreground text-center px-2">
-                            Cliquez dès que vous avez terminé.
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()}
+                  ) : (
+                    (() => {
+                      const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                      if (isListening && !isProcessing && !isSpeaking && !hasVoice) {
+                        return null;
+                      }
+                      return (
+                        <>
+                          <Button
+                            className={`w-full h-12 px-6 text-sm sm:text-base font-semibold ${
+                              isListening && !isProcessing && !isSpeaking
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                : ""
+                            }`}
+                            size="lg"
+                            onClick={handleSendResponse}
+                            disabled={isProcessing || isSpeaking || !hasVoice}
+                          >
+                            {isProcessing ? "Traitement…" : isSpeaking ? "Écoutez…" : "✓ Ma réponse est finie"}
+                          </Button>
+                          {currentQuestionIndex < 2 && (
+                            <p className="text-xs text-muted-foreground text-center px-2">
+                              Cliquez dès que vous avez terminé.
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()
+                  )}
                 </div>
 
                 {/* Live transcript (discret) */}
                 {liveTranscript && !isProcessing && (
                   <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 max-h-24 overflow-y-auto">
-                    <p className="text-xs italic text-muted-foreground leading-relaxed">
-                      {liveTranscript}
-                    </p>
+                    <p className="text-xs italic text-muted-foreground leading-relaxed">{liveTranscript}</p>
                   </div>
                 )}
 
@@ -1170,13 +1184,7 @@ export default function InterviewStart() {
         ) : (
           <>
             {/* Hidden video keeps stream alive even when masqué */}
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className="hidden"
-              style={{ transform: "scaleX(-1)" }}
-            />
+            <video ref={videoRef} muted playsInline className="hidden" style={{ transform: "scaleX(-1)" }} />
             <button
               type="button"
               onClick={() => setShowSelfView(true)}
