@@ -1158,9 +1158,7 @@ export default function InterviewStart() {
                       </div>
                     );
                   }
-                      </div>
-                    );
-                  }
+
 
                   return (
                     <div
