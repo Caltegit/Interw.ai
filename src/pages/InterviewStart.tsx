@@ -886,28 +886,15 @@ export default function InterviewStart() {
   return (
     <CandidateLayout minimal>
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)]">
-        {/* ── Header sticky : progression questions ── */}
-        <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md py-2 sm:py-3 -mx-2 sm:-mx-4 px-2 sm:px-4 border-b border-border/50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs sm:text-sm font-medium text-foreground">
-              Question {currentQuestionIndex + 1} / {questions.length}
+        {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
+        {backgroundSaving > 0 && (
+          <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md py-2 -mx-2 sm:-mx-4 px-2 sm:px-4 flex justify-end">
+            <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
+              Sauvegarde…
             </span>
-            <div className="flex items-center gap-2">
-              {backgroundSaving > 0 && (
-                <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
-                  Sauvegarde…
-                </span>
-              )}
-            </div>
           </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {(() => {
           const currentQ = questions[currentQuestionIndex];
