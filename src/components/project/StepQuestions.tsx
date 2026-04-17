@@ -270,7 +270,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-base font-semibold">Questions d'entretien</Label>
-          <p className="text-sm text-muted-foreground">{questions.filter((q) => q.title.trim() || q.content.trim()).length} question(s) — glissez pour réordonner</p>
+          <p className="text-sm text-muted-foreground">{questions.filter((q) => q.title.trim() || q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl).length} question(s) — glissez pour réordonner</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 15}>
