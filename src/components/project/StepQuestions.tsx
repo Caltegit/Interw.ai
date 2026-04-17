@@ -142,14 +142,8 @@ function SortableQuestion({
             <TypeIcon className="h-3 w-3" />
             {meta.label}
           </span>
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">#{index + 1}</span>
-          <span
-            className={cn(
-              "truncate text-sm",
-              previewText ? "text-foreground" : "italic text-muted-foreground",
-            )}
-          >
-            {previewText || "Question sans titre"}
+          <span className="truncate text-sm text-foreground">
+            {previewText || `Question ${index + 1}`}
           </span>
           {q.follow_up_enabled && (
             <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
