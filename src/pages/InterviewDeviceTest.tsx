@@ -98,10 +98,8 @@ export default function InterviewDeviceTest() {
     <CandidateLayout>
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center space-y-2">
-          <h1 className="text-xl font-bold">Vérification de vos appareils</h1>
-          <p className="text-sm text-muted-foreground">
-            Avant de commencer, vérifions que votre micro et votre caméra fonctionnent correctement.
-          </p>
+          <h1 className="text-xl font-bold">Vérification technique</h1>
+          <p className="text-sm text-muted-foreground">Vérifions que votre micro + caméra fonctionnent bien.</p>
         </div>
 
         {/* Camera test */}
@@ -123,9 +121,7 @@ export default function InterviewDeviceTest() {
                   Tester
                 </Button>
               )}
-              {camStatus === "error" && (
-                <span className="text-xs text-destructive">Accès refusé</span>
-              )}
+              {camStatus === "error" && <span className="text-xs text-destructive">Accès refusé</span>}
             </div>
 
             {camStatus === "testing" && (
@@ -148,9 +144,7 @@ export default function InterviewDeviceTest() {
             )}
 
             {camStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">
-                ✓ Caméra détectée
-              </p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">✓ Caméra détectée</p>
             )}
           </CardContent>
         </Card>
@@ -183,9 +177,7 @@ export default function InterviewDeviceTest() {
 
             {micStatus === "testing" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground text-center">
-                  Parlez pour tester votre micro...
-                </p>
+                <p className="text-xs text-muted-foreground text-center">Parlez pour tester votre micro...</p>
                 <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-100"
@@ -196,9 +188,7 @@ export default function InterviewDeviceTest() {
             )}
 
             {micStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">
-                ✓ Microphone détecté
-              </p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">✓ Microphone détecté</p>
             )}
 
             {micStatus === "error" && (
@@ -210,12 +200,7 @@ export default function InterviewDeviceTest() {
         </Card>
 
         {/* Continue */}
-        <Button
-          size="lg"
-          className="w-full"
-          disabled={!canContinue}
-          onClick={handleContinue}
-        >
+        <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
           Commencer l'entretien
         </Button>
