@@ -84,19 +84,17 @@ export default function MicVolumeMeter({ stream, active }: MicVolumeMeterProps) 
     };
   }, [stream, active]);
 
-  const bars = 12;
+  const bars = 16;
   const activeBars = Math.round(level * bars);
-  // Seuil minimal pour considérer "audible"
-  const tooQuiet = active && level < 0.06;
 
   return (
-    <div className="inline-flex items-center gap-2">
-      <Mic className={`h-3.5 w-3.5 ${active ? "text-primary" : "text-muted-foreground"}`} />
-      <div className="flex items-end gap-[2px] h-4" aria-hidden="true">
+    <div className="inline-flex items-center gap-3">
+      <Mic className={`h-6 w-6 ${active ? "text-primary" : "text-muted-foreground"}`} />
+      <div className="flex items-end gap-[4px] h-10" aria-hidden="true">
         {Array.from({ length: bars }).map((_, i) => {
           const isOn = i < activeBars;
-          const isHigh = i >= bars - 3;
-          const isMid = i >= bars - 7 && i < bars - 3;
+          const isHigh = i >= bars - 4;
+          const isMid = i >= bars - 9 && i < bars - 4;
           const color = isOn
             ? isHigh
               ? "bg-success"
@@ -105,19 +103,16 @@ export default function MicVolumeMeter({ stream, active }: MicVolumeMeterProps) 
               : "bg-primary/70"
             : "bg-muted-foreground/20";
           // Hauteur progressive
-          const h = 4 + (i / bars) * 12; // 4px → 16px
+          const h = 8 + (i / bars) * 32; // 8px → 40px
           return (
             <span
               key={i}
-              className={`w-[3px] rounded-sm transition-colors ${color}`}
+              className={`w-[6px] rounded-sm transition-colors ${color}`}
               style={{ height: `${h}px` }}
             />
           );
         })}
       </div>
-      <span className={`text-xs ${tooQuiet ? "text-warning" : "text-muted-foreground"}`}>
-        {tooQuiet ? "Parlez plus fort" : "Micro actif"}
-      </span>
     </div>
   );
 }
