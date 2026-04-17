@@ -139,19 +139,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               className="w-full h-full object-cover"
               preload="metadata"
             />
-            {!isPlaying && !hasFinished && (
-              <button
-                className="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/40"
-                onClick={togglePlay}
-              >
-                <div className="h-12 w-12 rounded-full bg-emerald-500/80 flex items-center justify-center">
-                  <Play className="h-6 w-6 text-white ml-0.5" />
-                </div>
-              </button>
-            )}
-            {isPlaying && (
-              <button className="absolute inset-0" onClick={togglePlay} />
-            )}
             {hasFinished && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
                 <span className="text-xs text-white/70 uppercase tracking-wide">Lecture terminée</span>
