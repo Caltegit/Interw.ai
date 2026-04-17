@@ -35,6 +35,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [hasFinished, setHasFinished] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>();
