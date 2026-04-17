@@ -964,6 +964,17 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 )}
+                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
+                  <div className="mt-3 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={handleSkipQuestion}
+                      className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                    >
+                      Passer la question
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
