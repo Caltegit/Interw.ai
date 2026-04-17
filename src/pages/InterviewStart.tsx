@@ -1118,12 +1118,6 @@ export default function InterviewStart() {
                   )}
                 </div>
 
-                {/* Live transcript (discret) */}
-                {liveTranscript && !isProcessing && (
-                  <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 max-h-24 overflow-y-auto">
-                    <p className="text-xs italic text-muted-foreground leading-relaxed">{liveTranscript}</p>
-                  </div>
-                )}
 
                 {/* Discreet "Skip question" link */}
                 {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
