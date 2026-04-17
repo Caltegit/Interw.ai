@@ -823,6 +823,25 @@ export default function InterviewStart() {
     handleSendResponseRef.current = handleSendResponse;
   });
 
+  // Spacebar shortcut to validate the answer (same conditions as the "Ma réponse est terminée" button)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) return;
+      }
+      if (isPaused || interviewFinished || isSpeaking || isProcessing || !isListening) return;
+      const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+      if (!hasVoice) return;
+      e.preventDefault();
+      handleSendResponseRef.current?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPaused, interviewFinished, isSpeaking, isProcessing, isListening, liveTranscript]);
+
   // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
   const clearAutoSkip = useCallback(() => {
     if (autoSkipTimerRef.current) {
@@ -1125,6 +1144,11 @@ export default function InterviewStart() {
                             </span>
                           )}
                         </Button>
+                        {hasVoice && (
+                          <p className="text-xs text-[#f5f0e8]/50 text-center">
+                            ou appuyer sur la barre d'espace du clavier
+                          </p>
+                        )}
                         {currentQuestionIndex < 2 && hasVoice && (
                           <p className="text-[11px] text-muted-foreground text-center inline-flex items-center justify-center gap-1 w-full">
                             <MousePointerClick className="h-3 w-3" />
@@ -1134,6 +1158,7 @@ export default function InterviewStart() {
                       </div>
                     );
                   }
+
 
                   return (
                     <div
