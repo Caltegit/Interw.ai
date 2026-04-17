@@ -268,6 +268,52 @@ export default function InterviewStart() {
     setIsListening(false);
   }, []);
 
+  // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
+  const pauseInterview = useCallback(() => {
+    // STT
+    stopListening();
+    // TTS
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    // Recorder
+    if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {
+      try { questionRecorderRef.current.pause(); } catch {}
+    }
+    // Snapshot elapsed time for max-duration timer
+    if (interviewStartTimeRef.current !== null) {
+      pausedElapsedRef.current = Date.now() - interviewStartTimeRef.current;
+    }
+    // Clear all timers
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (maxDurationTimerRef.current) { clearTimeout(maxDurationTimerRef.current); maxDurationTimerRef.current = null; }
+    if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+    if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    setAutoSkipCountdown(null);
+    setIsPaused(true);
+  }, [stopListening]);
+
+  // Resume: restart recorder, max-duration timer with remaining time, STT, silence timer
+  const resumeInterview = useCallback(() => {
+    setIsPaused(false);
+    // Recorder resume
+    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
+      try { questionRecorderRef.current.resume(); } catch {}
+    }
+    // Restart max-duration timer with remaining time
+    const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
+    interviewStartTimeRef.current = Date.now() - pausedElapsedRef.current;
+    maxDurationTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        toast({ title: "Entretien terminé", description: "La durée maximale a été atteinte." });
+        endInterviewRef.current?.();
+      }
+    }, remaining);
+    // Restart STT + silence timer
+    startListening();
+    resetSilenceTimer();
+  }, [startListening, resetSilenceTimer, toast]);
+
   // Load session data
   useEffect(() => {
     if (!token) return;
