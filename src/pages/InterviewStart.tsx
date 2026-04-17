@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -47,6 +47,7 @@ export default function InterviewStart() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
+  const [showSelfView, setShowSelfView] = useState(true);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -931,61 +932,15 @@ export default function InterviewStart() {
               ? "audio"
               : "written";
           return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              {/* ── Colonne 1 : Interviewer + Question ── */}
-              <div className="flex flex-col gap-3 sm:gap-4">
-                {/* AI Avatar OR Video player */}
-                {questionType === "video" && currentQ?.video_url ? (
-                  <div className="relative w-full">
-                    <QuestionMediaPlayer
-                      ref={featuredPlayerRef}
-                      type="video"
-                      content={currentQ.content}
-                      videoUrl={currentQ.video_url}
-                      variant="featured"
-                      autoPlay={shouldAutoPlay}
-                      onPlaybackEnd={() => {
-                        setShouldAutoPlay(false);
-                        setIsSpeaking(false);
-                        startQuestionRecording();
-                        startListening();
-                      }}
-                    />
-                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium z-10">
-                      {project?.ai_persona_name || "Marie"} — IA
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className={`relative w-full aspect-video rounded-xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/50 ring-offset-2 ring-offset-background" : "ring-1 ring-border"}`}
-                  >
-                    <img
-                      src={project?.avatar_image_url || defaultAiAvatar}
-                      alt={project?.ai_persona_name || "IA"}
-                      className="w-full h-full object-cover"
-                    />
-                    {isSpeaking && (
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-2 sm:p-3 flex items-end justify-center gap-1">
-                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="h-5 sm:h-6 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
-                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
-                        <span className="h-5 sm:h-7 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
-                        <span className="h-3 sm:h-4 w-1 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
-                      </div>
-                    )}
-                    <div className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs font-medium">
-                      {project?.ai_persona_name || "Marie"} — IA
-                    </div>
-                  </div>
-                )}
-
-                {/* Question text (for written/audio) */}
-                {currentQ && questionType !== "video" && (
+            <div className="mx-auto w-full max-w-2xl flex flex-col gap-4 sm:gap-6 pb-32 sm:pb-36">
+              {/* ── Bloc recruteur IA (focus principal) ── */}
+              {questionType === "video" && currentQ?.video_url ? (
+                <div className="relative w-full">
                   <QuestionMediaPlayer
                     ref={featuredPlayerRef}
-                    type={questionType}
+                    type="video"
                     content={currentQ.content}
-                    audioUrl={currentQ.audio_url}
+                    videoUrl={currentQ.video_url}
                     variant="featured"
                     autoPlay={shouldAutoPlay}
                     onPlaybackEnd={() => {
@@ -995,164 +950,235 @@ export default function InterviewStart() {
                       startListening();
                     }}
                   />
-                )}
-
-                {/* Discreet "Skip question" link */}
-                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={handleSkipQuestion}
-                    className="self-start text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                  >
-                    Passer la question
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col gap-3 sm:gap-4">
-                {/* Candidate video */}
-                <div className="relative w-full aspect-video rounded-xl bg-muted overflow-hidden ring-1 ring-border">
-                  <video
-                    ref={videoRef}
-                    muted
-                    playsInline
-                    className="w-full h-full object-cover"
-                    style={{ transform: "scaleX(-1)" }}
-                  />
-                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs">
-                    <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-destructive-foreground animate-pulse" />
-                    REC
-                  </div>
-                  <div className="absolute bottom-1.5 left-1.5 sm:bottom-2 sm:left-2 bg-black/50 text-white px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-xs">
-                    Vous
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium z-10">
+                    {project?.ai_persona_name || "Marie"} — IA
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {isProcessing && (
-                    <div className="flex gap-1">
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="h-2 w-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "300ms" }} />
+              ) : (
+                <div
+                  className={`relative w-full aspect-video rounded-2xl overflow-hidden transition-all ${isSpeaking ? "ring-4 ring-primary/60 ring-offset-4 ring-offset-background shadow-2xl shadow-primary/20" : "ring-1 ring-border shadow-lg"}`}
+                >
+                  <img
+                    src={project?.avatar_image_url || defaultAiAvatar}
+                    alt={project?.ai_persona_name || "IA"}
+                    className={`w-full h-full object-cover transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
+                  />
+                  {isSpeaking && (
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-5 flex items-end justify-center gap-1.5">
+                      <span className="h-4 sm:h-5 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="h-7 sm:h-9 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
+                      <span className="h-4 sm:h-5 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
+                      <span className="h-8 sm:h-10 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                      <span className="h-4 sm:h-5 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
                     </div>
                   )}
-                </div>
-
-                {/* Auto-skip countdown */}
-                {autoSkipCountdown !== null && (
-                  <div className="flex items-center justify-center gap-2 animate-pulse">
-                    <div className="h-8 w-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                      <span className="text-sm font-bold text-amber-500">{autoSkipCountdown}</span>
-                    </div>
-                    <span className="text-xs text-amber-500 font-medium">Passage auto dans {autoSkipCountdown}s...</span>
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
+                    {project?.ai_persona_name || "Marie"} — IA
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Status indicator: tells the candidate what's happening */}
-                {(() => {
-                  if (interviewFinished) return null;
-                  const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
-                  const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
+              {/* Question text (for written/audio) */}
+              {currentQ && questionType !== "video" && (
+                <QuestionMediaPlayer
+                  ref={featuredPlayerRef}
+                  type={questionType}
+                  content={currentQ.content}
+                  audioUrl={currentQ.audio_url}
+                  variant="featured"
+                  autoPlay={shouldAutoPlay}
+                  onPlaybackEnd={() => {
+                    setShouldAutoPlay(false);
+                    setIsSpeaking(false);
+                    startQuestionRecording();
+                    startListening();
+                  }}
+                />
+              )}
 
-                  if (showBigCta) {
-                    return (
-                      <div className="rounded-xl border-2 border-emerald-500/50 bg-emerald-500/15 px-4 py-5 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <span className="relative flex h-10 w-10 items-center justify-center">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/40" />
-                            <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/30">
-                              <Mic className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                            </span>
-                          </span>
-                          <span className="text-base sm:text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-                            🎙️ À vous ! Parlez maintenant
-                          </span>
-                        </div>
-                        {currentQuestionIndex < 2 && (
-                          <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                            Le bouton « Ma réponse est finie » apparaîtra dès que je vous entendrai.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  }
+              {/* Auto-skip countdown */}
+              {autoSkipCountdown !== null && (
+                <div className="flex items-center justify-center gap-2 animate-pulse">
+                  <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
+                    <span className="text-sm font-bold text-warning">{autoSkipCountdown}</span>
+                  </div>
+                  <span className="text-xs text-warning font-medium">Passage auto dans {autoSkipCountdown}s...</span>
+                </div>
+              )}
 
+              {/* Bandeau d'état */}
+              {(() => {
+                if (interviewFinished) return null;
+                const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
+
+                if (showBigCta) {
                   return (
-                    <div
-                      className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
-                        isProcessing
-                          ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                          : isSpeaking
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : isListening
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : "border-border bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {isProcessing ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                          Analyse de votre réponse…
+                    <div className="rounded-xl border-2 border-emerald-500/50 bg-emerald-500/15 px-4 py-5 text-center">
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="relative flex h-10 w-10 items-center justify-center">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/40" />
+                          <span className="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/30">
+                            <Mic className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                          </span>
                         </span>
-                      ) : isSpeaking ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                          L'IA pose la question…
+                        <span className="text-base sm:text-lg font-semibold text-emerald-700 dark:text-emerald-300">
+                          🎙️ À vous ! Parlez maintenant
                         </span>
-                      ) : isListening ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Mic className="h-3.5 w-3.5 animate-pulse" />
-                          Écoute en cours…
-                        </span>
-                      ) : (
-                        <span>Préparation…</span>
+                      </div>
+                      {currentQuestionIndex < 2 && (
+                        <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                          Le bouton « Ma réponse est finie » apparaîtra dès que je vous entendrai.
+                        </p>
                       )}
                     </div>
                   );
-                })()}
+                }
 
-                {/* Action buttons */}
-                <div className="flex flex-col items-center gap-2 sm:gap-3">
-                  {interviewFinished ? (
-                    <Button className="w-full" size="lg" variant="destructive" onClick={endInterview}>
-                      Terminer l'entretien
-                    </Button>
-                  ) : (() => {
-                    const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
-                    // Hide button when listening but no voice detected yet — big CTA above takes over
-                    if (isListening && !isProcessing && !isSpeaking && !hasVoice) {
-                      return null;
-                    }
-                    return (
-                      <>
-                        <Button
-                          className={`w-full h-12 sm:h-14 text-sm sm:text-base font-semibold ${
-                            isListening && !isProcessing && !isSpeaking
-                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                              : ""
-                          }`}
-                          size="lg"
-                          onClick={handleSendResponse}
-                          disabled={isProcessing || isSpeaking || !hasVoice}
-                        >
-                          {isProcessing
-                            ? "Traitement en cours…"
-                            : isSpeaking
-                              ? "Écoutez la question…"
-                              : "✓ Ma réponse est finie"}
-                        </Button>
-                        {currentQuestionIndex < 2 && (
-                          <p className="text-xs text-muted-foreground text-center px-2">
-                            Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.
-                          </p>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
+                return (
+                  <div
+                    className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
+                      isProcessing
+                        ? "border-warning/30 bg-warning/10 text-warning"
+                        : isSpeaking
+                          ? "border-primary/30 bg-primary/10 text-primary"
+                          : isListening
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "border-border bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {isProcessing ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
+                        Analyse de votre réponse…
+                      </span>
+                    ) : isSpeaking ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                        L'IA pose la question…
+                      </span>
+                    ) : isListening ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Mic className="h-3.5 w-3.5 animate-pulse" />
+                        Écoute en cours…
+                      </span>
+                    ) : (
+                      <span>Préparation…</span>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* CTA principal */}
+              <div className="flex flex-col items-center gap-2 sm:gap-3">
+                {interviewFinished ? (
+                  <Button className="w-full sm:w-auto sm:min-w-[280px]" size="lg" variant="destructive" onClick={endInterview}>
+                    Terminer l'entretien
+                  </Button>
+                ) : (() => {
+                  const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                  if (isListening && !isProcessing && !isSpeaking && !hasVoice) {
+                    return null;
+                  }
+                  return (
+                    <>
+                      <Button
+                        className={`w-full sm:w-auto sm:min-w-[320px] h-14 px-8 text-base font-semibold ${
+                          isListening && !isProcessing && !isSpeaking
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : ""
+                        }`}
+                        size="lg"
+                        onClick={handleSendResponse}
+                        disabled={isProcessing || isSpeaking || !hasVoice}
+                      >
+                        {isProcessing
+                          ? "Traitement en cours…"
+                          : isSpeaking
+                            ? "Écoutez la question…"
+                            : "✓ Ma réponse est finie"}
+                      </Button>
+                      {currentQuestionIndex < 2 && (
+                        <p className="text-xs text-muted-foreground text-center px-2">
+                          Parlez naturellement. Cliquez sur « Ma réponse est finie » dès que vous avez terminé.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
+
+              {/* Live transcript (discret) */}
+              {liveTranscript && !isProcessing && (
+                <div className="mt-2 rounded-lg border border-border bg-muted/40 px-3 py-2 max-h-24 overflow-y-auto">
+                  <p className="text-xs sm:text-sm italic text-muted-foreground leading-relaxed">
+                    {liveTranscript}
+                  </p>
+                </div>
+              )}
+
+              {/* Discreet "Skip question" link */}
+              {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
+                <button
+                  type="button"
+                  onClick={handleSkipQuestion}
+                  className="self-center text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                >
+                  Passer la question
+                </button>
+              )}
             </div>
           );
         })()}
+      </div>
+
+      {/* ── PIP retour vidéo candidat (fixe en bas-gauche) ── */}
+      <div className="fixed bottom-4 left-4 z-50 flex items-end gap-2">
+        {showSelfView ? (
+          <div className="relative rounded-xl overflow-hidden bg-black border-2 border-emerald-500/40 shadow-2xl w-[140px] h-[100px] sm:w-[160px] sm:h-[115px]">
+            <video
+              ref={videoRef}
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+              style={{ transform: "scaleX(-1)" }}
+            />
+            <div className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+              REC
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSelfView(false)}
+              className="absolute bottom-1 right-1 h-6 w-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+              aria-label="Masquer mon retour vidéo"
+              title="Masquer mon retour vidéo"
+            >
+              <EyeOff className="h-3 w-3 text-white" />
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Hidden video keeps stream alive even when masqué */}
+            <video
+              ref={videoRef}
+              muted
+              playsInline
+              className="hidden"
+              style={{ transform: "scaleX(-1)" }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowSelfView(true)}
+              className="flex items-center gap-1.5 rounded-full bg-background/90 backdrop-blur border border-border shadow-lg px-3 py-1.5 text-xs font-medium hover:bg-background transition-colors"
+              aria-label="Afficher mon retour vidéo"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <Eye className="h-3.5 w-3.5" />
+              Afficher ma vidéo
+            </button>
+          </>
+        )}
       </div>
 
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
