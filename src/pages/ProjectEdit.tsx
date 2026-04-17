@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 
 const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
+const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 interface CriteriaState {
   id?: string;
@@ -64,6 +66,7 @@ export default function ProjectEdit() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active" | "archived">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
@@ -93,6 +96,7 @@ export default function ProjectEdit() {
       setRecordVideo(project.record_video);
       setStatus(project.status as "draft" | "active" | "archived");
       setAutoSkipSilence(project.auto_skip_silence ?? false);
+      setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
 
@@ -242,7 +246,8 @@ export default function ProjectEdit() {
           avatar_image_url: avatarUrl,
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
-        })
+          completion_message: completionMessage.trim() || null,
+        } as never)
         .eq("id", id);
 
       if (updateError) throw updateError;
@@ -552,6 +557,20 @@ export default function ProjectEdit() {
                     <SelectItem value="archived">Archivé</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label>Message de fin</Label>
+                <Textarea
+                  value={completionMessage}
+                  onChange={(e) => setCompletionMessage(e.target.value)}
+                  placeholder={DEFAULT_COMPLETION_MESSAGE}
+                  rows={3}
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ce message s'affichera sur l'écran de remerciement après l'entretien.
+                </p>
               </div>
 
               <Card className="bg-muted/50">

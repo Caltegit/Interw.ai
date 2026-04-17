@@ -17,6 +17,7 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 
 const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
+const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 export default function ProjectNew() {
   const { profile, user } = useAuth();
@@ -92,6 +93,7 @@ export default function ProjectNew() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
@@ -148,7 +150,8 @@ export default function ProjectNew() {
           avatar_image_url: avatarUrl,
           intro_audio_url: null,
           presentation_video_url: null,
-        })
+          completion_message: completionMessage.trim() || null,
+        } as never)
         .select()
         .single();
 
@@ -493,6 +496,20 @@ export default function ProjectNew() {
                     <SelectItem value="active">Actif</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label>Message de fin</Label>
+                <Textarea
+                  value={completionMessage}
+                  onChange={(e) => setCompletionMessage(e.target.value)}
+                  placeholder={DEFAULT_COMPLETION_MESSAGE}
+                  rows={3}
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ce message s'affichera sur l'écran de remerciement après l'entretien.
+                </p>
               </div>
 
               <Card className="bg-muted/50">

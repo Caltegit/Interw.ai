@@ -1,10 +1,34 @@
+import { useEffect, useState } from "react";
 import { CheckCircle, Sparkles } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import CandidateLayout from "@/components/CandidateLayout";
+import { supabase } from "@/integrations/supabase/client";
+
+const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 export default function InterviewComplete() {
   const { token } = useParams();
+  const [message, setMessage] = useState<string>(DEFAULT_COMPLETION_MESSAGE);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      const { data: session } = await supabase
+        .from("sessions")
+        .select("project_id")
+        .eq("token", token)
+        .maybeSingle();
+      if (!session?.project_id) return;
+      const { data: project } = await supabase
+        .from("projects")
+        .select("completion_message")
+        .eq("id", session.project_id)
+        .maybeSingle();
+      const cm = (project as { completion_message?: string | null } | null)?.completion_message;
+      if (cm && cm.trim()) setMessage(cm);
+    })();
+  }, [token]);
 
   return (
     <CandidateLayout>
@@ -26,14 +50,16 @@ export default function InterviewComplete() {
             </div>
             <div className="space-y-2">
               <h1 className="text-2xl font-bold tracking-tight">Entretien terminé, merci !</h1>
-              <p style={{ color: "rgba(245, 240, 232, 0.65)" }}>&nbsp;</p>
+              <p className="text-base leading-relaxed" style={{ color: "rgba(245, 240, 232, 0.75)" }}>
+                {message}
+              </p>
             </div>
             <div
               className="flex items-center justify-center gap-2 text-sm"
               style={{ color: "rgba(245, 240, 232, 0.4)" }}
             >
               <Sparkles className="h-4 w-4" />
-              <span>Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.</span>
+              <span>À très vite.</span>
             </div>
           </CardContent>
         </Card>
