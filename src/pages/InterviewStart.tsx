@@ -876,7 +876,7 @@ export default function InterviewStart() {
               <Volume2 className="mr-2 h-5 w-5" />
               Lancer l'entretien
             </Button>
-            <p className="text-xs text-muted-foreground">Soyez naturelle et souriez vous êtes filmé !</p>
+            <p className="text-xs text-muted-foreground">Soyez naturel.le et souriez vous êtes filmé.e !</p>
           </CardContent>
         </Card>
       </CandidateLayout>
@@ -1102,7 +1102,6 @@ export default function InterviewStart() {
                     })()
                   )}
                 </div>
-
 
                 {/* Discreet "Skip question" link */}
                 {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
