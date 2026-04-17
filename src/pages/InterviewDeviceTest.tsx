@@ -97,6 +97,16 @@ export default function InterviewDeviceTest() {
   return (
     <CandidateLayout>
       <div className="w-full max-w-lg space-y-6">
+        {/* Skip link */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleContinue}
+            className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+          >
+            Passer
+          </button>
+        </div>
+
         <div className="text-center space-y-2">
           <h1 className="text-xl font-bold">Vérification technique</h1>
           <p className="text-sm text-muted-foreground">Vérifions que votre micro + caméra fonctionnent bien.</p>
