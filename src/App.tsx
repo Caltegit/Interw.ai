@@ -45,6 +45,7 @@ const App = () => (
             <Route path="/interview/:slug" element={<InterviewLanding />} />
             <Route path="/interview/:slug/test/:token" element={<InterviewDeviceTest />} />
             <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
+            <Route path="/interview/:slug/complete/:token" element={<InterviewComplete />} />
             <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
             <Route path="/shared-report/:token" element={<SharedReport />} />
 
