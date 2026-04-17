@@ -954,9 +954,18 @@ export default function InterviewStart() {
                     }}
                   />
                 )}
-              </div>
 
-              {/* ── Colonne 2 : Retour vidéo + Bouton ── */}
+                {/* Discreet "Skip question" link */}
+                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSkipQuestion}
+                    className="self-start text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                  >
+                    Passer la question
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-3 sm:gap-4">
                 {/* Candidate video */}
                 <div className="relative w-full aspect-video rounded-xl bg-muted overflow-hidden ring-1 ring-border">
