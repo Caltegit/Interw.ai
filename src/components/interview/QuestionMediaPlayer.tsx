@@ -168,13 +168,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     return (
       <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-5">
         {/* Badge */}
-        <div className="flex items-center gap-2 mb-3">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted text-xs font-medium ${color}`}>
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </div>
-          <span className="text-xs text-muted-foreground">Question en cours</span>
-        </div>
 
         {type === "written" && (
           <div className="border-l-2 border-primary/40 pl-4">
