@@ -66,6 +66,7 @@ export default function ProjectEdit() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active" | "archived">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [allowPause, setAllowPause] = useState(false);
   const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
@@ -96,6 +97,7 @@ export default function ProjectEdit() {
       setRecordVideo(project.record_video);
       setStatus(project.status as "draft" | "active" | "archived");
       setAutoSkipSilence(project.auto_skip_silence ?? false);
+      setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
@@ -243,6 +245,7 @@ export default function ProjectEdit() {
           record_video: recordVideo,
           status: status as never,
           auto_skip_silence: autoSkipSilence,
+          allow_pause: allowPause,
           avatar_image_url: avatarUrl,
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
@@ -541,6 +544,15 @@ export default function ProjectEdit() {
                   </p>
                 </div>
                 <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Autoriser le candidat à mettre en pause</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Affiche un bouton "Pause" pendant l'entretien. Le candidat peut figer l'interview et reprendre exactement où il s'était arrêté.
+                  </p>
+                </div>
+                <Switch checked={allowPause} onCheckedChange={setAllowPause} />
               </div>
               <div>
                 <Label>Statut</Label>

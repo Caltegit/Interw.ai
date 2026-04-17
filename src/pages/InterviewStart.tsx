@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,8 @@ export default function InterviewStart() {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [showSelfView, setShowSelfView] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const pausedElapsedRef = useRef<number>(0);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -265,6 +267,52 @@ export default function InterviewStart() {
     }
     setIsListening(false);
   }, []);
+
+  // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
+  const pauseInterview = useCallback(() => {
+    // STT
+    stopListening();
+    // TTS
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    // Recorder
+    if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {
+      try { questionRecorderRef.current.pause(); } catch {}
+    }
+    // Snapshot elapsed time for max-duration timer
+    if (interviewStartTimeRef.current !== null) {
+      pausedElapsedRef.current = Date.now() - interviewStartTimeRef.current;
+    }
+    // Clear all timers
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (maxDurationTimerRef.current) { clearTimeout(maxDurationTimerRef.current); maxDurationTimerRef.current = null; }
+    if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
+    if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    setAutoSkipCountdown(null);
+    setIsPaused(true);
+  }, [stopListening]);
+
+  // Resume: restart recorder, max-duration timer with remaining time, STT, silence timer
+  const resumeInterview = useCallback(() => {
+    setIsPaused(false);
+    // Recorder resume
+    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
+      try { questionRecorderRef.current.resume(); } catch {}
+    }
+    // Restart max-duration timer with remaining time
+    const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
+    interviewStartTimeRef.current = Date.now() - pausedElapsedRef.current;
+    maxDurationTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        toast({ title: "Entretien terminé", description: "La durée maximale a été atteinte." });
+        endInterviewRef.current?.();
+      }
+    }, remaining);
+    // Restart STT + silence timer
+    startListening();
+    resetSilenceTimer();
+  }, [startListening, resetSilenceTimer, toast]);
 
   // Load session data
   useEffect(() => {
@@ -1142,7 +1190,7 @@ export default function InterviewStart() {
                 />
               </div>
             </div>
-            <div className="flex justify-center">
+            <div className="flex justify-center items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1152,6 +1200,17 @@ export default function InterviewStart() {
                 <PhoneOff className="h-4 w-4" />
                 Arrêter l'entretien
               </Button>
+              {project?.allow_pause && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={pauseInterview}
+                  className="gap-2 text-muted-foreground hover:text-[#d4a574]"
+                >
+                  <Pause className="h-4 w-4" />
+                  Mettre en pause
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -1218,6 +1277,24 @@ export default function InterviewStart() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isPaused && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1a1a1a]/85 backdrop-blur-md">
+          <p className="mb-4 text-sm font-medium uppercase tracking-widest text-[#f5f0e8]/70">
+            Entretien en pause
+          </p>
+          <Button
+            onClick={resumeInterview}
+            className="h-20 px-12 text-xl font-semibold rounded-2xl bg-gradient-to-r from-[#d4a574] to-[#c4955e] hover:from-[#c4955e] hover:to-[#b48650] text-[#1a1a1a] shadow-2xl shadow-[#d4a574]/40 hover:scale-[1.03] transition-transform"
+          >
+            <Play className="!h-6 !w-6 mr-3" />
+            REPRENDRE
+          </Button>
+          <p className="mt-6 text-sm text-[#f5f0e8]/60 text-center max-w-sm px-6">
+            Cliquez pour reprendre exactement où vous vous êtes arrêté(e).
+          </p>
+        </div>
+      )}
     </CandidateLayout>
   );
 }

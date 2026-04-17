@@ -93,6 +93,7 @@ export default function ProjectNew() {
   const [recordVideo, setRecordVideo] = useState(false);
   const [status, setStatus] = useState<"draft" | "active">("active");
   const [autoSkipSilence, setAutoSkipSilence] = useState(true);
+  const [allowPause, setAllowPause] = useState(false);
   const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
@@ -146,6 +147,7 @@ export default function ProjectNew() {
           record_video: recordVideo,
           status,
           auto_skip_silence: autoSkipSilence,
+          allow_pause: allowPause,
           slug,
           avatar_image_url: avatarUrl,
           intro_audio_url: null,
@@ -485,6 +487,15 @@ export default function ProjectNew() {
                 </div>
                 <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
               </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Autoriser le candidat à mettre en pause</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Affiche un bouton "Pause" pendant l'entretien. Le candidat peut figer l'interview et reprendre exactement où il s'était arrêté.
+                  </p>
+                </div>
+                <Switch checked={allowPause} onCheckedChange={setAllowPause} />
+              </div>
               <div>
                 <Label>Statut</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active")}>
@@ -534,6 +545,9 @@ export default function ProjectNew() {
                   </p>
                   <p>
                     <strong>Durée max :</strong> {maxDuration} min
+                  </p>
+                  <p>
+                    <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
                   </p>
                   <p>
                     <strong>Présentation :</strong>{" "}
