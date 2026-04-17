@@ -600,6 +600,89 @@ export default function InterviewStart() {
     }
   };
 
+  // Skip the current question — go directly to the next one without calling AI
+  const handleSkipQuestion = async () => {
+    if (isProcessing || interviewFinished) return;
+    if (currentQuestionIndex >= questions.length - 1) return;
+
+    setIsProcessing(true);
+
+    // 1. Stop listening + reset transcript
+    stopListening();
+    candidateTranscriptRef.current = "";
+    setLiveTranscript("");
+    clearAutoSkip();
+    window.speechSynthesis?.cancel();
+
+    // 2. Stop & upload current question recording
+    const questionIdx = currentQuestionIndex;
+    let questionVideoUrl: string | null = null;
+    if (session?.id) {
+      questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
+    }
+
+    // 3. Persist a marker message so the report knows the question was skipped
+    const skipMarker = "[Question passée]";
+    setMessages((prev) => {
+      const updated = [...prev, { role: "candidate", content: skipMarker }];
+      messagesRef.current = updated;
+      return updated;
+    });
+    if (session?.id) {
+      try {
+        await persistMessage(session.id, "candidate", skipMarker, {
+          questionId: questions[questionIdx]?.id || null,
+          videoSegmentUrl: questionVideoUrl,
+        });
+      } catch {
+        // non-blocking
+      }
+    }
+    setAiMessages((prev) => [...prev, { role: "user" as const, content: skipMarker }]);
+
+    // 4. Build next question transition
+    const nextQIdx = currentQuestionIndex + 1;
+    const nextQ = questions[nextQIdx];
+    const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+      ? "video"
+      : nextQ?.audio_url
+        ? "audio"
+        : "written";
+    const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+
+    const transition =
+      nMediaType === "written"
+        ? `Passons à la question suivante : ${nextQ.content}`
+        : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
+
+    setMessages((prev) => {
+      const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+      messagesRef.current = updated;
+      return updated;
+    });
+    if (session?.id) {
+      try {
+        await persistMessage(session.id, "ai", transition);
+      } catch {
+        // non-blocking
+      }
+    }
+    setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
+
+    setCurrentQuestionIndex((prev) => prev + 1);
+    setIsProcessing(false);
+
+    // 5. Speak transition + auto-play next question media (or start listening for written)
+    await speak(transition);
+    if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      setIsSpeaking(true);
+      setShouldAutoPlay(true);
+    } else {
+      startQuestionRecording();
+      startListening();
+    }
+  };
+
   const endInterview = async () => {
     // Clear all auto-end timers
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
@@ -871,9 +954,18 @@ export default function InterviewStart() {
                     }}
                   />
                 )}
-              </div>
 
-              {/* ── Colonne 2 : Retour vidéo + Bouton ── */}
+                {/* Discreet "Skip question" link */}
+                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={handleSkipQuestion}
+                    className="self-start text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                  >
+                    Passer la question
+                  </button>
+                )}
+              </div>
               <div className="flex flex-col gap-3 sm:gap-4">
                 {/* Candidate video */}
                 <div className="relative w-full aspect-video rounded-xl bg-muted overflow-hidden ring-1 ring-border">
