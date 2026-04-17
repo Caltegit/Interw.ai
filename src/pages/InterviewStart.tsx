@@ -1277,6 +1277,24 @@ export default function InterviewStart() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isPaused && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1a1a1a]/85 backdrop-blur-md">
+          <p className="mb-4 text-sm font-medium uppercase tracking-widest text-[#f5f0e8]/70">
+            Entretien en pause
+          </p>
+          <Button
+            onClick={resumeInterview}
+            className="h-20 px-12 text-xl font-semibold rounded-2xl bg-gradient-to-r from-[#d4a574] to-[#c4955e] hover:from-[#c4955e] hover:to-[#b48650] text-[#1a1a1a] shadow-2xl shadow-[#d4a574]/40 hover:scale-[1.03] transition-transform"
+          >
+            <Play className="!h-6 !w-6 mr-3" />
+            REPRENDRE
+          </Button>
+          <p className="mt-6 text-sm text-[#f5f0e8]/60 text-center max-w-sm px-6">
+            Cliquez pour reprendre exactement où vous vous êtes arrêté(e).
+          </p>
+        </div>
+      )}
     </CandidateLayout>
   );
 }
