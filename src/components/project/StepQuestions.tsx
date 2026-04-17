@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, BookOpen, Type, Mic, Video } from "lucide-react";
+import { Plus, Trash2, GripVertical, BookOpen, Type, Mic, Video, ChevronRight, Sparkles } from "lucide-react";
 import { QuestionMediaRecorder } from "./QuestionMediaRecorder";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useState, useId } from "react";
+import { cn } from "@/lib/utils";
 import {
   DndContext,
   closestCenter,
@@ -51,11 +52,19 @@ export const createEmptyQuestion = (): Question => ({
   videoPreviewUrl: null,
 });
 
+const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
+  written: { label: "Écrite", Icon: Type, className: "bg-muted text-muted-foreground" },
+  audio: { label: "Audio", Icon: Mic, className: "bg-primary/10 text-primary" },
+  video: { label: "Vidéo", Icon: Video, className: "bg-accent text-accent-foreground" },
+};
+
 interface SortableQuestionProps {
   id: string;
   index: number;
   q: Question;
   questionsLength: number;
+  isOpen: boolean;
+  onToggle: () => void;
   updateQuestion: (index: number, field: keyof Question, value: any) => void;
   updateMediaType: (index: number, mediaType: "written" | "audio" | "video") => void;
   toggleFollowUp: (index: number) => void;
@@ -69,6 +78,8 @@ function SortableQuestion({
   index,
   q,
   questionsLength,
+  isOpen,
+  onToggle,
   updateQuestion,
   updateMediaType,
   toggleFollowUp,
@@ -92,19 +103,77 @@ function SortableQuestion({
     zIndex: isDragging ? 50 : undefined,
   };
 
+  const meta = TYPE_META[q.mediaType];
+  const TypeIcon = meta.Icon;
+  const previewText = q.content.trim();
+
   return (
-    <div ref={setNodeRef} style={style} className="rounded-lg border p-3 space-y-3 bg-background">
-      <div className="flex gap-2 items-start">
+    <div ref={setNodeRef} style={style} className="rounded-lg border bg-background overflow-hidden">
+      {/* Compact header row */}
+      <div className="flex items-center gap-2 px-2 py-1.5 min-h-[44px]">
         <button
           type="button"
-          className="mt-1 shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground transition-colors p-1"
           {...attributes}
           {...listeners}
+          aria-label="Réordonner"
         >
-          <GripVertical className="h-5 w-5" />
+          <GripVertical className="h-4 w-4" />
         </button>
-        <div className="flex-1 space-y-3">
-          {/* Type selector */}
+
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex-1 flex items-center gap-2 min-w-0 text-left hover:bg-muted/40 rounded-md px-1 py-1 -mx-1 transition-colors"
+          aria-expanded={isOpen}
+        >
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              isOpen && "rotate-90",
+            )}
+          />
+          <span
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+              meta.className,
+            )}
+          >
+            <TypeIcon className="h-3 w-3" />
+            {meta.label}
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">#{index + 1}</span>
+          <span
+            className={cn(
+              "truncate text-sm",
+              previewText ? "text-foreground" : "italic text-muted-foreground",
+            )}
+          >
+            {previewText || "Question sans titre"}
+          </span>
+          {q.follow_up_enabled && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
+              <Sparkles className="h-3 w-3" />
+              <span className="hidden sm:inline">Relance IA</span>
+            </span>
+          )}
+        </button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={() => removeQuestion(index)}
+          disabled={questionsLength <= 1}
+          aria-label="Supprimer"
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+
+      {/* Expanded content */}
+      {isOpen && (
+        <div className="px-3 pb-3 pt-1 border-t space-y-3">
           <div>
             <Label className="text-xs mb-1.5 block text-muted-foreground">Type de question</Label>
             <ToggleGroup
@@ -124,7 +193,6 @@ function SortableQuestion({
             </ToggleGroup>
           </div>
 
-          {/* Single text input */}
           <Input
             placeholder={
               q.mediaType === "written"
@@ -132,13 +200,9 @@ function SortableQuestion({
                 : "Titre de la question (optionnel)..."
             }
             value={q.content}
-            onChange={(e) => {
-              const val = e.target.value;
-              updateQuestion(index, "content", val);
-            }}
+            onChange={(e) => updateQuestion(index, "content", e.target.value)}
           />
 
-          {/* Media recorder for audio/video */}
           {(q.mediaType === "audio" || q.mediaType === "video") && (
             <div className="pt-1">
               <QuestionMediaRecorder
@@ -153,7 +217,6 @@ function SortableQuestion({
             </div>
           )}
 
-          {/* Bottom row: follow-up toggle */}
           <div className="flex items-center gap-2">
             <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(index)} id={`followup-${id}`} />
             <Label htmlFor={`followup-${id}`} className="text-xs text-muted-foreground cursor-pointer">
@@ -161,10 +224,7 @@ function SortableQuestion({
             </Label>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => removeQuestion(index)} disabled={questionsLength <= 1}>
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </div>
+      )}
     </div>
   );
 }
@@ -176,16 +236,25 @@ interface StepQuestionsProps {
 
 export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
   const dndId = useId();
 
   // Stable IDs for sortable items
   const [itemIds] = useState(() => questions.map(() => crypto.randomUUID()));
-  // Keep IDs in sync when questions are added/removed
   const getIds = () => {
     while (itemIds.length < questions.length) itemIds.push(crypto.randomUUID());
     return itemIds.slice(0, questions.length);
   };
   const ids = getIds();
+
+  const toggleOpen = (id: string) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -200,7 +269,6 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     const oldIndex = ids.findIndex(id => id === activeId);
     const newIndex = ids.findIndex(id => id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
-    // Reorder both ids array and questions
     const reorderedIds = arrayMove([...ids], oldIndex, newIndex);
     itemIds.splice(0, itemIds.length, ...reorderedIds);
     setQuestions(arrayMove([...questions], oldIndex, newIndex));
@@ -211,11 +279,18 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     const toAdd = selected.slice(0, remaining);
     toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
     setQuestions([...questions, ...toAdd]);
+    // Library imports stay collapsed by default
   };
 
   const addQuestion = () => {
     if (questions.length >= 15) return;
-    itemIds.push(crypto.randomUUID());
+    const newId = crypto.randomUUID();
+    itemIds.push(newId);
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.add(newId);
+      return next;
+    });
     setQuestions([...questions, createEmptyQuestion()]);
   };
 
@@ -261,7 +336,14 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   };
 
   const removeQuestion = (index: number) => {
+    const removedId = ids[index];
     itemIds.splice(index, 1);
+    setOpenIds((prev) => {
+      if (!prev.has(removedId)) return prev;
+      const next = new Set(prev);
+      next.delete(removedId);
+      return next;
+    });
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
@@ -289,7 +371,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {questions.map((q, i) => (
               <SortableQuestion
                 key={ids[i]}
@@ -297,6 +379,8 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
                 index={i}
                 q={q}
                 questionsLength={questions.length}
+                isOpen={openIds.has(ids[i])}
+                onToggle={() => toggleOpen(ids[i])}
                 updateQuestion={updateQuestion}
                 updateMediaType={updateMediaType}
                 toggleFollowUp={toggleFollowUp}
