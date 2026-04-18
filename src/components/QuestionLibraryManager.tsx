@@ -544,7 +544,8 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                 ) : (
                   <>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm">{t.content}</p>
+                      {t.title && <p className="text-sm font-semibold">{t.title}</p>}
+                      <p className="text-sm text-muted-foreground">{t.content}</p>
                       <div className="flex gap-1.5 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {typeLabel(t.type)}
