@@ -509,6 +509,11 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
               <div key={t.id} className="rounded-lg border p-3 flex items-start gap-2">
                 {editingId === t.id ? (
                   <div className="flex-1 space-y-2">
+                    <Input
+                      placeholder="Titre"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <div className="flex gap-2 items-end flex-wrap">
                     <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : v)}>
