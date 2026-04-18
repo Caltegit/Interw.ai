@@ -215,8 +215,14 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       const recruiterEmail = recruiterProfile?.email;
       if (recruiterEmail) {
         const reportUrl = `https://interw.ai/sessions/${session_id}`;
-        const { error: emailError } = await supabase.functions.invoke("send-transactional-email", {
-          body: {
+        const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+          },
+          body: JSON.stringify({
             templateName: "interview-report",
             recipientEmail: recruiterEmail,
             replyTo: session.candidate_email,
@@ -236,10 +242,11 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
               questionEvaluations: parsed.question_evaluations || {},
               reportUrl,
             },
-          },
+          }),
         });
-        if (emailError) {
-          console.error("Failed to send report email:", emailError);
+        if (!emailRes.ok) {
+          const errBody = await emailRes.text();
+          console.error("Failed to send report email:", emailRes.status, errBody);
         } else {
           console.log("Report email enqueued for", recruiterEmail);
         }
