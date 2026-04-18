@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 import {
   ArrowRight,
   Brain,
@@ -13,6 +14,33 @@ import {
   Sparkles,
   Video,
 } from "lucide-react";
+
+const CONTACT_EMAIL = "hello@interw.ai";
+const CONTACT_SUBJECT = "Demande de démo Interw.ai";
+const CONTACT_BODY = "Bonjour,\n\nJe souhaiterais planifier une démo d'Interw.ai.\n\nMerci !";
+
+function handleContactClick(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  const subject = encodeURIComponent(CONTACT_SUBJECT);
+  const body = encodeURIComponent(CONTACT_BODY);
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${CONTACT_EMAIL}&su=${subject}&body=${body}`;
+
+  // Try the default mail client
+  window.location.href = mailto;
+
+  // Fallback: if no mail handler, the page stays visible — open Gmail web compose
+  setTimeout(() => {
+    if (!document.hidden) {
+      window.open(gmail, "_blank", "noopener,noreferrer");
+      navigator.clipboard?.writeText(CONTACT_EMAIL).catch(() => {});
+      toast({
+        title: "Email copié",
+        description: `Écrivez-nous à ${CONTACT_EMAIL}`,
+      });
+    }
+  }, 600);
+}
 
 export default function Landing() {
   const { session, loading } = useAuth();
