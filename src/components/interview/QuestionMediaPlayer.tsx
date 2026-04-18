@@ -39,6 +39,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>();
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { icon: Icon, label, color } = typeConfig[type];
 
