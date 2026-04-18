@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 export interface QuestionMediaPlayerHandle {
   play: () => void;
   stop: () => void;
+  restart: () => void;
 }
 
 interface QuestionMediaPlayerProps {
