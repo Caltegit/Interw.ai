@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/shared-report/:token" element={<SharedReport />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/email-unsubscribe" element={<Unsubscribe />} />
 
             {/* Protected RH routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

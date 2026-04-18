@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
   let idempotencyKey: string
   let messageId: string
   let templateData: Record<string, any> = {}
+  let replyTo: string | undefined
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
@@ -68,6 +69,10 @@ Deno.serve(async (req) => {
     idempotencyKey = body.idempotencyKey || body.idempotency_key || messageId
     if (body.templateData && typeof body.templateData === 'object') {
       templateData = body.templateData
+    }
+    const rt = body.replyTo || body.reply_to
+    if (typeof rt === 'string' && rt.includes('@')) {
+      replyTo = rt
     }
   } catch {
     return new Response(
@@ -282,47 +287,20 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4. Render email — first check for an org-level override
-  let html = ''
-  let plainText = ''
-  let resolvedSubject =
+  // 4. Render React Email template to HTML and plain text
+  const html = await renderAsync(
+    React.createElement(template.component, templateData)
+  )
+  const plainText = await renderAsync(
+    React.createElement(template.component, templateData),
+    { plainText: true }
+  )
+
+  // Resolve subject — supports static string or dynamic function
+  const resolvedSubject =
     typeof template.subject === 'function'
       ? template.subject(templateData)
       : template.subject
-
-  try {
-    const orgIdFromBody = (templateData as any)?.organizationId || (templateData as any)?.organization_id
-    if (orgIdFromBody) {
-      const { data: override } = await supabase
-        .from('email_template_overrides')
-        .select('subject, html_body, enabled')
-        .eq('organization_id', orgIdFromBody)
-        .eq('template_key', templateName)
-        .eq('enabled', true)
-        .maybeSingle()
-
-      if (override && (override as any).html_body) {
-        const interpolate = (tpl: string) =>
-          tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => String((templateData as any)[k] ?? ''))
-        html = interpolate((override as any).html_body)
-        if ((override as any).subject) resolvedSubject = interpolate((override as any).subject)
-        plainText = html.replace(/<[^>]+>/g, '').trim()
-      }
-    }
-  } catch (e) {
-    console.warn('Override lookup failed, falling back to default template', { error: e })
-  }
-
-  if (!html) {
-    html = await renderAsync(
-      React.createElement(template.component, templateData)
-    )
-    plainText = await renderAsync(
-      React.createElement(template.component, templateData),
-      { plainText: true }
-    )
-  }
-
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
@@ -349,6 +327,7 @@ Deno.serve(async (req) => {
       label: templateName,
       idempotency_key: idempotencyKey,
       unsubscribe_token: unsubscribeToken,
+      reply_to: replyTo,
       queued_at: new Date().toISOString(),
     },
   })
