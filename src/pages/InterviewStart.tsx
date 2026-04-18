@@ -710,8 +710,12 @@ export default function InterviewStart() {
     await speak(transition);
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
-      // onPlaybackEnd will start recording + listening
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
+      // onPlaybackEnd (or watchdog) will start recording + listening
     } else {
       startQuestionRecording();
       startListening();
