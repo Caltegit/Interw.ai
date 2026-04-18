@@ -220,6 +220,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
   // Add form
+  const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState<string>("");
   const [newFollowUp, setNewFollowUp] = useState(true);
@@ -230,6 +231,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   // Edit
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editFollowUp, setEditFollowUp] = useState(true);
