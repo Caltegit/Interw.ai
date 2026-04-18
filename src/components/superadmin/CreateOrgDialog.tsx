@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
+import { slugify } from "@/lib/slug";
 
 interface Props {
   onCreated: () => void;
@@ -25,10 +26,25 @@ export function CreateOrgDialog({ onCreated }: Props) {
     if (!user || !orgName.trim() || !adminEmail.trim()) return;
     setLoading(true);
     try {
-      // 1. Créer l'organisation
+      // 1. Créer l'organisation avec slug unique
+      let baseSlug = slugify(orgName.trim()) || "org";
+      let candidate = baseSlug;
+      let counter = 1;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data: existing } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("slug", candidate)
+          .maybeSingle();
+        if (!existing) break;
+        counter += 1;
+        candidate = `${baseSlug}-${counter}`;
+      }
+
       const { data: org, error: orgErr } = await supabase
         .from("organizations")
-        .insert({ name: orgName.trim() })
+        .insert({ name: orgName.trim(), slug: candidate })
         .select()
         .single();
       if (orgErr) throw orgErr;
