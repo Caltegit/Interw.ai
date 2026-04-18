@@ -1020,14 +1020,32 @@ export default function InterviewStart() {
       <CandidateLayout>
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-6">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Mic className="h-10 w-10 text-primary" />
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle, hsl(var(--l-accent) / 0.4), transparent 70%)",
+                  filter: "blur(20px)",
+                }}
+              />
+              <div
+                className="relative flex h-20 w-20 items-center justify-center rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.2))",
+                }}
+              >
+                <Mic className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+              </div>
             </div>
             <div className="space-y-3">
-              <h1 className="text-xl font-bold">Prêt à démarrer ?</h1>
-              <p className="text-sm text-muted-foreground">Soyez naturel.le et souriez vous êtes filmé.e !</p>
+              <h1 className="text-xl font-bold candidate-gradient-text">Prêt à démarrer ?</h1>
+              <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Soyez naturel.le et souriez vous êtes filmé.e !
+              </p>
             </div>
-            <Button size="lg" className="w-full h-16 text-xl" onClick={beginInterview}>
+            <Button size="lg" className="candidate-btn-primary w-full h-16 text-xl" onClick={beginInterview}>
               <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer l'entretien
             </Button>
@@ -1084,40 +1102,46 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 ) : (
-                  <div
-                    className={`relative w-full max-w-[200px] sm:max-w-none aspect-square mx-auto rounded-3xl overflow-hidden transition-all lg:max-h-[70vh] ${isSpeaking ? "ring-4 ring-primary/60 ring-offset-4 ring-offset-background shadow-2xl shadow-primary/20 animate-pulse" : "ring-1 ring-border shadow-lg"}`}
-                  >
-                    <img
-                      src={project?.avatar_image_url || defaultAiAvatar}
-                      alt={project?.ai_persona_name || "IA"}
-                      className={`w-full h-full object-cover transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
-                    />
-                    {isSpeaking && (
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 flex items-end justify-center gap-1.5">
-                        <span
-                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
-                          style={{ animationDelay: "0ms" }}
-                        />
-                        <span
-                          className="h-7 sm:h-10 w-1.5 rounded-full bg-white animate-bounce"
-                          style={{ animationDelay: "100ms" }}
-                        />
-                        <span
-                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
-                          style={{ animationDelay: "200ms" }}
-                        />
-                        <span
-                          className="h-8 sm:h-12 w-1.5 rounded-full bg-white animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        />
-                        <span
-                          className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce"
-                          style={{ animationDelay: "400ms" }}
-                        />
+                  <div className="relative w-full max-w-[200px] sm:max-w-none aspect-square mx-auto lg:max-h-[70vh]">
+                    {/* Halo respirant quand IA parle */}
+                    {isSpeaking && <div className="candidate-avatar-halo" aria-hidden="true" />}
+                    <div
+                      className={`relative w-full h-full rounded-3xl overflow-hidden transition-all ${
+                        isSpeaking
+                          ? "ring-2 ring-offset-4 shadow-2xl"
+                          : isListening
+                            ? "ring-1 candidate-avatar-ring-listening"
+                            : "ring-1 shadow-lg"
+                      }`}
+                      style={{
+                        ["--tw-ring-color" as string]: isSpeaking
+                          ? "hsl(var(--l-accent) / 0.6)"
+                          : isListening
+                            ? "hsl(160 84% 50% / 0.5)"
+                            : "hsl(var(--l-border))",
+                        ["--tw-ring-offset-color" as string]: "hsl(var(--l-bg))",
+                      } as React.CSSProperties}
+                    >
+                      <img
+                        src={project?.avatar_image_url || defaultAiAvatar}
+                        alt={project?.ai_persona_name || "IA"}
+                        className={`w-full h-full object-cover transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
+                      />
+                      {isSpeaking && (
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 flex items-end justify-center gap-1.5">
+                          <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <span className="h-7 sm:h-10 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "100ms" }} />
+                          <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "200ms" }} />
+                          <span className="h-8 sm:h-12 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <span className="h-4 sm:h-6 w-1.5 rounded-full bg-white animate-bounce" style={{ animationDelay: "400ms" }} />
+                        </div>
+                      )}
+                      <div
+                        className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-1 rounded text-xs font-medium backdrop-blur-md"
+                        style={{ background: "hsl(var(--l-bg) / 0.6)", color: "hsl(var(--l-fg))" }}
+                      >
+                        {project?.ai_persona_name || "Marie"} — IA
                       </div>
-                    )}
-                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium">
-                      {project?.ai_persona_name || "Marie"} — IA
                     </div>
                   </div>
                 )}
@@ -1208,23 +1232,38 @@ export default function InterviewStart() {
                   if (isListening && !isProcessing && !isSpeaking && !interviewFinished) {
                     const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                     return (
-                      <div className="rounded-2xl border border-[#d4a574]/20 bg-[#262626] p-3 sm:p-4 space-y-3 shadow-sm">
+                      <div
+                        className="rounded-2xl border p-3 sm:p-4 space-y-3 shadow-lg"
+                        style={{
+                          borderColor: "hsl(var(--l-border))",
+                          background: "hsl(var(--l-bg-elev))",
+                        }}
+                      >
                         <div className="flex items-center justify-center py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
                         </div>
-                        <div className="h-px bg-[#d4a574]/15" />
+                        <div className="h-px" style={{ background: "hsl(var(--l-border))" }} />
                         <Button
                           className={`w-full h-16 px-6 text-lg sm:text-xl font-semibold rounded-2xl transition-all ${
                             hasVoice
-                              ? "bg-gradient-to-r from-[#d4a574] to-[#c4955e] hover:from-[#c4955e] hover:to-[#b48650] text-[#1a1a1a] shadow-lg shadow-[#d4a574]/40 hover:scale-[1.02] animate-pulse"
-                              : "bg-white/5 text-[#f5f0e8]/50 cursor-not-allowed"
+                              ? "candidate-btn-primary hover:scale-[1.02] animate-pulse"
+                              : ""
                           }`}
+                          style={
+                            !hasVoice
+                              ? {
+                                  background: "hsl(var(--l-bg-elev-2))",
+                                  color: "hsl(var(--l-fg) / 0.4)",
+                                  cursor: "not-allowed",
+                                }
+                              : undefined
+                          }
                           onClick={handleSendResponse}
                           disabled={!hasVoice}
                         >
                           {hasVoice ? (
                             <span className="inline-flex items-center gap-3">
-                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1a1a1a]/15">
+                              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                                 <CheckCircle2 className="!h-5 !w-5" />
                               </span>
                               Ma réponse est terminée
@@ -1237,7 +1276,7 @@ export default function InterviewStart() {
                           )}
                         </Button>
                         {hasVoice && (
-                          <p className="text-xs text-[#f5f0e8]/50 text-center">
+                          <p className="text-xs text-center" style={{ color: "hsl(var(--l-fg) / 0.5)" }}>
                             ou appuyer sur la barre d'espace du clavier
                           </p>
                         )}
@@ -1334,7 +1373,8 @@ export default function InterviewStart() {
                   variant="ghost"
                   size="sm"
                   onClick={pauseInterview}
-                  className="gap-2 text-muted-foreground hover:text-[#d4a574]"
+                  className="gap-2 text-muted-foreground"
+                  style={{ color: "hsl(var(--l-fg) / 0.6)" }}
                 >
                   <Pause className="h-4 w-4" />
                   Mettre en pause
@@ -1408,18 +1448,26 @@ export default function InterviewStart() {
       </Dialog>
 
       {isPaused && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#1a1a1a]/85 backdrop-blur-md">
-          <p className="mb-4 text-sm font-medium uppercase tracking-widest text-[#f5f0e8]/70">
-            Entretien en pause
+        <div
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center backdrop-blur-md"
+          style={{ background: "hsl(var(--l-bg) / 0.85)" }}
+        >
+          <p
+            className="mb-4 text-sm font-medium uppercase tracking-widest candidate-gradient-text"
+          >
+            En pause
           </p>
           <Button
             onClick={resumeInterview}
-            className="h-20 px-12 text-xl font-semibold rounded-2xl bg-gradient-to-r from-[#d4a574] to-[#c4955e] hover:from-[#c4955e] hover:to-[#b48650] text-[#1a1a1a] shadow-2xl shadow-[#d4a574]/40 hover:scale-[1.03] transition-transform"
+            className="candidate-btn-primary h-20 px-12 text-xl font-semibold rounded-2xl hover:scale-[1.03] transition-transform"
           >
             <Play className="!h-6 !w-6 mr-3" />
             REPRENDRE
           </Button>
-          <p className="mt-6 text-sm text-[#f5f0e8]/60 text-center max-w-sm px-6">
+          <p
+            className="mt-6 text-sm text-center max-w-sm px-6"
+            style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+          >
             {pausedDuringQuestionRef.current
               ? "La question sera rejouée depuis le début à la reprise."
               : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}

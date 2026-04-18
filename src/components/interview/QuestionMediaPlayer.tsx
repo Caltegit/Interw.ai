@@ -181,7 +181,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     if (type === "video" && videoUrl) {
       return (
         <div className="w-full">
-          <div className="relative w-full overflow-hidden bg-black aspect-video rounded-xl">
+          <div className="relative w-full overflow-hidden bg-black aspect-video rounded-2xl border border-border/40 shadow-xl">
             <video
               ref={videoPlayerRef}
               src={videoUrl}
@@ -204,7 +204,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
           <div className="flex items-center gap-2 mt-2">
             <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-emerald-400 rounded-full transition-all duration-100"
+                className="h-full candidate-progress-fill rounded-full transition-all duration-100"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -214,19 +214,17 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     }
 
     return (
-      <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-5">
-        {/* Badge */}
-
+      <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm p-5 sm:p-6">
         {type === "written" && (
-          <div className="border-l-2 border-primary/40 pl-4">
-            <p className="text-sm sm:text-base font-medium leading-relaxed">{content}</p>
+          <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
+            <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed">{content}</p>
           </div>
         )}
 
         {type === "audio" && audioUrl && (
           <div className="space-y-3">
-            <div className="border-l-2 border-amber-400/40 pl-4">
-              <p className="text-sm text-muted-foreground italic mb-2">{content}</p>
+            <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
+              <p className="text-base sm:text-lg italic mb-2 opacity-90">{content}</p>
             </div>
             <audio
               ref={audioRef}
@@ -244,13 +242,14 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-10 w-10 rounded-full bg-amber-500/10 hover:bg-amber-500/20"
+                  className="h-10 w-10 rounded-full"
+                  style={{ background: "hsl(var(--l-accent) / 0.15)" }}
                   onClick={togglePlay}
                 >
                   {isPlaying ? (
-                    <Pause className="h-5 w-5 text-amber-400" />
+                    <Pause className="h-5 w-5" style={{ color: "hsl(var(--l-accent))" }} />
                   ) : (
-                    <Play className="h-5 w-5 text-amber-400 ml-0.5" />
+                    <Play className="h-5 w-5 ml-0.5" style={{ color: "hsl(var(--l-accent))" }} />
                   )}
                 </Button>
               ) : (
@@ -261,7 +260,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               <div className="flex-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full bg-amber-400 rounded-full transition-all duration-100"
+                    className="h-full candidate-progress-fill rounded-full transition-all duration-100"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
