@@ -531,8 +531,12 @@ export default function InterviewStart() {
     await speak(greeting);
     if (isFirstQMedia) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
-      // Don't start listening yet — onPlaybackEnd will do it
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
+      // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
       startQuestionRecording();
