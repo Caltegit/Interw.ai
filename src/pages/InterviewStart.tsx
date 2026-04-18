@@ -469,6 +469,10 @@ export default function InterviewStart() {
   }, []);
 
   const forceStartListening = useCallback(() => {
+    if (isPausedRef.current) {
+      console.log("[InterviewStart] forceStartListening blocked — interview is paused");
+      return;
+    }
     console.log("[InterviewStart] Forcing transition to listening");
     clearPlaybackWatchdog();
     setShouldAutoPlay(false);
@@ -480,9 +484,12 @@ export default function InterviewStart() {
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
     // After 3s of "Préparation", offer a manual button as backup
-    manualContinueTimerRef.current = setTimeout(() => setShowManualContinue(true), 3000);
+    manualContinueTimerRef.current = setTimeout(() => {
+      if (!isPausedRef.current) setShowManualContinue(true);
+    }, 3000);
     // Hard fallback after 8s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
+      if (isPausedRef.current) return;
       console.warn("[InterviewStart] Playback watchdog triggered after 8s");
       forceStartListening();
     }, 8000);
