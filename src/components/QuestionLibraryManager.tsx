@@ -1,16 +1,29 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Trash2, Pencil, Search, BookOpen, X, Check, Mic, Video, Square, Play, Pause, Type } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, BookOpen, Mic, Video, Type } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
+import { MediaPlayerInline } from "@/components/library/MediaPlayerInline";
+import { Info } from "lucide-react";
 
 interface QuestionTemplate {
   id: string;
@@ -27,189 +40,35 @@ interface QuestionTemplate {
 }
 
 const CATEGORIES = ["Motivation", "Technique", "Soft skills", "Situationnel", "Culture fit", "Leadership"];
+const MAX_CONTENT = 500;
 
 interface QuestionLibraryManagerProps {
   orgId: string;
 }
 
-function MediaRecorderInline({
-  type,
-  audioUrl,
-  videoUrl,
-  onMediaReady,
-}: {
-  type: "audio" | "video";
-  audioUrl: string | null;
-  videoUrl: string | null;
-  onMediaReady: (blob: Blob, previewUrl: string) => void;
-}) {
-  const { toast } = useToast();
-  const [recording, setRecording] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(type === "audio" ? audioUrl : videoUrl);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const previewStreamRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    if (recording && type === "video" && previewStreamRef.current && streamRef.current) {
-      previewStreamRef.current.srcObject = streamRef.current;
-      previewStreamRef.current.play().catch(() => {});
-    }
-  }, [recording, type]);
-
-  const startRecording = async () => {
-    try {
-      const constraints = type === "audio" ? { audio: true } : { audio: true, video: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      const mimeType = type === "audio" ? "audio/webm" : "video/webm";
-      const mr = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mr;
-      chunksRef.current = [];
-
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mr.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        if (previewStreamRef.current) previewStreamRef.current.srcObject = null;
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
-        setPreviewUrl(url);
-        onMediaReady(blob, url);
-      };
-      mr.start(500);
-      setRecording(true);
-    } catch {
-      toast({
-        title: "Erreur",
-        description: `Impossible d'accéder au ${type === "audio" ? "micro" : "caméra"}.`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setRecording(false);
-  };
-
-  if (recording && type === "video") {
-    return (
-      <div className="space-y-2">
-        <video
-          ref={previewStreamRef}
-          muted
-          autoPlay
-          playsInline
-          className="w-full max-w-xs rounded-lg border border-border bg-black"
-          style={{ minHeight: "120px" }}
-        />
-        <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-          <Square className="mr-1 h-3 w-3" /> Stop
-        </Button>
-      </div>
-    );
-  }
-
-  if (recording) {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 text-xs text-destructive">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" /> Enregistrement...
-        </span>
-        <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-          <Square className="mr-1 h-3 w-3" /> Stop
-        </Button>
-      </div>
-    );
-  }
-
-  if (previewUrl) {
-    if (type === "audio") {
-      return (
-        <div className="flex items-center gap-2">
-          <audio ref={audioRef} src={previewUrl} onEnded={() => setIsPlaying(false)} className="hidden" />
-          <span className="text-xs text-muted-foreground">🎤 Audio enregistré</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={async () => {
-              if (!audioRef.current) return;
-              if (isPlaying) {
-                audioRef.current.pause();
-                setIsPlaying(false);
-              } else {
-                await audioRef.current.play();
-                setIsPlaying(true);
-              }
-            }}
-          >
-            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={startRecording}>
-            Ré-enregistrer
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div className="space-y-1">
-        <video
-          ref={videoRef}
-          src={previewUrl}
-          onEnded={() => setIsPlaying(false)}
-          playsInline
-          className="w-full max-w-xs rounded-lg border border-border"
-        />
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">🎬 Vidéo enregistrée</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={async () => {
-              if (!videoRef.current) return;
-              if (isPlaying) {
-                videoRef.current.pause();
-                setIsPlaying(false);
-              } else {
-                await videoRef.current.play();
-                setIsPlaying(true);
-              }
-            }}
-          >
-            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={startRecording}>
-            Ré-enregistrer
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <Button type="button" variant="outline" size="sm" onClick={startRecording}>
-      {type === "audio" ? (
-        <>
-          <Mic className="mr-1 h-3 w-3" /> Enregistrer audio
-        </>
-      ) : (
-        <>
-          <Video className="mr-1 h-3 w-3" /> Enregistrer vidéo
-        </>
-      )}
-    </Button>
-  );
+interface FormState {
+  title: string;
+  content: string;
+  category: string;
+  followUp: boolean;
+  type: "written" | "audio" | "video";
+  mediaBlob: Blob | null;
+  mediaPreviewUrl: string | null;
+  existingAudioUrl: string | null;
+  existingVideoUrl: string | null;
 }
+
+const EMPTY_FORM: FormState = {
+  title: "",
+  content: "",
+  category: "",
+  followUp: true,
+  type: "written",
+  mediaBlob: null,
+  mediaPreviewUrl: null,
+  existingAudioUrl: null,
+  existingVideoUrl: null,
+};
 
 export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const { user } = useAuth();
@@ -219,22 +78,10 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
-  // Add form
-  const [newTitle, setNewTitle] = useState("");
-  const [newContent, setNewContent] = useState("");
-  const [newCategory, setNewCategory] = useState<string>("");
-  const [newFollowUp, setNewFollowUp] = useState(true);
-  const [newType, setNewType] = useState<string>("written");
-  const [newMediaBlob, setNewMediaBlob] = useState<Blob | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-
-  // Edit
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editFollowUp, setEditFollowUp] = useState(true);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   const fetchTemplates = async () => {
     const { data, error } = await supabase
@@ -252,13 +99,36 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   useEffect(() => {
     if (orgId) fetchTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
+  const openNew = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (t: QuestionTemplate) => {
+    setEditingId(t.id);
+    setForm({
+      title: t.title || "",
+      content: t.content,
+      category: t.category || "",
+      followUp: t.follow_up_enabled,
+      type: (t.type as "written" | "audio" | "video") || "written",
+      mediaBlob: null,
+      mediaPreviewUrl: t.audio_url || t.video_url || null,
+      existingAudioUrl: t.audio_url,
+      existingVideoUrl: t.video_url,
+    });
+    setDialogOpen(true);
+  };
+
   const uploadMedia = async (blob: Blob, type: "audio" | "video"): Promise<string | null> => {
-    const ext = "webm";
+    const ext = type === "audio" ? "webm" : "webm";
     const path = `question-templates/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("media").upload(path, blob, {
-      contentType: type === "audio" ? "audio/webm" : "video/webm",
+      contentType: blob.type || (type === "audio" ? "audio/webm" : "video/webm"),
     });
     if (error) {
       toast({ title: "Erreur upload", description: error.message, variant: "destructive" });
@@ -268,52 +138,67 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     return urlData.publicUrl;
   };
 
-  const handleAdd = async () => {
+  const handleSave = async () => {
     if (!user) return;
-    if (newType === "written" && !newContent.trim()) return;
-    if ((newType === "audio" || newType === "video") && !newMediaBlob && !newContent.trim()) return;
+    if (!form.content.trim() && form.type === "written") {
+      toast({ title: "Question requise", description: "Saisis le texte de la question.", variant: "destructive" });
+      return;
+    }
+    if ((form.type === "audio" || form.type === "video") && !form.mediaBlob && !form.mediaPreviewUrl) {
+      toast({
+        title: "Média requis",
+        description: `Enregistre ou importe un ${form.type === "audio" ? "audio" : "vidéo"}.`,
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setAdding(true);
+    setSaving(true);
 
-    let audioUrl: string | null = null;
-    let videoUrl: string | null = null;
+    let audioUrl: string | null = form.existingAudioUrl;
+    let videoUrl: string | null = form.existingVideoUrl;
 
-    if (newMediaBlob) {
-      const url = await uploadMedia(newMediaBlob, newType as "audio" | "video");
+    // Si on change de type, on nettoie les anciennes URLs des autres types
+    if (form.type !== "audio") audioUrl = null;
+    if (form.type !== "video") videoUrl = null;
+
+    if (form.mediaBlob && (form.type === "audio" || form.type === "video")) {
+      const url = await uploadMedia(form.mediaBlob, form.type);
       if (!url) {
-        setAdding(false);
+        setSaving(false);
         return;
       }
-      if (newType === "audio") audioUrl = url;
+      if (form.type === "audio") audioUrl = url;
       else videoUrl = url;
     }
 
-    const { error } = await supabase.from("question_templates").insert({
-      title: newTitle.trim(),
-      content: newContent.trim() || (newType === "audio" ? "Question audio" : "Question vidéo"),
-      category: newCategory || null,
-      follow_up_enabled: newFollowUp,
-      max_follow_ups: newFollowUp ? 2 : 0,
-      organization_id: orgId,
-      created_by: user.id,
-      type: newType,
+    const payload = {
+      title: form.title.trim(),
+      content:
+        form.content.trim() ||
+        (form.type === "audio" ? "Question audio" : form.type === "video" ? "Question vidéo" : ""),
+      category: form.category || null,
+      follow_up_enabled: form.followUp,
+      max_follow_ups: form.followUp ? 2 : 0,
+      type: form.type,
       audio_url: audioUrl,
       video_url: videoUrl,
-    });
+    };
+
+    const { error } = editingId
+      ? await supabase.from("question_templates").update(payload).eq("id", editingId)
+      : await supabase
+          .from("question_templates")
+          .insert({ ...payload, organization_id: orgId, created_by: user.id });
+
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      setNewTitle("");
-      setNewContent("");
-      setNewCategory("");
-      setNewFollowUp(true);
-      setNewType("written");
-      setNewMediaBlob(null);
-      setShowForm(false);
+      toast({ title: editingId ? "Question mise à jour" : "Question ajoutée" });
+      setDialogOpen(false);
       fetchTemplates();
-      toast({ title: "Question ajoutée à la bibliothèque !" });
     }
-    setAdding(false);
+    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -322,34 +207,6 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
       setTemplates((t) => t.filter((q) => q.id !== id));
-    }
-  };
-
-  const startEdit = (t: QuestionTemplate) => {
-    setEditingId(t.id);
-    setEditTitle(t.title || "");
-    setEditContent(t.content);
-    setEditCategory(t.category || "");
-    setEditFollowUp(t.follow_up_enabled);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId || !editContent.trim()) return;
-    const { error } = await supabase
-      .from("question_templates")
-      .update({
-        title: editTitle.trim(),
-        content: editContent.trim(),
-        category: editCategory || null,
-        follow_up_enabled: editFollowUp,
-        max_follow_ups: editFollowUp ? 2 : 0,
-      })
-      .eq("id", editingId);
-    if (error) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } else {
-      setEditingId(null);
-      fetchTemplates();
     }
   };
 
@@ -365,9 +222,9 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const categories = [...new Set(templates.map((t) => t.category).filter(Boolean))] as string[];
 
   const typeLabel = (type: string) => {
-    if (type === "audio") return "🎤 Audio";
-    if (type === "video") return "🎬 Vidéo";
-    return "✏️ Écrite";
+    if (type === "audio") return { icon: <Mic className="h-3 w-3" />, label: "Audio" };
+    if (type === "video") return { icon: <Video className="h-3 w-3" />, label: "Vidéo" };
+    return { icon: <Type className="h-3 w-3" />, label: "Écrite" };
   };
 
   return (
@@ -403,25 +260,152 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
               ))}
             </SelectContent>
           </Select>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          <Button size="sm" onClick={openNew}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter
           </Button>
         </div>
 
-        {/* Add form */}
-        {showForm && (
-          <div className="rounded-lg border p-4 space-y-3 bg-muted/30">
-            {/* Type selector */}
-            <div>
-              <Label className="text-xs mb-1.5 block">Type de question</Label>
+        {/* List */}
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            {templates.length === 0 ? "Aucune question dans la bibliothèque." : "Aucun résultat."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((t) => {
+              const { icon, label } = typeLabel(t.type);
+              return (
+                <div key={t.id} className="rounded-lg border p-3 flex items-start gap-2">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    {t.title && <p className="text-sm font-semibold">{t.title}</p>}
+                    <p className="text-sm text-muted-foreground">{t.content}</p>
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <Badge variant="outline" className="text-xs gap-1">
+                        {icon} {label}
+                      </Badge>
+                      {t.category && (
+                        <Badge variant="secondary" className="text-xs">
+                          {t.category}
+                        </Badge>
+                      )}
+                      {t.follow_up_enabled && (
+                        <Badge variant="outline" className="text-xs">
+                          Relance IA
+                        </Badge>
+                      )}
+                      {(t.audio_url || t.video_url) && (
+                        <MediaPlayerInline audioUrl={t.audio_url} videoUrl={t.video_url} />
+                      )}
+                    </div>
+                  </div>
+                  <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Dialog création / édition */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>{editingId ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
+            <DialogDescription>
+              Définis le contenu, le format et le comportement de la question.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+            {/* Section Question */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Question
+              </h3>
+              <div className="space-y-1.5">
+                <Label htmlFor="q-title" className="text-xs">
+                  Titre court
+                </Label>
+                <Input
+                  id="q-title"
+                  placeholder="Ex: Présentez-vous"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="q-content" className="text-xs">
+                    Texte de la question
+                  </Label>
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      form.content.length > MAX_CONTENT ? "text-destructive" : "text-muted-foreground"
+                    }`}
+                  >
+                    {form.content.length}/{MAX_CONTENT}
+                  </span>
+                </div>
+                <Textarea
+                  id="q-content"
+                  placeholder="Parlez-moi de votre parcours..."
+                  rows={3}
+                  value={form.content}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Catégorie</Label>
+                <Select
+                  value={form.category || "_none"}
+                  onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Aucune" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Aucune</SelectItem>
+                    {CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+            {/* Section Format */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Format de présentation
+              </h3>
               <ToggleGroup
                 type="single"
-                value={newType}
+                value={form.type}
+                className="justify-start"
                 onValueChange={(v) => {
-                  if (v) {
-                    setNewType(v);
-                    setNewMediaBlob(null);
-                  }
+                  if (!v) return;
+                  const next = v as "written" | "audio" | "video";
+                  // Si un média existait, on prévient en conservant l'URL existante du même type uniquement
+                  setForm((f) => ({
+                    ...f,
+                    type: next,
+                    mediaBlob: null,
+                    mediaPreviewUrl:
+                      next === "audio"
+                        ? f.existingAudioUrl
+                        : next === "video"
+                          ? f.existingVideoUrl
+                          : null,
+                  }));
                 }}
               >
                 <ToggleGroupItem value="written" className="text-xs gap-1">
@@ -434,147 +418,67 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                   <Video className="h-3.5 w-3.5" /> Vidéo
                 </ToggleGroupItem>
               </ToggleGroup>
-            </div>
 
-            <Input
-              placeholder="Titre court (ex: Présentez-vous)"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-            />
-            <Input
-              placeholder={
-                newType === "written" ? "Texte de la question..." : "Description / titre de la question (optionnel)..."
-              }
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-            />
+              {(form.type === "audio" || form.type === "video") && (
+                <QuestionMediaEditor
+                  type={form.type}
+                  existingUrl={form.mediaPreviewUrl}
+                  onMediaReady={(blob, url) =>
+                    setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))
+                  }
+                  onClear={() =>
+                    setForm((f) => ({
+                      ...f,
+                      mediaBlob: null,
+                      mediaPreviewUrl: null,
+                      existingAudioUrl: f.type === "audio" ? null : f.existingAudioUrl,
+                      existingVideoUrl: f.type === "video" ? null : f.existingVideoUrl,
+                    }))
+                  }
+                />
+              )}
+            </section>
 
-            {/* Media recorder for audio/video */}
-            {(newType === "audio" || newType === "video") && (
-              <MediaRecorderInline
-                type={newType as "audio" | "video"}
-                audioUrl={null}
-                videoUrl={null}
-                onMediaReady={(blob) => setNewMediaBlob(blob)}
-              />
-            )}
-
-            <div className="flex gap-2 items-end flex-wrap">
-              <div className="flex-1 min-w-[150px]">
-                <Label className="text-xs">Catégorie</Label>
-                <Select value={newCategory} onValueChange={setNewCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={newFollowUp} onCheckedChange={setNewFollowUp} id="new-followup" />
-                <Label htmlFor="new-followup" className="text-xs cursor-pointer">
-                  Relance IA
+            {/* Section Relance IA */}
+            <section className="space-y-3">
+              <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Comportement IA
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      Quand activé, l'IA peut poser jusqu'à 2 questions de relance pour approfondir une
+                      réponse trop courte ou ambiguë.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h3>
+              <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+                <Switch
+                  id="followup"
+                  checked={form.followUp}
+                  onCheckedChange={(v) => setForm({ ...form, followUp: v })}
+                />
+                <Label htmlFor="followup" className="cursor-pointer text-sm">
+                  Activer la relance IA
                 </Label>
               </div>
-              <Button
-                size="sm"
-                onClick={handleAdd}
-                disabled={
-                  adding ||
-                  (newType === "written" && !newContent.trim()) ||
-                  ((newType === "audio" || newType === "video") && !newMediaBlob && !newContent.trim())
-                }
-              >
-                {adding ? "Ajout..." : "Enregistrer"}
-              </Button>
-            </div>
+            </section>
           </div>
-        )}
 
-        {/* List */}
-        {loading ? (
-          <p className="text-sm text-muted-foreground">Chargement...</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            {templates.length === 0 ? "Aucune question dans la bibliothèque." : "Aucun résultat."}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map((t) => (
-              <div key={t.id} className="rounded-lg border p-3 flex items-start gap-2">
-                {editingId === t.id ? (
-                  <div className="flex-1 space-y-2">
-                    <Input
-                      placeholder="Titre"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                    />
-                    <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
-                    <div className="flex gap-2 items-end flex-wrap">
-                    <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : v)}>
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue placeholder="Catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Aucune</SelectItem>
-                          {CATEGORIES.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex items-center gap-2">
-                        <Switch checked={editFollowUp} onCheckedChange={setEditFollowUp} />
-                        <Label className="text-xs">Relance</Label>
-                      </div>
-                      <Button size="icon" variant="ghost" onClick={handleSaveEdit}>
-                        <Check className="h-4 w-4 text-primary" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={() => setEditingId(null)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex-1 min-w-0">
-                      {t.title && <p className="text-sm font-semibold">{t.title}</p>}
-                      <p className="text-sm text-muted-foreground">{t.content}</p>
-                      <div className="flex gap-1.5 mt-1 flex-wrap">
-                        <Badge variant="outline" className="text-xs">
-                          {typeLabel(t.type)}
-                        </Badge>
-                        {t.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {t.category}
-                          </Badge>
-                        )}
-                        {t.follow_up_enabled && (
-                          <Badge variant="outline" className="text-xs">
-                            Relance IA
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => startEdit(t)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+          {/* Footer sticky */}
+          <DialogFooter className="border-t bg-background px-6 py-3">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+              Annuler
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Enregistrement..." : editingId ? "Enregistrer" : "Ajouter"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
