@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      email_template_overrides: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          html_body: string
+          id: string
+          organization_id: string
+          subject: string
+          template_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          html_body?: string
+          id?: string
+          organization_id: string
+          subject?: string
+          template_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          html_body?: string
+          id?: string
+          organization_id?: string
+          subject?: string
+          template_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_template_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evaluation_criteria: {
         Row: {
           anchors: Json | null
