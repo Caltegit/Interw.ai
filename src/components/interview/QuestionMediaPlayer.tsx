@@ -213,6 +213,10 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               src={audioUrl}
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
+              onError={handleMediaError}
+              onStalled={armStallTimer}
+              onSuspend={armStallTimer}
+              onPlaying={clearStallTimer}
               preload="metadata"
             />
             <div className="flex items-center gap-3">
