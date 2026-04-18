@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Lock, User, Building2, ShieldAlert } from "lucide-react";
+import { Save, Lock, User, Building2, ShieldAlert, Copy, ExternalLink } from "lucide-react";
 import { OrgMembers } from "@/components/OrgMembers";
 import { OrgLogoUpload } from "@/components/OrgLogoUpload";
 import { useOrgRole } from "@/hooks/useOrgRole";
+import { slugify, SLUG_REGEX } from "@/lib/slug";
 
 export default function Settings() {
   const { profile, user } = useAuth();
@@ -24,6 +25,8 @@ export default function Settings() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [orgName, setOrgName] = useState("");
+  const [orgSlug, setOrgSlug] = useState("");
+  const [initialSlug, setInitialSlug] = useState("");
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [savingOrg, setSavingOrg] = useState(false);
 
@@ -36,6 +39,8 @@ export default function Settings() {
     supabase.from("organizations").select("*").eq("id", orgId).single().then(({ data }) => {
       if (data) {
         setOrgName(data.name);
+        setOrgSlug((data as any).slug || "");
+        setInitialSlug((data as any).slug || "");
         setOrgLogo(data.logo_url || null);
       }
     });
@@ -80,16 +85,51 @@ export default function Settings() {
 
   const handleSaveOrg = async () => {
     if (!orgId) return;
+    const trimmedSlug = orgSlug.trim().toLowerCase();
+    if (trimmedSlug && !SLUG_REGEX.test(trimmedSlug)) {
+      toast({
+        title: "Identifiant invalide",
+        description: "Lettres minuscules, chiffres et tirets uniquement (2-60 caractères).",
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingOrg(true);
     try {
-      const { error } = await supabase.from("organizations").update({ name: orgName }).eq("id", orgId);
+      // Vérif unicité si changé
+      if (trimmedSlug && trimmedSlug !== initialSlug) {
+        const { data: existing } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("slug", trimmedSlug)
+          .neq("id", orgId)
+          .maybeSingle();
+        if (existing) {
+          toast({ title: "Cet identifiant est déjà utilisé.", variant: "destructive" });
+          setSavingOrg(false);
+          return;
+        }
+      }
+      const { error } = await supabase
+        .from("organizations")
+        .update({ name: orgName, slug: trimmedSlug || initialSlug })
+        .eq("id", orgId);
       if (error) throw error;
+      setInitialSlug(trimmedSlug || initialSlug);
       toast({ title: "Organisation mise à jour !" });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
     } finally {
       setSavingOrg(false);
     }
+  };
+
+  const publicUrl = initialSlug ? `${window.location.origin}/o/${initialSlug}` : "";
+
+  const copyPublicUrl = async () => {
+    if (!publicUrl) return;
+    await navigator.clipboard.writeText(publicUrl);
+    toast({ title: "URL copiée !" });
   };
 
   return (
@@ -163,10 +203,40 @@ export default function Settings() {
             <Label>Nom de l'organisation</Label>
             <Input
               value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
+              onChange={(e) => {
+                setOrgName(e.target.value);
+                if (isAdmin && !initialSlug) setOrgSlug(slugify(e.target.value));
+              }}
               placeholder="Mon entreprise"
               disabled={!isAdmin}
             />
+          </div>
+          <div>
+            <Label>Identifiant URL (slug)</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">interw.ai/o/</span>
+              <Input
+                value={orgSlug}
+                onChange={(e) => setOrgSlug(e.target.value.toLowerCase())}
+                placeholder="mon-entreprise"
+                disabled={!isAdmin}
+              />
+            </div>
+            {publicUrl && (
+              <div className="mt-2 flex items-center gap-2">
+                <a
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                >
+                  {publicUrl} <ExternalLink className="h-3 w-3" />
+                </a>
+                <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={copyPublicUrl}>
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
           </div>
           {orgId && (
             <OrgLogoUpload
