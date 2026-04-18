@@ -136,6 +136,8 @@ export default function ProjectEdit() {
               max_follow_ups: q.max_follow_ups,
               audioPreviewUrl: q.audio_url,
               videoPreviewUrl: q.video_url,
+              from_library: true,
+              save_to_library: false,
             };
           }),
         );
