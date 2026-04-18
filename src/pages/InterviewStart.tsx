@@ -1103,10 +1103,8 @@ export default function InterviewStart() {
                     variant="featured"
                     autoPlay={shouldAutoPlay}
                     onPlaybackEnd={() => {
-                      setShouldAutoPlay(false);
-                      setIsSpeaking(false);
-                      startQuestionRecording();
-                      startListening();
+                      console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
+                      forceStartListening();
                     }}
                   />
                 )}
