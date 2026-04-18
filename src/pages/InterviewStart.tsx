@@ -50,6 +50,8 @@ export default function InterviewStart() {
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
+  const pausedDuringQuestionRef = useRef(false);
   const pausedElapsedRef = useRef<number>(0);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
