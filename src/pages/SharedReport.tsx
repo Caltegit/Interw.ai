@@ -209,7 +209,7 @@ export default function SharedReport() {
       )}
 
       <p className="text-center text-xs text-muted-foreground">
-        Ce rapport a été partagé via un lien sécurisé. • Généré par InterviewAI
+        Ce rapport a été partagé via un lien sécurisé. • Généré par Interw.ai
       </p>
     </div>
   );
