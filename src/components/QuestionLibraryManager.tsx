@@ -14,6 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface QuestionTemplate {
   id: string;
+  title: string;
   content: string;
   category: string | null;
   follow_up_enabled: boolean;
