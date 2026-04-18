@@ -289,6 +289,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     }
 
     const { error } = await supabase.from("question_templates").insert({
+      title: newTitle.trim(),
       content: newContent.trim() || (newType === "audio" ? "Question audio" : "Question vidéo"),
       category: newCategory || null,
       follow_up_enabled: newFollowUp,
@@ -302,6 +303,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
+      setNewTitle("");
       setNewContent("");
       setNewCategory("");
       setNewFollowUp(true);
