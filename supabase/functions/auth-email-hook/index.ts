@@ -228,17 +228,53 @@ async function handleWebhook(req: Request): Promise<Response> {
     newEmail: payload.data.new_email,
   }
 
-  // Render React Email to HTML and plain text
-  const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
-
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
+  // Render email — first check for an org-level override
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+
+  // Find the org owning this user (via profile)
+  let html = ''
+  let text = ''
+  let resolvedSubject = EMAIL_SUBJECTS[emailType] || 'Notification'
+
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('email', payload.data.email)
+      .maybeSingle()
+
+    const orgId = (profile as any)?.organization_id
+    if (orgId) {
+      const { data: override } = await supabase
+        .from('email_template_overrides')
+        .select('subject, html_body, enabled')
+        .eq('organization_id', orgId)
+        .eq('template_key', emailType)
+        .eq('enabled', true)
+        .maybeSingle()
+
+      if (override && (override as any).html_body) {
+        const interpolate = (tpl: string) =>
+          tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => String((templateProps as any)[k] ?? ''))
+        html = interpolate((override as any).html_body)
+        resolvedSubject = interpolate((override as any).subject || resolvedSubject)
+        text = html.replace(/<[^>]+>/g, '').trim()
+      }
+    }
+  } catch (e) {
+    console.warn('Override lookup failed, falling back to default template', { error: e })
+  }
+
+  if (!html) {
+    html = await renderAsync(React.createElement(EmailTemplate, templateProps))
+    text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
+      plainText: true,
+    })
+  }
+
 
   const messageId = crypto.randomUUID()
 
