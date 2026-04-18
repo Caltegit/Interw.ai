@@ -15,6 +15,7 @@ import { StepQuestions, Question, createEmptyQuestion } from "@/components/proje
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
+import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 
 const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
@@ -493,7 +494,21 @@ export default function ProjectEdit() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border p-4">
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex justify-end">
+                  <IntroLibraryDialog
+                    type={introType}
+                    onSelect={(item) => {
+                      if (introType === "audio") {
+                        setIntroAudioBlob(null);
+                        setIntroAudioPreviewUrl(item.audio_url);
+                      } else {
+                        setIntroVideoFile(null);
+                        setIntroVideoPreviewUrl(item.video_url);
+                      }
+                    }}
+                  />
+                </div>
                 {introType === "audio" ? (
                   <IntroAudioRecorder
                     existingUrl={introAudioPreviewUrl}
