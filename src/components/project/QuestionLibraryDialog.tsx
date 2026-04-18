@@ -79,6 +79,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       .map((t) => ({
         title: t.content.slice(0, 60),
         content: t.content,
+        category: t.category || "",
         type: "open",
         mediaType: (t.type === "audio" ? "audio" : t.type === "video" ? "video" : "written") as "written" | "audio" | "video",
         follow_up_enabled: t.follow_up_enabled,
@@ -87,6 +88,8 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         audioPreviewUrl: t.audio_url || null,
         videoBlob: null,
         videoPreviewUrl: t.video_url || null,
+        from_library: true,
+        save_to_library: false,
       }));
     onSelect(questions);
     onOpenChange(false);
