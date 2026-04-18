@@ -50,6 +50,8 @@ export default function InterviewStart() {
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
+  const pausedDuringQuestionRef = useRef(false);
   const pausedElapsedRef = useRef<number>(0);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
@@ -274,6 +276,15 @@ export default function InterviewStart() {
 
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
   const pauseInterview = useCallback(() => {
+    isPausedRef.current = true;
+    // Detect "pause pendant lecture question": question media is currently presenting
+    const duringQuestion = isSpeaking || !isListening;
+    pausedDuringQuestionRef.current = duringQuestion;
+
+    // Stop the question media player cleanly (resets currentTime + finished state)
+    if (duringQuestion) {
+      try { featuredPlayerRef.current?.stop(); } catch {}
+    }
     // STT
     stopListening();
     // TTS
@@ -287,23 +298,27 @@ export default function InterviewStart() {
     if (interviewStartTimeRef.current !== null) {
       pausedElapsedRef.current = Date.now() - interviewStartTimeRef.current;
     }
-    // Clear all timers
+    // Clear all timers — including watchdog so it doesn't fire during pause
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     if (maxDurationTimerRef.current) { clearTimeout(maxDurationTimerRef.current); maxDurationTimerRef.current = null; }
     if (autoSkipTimerRef.current) { clearTimeout(autoSkipTimerRef.current); autoSkipTimerRef.current = null; }
     if (autoSkipCountdownRef.current) { clearInterval(autoSkipCountdownRef.current); autoSkipCountdownRef.current = null; }
+    if (playbackWatchdogRef.current) { clearTimeout(playbackWatchdogRef.current); playbackWatchdogRef.current = null; }
+    if (manualContinueTimerRef.current) { clearTimeout(manualContinueTimerRef.current); manualContinueTimerRef.current = null; }
+    setShowManualContinue(false);
+    setShouldAutoPlay(false);
     setAutoSkipCountdown(null);
     setIsPaused(true);
-  }, [stopListening]);
+  }, [stopListening, isSpeaking, isListening]);
 
-  // Resume: restart recorder, max-duration timer with remaining time, STT, silence timer
+  // Resume: either restart the question from the beginning, or resume the response phase
   const resumeInterview = useCallback(() => {
     setIsPaused(false);
-    // Recorder resume
-    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
-      try { questionRecorderRef.current.resume(); } catch {}
-    }
-    // Restart max-duration timer with remaining time
+    isPausedRef.current = false;
+    const wasDuringQuestion = pausedDuringQuestionRef.current;
+    pausedDuringQuestionRef.current = false;
+
+    // Restart max-duration timer with remaining time (always)
     const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
     interviewStartTimeRef.current = Date.now() - pausedElapsedRef.current;
     maxDurationTimerRef.current = setTimeout(() => {
@@ -313,6 +328,21 @@ export default function InterviewStart() {
         endInterviewRef.current?.();
       }
     }, remaining);
+
+    if (wasDuringQuestion) {
+      // Replay the question from the start — synchronous call preserves user gesture (mobile autoplay)
+      console.log("[InterviewStart] Resume: replaying question from start");
+      setShouldAutoPlay(true);
+      setIsSpeaking(true);
+      try { featuredPlayerRef.current?.restart(); } catch (e) { console.warn("restart failed", e); }
+      armPlaybackWatchdog();
+      return;
+    }
+
+    // Recorder resume (response phase)
+    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
+      try { questionRecorderRef.current.resume(); } catch {}
+    }
     // Restart STT + silence timer
     startListening();
     resetSilenceTimer();
@@ -439,6 +469,10 @@ export default function InterviewStart() {
   }, []);
 
   const forceStartListening = useCallback(() => {
+    if (isPausedRef.current) {
+      console.log("[InterviewStart] forceStartListening blocked — interview is paused");
+      return;
+    }
     console.log("[InterviewStart] Forcing transition to listening");
     clearPlaybackWatchdog();
     setShouldAutoPlay(false);
@@ -450,9 +484,12 @@ export default function InterviewStart() {
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
     // After 3s of "Préparation", offer a manual button as backup
-    manualContinueTimerRef.current = setTimeout(() => setShowManualContinue(true), 3000);
+    manualContinueTimerRef.current = setTimeout(() => {
+      if (!isPausedRef.current) setShowManualContinue(true);
+    }, 3000);
     // Hard fallback after 8s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
+      if (isPausedRef.current) return;
       console.warn("[InterviewStart] Playback watchdog triggered after 8s");
       forceStartListening();
     }, 8000);
@@ -1034,6 +1071,10 @@ export default function InterviewStart() {
                       variant="featured"
                       autoPlay={shouldAutoPlay}
                       onPlaybackEnd={() => {
+                        if (isPausedRef.current) {
+                          console.log("[InterviewStart] onPlaybackEnd (video) ignored — paused");
+                          return;
+                        }
                         console.log("[InterviewStart] onPlaybackEnd (video) fired");
                         forceStartListening();
                       }}
@@ -1105,6 +1146,10 @@ export default function InterviewStart() {
                     variant="featured"
                     autoPlay={shouldAutoPlay}
                     onPlaybackEnd={() => {
+                      if (isPausedRef.current) {
+                        console.log("[InterviewStart] onPlaybackEnd (audio/text) ignored — paused");
+                        return;
+                      }
                       console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
                       forceStartListening();
                     }}
@@ -1375,7 +1420,9 @@ export default function InterviewStart() {
             REPRENDRE
           </Button>
           <p className="mt-6 text-sm text-[#f5f0e8]/60 text-center max-w-sm px-6">
-            Cliquez pour reprendre exactement où vous vous êtes arrêté(e).
+            {pausedDuringQuestionRef.current
+              ? "La question sera rejouée depuis le début à la reprise."
+              : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
           </p>
         </div>
       )}
