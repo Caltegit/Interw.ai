@@ -109,6 +109,98 @@
   }
 }
 
+/* ============ Landing page (Linear-inspired dark) ============ */
+.landing-root {
+  --l-bg: 230 25% 5%;
+  --l-bg-elev: 230 22% 8%;
+  --l-fg: 0 0% 98%;
+  --l-fg-dim: 230 10% 65%;
+  --l-border: 230 15% 16%;
+  --l-accent: 244 90% 70%;
+  --l-accent-2: 280 85% 70%;
+
+  background: hsl(var(--l-bg));
+  color: hsl(var(--l-fg));
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
+}
+
+.landing-root h1,
+.landing-root h2,
+.landing-root h3 {
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.landing-bg-grid {
+  background-image:
+    linear-gradient(hsl(var(--l-border) / 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--l-border) / 0.5) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 40%, transparent 100%);
+}
+
+.landing-hero-glow {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, hsl(var(--l-accent) / 0.25), transparent 60%),
+    radial-gradient(ellipse 40% 40% at 70% 20%, hsl(var(--l-accent-2) / 0.18), transparent 60%);
+}
+
+.landing-gradient-text {
+  background: linear-gradient(180deg, hsl(var(--l-fg)) 0%, hsl(var(--l-fg) / 0.6) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-accent-text {
+  background: linear-gradient(90deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-card {
+  background: linear-gradient(180deg, hsl(var(--l-bg-elev)) 0%, hsl(var(--l-bg)) 100%);
+  border: 1px solid hsl(var(--l-border));
+  border-radius: 14px;
+}
+
+.landing-divider {
+  border-color: hsl(var(--l-border));
+}
+
+.landing-btn-primary {
+  background: hsl(var(--l-fg));
+  color: hsl(var(--l-bg));
+  transition: all 0.2s ease;
+}
+.landing-btn-primary:hover {
+  background: hsl(var(--l-fg) / 0.9);
+  transform: translateY(-1px);
+}
+
+.landing-btn-ghost {
+  background: transparent;
+  color: hsl(var(--l-fg));
+  border: 1px solid hsl(var(--l-border));
+  transition: all 0.2s ease;
+}
+.landing-btn-ghost:hover {
+  background: hsl(var(--l-bg-elev));
+  border-color: hsl(var(--l-fg) / 0.3);
+}
+
+@keyframes landing-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.landing-fade-up { animation: landing-fade-up 0.7s ease-out both; }
+.landing-delay-1 { animation-delay: 0.1s; }
+.landing-delay-2 { animation-delay: 0.2s; }
+.landing-delay-3 { animation-delay: 0.3s; }
+
 /* Morning-branded candidate pages */
 .candidate-layout {
   background-color: #1a1a1a;
