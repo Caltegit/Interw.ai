@@ -1206,27 +1206,39 @@ export default function InterviewStart() {
 
 
                   return (
-                    <div
-                      className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
-                        isProcessing
-                          ? "border-warning/30 bg-warning/10 text-warning"
-                          : isSpeaking
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-border bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {isProcessing ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
-                          Analyse de votre réponse…
-                        </span>
-                      ) : isSpeaking ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                          L'IA pose la question…
-                        </span>
-                      ) : (
-                        <span>Préparation…</span>
+                    <div className="space-y-2">
+                      <div
+                        className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
+                          isProcessing
+                            ? "border-warning/30 bg-warning/10 text-warning"
+                            : isSpeaking
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isProcessing ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
+                            Analyse de votre réponse…
+                          </span>
+                        ) : isSpeaking ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                            L'IA pose la question…
+                          </span>
+                        ) : (
+                          <span>Préparation…</span>
+                        )}
+                      </div>
+                      {/* Bouton manuel de secours si la transition tarde */}
+                      {showManualContinue && !isListening && !isProcessing && (
+                        <button
+                          type="button"
+                          onClick={forceStartListening}
+                          className="w-full text-xs text-muted-foreground hover:text-foreground underline transition-colors py-1"
+                        >
+                          La question ne se lance pas ? Continuer →
+                        </button>
                       )}
                     </div>
                   );
