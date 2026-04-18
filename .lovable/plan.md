@@ -1,76 +1,48 @@
 
 
-## Analyse UX — création/édition de question dans la bibliothèque
+## Diagnostic complet — système d'emails
 
-Avant de proposer, je relis le composant concerné.
+### Ce que j'ai vérifié
 
-### Constat actuel (`QuestionLibraryManager.tsx` + `QuestionMediaRecorder.tsx`)
+**1. Historique d'envoi (`email_send_log`)** — 3 emails de recovery envoyés aujourd'hui à `cclemalte@gmail.com` :
+- 13:06 → `pending` puis `sent` ✅
+- 13:07 → `pending` puis `sent` ✅
+- 13:10 → `pending` puis `sent` ✅
 
-Le formulaire d'ajout/édition empile verticalement, sans hiérarchie claire :
-- Champ **Titre** (input)
-- Champ **Question** (textarea)
-- Champ **Catégorie** (input libre, pas de suggestions des catégories existantes)
-- **Type de média** (3 boutons radio : Texte / Audio / Vidéo)
-- **Enregistreur média** (un seul bouton "Enregistrer audio/vidéo")
-- **Switch relance IA** + slider max relances
-- Boutons Annuler / Enregistrer
+Tous les statuts passent à `sent` en 1-6 secondes, aucune erreur, aucun message bloqué en `pending`/`failed`/`dlq`.
 
-### Problèmes identifiés
+**2. Logs edge function `auth-email-hook`** — réception et enqueue corrects :
+```
+Received auth event { emailType: "recovery", email: "cclemalte@gmail.com" }
+Auth email enqueued { emailType: "recovery", ... }
+```
+Aucune erreur, aucun crash.
 
-1. **Médias enregistrés invisibles dans la liste** — la liste des questions n'affiche aucune indication qu'une question a un audio/vidéo attaché, et on ne peut pas le lire sans entrer en édition. C'est ton point principal.
-2. **Pas de prévisualisation au survol/clic dans la liste** — il faut éditer pour écouter.
-3. **Re-enregistrer = supprimer puis recommencer** — pas de bouton "Refaire" direct.
-4. **Pas d'upload de fichier** — uniquement enregistrement live, alors qu'un RH peut avoir un MP3/MP4 prêt.
-5. **Catégorie en input libre** → fautes de frappe, doublons ("Soft skills" vs "soft skill").
-6. **Pas de durée affichée** sur les médias enregistrés.
-7. **Pas de compteur de caractères** sur le contenu de la question.
-8. **Toggle Texte/Audio/Vidéo confus** — si on a déjà enregistré un audio puis on clique "Vidéo", l'audio est perdu silencieusement.
-9. **Formulaire trop long** dans le dialog → sur viewport 966×680 le bouton Sauvegarder peut passer sous le pli (même problème qu'on a déjà eu sur les intros vidéo).
-10. **Pas de feedback visuel** sur la qualité du son pendant l'enregistrement (pas de VU-mètre, alors qu'on a déjà `MicVolumeMeter`).
+**3. Logs edge function `process-email-queue`** — boots et shutdowns réguliers (cron tourne toutes les 5s).
 
-### Propositions d'amélioration (ordonnées par impact)
+**4. Configuration dispatcher (`email_send_state`)** — batch 10, delay 200ms, TTL 15min auth / 60min transactional. Pas de rate-limit actif (`retry_after_until` vide).
 
-**P1 — Lecture des médias depuis la liste** (résout le pain principal)
-- Dans chaque carte de question de la liste : si `audio_url` ou `video_url` présent, afficher un mini-player inline (bouton play + durée + waveform simplifié pour audio, thumbnail vidéo cliquable qui ouvre un popover avec lecteur).
-- Badge visuel "🎤 Audio" / "🎬 Vidéo" déjà bien visible (pas seulement en édition).
+**5. Liste de suppression (`suppressed_emails`)** — vide. Aucune adresse bloquée.
 
-**P2 — Refonte du dialog en deux colonnes ou onglets**
-- Layout en sections claires avec scroll interne et footer sticky (comme le fix qu'on a fait sur les intros vidéo) :
-  - Section "Question" (titre + contenu + catégorie + compteur)
-  - Section "Média" (type + enregistreur + upload fichier + lecteur preview)
-  - Section "Relance IA" (switch + slider, replié par défaut)
-- Footer toujours visible avec bouton Sauvegarder.
+### Conclusion
 
-**P3 — Enregistreur média amélioré**
-- Bouton "Refaire" qui combine supprimer + ré-enregistrer en un clic.
-- Bouton "Importer un fichier" (audio: mp3/m4a/wav, vidéo: mp4/webm/mov).
-- Affichage de la **durée** du média une fois enregistré.
-- VU-mètre micro pendant l'enregistrement audio (réutilise `MicVolumeMeter`).
-- Timer d'enregistrement (00:23 / max 2:00) + limite max configurable.
-- Avertissement explicite si on change de type média alors qu'un enregistrement existe.
+**Le système d'envoi d'emails fonctionne parfaitement.** Tous les emails de reset de mot de passe envoyés aujourd'hui ont été délivrés au provider avec succès (status `sent`).
 
-**P4 — Catégorie : combobox intelligent**
-- Remplacer l'input libre par un combobox listant les catégories déjà utilisées dans l'org + permettre de créer une nouvelle valeur. Évite les doublons.
+### Si tu ne reçois pas les emails malgré ça
 
-**P5 — Améliorations liste**
-- Recherche par titre + filtre par catégorie + filtre par type de média (déjà partiellement présent dans `QuestionLibraryDialog` côté projets, à harmoniser).
-- Tri (alphabétique / récemment ajouté / catégorie).
-- Action "Dupliquer" une question.
+Trois pistes possibles côté **réception** (pas côté envoi) :
 
-**P6 — Petits détails UX**
-- Compteur caractères sur le contenu (max suggéré ~500).
-- Tooltip explicatif sur "Relance IA" (pourquoi, quand l'utiliser).
-- Si type = "written", masquer complètement la section enregistreur (au lieu de la laisser vide).
-- Confirmation avant fermeture du dialog si modifications non sauvegardées.
+1. **Spam / Promotions** — vérifie le dossier spam de Gmail, et l'onglet "Promotions" / "Notifications" (les emails de `notify.interw.ai` peuvent être catégorisés là).
+2. **Filtres Gmail** — vérifie qu'aucun filtre ne classe automatiquement les emails de `noreply@notify.interw.ai`.
+3. **DNS encore en propagation** — si le domaine vient d'être configuré, la réputation SPF/DKIM peut être faible les premières heures et certains emails peuvent être rejetés silencieusement par Gmail.
 
-### Question avant d'implémenter
+### Plan d'action proposé
 
-Sur les 6 propositions, **lesquelles tu veux que je fasse maintenant** ?
+**Aucune action de code nécessaire** — le système fonctionne. Je propose à la place de :
 
-- **A. Quick win (30 min)** — uniquement P1 (lecture médias depuis la liste) + P3 partiel (bouton "Refaire" + durée + upload fichier)
-- **B. Refonte ciblée (1h)** — P1 + P2 (dialog restructuré + footer sticky) + P3 complet
-- **C. Refonte complète (2h)** — tout : P1 → P6
-- **D. Autre combinaison** — dis-moi lesquelles
+1. **Tester end-to-end maintenant** avec toi : déclencher un reset password, vérifier dans Gmail (inbox + spam + promotions).
+2. Si l'email n'arrive pas dans Gmail malgré le statut `sent`, je peux **vérifier le statut DNS du domaine** `notify.interw.ai` (SPF/DKIM) pour confirmer qu'il est bien actif.
+3. Optionnel : tester avec une **autre adresse email** (Outlook, Yahoo) pour isoler un éventuel problème spécifique à Gmail.
 
-Je recommande **B** : ça résout ton problème immédiat (lecture médias) + le risque récurrent du bouton Sauvegarder qui passe sous le pli + une vraie ergonomie sur l'enregistreur, sans aller jusqu'aux features secondaires (combobox catégorie, dupliquer, etc.) qu'on peut garder pour plus tard.
+Veux-tu que je vérifie le statut DNS du domaine, ou préfères-tu d'abord faire un test live et regarder ton inbox + spam ?
 
