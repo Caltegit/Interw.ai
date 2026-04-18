@@ -64,9 +64,40 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const doPlay = () => {
     const el = getEl();
     if (!el) return;
-    el.play().catch(() => {});
+    const p = el.play();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("[QuestionMediaPlayer] play() rejected — falling back to onPlaybackEnd", err);
+        // Autoplay blocked or other failure → unblock parent flow
+        setTimeout(() => onPlaybackEnd?.(), 300);
+      });
+    }
     setIsPlaying(true);
     animFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  // Fallback: if media stalls/suspends for too long, force the end event
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const armStallTimer = () => {
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+    stallTimerRef.current = setTimeout(() => {
+      console.warn("[QuestionMediaPlayer] media stalled — forcing onPlaybackEnd");
+      onPlaybackEnd?.();
+    }, 5000);
+  };
+  const clearStallTimer = () => {
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
+  };
+
+  const handleMediaError = (e: any) => {
+    console.warn("[QuestionMediaPlayer] media error — forcing onPlaybackEnd", e);
+    clearStallTimer();
+    setIsPlaying(false);
+    setHasFinished(true);
+    onPlaybackEnd?.();
   };
 
   const doPause = () => {
