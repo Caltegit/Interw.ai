@@ -14,6 +14,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 interface QuestionTemplate {
   id: string;
+  title: string;
   content: string;
   category: string | null;
   follow_up_enabled: boolean;
@@ -219,6 +220,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
   // Add form
+  const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState<string>("");
   const [newFollowUp, setNewFollowUp] = useState(true);
@@ -229,6 +231,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   // Edit
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editFollowUp, setEditFollowUp] = useState(true);
@@ -286,6 +289,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     }
 
     const { error } = await supabase.from("question_templates").insert({
+      title: newTitle.trim(),
       content: newContent.trim() || (newType === "audio" ? "Question audio" : "Question vidéo"),
       category: newCategory || null,
       follow_up_enabled: newFollowUp,
@@ -299,6 +303,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
+      setNewTitle("");
       setNewContent("");
       setNewCategory("");
       setNewFollowUp(true);
@@ -322,6 +327,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   const startEdit = (t: QuestionTemplate) => {
     setEditingId(t.id);
+    setEditTitle(t.title || "");
     setEditContent(t.content);
     setEditCategory(t.category || "");
     setEditFollowUp(t.follow_up_enabled);
@@ -332,6 +338,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     const { error } = await supabase
       .from("question_templates")
       .update({
+        title: editTitle.trim(),
         content: editContent.trim(),
         category: editCategory || null,
         follow_up_enabled: editFollowUp,
@@ -347,7 +354,10 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   };
 
   const filtered = templates.filter((t) => {
-    const matchSearch = !search || t.content.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      !search ||
+      t.content.toLowerCase().includes(search.toLowerCase()) ||
+      (t.title || "").toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "all" || t.category === filterCategory;
     return matchSearch && matchCat;
   });
@@ -427,6 +437,11 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             </div>
 
             <Input
+              placeholder="Titre court (ex: Présentez-vous)"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+            />
+            <Input
               placeholder={
                 newType === "written" ? "Texte de la question..." : "Description / titre de la question (optionnel)..."
               }
@@ -494,6 +509,11 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
               <div key={t.id} className="rounded-lg border p-3 flex items-start gap-2">
                 {editingId === t.id ? (
                   <div className="flex-1 space-y-2">
+                    <Input
+                      placeholder="Titre"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
                     <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} />
                     <div className="flex gap-2 items-end flex-wrap">
                     <Select value={editCategory || "_none"} onValueChange={(v) => setEditCategory(v === "_none" ? "" : v)}>
@@ -524,7 +544,8 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                 ) : (
                   <>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm">{t.content}</p>
+                      {t.title && <p className="text-sm font-semibold">{t.title}</p>}
+                      <p className="text-sm text-muted-foreground">{t.content}</p>
                       <div className="flex gap-1.5 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-xs">
                           {typeLabel(t.type)}

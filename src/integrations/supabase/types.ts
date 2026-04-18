@@ -338,6 +338,7 @@ export type Database = {
           id: string
           max_follow_ups: number
           organization_id: string
+          title: string
           type: string
           video_url: string | null
         }
@@ -351,6 +352,7 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id: string
+          title?: string
           type?: string
           video_url?: string | null
         }
@@ -364,6 +366,7 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id?: string
+          title?: string
           type?: string
           video_url?: string | null
         }
@@ -732,6 +735,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      seed_default_question_templates: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: undefined
+      }
       slugify: { Args: { _input: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
     }
