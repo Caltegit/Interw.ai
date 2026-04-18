@@ -12,6 +12,7 @@ import type { Question } from "./StepQuestions";
 
 interface Template {
   id: string;
+  title: string | null;
   content: string;
   category: string | null;
   follow_up_enabled: boolean;
@@ -46,10 +47,9 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       if (!orgId) { setLoading(false); return; }
       supabase
         .from("question_templates")
-        .select("id, content, category, follow_up_enabled, max_follow_ups, type, audio_url, video_url")
+        .select("id, title, content, category, follow_up_enabled, max_follow_ups, type, audio_url, video_url")
         .eq("organization_id", orgId)
-        .order("category")
-        .order("content")
+        .order("created_at", { ascending: false })
         .then(({ data }) => {
           setTemplates(data || []);
           setLoading(false);
@@ -60,7 +60,11 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
   const categories = [...new Set(templates.map((t) => t.category).filter(Boolean))] as string[];
 
   const filtered = templates.filter((t) => {
-    const matchSearch = !search || t.content.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchSearch =
+      !search ||
+      t.content.toLowerCase().includes(q) ||
+      (t.title || "").toLowerCase().includes(q);
     const matchCat = filterCategory === "all" || t.category === filterCategory;
     return matchSearch && matchCat;
   });
@@ -77,7 +81,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
     const questions: Question[] = templates
       .filter((t) => selected.has(t.id))
       .map((t) => ({
-        title: t.content.slice(0, 60),
+        title: t.title || t.content.slice(0, 60),
         content: t.content,
         category: t.category || "",
         type: "open",
@@ -137,7 +141,8 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
               >
                 <Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggle(t.id)} className="mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm">{t.content}</p>
+                  {t.title && <p className="text-sm font-semibold">{t.title}</p>}
+                  <p className="text-sm text-muted-foreground">{t.content}</p>
                   <div className="flex gap-1 mt-1">
                     {t.category && <Badge variant="secondary" className="text-xs">{t.category}</Badge>}
                     {t.follow_up_enabled && <Badge variant="outline" className="text-xs">Relance IA</Badge>}
