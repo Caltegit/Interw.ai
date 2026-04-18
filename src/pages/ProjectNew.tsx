@@ -254,6 +254,33 @@ export default function ProjectNew() {
                 .update(updates as never)
                 .eq("id", qId);
             }
+
+            // Save to library if requested
+            if (q.save_to_library && !q.from_library) {
+              const contentText = q.content.trim() || q.title || "";
+              if (contentText) {
+                const { data: existing } = await supabase
+                  .from("question_templates")
+                  .select("id")
+                  .eq("organization_id", "a0000000-0000-0000-0000-000000000001")
+                  .eq("content", contentText)
+                  .maybeSingle();
+                if (!existing) {
+                  await supabase.from("question_templates").insert({
+                    organization_id: "a0000000-0000-0000-0000-000000000001",
+                    created_by: user.id,
+                    title: q.title || contentText.slice(0, 60),
+                    content: contentText,
+                    category: q.category || null,
+                    type: q.mediaType,
+                    follow_up_enabled: q.follow_up_enabled,
+                    max_follow_ups: q.max_follow_ups,
+                    audio_url: updates.audio_url || null,
+                    video_url: updates.video_url || null,
+                  } as never);
+                }
+              }
+            }
           }
         }
       }
