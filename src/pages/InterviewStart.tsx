@@ -798,7 +798,11 @@ export default function InterviewStart() {
     await speak(transition);
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
     } else {
       startQuestionRecording();
       startListening();
