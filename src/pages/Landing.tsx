@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 import {
   ArrowRight,
   Brain,
@@ -13,6 +14,33 @@ import {
   Sparkles,
   Video,
 } from "lucide-react";
+
+const CONTACT_EMAIL = "hello@interw.ai";
+const CONTACT_SUBJECT = "Demande de démo Interw.ai";
+const CONTACT_BODY = "Bonjour,\n\nJe souhaiterais planifier une démo d'Interw.ai.\n\nMerci !";
+
+function handleContactClick(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  const subject = encodeURIComponent(CONTACT_SUBJECT);
+  const body = encodeURIComponent(CONTACT_BODY);
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${CONTACT_EMAIL}&su=${subject}&body=${body}`;
+
+  // Try the default mail client
+  window.location.href = mailto;
+
+  // Fallback: if no mail handler, the page stays visible — open Gmail web compose
+  setTimeout(() => {
+    if (!document.hidden) {
+      window.open(gmail, "_blank", "noopener,noreferrer");
+      navigator.clipboard?.writeText(CONTACT_EMAIL).catch(() => {});
+      toast({
+        title: "Email copié",
+        description: `Écrivez-nous à ${CONTACT_EMAIL}`,
+      });
+    }
+  }, 600);
+}
 
 export default function Landing() {
   const { session, loading } = useAuth();
@@ -52,7 +80,7 @@ export default function Landing() {
             <Link to="/login" className="text-sm hover:text-white transition-colors" style={{ color: "hsl(var(--l-fg-dim))" }}>
               Connexion
             </Link>
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
               Demander une démo <ArrowRight className="h-3.5 w-3.5" />
             </a>
           </div>
@@ -78,7 +106,7 @@ export default function Landing() {
             Scoring objectif, rapports détaillés, expérience candidat soignée.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
               Demander une démo <ArrowRight className="h-4 w-4" />
             </a>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
@@ -234,7 +262,7 @@ export default function Landing() {
             Réservez une démo de 20 minutes. On vous montre comment Interw.ai s'intègre à votre process.
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
               Demander une démo <ArrowRight className="h-4 w-4" />
             </a>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
@@ -254,7 +282,7 @@ export default function Landing() {
             <span>© {new Date().getFullYear()} Interw.ai — Tous droits réservés</span>
           </div>
           <div className="flex items-center gap-5">
-            <a href="mailto:hello@interw.ai" className="hover:text-white transition-colors">Contact</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="hover:text-white transition-colors">Contact</a>
             <a href="#" className="hover:text-white transition-colors">Mentions légales</a>
             <a href="#" className="hover:text-white transition-colors">RGPD</a>
           </div>
