@@ -18,3 +18,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.get-email-template-defaults]
     verify_jwt = false
+
+  [functions.process-email-queue]
+    verify_jwt = true
