@@ -1,39 +1,79 @@
 
 
-## Brancher les emails @interw.ai
+## Page "Emails" — gestion des templates
 
-### Constat
-Tu as `hello@interw.ai` chez GoDaddy. Pour que l'app envoie des emails depuis ton domaine (invitations, confirmations, reset password, etc.), il faut configurer **interw.ai** comme domaine d'envoi dans Lovable Cloud Emails.
+### Vision
+Ajouter une page `/emails` dans le sidebar (sous "Bibliothèque") qui permet aux admins de l'org de visualiser et personnaliser tous les emails envoyés par la plateforme : emails d'authentification (signup, reset, invitation, etc.) et emails transactionnels (à venir).
 
-### Important — distinction
-- **Boîte de réception `hello@interw.ai`** (GoDaddy) = pour recevoir/lire des emails → reste chez GoDaddy, on n'y touche pas
-- **Domaine d'envoi `interw.ai`** (Lovable) = pour que l'app envoie des emails programmatiques → c'est ce qu'on configure
+### Réalité technique importante
+Les templates d'emails actuels sont des fichiers `.tsx` React Email dans `supabase/functions/_shared/email-templates/` (auth) et `_shared/transactional-email-templates/` (transactionnels). Ces fichiers sont **codés en dur** et déployés avec les Edge Functions — ils ne sont **pas modifiables à chaud** depuis l'UI sans architecture supplémentaire.
 
-Lovable utilise un sous-domaine dédié (par défaut `notify.interw.ai`) délégué à ses nameservers via des records NS chez GoDaddy. Ça **n'affecte pas** ta boîte `hello@interw.ai` ni les MX records existants.
+Deux approches possibles :
 
-### Plan en 3 étapes
+**Option A — Visualisation + override DB (recommandé)**
+- Page `/emails` qui liste tous les templates avec aperçu (via `preview-transactional-email` + endpoint similaire pour auth).
+- Nouvelle table `email_template_overrides` (org_id, template_key, subject, html_body, variables) — quand un override existe, il prend le pas sur le template `.tsx` par défaut.
+- Éditeur dans l'UI : sujet + corps HTML (avec variables `{{recipient}}`, `{{confirmationUrl}}`, etc.) + aperçu live.
+- Modifs `auth-email-hook` et `send-transactional-email` pour vérifier d'abord l'override en DB avant d'utiliser le template par défaut.
+- ✅ Modification 100% via UI, par org, sans redéploiement.
+- ⚠️ Éditeur HTML brut (pas de WYSIWYG riche, sinon scope énorme).
 
-**1. Configurer le domaine d'envoi**
-Ouvrir le dialog de setup email → renseigner `interw.ai` → Lovable génère 2 records NS à ajouter chez GoDaddy (sur `notify.interw.ai`). Vérification DNS auto (jusqu'à 72h, souvent <1h).
+**Option B — Visualisation seule (read-only)**
+- Page `/emails` qui liste et affiche l'aperçu des templates `.tsx` actuels.
+- Pour modifier : l'utilisateur me demande dans le chat ("change le sujet du signup en X"), j'édite le `.tsx` et redéploie.
+- ✅ Simple, rapide à livrer.
+- ❌ Pas vraiment "gestion" — juste de la visualisation.
 
-**2. Personnaliser les templates auth (optionnel mais recommandé)**
-Scaffolder les templates d'emails d'authentification (signup, reset password, invitation, magic link) avec le branding **Interw.ai** : couleur primaire indigo `#6366F1`, font Inter, logo si dispo. Ça remplace les emails Lovable génériques par des emails à ta marque.
+### Plan recommandé (Option A)
 
-**3. Brancher les emails transactionnels (app)**
-Mettre en place l'infra d'envoi d'emails transactionnels pour pouvoir envoyer depuis le code (ex: notification au recruteur quand un candidat termine son entretien, confirmation d'inscription candidat, etc.). Pour l'instant : juste l'infra prête, pas de template spécifique tant que tu n'as pas un cas d'usage précis.
+**1. DB — table `email_template_overrides`**
+```
+- id uuid PK
+- organization_id uuid (FK orgs)
+- template_key text  -- 'signup' | 'recovery' | 'invite' | 'magic-link' | 'email-change' | 'reauthentication' | 'contact-confirmation' | ...
+- subject text
+- html_body text  -- HTML brut avec placeholders {{var}}
+- enabled boolean default true
+- updated_at, updated_by
+- UNIQUE (organization_id, template_key)
+```
+RLS : admins de l'org peuvent SELECT/INSERT/UPDATE/DELETE leurs overrides.
 
-### Ce qu'il faut faire côté GoDaddy
-Une fois le dialog complété, Lovable affichera 2 records NS du type :
-- `notify.interw.ai NS ns3.lovable.cloud`
-- `notify.interw.ai NS ns4.lovable.cloud`
+**2. Edge Functions — résolution override**
+- `auth-email-hook` : avant de rendre le template `.tsx`, query `email_template_overrides` par org + key. Si trouvé et enabled → render le HTML override avec interpolation `{{var}}`. Sinon → fallback sur le `.tsx`.
+- `send-transactional-email` : même logique.
+- Nouvelle fonction `get-email-template-defaults` (auth requise) : retourne le HTML par défaut rendu de chaque template (pour pré-remplir l'éditeur "Reset to default").
 
-À ajouter dans **GoDaddy → DNS de interw.ai → Add Record (NS)**. Tes MX/A/TXT existants restent intacts.
+**3. Sidebar**
+- Ajouter "Emails" dans `librarySubItems` de `AppSidebar.tsx` (sous Bibliothèque, après Intros) avec icône `Mail`.
 
-### Question
-L'adresse d'expéditeur que verront les destinataires sera affichée comme `noreply@interw.ai` (ou autre nom au choix) — quel **nom d'expéditeur** veux-tu utiliser ?
-1. `noreply@interw.ai` (générique, standard)
-2. `hello@interw.ai` (ta boîte existante — les réponses arriveront chez toi sur GoDaddy)
-3. `contact@interw.ai` ou autre
+**4. Page `src/pages/EmailTemplates.tsx` (route `/library/emails`)**
+- Liste des templates groupés : **Authentification** (6 templates) + **Notifications app** (transactionnels enregistrés dans `registry.ts`).
+- Chaque ligne : nom, statut (Défaut / Personnalisé), bouton "Modifier".
+- Dialog d'édition :
+  - Champ Sujet (input)
+  - Champ Corps (textarea HTML, monospace)
+  - Liste des variables disponibles pour ce template (chips cliquables qui insèrent `{{var}}`)
+  - Aperçu live (iframe sandbox) à droite
+  - Boutons : Sauvegarder / Réinitialiser au défaut / Annuler
+- Réservé aux admins de l'org (check via `useOrgRole`).
 
-Une fois cette préférence connue, on lance la config.
+**5. Routing**
+- `src/App.tsx` : route protégée `/library/emails` → `EmailTemplates`.
+
+### Templates concernés (au lancement)
+Auth : signup, recovery, invite, magic-link, email-change, reauthentication
+Transactionnels : ceux enregistrés dans `registry.ts` (vide pour l'instant, mais l'UI les prendra en compte dynamiquement quand tu en ajouteras)
+
+### Hors scope (V2 possible)
+- Éditeur WYSIWYG (TipTap/MJML) — pour l'instant HTML brut
+- Versioning des templates (historique des modifs)
+- A/B testing
+- Multi-langue par template
+- Édition des templates par projet (uniquement par org pour l'instant)
+
+### Questions
+1. **Option A (override DB éditable) ou Option B (visualisation seule, modifs via chat) ?** → je recommande A
+2. **Pour Option A, l'éditeur HTML brut te convient-il** (avec aperçu live + variables cliquables), ou tu veux un éditeur visuel type WYSIWYG (scope plus gros, ~+50% de boulot) ?
+3. **Qui peut éditer** : admins de l'org seulement, ou tous les recruteurs ?
 
