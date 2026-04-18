@@ -1420,7 +1420,9 @@ export default function InterviewStart() {
             REPRENDRE
           </Button>
           <p className="mt-6 text-sm text-[#f5f0e8]/60 text-center max-w-sm px-6">
-            Cliquez pour reprendre exactement où vous vous êtes arrêté(e).
+            {pausedDuringQuestionRef.current
+              ? "La question sera rejouée depuis le début à la reprise."
+              : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
           </p>
         </div>
       )}
