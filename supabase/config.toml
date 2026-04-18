@@ -17,4 +17,4 @@ project_id = "qxszgsxdktnwqabsdfvw"
     verify_jwt = false
 
   [functions.get-email-template-defaults]
-    verify_jwt = true
+    verify_jwt = false

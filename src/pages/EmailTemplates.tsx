@@ -41,40 +41,51 @@ export default function EmailTemplates() {
   const [templates, setTemplates] = useState<TemplateDefault[]>([]);
   const [overrides, setOverrides] = useState<Record<string, OverrideRow>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState<TemplateDefault | null>(null);
   const [editSubject, setEditSubject] = useState("");
   const [editBody, setEditBody] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (roleLoading) return;
+  const loadTemplates = async () => {
     if (!isAdmin || !organizationId) {
       setLoading(false);
       return;
     }
-    (async () => {
-      setLoading(true);
-      try {
-        const [{ data: defaults, error: fnError }, { data: ovs, error: ovError }] = await Promise.all([
-          supabase.functions.invoke("get-email-template-defaults"),
-          supabase
-            .from("email_template_overrides" as never)
-            .select("template_key, subject, html_body, enabled")
-            .eq("organization_id", organizationId),
-        ]);
-        if (fnError) throw fnError;
-        if (ovError) throw ovError;
-        setTemplates((defaults as any)?.templates || []);
-        const map: Record<string, OverrideRow> = {};
-        ((ovs as any[]) || []).forEach((o) => (map[o.template_key] = o));
-        setOverrides(map);
-      } catch (e: any) {
-        toast({ title: "Erreur", description: e.message, variant: "destructive" });
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [{ data: defaults, error: fnError }, { data: ovs, error: ovError }] = await Promise.all([
+        supabase.functions.invoke("get-email-template-defaults"),
+        supabase
+          .from("email_template_overrides" as never)
+          .select("template_key, subject, html_body, enabled")
+          .eq("organization_id", organizationId),
+      ]);
+      if (fnError) throw fnError;
+      if (ovError) throw ovError;
+      const list = (defaults as any)?.templates || [];
+      setTemplates(list);
+      const map: Record<string, OverrideRow> = {};
+      ((ovs as any[]) || []).forEach((o) => (map[o.template_key] = o));
+      setOverrides(map);
+      if (list.length === 0) {
+        setLoadError("Aucun template retourné par le serveur.");
       }
-    })();
-  }, [isAdmin, organizationId, roleLoading, toast]);
+    } catch (e: any) {
+      const msg = e?.message || "Erreur inconnue";
+      setLoadError(msg);
+      toast({ title: "Erreur de chargement", description: msg, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (roleLoading) return;
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, organizationId, roleLoading]);
 
   const grouped = useMemo(() => {
     const auth = templates.filter((t) => t.group === "auth");
@@ -208,6 +219,20 @@ export default function EmailTemplates() {
           <code className="text-xs bg-muted px-1 rounded">{`{{nom}}`}</code> pour insérer des données dynamiques.
         </p>
       </div>
+
+      {loadError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="text-sm">
+              <div className="font-medium text-destructive">Impossible de charger les templates</div>
+              <div className="text-muted-foreground text-xs mt-0.5">{loadError}</div>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadTemplates}>
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
