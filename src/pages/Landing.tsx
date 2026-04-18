@@ -106,7 +106,7 @@ export default function Landing() {
             Scoring objectif, rapports détaillés, expérience candidat soignée.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
               Demander une démo <ArrowRight className="h-4 w-4" />
             </a>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
