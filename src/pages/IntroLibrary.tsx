@@ -200,16 +200,6 @@ export default function IntroLibrary() {
               </div>
 
               <div>
-                <Label>Description (optionnel)</Label>
-                <Textarea
-                  placeholder="Contexte d'usage…"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                />
-              </div>
-
-              <div>
                 <Label>Type</Label>
                 <div className="mt-2 flex gap-2">
                   <Button
