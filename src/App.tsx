@@ -25,6 +25,7 @@ import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
 import SharedReport from "./pages/SharedReport";
+import OrgPublic from "./pages/OrgPublic";
 import SuperAdmin from "./pages/SuperAdmin";
 import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/interview/:slug/complete/:token" element={<InterviewComplete />} />
             <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
             <Route path="/shared-report/:token" element={<SharedReport />} />
+            <Route path="/o/:slug" element={<OrgPublic />} />
 
             {/* Protected RH routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
