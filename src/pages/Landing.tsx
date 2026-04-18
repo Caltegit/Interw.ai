@@ -80,7 +80,7 @@ export default function Landing() {
             <Link to="/login" className="text-sm hover:text-white transition-colors" style={{ color: "hsl(var(--l-fg-dim))" }}>
               Connexion
             </Link>
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
               Demander une démo <ArrowRight className="h-3.5 w-3.5" />
             </a>
           </div>
