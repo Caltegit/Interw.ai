@@ -9,9 +9,8 @@ export interface TemplateEntry {
   previewData?: Record<string, any>
 }
 
-// Register transactional email templates here as you create them.
-// Example:
-// import { template as welcome } from './welcome.tsx'
-// export const TEMPLATES: Record<string, TemplateEntry> = { 'welcome': welcome }
+import { template as interviewReport } from './interview-report.tsx'
 
-export const TEMPLATES: Record<string, TemplateEntry> = {}
+export const TEMPLATES: Record<string, TemplateEntry> = {
+  'interview-report': interviewReport,
+}
