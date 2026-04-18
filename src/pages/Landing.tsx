@@ -262,7 +262,7 @@ export default function Landing() {
             Réservez une démo de 20 minutes. On vous montre comment Interw.ai s'intègre à votre process.
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="mailto:hello@interw.ai" className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
               Demander une démo <ArrowRight className="h-4 w-4" />
             </a>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
