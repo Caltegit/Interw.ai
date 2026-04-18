@@ -108,6 +108,30 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     setIsPlaying(false);
   };
 
+  const doStop = () => {
+    const el = getEl();
+    clearStallTimer();
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    if (el) {
+      try {
+        el.pause();
+        el.currentTime = 0;
+      } catch {}
+    }
+    setIsPlaying(false);
+    setProgress(0);
+    setHasFinished(false);
+  };
+
+  const doRestart = () => {
+    const el = getEl();
+    if (!el) return;
+    try { el.currentTime = 0; } catch {}
+    setProgress(0);
+    setHasFinished(false);
+    doPlay();
+  };
+
   const togglePlay = () => {
     const el = getEl();
     if (!el) return;
@@ -115,13 +139,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     else doPause();
   };
 
-  const restart = () => {
-    const el = getEl();
-    if (!el) return;
-    el.currentTime = 0;
-    doPlay();
-    setProgress(0);
-  };
+  const restart = () => doRestart();
 
   const handleEnded = () => {
     setIsPlaying(false);
@@ -134,10 +152,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     setDuration(el.duration);
   };
 
-  // Expose play/stop via ref
+  // Expose play/stop/restart via ref
   useImperativeHandle(ref, () => ({
     play: () => doPlay(),
-    stop: () => doPause(),
+    stop: () => doStop(),
+    restart: () => doRestart(),
   }));
 
   // Auto-play + reset finished state when media changes
