@@ -145,6 +145,7 @@ export type Database = {
           logo_url: string | null
           name: string
           owner_id: string | null
+          slug: string
         }
         Insert: {
           created_at?: string
@@ -152,6 +153,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           owner_id?: string | null
+          slug: string
         }
         Update: {
           created_at?: string
@@ -159,6 +161,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           owner_id?: string | null
+          slug?: string
         }
         Relationships: []
       }
@@ -685,6 +688,8 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      slugify: { Args: { _input: string }; Returns: string }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       ai_voice_type: "female_fr" | "male_fr" | "female_en" | "male_en"
