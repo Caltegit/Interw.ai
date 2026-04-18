@@ -1146,6 +1146,10 @@ export default function InterviewStart() {
                     variant="featured"
                     autoPlay={shouldAutoPlay}
                     onPlaybackEnd={() => {
+                      if (isPausedRef.current) {
+                        console.log("[InterviewStart] onPlaybackEnd (audio/text) ignored — paused");
+                        return;
+                      }
                       console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
                       forceStartListening();
                     }}
