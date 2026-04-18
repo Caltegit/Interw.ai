@@ -1,52 +1,46 @@
 
 
-## Bibliothèque d'intros (audio + vidéo)
+## Option B — URLs path-based par organisation : `interw.ai/o/{slug}`
 
-### Concept
-Créer une bibliothèque réutilisable d'**intros de présentation** (audio ou vidéo) au niveau de l'organisation, sur le même modèle que la bibliothèque de questions existante. À la création/édition d'un projet (étape 2), au lieu de réenregistrer une intro à chaque fois, l'utilisateur peut piocher une intro pré-enregistrée.
+### Schéma DB
+Ajouter à `organizations` :
+- `slug` text unique — généré auto à partir du nom (ex: "Acme Inc" → `acme-inc`)
+- Backfill des orgs existantes
+- Policy RLS `anon` SELECT sur orgs actives via slug (pour la page publique)
 
-### Navigation — restructurer le menu
-Renommer **"Questions"** en **"Bibliothèque"** dans la sidebar, avec 2 sous-items :
-- **Questions** → page actuelle `QuestionLibrary` (URL : `/library/questions`)
-- **Intros** → nouvelle page `IntroLibrary` (URL : `/library/intros`)
+### Génération du slug
+- À la création d'org (super admin + invitation) : slugify(name) + suffixe numérique si collision
+- Éditable dans Settings (admin uniquement) avec validation unicité
 
-Redirection `/question-library` → `/library/questions` pour ne pas casser les liens existants.
+### Nouvelle page publique `/o/:slug`
+Vitrine org accessible sans auth :
+- Logo + nom de l'org (chargés depuis `organizations` via slug)
+- Liste des projets actifs publics de l'org (titre, job_title, bouton "Postuler" → `/interview/{project.slug}`)
+- Branding minimal cohérent avec la marque org
 
-### Nouvelle table `intro_templates`
-Symétrique à `question_templates` :
-```
-id, organization_id, created_by, created_at
-name           text     — label (ex: "Intro Marie - chaleureuse")
-type           text     — 'audio' | 'video'
-audio_url      text     — si type=audio
-video_url      text     — si type=video
-description    text     — optionnel, contexte d'usage
-```
-RLS : org members peuvent CRUD sur les intros de leur organisation (calqué sur `question_templates`).
+### Réécriture des liens candidat (optionnel mais recommandé)
+Garder l'existant `/interview/:slug/...` qui marche déjà, **et** ajouter une variante préfixée `/o/:orgSlug/i/:projectSlug/...` qui résout vers les mêmes pages. Les anciens liens continuent de fonctionner.
 
-Les fichiers vont dans le bucket `media` existant, sous `intro-library/{uuid}.webm`.
-
-### Nouvelle page `IntroLibrary`
-- Grille de cards : nom, type (badge audio/vidéo), preview lecteur intégré, bouton supprimer
-- Bouton **"+ Nouvelle intro"** → dialog avec :
-  - Champ **Nom**
-  - Toggle **Audio / Vidéo**
-  - Réutilise `IntroAudioRecorder` ou `IntroVideoRecorder` existants
-  - Save → upload bucket + insert `intro_templates`
-
-### Intégration étape 2 de création projet
-Dans `ProjectNew.tsx` et `ProjectEdit.tsx`, à côté du recorder d'intro, ajouter un bouton **"Choisir depuis la bibliothèque"** qui ouvre un dialog `IntroLibraryDialog` :
-- Liste filtrée par type (audio ou vidéo selon le toggle actif)
-- Au clic sur une intro : l'URL de la bibliothèque est utilisée directement comme `intro_audio_url` / `presentation_video_url` du projet (pas de réupload — réutilisation comme déjà fait pour les questions)
+### Settings → exposer l'URL publique
+Dans `Settings.tsx`, section Organisation :
+- Champ `slug` éditable (admin)
+- Affichage de l'URL publique `https://interw.ai/o/{slug}` avec bouton copier
+- Lien "Voir la page publique"
 
 ### Fichiers touchés
-1. Migration SQL — table `intro_templates` + RLS
-2. `src/components/AppSidebar.tsx` — sous-menu Bibliothèque
-3. `src/App.tsx` — nouvelles routes `/library/questions` et `/library/intros` + redirect
-4. `src/pages/IntroLibrary.tsx` — **nouveau**
-5. `src/components/project/IntroLibraryDialog.tsx` — **nouveau** (sélecteur réutilisable)
-6. `src/pages/ProjectNew.tsx` + `src/pages/ProjectEdit.tsx` — bouton "Depuis la bibliothèque"
+1. Migration SQL : colonne `slug` + index unique + backfill + policy anon
+2. `src/pages/OrgPublic.tsx` — **nouveau** (page `/o/:slug`)
+3. `src/App.tsx` — route publique `/o/:slug`
+4. `src/pages/Settings.tsx` — édition slug + affichage URL publique
+5. `src/components/superadmin/CreateOrgDialog.tsx` — génération slug à la création
 
-### Question optionnelle
-Quand l'utilisateur enregistre une intro depuis l'étape 2 d'un projet, faut-il proposer une **case à cocher "Sauvegarder dans la bibliothèque"** pour qu'elle soit réutilisable ailleurs ? (Aujourd'hui les questions enregistrées dans un projet ne remontent pas dans la bibliothèque — comportement cohérent à garder, sauf si tu veux le changer.)
+### Hors scope (gardé pour Option C plus tard)
+- Vrais sous-domaines `acme.interw.ai` (nécessite wildcard DNS + Cloudflare Worker, hors Lovable)
+- Branding visuel custom par org (couleurs, fonts) — possible plus tard via colonnes additionnelles
+
+### Question
+La page publique `/o/{slug}` doit-elle :
+1. Lister les projets actifs de l'org (job board public), OU
+2. Être juste une page vitrine (logo + nom + bouton contact), OU
+3. Rediriger vers le site externe de l'org si renseigné ?
 
