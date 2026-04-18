@@ -1,86 +1,54 @@
 
 
-## Plan : Email automatique au recruteur après chaque entretien
+## Plan : Solidifier l'enchaînement question/réponse côté candidat
 
-### Objectif
-Quand un candidat termine son entretien et que le rapport IA est généré, envoyer automatiquement un email au recruteur (créateur du projet) avec le contenu complet du rapport + lien vers le rapport en ligne, avec le `Reply-To` configuré sur l'email du candidat.
+### Diagnostic
 
-### Flux technique
+**Cause racine commune** des deux bugs : l'enchaînement vers le mode "écoute" (start recording + start listening) dépend uniquement de l'event `onPlaybackEnd` du `QuestionMediaPlayer`. Si cet event ne se déclenche pas, l'interface reste figée sur "Préparation…".
 
-```
-Candidat termine entretien
-    ↓
-generate-report (déjà existant) crée le rapport
-    ↓
-[NOUVEAU] À la fin de generate-report, on appelle send-transactional-email
-    ↓
-Template "interview-report" est rendu avec toutes les données
-    ↓
-Email envoyé à recruiter.email (créateur du projet) avec Reply-To = candidat
-```
+Cas où `onended` ne fire jamais :
+1. **Auto-play bloqué** par le navigateur (politique mobile) → `play().catch(() => {})` avale l'erreur silencieusement, aucun fallback.
+2. **Vidéo qui buffer** ou erreur réseau pendant la lecture.
+3. **Race condition** : `setShouldAutoPlay(true)` déclenche le `useEffect` du player avec un délai de 200ms, mais si la question change avant, l'event est perdu.
+4. **Erreur de chargement média** (`onerror` non géré dans le player).
+5. **TTS qui se finit normalement mais `setShouldAutoPlay(true)` ne déclenche jamais le `useEffect`** si `autoPlay` était déjà `true`.
 
-### Étapes d'implémentation
+### Corrections à appliquer
 
-**1. Vérifier l'infra emails transactionnels**
-- `setup_email_infra` semble OK (tables présentes : `email_send_log`, `suppressed_emails`, `email_unsubscribe_tokens`, `email_send_state`)
-- Mais `send-transactional-email` Edge Function existe déjà ✓
-- Le registry `_shared/transactional-email-templates/registry.ts` est vide → pas encore de templates transactionnels scaffoldés
+**1. Watchdog timer dans `InterviewStart.tsx`**
+Ajouter un timer de sécurité : après chaque transition (TTS terminé + `setShouldAutoPlay(true)`), si `isListening` n'est toujours pas `true` au bout de **8 secondes**, on force `startQuestionRecording()` + `startListening()` automatiquement.
+- Ce watchdog se reset si `onPlaybackEnd` se déclenche normalement.
+- Couvre tous les cas où la vidéo/audio ne joue pas ou n'envoie pas `onended`.
 
-→ Exécuter `email_domain--scaffold_transactional_email` pour créer proprement `handle-email-unsubscribe`, `handle-email-suppression`, et la page unsubscribe associée.
+**2. Bouton manuel de secours "J'ai bien vu/entendu la question"**
+Quand le bandeau "Préparation…" est affiché ET qu'une question média est en cours, afficher après **3 secondes** un petit bouton discret en dessous : *"Continuer →"*. Permet au candidat de débloquer manuellement l'écoute si la vidéo reste figée.
 
-**2. Créer le template `interview-report.tsx`**
-Composant React Email avec props :
-- `candidateName`, `candidateEmail`, `jobTitle`, `projectTitle`
-- `overallScore`, `overallGrade`, `recommendation`, `executiveSummary`
-- `strengths[]`, `areasForImprovement[]`
-- `criteriaScores` (label / score / max / comment)
-- `questionEvaluations` (question / score / comment)
-- `reportUrl` (lien vers `/sessions/:id` côté app)
+**3. Gestion des erreurs média dans `QuestionMediaPlayer.tsx`**
+- Ajouter `onError` sur les éléments `<audio>` et `<video>` qui appelle `onPlaybackEnd?.()` → n'importe quelle erreur média débloque l'enchaînement.
+- Dans `doPlay()`, capturer le rejet de `play()` et appeler `onPlaybackEnd?.()` après un court délai si la lecture n'a pas pu démarrer (auto-play bloqué).
+- Ajouter `onStalled` et `onSuspend` (avec un timeout de 5s) pour détecter les vidéos qui freezent.
 
-Sujet : `interw.ai - {candidateName}`
+**4. Robustesse du `useEffect` autoPlay**
+Le `useEffect` actuel se déclenche sur `[autoPlay, type, audioUrl, videoUrl]`. Si `autoPlay` reste `true` entre deux questions, l'effect ne re-fire pas correctement. Solution : ajouter une clé de "génération" (incrémentée à chaque question) ou réinitialiser `shouldAutoPlay` à `false` côté parent juste avant chaque transition.
 
-Background blanc, accents indigo (#6366F1), boutons CTA "Voir le rapport complet".
+**5. Garantir le state propre entre questions**
+Dans `handleSendResponse` et `handleSkipQuestion`, avant le `setShouldAutoPlay(true)` :
+- Faire `setShouldAutoPlay(false)` puis `setShouldAutoPlay(true)` dans deux ticks pour garantir que le `useEffect` re-déclenche.
+- Reset explicite de `isSpeaking` et autres états avant la nouvelle question.
 
-**3. Enregistrer dans `registry.ts`**
-Ajouter l'import + entrée `'interview-report'`.
+**6. Logs de debug**
+Ajouter quelques `console.log` ciblés sur les transitions (`onPlaybackEnd fired`, `watchdog triggered`, `play() failed`) pour pouvoir diagnostiquer en prod si un autre cas pointu surgit.
 
-**4. Support du `Reply-To`**
-`send-transactional-email` actuel ne gère pas `replyTo`. Il faut :
-- Ajouter un champ optionnel `replyTo` au body
-- Le passer dans le payload `enqueue_email`
-- Vérifier que `process-email-queue` le forwarde à l'API d'envoi (s'il ne le fait pas, l'ajouter aussi)
+### Fichiers modifiés
 
-**5. Trigger automatique dans `generate-report`**
-À la toute fin de `generate-report/index.ts`, après le succès de l'insert du rapport :
-- Récupérer le créateur du projet : `projects.created_by` → `profiles.email` (ou `auth.users.email` via service role)
-- Construire l'URL du rapport : `https://interw.ai/sessions/{session_id}` (ou domaine de prod)
-- Invoquer `send-transactional-email` avec :
-  ```
-  templateName: 'interview-report'
-  recipientEmail: <email recruteur>
-  replyTo: session.candidate_email
-  idempotencyKey: `report-${session_id}`
-  templateData: { ...toutes les données du rapport... }
-  ```
-
-**6. Redéployer**
-- `send-transactional-email` (modifié pour replyTo)
-- `process-email-queue` (modifié si besoin pour replyTo)
-- `handle-email-unsubscribe`, `handle-email-suppression` (scaffoldés)
-- `generate-report` (modifié)
-
-**7. Page Unsubscribe**
-Créer la page React au chemin déterminé par le scaffold (ex `/unsubscribe`) + ajouter la route dans `App.tsx`.
+- `src/pages/InterviewStart.tsx` : watchdog, bouton manuel "Continuer", reset propre de `shouldAutoPlay` entre questions
+- `src/components/interview/QuestionMediaPlayer.tsx` : `onError`/`onStalled`, fallback si `play()` rejette, garantir que `onPlaybackEnd` est appelé même en cas d'échec
 
 ### Test final
-Lancer un vrai entretien de bout en bout, vérifier que :
-- Le rapport est généré
-- Un email arrive sur l'adresse du créateur du projet
-- L'objet contient bien `interw.ai - {nom candidat}`
-- Cliquer "Répondre" cible bien l'email du candidat
-- Les sections du rapport sont toutes présentes et lisibles
 
-### Notes
-- L'email part depuis `noreply@notify.interw.ai` (domaine vérifié), Reply-To pointera sur le candidat → expérience naturelle pour le recruteur
-- Idempotency key basé sur `session_id` → pas de doublon si `generate-report` est rejoué
+Lancer un entretien complet en simulant :
+- Une vidéo qui charge bien → enchaînement fluide question→réponse (cas nominal toujours OK)
+- Mode "Passer la question" → bien enchaîner sur la suivante
+- Désactiver l'auto-play du navigateur → le watchdog doit débloquer après 8s ou le candidat peut cliquer "Continuer →" après 3s
+- Simuler une coupure réseau pendant la vidéo → débloquer via watchdog
 
