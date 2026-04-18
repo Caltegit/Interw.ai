@@ -1020,14 +1020,32 @@ export default function InterviewStart() {
       <CandidateLayout>
         <Card className="max-w-md w-full text-center">
           <CardContent className="py-12 space-y-6">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-              <Mic className="h-10 w-10 text-primary" />
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle, hsl(var(--l-accent) / 0.4), transparent 70%)",
+                  filter: "blur(20px)",
+                }}
+              />
+              <div
+                className="relative flex h-20 w-20 items-center justify-center rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.2))",
+                }}
+              >
+                <Mic className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+              </div>
             </div>
             <div className="space-y-3">
-              <h1 className="text-xl font-bold">Prêt à démarrer ?</h1>
-              <p className="text-sm text-muted-foreground">Soyez naturel.le et souriez vous êtes filmé.e !</p>
+              <h1 className="text-xl font-bold candidate-gradient-text">Prêt à démarrer ?</h1>
+              <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Soyez naturel.le et souriez vous êtes filmé.e !
+              </p>
             </div>
-            <Button size="lg" className="w-full h-16 text-xl" onClick={beginInterview}>
+            <Button size="lg" className="candidate-btn-primary w-full h-16 text-xl" onClick={beginInterview}>
               <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer l'entretien
             </Button>
