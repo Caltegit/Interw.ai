@@ -104,8 +104,8 @@ export default function EmailTemplates() {
     setSaving(true);
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
-    const { error } = await supabase
-      .from("email_template_overrides" as never)
+    const { error } = await (supabase as any)
+      .from("email_template_overrides")
       .upsert(
         {
           organization_id: organizationId,
