@@ -437,6 +437,11 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             </div>
 
             <Input
+              placeholder="Titre court (ex: Présentez-vous)"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+            />
+            <Input
               placeholder={
                 newType === "written" ? "Texte de la question..." : "Description / titre de la question (optionnel)..."
               }
