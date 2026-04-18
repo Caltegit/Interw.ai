@@ -282,7 +282,7 @@ export default function Landing() {
             <span>© {new Date().getFullYear()} Interw.ai — Tous droits réservés</span>
           </div>
           <div className="flex items-center gap-5">
-            <a href="mailto:hello@interw.ai" className="hover:text-white transition-colors">Contact</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} onClick={handleContactClick} className="hover:text-white transition-colors">Contact</a>
             <a href="#" className="hover:text-white transition-colors">Mentions légales</a>
             <a href="#" className="hover:text-white transition-colors">RGPD</a>
           </div>
