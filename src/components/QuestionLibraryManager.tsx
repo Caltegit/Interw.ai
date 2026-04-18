@@ -327,6 +327,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   const startEdit = (t: QuestionTemplate) => {
     setEditingId(t.id);
+    setEditTitle(t.title || "");
     setEditContent(t.content);
     setEditCategory(t.category || "");
     setEditFollowUp(t.follow_up_enabled);
@@ -337,6 +338,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     const { error } = await supabase
       .from("question_templates")
       .update({
+        title: editTitle.trim(),
         content: editContent.trim(),
         category: editCategory || null,
         follow_up_enabled: editFollowUp,
@@ -352,7 +354,10 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   };
 
   const filtered = templates.filter((t) => {
-    const matchSearch = !search || t.content.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      !search ||
+      t.content.toLowerCase().includes(search.toLowerCase()) ||
+      (t.title || "").toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "all" || t.category === filterCategory;
     return matchSearch && matchCat;
   });
