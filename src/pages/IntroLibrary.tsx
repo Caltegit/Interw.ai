@@ -181,7 +181,7 @@ export default function IntroLibrary() {
               <Plus className="mr-1 h-4 w-4" /> Nouvelle intro
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="flex max-h-[90vh] max-w-lg flex-col">
             <DialogHeader>
               <DialogTitle>Nouvelle intro</DialogTitle>
               <DialogDescription>
@@ -189,7 +189,7 @@ export default function IntroLibrary() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="-mx-6 flex-1 space-y-4 overflow-y-auto px-6">
               <div>
                 <Label>Nom *</Label>
                 <Input
