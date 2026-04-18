@@ -964,6 +964,8 @@ export default function InterviewStart() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
+      if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
