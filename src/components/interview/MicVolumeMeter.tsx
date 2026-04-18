@@ -95,20 +95,17 @@ export default function MicVolumeMeter({ stream, active }: MicVolumeMeterProps) 
           const isOn = i < activeBars;
           const isHigh = i >= bars - 4;
           const isMid = i >= bars - 9 && i < bars - 4;
-          const color = isOn
-            ? isHigh
-              ? "bg-success"
-              : isMid
-              ? "bg-primary"
-              : "bg-primary/70"
-            : "bg-muted-foreground/20";
+          const baseClass = isOn ? "candidate-mic-bar-on" : "bg-muted-foreground/20";
           // Hauteur progressive
           const h = 8 + (i / bars) * 32; // 8px → 40px
           return (
             <span
               key={i}
-              className={`w-[6px] rounded-sm transition-colors ${color}`}
-              style={{ height: `${h}px` }}
+              className={`w-[6px] rounded-sm transition-all ${baseClass}`}
+              style={{
+                height: `${h}px`,
+                opacity: isOn ? (isHigh ? 1 : isMid ? 0.9 : 0.7) : 1,
+              }}
             />
           );
         })}
