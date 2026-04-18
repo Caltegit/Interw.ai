@@ -1,32 +1,23 @@
 
 
-## Endroits où le nom "Interw.ai" devrait apparaître
+## Remplacer "InterviewAI" par "Interw.ai" partout
 
-J'ai cherché les occurrences visibles du nom du produit dans le code. Voici les endroits où "InterviewAI" est actuellement affiché et qu'il faudrait remplacer par **Interw.ai** :
+La capture montre la page Login qui affiche encore "InterviewAI". Je vais chercher toutes les occurrences restantes.
+<lov-tool-use id="toolu_vrtx_016wmWPJmeRJVNhfYEkem8Y4" name="code--search_files" integration-id="code" data="{\"query\": \"InterviewAI\"}">
+</lov-tool-use>
 
-### 1. Onglet navigateur & SEO (`index.html`)
-- `<title>` : "InterviewAI — Entretien vidéo IA pour le recrutement"
-- `<meta name="description">`
-- `<meta property="og:title">` (partage réseaux sociaux)
-- `<meta name="twitter:title">`
+<lov-tool-use id="toolu_vrtx_0196DC4spkgyxa8NDD7W8P5F" name="code--search_files" integration-id="code" data="{\"query\": \"InterviewAI\"}">
+</lov-tool-use>
+<lov-plan>
 
-### 2. Sidebar RH (`src/components/AppSidebar.tsx`)
-- Logo texte affiché en haut de la sidebar : `<span>InterviewAI</span>`
+## Remplacer "InterviewAI" par "Interw.ai" partout
 
-### 3. Memory projet (`mem://index.md`)
-- Description du projet utilisée comme référence interne pour l'IA
+3 occurrences restantes trouvées :
 
-### Pas concernés (à confirmer)
-- Page de login, emails transactionnels, page candidat (`CandidateLayout`) → **aucune occurrence du nom** trouvée actuellement, donc rien à changer.
-- README.md → contient juste le placeholder Lovable par défaut.
+1. **`src/pages/Login.tsx`** (ligne 54) → titre de la card de connexion (visible sur ta capture)
+2. **`src/pages/InviteSignup.tsx`** (ligne 154) → titre de la page d'invitation
+3. **`src/pages/SharedReport.tsx`** (ligne 212) → footer "Généré par InterviewAI"
 
-### Plan d'action proposé
-Remplacer **InterviewAI** par **Interw.ai** dans :
-1. `index.html` (title + 4 meta tags)
-2. `src/components/AppSidebar.tsx` (logo sidebar)
-3. `mem://index.md` (mémoire projet)
-
-Et te rappeler de renommer aussi le projet côté Lovable (clic sur le nom en haut à gauche → "Rename project") — ça, je ne peux pas le faire pour toi.
-
-Veux-tu aussi que j'ajoute le nom **Interw.ai** quelque part où il n'apparaît pas encore (ex. header de la page candidat, page de login, page de fin d'entretien) pour renforcer la marque ?
+### Action
+Remplacer `InterviewAI` par `Interw.ai` dans ces 3 fichiers. C'est tout — aucune autre occurrence du nom dans le code.
 
