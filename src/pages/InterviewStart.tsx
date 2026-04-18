@@ -1114,15 +1114,13 @@ export default function InterviewStart() {
                             : "ring-1 shadow-lg"
                       }`}
                       style={{
-                        // @ts-expect-error css var
-                        "--tw-ring-color": isSpeaking
+                        ["--tw-ring-color" as string]: isSpeaking
                           ? "hsl(var(--l-accent) / 0.6)"
                           : isListening
                             ? "hsl(160 84% 50% / 0.5)"
                             : "hsl(var(--l-border))",
-                        // @ts-expect-error css var
-                        "--tw-ring-offset-color": "hsl(var(--l-bg))",
-                      }}
+                        ["--tw-ring-offset-color" as string]: "hsl(var(--l-bg))",
+                      } as React.CSSProperties}
                     >
                       <img
                         src={project?.avatar_image_url || defaultAiAvatar}
