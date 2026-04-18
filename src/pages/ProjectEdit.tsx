@@ -282,6 +282,16 @@ export default function ProjectEdit() {
           .select();
 
         if (insertedQuestions) {
+          // Fetch org id once for save_to_library inserts
+          let orgIdForLib: string | null = null;
+          const needsLib = validQuestions.some((q) => q.save_to_library && !q.from_library);
+          if (needsLib) {
+            const { data: orgData } = await supabase.rpc("get_user_organization_id", {
+              _user_id: user.id,
+            });
+            orgIdForLib = orgData || null;
+          }
+
           for (let i = 0; i < insertedQuestions.length; i++) {
             const q = validQuestions[i];
             const qId = insertedQuestions[i].id;
@@ -318,6 +328,33 @@ export default function ProjectEdit() {
                 .from("questions")
                 .update(updates as never)
                 .eq("id", qId);
+            }
+
+            // Save to library if requested
+            if (q.save_to_library && !q.from_library && orgIdForLib) {
+              const contentText = q.content.trim() || q.title || "";
+              if (contentText) {
+                const { data: existing } = await supabase
+                  .from("question_templates")
+                  .select("id")
+                  .eq("organization_id", orgIdForLib)
+                  .eq("content", contentText)
+                  .maybeSingle();
+                if (!existing) {
+                  await supabase.from("question_templates").insert({
+                    organization_id: orgIdForLib,
+                    created_by: user.id,
+                    title: q.title || contentText.slice(0, 60),
+                    content: contentText,
+                    category: q.category || null,
+                    type: q.mediaType,
+                    follow_up_enabled: q.follow_up_enabled,
+                    max_follow_ups: q.max_follow_ups,
+                    audio_url: (updates.audio_url as string | null) || null,
+                    video_url: (updates.video_url as string | null) || null,
+                  } as never);
+                }
+              }
             }
           }
         }
