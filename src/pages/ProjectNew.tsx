@@ -151,8 +151,8 @@ export default function ProjectNew() {
           allow_pause: allowPause,
           slug,
           avatar_image_url: avatarUrl,
-          intro_audio_url: null,
-          presentation_video_url: null,
+          intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
+          presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
         } as never)
         .select()
