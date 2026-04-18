@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,6 +18,7 @@ import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
 import QuestionLibrary from "./pages/QuestionLibrary";
+import IntroLibrary from "./pages/IntroLibrary";
 import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
@@ -58,7 +59,9 @@ const App = () => (
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />
-              <Route path="/question-library" element={<QuestionLibrary />} />
+              <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
+              <Route path="/library/questions" element={<QuestionLibrary />} />
+              <Route path="/library/intros" element={<IntroLibrary />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />

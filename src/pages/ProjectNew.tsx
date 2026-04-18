@@ -15,6 +15,7 @@ import { StepQuestions, Question, createEmptyQuestion } from "@/components/proje
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
+import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 
 const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
@@ -150,8 +151,8 @@ export default function ProjectNew() {
           allow_pause: allowPause,
           slug,
           avatar_image_url: avatarUrl,
-          intro_audio_url: null,
-          presentation_video_url: null,
+          intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
+          presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
         } as never)
         .select()
@@ -434,7 +435,21 @@ export default function ProjectNew() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border p-4">
+              <div className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex justify-end">
+                  <IntroLibraryDialog
+                    type={introType}
+                    onSelect={(item) => {
+                      if (introType === "audio") {
+                        setIntroAudioBlob(null);
+                        setIntroAudioPreviewUrl(item.audio_url);
+                      } else {
+                        setIntroVideoFile(null);
+                        setIntroVideoPreviewUrl(item.video_url);
+                      }
+                    }}
+                  />
+                </div>
                 {introType === "audio" ? (
                   <IntroAudioRecorder
                     existingUrl={introAudioPreviewUrl}

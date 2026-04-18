@@ -61,6 +61,42 @@ export type Database = {
           },
         ]
       }
+      intro_templates: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          type: string
+          video_url: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          type: string
+          video_url?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          type?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       organization_invitations: {
         Row: {
           created_at: string
