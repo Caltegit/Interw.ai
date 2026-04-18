@@ -1,79 +1,60 @@
 
 
-## Page "Emails" — gestion des templates
+## Landing page interw.ai — méthode et options
 
-### Vision
-Ajouter une page `/emails` dans le sidebar (sous "Bibliothèque") qui permet aux admins de l'org de visualiser et personnaliser tous les emails envoyés par la plateforme : emails d'authentification (signup, reset, invitation, etc.) et emails transactionnels (à venir).
+### Constat
+Aujourd'hui `/` est protégé (Dashboard RH après login). Il faut une vraie **landing publique** sur la racine pour les visiteurs non connectés, qui présente le produit, et redirige les utilisateurs connectés vers le Dashboard.
 
-### Réalité technique importante
-Les templates d'emails actuels sont des fichiers `.tsx` React Email dans `supabase/functions/_shared/email-templates/` (auth) et `_shared/transactional-email-templates/` (transactionnels). Ces fichiers sont **codés en dur** et déployés avec les Edge Functions — ils ne sont **pas modifiables à chaud** depuis l'UI sans architecture supplémentaire.
+### Charte graphique — comment l'intégrer
+Tu as **3 façons** de me donner ta charte, du plus simple au plus complet :
 
-Deux approches possibles :
+1. **Site de référence (recommandé pour démarrer)** — tu m'envoies 1-3 URLs qui t'inspirent (style, ton, structure). J'analyse couleurs, typo, rythme visuel, et je m'en inspire sans copier. ✅ Le plus rapide.
+2. **Captures d'écran / moodboard** — tu uploads des images (Dribbble, Behance, sites concurrents). Je détecte les couleurs dominantes et l'ambiance.
+3. **Charte formelle** — si tu as un PDF de brand guidelines (logo, palette HEX, fonts, ton de voix), je l'applique pixel-près.
 
-**Option A — Visualisation + override DB (recommandé)**
-- Page `/emails` qui liste tous les templates avec aperçu (via `preview-transactional-email` + endpoint similaire pour auth).
-- Nouvelle table `email_template_overrides` (org_id, template_key, subject, html_body, variables) — quand un override existe, il prend le pas sur le template `.tsx` par défaut.
-- Éditeur dans l'UI : sujet + corps HTML (avec variables `{{recipient}}`, `{{confirmationUrl}}`, etc.) + aperçu live.
-- Modifs `auth-email-hook` et `send-transactional-email` pour vérifier d'abord l'override en DB avant d'utiliser le template par défaut.
-- ✅ Modification 100% via UI, par org, sans redéploiement.
-- ⚠️ Éditeur HTML brut (pas de WYSIWYG riche, sinon scope énorme).
+→ **Pour interw.ai, le plus pragmatique** : envoie-moi **1 site exemple** + dis-moi si tu veux garder l'indigo actuel (`#6366F1`) ou pivoter vers une autre direction (ex: dark + accent vif type Linear, ou clair/éditorial type Notion, ou premium/sombre type Vercel).
 
-**Option B — Visualisation seule (read-only)**
-- Page `/emails` qui liste et affiche l'aperçu des templates `.tsx` actuels.
-- Pour modifier : l'utilisateur me demande dans le chat ("change le sujet du signup en X"), j'édite le `.tsx` et redéploie.
-- ✅ Simple, rapide à livrer.
-- ❌ Pas vraiment "gestion" — juste de la visualisation.
+### Ce que je vais construire
 
-### Plan recommandé (Option A)
+**Route `/` repensée**
+- Si non connecté → nouvelle `Landing.tsx` (publique)
+- Si connecté → redirect vers `/dashboard`
 
-**1. DB — table `email_template_overrides`**
-```
-- id uuid PK
-- organization_id uuid (FK orgs)
-- template_key text  -- 'signup' | 'recovery' | 'invite' | 'magic-link' | 'email-change' | 'reauthentication' | 'contact-confirmation' | ...
-- subject text
-- html_body text  -- HTML brut avec placeholders {{var}}
-- enabled boolean default true
-- updated_at, updated_by
-- UNIQUE (organization_id, template_key)
-```
-RLS : admins de l'org peuvent SELECT/INSERT/UPDATE/DELETE leurs overrides.
+**Sections de la landing (structure standard SaaS, à ajuster selon ton inspiration)**
+1. **Header** — logo Interw.ai, nav (Fonctionnalités, Tarifs, Connexion), CTA "Demander une démo"
+2. **Hero** — titre fort + sous-titre + CTA principal + visuel (mockup d'un entretien IA en cours)
+3. **Logos clients** (placeholder pour l'instant)
+4. **Problème / Solution** — pourquoi les entretiens RH classiques sont lents/biaisés, comment l'IA aide
+5. **Fonctionnalités clés** (3-4 cartes) : entretien vidéo IA, scoring automatique, rapports détaillés, bibliothèque de questions
+6. **Comment ça marche** (3 étapes) : créer un projet → envoyer le lien → recevoir les rapports
+7. **Témoignages** (placeholder)
+8. **CTA final** + footer (mentions légales, contact, RGPD)
 
-**2. Edge Functions — résolution override**
-- `auth-email-hook` : avant de rendre le template `.tsx`, query `email_template_overrides` par org + key. Si trouvé et enabled → render le HTML override avec interpolation `{{var}}`. Sinon → fallback sur le `.tsx`.
-- `send-transactional-email` : même logique.
-- Nouvelle fonction `get-email-template-defaults` (auth requise) : retourne le HTML par défaut rendu de chaque template (pour pré-remplir l'éditeur "Reset to default").
+**Stack visuelle**
+- Composants shadcn existants (Card, Button, Badge)
+- Tailwind, design tokens du projet
+- Animations légères (fade-in au scroll via `framer-motion` ou pur CSS)
+- Responsive mobile-first
 
-**3. Sidebar**
-- Ajouter "Emails" dans `librarySubItems` de `AppSidebar.tsx` (sous Bibliothèque, après Intros) avec icône `Mail`.
+**Routing**
+- `src/App.tsx` : nouvelle route `/` publique conditionnelle (redirect via AuthContext si connecté)
+- Ancien `Dashboard` reste sur `/dashboard`
 
-**4. Page `src/pages/EmailTemplates.tsx` (route `/library/emails`)**
-- Liste des templates groupés : **Authentification** (6 templates) + **Notifications app** (transactionnels enregistrés dans `registry.ts`).
-- Chaque ligne : nom, statut (Défaut / Personnalisé), bouton "Modifier".
-- Dialog d'édition :
-  - Champ Sujet (input)
-  - Champ Corps (textarea HTML, monospace)
-  - Liste des variables disponibles pour ce template (chips cliquables qui insèrent `{{var}}`)
-  - Aperçu live (iframe sandbox) à droite
-  - Boutons : Sauvegarder / Réinitialiser au défaut / Annuler
-- Réservé aux admins de l'org (check via `useOrgRole`).
+**Hors scope V1**
+- Page Tarifs, page À propos, blog → on ajoutera plus tard
+- i18n (français only pour l'instant)
+- Animations 3D / Lottie complexes
 
-**5. Routing**
-- `src/App.tsx` : route protégée `/library/emails` → `EmailTemplates`.
+### Questions avant que je code
 
-### Templates concernés (au lancement)
-Auth : signup, recovery, invite, magic-link, email-change, reauthentication
-Transactionnels : ceux enregistrés dans `registry.ts` (vide pour l'instant, mais l'UI les prendra en compte dynamiquement quand tu en ajouteras)
+1. **Site(s) d'inspiration** — colle-moi 1 à 3 URLs (Linear, Vercel, Lovable, Notion, ou n'importe quoi qui te plaît visuellement)
+2. **Direction visuelle** :
+   - A. Garder indigo actuel + clair/aéré (type Notion/Linear clair)
+   - B. Dark mode + accent vif (type Linear sombre, Vercel)
+   - C. Premium éditorial (typo serif + beaucoup de blanc, type Stripe/Pitch)
+   - D. Autre — décrit avec mots
+3. **Ton de voix** : pro/corporate, fun/punchy, ou expert/RH-friendly ?
+4. **CTA principal** : "Demander une démo", "Essayer gratuitement", "Créer un compte" ?
 
-### Hors scope (V2 possible)
-- Éditeur WYSIWYG (TipTap/MJML) — pour l'instant HTML brut
-- Versioning des templates (historique des modifs)
-- A/B testing
-- Multi-langue par template
-- Édition des templates par projet (uniquement par org pour l'instant)
-
-### Questions
-1. **Option A (override DB éditable) ou Option B (visualisation seule, modifs via chat) ?** → je recommande A
-2. **Pour Option A, l'éditeur HTML brut te convient-il** (avec aperçu live + variables cliquables), ou tu veux un éditeur visuel type WYSIWYG (scope plus gros, ~+50% de boulot) ?
-3. **Qui peut éditer** : admins de l'org seulement, ou tous les recruteurs ?
+Réponds aux 4 et j'attaque.
 
