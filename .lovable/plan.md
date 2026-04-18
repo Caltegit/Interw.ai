@@ -1,62 +1,67 @@
 
 
-## Diagnostic complet — Pourquoi tu ne reçois pas les emails
+## Lecture du screenshot Infomaniak
 
-### Ce que j'ai vérifié (tout fonctionne côté envoi)
+L'utilisateur me montre l'interface Infomaniak qui dit :
+- **"Aucun enregistrement SPF n'a été détecté"** sur le domaine racine `interw.ai`
+- Infomaniak recommande d'ajouter : `v=spf1 include:spf.infomaniak.ch -all`
+- Note : "Le domaine n'étant pas sur votre compte, il est nécessaire de copier l'enregistrement chez le prestataire gérant le domaine" → confirme que le DNS de `interw.ai` est bien chez **GoDaddy**, pas Infomaniak.
 
-| Vérification | Résultat |
-|---|---|
-| Logs `email_send_log` | ✅ 16/16 emails `sent` (dernier 19:19:19) |
-| Dispatcher actif | ✅ batch 10, delay 200ms, pas de rate-limit |
-| Liste de suppression | ✅ Vide |
-| Edge function `auth-email-hook` | ✅ Reçoit et enqueue sans erreur |
-| SPF `notify.interw.ai` | ✅ `v=spf1 include:mailgun.org ~all` |
-| MX `notify.interw.ai` | ✅ Mailgun EU |
-| NS délégation | ✅ ns3/ns4.lovable.cloud |
+## Ce que ça change au diagnostic
 
-### 🔴 Problème identifié : DKIM manquant + DMARC strict
+Oui, ça aide énormément. Ça révèle un **deuxième problème** que je n'avais pas vu :
 
-```
-=== DKIM smtp._domainkey.notify.interw.ai ===
-(VIDE — aucune réponse)
+### Le domaine racine `interw.ai` n'a AUCUN SPF
 
-=== DMARC interw.ai ===
-v=DMARC1; p=quarantine; adkim=r; aspf=r;
-```
+Conséquence concrète : quand quelqu'un t'envoie un email à `xxx@interw.ai` (ta boîte Infomaniak), tout va bien côté réception. Mais quand **tu envoies** depuis cette adresse Infomaniak, les destinataires ne peuvent pas vérifier que le serveur Infomaniak a le droit d'envoyer pour `interw.ai` → tes emails personnels partent aussi en spam potentiellement.
 
-**Deux problèmes combinés :**
+### Mais surtout : impact sur les emails Lovable
 
-1. **DKIM absent** : la requête sur `smtp._domainkey.notify.interw.ai` ne retourne rien. Sans DKIM, Mailgun signe les emails mais Gmail ne peut pas vérifier la signature → les emails finissent **directement en spam ou sont rejetés silencieusement** par Gmail.
+Tu as un DMARC `p=quarantine` sur `interw.ai` qui exige SPF **OU** DKIM aligné. Sur le sous-domaine `notify.interw.ai` :
+- ✅ SPF présent (`include:mailgun.org`)
+- ❌ DKIM absent
 
-2. **DMARC `p=quarantine` sur le domaine racine** : ta politique DMARC (gérée par GoDaddy/Infomaniak sur `interw.ai`) demande aux serveurs de réception de **mettre en quarantaine** (= dossier spam) tous les emails qui échouent SPF ou DKIM. Comme DKIM n'est pas configuré, **chaque email passe en quarantaine systématiquement**.
+Le SPF de `notify.interw.ai` aligne en mode "relaxed" (`aspf=r` dans ton DMARC) avec le domaine racine `interw.ai` → donc **SPF passe DMARC normalement** sur tes emails Lovable. Ce n'est donc PAS le SPF racine manquant qui bloque les emails Lovable.
 
-### Cause racine
+**La vraie cause des emails Lovable bloqués reste : DKIM manquant + DMARC strict.**
 
-Le sous-domaine `notify.interw.ai` est délégué à Lovable (NS records OK), mais la **zone Cloudflare gérée par Lovable ne contient pas le record DKIM**. C'est probablement parce que la provision DNS Mailgun n'a pas terminé proprement, ou que le selector DKIM utilisé par Mailgun est différent de `smtp` (parfois `mta` ou un selector custom).
+## Plan révisé
 
-### Plan d'action
+### Action 1 — DNS GoDaddy : ajouter SPF Infomaniak ET ajuster DMARC
 
-**Étape 1 — Vérifier le statut de provisioning du domaine côté Lovable**
-Utiliser `email_domain--check_email_domain_status` pour voir si le domaine est `active` ou s'il est resté en `awaiting_dns` / `provisioning_failed`. Si pas `active`, relancer le setup depuis **Cloud → Emails → Manage Domains → Rerun Setup**.
+Dans ton DNS GoDaddy pour `interw.ai`, ajouter / modifier 2 records TXT :
 
-**Étape 2 — Vérifier le bon selector DKIM**
-Tester aussi `mta._domainkey.notify.interw.ai`, `k1._domainkey.notify.interw.ai`, et `mailo._domainkey.notify.interw.ai` pour identifier le selector réel utilisé par Mailgun via Lovable.
+**a) SPF racine (pour Infomaniak — emails personnels)**
+- Type : `TXT`
+- Nom : `@` (ou laisser vide selon GoDaddy)
+- Valeur : `v=spf1 include:spf.infomaniak.ch -all`
 
-**Étape 3 — Si DKIM toujours absent après Rerun Setup**
-Le problème est côté infrastructure Lovable Cloud — le record DKIM n'a pas été créé dans la zone Cloudflare déléguée. Dans ce cas tu peux :
-- soit attendre la propagation (jusqu'à 24h après provisioning)
-- soit supprimer le domaine et le recréer depuis zéro via le dialog email setup
+⚠️ **Important** : si un jour tu envoies aussi depuis le domaine racine via Lovable/Mailgun, il faudra fusionner :
+`v=spf1 include:spf.infomaniak.ch include:mailgun.org -all`
+Mais pour l'instant Lovable envoie depuis `notify.interw.ai`, donc juste Infomaniak suffit.
 
-**Étape 4 — Test cross-provider en attendant**
-Demande un reset de mot de passe avec une adresse **Outlook** ou **ProtonMail** (DMARC moins strict que Gmail). Si l'email arrive là-bas mais pas sur Gmail, c'est confirmé que c'est DKIM + DMARC qui bloquent.
+**b) DMARC racine — passer en `p=none` temporairement**
+- Type : `TXT`
+- Nom : `_dmarc`
+- Modifier de : `v=DMARC1; p=quarantine; adkim=r; aspf=r;`
+- Vers : `v=DMARC1; p=none; adkim=r; aspf=r; rua=mailto:postmaster@interw.ai;`
 
-**Étape 5 (optionnel) — Assouplir temporairement DMARC**
-Sur ton DNS GoDaddy/Infomaniak, passer le DMARC du domaine racine de `p=quarantine` à `p=none` le temps de débugger. Ça arrête de mettre en quarantaine pendant que tu fixes DKIM. À ne PAS laisser en `p=none` long terme.
+### Action 2 — Lovable Cloud : Rerun Setup pour publier DKIM
 
-### Ce qui sera fait au prochain run (mode default)
+Va dans **Cloud → Emails → Manage Domains → notify.interw.ai → Rerun Setup**. Ça force la republication du record DKIM dans la zone Cloudflare déléguée.
 
-1. Appel `email_domain--check_email_domain_status` pour status précis
-2. Tests DKIM sur plusieurs selectors
-3. Selon résultat : Rerun Setup ou recréation du domaine
-4. Te dire exactement quoi faire côté GoDaddy/Infomaniak si le DMARC racine doit être ajusté
+### Action 3 — Ce que je ferai en mode default ensuite
+
+1. Re-tester DKIM sur `notify.interw.ai` après ton Rerun Setup
+2. Vérifier que le SPF racine est bien propagé après ton ajout GoDaddy
+3. Vérifier que DMARC est bien passé à `p=none`
+4. Te demander de re-déclencher un reset password et confirmer la réception sur Infomaniak (inbox + spam)
+
+Une fois confirmé que tout marche, on remettra DMARC en `p=quarantine` (plus sécurisé) une fois que DKIM sera stable.
+
+## Ordre d'exécution recommandé
+
+1. **Toi** → ajoute SPF racine sur GoDaddy + change DMARC en `p=none`
+2. **Toi** → Rerun Setup dans Cloud → Emails
+3. **Moi** (mode default au prochain run) → vérifications DNS + test fonctionnel
 
