@@ -78,7 +78,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   };
 
   // Fallback: if media stalls/suspends for too long, force the end event
-  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const armStallTimer = () => {
     if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
     stallTimerRef.current = setTimeout(() => {
