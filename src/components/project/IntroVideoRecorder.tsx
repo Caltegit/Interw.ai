@@ -127,8 +127,7 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
             muted
             autoPlay
             playsInline
-            className="w-full max-w-md rounded-lg border border-border bg-black"
-            style={{ minHeight: "240px" }}
+            className="w-full max-w-xs max-h-[180px] rounded-lg border border-border bg-black object-cover"
           />
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-sm text-destructive">
@@ -149,7 +148,7 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
             src={videoUrl}
             onEnded={() => setIsPlaying(false)}
             playsInline
-            className="w-full max-w-md rounded-lg border border-border"
+            className="w-full max-w-xs max-h-[180px] rounded-lg border border-border object-cover"
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={togglePlay}>
