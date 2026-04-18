@@ -220,6 +220,20 @@ export default function EmailTemplates() {
         </p>
       </div>
 
+      {loadError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="p-4 flex items-center justify-between gap-4">
+            <div className="text-sm">
+              <div className="font-medium text-destructive">Impossible de charger les templates</div>
+              <div className="text-muted-foreground text-xs mt-0.5">{loadError}</div>
+            </div>
+            <Button variant="outline" size="sm" onClick={loadTemplates}>
+              Réessayer
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Authentification</CardTitle>
