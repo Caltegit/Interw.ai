@@ -204,6 +204,52 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       });
     }
 
+    // Send email to recruiter (project creator) with the report
+    try {
+      const { data: recruiterProfile } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", project.created_by)
+        .maybeSingle();
+
+      const recruiterEmail = recruiterProfile?.email;
+      if (recruiterEmail) {
+        const reportUrl = `https://interw.ai/sessions/${session_id}`;
+        const { error: emailError } = await supabase.functions.invoke("send-transactional-email", {
+          body: {
+            templateName: "interview-report",
+            recipientEmail: recruiterEmail,
+            replyTo: session.candidate_email,
+            idempotencyKey: `report-${session_id}`,
+            templateData: {
+              candidateName: session.candidate_name,
+              candidateEmail: session.candidate_email,
+              jobTitle: project.job_title,
+              projectTitle: project.title,
+              overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+              overallGrade: parsed.overall_grade || null,
+              recommendation: parsed.recommendation || null,
+              executiveSummary: parsed.executive_summary || "",
+              strengths: parsed.strengths || [],
+              areasForImprovement: parsed.areas_for_improvement || [],
+              criteriaScores,
+              questionEvaluations: parsed.question_evaluations || {},
+              reportUrl,
+            },
+          },
+        });
+        if (emailError) {
+          console.error("Failed to send report email:", emailError);
+        } else {
+          console.log("Report email enqueued for", recruiterEmail);
+        }
+      } else {
+        console.warn("No recruiter email found for project", project.id);
+      }
+    } catch (e) {
+      console.error("Email send threw:", e);
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
