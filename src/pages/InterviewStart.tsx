@@ -67,6 +67,10 @@ export default function InterviewStart() {
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
+  const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showManualContinue, setShowManualContinue] = useState(false);
+  const manualContinueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
   const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
@@ -421,6 +425,39 @@ export default function InterviewStart() {
     [],
   );
 
+  // Watchdog helpers — guarantee transition to listening even if onPlaybackEnd never fires
+  const clearPlaybackWatchdog = useCallback(() => {
+    if (playbackWatchdogRef.current) {
+      clearTimeout(playbackWatchdogRef.current);
+      playbackWatchdogRef.current = null;
+    }
+    if (manualContinueTimerRef.current) {
+      clearTimeout(manualContinueTimerRef.current);
+      manualContinueTimerRef.current = null;
+    }
+    setShowManualContinue(false);
+  }, []);
+
+  const forceStartListening = useCallback(() => {
+    console.log("[InterviewStart] Forcing transition to listening");
+    clearPlaybackWatchdog();
+    setShouldAutoPlay(false);
+    setIsSpeaking(false);
+    startQuestionRecording();
+    startListening();
+  }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+
+  const armPlaybackWatchdog = useCallback(() => {
+    clearPlaybackWatchdog();
+    // After 3s of "Préparation", offer a manual button as backup
+    manualContinueTimerRef.current = setTimeout(() => setShowManualContinue(true), 3000);
+    // Hard fallback after 8s if onPlaybackEnd never fires
+    playbackWatchdogRef.current = setTimeout(() => {
+      console.warn("[InterviewStart] Playback watchdog triggered after 8s");
+      forceStartListening();
+    }, 8000);
+  }, [clearPlaybackWatchdog, forceStartListening]);
+
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
     if (!session || !project || questions.length === 0) return;
@@ -494,8 +531,12 @@ export default function InterviewStart() {
     await speak(greeting);
     if (isFirstQMedia) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
-      // Don't start listening yet — onPlaybackEnd will do it
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
+      // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
       startQuestionRecording();
@@ -669,8 +710,12 @@ export default function InterviewStart() {
     await speak(transition);
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
-      // onPlaybackEnd will start recording + listening
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
+      // onPlaybackEnd (or watchdog) will start recording + listening
     } else {
       startQuestionRecording();
       startListening();
@@ -753,7 +798,11 @@ export default function InterviewStart() {
     await speak(transition);
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
-      setShouldAutoPlay(true);
+      setShouldAutoPlay(false);
+      setTimeout(() => {
+        setShouldAutoPlay(true);
+        armPlaybackWatchdog();
+      }, 30);
     } else {
       startQuestionRecording();
       startListening();
@@ -915,6 +964,8 @@ export default function InterviewStart() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+      if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
+      if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
@@ -983,10 +1034,8 @@ export default function InterviewStart() {
                       variant="featured"
                       autoPlay={shouldAutoPlay}
                       onPlaybackEnd={() => {
-                        setShouldAutoPlay(false);
-                        setIsSpeaking(false);
-                        startQuestionRecording();
-                        startListening();
+                        console.log("[InterviewStart] onPlaybackEnd (video) fired");
+                        forceStartListening();
                       }}
                     />
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium z-10">
@@ -1056,10 +1105,8 @@ export default function InterviewStart() {
                     variant="featured"
                     autoPlay={shouldAutoPlay}
                     onPlaybackEnd={() => {
-                      setShouldAutoPlay(false);
-                      setIsSpeaking(false);
-                      startQuestionRecording();
-                      startListening();
+                      console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
+                      forceStartListening();
                     }}
                   />
                 )}
@@ -1161,27 +1208,39 @@ export default function InterviewStart() {
 
 
                   return (
-                    <div
-                      className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
-                        isProcessing
-                          ? "border-warning/30 bg-warning/10 text-warning"
-                          : isSpeaking
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : "border-border bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {isProcessing ? (
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
-                          Analyse de votre réponse…
-                        </span>
-                      ) : isSpeaking ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                          L'IA pose la question…
-                        </span>
-                      ) : (
-                        <span>Préparation…</span>
+                    <div className="space-y-2">
+                      <div
+                        className={`rounded-lg border px-3 py-2.5 text-center text-xs sm:text-sm font-medium transition-colors ${
+                          isProcessing
+                            ? "border-warning/30 bg-warning/10 text-warning"
+                            : isSpeaking
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isProcessing ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
+                            Analyse de votre réponse…
+                          </span>
+                        ) : isSpeaking ? (
+                          <span className="inline-flex items-center gap-2">
+                            <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                            L'IA pose la question…
+                          </span>
+                        ) : (
+                          <span>Préparation…</span>
+                        )}
+                      </div>
+                      {/* Bouton manuel de secours si la transition tarde */}
+                      {showManualContinue && !isListening && !isProcessing && (
+                        <button
+                          type="button"
+                          onClick={forceStartListening}
+                          className="w-full text-xs text-muted-foreground hover:text-foreground underline transition-colors py-1"
+                        >
+                          La question ne se lance pas ? Continuer →
+                        </button>
                       )}
                     </div>
                   );

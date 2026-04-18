@@ -39,6 +39,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>();
+  const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { icon: Icon, label, color } = typeConfig[type];
 
@@ -64,9 +65,39 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const doPlay = () => {
     const el = getEl();
     if (!el) return;
-    el.play().catch(() => {});
+    const p = el.play();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("[QuestionMediaPlayer] play() rejected — falling back to onPlaybackEnd", err);
+        // Autoplay blocked or other failure → unblock parent flow
+        setTimeout(() => onPlaybackEnd?.(), 300);
+      });
+    }
     setIsPlaying(true);
     animFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  // Fallback: if media stalls/suspends for too long, force the end event
+  const armStallTimer = () => {
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+    stallTimerRef.current = setTimeout(() => {
+      console.warn("[QuestionMediaPlayer] media stalled — forcing onPlaybackEnd");
+      onPlaybackEnd?.();
+    }, 5000);
+  };
+  const clearStallTimer = () => {
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
+  };
+
+  const handleMediaError = (e: any) => {
+    console.warn("[QuestionMediaPlayer] media error — forcing onPlaybackEnd", e);
+    clearStallTimer();
+    setIsPlaying(false);
+    setHasFinished(true);
+    onPlaybackEnd?.();
   };
 
   const doPause = () => {
@@ -136,6 +167,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               src={videoUrl}
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
+              onError={handleMediaError}
+              onStalled={armStallTimer}
+              onSuspend={armStallTimer}
+              onPlaying={clearStallTimer}
+              onWaiting={armStallTimer}
               className="w-full h-full object-cover"
               preload="metadata"
             />
@@ -177,6 +213,10 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               src={audioUrl}
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
+              onError={handleMediaError}
+              onStalled={armStallTimer}
+              onSuspend={armStallTimer}
+              onPlaying={clearStallTimer}
               preload="metadata"
             />
             <div className="flex items-center gap-3">
