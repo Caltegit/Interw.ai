@@ -67,6 +67,10 @@ export default function InterviewStart() {
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
+  const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showManualContinue, setShowManualContinue] = useState(false);
+  const manualContinueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
   const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
