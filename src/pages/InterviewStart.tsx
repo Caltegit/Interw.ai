@@ -425,6 +425,39 @@ export default function InterviewStart() {
     [],
   );
 
+  // Watchdog helpers — guarantee transition to listening even if onPlaybackEnd never fires
+  const clearPlaybackWatchdog = useCallback(() => {
+    if (playbackWatchdogRef.current) {
+      clearTimeout(playbackWatchdogRef.current);
+      playbackWatchdogRef.current = null;
+    }
+    if (manualContinueTimerRef.current) {
+      clearTimeout(manualContinueTimerRef.current);
+      manualContinueTimerRef.current = null;
+    }
+    setShowManualContinue(false);
+  }, []);
+
+  const forceStartListening = useCallback(() => {
+    console.log("[InterviewStart] Forcing transition to listening");
+    clearPlaybackWatchdog();
+    setShouldAutoPlay(false);
+    setIsSpeaking(false);
+    startQuestionRecording();
+    startListening();
+  }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+
+  const armPlaybackWatchdog = useCallback(() => {
+    clearPlaybackWatchdog();
+    // After 3s of "Préparation", offer a manual button as backup
+    manualContinueTimerRef.current = setTimeout(() => setShowManualContinue(true), 3000);
+    // Hard fallback after 8s if onPlaybackEnd never fires
+    playbackWatchdogRef.current = setTimeout(() => {
+      console.warn("[InterviewStart] Playback watchdog triggered after 8s");
+      forceStartListening();
+    }, 8000);
+  }, [clearPlaybackWatchdog, forceStartListening]);
+
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
     if (!session || !project || questions.length === 0) return;
