@@ -19,6 +19,7 @@ import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
 import QuestionLibrary from "./pages/QuestionLibrary";
 import IntroLibrary from "./pages/IntroLibrary";
+import EmailTemplates from "./pages/EmailTemplates";
 import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
               <Route path="/library/questions" element={<QuestionLibrary />} />
               <Route path="/library/intros" element={<IntroLibrary />} />
+              <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />

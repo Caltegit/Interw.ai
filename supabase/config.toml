@@ -15,3 +15,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.handle-email-suppression]
     verify_jwt = false
+
+  [functions.get-email-template-defaults]
+    verify_jwt = true
