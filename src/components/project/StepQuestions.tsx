@@ -1,10 +1,37 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, BookOpen, Type, Mic, Video, ChevronRight, Sparkles } from "lucide-react";
-import { QuestionMediaRecorder } from "./QuestionMediaRecorder";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Plus,
+  Trash2,
+  GripVertical,
+  BookOpen,
+  Type,
+  Mic,
+  Video,
+  ChevronRight,
+  Sparkles,
+  Info,
+  BookmarkPlus,
+} from "lucide-react";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
+import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useState, useId } from "react";
 import { cn } from "@/lib/utils";
@@ -26,9 +53,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+const CATEGORIES = ["Motivation", "Technique", "Soft skills", "Situationnel", "Culture fit", "Leadership"];
+const MAX_CONTENT = 500;
+
 export interface Question {
   title: string;
   content: string;
+  category: string;
   type: string;
   mediaType: "written" | "audio" | "video";
   follow_up_enabled: boolean;
@@ -37,11 +68,16 @@ export interface Question {
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
   videoPreviewUrl: string | null;
+  /** true si la question vient d'un import depuis la bibliothèque */
+  from_library?: boolean;
+  /** true si l'utilisateur veut sauvegarder cette question dans la bibliothèque à la sauvegarde du projet */
+  save_to_library?: boolean;
 }
 
 export const createEmptyQuestion = (): Question => ({
   title: "",
   content: "",
+  category: "",
   type: "open",
   mediaType: "written",
   follow_up_enabled: false,
@@ -50,6 +86,8 @@ export const createEmptyQuestion = (): Question => ({
   audioPreviewUrl: null,
   videoBlob: null,
   videoPreviewUrl: null,
+  from_library: false,
+  save_to_library: false,
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
@@ -105,7 +143,8 @@ function SortableQuestion({
 
   const meta = TYPE_META[q.mediaType];
   const TypeIcon = meta.Icon;
-  const previewText = q.content.trim();
+  const previewText = q.title.trim() || q.content.trim();
+  const overLimit = q.content.length > MAX_CONTENT;
 
   return (
     <div ref={setNodeRef} style={style} className="rounded-lg border bg-background overflow-hidden">
@@ -151,6 +190,12 @@ function SortableQuestion({
               <span className="hidden sm:inline">Relance IA</span>
             </span>
           )}
+          {q.save_to_library && !q.from_library && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
+              <BookmarkPlus className="h-3 w-3" />
+              <span className="hidden sm:inline">Bibliothèque</span>
+            </span>
+          )}
         </button>
 
         <Button
@@ -165,15 +210,80 @@ function SortableQuestion({
         </Button>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded content — same layout as library editor */}
       {isOpen && (
-        <div className="px-3 pb-3 pt-1 border-t space-y-3">
-          <div>
-            <Label className="text-xs mb-1.5 block text-muted-foreground">Type de question</Label>
+        <div className="px-4 pb-4 pt-2 border-t space-y-5">
+          {/* Section Question */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Question
+            </h3>
+            <div className="space-y-1.5">
+              <Label htmlFor={`q-title-${id}`} className="text-xs">
+                Titre court
+              </Label>
+              <Input
+                id={`q-title-${id}`}
+                placeholder="Ex: Présentez-vous"
+                value={q.title}
+                onChange={(e) => updateQuestion(index, "title", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`q-content-${id}`} className="text-xs">
+                  Texte de la question
+                </Label>
+                <span
+                  className={cn(
+                    "text-[10px] tabular-nums",
+                    overLimit ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {q.content.length}/{MAX_CONTENT}
+                </span>
+              </div>
+              <Textarea
+                id={`q-content-${id}`}
+                placeholder="Parlez-moi de votre parcours..."
+                rows={3}
+                value={q.content}
+                onChange={(e) => updateQuestion(index, "content", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Catégorie</Label>
+              <Select
+                value={q.category || "_none"}
+                onValueChange={(v) => updateQuestion(index, "category", v === "_none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Aucune" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Aucune</SelectItem>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+
+          {/* Section Format */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Format de présentation
+            </h3>
             <ToggleGroup
               type="single"
               value={q.mediaType}
-              onValueChange={(v) => { if (v) updateMediaType(index, v as "written" | "audio" | "video"); }}
+              className="justify-start"
+              onValueChange={(v) => {
+                if (v) updateMediaType(index, v as "written" | "audio" | "video");
+              }}
             >
               <ToggleGroupItem value="written" className="text-xs gap-1">
                 <Type className="h-3.5 w-3.5" /> Écrite
@@ -185,38 +295,78 @@ function SortableQuestion({
                 <Video className="h-3.5 w-3.5" /> Vidéo
               </ToggleGroupItem>
             </ToggleGroup>
-          </div>
 
-          <Input
-            placeholder={
-              q.mediaType === "written"
-                ? "Texte de la question..."
-                : "Titre de la question (optionnel)..."
-            }
-            value={q.content}
-            onChange={(e) => updateQuestion(index, "content", e.target.value)}
-          />
-
-          {(q.mediaType === "audio" || q.mediaType === "video") && (
-            <div className="pt-1">
-              <QuestionMediaRecorder
-                mode={q.mediaType as "audio" | "video"}
-                audioBlob={q.mediaType === "audio" ? q.audioBlob : null}
-                audioPreviewUrl={q.mediaType === "audio" ? q.audioPreviewUrl : null}
-                videoBlob={q.mediaType === "video" ? q.videoBlob : null}
-                videoPreviewUrl={q.mediaType === "video" ? q.videoPreviewUrl : null}
-                onAudioChange={(data) => updateAudio(index, data)}
-                onVideoChange={(data) => updateVideo(index, data)}
+            {(q.mediaType === "audio" || q.mediaType === "video") && (
+              <QuestionMediaEditor
+                type={q.mediaType}
+                existingUrl={
+                  q.mediaType === "audio" ? q.audioPreviewUrl : q.videoPreviewUrl
+                }
+                onMediaReady={(blob, url) => {
+                  if (q.mediaType === "audio") updateAudio(index, { blob, previewUrl: url });
+                  else updateVideo(index, { blob, previewUrl: url });
+                }}
+                onClear={() => {
+                  if (q.mediaType === "audio") updateAudio(index, { blob: null, previewUrl: null });
+                  else updateVideo(index, { blob: null, previewUrl: null });
+                }}
               />
-            </div>
-          )}
+            )}
+          </section>
 
-          <div className="flex items-center gap-2">
-            <Switch checked={q.follow_up_enabled} onCheckedChange={() => toggleFollowUp(index)} id={`followup-${id}`} />
-            <Label htmlFor={`followup-${id}`} className="text-xs text-muted-foreground cursor-pointer">
-              Relance IA
-            </Label>
-          </div>
+          {/* Section Comportement IA */}
+          <section className="space-y-3">
+            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Comportement IA
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Quand activé, l'IA peut poser jusqu'à 2 questions de relance pour approfondir une
+                    réponse trop courte ou ambiguë.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </h3>
+            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
+              <Switch
+                id={`followup-${id}`}
+                checked={q.follow_up_enabled}
+                onCheckedChange={() => toggleFollowUp(index)}
+              />
+              <Label htmlFor={`followup-${id}`} className="cursor-pointer text-sm">
+                Activer la relance IA
+              </Label>
+            </div>
+          </section>
+
+          {/* Save to library checkbox (hidden if imported from library) */}
+          {!q.from_library && (
+            <section className="space-y-2">
+              <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/20 px-3 py-2">
+                <Checkbox
+                  id={`save-lib-${id}`}
+                  checked={!!q.save_to_library}
+                  onCheckedChange={(v) => updateQuestion(index, "save_to_library", v === true)}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor={`save-lib-${id}`}
+                  className="cursor-pointer text-sm leading-snug font-normal"
+                >
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
+                    Ajouter à ma bibliothèque
+                  </span>
+                  <span className="block text-xs text-muted-foreground mt-0.5">
+                    La question sera réutilisable dans tes prochains projets.
+                  </span>
+                </Label>
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
@@ -270,10 +420,9 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
 
   const handleLibrarySelect = (selected: Question[]) => {
     const remaining = 15 - questions.length;
-    const toAdd = selected.slice(0, remaining);
+    const toAdd = selected.slice(0, remaining).map((q) => ({ ...q, from_library: true, save_to_library: false }));
     toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
     setQuestions([...questions, ...toAdd]);
-    // Library imports stay collapsed by default
   };
 
   const addQuestion = () => {
@@ -291,9 +440,6 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const updateQuestion = (index: number, field: keyof Question, value: any) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
-    if (field === "content") {
-      updated[index].title = String(value).slice(0, 60);
-    }
     setQuestions(updated);
   };
 
@@ -346,7 +492,9 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-base font-semibold">Questions d'entretien</Label>
-          <p className="text-sm text-muted-foreground">{questions.filter((q) => q.title.trim() || q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl).length} question(s) — glissez pour réordonner</p>
+          <p className="text-sm text-muted-foreground">
+            {questions.filter((q) => q.title.trim() || q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl).length} question(s) — glissez pour réordonner
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 15}>
