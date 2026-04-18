@@ -167,6 +167,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               src={videoUrl}
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
+              onError={handleMediaError}
+              onStalled={armStallTimer}
+              onSuspend={armStallTimer}
+              onPlaying={clearStallTimer}
+              onWaiting={armStallTimer}
               className="w-full h-full object-cover"
               preload="metadata"
             />
