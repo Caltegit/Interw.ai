@@ -22,6 +22,7 @@ interface QuestionTemplate {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: string | null;
   organization_id: string;
   created_by: string;
   type: string;
