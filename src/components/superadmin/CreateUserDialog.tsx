@@ -46,7 +46,11 @@ export function CreateUserDialog({ onCreated }: Props) {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Utilisateur créé", description: email });
+      const wasInvited = (data as any)?.invited;
+      toast({
+        title: wasInvited ? "Invitation envoyée" : "Utilisateur créé",
+        description: wasInvited ? `Un email d'invitation a été envoyé à ${email}` : email,
+      });
       setOpen(false);
       setEmail(""); setFullName(""); setPassword(""); setOrgId("none"); setRole("none");
       onCreated();
