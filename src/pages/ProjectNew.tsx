@@ -399,16 +399,10 @@ export default function ProjectNew() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-5">
               <div>
                 <Label>Nom du persona IA</Label>
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
-
               <div>
                 <Label>Photo du recruteur</Label>
                 <div className="mt-2 flex items-center gap-4">
@@ -450,41 +444,46 @@ export default function ProjectNew() {
                   <p className="text-sm text-muted-foreground">JPG, PNG — affiché pendant l'entretien candidat</p>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Voix IA fixée à female_fr — pas de sélecteur */}
-
-              <div>
-                <Label>Message d'intro </Label>
-                <div className="mt-2 flex gap-2">
-                  <Button
-                    type="button"
-                    variant={introType === "audio" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setIntroType("audio");
-                      setIntroVideoFile(null);
-                      setIntroVideoPreviewUrl(null);
-                    }}
-                  >
-                    <Mic className="mr-1 h-4 w-4" /> Audio
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={introType === "video" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setIntroType("video");
-                      setIntroAudioBlob(null);
-                      setIntroAudioPreviewUrl(null);
-                    }}
-                  >
-                    <Video className="mr-1 h-4 w-4" /> Vidéo
-                  </Button>
-                </div>
+          {step === 1 && (
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold">Message d'introduction</h2>
+                <p className="text-sm text-muted-foreground">
+                  Cette intro sera diffusée au candidat avant le début des questions.
+                </p>
               </div>
 
-              <div className="rounded-lg border border-border p-4 space-y-3">
-                <div className="flex justify-end">
+              <div className="rounded-lg border border-border bg-card p-5 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={introType === "audio" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setIntroType("audio");
+                        setIntroVideoFile(null);
+                        setIntroVideoPreviewUrl(null);
+                      }}
+                    >
+                      <Mic className="mr-1 h-4 w-4" /> Audio
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={introType === "video" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setIntroType("video");
+                        setIntroAudioBlob(null);
+                        setIntroAudioPreviewUrl(null);
+                      }}
+                    >
+                      <Video className="mr-1 h-4 w-4" /> Vidéo
+                    </Button>
+                  </div>
                   <IntroLibraryDialog
                     type={introType}
                     onSelect={(item) => {
@@ -498,6 +497,7 @@ export default function ProjectNew() {
                     }}
                   />
                 </div>
+
                 {introType === "audio" ? (
                   <IntroAudioRecorder
                     existingUrl={introAudioPreviewUrl}
@@ -515,11 +515,13 @@ export default function ProjectNew() {
                     }}
                   />
                 )}
+
+                <p className="text-xs text-muted-foreground">
+                  💡 Astuce : enregistrez une intro chaleureuse pour mettre le candidat à l'aise.
+                </p>
               </div>
             </div>
           )}
-
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
 
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
