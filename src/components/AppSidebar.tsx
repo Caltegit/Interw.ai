@@ -49,7 +49,11 @@ export function AppSidebar() {
   const [libraryOpen, setLibraryOpen] = useState(isLibraryActive);
 
   const bottomItemsList = isSuperAdmin
-    ? [...bottomItems, { title: "Super Admin", url: "/admin", icon: Shield }]
+    ? [
+        ...bottomItems,
+        { title: "Super Admin", url: "/admin", icon: Shield },
+        { title: "Santé emails", url: "/admin/emails", icon: Mail },
+      ]
     : bottomItems;
 
   return (

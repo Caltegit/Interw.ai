@@ -31,6 +31,7 @@ import SharedReport from "./pages/SharedReport";
 import OrgPublic from "./pages/OrgPublic";
 import Unsubscribe from "./pages/Unsubscribe";
 import SuperAdmin from "./pages/SuperAdmin";
+import AdminEmails from "./pages/AdminEmails";
 import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import NotFound from "./pages/NotFound";
 
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
+              <Route path="/admin/emails" element={<SuperAdminRoute><AdminEmails /></SuperAdminRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
