@@ -1522,9 +1522,9 @@ export default function InterviewStart() {
       </div>
 
       {/* ── PIP retour vidéo candidat (fixe en bas-gauche) ── */}
-      <div className="fixed bottom-4 left-4 z-50 flex items-end gap-2">
+      <div className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-50 flex items-end gap-2">
         {showSelfView ? (
-          <div className="relative rounded-xl overflow-hidden bg-black border-2 border-emerald-500/40 shadow-2xl w-[140px] h-[100px] sm:w-[160px] sm:h-[115px]">
+          <div className="relative rounded-xl overflow-hidden bg-black border-2 border-emerald-500/40 shadow-2xl w-[96px] h-[68px] sm:w-[160px] sm:h-[115px]">
             <video
               ref={videoRef}
               muted
@@ -1565,18 +1565,18 @@ export default function InterviewStart() {
       </div>
 
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle>Terminer l'entretien ?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Êtes-vous sûr de vouloir mettre fin à l'entretien ? Cette action est irréversible.
           </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEndDialog(false)}>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto min-h-[44px]" onClick={() => setShowEndDialog(false)}>
               Continuer
             </Button>
-            <Button variant="destructive" onClick={endInterview}>
+            <Button variant="destructive" className="w-full sm:w-auto min-h-[44px]" onClick={endInterview}>
               Terminer
             </Button>
           </DialogFooter>

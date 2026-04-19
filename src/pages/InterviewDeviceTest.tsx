@@ -101,7 +101,7 @@ export default function InterviewDeviceTest() {
         <div className="flex justify-end">
           <button
             onClick={handleContinue}
-            className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+            className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
           >
             Passer
           </button>
@@ -127,7 +127,7 @@ export default function InterviewDeviceTest() {
                 <span className="font-medium">Caméra</span>
               </div>
               {camStatus === "idle" && (
-                <Button variant="outline" size="sm" onClick={testCam}>
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testCam}>
                   Tester
                 </Button>
               )}
@@ -174,12 +174,12 @@ export default function InterviewDeviceTest() {
                 <span className="font-medium">Microphone</span>
               </div>
               {micStatus === "idle" && (
-                <Button variant="outline" size="sm" onClick={testMic}>
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
                   Tester
                 </Button>
               )}
               {micStatus === "error" && (
-                <Button variant="outline" size="sm" onClick={testMic}>
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
                   Réessayer
                 </Button>
               )}
