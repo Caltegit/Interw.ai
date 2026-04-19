@@ -157,6 +157,9 @@ export default function InterviewStart() {
           return;
         }
 
+        // Track for pause/resume replay
+        currentPresentationRef.current = { kind: "tts", text };
+
         let settled = false;
         // Backup button visible after 4s of TTS (in case it's stuck)
         const manualBackupTimer = setTimeout(() => {
