@@ -29,6 +29,8 @@ export interface QuestionFormValue {
   category: string;
   mediaType: "written" | "audio" | "video";
   followUp: boolean;
+  /** Niveau de relance IA pour cette question */
+  relanceLevel: "light" | "medium" | "deep";
   /** Blob if a new recording was made/imported during this edit */
   mediaBlob: Blob | null;
   /** Preview URL (existing or freshly created) for audio/video */
