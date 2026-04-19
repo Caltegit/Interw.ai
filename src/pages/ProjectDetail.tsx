@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Copy, CopyPlus, Pencil, Trash2, Send, BarChart3, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -277,6 +278,13 @@ export default function ProjectDetail() {
                 </Link>
               </Button>
             )}
+            <SaveAsTemplateDialog
+              projectId={project.id}
+              defaultName={project.title}
+              defaultJobTitle={project.job_title}
+              defaultDuration={project.max_duration_minutes}
+              defaultLanguage={project.language}
+            />
             <Button variant="outline" size="sm" asChild>
               <Link to={`/projects/${project.id}/edit`}>
                 <Pencil className="mr-1 h-4 w-4" /> Modifier

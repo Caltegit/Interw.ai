@@ -10,13 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, X, Mic, Video, Sparkles } from "lucide-react";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
+import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/components/project/InterviewTemplatePickerDialog";
 
 const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
@@ -27,6 +28,44 @@ export default function ProjectNew() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const applyTemplate = (tpl: InterviewTemplatePayload) => {
+    if (tpl.name) setTitle(tpl.name);
+    if (tpl.default_language) setLanguage(tpl.default_language);
+    if (tpl.default_duration_minutes) setMaxDuration(tpl.default_duration_minutes);
+    if (tpl.questions.length) {
+      setQuestions(
+        tpl.questions.map((q) => ({
+          ...createEmptyQuestion(),
+          title: q.title,
+          content: q.content,
+          category: q.category || "",
+          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
+          follow_up_enabled: q.follow_up_enabled,
+          max_follow_ups: q.max_follow_ups,
+          relance_level: q.relance_level,
+          audioPreviewUrl: q.audio_url,
+          videoPreviewUrl: q.video_url,
+          from_library: true,
+        })),
+      );
+    }
+    if (tpl.criteria.length) {
+      setCriteria(
+        tpl.criteria.map((c) => ({
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: c.scoring_scale,
+          applies_to: c.applies_to,
+          anchors: c.anchors,
+          from_library: true,
+        })),
+      );
+    }
+    toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
+  };
 
   // Step 1
   const [title, setTitle] = useState("Candidature spontanée");
@@ -355,7 +394,14 @@ export default function ProjectNew() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Nouveau projet</h1>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h1 className="text-2xl font-bold">Nouveau projet</h1>
+        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+          <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un entretien type
+        </Button>
+      </div>
+
+      <InterviewTemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onApply={applyTemplate} />
 
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
