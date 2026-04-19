@@ -49,7 +49,7 @@ export default function ProjectNew() {
     { ...createEmptyQuestion(), title: "Bien-être", content: "Comment ça va aujourd'hui ?" },
     { ...createEmptyQuestion(), title: "Culture", content: "Tu penses quoi de Morning ?" },
   ]);
-  const [relanceLevel, setRelanceLevel] = useState<RelanceLevel>("medium");
+  
 
   // Step 4
   const [criteria, setCriteria] = useState<
