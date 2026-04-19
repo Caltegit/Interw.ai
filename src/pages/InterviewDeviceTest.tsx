@@ -212,7 +212,7 @@ export default function InterviewDeviceTest() {
         {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
-          Commencer l'entretien
+          Commencer la session
         </Button>
 
         {!canContinue && (
