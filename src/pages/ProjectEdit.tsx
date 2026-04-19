@@ -451,6 +451,21 @@ export default function ProjectEdit() {
         ))}
       </div>
 
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={() => setStep(step - 1)} disabled={step === 0}>
+          <ChevronLeft className="mr-2 h-4 w-4" /> Précédent
+        </Button>
+        {step < STEPS.length - 1 ? (
+          <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
+            Suivant <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : (
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+          </Button>
+        )}
+      </div>
+
       <Card>
         <CardContent className="pt-6">
           {step === 0 && (
