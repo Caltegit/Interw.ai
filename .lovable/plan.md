@@ -1,53 +1,45 @@
 
 
-## Plan : Refonte design candidat — Phases 1 + 2
+## Plan : Fiabiliser l'enchaînement des questions côté candidat
 
-Application complète des 10 améliorations proposées pour aligner l'interface candidat sur la charte du site vitrine (dark premium, accents indigo→violet).
+### Diagnostic
 
-### 1. Fondation CSS (`src/index.css`)
-- Étendre `.candidate-layout` avec les tokens `--l-bg`, `--l-bg-elev`, `--l-accent`, `--l-accent-2`, `--l-border` (au lieu du beige/marron actuel `#1a1a1a` / `#d4a574`).
-- Ajouter classes utilitaires : `.candidate-bg-grid`, `.candidate-hero-glow`, `.candidate-card`, `.candidate-btn-primary` (gradient indigo→violet).
-- Nouvelles keyframes : `halo-breathe` (2.5s pulse pour avatar speaking), `ring-pulse` (listening), `progress-shine`.
-- Garder backward-compat : les anciennes classes (`.bg-primary`, `.text-primary`) basculent vers indigo.
+Le freeze sur "Préparation…" arrive parce que la transition vers la question suivante dépend d'une **chaîne fragile d'événements asynchrones** qui peut casser à plusieurs endroits :
 
-### 2. Layout & Header (`src/components/CandidateLayout.tsx`)
-- Header sticky `backdrop-blur-md` avec :
-  - Gauche : logo Sparkles gradient + "Interw.ai"
-  - Droite : badge `ShieldCheck` "Entretien sécurisé"
-- Fond global avec grid + halo radial subtil.
-- Footer minimal "Propulsé par Interw.ai" (opacity 50%).
+1. **TTS (synthèse vocale IA)** : si `speechSynthesis.speak()` ne déclenche pas son `onend` (cas connus : navigateur en arrière-plan, Chrome qui coupe après 15s, voix non chargée), l'UI reste figée.
+2. **Appel à `ai-conversation-turn`** : si l'edge function met du temps ou échoue silencieusement, on attend la réponse texte sans timeout côté client.
+3. **Lecture du média question (audio/vidéo)** : on a déjà mis un watchdog dans `QuestionMediaPlayer`, mais la transition qui *précède* la lecture (intro IA → média) n'a pas de garde-fou.
+4. **Pas d'état machine clair** : on enchaîne `setState` (`isPreparing`, `isAiSpeaking`, `isPlayingQuestion`, `isListening`) qui peuvent se croiser et bloquer si un event manque.
 
-### 3. Page interview (`src/pages/InterviewStart.tsx`)
-- **Barre de progression** fine en haut (gradient indigo→violet) basée sur `currentQuestionIndex / total`.
-- **Avatar IA** : halo radial respirant quand `isSpeaking`, anneau pulsant fin quand `isListening`, ring statique au repos.
-- **Question** : panneau central élargi `rounded-2xl`, texte `text-xl md:text-2xl`, chip catégorie en gradient text au-dessus ("Question X/Y · Type").
-- **CTA principaux** ("Je suis prêt", "Terminer") : classe `.candidate-btn-primary` gradient.
-- **Boutons secondaires** (Pause, Mute, Skip) : style ghost, icône seule + tooltip.
-- **Overlay pause** : backdrop-blur, carte centrale, gradient text "En pause", compteur mono, bouton reprendre gradient.
-- Transitions `landing-fade-up` réutilisées entre questions.
+### Solution
 
-### 4. Composants interview
-- **`MicVolumeMeter.tsx`** : barres en gradient indigo→violet quand actif, halo diffus si volume élevé.
-- **`QuestionMediaPlayer.tsx`** : fond `--l-bg-elev`, bordure `--l-border`, coins `rounded-2xl`, contrôles teintés indigo.
+**A. Watchdog global "Préparation…"**
+Dans `InterviewStart.tsx`, dès qu'on entre en état `isPreparing` (ou équivalent), armer un timer de **10 secondes**. Si on n'a pas avancé dans la machine d'état → forcer le passage à l'étape suivante (lecture média ou écoute candidat) + log warning.
 
-### 5. Écran de fin (`src/pages/InterviewComplete.tsx`)
-- Checkmark gradient indigo (au lieu de vert) avec animation trace.
-- Titre en `landing-gradient-text`.
-- Message custom conservé.
+**B. Bouton de secours visible après 4s**
+Si "Préparation…" dure > 4s, afficher un petit bouton ghost **"Continuer →"** sous l'indicateur, qui force manuellement l'avancée. Le candidat n'est plus jamais bloqué.
+
+**C. Timeout sur l'appel `ai-conversation-turn`**
+Wrapper l'appel `supabase.functions.invoke('ai-conversation-turn', …)` avec `Promise.race` + timeout 8s. Si timeout → fallback : on saute la transition IA et on enchaîne directement sur la lecture du média de la question suivante.
+
+**D. TTS robuste**
+- Ajouter `onerror` sur l'utterance.
+- Armer un timer de sécurité = `(longueur texte / 15) + 4s` qui force `onend` si rien ne se passe.
+- Si la voix demandée n'est pas dispo (`voices` vide), enchaîner directement sans TTS.
+
+**E. État machine simplifié**
+Introduire un seul `phase` enum : `idle | ai_intro | playing_question | listening | processing_answer | finished`. Toutes les transitions passent par une fonction `goToPhase(next)` qui clear les watchdogs précédents et arme le nouveau. Évite les états croisés.
+
+**F. Logs de diagnostic**
+Ajouter `console.log("[interview] phase:", from, "→", to, reason)` à chaque transition pour qu'on puisse débugger les prochains cas en regardant les logs.
 
 ### Fichiers modifiés
-- `src/index.css`
-- `src/components/CandidateLayout.tsx`
-- `src/pages/InterviewStart.tsx`
-- `src/pages/InterviewComplete.tsx`
-- `src/components/interview/MicVolumeMeter.tsx`
-- `src/components/interview/QuestionMediaPlayer.tsx`
+- `src/pages/InterviewStart.tsx` — phase machine + watchdogs + bouton secours + timeout invoke + TTS robuste
 
 ### Test final
-1. Lancer un entretien → vérifier header sticky, fond grid+halo, barre progression visible.
-2. Pendant question : avatar avec halo respirant, panneau central premium, chip catégorie.
-3. Pendant réponse : anneau listening sur avatar, vu-mètre gradient.
-4. Cliquer Pause → overlay blur cohérent.
-5. Terminer → écran fin avec gradient indigo (plus de beige).
-6. Vérifier responsive mobile (viewport 375px).
+1. Entretien complet nominal → enchaînement fluide
+2. Couper le réseau juste avant la question 2 → watchdog 10s débloque OU bouton "Continuer" visible à 4s
+3. Onglet en arrière-plan pendant que l'IA parle → TTS watchdog débloque
+4. Question média qui ne charge pas → on passe quand même à l'écoute (watchdog déjà en place dans QuestionMediaPlayer)
+5. Vérifier logs `[interview] phase: …` dans la console pour tracer chaque transition
 
