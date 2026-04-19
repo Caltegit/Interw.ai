@@ -151,9 +151,17 @@ export default function InterviewStart() {
         }
 
         let settled = false;
+        // Backup button visible after 4s of TTS (in case it's stuck)
+        const manualBackupTimer = setTimeout(() => {
+          if (!settled && !isPausedRef.current) {
+            console.warn("[interview] TTS slow — showing manual continue button");
+            setShowManualContinue(true);
+          }
+        }, 4000);
         const safeResolve = (reason: string) => {
           if (settled) return;
           settled = true;
+          clearTimeout(manualBackupTimer);
           console.log("[interview] TTS done:", reason);
           setIsSpeaking(false);
           resolve();
