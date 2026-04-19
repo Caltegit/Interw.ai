@@ -224,7 +224,7 @@ export default function InterviewLanding() {
             <Mic className="h-7 w-7" style={{ color: "#d4a574" }} />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Entretien pour le poste de
+            Nouvelle session pour
           </h1>
           <p className="text-lg font-semibold" style={{ color: "#d4a574" }}>
             {project?.job_title}
