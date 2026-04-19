@@ -17,7 +17,7 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 
-const STEPS = ["Informations", "Pré", "Questions", "Critères", "Publication"];
+const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 interface CriteriaState {
