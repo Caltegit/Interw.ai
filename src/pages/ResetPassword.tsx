@@ -36,8 +36,8 @@ export default function ResetPassword() {
       toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
       return;
     }
-    if (password.length < 6) {
-      toast({ title: "Erreur", description: "Minimum 6 caractères.", variant: "destructive" });
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      toast({ title: "Erreur", description: "Minimum 8 caractères, avec au moins une lettre et un chiffre.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -67,7 +67,10 @@ export default function ResetPassword() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Nouveau mot de passe</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                <p className="text-xs text-muted-foreground">
+                  Minimum 8 caractères, avec au moins une lettre et un chiffre.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm">Confirmer</Label>
