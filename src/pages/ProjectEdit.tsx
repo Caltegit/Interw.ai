@@ -28,6 +28,9 @@ interface CriteriaState {
   scoring_scale: string;
   anchors: Record<string, string>;
   applies_to: string;
+  category?: string;
+  from_library?: boolean;
+  save_to_library?: boolean;
 }
 
 export default function ProjectEdit() {
@@ -377,6 +380,27 @@ export default function ProjectEdit() {
             applies_to: c.applies_to as never,
           })),
         );
+
+        // Save criteria flagged for library
+        const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
+        if (toLibrary.length > 0) {
+          const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+          if (orgData) {
+            await supabase.from("criteria_templates").insert(
+              toLibrary.map((c) => ({
+                organization_id: orgData,
+                created_by: user.id,
+                label: c.label,
+                description: c.description,
+                weight: c.weight,
+                scoring_scale: c.scoring_scale as never,
+                applies_to: c.applies_to as never,
+                anchors: c.anchors,
+                category: c.category || null,
+              })),
+            );
+          }
+        }
       }
 
       toast({ title: "Projet mis à jour !" });
