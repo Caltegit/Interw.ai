@@ -24,3 +24,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.check-email-failures]
     verify_jwt = true
+
+  [functions.seed-e2e-user]
+    verify_jwt = false
