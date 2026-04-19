@@ -46,7 +46,11 @@ export function CreateUserDialog({ onCreated }: Props) {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Utilisateur créé", description: email });
+      const wasInvited = (data as any)?.invited;
+      toast({
+        title: wasInvited ? "Invitation envoyée" : "Utilisateur créé",
+        description: wasInvited ? `Un email d'invitation a été envoyé à ${email}` : email,
+      });
       setOpen(false);
       setEmail(""); setFullName(""); setPassword(""); setOrgId("none"); setRole("none");
       onCreated();
@@ -65,7 +69,7 @@ export function CreateUserDialog({ onCreated }: Props) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Créer un utilisateur</DialogTitle>
-          <DialogDescription>Crée directement un compte (email confirmé). Pas d'invitation envoyée.</DialogDescription>
+          <DialogDescription>Si aucun mot de passe n'est fourni, un email d'invitation sera envoyé.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -78,7 +82,8 @@ export function CreateUserDialog({ onCreated }: Props) {
           </div>
           <div className="space-y-2">
             <Label>Mot de passe (optionnel)</Label>
-            <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour aléatoire" />
+            <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour envoyer une invitation" />
+            <p className="text-xs text-muted-foreground">Laisser vide pour envoyer un email d'invitation au lieu de créer un compte directement.</p>
           </div>
           <div className="space-y-2">
             <Label>Organisation</Label>
