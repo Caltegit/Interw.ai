@@ -178,16 +178,12 @@ function SortableQuestion({
   );
 }
 
-export type RelanceLevel = "light" | "medium" | "deep";
-
 interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
-  relanceLevel?: RelanceLevel;
-  setRelanceLevel?: (v: RelanceLevel) => void;
 }
 
-export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanceLevel }: StepQuestionsProps) {
+export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
