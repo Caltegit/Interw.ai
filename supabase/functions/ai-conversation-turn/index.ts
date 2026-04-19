@@ -15,32 +15,43 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const questionsList = Array.isArray(projectContext.questions) ? projectContext.questions : [];
+    const currentIdx = Math.max(
+      0,
+      Math.min((projectContext.currentQuestionNumber ?? 1) - 1, questionsList.length - 1),
+    );
+    const currentQ = questionsList[currentIdx] ?? {};
+    const rawLevel = currentQ.relanceLevel;
     const relanceLevel: "light" | "medium" | "deep" =
-      projectContext.relanceLevel === "light" || projectContext.relanceLevel === "deep"
-        ? projectContext.relanceLevel
-        : "medium";
+      rawLevel === "light" || rawLevel === "deep" ? rawLevel : "medium";
 
     const relanceRules: Record<typeof relanceLevel, string> = {
       light:
-        "- NIVEAU DE RELANCE : LÉGER. Ne pose AUCUNE relance. Enchaîne directement la question suivante après un bref acquiescement.\n- Pas de reformulation.",
+        "- NIVEAU DE RELANCE (question actuelle) : LÉGER. Ne pose AUCUNE relance. Enchaîne directement la question suivante après un bref acquiescement.\n- Pas de reformulation.",
       medium:
-        "- NIVEAU DE RELANCE : MOYEN. Si la réponse du candidat est floue, vague ou très courte (moins de 2 phrases), pose UNE seule relance ciblée pour clarifier ou obtenir un exemple concret (ex : « Pouvez-vous donner un exemple concret ? »). Sinon, n'insiste pas.\n- Avant la question suivante, fais une COURTE reformulation de ce que le candidat vient de dire (1 phrase, ex : « Si je comprends bien, vous avez… »).",
+        "- NIVEAU DE RELANCE (question actuelle) : MOYEN. Si la réponse du candidat est floue, vague ou très courte (moins de 2 phrases), pose UNE seule relance ciblée pour clarifier ou obtenir un exemple concret (ex : « Pouvez-vous donner un exemple concret ? »). Sinon, n'insiste pas.\n- Avant la question suivante, fais une COURTE reformulation de ce que le candidat vient de dire (1 phrase, ex : « Si je comprends bien, vous avez… »).",
       deep:
-        "- NIVEAU DE RELANCE : APPROFONDI. Tu peux poser jusqu'à 2 relances par question pour creuser un mot-clé important mentionné par le candidat ou obtenir des détails concrets (chiffres, exemples, contexte). Reste pertinente, ne creuse pas dans le vide.\n- Avant la question suivante, fais une COURTE reformulation (1 phrase) de la réponse du candidat.\n- Tu peux référencer un point évoqué plus tôt dans l'entretien si c'est pertinent (« Tout à l'heure vous parliez de X… »).",
+        "- NIVEAU DE RELANCE (question actuelle) : APPROFONDI. Tu peux poser jusqu'à 2 relances par question pour creuser un mot-clé important mentionné par le candidat ou obtenir des détails concrets (chiffres, exemples, contexte). Reste pertinente, ne creuse pas dans le vide.\n- Avant la question suivante, fais une COURTE reformulation (1 phrase) de la réponse du candidat.\n- Tu peux référencer un point évoqué plus tôt dans l'entretien si c'est pertinent (« Tout à l'heure vous parliez de X… »).",
     };
 
     const systemPrompt = `Tu es ${projectContext.aiPersonaName}, recruteuse IA pour le poste "${projectContext.jobTitle}".
 
-Questions prévues :
-${projectContext.questions.map((q: any, i: number) => `${i + 1}. [${q.mediaType === "video" ? "VIDÉO" : q.mediaType === "audio" ? "AUDIO" : "TEXTE"}] ${q.content}`).join("\n")}
+Questions prévues (chacune a son propre niveau de relance) :
+${questionsList.map((q: any, i: number) => {
+  const lvl = q.relanceLevel === "light" || q.relanceLevel === "deep" ? q.relanceLevel : "medium";
+  const lvlLabel = lvl === "light" ? "léger" : lvl === "deep" ? "approfondi" : "moyen";
+  const mt = q.mediaType === "video" ? "VIDÉO" : q.mediaType === "audio" ? "AUDIO" : "TEXTE";
+  return `${i + 1}. [${mt}] (relance ${lvlLabel}) ${q.content}`;
+}).join("\n")}
 
-Règles de comportement :
+Règles de comportement pour LA QUESTION ACTUELLE :
 ${relanceRules[relanceLevel]}
 - Varie tes acquiescements de façon naturelle : « Intéressant », « Ok je vois », « Merci pour cet exemple », « D'accord », plutôt que de toujours dire « Merci ».
 - Si la réponse du candidat fait moins de 5 mots ou semble hésitante, propose-lui doucement : « Prenez votre temps, voulez-vous que je reformule la question ? ».
 - Pose les questions une par une dans l'ordre prévu. Une seule à la fois.
 - **IMPORTANT** : Si la question suivante est de type AUDIO ou VIDÉO, NE RÉPÈTE PAS son contenu. Dis seulement une courte transition comme « Écoutez la question suivante » ou « Regardez la question suivante ». Le média sera joué automatiquement.
 - Si la question suivante est de type TEXTE, pose-la normalement dans ta réponse.
+- Quand tu passes à la question suivante, adapte ton comportement de relance au niveau indiqué pour CETTE nouvelle question.
 - Reste professionnelle, chaleureuse, jamais bavarde. Maximum 2-3 phrases courtes par tour.
 - Réponds toujours en français.
 - Quand toutes les questions sont posées, remercie brièvement le candidat et indique que l'entretien est terminé.
