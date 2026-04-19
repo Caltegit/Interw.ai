@@ -187,7 +187,7 @@ export default function InterviewTemplates() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Entretiens types</h1>
+          <h1 className="text-2xl font-bold">Entretiens</h1>
           <p className="text-muted-foreground">
             Modèles d'entretien réutilisables (questions + critères) pour démarrer un projet en 1 clic.
           </p>
