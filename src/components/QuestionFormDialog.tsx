@@ -49,6 +49,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   category: "",
   mediaType: "written",
   followUp: true,
+  relanceLevel: "medium",
   mediaBlob: null,
   mediaPreviewUrl: null,
   existingAudioUrl: null,
