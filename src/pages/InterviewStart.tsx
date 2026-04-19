@@ -976,57 +976,73 @@ export default function InterviewStart() {
     }
   };
 
+  const endInterviewStartedRef = useRef(false);
   const endInterview = async () => {
+    // Guard against double invocation
+    if (endInterviewStartedRef.current) return;
+    endInterviewStartedRef.current = true;
+
     // Clear all auto-end timers
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
     stopListening();
     window.speechSynthesis?.cancel();
 
-    if (session?.id) {
-      // Stop per-question recorder if still running and upload last segment
-      if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
-        await stopAndUploadQuestionVideo(session.id, currentQuestionIndex);
-      }
+    const sessionId = session?.id;
+    const questionIndex = currentQuestionIndex;
+    const startedAt = interviewStartTimeRef.current;
 
-      // Stop camera stream
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-
-      // Flush in-flight background jobs (candidate inserts + AI transitions), max 3s
-      if (backgroundJobsRef.current.length > 0) {
-        const flush = Promise.allSettled(backgroundJobsRef.current);
-        const timeout = new Promise((resolve) => setTimeout(resolve, 3000));
-        await Promise.race([flush, timeout]);
-        backgroundJobsRef.current = [];
-      }
-
-      // Calculate duration
-      const durationSeconds = interviewStartTimeRef.current
-        ? Math.round((Date.now() - interviewStartTimeRef.current) / 1000)
-        : null;
-
-      // Update session status to completed
-      await supabase
-        .from("sessions")
-        .update({
-          status: "completed" as any,
-          completed_at: new Date().toISOString(),
-          ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-        })
-        .eq("id", session.id);
-
-      // Trigger report generation — messages already saved in real-time
-      try {
-        const { error: reportError } = await supabase.functions.invoke("generate-report", {
-          body: { session_id: session.id },
-        });
-        if (reportError) console.error("Report generation error:", reportError);
-      } catch (e) {
-        console.error("Report generation exception:", e);
-      }
-    }
-
+    // Redirect IMMEDIATELY — finalize in background.
+    // The Complete page will display a "Recording in progress…" state until
+    // sessions.status === 'completed', then auto-switch to the final screen.
     navigate(`/interview/${slug}/complete/${token}`);
+
+    // Run finalization async in the background (no await on UI)
+    (async () => {
+      if (!sessionId) return;
+      try {
+        // Stop per-question recorder if still running and upload last segment
+        if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+          try { await stopAndUploadQuestionVideo(sessionId, questionIndex); } catch (e) { console.error(e); }
+        }
+
+        // Stop camera stream
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+
+        // Flush in-flight background jobs (candidate inserts + AI transitions), max 5s
+        if (backgroundJobsRef.current.length > 0) {
+          const flush = Promise.allSettled(backgroundJobsRef.current);
+          const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
+          await Promise.race([flush, timeout]);
+          backgroundJobsRef.current = [];
+        }
+
+        const durationSeconds = startedAt
+          ? Math.round((Date.now() - startedAt) / 1000)
+          : null;
+
+        await supabase
+          .from("sessions")
+          .update({
+            status: "completed" as any,
+            completed_at: new Date().toISOString(),
+            ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
+          })
+          .eq("id", sessionId);
+
+        // Trigger report generation
+        try {
+          const { error: reportError } = await supabase.functions.invoke("generate-report", {
+            body: { session_id: sessionId },
+          });
+          if (reportError) console.error("Report generation error:", reportError);
+        } catch (e) {
+          console.error("Report generation exception:", e);
+        }
+      } catch (e) {
+        console.error("Background finalize error:", e);
+      }
+    })();
   };
 
   // Keep endInterviewRef in sync
