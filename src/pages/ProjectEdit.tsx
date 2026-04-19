@@ -61,7 +61,7 @@ export default function ProjectEdit() {
 
   // Step 3
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [relanceLevel, setRelanceLevel] = useState<RelanceLevel>("medium");
+  
 
   // Step 4
   const [criteria, setCriteria] = useState<CriteriaState[]>([]);
