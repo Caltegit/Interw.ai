@@ -567,13 +567,21 @@ export default function InterviewStart() {
       console.log("[InterviewStart] forceStartListening blocked — interview is paused");
       return;
     }
-    console.log("[InterviewStart] Forcing transition to listening");
+    console.log("[interview] Forcing transition to listening");
     clearPlaybackWatchdog();
+    currentPresentationRef.current = null; // presentation finished
     setShouldAutoPlay(false);
     setIsSpeaking(false);
     startQuestionRecording();
     startListening();
   }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+
+  // Mark current question as a media presentation (for pause/resume replay)
+  const markMediaPresentation = useCallback((qIndex: number) => {
+    const q = questions[qIndex];
+    if (q?.video_url) currentPresentationRef.current = { kind: "media", mediaType: "video" };
+    else if (q?.audio_url) currentPresentationRef.current = { kind: "media", mediaType: "audio" };
+  }, [questions]);
 
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
