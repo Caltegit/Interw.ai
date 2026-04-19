@@ -1,6 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Trash2,
   GripVertical,
@@ -176,12 +183,16 @@ function SortableQuestion({
   );
 }
 
+export type RelanceLevel = "light" | "medium" | "deep";
+
 interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
+  relanceLevel?: RelanceLevel;
+  setRelanceLevel?: (v: RelanceLevel) => void;
 }
 
-export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
+export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanceLevel }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -281,6 +292,32 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
 
   return (
     <div className="space-y-4">
+      {setRelanceLevel && (
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <Label className="text-sm font-semibold">Comportement de l'IA</Label>
+              <p className="text-xs text-muted-foreground">
+                Niveau de relance et de reformulation pendant l'entretien.
+              </p>
+            </div>
+            <Select
+              value={relanceLevel ?? "medium"}
+              onValueChange={(v) => setRelanceLevel(v as RelanceLevel)}
+            >
+              <SelectTrigger className="w-[180px] shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">Léger — pas de relance</SelectItem>
+                <SelectItem value="medium">Moyen — 1 relance</SelectItem>
+                <SelectItem value="deep">Approfondi — 2 relances</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-base font-semibold">Questions d'entretien</Label>
