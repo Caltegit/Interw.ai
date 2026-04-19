@@ -2,28 +2,18 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Trash2, Pencil, Search, BookOpen, Mic, Video, Type } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { MediaPlayerInline } from "@/components/library/MediaPlayerInline";
-import { Info } from "lucide-react";
+import {
+  QuestionFormDialog,
+  EMPTY_QUESTION_FORM,
+  type QuestionFormValue,
+} from "@/components/QuestionFormDialog";
 
 interface QuestionTemplate {
   id: string;
@@ -39,36 +29,9 @@ interface QuestionTemplate {
   video_url: string | null;
 }
 
-const CATEGORIES = ["Motivation", "Technique", "Soft skills", "Situationnel", "Culture fit", "Leadership"];
-const MAX_CONTENT = 500;
-
 interface QuestionLibraryManagerProps {
   orgId: string;
 }
-
-interface FormState {
-  title: string;
-  content: string;
-  category: string;
-  followUp: boolean;
-  type: "written" | "audio" | "video";
-  mediaBlob: Blob | null;
-  mediaPreviewUrl: string | null;
-  existingAudioUrl: string | null;
-  existingVideoUrl: string | null;
-}
-
-const EMPTY_FORM: FormState = {
-  title: "",
-  content: "",
-  category: "",
-  followUp: true,
-  type: "written",
-  mediaBlob: null,
-  mediaPreviewUrl: null,
-  existingAudioUrl: null,
-  existingVideoUrl: null,
-};
 
 export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const { user } = useAuth();
@@ -80,7 +43,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [initialForm, setInitialForm] = useState<QuestionFormValue>(EMPTY_QUESTION_FORM);
   const [saving, setSaving] = useState(false);
 
   const fetchTemplates = async () => {
@@ -104,18 +67,18 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
 
   const openNew = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setInitialForm(EMPTY_QUESTION_FORM);
     setDialogOpen(true);
   };
 
   const openEdit = (t: QuestionTemplate) => {
     setEditingId(t.id);
-    setForm({
+    setInitialForm({
       title: t.title || "",
       content: t.content,
       category: t.category || "",
+      mediaType: (t.type as "written" | "audio" | "video") || "written",
       followUp: t.follow_up_enabled,
-      type: (t.type as "written" | "audio" | "video") || "written",
       mediaBlob: null,
       mediaPreviewUrl: t.audio_url || t.video_url || null,
       existingAudioUrl: t.audio_url,
@@ -125,7 +88,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   };
 
   const uploadMedia = async (blob: Blob, type: "audio" | "video"): Promise<string | null> => {
-    const ext = type === "audio" ? "webm" : "webm";
+    const ext = "webm";
     const path = `question-templates/${crypto.randomUUID()}.${ext}`;
     const { error } = await supabase.storage.from("media").upload(path, blob, {
       contentType: blob.type || (type === "audio" ? "audio/webm" : "video/webm"),
@@ -138,37 +101,22 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     return urlData.publicUrl;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (form: QuestionFormValue) => {
     if (!user) return;
-    if (!form.content.trim() && form.type === "written") {
-      toast({ title: "Question requise", description: "Saisis le texte de la question.", variant: "destructive" });
-      return;
-    }
-    if ((form.type === "audio" || form.type === "video") && !form.mediaBlob && !form.mediaPreviewUrl) {
-      toast({
-        title: "Média requis",
-        description: `Enregistre ou importe un ${form.type === "audio" ? "audio" : "vidéo"}.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSaving(true);
 
     let audioUrl: string | null = form.existingAudioUrl;
     let videoUrl: string | null = form.existingVideoUrl;
+    if (form.mediaType !== "audio") audioUrl = null;
+    if (form.mediaType !== "video") videoUrl = null;
 
-    // Si on change de type, on nettoie les anciennes URLs des autres types
-    if (form.type !== "audio") audioUrl = null;
-    if (form.type !== "video") videoUrl = null;
-
-    if (form.mediaBlob && (form.type === "audio" || form.type === "video")) {
-      const url = await uploadMedia(form.mediaBlob, form.type);
+    if (form.mediaBlob && (form.mediaType === "audio" || form.mediaType === "video")) {
+      const url = await uploadMedia(form.mediaBlob, form.mediaType);
       if (!url) {
         setSaving(false);
         return;
       }
-      if (form.type === "audio") audioUrl = url;
+      if (form.mediaType === "audio") audioUrl = url;
       else videoUrl = url;
     }
 
@@ -176,11 +124,11 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       title: form.title.trim(),
       content:
         form.content.trim() ||
-        (form.type === "audio" ? "Question audio" : form.type === "video" ? "Question vidéo" : ""),
+        (form.mediaType === "audio" ? "Question audio" : form.mediaType === "video" ? "Question vidéo" : ""),
       category: form.category || null,
       follow_up_enabled: form.followUp,
       max_follow_ups: form.followUp ? 2 : 0,
-      type: form.type,
+      type: form.mediaType,
       audio_url: audioUrl,
       video_url: videoUrl,
     };
@@ -236,7 +184,6 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
         <CardDescription>Créez vos questions types ({templates.length})</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Search & Filter */}
         <div className="flex gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -254,9 +201,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             <SelectContent>
               <SelectItem value="all">Toutes</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
+                <SelectItem key={c} value={c}>{c}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -265,7 +210,6 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
           </Button>
         </div>
 
-        {/* List */}
         {loading ? (
           <p className="text-sm text-muted-foreground">Chargement...</p>
         ) : filtered.length === 0 ? (
@@ -286,14 +230,10 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
                         {icon} {label}
                       </Badge>
                       {t.category && (
-                        <Badge variant="secondary" className="text-xs">
-                          {t.category}
-                        </Badge>
+                        <Badge variant="secondary" className="text-xs">{t.category}</Badge>
                       )}
                       {t.follow_up_enabled && (
-                        <Badge variant="outline" className="text-xs">
-                          Relance IA
-                        </Badge>
+                        <Badge variant="outline" className="text-xs">Relance IA</Badge>
                       )}
                       {(t.audio_url || t.video_url) && (
                         <MediaPlayerInline audioUrl={t.audio_url} videoUrl={t.video_url} />
@@ -313,172 +253,14 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
         )}
       </CardContent>
 
-      {/* Dialog création / édition */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
-          <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>{editingId ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
-            <DialogDescription>
-              Définis le contenu, le format et le comportement de la question.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-            {/* Section Question */}
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Question
-              </h3>
-              <div className="space-y-1.5">
-                <Label htmlFor="q-title" className="text-xs">
-                  Titre court
-                </Label>
-                <Input
-                  id="q-title"
-                  placeholder="Ex: Présentez-vous"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="q-content" className="text-xs">
-                    Texte de la question
-                  </Label>
-                  <span
-                    className={`text-[10px] tabular-nums ${
-                      form.content.length > MAX_CONTENT ? "text-destructive" : "text-muted-foreground"
-                    }`}
-                  >
-                    {form.content.length}/{MAX_CONTENT}
-                  </span>
-                </div>
-                <Textarea
-                  id="q-content"
-                  placeholder="Parlez-moi de votre parcours..."
-                  rows={3}
-                  value={form.content}
-                  onChange={(e) => setForm({ ...form, content: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Catégorie</Label>
-                <Select
-                  value={form.category || "_none"}
-                  onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Aucune" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Aucune</SelectItem>
-                    {CATEGORIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </section>
-
-            {/* Section Format */}
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Format de présentation
-              </h3>
-              <ToggleGroup
-                type="single"
-                value={form.type}
-                className="justify-start"
-                onValueChange={(v) => {
-                  if (!v) return;
-                  const next = v as "written" | "audio" | "video";
-                  // Si un média existait, on prévient en conservant l'URL existante du même type uniquement
-                  setForm((f) => ({
-                    ...f,
-                    type: next,
-                    mediaBlob: null,
-                    mediaPreviewUrl:
-                      next === "audio"
-                        ? f.existingAudioUrl
-                        : next === "video"
-                          ? f.existingVideoUrl
-                          : null,
-                  }));
-                }}
-              >
-                <ToggleGroupItem value="written" className="text-xs gap-1">
-                  <Type className="h-3.5 w-3.5" /> Écrite
-                </ToggleGroupItem>
-                <ToggleGroupItem value="audio" className="text-xs gap-1">
-                  <Mic className="h-3.5 w-3.5" /> Audio
-                </ToggleGroupItem>
-                <ToggleGroupItem value="video" className="text-xs gap-1">
-                  <Video className="h-3.5 w-3.5" /> Vidéo
-                </ToggleGroupItem>
-              </ToggleGroup>
-
-              {(form.type === "audio" || form.type === "video") && (
-                <QuestionMediaEditor
-                  type={form.type}
-                  existingUrl={form.mediaPreviewUrl}
-                  onMediaReady={(blob, url) =>
-                    setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))
-                  }
-                  onClear={() =>
-                    setForm((f) => ({
-                      ...f,
-                      mediaBlob: null,
-                      mediaPreviewUrl: null,
-                      existingAudioUrl: f.type === "audio" ? null : f.existingAudioUrl,
-                      existingVideoUrl: f.type === "video" ? null : f.existingVideoUrl,
-                    }))
-                  }
-                />
-              )}
-            </section>
-
-            {/* Section Relance IA */}
-            <section className="space-y-3">
-              <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Comportement IA
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3 w-3 cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      Quand activé, l'IA peut poser jusqu'à 2 questions de relance pour approfondir une
-                      réponse trop courte ou ambiguë.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </h3>
-              <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-                <Switch
-                  id="followup"
-                  checked={form.followUp}
-                  onCheckedChange={(v) => setForm({ ...form, followUp: v })}
-                />
-                <Label htmlFor="followup" className="cursor-pointer text-sm">
-                  Activer la relance IA
-                </Label>
-              </div>
-            </section>
-          </div>
-
-          {/* Footer sticky */}
-          <DialogFooter className="border-t bg-background px-6 py-3">
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-              Annuler
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Enregistrement..." : editingId ? "Enregistrer" : "Ajouter"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <QuestionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initial={initialForm}
+        isEditing={!!editingId}
+        saving={saving}
+        onSubmit={handleSave}
+      />
     </Card>
   );
 }
