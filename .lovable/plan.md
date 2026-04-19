@@ -1,35 +1,34 @@
 
 
-## Problème
-Le rapport est bien généré (sauvé en DB) mais l'email au recruteur n'est pas envoyé. Logs de `generate-report` :
-```
-ERROR Failed to send report email: Edge Function returned a non-2xx status code
-```
-Aucun log côté `send-transactional-email` → la requête est rejetée à la passerelle Supabase avant d'atteindre la fonction.
+## Plan : Renommer "Pré" → "Intro" + déplacer Persona/Avatar dans "Informations"
 
-## Cause
-`send-transactional-email` est configurée avec `verify_jwt = true` dans `supabase/config.toml`. Quand `generate-report` l'appelle via `supabase.functions.invoke(...)` avec un client construit à partir du `SERVICE_ROLE_KEY`, le SDK n'attache pas automatiquement le service-role en `Authorization: Bearer`. La passerelle rejette donc l'appel (401).
+### Changements
 
-## Fix
-Dans `supabase/functions/generate-report/index.ts`, remplacer l'appel `supabase.functions.invoke(...)` par un `fetch` direct vers l'URL de la fonction avec les headers explicites :
+**1. Renommer l'étape "Pré" → "Intro"**
+Dans `src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx`, ligne 20 :
 ```ts
-await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-    'apikey': SUPABASE_SERVICE_ROLE_KEY,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({ templateName: 'interview-report', ... }),
-})
+const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
 ```
-Cela garantit que le service-role est bien envoyé en Bearer et passe `verify_jwt`.
 
-## Fichiers
-- `supabase/functions/generate-report/index.ts` — remplacer le bloc `supabase.functions.invoke("send-transactional-email", ...)` par un `fetch` direct, avec gestion d'erreur (lire le body en cas de non-2xx pour logger la vraie raison).
+**2. Déplacer "Nom du persona IA" + "Photo du recruteur" de l'étape "Intro" (step 1) vers "Informations" (step 0)**
 
-## Test
-1. Refaire un entretien complet de bout en bout.
-2. Vérifier dans `email_send_log` qu'une ligne `template_name = 'interview-report'` apparaît avec `status = 'sent'`.
-3. Vérifier la réception de l'email côté recruteur.
+Dans les deux fichiers :
+- Step 0 (Informations) devient : Titre · Langue · **Nom du persona IA** · **Photo du recruteur**
+- Step 1 (Intro) ne contient plus que : sélecteur Audio/Vidéo + enregistreur d'intro + bibliothèque
+
+**3. Améliorer l'interface de l'étape "Intro"**
+- Titre + courte description en tête : "Message d'introduction" / "Cette intro sera diffusée au candidat avant le début des questions."
+- Regrouper le sélecteur de type (Audio/Vidéo) et le recorder dans une seule carte propre avec un peu plus d'espacement.
+- Bouton "Choisir depuis la bibliothèque" mieux placé (en haut à droite de la carte, déjà le cas — on garde mais on uniformise le padding).
+- Petit hint sous le recorder : "Astuce : enregistrez une intro chaleureuse pour mettre le candidat à l'aise."
+
+### Fichiers modifiés
+- `src/pages/ProjectNew.tsx` — STEPS, contenu step 0, contenu step 1
+- `src/pages/ProjectEdit.tsx` — mêmes changements (mêmes blocs JSX)
+
+### Test
+1. Aller sur `/projects/new` → vérifier que l'étape s'appelle "Intro" et que **Nom du persona** + **Avatar** apparaissent dans l'étape **Informations**.
+2. Vérifier que l'étape "Intro" affiche uniquement le message audio/vidéo, avec l'UI améliorée.
+3. Créer un projet → vérifier que les données sont bien sauvegardées (persona_name, avatar_url, intro audio/vidéo).
+4. Éditer un projet existant (`/projects/:id/edit`) → mêmes vérifications.
 
