@@ -89,6 +89,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         mediaType: (t.type === "audio" ? "audio" : t.type === "video" ? "video" : "written") as "written" | "audio" | "video",
         follow_up_enabled: t.follow_up_enabled,
         max_follow_ups: t.max_follow_ups,
+        relance_level: ((t.relance_level as "light" | "medium" | "deep") ?? "medium"),
         audioBlob: null,
         audioPreviewUrl: t.audio_url || null,
         videoBlob: null,
