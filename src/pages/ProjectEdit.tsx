@@ -259,7 +259,6 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
-          relance_level: relanceLevel,
         } as never)
         .eq("id", id);
 
