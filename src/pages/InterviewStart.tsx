@@ -1193,7 +1193,7 @@ export default function InterviewStart() {
             </div>
             <Button size="lg" className="candidate-btn-primary w-full h-16 text-xl" onClick={beginInterview}>
               <Volume2 className="mr-2 !h-6 !w-6" />
-              Lancer l'entretien
+              Lancer la session
             </Button>
           </CardContent>
         </Card>
