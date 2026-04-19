@@ -1,64 +1,40 @@
 
-## Diagnostic
 
-J’ai identifié la vraie cause dans les logs du système d’envoi :
+## Problème
 
-```text
-Email API error: 400 {"type":"invalid_email","message":"Invalid 'reply_to' email address"}
-```
+La création d'utilisateur depuis la console Super Admin **n'envoie aucun email**. Elle crée un compte directement confirmé avec un mot de passe aléatoire — l'utilisateur ne peut donc pas se connecter sauf si le super admin lui transmet manuellement un mot de passe.
 
-Le rapport est bien généré puis mis en file d’envoi, mais l’envoi échoue ensuite parce que `reply_to` reçoit parfois une adresse candidat invalide ou vide.
+## Solution proposée
 
-Aujourd’hui :
-- `generate-report` enfile `reply_to: session.candidate_email`
-- `InterviewLanding.tsx` laisse démarrer une session dès que le champ email n’est pas vide
-- le champ est `type="email"`, mais il n’y a pas de vraie validation côté logique avant insertion
+Remplacer la logique `createUser` par `inviteUserByEmail` quand aucun mot de passe n'est fourni → ça envoie un vrai email d'invitation (qui passera par notre `auth-email-hook` → template `invite.tsx` → Lovable Emails).
 
-Donc si un candidat saisit un email mal formé, le rapport est généré, mais l’email au recruteur échoue ensuite.
+### Changements
 
-## Plan de correction
+**1. `supabase/functions/superadmin-manage-user/index.ts` — action `create`**
 
-### 1. Sécuriser l’envoi du rapport côté backend
-Dans `supabase/functions/generate-report/index.ts` :
-- ajouter une validation simple de l’email candidat
-- ne renseigner `reply_to` que si l’adresse est valide
-- sinon envoyer quand même le rapport sans `reply_to`
+Nouveau comportement :
+- Si **aucun mot de passe** fourni → `admin.auth.admin.inviteUserByEmail(email, { data: { full_name }, redirectTo: <origin>/reset-password })` → email d'invitation envoyé, l'utilisateur clique, définit son mot de passe.
+- Si **mot de passe fourni** → comportement actuel (`createUser` + `email_confirm: true`), pas d'email (cas "création manuelle silencieuse").
+- Dans les deux cas : assignation de l'organisation et du rôle après création.
+- Récupérer l'`origin` depuis le header `Origin`/`Referer` pour construire le `redirectTo`.
 
-Effet attendu :
-- le recruteur reçoit le rapport même si l’email candidat est faux
-- seul le “répondre à” sera omis dans ce cas
+**2. `src/components/superadmin/CreateUserDialog.tsx`**
 
-### 2. Bloquer les emails invalides dès le début du parcours candidat
-Dans `src/pages/InterviewLanding.tsx` :
-- valider réellement `candidateEmail.trim()` avant création de session
-- afficher un message d’erreur clair si l’email n’est pas valide
-- désactiver le bouton “Continuer” tant que nom + email valide ne sont pas fournis
+- Mettre à jour la description du dialog : "Si aucun mot de passe n'est fourni, un email d'invitation sera envoyé."
+- Mettre à jour le toast de succès : "Invitation envoyée à X" ou "Compte créé pour X" selon le cas (le edge function renvoie un flag `invited: true/false`).
+- Helper text sous le champ mot de passe : "Laisser vide pour envoyer une invitation par email".
 
-Effet attendu :
-- on évite de créer des sessions avec un email candidat inutilisable
-- meilleure qualité des données et moins d’échecs d’envoi ensuite
+### Pré-requis vérifiés
 
-### 3. Améliorer le diagnostic
-Toujours dans `generate-report` :
-- journaliser explicitement quand `reply_to` est ignoré car invalide
-- garder les logs d’enfilement/envoi plus lisibles pour les prochains cas
+- `auth-email-hook` est déployé et actif (vu dans les logs : `Auth email enqueued { emailType: "recovery", ... }`).
+- Template `invite.tsx` existe déjà dans `supabase/functions/_shared/email-templates/`.
+- Le hook intercepte automatiquement le type `invite` envoyé par `inviteUserByEmail`.
 
-## Fichiers concernés
-- `supabase/functions/generate-report/index.ts`
-- `src/pages/InterviewLanding.tsx`
+### Test après déploiement
 
-## Résultat attendu après correctif
-- un rapport part même si l’email candidat est mal saisi
-- si l’email candidat est valide, il reste utilisé dans le champ “répondre à”
-- les nouvelles sessions empêcheront les saisies d’email invalides
+1. Aller dans Super Admin → Utilisateurs → "Créer un utilisateur".
+2. Saisir un email **sans** mot de passe + (optionnel) org + rôle.
+3. Vérifier que l'email d'invitation arrive bien.
+4. Cliquer le lien → définir le mot de passe → se connecter.
+5. Vérifier dans `email_send_log` qu'une ligne `template_name = 'auth_emails'` avec `emailType: invite` apparaît.
 
-## Vérification prévue
-1. Créer une session avec un email invalide :
-   - la page doit bloquer avant démarrage
-2. Forcer un cas existant avec email invalide :
-   - le rapport doit quand même partir au recruteur
-   - sans `reply_to`
-3. Créer une session avec un email valide :
-   - le rapport doit être reçu normalement
-   - avec `reply_to` correct
-4. Vérifier les logs d’envoi pour confirmer la disparition de l’erreur `Invalid 'reply_to' email address`
