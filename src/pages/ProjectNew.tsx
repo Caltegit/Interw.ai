@@ -160,7 +160,6 @@ export default function ProjectNew() {
           intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
           presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
-          relance_level: relanceLevel,
         } as never)
         .select()
         .single();
