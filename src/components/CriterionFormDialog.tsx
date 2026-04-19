@@ -15,8 +15,6 @@ import {
 import { BookmarkPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const CATEGORIES = ["Soft skills", "Hard skills", "Culture fit", "Leadership", "Motivation", "Communication"];
-
 export interface CriterionFormValue {
   label: string;
   description: string;
@@ -105,59 +103,19 @@ export function CriterionFormDialog({
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Catégorie</Label>
-              <Select
-                value={form.category || "_none"}
-                onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Aucune" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">Aucune</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </section>
 
           <section className="space-y-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notation</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Poids %</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.weight}
-                  onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Échelle</Label>
-                <Select value={form.scoring_scale} onValueChange={(v) => setForm({ ...form, scoring_scale: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0-5">0 à 5</SelectItem>
-                    <SelectItem value="0-10">0 à 10</SelectItem>
-                    <SelectItem value="ABC">A / B / C / D</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Application</Label>
-                <Select value={form.applies_to} onValueChange={(v) => setForm({ ...form, applies_to: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all_questions">Tous</SelectItem>
-                    <SelectItem value="specific_questions">Spécifique</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-1.5 max-w-[140px]">
+              <Label className="text-xs">Poids %</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={form.weight}
+                onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
+              />
             </div>
           </section>
 
