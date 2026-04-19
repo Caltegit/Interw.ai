@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      criteria_templates: {
+        Row: {
+          anchors: Json | null
+          applies_to: Database["public"]["Enums"]["criteria_scope"]
+          category: string | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          label: string
+          organization_id: string
+          scoring_scale: Database["public"]["Enums"]["scoring_scale_type"]
+          weight: number
+        }
+        Insert: {
+          anchors?: Json | null
+          applies_to?: Database["public"]["Enums"]["criteria_scope"]
+          category?: string | null
+          created_at?: string
+          created_by: string
+          description?: string
+          id?: string
+          label: string
+          organization_id: string
+          scoring_scale?: Database["public"]["Enums"]["scoring_scale_type"]
+          weight?: number
+        }
+        Update: {
+          anchors?: Json | null
+          applies_to?: Database["public"]["Enums"]["criteria_scope"]
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          label?: string
+          organization_id?: string
+          scoring_scale?: Database["public"]["Enums"]["scoring_scale_type"]
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "criteria_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
