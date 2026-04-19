@@ -64,6 +64,63 @@ export type Database = {
           },
         ]
       }
+      email_alert_config: {
+        Row: {
+          cooldown_hours: number
+          enabled: boolean
+          failure_threshold: number
+          id: number
+          updated_at: string
+          window_minutes: number
+        }
+        Insert: {
+          cooldown_hours?: number
+          enabled?: boolean
+          failure_threshold?: number
+          id?: number
+          updated_at?: string
+          window_minutes?: number
+        }
+        Update: {
+          cooldown_hours?: number
+          enabled?: boolean
+          failure_threshold?: number
+          id?: number
+          updated_at?: string
+          window_minutes?: number
+        }
+        Relationships: []
+      }
+      email_alert_log: {
+        Row: {
+          details: Json | null
+          failure_count: number
+          id: string
+          recipients_notified: number
+          threshold: number
+          triggered_at: string
+          window_minutes: number
+        }
+        Insert: {
+          details?: Json | null
+          failure_count: number
+          id?: string
+          recipients_notified?: number
+          threshold: number
+          triggered_at?: string
+          window_minutes: number
+        }
+        Update: {
+          details?: Json | null
+          failure_count?: number
+          id?: string
+          recipients_notified?: number
+          threshold?: number
+          triggered_at?: string
+          window_minutes?: number
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
