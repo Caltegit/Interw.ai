@@ -525,7 +525,7 @@ export default function ProjectNew() {
             </div>
           )}
 
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} relanceLevel={relanceLevel} setRelanceLevel={setRelanceLevel} />}
+          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
 
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
