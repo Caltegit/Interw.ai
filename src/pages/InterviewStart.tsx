@@ -53,6 +53,13 @@ export default function InterviewStart() {
   const isPausedRef = useRef(false);
   const pausedDuringQuestionRef = useRef(false);
   const pausedElapsedRef = useRef<number>(0);
+  const isListeningRef = useRef(false);
+  // Track what the AI is currently presenting so we can replay it on resume
+  type Presentation =
+    | { kind: "tts"; text: string }
+    | { kind: "media"; mediaType: "audio" | "video" }
+    | null;
+  const currentPresentationRef = useRef<Presentation>(null);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
