@@ -357,6 +357,7 @@ export default function ProjectEdit() {
                     type: q.mediaType,
                     follow_up_enabled: q.follow_up_enabled,
                     max_follow_ups: q.max_follow_ups,
+                    relance_level: q.relance_level,
                     audio_url: (updates.audio_url as string | null) || null,
                     video_url: (updates.video_url as string | null) || null,
                   } as never);
