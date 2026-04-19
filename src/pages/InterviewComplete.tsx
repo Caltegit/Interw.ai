@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
-import { CheckCircle, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle, Loader2, Sparkles } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import CandidateLayout from "@/components/CandidateLayout";
 import { supabase } from "@/integrations/supabase/client";
 
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
+const POLL_INTERVAL_MS = 2000;
+const PROCESSING_TIMEOUT_MS = 60_000;
 
 export default function InterviewComplete() {
   const { token } = useParams();
   const [message, setMessage] = useState<string>(DEFAULT_COMPLETION_MESSAGE);
+  const [processing, setProcessing] = useState(true);
+  const cancelledRef = useRef(false);
 
+  // Load completion message from project (independent of processing state)
   useEffect(() => {
     if (!token) return;
     (async () => {
@@ -28,6 +33,47 @@ export default function InterviewComplete() {
       const cm = (project as { completion_message?: string | null } | null)?.completion_message;
       if (cm && cm.trim()) setMessage(cm);
     })();
+  }, [token]);
+
+  // Poll session status until completed (or safety timeout)
+  useEffect(() => {
+    if (!token) {
+      setProcessing(false);
+      return;
+    }
+    cancelledRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const checkStatus = async () => {
+      const { data } = await supabase
+        .from("sessions")
+        .select("status")
+        .eq("token", token)
+        .maybeSingle();
+      if (cancelledRef.current) return;
+      if (data?.status === "completed") {
+        setProcessing(false);
+        if (intervalId) clearInterval(intervalId);
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
+    // Check immediately, then poll
+    checkStatus();
+    intervalId = setInterval(checkStatus, POLL_INTERVAL_MS);
+
+    // Safety: after 60s, show final screen anyway (server keeps processing)
+    timeoutId = setTimeout(() => {
+      if (!cancelledRef.current) setProcessing(false);
+      if (intervalId) clearInterval(intervalId);
+    }, PROCESSING_TIMEOUT_MS);
+
+    return () => {
+      cancelledRef.current = true;
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [token]);
 
   return (
@@ -55,24 +101,46 @@ export default function InterviewComplete() {
                   boxShadow: "0 12px 32px -8px hsl(var(--l-accent) / 0.5)",
                 }}
               >
-                <CheckCircle className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+                {processing ? (
+                  <Loader2
+                    className="h-10 w-10 animate-spin"
+                    style={{ color: "hsl(var(--l-accent))" }}
+                  />
+                ) : (
+                  <CheckCircle className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+                )}
               </div>
             </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight candidate-gradient-text">
-                Entretien terminé, merci !
-              </h1>
-              <p className="text-base leading-relaxed" style={{ color: "hsl(var(--l-fg) / 0.75)" }}>
-                {message}
-              </p>
-            </div>
-            <div
-              className="flex items-center justify-center gap-2 text-sm"
-              style={{ color: "hsl(var(--l-fg) / 0.45)" }}
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>À très vite.</span>
-            </div>
+
+            {processing ? (
+              <div className="space-y-2 animate-fade-in">
+                <h1 className="text-2xl font-bold tracking-tight candidate-gradient-text">
+                  Enregistrement de votre session…
+                </h1>
+                <p className="text-base leading-relaxed" style={{ color: "hsl(var(--l-fg) / 0.75)" }}>
+                  Merci de patienter quelques secondes, ne fermez pas cette page.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 animate-fade-in">
+                <h1 className="text-2xl font-bold tracking-tight candidate-gradient-text">
+                  Entretien terminé, merci !
+                </h1>
+                <p className="text-base leading-relaxed" style={{ color: "hsl(var(--l-fg) / 0.75)" }}>
+                  {message}
+                </p>
+              </div>
+            )}
+
+            {!processing && (
+              <div
+                className="flex items-center justify-center gap-2 text-sm animate-fade-in"
+                style={{ color: "hsl(var(--l-fg) / 0.45)" }}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span>À très vite.</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
