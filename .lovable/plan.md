@@ -1,61 +1,90 @@
 
 
-## Plan — Quick Win : améliorer les relances et interactions de l'IA
+## Plan — Bibliothèque d'entretiens types
 
-### Objectif
+### Concept
 
-Rendre l'IA plus humaine et engageante en enrichissant son comportement conversationnel, **sans changer la voix** (gros chantier ElevenLabs reporté).
+Permettre au recruteur de créer/sauvegarder des **modèles d'entretiens complets** (un set cohérent : titre + description + liste de questions + critères d'évaluation + niveaux de relance) qu'il peut ensuite appliquer en 1 clic à un nouveau projet, plutôt que de tout reconstruire à chaque fois.
 
-### 1. Nouveau champ projet : `relance_level`
+Exemples : "Entretien Commercial Junior", "Entretien Développeur Senior", "Entretien Manager", "Entretien Stage RH"...
 
-Migration SQL pour ajouter à `projects` :
-- Colonne `relance_level` de type text avec valeurs `'light' | 'medium' | 'deep'`, défaut `'medium'`.
-- Pas de contrainte CHECK (on validera côté code et via le wizard).
+### 1. Nouvelle table DB : `interview_templates`
 
-### 2. UI wizard — exposer le paramètre
+Migration SQL pour créer :
+- `id`, `organization_id`, `created_by`, `created_at`
+- `name` (ex: "Entretien Commercial Junior")
+- `description` (résumé du modèle)
+- `category` (ex: Commercial / Tech / Management / RH...)
+- `job_title` (intitulé poste suggéré)
+- `default_duration_minutes`, `default_language`
+- RLS : visible/modifiable par les membres de l'org.
 
-Dans `StepQuestions.tsx` (ou en haut de l'étape questions), ajouter un petit sélecteur :
-- **Léger** : 0 relance, l'IA enchaîne.
-- **Moyen** (défaut) : 1 relance si réponse vague/courte.
-- **Approfondi** : jusqu'à 2 relances + reformulations.
+Plus 2 tables liées (snapshot des questions/critères du modèle, indépendantes des projets) :
+- `interview_template_questions` : id, template_id, order_index, title, content, type (written/audio/video), audio_url, video_url, category, follow_up_enabled, max_follow_ups, relance_level
+- `interview_template_criteria` : id, template_id, order_index, label, description, weight, scoring_scale, applies_to, anchors
 
-Mêmes modifs dans `ProjectNew.tsx` et `ProjectEdit.tsx` pour persister la valeur.
+### 2. Nouvelle page `/library/interviews` — gestion des entretiens types
 
-### 3. Edge function `ai-conversation-turn` — prompt enrichi
+Composant `InterviewTemplatesManager` :
+- Liste des modèles avec filtre par catégorie + recherche.
+- Cards : nom, catégorie, nb de questions, nb de critères, durée, badge "X questions / Y critères".
+- Actions : Créer, Dupliquer, Modifier, Supprimer.
+- Ajouter l'item dans la sidebar `AppSidebar` ("Entretiens types") sous "Bibliothèque".
 
-Refonte du `systemPrompt` pour intégrer :
+### 3. Éditeur de modèle (`InterviewTemplateEditor`)
 
-a) **Relances calibrées** selon `relance_level` (passé dans `projectContext`) :
-- light → pas de relance, juste transition.
-- medium → 1 relance si réponse < 2 phrases ou floue ("Pouvez-vous donner un exemple concret ?").
-- deep → jusqu'à 2 relances, creuse les mots-clés mentionnés par le candidat.
+Mini-wizard ou page unique avec onglets :
+- **Infos** : nom, description, catégorie, job_title, durée, langue.
+- **Questions** : réutilise la logique de `StepQuestions` (ajout manuel, depuis bibliothèque questions, drag&drop ordre, niveaux relance).
+- **Critères** : réutilise la logique de `StepCriteria`.
 
-b) **Reformulation active** (medium/deep) : avant la question suivante, courte reformulation de ce que le candidat vient de dire ("Si je comprends bien, vous avez…").
+Pas d'IA / d'avatar / de candidat ici — juste le contenu pédagogique du modèle.
 
-c) **Réactions émotionnelles naturelles** : variations d'acquiescements ("Intéressant", "Ok je vois", "Merci pour cet exemple") au lieu du seul "Merci".
+### 4. Intégration côté création de projet
 
-d) **Mémoire intra-entretien légère** : autoriser l'IA à référencer un point évoqué plus tôt si pertinent ("Tout à l'heure vous parliez de X…").
+Dans `ProjectNew.tsx`, ajouter une **étape 0** ou un bandeau en tête de l'étape 1 :
+> "Démarrer à partir d'un entretien type ?" → bouton "Choisir un modèle".
 
-e) **Gestion du silence/hésitation** : si la réponse fait < 5 mots, proposer "Prenez votre temps, voulez-vous que je reformule ?".
+Dialog `InterviewTemplatePickerDialog` :
+- Liste filtrable des modèles de l'org.
+- Aperçu (questions + critères + durée).
+- Bouton "Utiliser ce modèle" → pré-remplit tous les champs du wizard (titre, description, questions, critères, durée, langue, niveaux de relance).
+- L'utilisateur peut ensuite tout modifier librement avant de créer le projet.
 
-f) **Garde-fous conservés** : ne pas répéter le contenu d'une question audio/vidéo, rester en français, ne pas inventer de questions.
+### 5. Sauvegarder un projet existant comme modèle
 
-### 4. Côté client — passer `relance_level`
+Dans `ProjectDetail.tsx` (ou `ProjectEdit.tsx`), bouton **"Sauvegarder comme entretien type"** → dialog demandant nom + catégorie → snapshot des questions + critères du projet vers `interview_templates`.
 
-Dans `InterviewStart.tsx` (ou le hook qui appelle `ai-conversation-turn`), récupérer `project.relance_level` et l'inclure dans le `projectContext` envoyé à l'edge function.
+### 6. Seed (optionnel — recommandé)
+
+Comme pour `question_templates` et `criteria_templates`, ajouter une fonction `seed_default_interview_templates(_org_id, _user_id)` qui crée 3-5 entretiens types prêts à l'emploi à la création d'une org :
+- "Entretien Commercial",
+- "Entretien Développeur",
+- "Entretien Manager",
+- "Entretien Stage / Alternance",
+- "Entretien découverte générique".
+
+Appelée depuis `accept_invitation` et `trg_seed_on_owner_set` (à côté des seeds existants).
 
 ### Fichiers touchés
 
-- Migration SQL (ajout colonne).
-- `src/pages/ProjectNew.tsx` + `src/pages/ProjectEdit.tsx` (état + persistance).
-- `src/components/project/StepQuestions.tsx` (sélecteur UI).
-- `src/integrations/supabase/types.ts` — auto-régénéré.
-- `src/pages/InterviewStart.tsx` (transmission du paramètre).
-- `supabase/functions/ai-conversation-turn/index.ts` (prompt enrichi).
+- Migration SQL (3 tables + RLS + fonction seed).
+- `src/pages/InterviewTemplates.tsx` (nouvelle page liste).
+- `src/pages/InterviewTemplateEdit.tsx` (nouvelle page éditeur).
+- `src/components/library/InterviewTemplatesManager.tsx`.
+- `src/components/project/InterviewTemplatePickerDialog.tsx`.
+- `src/components/AppSidebar.tsx` (ajout item menu).
+- `src/App.tsx` (routes).
+- `src/pages/ProjectNew.tsx` (intégration picker).
+- `src/pages/ProjectDetail.tsx` (bouton "sauvegarder comme modèle").
 
-### Hors scope (gros chantier — pour plus tard)
+### Hors scope
 
-- Voix ElevenLabs (TTS naturel ou agent temps réel).
-- Adaptation séniorité auto-détectée.
-- Vitesse de parole ajustable côté candidat.
+- Partage de modèles entre organisations (gardé privé à l'org).
+- Marketplace publique de modèles.
+- Voix ElevenLabs.
+
+### Question avant de coder
+
+3 points à valider :
 
