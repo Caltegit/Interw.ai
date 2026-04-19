@@ -17,6 +17,7 @@ interface Template {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: string | null;
   type: string;
   audio_url: string | null;
   video_url: string | null;
