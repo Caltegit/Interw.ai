@@ -394,7 +394,14 @@ export default function ProjectNew() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Nouveau projet</h1>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <h1 className="text-2xl font-bold">Nouveau projet</h1>
+        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+          <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un entretien type
+        </Button>
+      </div>
+
+      <InterviewTemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onApply={applyTemplate} />
 
       <div className="flex items-center gap-2">
         {STEPS.map((s, i) => (
