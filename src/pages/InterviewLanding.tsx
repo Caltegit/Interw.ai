@@ -211,7 +211,7 @@ export default function InterviewLanding() {
                   </div>
                   <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
                     <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
-                    Commencer l'entretien
+                    Commencer la session
                   </Button>
                 </div>
               )}
