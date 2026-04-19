@@ -81,6 +81,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       category: t.category || "",
       mediaType: (t.type as "written" | "audio" | "video") || "written",
       followUp: t.follow_up_enabled,
+      relanceLevel: ((t.relance_level as "light" | "medium" | "deep") ?? "medium"),
       mediaBlob: null,
       mediaPreviewUrl: t.audio_url || t.video_url || null,
       existingAudioUrl: t.audio_url,
