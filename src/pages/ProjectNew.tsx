@@ -523,6 +523,8 @@ export default function ProjectNew() {
             </div>
           )}
 
+          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
+
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
           {step === 4 && (
