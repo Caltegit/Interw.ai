@@ -29,6 +29,8 @@ export interface QuestionFormValue {
   category: string;
   mediaType: "written" | "audio" | "video";
   followUp: boolean;
+  /** Niveau de relance IA pour cette question */
+  relanceLevel: "light" | "medium" | "deep";
   /** Blob if a new recording was made/imported during this edit */
   mediaBlob: Blob | null;
   /** Preview URL (existing or freshly created) for audio/video */
@@ -47,6 +49,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   category: "",
   mediaType: "written",
   followUp: true,
+  relanceLevel: "medium",
   mediaBlob: null,
   mediaPreviewUrl: null,
   existingAudioUrl: null,
@@ -223,21 +226,32 @@ export function QuestionFormDialog({
                     <Info className="h-3 w-3 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    Quand activé, l'IA peut poser jusqu'à 2 questions de relance pour approfondir une
-                    réponse trop courte ou ambiguë.
+                    Niveau de relance et de reformulation de l'IA pour cette question.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </h3>
-            <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-2">
-              <Switch
-                id="qfd-followup"
-                checked={form.followUp}
-                onCheckedChange={(v) => setForm({ ...form, followUp: v })}
-              />
-              <Label htmlFor="qfd-followup" className="cursor-pointer text-sm">
-                Activer la relance IA
-              </Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Niveau de relance IA</Label>
+              <Select
+                value={form.relanceLevel}
+                onValueChange={(v) =>
+                  setForm({
+                    ...form,
+                    relanceLevel: v as "light" | "medium" | "deep",
+                    followUp: v !== "light",
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Léger — pas de relance</SelectItem>
+                  <SelectItem value="medium">Moyen — 1 relance si réponse vague</SelectItem>
+                  <SelectItem value="deep">Approfondi — jusqu'à 2 relances</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </section>
 

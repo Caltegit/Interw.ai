@@ -17,6 +17,7 @@ interface Template {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: string | null;
   type: string;
   audio_url: string | null;
   video_url: string | null;
@@ -47,7 +48,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       if (!orgId) { setLoading(false); return; }
       supabase
         .from("question_templates")
-        .select("id, title, content, category, follow_up_enabled, max_follow_ups, type, audio_url, video_url")
+        .select("id, title, content, category, follow_up_enabled, max_follow_ups, relance_level, type, audio_url, video_url")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
@@ -88,6 +89,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         mediaType: (t.type === "audio" ? "audio" : t.type === "video" ? "video" : "written") as "written" | "audio" | "video",
         follow_up_enabled: t.follow_up_enabled,
         max_follow_ups: t.max_follow_ups,
+        relance_level: ((t.relance_level as "light" | "medium" | "deep") ?? "medium"),
         audioBlob: null,
         audioPreviewUrl: t.audio_url || null,
         videoBlob: null,

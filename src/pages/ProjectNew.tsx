@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
-import { StepQuestions, Question, createEmptyQuestion, type RelanceLevel } from "@/components/project/StepQuestions";
+import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
@@ -49,7 +49,7 @@ export default function ProjectNew() {
     { ...createEmptyQuestion(), title: "Bien-être", content: "Comment ça va aujourd'hui ?" },
     { ...createEmptyQuestion(), title: "Culture", content: "Tu penses quoi de Morning ?" },
   ]);
-  const [relanceLevel, setRelanceLevel] = useState<RelanceLevel>("medium");
+  
 
   // Step 4
   const [criteria, setCriteria] = useState<
@@ -160,7 +160,6 @@ export default function ProjectNew() {
           intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
           presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
-          relance_level: relanceLevel,
         } as never)
         .select()
         .single();
@@ -217,6 +216,7 @@ export default function ProjectNew() {
               type: q.type as never,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
+              relance_level: q.relance_level,
             })),
           )
           .select();
@@ -282,6 +282,7 @@ export default function ProjectNew() {
                     type: q.mediaType,
                     follow_up_enabled: q.follow_up_enabled,
                     max_follow_ups: q.max_follow_ups,
+                    relance_level: q.relance_level,
                     audio_url: updates.audio_url || null,
                     video_url: updates.video_url || null,
                   } as never);
@@ -524,7 +525,7 @@ export default function ProjectNew() {
             </div>
           )}
 
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} relanceLevel={relanceLevel} setRelanceLevel={setRelanceLevel} />}
+          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
 
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 

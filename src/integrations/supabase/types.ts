@@ -459,7 +459,6 @@ export type Database = {
           presentation_video_url: string | null
           record_audio: boolean
           record_video: boolean
-          relance_level: string
           slug: string | null
           status: Database["public"]["Enums"]["project_status"]
           title: string
@@ -484,7 +483,6 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
-          relance_level?: string
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title: string
@@ -509,7 +507,6 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
-          relance_level?: string
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
@@ -535,6 +532,7 @@ export type Database = {
           id: string
           max_follow_ups: number
           organization_id: string
+          relance_level: string
           title: string
           type: string
           video_url: string | null
@@ -549,6 +547,7 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id: string
+          relance_level?: string
           title?: string
           type?: string
           video_url?: string | null
@@ -563,6 +562,7 @@ export type Database = {
           id?: string
           max_follow_ups?: number
           organization_id?: string
+          relance_level?: string
           title?: string
           type?: string
           video_url?: string | null
@@ -587,6 +587,7 @@ export type Database = {
           max_follow_ups: number
           order_index: number
           project_id: string
+          relance_level: string
           scoring_criteria_ids: string[] | null
           title: string
           type: Database["public"]["Enums"]["question_type"]
@@ -601,6 +602,7 @@ export type Database = {
           max_follow_ups?: number
           order_index?: number
           project_id: string
+          relance_level?: string
           scoring_criteria_ids?: string[] | null
           title?: string
           type?: Database["public"]["Enums"]["question_type"]
@@ -615,6 +617,7 @@ export type Database = {
           max_follow_ups?: number
           order_index?: number
           project_id?: string
+          relance_level?: string
           scoring_criteria_ids?: string[] | null
           title?: string
           type?: Database["public"]["Enums"]["question_type"]

@@ -22,6 +22,7 @@ interface QuestionTemplate {
   category: string | null;
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: string | null;
   organization_id: string;
   created_by: string;
   type: string;
@@ -80,6 +81,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       category: t.category || "",
       mediaType: (t.type as "written" | "audio" | "video") || "written",
       followUp: t.follow_up_enabled,
+      relanceLevel: ((t.relance_level as "light" | "medium" | "deep") ?? "medium"),
       mediaBlob: null,
       mediaPreviewUrl: t.audio_url || t.video_url || null,
       existingAudioUrl: t.audio_url,

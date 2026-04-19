@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ChevronLeft, ChevronRight, Upload, X, Mic, Video } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { StepQuestions, Question, createEmptyQuestion, type RelanceLevel } from "@/components/project/StepQuestions";
+import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
@@ -61,7 +61,7 @@ export default function ProjectEdit() {
 
   // Step 3
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [relanceLevel, setRelanceLevel] = useState<RelanceLevel>("medium");
+  
 
   // Step 4
   const [criteria, setCriteria] = useState<CriteriaState[]>([]);
@@ -105,7 +105,7 @@ export default function ProjectEdit() {
       setAutoSkipSilence(project.auto_skip_silence ?? false);
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
-      setRelanceLevel(((project as { relance_level?: string }).relance_level as RelanceLevel) ?? "medium");
+      
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
 
@@ -140,6 +140,7 @@ export default function ProjectEdit() {
               mediaType,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
+              relance_level: (((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium"),
               audioPreviewUrl: q.audio_url,
               videoPreviewUrl: q.video_url,
               from_library: true,
@@ -259,7 +260,6 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
-          relance_level: relanceLevel,
         } as never)
         .eq("id", id);
 
@@ -284,6 +284,7 @@ export default function ProjectEdit() {
               type: q.type as never,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
+              relance_level: q.relance_level,
             })),
           )
           .select();
@@ -357,6 +358,7 @@ export default function ProjectEdit() {
                     type: q.mediaType,
                     follow_up_enabled: q.follow_up_enabled,
                     max_follow_ups: q.max_follow_ups,
+                    relance_level: q.relance_level,
                     audio_url: (updates.audio_url as string | null) || null,
                     video_url: (updates.video_url as string | null) || null,
                   } as never);
@@ -598,7 +600,7 @@ export default function ProjectEdit() {
             </div>
           )}
 
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} relanceLevel={relanceLevel} setRelanceLevel={setRelanceLevel} />}
+          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
 
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 

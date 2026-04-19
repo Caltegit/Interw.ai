@@ -1,13 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Plus,
   Trash2,
   GripVertical,
@@ -53,6 +46,7 @@ export interface Question {
   mediaType: "written" | "audio" | "video";
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: "light" | "medium" | "deep";
   audioBlob: Blob | null;
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
@@ -71,6 +65,7 @@ export const createEmptyQuestion = (): Question => ({
   mediaType: "written",
   follow_up_enabled: false,
   max_follow_ups: 0,
+  relance_level: "medium",
   audioBlob: null,
   audioPreviewUrl: null,
   videoBlob: null,
@@ -183,16 +178,12 @@ function SortableQuestion({
   );
 }
 
-export type RelanceLevel = "light" | "medium" | "deep";
-
 interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
-  relanceLevel?: RelanceLevel;
-  setRelanceLevel?: (v: RelanceLevel) => void;
 }
 
-export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanceLevel }: StepQuestionsProps) {
+export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -248,6 +239,7 @@ export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanc
       category: q.category,
       mediaType: q.mediaType,
       followUp: q.follow_up_enabled,
+      relanceLevel: q.relance_level ?? "medium",
       mediaBlob: q.mediaType === "audio" ? q.audioBlob : q.mediaType === "video" ? q.videoBlob : null,
       mediaPreviewUrl:
         q.mediaType === "audio" ? q.audioPreviewUrl : q.mediaType === "video" ? q.videoPreviewUrl : null,
@@ -264,8 +256,9 @@ export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanc
       content: form.content,
       category: form.category,
       mediaType: form.mediaType,
-      follow_up_enabled: form.followUp,
-      max_follow_ups: form.followUp ? 2 : 0,
+      follow_up_enabled: form.relanceLevel !== "light",
+      max_follow_ups: form.relanceLevel === "deep" ? 2 : form.relanceLevel === "medium" ? 1 : 0,
+      relance_level: form.relanceLevel,
       audioBlob: form.mediaType === "audio" ? form.mediaBlob : null,
       audioPreviewUrl: form.mediaType === "audio" ? form.mediaPreviewUrl : null,
       videoBlob: form.mediaType === "video" ? form.mediaBlob : null,
@@ -292,32 +285,6 @@ export function StepQuestions({ questions, setQuestions, relanceLevel, setRelanc
 
   return (
     <div className="space-y-4">
-      {setRelanceLevel && (
-        <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <Label className="text-sm font-semibold">Comportement de l'IA</Label>
-              <p className="text-xs text-muted-foreground">
-                Niveau de relance et de reformulation pendant l'entretien.
-              </p>
-            </div>
-            <Select
-              value={relanceLevel ?? "medium"}
-              onValueChange={(v) => setRelanceLevel(v as RelanceLevel)}
-            >
-              <SelectTrigger className="w-[180px] shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="light">Léger — pas de relance</SelectItem>
-                <SelectItem value="medium">Moyen — 1 relance</SelectItem>
-                <SelectItem value="deep">Approfondi — 2 relances</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <Label className="text-base font-semibold">Questions d'entretien</Label>
