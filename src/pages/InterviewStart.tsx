@@ -140,21 +140,51 @@ export default function InterviewStart() {
     });
   }, []);
 
-  // TTS: speak text aloud
+  // TTS: speak text aloud — robust with safety timer + voice fallback
   const speak = useCallback(
     (text: string): Promise<void> => {
       return new Promise((resolve) => {
-        if (!ttsEnabled || !window.speechSynthesis) {
+        if (!ttsEnabled || !window.speechSynthesis || !text?.trim()) {
+          console.log("[interview] TTS skipped (disabled/unsupported/empty)");
           resolve();
           return;
         }
-        window.speechSynthesis.cancel();
+
+        let settled = false;
+        // Backup button visible after 4s of TTS (in case it's stuck)
+        const manualBackupTimer = setTimeout(() => {
+          if (!settled && !isPausedRef.current) {
+            console.warn("[interview] TTS slow — showing manual continue button");
+            setShowManualContinue(true);
+          }
+        }, 4000);
+        const safeResolve = (reason: string) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(manualBackupTimer);
+          console.log("[interview] TTS done:", reason);
+          setIsSpeaking(false);
+          resolve();
+        };
+
+        try {
+          window.speechSynthesis.cancel();
+        } catch {}
+
+        const voices = window.speechSynthesis.getVoices();
+        // If voices not loaded yet, skip TTS rather than blocking forever
+        if (!voices || voices.length === 0) {
+          console.warn("[interview] TTS: no voices available, skipping");
+          // Brief delay to mimic speech rhythm, then resolve
+          setTimeout(() => safeResolve("no_voices"), 300);
+          return;
+        }
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "fr-FR";
         utterance.rate = 0.95;
         utterance.pitch = 1.1;
 
-        const voices = window.speechSynthesis.getVoices();
         const femaleVoice =
           voices.find(
             (v) =>
@@ -172,17 +202,35 @@ export default function InterviewStart() {
           voices.find((v) => v.lang.startsWith("fr"));
         if (femaleVoice) utterance.voice = femaleVoice;
 
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          resolve();
+        // Safety timer: text length / 15 chars per second + 4s buffer (max 20s)
+        const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
+        const safetyTimer = setTimeout(() => {
+          console.warn("[interview] TTS safety timer fired after", safetyMs, "ms");
+          try { window.speechSynthesis.cancel(); } catch {}
+          safeResolve("safety_timer");
+        }, safetyMs);
+
+        utterance.onstart = () => {
+          console.log("[interview] TTS onstart");
+          setIsSpeaking(true);
         };
-        utterance.onerror = () => {
-          setIsSpeaking(false);
-          resolve();
+        utterance.onend = () => {
+          clearTimeout(safetyTimer);
+          safeResolve("onend");
+        };
+        utterance.onerror = (e) => {
+          clearTimeout(safetyTimer);
+          console.warn("[interview] TTS onerror:", (e as any)?.error);
+          safeResolve("onerror");
         };
 
-        window.speechSynthesis.speak(utterance);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn("[interview] TTS speak() threw:", e);
+          clearTimeout(safetyTimer);
+          safeResolve("speak_throw");
+        }
       });
     },
     [ttsEnabled],
@@ -483,16 +531,17 @@ export default function InterviewStart() {
 
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
+    console.log("[interview] watchdog armed (manual btn @3s, hard fallback @7s)");
     // After 3s of "Préparation", offer a manual button as backup
     manualContinueTimerRef.current = setTimeout(() => {
       if (!isPausedRef.current) setShowManualContinue(true);
     }, 3000);
-    // Hard fallback after 8s if onPlaybackEnd never fires
+    // Hard fallback after 7s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
       if (isPausedRef.current) return;
-      console.warn("[InterviewStart] Playback watchdog triggered after 8s");
+      console.warn("[interview] Playback watchdog triggered after 7s — forcing listening");
       forceStartListening();
-    }, 8000);
+    }, 7000);
   }, [clearPlaybackWatchdog, forceStartListening]);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
