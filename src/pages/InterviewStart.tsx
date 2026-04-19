@@ -441,7 +441,8 @@ export default function InterviewStart() {
     }
     startListening();
     resetSilenceTimer();
-  }, [speak, startListening, startQuestionRecording, resetSilenceTimer, toast, questions, currentQuestionIndex, markMediaPresentation, armPlaybackWatchdog]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
 
   // Load session data
   useEffect(() => {
