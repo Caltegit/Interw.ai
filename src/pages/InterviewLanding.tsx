@@ -265,12 +265,17 @@ export default function InterviewLanding() {
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
                 style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
               />
+              {showEmailError && (
+                <p className="text-xs" style={{ color: "#f87171" }}>
+                  Veuillez saisir une adresse email valide.
+                </p>
+              )}
             </div>
             <Button
               className="w-full h-12 rounded-lg text-base font-semibold group transition-all duration-300"
               size="lg"
               onClick={handleStart}
-              disabled={!candidateName.trim() || !candidateEmail.trim() || starting}
+              disabled={!canSubmit}
             >
               {starting ? (
                 <>
