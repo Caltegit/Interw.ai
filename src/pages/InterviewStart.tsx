@@ -52,6 +52,14 @@ export default function InterviewStart() {
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
   const pausedDuringQuestionRef = useRef(false);
+  // Snapshot of the presentation at pause-time, used by resumeInterview
+  // (currentPresentationRef may be null by the time resume runs because TTS
+  // ends naturally and clears it).
+  const pausedReplayRef = useRef<
+    | { kind: "tts"; text: string }
+    | { kind: "media"; mediaType: "audio" | "video" }
+    | null
+  >(null);
   const pausedElapsedRef = useRef<number>(0);
   const isListeningRef = useRef(false);
   // Track what the AI is currently presenting so we can replay it on resume
@@ -174,6 +182,11 @@ export default function InterviewStart() {
           clearTimeout(manualBackupTimer);
           console.log("[interview] TTS done:", reason);
           setIsSpeaking(false);
+          // Clear "current presentation" so a pause during the listening phase
+          // is NOT treated as "pendant la question" (would replay stale TTS).
+          if (currentPresentationRef.current?.kind === "tts") {
+            currentPresentationRef.current = null;
+          }
           resolve();
         };
 
@@ -348,7 +361,10 @@ export default function InterviewStart() {
     // "Pendant la question" = il y a une présentation en cours (TTS ou média)
     const duringQuestion = currentPresentationRef.current !== null;
     pausedDuringQuestionRef.current = duringQuestion;
-    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "presentation:", currentPresentationRef.current);
+    // Snapshot the presentation NOW — TTS cancellation below would otherwise
+    // wipe currentPresentationRef before resume reads it.
+    pausedReplayRef.current = currentPresentationRef.current;
+    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "snapshot:", pausedReplayRef.current);
 
     // Stop the question media player cleanly (resets currentTime + finished state)
     if (duringQuestion) {
@@ -385,9 +401,11 @@ export default function InterviewStart() {
     setIsPaused(false);
     isPausedRef.current = false;
     const wasDuringQuestion = pausedDuringQuestionRef.current;
-    const presentation = currentPresentationRef.current;
+    // Use the snapshot taken at pause-time (currentPresentationRef may be stale or null)
+    const presentation = pausedReplayRef.current;
     pausedDuringQuestionRef.current = false;
-    console.log("[interview] RESUME — wasDuringQuestion:", wasDuringQuestion, "presentation:", presentation);
+    pausedReplayRef.current = null;
+    console.log("[interview] RESUME — wasDuringQuestion:", wasDuringQuestion, "snapshot:", presentation);
 
     // Restart max-duration timer with remaining time (always)
     const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
@@ -405,6 +423,8 @@ export default function InterviewStart() {
       console.log("[interview] Resume: replaying TTS from start");
       await speak(presentation.text);
       if (isPausedRef.current) return; // user re-paused mid-TTS
+      // speak() already cleared currentPresentationRef on natural end; ensure clean state
+      currentPresentationRef.current = null;
       // Was this a written question (no media to follow)? Start listening now.
       const q = questions[currentQuestionIndex];
       const hasMedia = !!(q?.audio_url || q?.video_url);
@@ -428,6 +448,8 @@ export default function InterviewStart() {
     if (wasDuringQuestion && presentation?.kind === "media") {
       // Replay media from start — synchronous call preserves user gesture (mobile autoplay)
       console.log("[interview] Resume: replaying media from start");
+      // Re-mark presentation so a re-pause during the replay still tracks correctly
+      markMediaPresentation(currentQuestionIndex);
       setShouldAutoPlay(true);
       setIsSpeaking(true);
       try { featuredPlayerRef.current?.restart(); } catch (e) { console.warn("restart failed", e); }
