@@ -1,45 +1,72 @@
 
 
-## Plan : Fiabiliser l'enchaînement des questions côté candidat
+## Plan : Stabiliser séquence candidat + pause/reprise relit la question
 
-### Diagnostic
+### 🔴 Bugs identifiés en lecture
 
-Le freeze sur "Préparation…" arrive parce que la transition vers la question suivante dépend d'une **chaîne fragile d'événements asynchrones** qui peut casser à plusieurs endroits :
+**1. Pause/Reprise ne relit PAS la question (le bug remonté)**
+- `pauseInterview` détecte `duringQuestion = isSpeaking || !isListening` → faux pour les questions **texte écrit pur** (TTS lit le greeting puis on devrait écouter, mais si on pause pendant un état transitoire ça part en faux positif).
+- À la reprise, `featuredPlayerRef.current?.restart()` ne marche **que pour audio/video** (média avec `<audio>`/`<video>`). Pour une **question lue par TTS via `speak()`**, il n'y a aucun replay → on relance seulement le watchdog mais pas la voix IA.
+- Conclusion : il faut **stocker le texte/média en cours** + à la reprise, rejouer **selon le type** (TTS pour texte, restart() pour média).
 
-1. **TTS (synthèse vocale IA)** : si `speechSynthesis.speak()` ne déclenche pas son `onend` (cas connus : navigateur en arrière-plan, Chrome qui coupe après 15s, voix non chargée), l'UI reste figée.
-2. **Appel à `ai-conversation-turn`** : si l'edge function met du temps ou échoue silencieusement, on attend la réponse texte sans timeout côté client.
-3. **Lecture du média question (audio/vidéo)** : on a déjà mis un watchdog dans `QuestionMediaPlayer`, mais la transition qui *précède* la lecture (intro IA → média) n'a pas de garde-fou.
-4. **Pas d'état machine clair** : on enchaîne `setState` (`isPreparing`, `isAiSpeaking`, `isPlayingQuestion`, `isListening`) qui peuvent se croiser et bloquer si un event manque.
+**2. STT — closure stale sur `isListening` (déjà identifié)**
+- `recognition.onend` lit `isListening` depuis la closure → toujours `false` à la création. La reconnaissance ne redémarre jamais quand Chrome la coupe naturellement (~30-60s) → micro mort silencieusement.
+- Fix : utiliser `isListeningRef`.
 
-### Solution
+**3. STT — pas d'auto-restart sur `onerror` "no-speech"**
+- Chrome déclenche souvent `no-speech` → end → micro coupé pour le reste de la question.
+- Fix : sur `no-speech`, redémarrer automatiquement si toujours en phase d'écoute.
 
-**A. Watchdog global "Préparation…"**
-Dans `InterviewStart.tsx`, dès qu'on entre en état `isPreparing` (ou équivalent), armer un timer de **10 secondes**. Si on n'a pas avancé dans la machine d'état → forcer le passage à l'étape suivante (lecture média ou écoute candidat) + log warning.
+**4. `MicVolumeMeter` — AudioContext peut rester `suspended`**
+- Sur Chrome strict, `new AudioContext()` démarre `suspended` sans user gesture immédiat → vu-mètre figé à 0.
+- Fix : `ctx.resume()` après création + retry si encore suspendu.
 
-**B. Bouton de secours visible après 4s**
-Si "Préparation…" dure > 4s, afficher un petit bouton ghost **"Continuer →"** sous l'indicateur, qui force manuellement l'avancée. Le candidat n'est plus jamais bloqué.
+**5. Pause pendant intro IA (greeting) avant Q1**
+- Si on met en pause pendant que l'IA dit "Bonjour…", à la reprise rien ne se passe (greeting perdu).
+- Fix : tracker aussi le **texte TTS en cours** dans une ref + rejouer.
 
-**C. Timeout sur l'appel `ai-conversation-turn`**
-Wrapper l'appel `supabase.functions.invoke('ai-conversation-turn', …)` avec `Promise.race` + timeout 8s. Si timeout → fallback : on saute la transition IA et on enchaîne directement sur la lecture du média de la question suivante.
+### ✅ Solution
 
-**D. TTS robuste**
-- Ajouter `onerror` sur l'utterance.
-- Armer un timer de sécurité = `(longueur texte / 15) + 4s` qui force `onend` si rien ne se passe.
-- Si la voix demandée n'est pas dispo (`voices` vide), enchaîner directement sans TTS.
+**A. Tracker la "présentation en cours"**
+Nouveau ref `currentPresentationRef` avec :
+```ts
+{ kind: 'tts' | 'media', text?: string, mediaType?: 'audio'|'video' }
+```
+- Renseigné à chaque appel à `speak()` et avant `setShouldAutoPlay(true)`.
+- Cleared quand on passe en `listening`.
 
-**E. État machine simplifié**
-Introduire un seul `phase` enum : `idle | ai_intro | playing_question | listening | processing_answer | finished`. Toutes les transitions passent par une fonction `goToPhase(next)` qui clear les watchdogs précédents et arme le nouveau. Évite les états croisés.
+**B. `pauseInterview`**
+- Considérer "pendant question" si `currentPresentationRef.current !== null`.
+- Cancel TTS, stop player, stop STT (déjà fait).
 
-**F. Logs de diagnostic**
-Ajouter `console.log("[interview] phase:", from, "→", to, reason)` à chaque transition pour qu'on puisse débugger les prochains cas en regardant les logs.
+**C. `resumeInterview`**
+- Si `currentPresentationRef.current.kind === 'tts'` → `await speak(text)` puis enchaîner sur `forceStartListening()`.
+- Si `kind === 'media'` → `featuredPlayerRef.current?.restart()` + watchdog (déjà fait, mais on s'assure que `shouldAutoPlay` est remis).
+- Sinon → reprise phase d'écoute (déjà fait).
+
+**D. STT robuste**
+- Ajouter `isListeningRef = useRef(false)` synchronisé avec `setIsListening`.
+- `recognition.onend` : si `isListeningRef.current` → restart.
+- `recognition.onerror` : sur `no-speech` → restart si toujours en écoute, ne pas couper.
+
+**E. MicVolumeMeter**
+- Après `new AudioContext()` → `await ctx.resume()`.
+- Si `ctx.state !== 'running'` après 500ms → log warning.
+
+**F. Texte du bouton "Mettre en pause"**
+- Aujourd'hui sur le footer toujours visible → OK.
+- Préciser dans l'overlay : "La question va être rejouée depuis le début" (déjà fait pour média, étendre à TTS).
 
 ### Fichiers modifiés
-- `src/pages/InterviewStart.tsx` — phase machine + watchdogs + bouton secours + timeout invoke + TTS robuste
+- `src/pages/InterviewStart.tsx` — ref de présentation, pause/reprise complète, STT robuste avec ref
+- `src/components/interview/MicVolumeMeter.tsx` — `ctx.resume()`
 
 ### Test final
-1. Entretien complet nominal → enchaînement fluide
-2. Couper le réseau juste avant la question 2 → watchdog 10s débloque OU bouton "Continuer" visible à 4s
-3. Onglet en arrière-plan pendant que l'IA parle → TTS watchdog débloque
-4. Question média qui ne charge pas → on passe quand même à l'écoute (watchdog déjà en place dans QuestionMediaPlayer)
-5. Vérifier logs `[interview] phase: …` dans la console pour tracer chaque transition
+1. Lancer entretien → pause pendant greeting IA → reprendre → l'IA redit "Bonjour…" depuis le début, puis on enchaîne Q1.
+2. Pause pendant question audio → reprendre → audio rejoué depuis 0.
+3. Pause pendant question vidéo → reprendre → vidéo rejouée depuis 0.
+4. Pause pendant question texte lue par TTS → reprendre → TTS relit toute la question.
+5. Pendant réponse candidat, parler 70s sans interruption → micro ne doit plus couper (auto-restart STT).
+6. Vérifier vu-mètre réagit dès la 1ère question (plus figé à 0).
+7. Vérifier logs `[interview]` en console pour tracer chaque transition.
 
