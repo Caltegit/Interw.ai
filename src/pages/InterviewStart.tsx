@@ -406,7 +406,18 @@ export default function InterviewStart() {
     pausedDuringQuestionRef.current = false;
     pausedReplayRef.current = null;
     console.log("[interview] RESUME — wasDuringQuestion:", wasDuringQuestion, "snapshot:", presentation);
-...
+
+    // Restart max-duration timer with remaining time (always)
+    const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
+    interviewStartTimeRef.current = Date.now() - pausedElapsedRef.current;
+    maxDurationTimerRef.current = setTimeout(() => {
+      if (!autoEndTriggeredRef.current) {
+        autoEndTriggeredRef.current = true;
+        toast({ title: "Entretien terminé", description: "La durée maximale a été atteinte." });
+        endInterviewRef.current?.();
+      }
+    }, remaining);
+
     if (wasDuringQuestion && presentation?.kind === "tts") {
       // Replay TTS from the start, then continue the natural flow
       console.log("[interview] Resume: replaying TTS from start");
