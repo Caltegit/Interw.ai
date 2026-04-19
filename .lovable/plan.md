@@ -1,30 +1,35 @@
 
 
-## Analyse
+## Problème
+Le rapport est bien généré (sauvé en DB) mais l'email au recruteur n'est pas envoyé. Logs de `generate-report` :
+```
+ERROR Failed to send report email: Edge Function returned a non-2xx status code
+```
+Aucun log côté `send-transactional-email` → la requête est rejetée à la passerelle Supabase avant d'atteindre la fonction.
 
-Le lien "La question ne se lance pas ? Continuer →" est un fallback affiché pendant que l'IA prépare/joue la question. S'il crée un bug (probablement : skip prématuré qui désynchronise l'état de la conversation, ou double-déclenchement de la question suivante), deux options :
+## Cause
+`send-transactional-email` est configurée avec `verify_jwt = true` dans `supabase/config.toml`. Quand `generate-report` l'appelle via `supabase.functions.invoke(...)` avec un client construit à partir du `SERVICE_ROLE_KEY`, le SDK n'attache pas automatiquement le service-role en `Authorization: Bearer`. La passerelle rejette donc l'appel (401).
 
-**Option 1 — Le retirer purement et simplement**
-Plus simple, plus safe. Si la question ne se lance vraiment pas, le candidat recharge la page. Risque : un candidat bloqué sans recours immédiat.
+## Fix
+Dans `supabase/functions/generate-report/index.ts`, remplacer l'appel `supabase.functions.invoke(...)` par un `fetch` direct vers l'URL de la fonction avec les headers explicites :
+```ts
+await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'apikey': SUPABASE_SERVICE_ROLE_KEY,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ templateName: 'interview-report', ... }),
+})
+```
+Cela garantit que le service-role est bien envoyé en Bearer et passe `verify_jwt`.
 
-**Option 2 — Le garder mais corriger le bug**
-Nécessite d'identifier le bug exact (j'aurais besoin d'investiguer `InterviewStart.tsx` autour du handler de ce lien).
+## Fichiers
+- `supabase/functions/generate-report/index.ts` — remplacer le bloc `supabase.functions.invoke("send-transactional-email", ...)` par un `fetch` direct, avec gestion d'erreur (lire le body en cas de non-2xx pour logger la vraie raison).
 
-## Recommandation : Option 1 (retirer)
-
-Vu que :
-- L'IA a déjà un timeout/auto-retry interne dans la plupart des cas
-- Le lien est un "panic button" qui contourne le flow normal → source typique de bugs de désynchronisation
-- En cas de vrai blocage, le rechargement de page reprend la session là où elle en était
-
-→ Je propose de **retirer le lien** dans `InterviewStart.tsx`.
-
-## Plan
-
-1. Localiser le lien "La question ne se lance pas ? Continuer →" dans `src/pages/InterviewStart.tsx`.
-2. Supprimer le `<button>`/`<a>` correspondant ainsi que son handler s'il n'est utilisé que là.
-3. Garder l'indicateur "L'IA pose la question…" qui reste utile.
-
-### Test
-Refaire un entretien complet → vérifier que l'indicateur "L'IA pose la question…" s'affiche toujours, sans le lien en dessous, et que les questions s'enchaînent normalement.
+## Test
+1. Refaire un entretien complet de bout en bout.
+2. Vérifier dans `email_send_log` qu'une ligne `template_name = 'interview-report'` apparaît avec `status = 'sent'`.
+3. Vérifier la réception de l'email côté recruteur.
 
