@@ -140,21 +140,43 @@ export default function InterviewStart() {
     });
   }, []);
 
-  // TTS: speak text aloud
+  // TTS: speak text aloud — robust with safety timer + voice fallback
   const speak = useCallback(
     (text: string): Promise<void> => {
       return new Promise((resolve) => {
-        if (!ttsEnabled || !window.speechSynthesis) {
+        if (!ttsEnabled || !window.speechSynthesis || !text?.trim()) {
+          console.log("[interview] TTS skipped (disabled/unsupported/empty)");
           resolve();
           return;
         }
-        window.speechSynthesis.cancel();
+
+        let settled = false;
+        const safeResolve = (reason: string) => {
+          if (settled) return;
+          settled = true;
+          console.log("[interview] TTS done:", reason);
+          setIsSpeaking(false);
+          resolve();
+        };
+
+        try {
+          window.speechSynthesis.cancel();
+        } catch {}
+
+        const voices = window.speechSynthesis.getVoices();
+        // If voices not loaded yet, skip TTS rather than blocking forever
+        if (!voices || voices.length === 0) {
+          console.warn("[interview] TTS: no voices available, skipping");
+          // Brief delay to mimic speech rhythm, then resolve
+          setTimeout(() => safeResolve("no_voices"), 300);
+          return;
+        }
+
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "fr-FR";
         utterance.rate = 0.95;
         utterance.pitch = 1.1;
 
-        const voices = window.speechSynthesis.getVoices();
         const femaleVoice =
           voices.find(
             (v) =>
@@ -172,17 +194,35 @@ export default function InterviewStart() {
           voices.find((v) => v.lang.startsWith("fr"));
         if (femaleVoice) utterance.voice = femaleVoice;
 
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => {
-          setIsSpeaking(false);
-          resolve();
+        // Safety timer: text length / 15 chars per second + 4s buffer (max 20s)
+        const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
+        const safetyTimer = setTimeout(() => {
+          console.warn("[interview] TTS safety timer fired after", safetyMs, "ms");
+          try { window.speechSynthesis.cancel(); } catch {}
+          safeResolve("safety_timer");
+        }, safetyMs);
+
+        utterance.onstart = () => {
+          console.log("[interview] TTS onstart");
+          setIsSpeaking(true);
         };
-        utterance.onerror = () => {
-          setIsSpeaking(false);
-          resolve();
+        utterance.onend = () => {
+          clearTimeout(safetyTimer);
+          safeResolve("onend");
+        };
+        utterance.onerror = (e) => {
+          clearTimeout(safetyTimer);
+          console.warn("[interview] TTS onerror:", (e as any)?.error);
+          safeResolve("onerror");
         };
 
-        window.speechSynthesis.speak(utterance);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn("[interview] TTS speak() threw:", e);
+          clearTimeout(safetyTimer);
+          safeResolve("speak_throw");
+        }
       });
     },
     [ttsEnabled],
