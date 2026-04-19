@@ -345,9 +345,10 @@ export default function InterviewStart() {
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
   const pauseInterview = useCallback(() => {
     isPausedRef.current = true;
-    // Detect "pause pendant lecture question": question media is currently presenting
-    const duringQuestion = isSpeaking || !isListening;
+    // "Pendant la question" = il y a une présentation en cours (TTS ou média)
+    const duringQuestion = currentPresentationRef.current !== null;
     pausedDuringQuestionRef.current = duringQuestion;
+    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "presentation:", currentPresentationRef.current);
 
     // Stop the question media player cleanly (resets currentTime + finished state)
     if (duringQuestion) {
@@ -377,14 +378,16 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     setAutoSkipCountdown(null);
     setIsPaused(true);
-  }, [stopListening, isSpeaking, isListening]);
+  }, [stopListening]);
 
-  // Resume: either restart the question from the beginning, or resume the response phase
-  const resumeInterview = useCallback(() => {
+  // Resume: replay the question (TTS or media) from the start, or resume listening
+  const resumeInterview = useCallback(async () => {
     setIsPaused(false);
     isPausedRef.current = false;
     const wasDuringQuestion = pausedDuringQuestionRef.current;
+    const presentation = currentPresentationRef.current;
     pausedDuringQuestionRef.current = false;
+    console.log("[interview] RESUME — wasDuringQuestion:", wasDuringQuestion, "presentation:", presentation);
 
     // Restart max-duration timer with remaining time (always)
     const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
@@ -397,9 +400,33 @@ export default function InterviewStart() {
       }
     }, remaining);
 
-    if (wasDuringQuestion) {
-      // Replay the question from the start — synchronous call preserves user gesture (mobile autoplay)
-      console.log("[InterviewStart] Resume: replaying question from start");
+    if (wasDuringQuestion && presentation?.kind === "tts") {
+      // Replay TTS from the start, then continue the natural flow
+      console.log("[interview] Resume: replaying TTS from start");
+      await speak(presentation.text);
+      if (isPausedRef.current) return; // user re-paused mid-TTS
+      // Was this a written question (no media to follow)? Start listening now.
+      const q = questions[currentQuestionIndex];
+      const hasMedia = !!(q?.audio_url || q?.video_url);
+      if (!hasMedia) {
+        startQuestionRecording();
+        startListening();
+        resetSilenceTimer();
+      } else {
+        // After greeting/transition TTS, the media should auto-play
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        setTimeout(() => {
+          setShouldAutoPlay(true);
+          armPlaybackWatchdog();
+        }, 30);
+      }
+      return;
+    }
+
+    if (wasDuringQuestion && presentation?.kind === "media") {
+      // Replay media from start — synchronous call preserves user gesture (mobile autoplay)
+      console.log("[interview] Resume: replaying media from start");
       setShouldAutoPlay(true);
       setIsSpeaking(true);
       try { featuredPlayerRef.current?.restart(); } catch (e) { console.warn("restart failed", e); }
@@ -407,14 +434,13 @@ export default function InterviewStart() {
       return;
     }
 
-    // Recorder resume (response phase)
+    // Listening phase — resume recorder + STT
     if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
       try { questionRecorderRef.current.resume(); } catch {}
     }
-    // Restart STT + silence timer
     startListening();
     resetSilenceTimer();
-  }, [startListening, resetSilenceTimer, toast]);
+  }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
 
   // Load session data
   useEffect(() => {
