@@ -941,6 +941,7 @@ export default function InterviewStart() {
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
+      markMediaPresentation(nextQIdx);
       setTimeout(() => {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
