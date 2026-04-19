@@ -383,92 +383,198 @@ export default function ProjectDetail() {
               Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 font-medium">Candidat</th>
-                    <th className="pb-2 font-medium">Email</th>
-                    <th className="pb-2 font-medium">Statut</th>
-                    <th className="pb-2 font-medium">Date</th>
-                    <th className="pb-2 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sessions.map((s) => (
-                    <tr key={s.id} className="border-b last:border-0">
-                      <td className="py-3">{s.candidate_name}</td>
-                      <td className="py-3">{s.candidate_email}</td>
-                      <td className="py-3">
-                        <SessionStatusBadge status={s.status} />
-                      </td>
-                      <td className="py-3 text-muted-foreground">
-                        {new Date(s.created_at).toLocaleDateString("fr-FR")}
-                      </td>
-                      <td className="py-3 flex gap-1">
-                        {s.status === "completed" && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/sessions/${s.id}`}>Voir</Link>
-                          </Button>
-                        )}
-                        {s.status === "pending" && (
-                          <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(s.token)}>
-                            <Copy className="mr-1 h-3 w-3" /> Relancer
-                          </Button>
-                        )}
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription,
-                                le rapport et les vidéos associées. Cette action est irréversible.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                onClick={async () => {
-                                  // Delete related data then session
-                                  // Get report ids first for report_shares cleanup
-                                  const { data: reports } = await supabase
-                                    .from("reports")
-                                    .select("id")
-                                    .eq("session_id", s.id);
-                                  if (reports && reports.length > 0) {
-                                    await supabase
-                                      .from("report_shares")
-                                      .delete()
-                                      .in(
-                                        "report_id",
-                                        reports.map((r) => r.id),
-                                      );
-                                  }
-                                  await supabase.from("session_messages").delete().eq("session_id", s.id);
-                                  await supabase.from("reports").delete().eq("session_id", s.id);
-                                  await supabase.from("transcripts").delete().eq("session_id", s.id);
-                                  await supabase.from("sessions").delete().eq("id", s.id);
-                                  setSessions((prev) => prev.filter((ss) => ss.id !== s.id));
-                                  toast({ title: "Entretien supprimé" });
-                                }}
-                              >
-                                Supprimer
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </td>
+            <>
+              {/* Filters */}
+              <Card>
+                <CardContent className="pt-4 space-y-3">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Input
+                      placeholder="Rechercher (nom ou email)…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="max-w-xs"
+                    />
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[160px]"><SelectValue placeholder="Statut" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous statuts</SelectItem>
+                        <SelectItem value="pending">En attente</SelectItem>
+                        <SelectItem value="in_progress">En cours</SelectItem>
+                        <SelectItem value="completed">Terminé</SelectItem>
+                        <SelectItem value="expired">Expiré</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={recoFilter} onValueChange={setRecoFilter}>
+                      <SelectTrigger className="w-[180px]"><SelectValue placeholder="Recommandation" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Toutes recos</SelectItem>
+                        <SelectItem value="strong_yes">Très favorable</SelectItem>
+                        <SelectItem value="yes">Favorable</SelectItem>
+                        <SelectItem value="maybe">Mitigé</SelectItem>
+                        <SelectItem value="no">Défavorable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Score min"
+                      value={scoreMin}
+                      onChange={(e) => setScoreMin(e.target.value)}
+                      className="w-[110px]"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Score max"
+                      value={scoreMax}
+                      onChange={(e) => setScoreMax(e.target.value)}
+                      className="w-[110px]"
+                    />
+                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" />
+                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto" />
+                    <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
+                      const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
+                      setSortKey(k); setSortDir(d);
+                    }}>
+                      <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="date-desc">Date (récent)</SelectItem>
+                        <SelectItem value="date-asc">Date (ancien)</SelectItem>
+                        <SelectItem value="score-desc">Score (haut)</SelectItem>
+                        <SelectItem value="score-asc">Score (bas)</SelectItem>
+                        <SelectItem value="name-asc">Nom (A-Z)</SelectItem>
+                        <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {filteredSessions.length} session(s) sur {sessions.length}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-2 font-medium">Candidat</th>
+                      <th className="pb-2 font-medium">Email</th>
+                      <th className="pb-2 font-medium">Statut</th>
+                      <th className="pb-2 font-medium">Score</th>
+                      <th className="pb-2 font-medium">Reco</th>
+                      <th className="pb-2 font-medium">Date</th>
+                      <th className="pb-2 font-medium min-w-[200px]">Note recruteur</th>
+                      <th className="pb-2 font-medium"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredSessions.map((s) => {
+                      const rep = reportsBySession[s.id];
+                      const clickable = s.status === "completed";
+                      const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
+                      return (
+                        <tr
+                          key={s.id}
+                          className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                          onClick={onRowClick}
+                        >
+                          <td className="py-3">{s.candidate_name}</td>
+                          <td className="py-3">{s.candidate_email}</td>
+                          <td className="py-3">
+                            <SessionStatusBadge status={s.status} />
+                          </td>
+                          <td className="py-3 font-medium">
+                            {rep?.overall_score != null ? rep.overall_score.toFixed(1) : "—"}
+                          </td>
+                          <td className="py-3 text-xs">
+                            {rep?.recommendation ? recoLabel[rep.recommendation] ?? rep.recommendation : "—"}
+                          </td>
+                          <td className="py-3 text-muted-foreground">
+                            {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                          </td>
+                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            {rep ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  value={noteDrafts[s.id] ?? ""}
+                                  onChange={(e) => saveNote(s.id, e.target.value)}
+                                  placeholder="Ajouter une note…"
+                                  className="h-8 text-xs"
+                                />
+                                {savingNote[s.id] && (
+                                  <span className="text-xs text-muted-foreground">…</span>
+                                )}
+                              </div>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Input disabled placeholder="Pas de rapport" className="h-8 text-xs" />
+                                </TooltipTrigger>
+                                <TooltipContent>Note disponible une fois le rapport généré</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </td>
+                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-1 justify-end">
+                              {s.status === "completed" && (
+                                <Button variant="ghost" size="sm" asChild>
+                                  <Link to={`/sessions/${s.id}`}>Voir</Link>
+                                </Button>
+                              )}
+                              {s.status === "pending" && (
+                                <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(s.token)}>
+                                  <Copy className="mr-1 h-3 w-3" /> Relancer
+                                </Button>
+                              )}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription,
+                                      le rapport et les vidéos associées. Cette action est irréversible.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={async () => {
+                                        const { data: reports } = await supabase
+                                          .from("reports")
+                                          .select("id")
+                                          .eq("session_id", s.id);
+                                        if (reports && reports.length > 0) {
+                                          await supabase
+                                            .from("report_shares")
+                                            .delete()
+                                            .in("report_id", reports.map((r) => r.id));
+                                        }
+                                        await supabase.from("session_messages").delete().eq("session_id", s.id);
+                                        await supabase.from("reports").delete().eq("session_id", s.id);
+                                        await supabase.from("transcripts").delete().eq("session_id", s.id);
+                                        await supabase.from("sessions").delete().eq("id", s.id);
+                                        setSessions((prev) => prev.filter((ss) => ss.id !== s.id));
+                                        toast({ title: "Entretien supprimé" });
+                                      }}
+                                    >
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </TabsContent>
 
