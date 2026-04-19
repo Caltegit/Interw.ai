@@ -672,6 +672,7 @@ export default function InterviewStart() {
     if (isFirstQMedia) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
+      markMediaPresentation(0);
       setTimeout(() => {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
