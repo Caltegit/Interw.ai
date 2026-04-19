@@ -31,14 +31,32 @@ Deno.serve(async (req) => {
       const { email, full_name, organization_id, role, password } = body;
       if (!email) return json({ error: "Email requis" }, 400);
 
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email,
-        password: password || crypto.randomUUID(),
-        email_confirm: true,
-        user_metadata: { full_name: full_name || email },
-      });
-      if (createErr) throw createErr;
-      const newUserId = created.user!.id;
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
+      const redirectTo = origin ? `${origin}/reset-password` : undefined;
+
+      let newUserId: string;
+      let invited = false;
+
+      if (password && password.trim().length > 0) {
+        // Création silencieuse avec mot de passe fourni
+        const { data: created, error: createErr } = await admin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: full_name || email },
+        });
+        if (createErr) throw createErr;
+        newUserId = created.user!.id;
+      } else {
+        // Invitation par email
+        const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+          data: { full_name: full_name || email },
+          redirectTo,
+        });
+        if (inviteErr) throw inviteErr;
+        newUserId = invitedData.user!.id;
+        invited = true;
+      }
 
       if (organization_id) {
         await admin.from("profiles").update({ organization_id, full_name: full_name || email }).eq("user_id", newUserId);
@@ -50,7 +68,7 @@ Deno.serve(async (req) => {
           organization_id: role === "super_admin" ? null : organization_id ?? null,
         });
       }
-      return json({ success: true, user_id: newUserId });
+      return json({ success: true, user_id: newUserId, invited });
     }
 
     if (action === "delete") {
