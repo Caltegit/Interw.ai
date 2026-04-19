@@ -14,8 +14,8 @@ export default function InterviewLanding() {
   const [project, setProject] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [candidateName, setCandidateName] = useState("");
-  const [candidateEmail, setCandidateEmail] = useState("");
+  const [candidateName, setCandidateName] = useState("Jean Dujardin");
+  const [candidateEmail, setCandidateEmail] = useState("jean@test.fr");
   const [starting, setStarting] = useState(false);
 
   // Intermediate media screen state
