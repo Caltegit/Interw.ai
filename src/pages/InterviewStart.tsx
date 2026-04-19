@@ -416,6 +416,7 @@ export default function InterviewStart() {
         // After greeting/transition TTS, the media should auto-play
         setIsSpeaking(true);
         setShouldAutoPlay(false);
+        markMediaPresentation(currentQuestionIndex);
         setTimeout(() => {
           setShouldAutoPlay(true);
           armPlaybackWatchdog();
