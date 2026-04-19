@@ -300,30 +300,40 @@ export default function InterviewStart() {
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      if (event.error !== "no-speech") {
-        setIsListening(false);
+      console.warn("[interview] STT onerror:", event.error);
+      // "no-speech" is benign on Chrome — let onend auto-restart, don't tear down
+      if (event.error === "no-speech" || event.error === "aborted") {
+        return;
       }
+      // Other errors: stop listening
+      isListeningRef.current = false;
+      setIsListening(false);
     };
 
     recognition.onend = () => {
-      // Auto-restart if still listening
-      if (isListening && recognitionRef.current) {
+      console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
+      // Auto-restart if we should still be listening (use ref, not stale state)
+      if (isListeningRef.current && !isPausedRef.current && recognitionRef.current) {
         try {
           recognitionRef.current.start();
-        } catch {}
+          console.log("[interview] STT auto-restarted");
+        } catch (e) {
+          console.warn("[interview] STT restart failed:", e);
+        }
       }
     };
 
     recognition.start();
+    isListeningRef.current = true;
     setIsListening(true);
-  }, [isListening, toast]);
+  }, [toast]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     setIsListening(false);
