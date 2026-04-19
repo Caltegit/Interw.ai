@@ -299,6 +299,156 @@ export type Database = {
           },
         ]
       }
+      interview_template_criteria: {
+        Row: {
+          anchors: Json | null
+          applies_to: Database["public"]["Enums"]["criteria_scope"]
+          created_at: string
+          description: string
+          id: string
+          label: string
+          order_index: number
+          scoring_scale: Database["public"]["Enums"]["scoring_scale_type"]
+          template_id: string
+          weight: number
+        }
+        Insert: {
+          anchors?: Json | null
+          applies_to?: Database["public"]["Enums"]["criteria_scope"]
+          created_at?: string
+          description?: string
+          id?: string
+          label: string
+          order_index?: number
+          scoring_scale?: Database["public"]["Enums"]["scoring_scale_type"]
+          template_id: string
+          weight?: number
+        }
+        Update: {
+          anchors?: Json | null
+          applies_to?: Database["public"]["Enums"]["criteria_scope"]
+          created_at?: string
+          description?: string
+          id?: string
+          label?: string
+          order_index?: number
+          scoring_scale?: Database["public"]["Enums"]["scoring_scale_type"]
+          template_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_template_criteria_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "interview_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_template_questions: {
+        Row: {
+          audio_url: string | null
+          category: string | null
+          content: string
+          created_at: string
+          follow_up_enabled: boolean
+          id: string
+          max_follow_ups: number
+          order_index: number
+          relance_level: string
+          template_id: string
+          title: string
+          type: string
+          video_url: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          category?: string | null
+          content: string
+          created_at?: string
+          follow_up_enabled?: boolean
+          id?: string
+          max_follow_ups?: number
+          order_index?: number
+          relance_level?: string
+          template_id: string
+          title?: string
+          type?: string
+          video_url?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          category?: string | null
+          content?: string
+          created_at?: string
+          follow_up_enabled?: boolean
+          id?: string
+          max_follow_ups?: number
+          order_index?: number
+          relance_level?: string
+          template_id?: string
+          title?: string
+          type?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_template_questions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "interview_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string
+          default_duration_minutes: number
+          default_language: Database["public"]["Enums"]["project_language"]
+          description: string
+          id: string
+          job_title: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by: string
+          default_duration_minutes?: number
+          default_language?: Database["public"]["Enums"]["project_language"]
+          description?: string
+          id?: string
+          job_title?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          default_duration_minutes?: number
+          default_language?: Database["public"]["Enums"]["project_language"]
+          description?: string
+          id?: string
+          job_title?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intro_templates: {
         Row: {
           audio_url: string | null
@@ -985,6 +1135,10 @@ export type Database = {
         }[]
       }
       seed_default_criteria_templates: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: undefined
+      }
+      seed_default_interview_templates: {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
       }
