@@ -523,16 +523,17 @@ export default function InterviewStart() {
 
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
+    console.log("[interview] watchdog armed (manual btn @3s, hard fallback @7s)");
     // After 3s of "Préparation", offer a manual button as backup
     manualContinueTimerRef.current = setTimeout(() => {
       if (!isPausedRef.current) setShowManualContinue(true);
     }, 3000);
-    // Hard fallback after 8s if onPlaybackEnd never fires
+    // Hard fallback after 7s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
       if (isPausedRef.current) return;
-      console.warn("[InterviewStart] Playback watchdog triggered after 8s");
+      console.warn("[interview] Playback watchdog triggered after 7s — forcing listening");
       forceStartListening();
-    }, 8000);
+    }, 7000);
   }, [clearPlaybackWatchdog, forceStartListening]);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
