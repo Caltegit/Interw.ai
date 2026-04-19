@@ -21,6 +21,8 @@ import Settings from "./pages/Settings";
 import QuestionLibrary from "./pages/QuestionLibrary";
 import IntroLibrary from "./pages/IntroLibrary";
 import CriteriaLibrary from "./pages/CriteriaLibrary";
+import InterviewTemplates from "./pages/InterviewTemplates";
+import InterviewTemplateEdit from "./pages/InterviewTemplateEdit";
 import EmailTemplates from "./pages/EmailTemplates";
 import InviteSignup from "./pages/InviteSignup";
 import InterviewLanding from "./pages/InterviewLanding";
@@ -74,6 +76,8 @@ const App = () => (
               <Route path="/library/questions" element={<QuestionLibrary />} />
               <Route path="/library/intros" element={<IntroLibrary />} />
               <Route path="/library/criteria" element={<CriteriaLibrary />} />
+              <Route path="/library/interviews" element={<InterviewTemplates />} />
+              <Route path="/library/interviews/:id" element={<InterviewTemplateEdit />} />
               <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
