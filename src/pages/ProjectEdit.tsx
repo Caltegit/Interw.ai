@@ -105,7 +105,7 @@ export default function ProjectEdit() {
       setAutoSkipSilence(project.auto_skip_silence ?? false);
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
-      setRelanceLevel(((project as { relance_level?: string }).relance_level as RelanceLevel) ?? "medium");
+      
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
 
