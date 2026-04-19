@@ -33,8 +33,25 @@ export default function ProjectDetail() {
   const [questions, setQuestions] = useState<any[]>([]);
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+  const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
+
+  // Filters / sort for sessions list
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [recoFilter, setRecoFilter] = useState<string>("all");
+  const [scoreMin, setScoreMin] = useState<string>("");
+  const [scoreMax, setScoreMax] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const [sortKey, setSortKey] = useState<"date" | "score" | "name">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  // Recruiter notes inline edit
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [savingNote, setSavingNote] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!id) return;
@@ -43,14 +60,48 @@ export default function ProjectDetail() {
       supabase.from("questions").select("*").eq("project_id", id).order("order_index"),
       supabase.from("evaluation_criteria").select("*").eq("project_id", id).order("order_index"),
       supabase.from("sessions").select("*").eq("project_id", id).order("created_at", { ascending: false }),
-    ]).then(([pRes, qRes, cRes, sRes]) => {
+    ]).then(async ([pRes, qRes, cRes, sRes]) => {
       setProject(pRes.data);
       setQuestions(qRes.data ?? []);
       setCriteria(cRes.data ?? []);
-      setSessions(sRes.data ?? []);
+      const sessionsList = sRes.data ?? [];
+      setSessions(sessionsList);
+
+      // Fetch reports for these sessions in one batch
+      const ids = sessionsList.map((s) => s.id);
+      if (ids.length > 0) {
+        const { data: reps } = await supabase
+          .from("reports")
+          .select("session_id, overall_score, recommendation, recruiter_notes")
+          .in("session_id", ids);
+        const map: Record<string, any> = {};
+        const drafts: Record<string, string> = {};
+        for (const r of reps ?? []) {
+          map[r.session_id] = r;
+          drafts[r.session_id] = r.recruiter_notes ?? "";
+        }
+        setReportsBySession(map);
+        setNoteDrafts(drafts);
+      }
       setLoading(false);
     });
   }, [id]);
+
+  const saveNote = (sessionId: string, value: string) => {
+    setNoteDrafts((prev) => ({ ...prev, [sessionId]: value }));
+    if (noteTimers.current[sessionId]) clearTimeout(noteTimers.current[sessionId]);
+    noteTimers.current[sessionId] = setTimeout(async () => {
+      setSavingNote((p) => ({ ...p, [sessionId]: true }));
+      const { error } = await supabase
+        .from("reports")
+        .update({ recruiter_notes: value })
+        .eq("session_id", sessionId);
+      setSavingNote((p) => ({ ...p, [sessionId]: false }));
+      if (error) {
+        toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
+      }
+    }, 1000);
+  };
 
   const copyProjectLink = () => {
     if (!project?.slug) return;
