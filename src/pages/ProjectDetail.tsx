@@ -214,6 +214,45 @@ export default function ProjectDetail() {
   const pendingSessions = sessions.filter((s) => s.status === "pending");
   const completedSessions = sessions.filter((s) => s.status === "completed");
 
+  // Apply filters + sort to sessions
+  const filteredSessions = (() => {
+    let list = sessions.slice();
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (s) =>
+          (s.candidate_name || "").toLowerCase().includes(q) ||
+          (s.candidate_email || "").toLowerCase().includes(q),
+      );
+    }
+    if (statusFilter !== "all") list = list.filter((s) => s.status === statusFilter);
+    if (recoFilter !== "all")
+      list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
+    if (scoreMin !== "")
+      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? -1) >= Number(scoreMin));
+    if (scoreMax !== "")
+      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? 999) <= Number(scoreMax));
+    if (dateFrom) list = list.filter((s) => new Date(s.created_at) >= new Date(dateFrom));
+    if (dateTo) list = list.filter((s) => new Date(s.created_at) <= new Date(dateTo + "T23:59:59"));
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      else if (sortKey === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
+      else if (sortKey === "score")
+        cmp = (reportsBySession[a.id]?.overall_score ?? -1) - (reportsBySession[b.id]?.overall_score ?? -1);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  })();
+
+  const recoLabel: Record<string, string> = {
+    strong_yes: "Très favorable",
+    yes: "Favorable",
+    maybe: "Mitigé",
+    no: "Défavorable",
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
