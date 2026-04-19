@@ -283,6 +283,7 @@ export default function ProjectEdit() {
               type: q.type as never,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
+              relance_level: q.relance_level,
             })),
           )
           .select();
