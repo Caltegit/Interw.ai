@@ -134,7 +134,7 @@ export default function SessionDetail() {
             </Link>
           </Button>
           <h1 className="text-2xl font-bold">{session.candidate_name}</h1>
-          <p className="text-muted-foreground">{session.candidate_email} • {project?.job_title}</p>
+          <p className="text-muted-foreground">{session.candidate_email} • {project?.title}</p>
         </div>
         <div className="flex items-center gap-3">
           <SessionStatusBadge status={session.status} />

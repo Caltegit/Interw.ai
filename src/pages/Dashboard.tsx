@@ -92,19 +92,19 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                   <tr className="border-b text-left text-muted-foreground">
-                     <th className="pb-2 font-medium">Candidat</th>
-                     <th className="pb-2 font-medium">Poste</th>
-                     <th className="pb-2 font-medium">Statut</th>
-                     <th className="pb-2 font-medium">Date</th>
-                     <th className="pb-2 font-medium"></th>
-                   </tr>
-                </thead>
-                <tbody>
-                  {recentSessions.map((session) => (
-                    <tr key={session.id} className="border-b last:border-0">
-                      <td className="py-3">{session.candidate_name}</td>
-                      <td className="py-3">{(session.projects as any)?.job_title}</td>
+                     <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-2 font-medium">Candidat</th>
+                      <th className="pb-2 font-medium">Projet</th>
+                      <th className="pb-2 font-medium">Statut</th>
+                      <th className="pb-2 font-medium">Date</th>
+                      <th className="pb-2 font-medium"></th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                   {recentSessions.map((session) => (
+                     <tr key={session.id} className="border-b last:border-0">
+                       <td className="py-3">{session.candidate_name}</td>
+                       <td className="py-3">{(session.projects as any)?.title}</td>
                       <td className="py-3">
                         <SessionStatusBadge status={session.status} />
                       </td>

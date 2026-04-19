@@ -95,7 +95,7 @@ export default function ProjectCompare() {
           </Link>
         </Button>
         <h1 className="text-2xl font-bold">Comparaison des candidats</h1>
-        <p className="text-muted-foreground">{project.title} — {project.job_title}</p>
+        <p className="text-muted-foreground">{project.title}</p>
       </div>
 
       {candidates.length === 0 ? (

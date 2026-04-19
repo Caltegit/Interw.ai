@@ -112,7 +112,6 @@ export default function Projects() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Titre</TableHead>
-                  <TableHead className="hidden md:table-cell">Poste</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="hidden sm:table-cell">Créé le</TableHead>
                   <TableHead className="w-[1%] text-right">Actions</TableHead>
@@ -135,7 +134,6 @@ export default function Projects() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground">{project.job_title}</TableCell>
                       <TableCell>
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
