@@ -1,25 +1,35 @@
 
 
-## Plan : Seed automatique des 10 critères de base
+## Plan : Écran d'attente avant l'écran final
 
-### Objectif
-Comme pour les questions, créer une fonction SQL `seed_default_criteria_templates(_org_id, _created_by)` qui insère 10 critères par défaut dans `criteria_templates` lors de la création d'une organisation, et reseed les orgs existantes.
+### Approche (Option A)
 
-### Migration SQL
+Rediriger immédiatement le candidat vers `/interview/:slug/complete/:token` dès la fin logique de l'entretien. La page `InterviewComplete` affiche un état "Enregistrement en cours…" tant que la session n'est pas finalisée, puis bascule automatiquement sur l'écran final.
 
-**1. Créer la fonction `seed_default_criteria_templates`** :
-- Insère les 10 critères (label + description) dans `criteria_templates`.
-- Valeurs par défaut : `weight=10`, `scoring_scale='0-5'`, `applies_to='all_questions'`, `category=NULL`.
-- Idempotent : `WHERE NOT EXISTS` sur `(organization_id, label)`.
+### Investigation préalable
+Lire `src/pages/InterviewStart.tsx` pour identifier où se déclenche la fin d'entretien et quelles opérations bloquent la redirection (upload final, finalize session, génération rapport).
 
-**2. Modifier les triggers existants** :
-- `trg_seed_org_question_templates` et `trg_seed_on_owner_set` appellent déjà `seed_default_question_templates`. Les étendre pour appeler aussi `seed_default_criteria_templates`.
-- Idem dans `accept_invitation` (premier membre = owner).
+### Modifications
 
-**3. Reseed des orgs existantes** :
-- Boucler sur toutes les organizations et appeler `seed_default_criteria_templates` (idempotent grâce au `NOT EXISTS`).
+**1. `src/pages/InterviewStart.tsx`**
+- À la fin de la dernière question : déclencher la redirection vers `/interview/:slug/complete/:token` immédiatement.
+- Laisser les opérations async (upload media restant, mise à jour `sessions.status`, déclenchement génération rapport) se terminer en arrière-plan sans bloquer la navigation.
+- Garder un guard pour éviter une double-finalisation.
+
+**2. `src/pages/InterviewComplete.tsx`**
+- Ajouter un état local `processing` (true par défaut).
+- Au montage, lire `sessions.status` via `token` :
+  - Si `status === 'completed'` → afficher l'écran final actuel.
+  - Sinon → afficher un écran d'attente : spinner + titre "Enregistrement de votre session…" + sous-texte rassurant ("Merci de patienter quelques secondes, ne fermez pas cette page.").
+- Poll toutes les 2s (ou Realtime sur la row `sessions`) jusqu'à `completed`, puis bascule sur l'écran final avec une animation fade-in.
+- Timeout de sécurité : après 60s, afficher quand même l'écran final (le traitement continue côté serveur, le candidat n'a plus rien à faire).
+
+### UI écran d'attente
+Réutilise `CandidateLayout` + `Card` existants, dans le même style que l'écran final : pastille animée (loader au lieu du check), titre "Enregistrement de votre session…", message court.
 
 ### Test
-1. La bibliothèque de critères affiche les 10 nouveaux critères.
-2. Créer une nouvelle org → critères auto-créés.
+Faire un entretien complet → vérifier :
+1. La bascule vers l'écran d'attente est instantanée à la dernière question.
+2. L'écran "Entretien terminé" s'affiche automatiquement une fois la session marquée `completed`.
+3. Pas de régression sur la finalisation côté serveur (rapport bien généré).
 
