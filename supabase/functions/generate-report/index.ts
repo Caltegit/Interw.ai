@@ -1,5 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import * as React from "npm:react@18.3.1";
+import { renderAsync } from "npm:@react-email/components@0.0.22";
+import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
+
+const SITE_NAME = "interw";
+const SENDER_DOMAIN = "notify.interw.ai";
+const FROM_DOMAIN = "notify.interw.ai";
+
+function generateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
