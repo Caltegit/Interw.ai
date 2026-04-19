@@ -53,6 +53,13 @@ export default function InterviewStart() {
   const isPausedRef = useRef(false);
   const pausedDuringQuestionRef = useRef(false);
   const pausedElapsedRef = useRef<number>(0);
+  const isListeningRef = useRef(false);
+  // Track what the AI is currently presenting so we can replay it on resume
+  type Presentation =
+    | { kind: "tts"; text: string }
+    | { kind: "media"; mediaType: "audio" | "video" }
+    | null;
+  const currentPresentationRef = useRef<Presentation>(null);
   const recognitionRef = useRef<any>(null);
   const candidateTranscriptRef = useRef("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -149,6 +156,9 @@ export default function InterviewStart() {
           resolve();
           return;
         }
+
+        // Track for pause/resume replay
+        currentPresentationRef.current = { kind: "tts", text };
 
         let settled = false;
         // Backup button visible after 4s of TTS (in case it's stuck)
@@ -293,30 +303,40 @@ export default function InterviewStart() {
     };
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error:", event.error);
-      if (event.error !== "no-speech") {
-        setIsListening(false);
+      console.warn("[interview] STT onerror:", event.error);
+      // "no-speech" is benign on Chrome — let onend auto-restart, don't tear down
+      if (event.error === "no-speech" || event.error === "aborted") {
+        return;
       }
+      // Other errors: stop listening
+      isListeningRef.current = false;
+      setIsListening(false);
     };
 
     recognition.onend = () => {
-      // Auto-restart if still listening
-      if (isListening && recognitionRef.current) {
+      console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
+      // Auto-restart if we should still be listening (use ref, not stale state)
+      if (isListeningRef.current && !isPausedRef.current && recognitionRef.current) {
         try {
           recognitionRef.current.start();
-        } catch {}
+          console.log("[interview] STT auto-restarted");
+        } catch (e) {
+          console.warn("[interview] STT restart failed:", e);
+        }
       }
     };
 
     recognition.start();
+    isListeningRef.current = true;
     setIsListening(true);
-  }, [isListening, toast]);
+  }, [toast]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch {}
       recognitionRef.current = null;
     }
     setIsListening(false);
@@ -325,9 +345,10 @@ export default function InterviewStart() {
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
   const pauseInterview = useCallback(() => {
     isPausedRef.current = true;
-    // Detect "pause pendant lecture question": question media is currently presenting
-    const duringQuestion = isSpeaking || !isListening;
+    // "Pendant la question" = il y a une présentation en cours (TTS ou média)
+    const duringQuestion = currentPresentationRef.current !== null;
     pausedDuringQuestionRef.current = duringQuestion;
+    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "presentation:", currentPresentationRef.current);
 
     // Stop the question media player cleanly (resets currentTime + finished state)
     if (duringQuestion) {
@@ -357,14 +378,16 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     setAutoSkipCountdown(null);
     setIsPaused(true);
-  }, [stopListening, isSpeaking, isListening]);
+  }, [stopListening]);
 
-  // Resume: either restart the question from the beginning, or resume the response phase
-  const resumeInterview = useCallback(() => {
+  // Resume: replay the question (TTS or media) from the start, or resume listening
+  const resumeInterview = useCallback(async () => {
     setIsPaused(false);
     isPausedRef.current = false;
     const wasDuringQuestion = pausedDuringQuestionRef.current;
+    const presentation = currentPresentationRef.current;
     pausedDuringQuestionRef.current = false;
+    console.log("[interview] RESUME — wasDuringQuestion:", wasDuringQuestion, "presentation:", presentation);
 
     // Restart max-duration timer with remaining time (always)
     const remaining = Math.max(0, MAX_DURATION_MS - pausedElapsedRef.current);
@@ -377,9 +400,34 @@ export default function InterviewStart() {
       }
     }, remaining);
 
-    if (wasDuringQuestion) {
-      // Replay the question from the start — synchronous call preserves user gesture (mobile autoplay)
-      console.log("[InterviewStart] Resume: replaying question from start");
+    if (wasDuringQuestion && presentation?.kind === "tts") {
+      // Replay TTS from the start, then continue the natural flow
+      console.log("[interview] Resume: replaying TTS from start");
+      await speak(presentation.text);
+      if (isPausedRef.current) return; // user re-paused mid-TTS
+      // Was this a written question (no media to follow)? Start listening now.
+      const q = questions[currentQuestionIndex];
+      const hasMedia = !!(q?.audio_url || q?.video_url);
+      if (!hasMedia) {
+        startQuestionRecording();
+        startListening();
+        resetSilenceTimer();
+      } else {
+        // After greeting/transition TTS, the media should auto-play
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        markMediaPresentation(currentQuestionIndex);
+        setTimeout(() => {
+          setShouldAutoPlay(true);
+          armPlaybackWatchdog();
+        }, 30);
+      }
+      return;
+    }
+
+    if (wasDuringQuestion && presentation?.kind === "media") {
+      // Replay media from start — synchronous call preserves user gesture (mobile autoplay)
+      console.log("[interview] Resume: replaying media from start");
       setShouldAutoPlay(true);
       setIsSpeaking(true);
       try { featuredPlayerRef.current?.restart(); } catch (e) { console.warn("restart failed", e); }
@@ -387,14 +435,14 @@ export default function InterviewStart() {
       return;
     }
 
-    // Recorder resume (response phase)
+    // Listening phase — resume recorder + STT
     if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
       try { questionRecorderRef.current.resume(); } catch {}
     }
-    // Restart STT + silence timer
     startListening();
     resetSilenceTimer();
-  }, [startListening, resetSilenceTimer, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
 
   // Load session data
   useEffect(() => {
@@ -521,13 +569,21 @@ export default function InterviewStart() {
       console.log("[InterviewStart] forceStartListening blocked — interview is paused");
       return;
     }
-    console.log("[InterviewStart] Forcing transition to listening");
+    console.log("[interview] Forcing transition to listening");
     clearPlaybackWatchdog();
+    currentPresentationRef.current = null; // presentation finished
     setShouldAutoPlay(false);
     setIsSpeaking(false);
     startQuestionRecording();
     startListening();
   }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+
+  // Mark current question as a media presentation (for pause/resume replay)
+  const markMediaPresentation = useCallback((qIndex: number) => {
+    const q = questions[qIndex];
+    if (q?.video_url) currentPresentationRef.current = { kind: "media", mediaType: "video" };
+    else if (q?.audio_url) currentPresentationRef.current = { kind: "media", mediaType: "audio" };
+  }, [questions]);
 
   const armPlaybackWatchdog = useCallback(() => {
     clearPlaybackWatchdog();
@@ -618,6 +674,7 @@ export default function InterviewStart() {
     if (isFirstQMedia) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
+      markMediaPresentation(0);
       setTimeout(() => {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
@@ -797,6 +854,7 @@ export default function InterviewStart() {
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
+      markMediaPresentation(nextQIdx);
       setTimeout(() => {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
@@ -885,6 +943,7 @@ export default function InterviewStart() {
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
+      markMediaPresentation(nextQIdx);
       setTimeout(() => {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
