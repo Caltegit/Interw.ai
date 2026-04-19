@@ -1,43 +1,64 @@
 
+## Diagnostic
 
-## Plan : Bibliothèque d'avatars prédéfinis à l'étape 1
+J’ai identifié la vraie cause dans les logs du système d’envoi :
 
-### Idée
-À l'étape "Informations" de la création/édition de projet, sous le champ "Photo du recruteur", afficher une grille de 6-8 avatars prédéfinis (libres de droits) que l'utilisateur peut sélectionner en un clic, en plus de l'option "Téléverser une photo" déjà existante.
+```text
+Email API error: 400 {"type":"invalid_email","message":"Invalid 'reply_to' email address"}
+```
 
-### Source des images
-**DiceBear** (https://www.dicebear.com) — avatars vectoriels libres de droits (licence CC0 / MIT), générés à la volée via URL. Pas besoin de stocker les fichiers, on utilise directement l'URL publique. Style proposé : `personas` ou `avataaars` (illustrations professionnelles, style chaleureux adapté à un recruteur).
+Le rapport est bien généré puis mis en file d’envoi, mais l’envoi échoue ensuite parce que `reply_to` reçoit parfois une adresse candidat invalide ou vide.
 
-Exemple d'URL : `https://api.dicebear.com/9.x/personas/svg?seed=Sarah&backgroundColor=b6e3f4`
+Aujourd’hui :
+- `generate-report` enfile `reply_to: session.candidate_email`
+- `InterviewLanding.tsx` laisse démarrer une session dès que le champ email n’est pas vide
+- le champ est `type="email"`, mais il n’y a pas de vraie validation côté logique avant insertion
 
-Alternative : **Pravatar** (https://i.pravatar.cc) — vraies photos de personnes (Unsplash / generated faces, libres de droits) si on préfère un rendu photo-réaliste.
+Donc si un candidat saisit un email mal formé, le rapport est généré, mais l’email au recruteur échoue ensuite.
 
-### Question à clarifier
+## Plan de correction
 
-Avant d'implémenter, je veux savoir quel style tu préfères :
+### 1. Sécuriser l’envoi du rapport côté backend
+Dans `supabase/functions/generate-report/index.ts` :
+- ajouter une validation simple de l’email candidat
+- ne renseigner `reply_to` que si l’adresse est valide
+- sinon envoyer quand même le rapport sans `reply_to`
 
-1. **Illustrations** (DiceBear "personas") — moderne, neutre, inclusif, pas de problème de droit à l'image, cohérent avec une UI SaaS.
-2. **Photos réalistes** (Pravatar / generated faces) — plus humain et chaleureux, mais visages générés par IA (toujours libres de droits).
-3. **Mix** — proposer une rangée de chaque.
+Effet attendu :
+- le recruteur reçoit le rapport même si l’email candidat est faux
+- seul le “répondre à” sera omis dans ce cas
 
-### Implémentation (une fois le style choisi)
+### 2. Bloquer les emails invalides dès le début du parcours candidat
+Dans `src/pages/InterviewLanding.tsx` :
+- valider réellement `candidateEmail.trim()` avant création de session
+- afficher un message d’erreur clair si l’email n’est pas valide
+- désactiver le bouton “Continuer” tant que nom + email valide ne sont pas fournis
 
-**Fichier modifié :** `src/components/project/AvatarPicker.tsx` (nouveau composant) + intégration dans `src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx` à l'étape 0.
+Effet attendu :
+- on évite de créer des sessions avec un email candidat inutilisable
+- meilleure qualité des données et moins d’échecs d’envoi ensuite
 
-**Composant `AvatarPicker`** :
-- Liste de 8 avatars prédéfinis (URLs constantes en haut du fichier).
-- Grille responsive (4 colonnes desktop / 2 mobile).
-- Avatar sélectionné = ring indigo + check icon.
-- Bouton "Téléverser ma propre photo" conserve le flux actuel (upload Supabase Storage).
-- État contrôlé via `value` / `onChange` (URL string).
+### 3. Améliorer le diagnostic
+Toujours dans `generate-report` :
+- journaliser explicitement quand `reply_to` est ignoré car invalide
+- garder les logs d’enfilement/envoi plus lisibles pour les prochains cas
 
-**Intégration** :
-Remplacer le bloc actuel "Photo du recruteur" (input file seul) par `<AvatarPicker value={avatarUrl} onChange={setAvatarUrl} orgId={...} />`.
+## Fichiers concernés
+- `supabase/functions/generate-report/index.ts`
+- `src/pages/InterviewLanding.tsx`
 
-### Test
-1. Aller sur `/projects/new` → étape Informations → vérifier que la grille de 8 avatars s'affiche.
-2. Cliquer sur un avatar → vérifier la sélection visuelle (ring) et que `avatar_url` est bien la bonne URL.
-3. Téléverser une photo perso → vérifier que ça écrase la sélection et fonctionne comme avant.
-4. Sauvegarder le projet → vérifier en DB que `avatar_url` est correct.
-5. Éditer le projet → vérifier que l'avatar choisi est bien resélectionné dans la grille.
+## Résultat attendu après correctif
+- un rapport part même si l’email candidat est mal saisi
+- si l’email candidat est valide, il reste utilisé dans le champ “répondre à”
+- les nouvelles sessions empêcheront les saisies d’email invalides
 
+## Vérification prévue
+1. Créer une session avec un email invalide :
+   - la page doit bloquer avant démarrage
+2. Forcer un cas existant avec email invalide :
+   - le rapport doit quand même partir au recruteur
+   - sans `reply_to`
+3. Créer une session avec un email valide :
+   - le rapport doit être reçu normalement
+   - avec `reply_to` correct
+4. Vérifier les logs d’envoi pour confirmer la disparition de l’erreur `Invalid 'reply_to' email address`
