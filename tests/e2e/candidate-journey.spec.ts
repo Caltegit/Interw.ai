@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures";
+import { test, expect } from "../../playwright-fixture";
 import { BASE_URL, SEED } from "./helpers/constants";
 
 test("Candidat peut accéder à la page d'entretien", async ({ page }) => {

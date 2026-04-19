@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures";
+import { test, expect } from "../../playwright-fixture";
 import { loginAsRH } from "./helpers/auth";
 import { BASE_URL, SEED } from "./helpers/constants";
 
