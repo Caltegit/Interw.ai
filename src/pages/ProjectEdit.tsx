@@ -140,6 +140,7 @@ export default function ProjectEdit() {
               mediaType,
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
+              relance_level: (((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium"),
               audioPreviewUrl: q.audio_url,
               videoPreviewUrl: q.video_url,
               from_library: true,
