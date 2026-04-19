@@ -40,6 +40,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -164,7 +165,8 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       t.content.toLowerCase().includes(search.toLowerCase()) ||
       (t.title || "").toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "all" || t.category === filterCategory;
-    return matchSearch && matchCat;
+    const matchType = filterType === "all" || t.type === filterType;
+    return matchSearch && matchCat && matchType;
   });
 
   const categories = [...new Set(templates.map((t) => t.category).filter(Boolean))] as string[];
@@ -195,14 +197,25 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
             />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Catégorie" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="all">Toutes catégories</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c} value={c}>{c}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous types</SelectItem>
+              <SelectItem value="written">Texte</SelectItem>
+              <SelectItem value="audio">Audio</SelectItem>
+              <SelectItem value="video">Vidéo</SelectItem>
             </SelectContent>
           </Select>
           <Button size="sm" onClick={openNew}>
