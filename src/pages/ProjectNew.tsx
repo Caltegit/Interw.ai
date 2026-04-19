@@ -36,6 +36,7 @@ export default function ProjectNew() {
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(null);
   const [introType, setIntroType] = useState<"audio" | "video">("audio");
   const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
   const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);
@@ -125,7 +126,7 @@ export default function ProjectNew() {
         "-" +
         Date.now().toString(36);
 
-      let avatarUrl: string | null = null;
+      let avatarUrl: string | null = presetAvatarUrl;
       if (avatarFile) {
         const ext = avatarFile.name.split(".").pop() || "png";
         const path = `avatars/${slug}.${ext}`;
@@ -405,43 +406,25 @@ export default function ProjectNew() {
               </div>
               <div>
                 <Label>Photo du recruteur</Label>
-                <div className="mt-2 flex items-center gap-4">
-                  {avatarPreview ? (
-                    <div className="relative">
-                      <img
-                        src={avatarPreview}
-                        alt="Avatar"
-                        className="h-20 w-20 rounded-full border-2 border-border object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAvatarFile(null);
-                          setAvatarPreview(null);
-                        }}
-                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-border transition-colors hover:border-primary">
-                      <Upload className="h-6 w-6 text-muted-foreground" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setAvatarFile(file);
-                            setAvatarPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                  <p className="text-sm text-muted-foreground">JPG, PNG — affiché pendant l'entretien candidat</p>
+                <div className="mt-2">
+                  <AvatarPicker
+                    value={presetAvatarUrl ?? avatarPreview}
+                    onSelectPreset={(url) => {
+                      setPresetAvatarUrl(url);
+                      setAvatarFile(null);
+                      setAvatarPreview(null);
+                    }}
+                    onUpload={(file) => {
+                      setAvatarFile(file);
+                      setAvatarPreview(URL.createObjectURL(file));
+                      setPresetAvatarUrl(null);
+                    }}
+                    onClear={() => {
+                      setAvatarFile(null);
+                      setAvatarPreview(null);
+                      setPresetAvatarUrl(null);
+                    }}
+                  />
                 </div>
               </div>
             </div>
