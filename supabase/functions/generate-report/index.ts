@@ -217,7 +217,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       });
     }
 
-    // Send email to recruiter (project creator) with the report
+    // Send email to recruiter (project creator) — enqueue directly to bypass JWT gateway
     try {
       const { data: recruiterProfile } = await supabase
         .from("profiles")
@@ -226,49 +226,124 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
         .maybeSingle();
 
       const recruiterEmail = recruiterProfile?.email;
-      if (recruiterEmail) {
-        const reportUrl = `https://interw.ai/sessions/${session_id}`;
-        const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            apikey: SUPABASE_SERVICE_ROLE_KEY,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            templateName: "interview-report",
-            recipientEmail: recruiterEmail,
-            replyTo: session.candidate_email,
-            idempotencyKey: `report-${session_id}`,
-            templateData: {
-              candidateName: session.candidate_name,
-              candidateEmail: session.candidate_email,
-              jobTitle: project.job_title,
-              projectTitle: project.title,
-              overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
-              overallGrade: parsed.overall_grade || null,
-              recommendation: parsed.recommendation || null,
-              executiveSummary: parsed.executive_summary || "",
-              strengths: parsed.strengths || [],
-              areasForImprovement: parsed.areas_for_improvement || [],
-              criteriaScores,
-              questionEvaluations: parsed.question_evaluations || {},
-              reportUrl,
-            },
-          }),
-        });
-        if (!emailRes.ok) {
-          const errBody = await emailRes.text();
-          console.error("Failed to send report email:", emailRes.status, errBody);
-        } else {
-          const okBody = await emailRes.json().catch(() => ({}));
-          console.log("Report email enqueued for", recruiterEmail, okBody);
-        }
-      } else {
+      if (!recruiterEmail) {
         console.warn("No recruiter email found for project", project.id);
+      } else {
+        const normalizedEmail = recruiterEmail.toLowerCase();
+        const reportUrl = `https://interw.ai/sessions/${session_id}`;
+        const templateData = {
+          candidateName: session.candidate_name,
+          candidateEmail: session.candidate_email,
+          jobTitle: project.job_title,
+          projectTitle: project.title,
+          overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+          overallGrade: parsed.overall_grade || null,
+          recommendation: parsed.recommendation || null,
+          executiveSummary: parsed.executive_summary || "",
+          strengths: parsed.strengths || [],
+          areasForImprovement: parsed.areas_for_improvement || [],
+          criteriaScores,
+          questionEvaluations: parsed.question_evaluations || {},
+          reportUrl,
+        };
+
+        // 1. Suppression check
+        const { data: suppressed } = await supabase
+          .from("suppressed_emails")
+          .select("id")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+
+        if (suppressed) {
+          console.log("Recruiter email suppressed, skipping", normalizedEmail);
+        } else {
+          // 2. Get / create unsubscribe token
+          let unsubscribeToken: string | null = null;
+          const { data: existingToken } = await supabase
+            .from("email_unsubscribe_tokens")
+            .select("token, used_at")
+            .eq("email", normalizedEmail)
+            .maybeSingle();
+
+          if (existingToken && !existingToken.used_at) {
+            unsubscribeToken = existingToken.token;
+          } else if (!existingToken) {
+            const newToken = generateToken();
+            await supabase.from("email_unsubscribe_tokens").upsert(
+              { token: newToken, email: normalizedEmail },
+              { onConflict: "email", ignoreDuplicates: true },
+            );
+            const { data: stored } = await supabase
+              .from("email_unsubscribe_tokens")
+              .select("token")
+              .eq("email", normalizedEmail)
+              .maybeSingle();
+            unsubscribeToken = stored?.token ?? newToken;
+          }
+
+          if (!unsubscribeToken) {
+            console.warn("Unsubscribe token unavailable, skipping report email");
+          } else {
+            // 3. Render template
+            const html = await renderAsync(
+              React.createElement(interviewReportTemplate.component, templateData),
+            );
+            const plainText = await renderAsync(
+              React.createElement(interviewReportTemplate.component, templateData),
+              { plainText: true },
+            );
+            const subject = typeof interviewReportTemplate.subject === "function"
+              ? interviewReportTemplate.subject(templateData)
+              : interviewReportTemplate.subject;
+
+            const messageId = crypto.randomUUID();
+            const idempotencyKey = `report-${session_id}`;
+
+            // 4. Log pending
+            await supabase.from("email_send_log").insert({
+              message_id: messageId,
+              template_name: "interview-report",
+              recipient_email: recruiterEmail,
+              status: "pending",
+            });
+
+            // 5. Enqueue
+            const { error: enqueueError } = await supabase.rpc("enqueue_email", {
+              queue_name: "transactional_emails",
+              payload: {
+                message_id: messageId,
+                to: recruiterEmail,
+                from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+                sender_domain: SENDER_DOMAIN,
+                subject,
+                html,
+                text: plainText,
+                purpose: "transactional",
+                label: "interview-report",
+                idempotency_key: idempotencyKey,
+                unsubscribe_token: unsubscribeToken,
+                reply_to: session.candidate_email,
+                queued_at: new Date().toISOString(),
+              },
+            });
+
+            if (enqueueError) {
+              console.error("Failed to enqueue report email:", enqueueError);
+              await supabase.from("email_send_log").insert({
+                message_id: messageId,
+                template_name: "interview-report",
+                recipient_email: recruiterEmail,
+                status: "failed",
+                error_message: enqueueError.message,
+              });
+            } else {
+              console.log("Report email enqueued for", recruiterEmail);
+            }
+          }
+        }
       }
     } catch (e) {
-      console.error("Email send threw:", e);
+      console.error("Email enqueue threw:", e);
     }
 
     return new Response(JSON.stringify({ success: true }), {
