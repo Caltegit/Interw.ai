@@ -140,7 +140,10 @@ export default function InterviewTemplates() {
     if (srcQ && srcQ.length) {
       await supabase.from("interview_template_questions" as never).insert(
         (srcQ as Record<string, unknown>[]).map((q) => {
-          const { id: _id, created_at: _c, template_id: _t, ...rest } = q as never;
+          const rest = { ...q };
+          delete (rest as Record<string, unknown>).id;
+          delete (rest as Record<string, unknown>).created_at;
+          delete (rest as Record<string, unknown>).template_id;
           return { ...rest, template_id: newId };
         }) as never,
       );
@@ -148,7 +151,10 @@ export default function InterviewTemplates() {
     if (srcC && srcC.length) {
       await supabase.from("interview_template_criteria" as never).insert(
         (srcC as Record<string, unknown>[]).map((c) => {
-          const { id: _id, created_at: _c, template_id: _t, ...rest } = c as never;
+          const rest = { ...c };
+          delete (rest as Record<string, unknown>).id;
+          delete (rest as Record<string, unknown>).created_at;
+          delete (rest as Record<string, unknown>).template_id;
           return { ...rest, template_id: newId };
         }) as never,
       );
