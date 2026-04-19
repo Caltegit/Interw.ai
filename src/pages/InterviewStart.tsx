@@ -441,7 +441,7 @@ export default function InterviewStart() {
     }
     startListening();
     resetSilenceTimer();
-  }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
+  }, [speak, startListening, startQuestionRecording, resetSilenceTimer, toast, questions, currentQuestionIndex, markMediaPresentation, armPlaybackWatchdog]);
 
   // Load session data
   useEffect(() => {
