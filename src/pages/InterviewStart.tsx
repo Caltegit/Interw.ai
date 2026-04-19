@@ -805,6 +805,7 @@ export default function InterviewStart() {
               projectContext: {
                 aiPersonaName: project?.ai_persona_name ?? "Marie",
                 jobTitle: project?.job_title ?? "",
+                relanceLevel: (project?.relance_level as "light" | "medium" | "deep") ?? "medium",
                 questions: questions.map((q) => ({
                   content: q.content,
                   type: q.type,

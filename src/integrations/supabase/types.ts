@@ -459,6 +459,7 @@ export type Database = {
           presentation_video_url: string | null
           record_audio: boolean
           record_video: boolean
+          relance_level: string
           slug: string | null
           status: Database["public"]["Enums"]["project_status"]
           title: string
@@ -483,6 +484,7 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
+          relance_level?: string
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title: string
@@ -507,6 +509,7 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
+          relance_level?: string
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
