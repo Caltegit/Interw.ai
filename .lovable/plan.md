@@ -1,27 +1,25 @@
 
 
-## Plan : Remplacer les 10 questions types par 50 nouvelles
+## Plan : Seed automatique des 10 critères de base
 
 ### Objectif
-Mettre à jour la fonction `seed_default_question_templates` pour insérer les 50 nouvelles questions (au lieu des 10 actuelles), et reseed les organisations existantes.
+Comme pour les questions, créer une fonction SQL `seed_default_criteria_templates(_org_id, _created_by)` qui insère 10 critères par défaut dans `criteria_templates` lors de la création d'une organisation, et reseed les orgs existantes.
 
-### Changements
+### Migration SQL
 
-**1. Migration SQL** :
-- Remplacer le corps de `seed_default_question_templates(_org_id, _created_by)` avec les 50 nouvelles questions (titre, contenu, catégorie). Toutes en `type='written'`, `follow_up_enabled=false` (Relance IA = Non par défaut, contrairement à l'ancienne version qui était `true`), `max_follow_ups=0`.
-- Garder le `WHERE NOT EXISTS` sur `(organization_id, title)` pour idempotence.
+**1. Créer la fonction `seed_default_criteria_templates`** :
+- Insère les 10 critères (label + description) dans `criteria_templates`.
+- Valeurs par défaut : `weight=10`, `scoring_scale='0-5'`, `applies_to='all_questions'`, `category=NULL`.
+- Idempotent : `WHERE NOT EXISTS` sur `(organization_id, label)`.
 
-**2. Reseed des orgs existantes** :
-- Pour chaque organisation existante : supprimer les 10 anciennes questions seed (matchées par leurs titres exacts d'origine : `Présentez-vous`, `Motivation entreprise`, `Qualités`, `Axe d'amélioration`, `Ambitions`, `Défi pro`, `Ancien poste`, `Salaire`, `Questions pour nous`, `Style de Management`) UNIQUEMENT si elles n'ont pas été modifiées (on supprime par titre, simple).
-- Puis appeler `seed_default_question_templates` pour chaque org existante avec son `owner_id` (ou `created_by` du premier template existant si owner_id null).
+**2. Modifier les triggers existants** :
+- `trg_seed_org_question_templates` et `trg_seed_on_owner_set` appellent déjà `seed_default_question_templates`. Les étendre pour appeler aussi `seed_default_criteria_templates`.
+- Idem dans `accept_invitation` (premier membre = owner).
 
-⚠️ Risque : si un utilisateur a personnalisé une des 10 questions par défaut, la suppression la perdra. Sécurité : on supprime uniquement les rows dont `title` ET `content` correspondent EXACTEMENT à l'original (non modifié).
-
-### Fichier(s)
-- Nouvelle migration SQL (création via outil migration).
+**3. Reseed des orgs existantes** :
+- Boucler sur toutes les organizations et appeler `seed_default_criteria_templates` (idempotent grâce au `NOT EXISTS`).
 
 ### Test
-1. Vérifier `select count(*) from question_templates where organization_id = '<org>'` après migration.
-2. Aller dans Bibliothèque de questions → voir les 50 nouvelles avec les bonnes catégories et Relance IA OFF.
-3. Vérifier qu'une question personnalisée existante n'a pas été écrasée.
+1. La bibliothèque de critères affiche les 10 nouveaux critères.
+2. Créer une nouvelle org → critères auto-créés.
 
