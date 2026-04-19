@@ -1462,16 +1462,6 @@ export default function InterviewStart() {
                           <span>Préparation…</span>
                         )}
                       </div>
-                      {/* Bouton manuel de secours si la transition tarde */}
-                      {showManualContinue && !isListening && !isProcessing && (
-                        <button
-                          type="button"
-                          onClick={forceStartListening}
-                          className="w-full text-xs text-muted-foreground hover:text-foreground underline transition-colors py-1"
-                        >
-                          La question ne se lance pas ? Continuer →
-                        </button>
-                      )}
                     </div>
                   );
                 })()}
