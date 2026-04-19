@@ -116,7 +116,7 @@ export default function SharedReport() {
         {session && (
           <div>
             <p className="text-lg font-medium">{session.candidate_name}</p>
-            <p className="text-muted-foreground">{project?.job_title} — {project?.title}</p>
+            <p className="text-muted-foreground">{project?.title}</p>
             <p className="text-sm text-muted-foreground">
               {new Date(session.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
             </p>

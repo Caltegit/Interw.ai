@@ -258,7 +258,6 @@ export default function ProjectDetail() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{project.title}</h1>
-          <p className="text-muted-foreground">{project.job_title}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex flex-wrap gap-2 items-center">

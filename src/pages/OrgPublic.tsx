@@ -104,7 +104,6 @@ export default function OrgPublic() {
               <Card key={p.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">{p.title}</CardTitle>
-                  {p.job_title && <CardDescription>{p.job_title}</CardDescription>}
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {p.description && (
