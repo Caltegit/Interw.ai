@@ -308,7 +308,7 @@ export default function ProjectNew() {
         if (toLibrary.length > 0) {
           await supabase.from("criteria_templates").insert(
             toLibrary.map((c) => ({
-              organization_id: orgId!,
+              organization_id: "a0000000-0000-0000-0000-000000000001",
               created_by: user.id,
               label: c.label,
               description: c.description,
