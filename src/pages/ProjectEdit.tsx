@@ -476,7 +476,7 @@ export default function ProjectEdit() {
                 </Select>
               </div>
               <div>
-                <Label>Nom du persona IA</Label>
+                <Label>Nom de l'interviewer IA</Label>
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
               <div>
