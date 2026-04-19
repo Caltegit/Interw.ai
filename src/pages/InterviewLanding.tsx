@@ -55,16 +55,23 @@ export default function InterviewLanding() {
     load();
   }, [slug]);
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const trimmedEmail = candidateEmail.trim();
+  const trimmedName = candidateName.trim();
+  const emailValid = emailRegex.test(trimmedEmail);
+  const showEmailError = candidateEmail.length > 0 && !emailValid;
+  const canSubmit = trimmedName.length > 0 && emailValid && !starting;
+
   const handleStart = async () => {
-    if (!candidateName.trim() || !candidateEmail.trim() || !project) return;
+    if (!canSubmit || !project) return;
     setStarting(true);
 
     const { data: session, error: err } = await supabase
       .from("sessions")
       .insert({
         project_id: project.id,
-        candidate_name: candidateName.trim(),
-        candidate_email: candidateEmail.trim(),
+        candidate_name: trimmedName,
+        candidate_email: trimmedEmail,
       })
       .select()
       .single();
@@ -258,12 +265,17 @@ export default function InterviewLanding() {
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
                 style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
               />
+              {showEmailError && (
+                <p className="text-xs" style={{ color: "#f87171" }}>
+                  Veuillez saisir une adresse email valide.
+                </p>
+              )}
             </div>
             <Button
               className="w-full h-12 rounded-lg text-base font-semibold group transition-all duration-300"
               size="lg"
               onClick={handleStart}
-              disabled={!candidateName.trim() || !candidateEmail.trim() || starting}
+              disabled={!canSubmit}
             >
               {starting ? (
                 <>

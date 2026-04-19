@@ -307,24 +307,38 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
               status: "pending",
             });
 
+            // Validate candidate email before using as reply_to
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const candidateEmail = (session.candidate_email ?? "").trim();
+            const validReplyTo = candidateEmail && emailRegex.test(candidateEmail);
+            if (!validReplyTo) {
+              console.warn(
+                `Invalid candidate email "${session.candidate_email}" for session ${session_id}; sending report without reply_to.`,
+              );
+            }
+
             // 5. Enqueue
+            const payload: Record<string, unknown> = {
+              message_id: messageId,
+              to: recruiterEmail,
+              from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+              sender_domain: SENDER_DOMAIN,
+              subject,
+              html,
+              text: plainText,
+              purpose: "transactional",
+              label: "interview-report",
+              idempotency_key: idempotencyKey,
+              unsubscribe_token: unsubscribeToken,
+              queued_at: new Date().toISOString(),
+            };
+            if (validReplyTo) {
+              payload.reply_to = candidateEmail;
+            }
+
             const { error: enqueueError } = await supabase.rpc("enqueue_email", {
               queue_name: "transactional_emails",
-              payload: {
-                message_id: messageId,
-                to: recruiterEmail,
-                from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-                sender_domain: SENDER_DOMAIN,
-                subject,
-                html,
-                text: plainText,
-                purpose: "transactional",
-                label: "interview-report",
-                idempotency_key: idempotencyKey,
-                unsubscribe_token: unsubscribeToken,
-                reply_to: session.candidate_email,
-                queued_at: new Date().toISOString(),
-              },
+              payload,
             });
 
             if (enqueueError) {
