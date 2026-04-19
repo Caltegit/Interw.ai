@@ -53,6 +53,7 @@ export interface Question {
   mediaType: "written" | "audio" | "video";
   follow_up_enabled: boolean;
   max_follow_ups: number;
+  relance_level: "light" | "medium" | "deep";
   audioBlob: Blob | null;
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
@@ -71,6 +72,7 @@ export const createEmptyQuestion = (): Question => ({
   mediaType: "written",
   follow_up_enabled: false,
   max_follow_ups: 0,
+  relance_level: "medium",
   audioBlob: null,
   audioPreviewUrl: null,
   videoBlob: null,
