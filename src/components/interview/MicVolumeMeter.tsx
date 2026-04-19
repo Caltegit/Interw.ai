@@ -43,6 +43,19 @@ export default function MicVolumeMeter({ stream, active }: MicVolumeMeterProps) 
       analyserRef.current = analyser;
       sourceRef.current = source;
 
+      // Chrome strict can leave the context suspended without a user gesture
+      // immediately preceding it → vu-mètre stays at 0. Force resume.
+      if (ctx.state === "suspended") {
+        ctx.resume().catch((err) => console.warn("[MicVolumeMeter] ctx.resume() failed", err));
+      }
+      // Safety check: if still suspended after 500ms, log a warning
+      setTimeout(() => {
+        if (!cancelled && ctx.state !== "running") {
+          console.warn("[MicVolumeMeter] AudioContext still", ctx.state, "after 500ms — vu-mètre may be frozen");
+          ctx.resume().catch(() => {});
+        }
+      }, 500);
+
       const buffer = new Uint8Array(analyser.fftSize);
 
       const tick = () => {
