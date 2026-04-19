@@ -28,6 +28,44 @@ export default function ProjectNew() {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const applyTemplate = (tpl: InterviewTemplatePayload) => {
+    if (tpl.name) setTitle(tpl.name);
+    if (tpl.default_language) setLanguage(tpl.default_language);
+    if (tpl.default_duration_minutes) setMaxDuration(tpl.default_duration_minutes);
+    if (tpl.questions.length) {
+      setQuestions(
+        tpl.questions.map((q) => ({
+          ...createEmptyQuestion(),
+          title: q.title,
+          content: q.content,
+          category: q.category || "",
+          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
+          follow_up_enabled: q.follow_up_enabled,
+          max_follow_ups: q.max_follow_ups,
+          relance_level: q.relance_level,
+          audioPreviewUrl: q.audio_url,
+          videoPreviewUrl: q.video_url,
+          from_library: true,
+        })),
+      );
+    }
+    if (tpl.criteria.length) {
+      setCriteria(
+        tpl.criteria.map((c) => ({
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: c.scoring_scale,
+          applies_to: c.applies_to,
+          anchors: c.anchors,
+          from_library: true,
+        })),
+      );
+    }
+    toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
+  };
 
   // Step 1
   const [title, setTitle] = useState("Candidature spontanée");
