@@ -1,5 +1,7 @@
-import { ReactNode } from "react";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { ReactNode, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CandidateLayoutProps {
   children: ReactNode;
@@ -8,6 +10,47 @@ interface CandidateLayoutProps {
 }
 
 export default function CandidateLayout({ children, minimal = false }: CandidateLayoutProps) {
+  const params = useParams();
+  const slug = (params as any).slug as string | undefined;
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string>("");
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!slug) {
+      setLogoUrl(null);
+      setOrgName("");
+      return;
+    }
+    (async () => {
+      // Try to find the org via the project slug → organizations.logo_url
+      const { data: project } = await supabase
+        .from("projects")
+        .select("organization_id, organizations:organization_id(name, logo_url)")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (cancelled) return;
+      const org = (project as any)?.organizations;
+      if (org) {
+        setLogoUrl(org.logo_url ?? null);
+        setOrgName(org.name ?? "");
+      } else {
+        // Fallback: maybe slug is an org slug directly
+        const { data: orgRow } = await supabase
+          .from("organizations")
+          .select("name, logo_url")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (cancelled) return;
+        setLogoUrl(orgRow?.logo_url ?? null);
+        setOrgName(orgRow?.name ?? "");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   return (
     <div className="candidate-layout min-h-screen flex flex-col relative overflow-hidden">
       <div className="candidate-bg-grid" aria-hidden="true" />
@@ -18,18 +61,16 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
           minimal ? "py-2.5 px-4" : "py-3 px-5 sm:px-6"
         }`}
       >
-        <a href="/" className="flex items-center gap-2 group">
-          <span
-            className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))",
-              boxShadow: "0 4px 12px -4px hsl(var(--l-accent) / 0.6)",
-            }}
-          >
-            <Sparkles className="h-4 w-4 text-white" />
-          </span>
-          <span className="text-sm font-semibold tracking-tight">Interw.ai</span>
-        </a>
+        {/* Org logo only — nothing if no logo */}
+        <div className="flex items-center gap-2 min-h-[28px]">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={orgName ? `Logo ${orgName}` : "Logo organisation"}
+              className="h-7 w-auto max-w-[160px] object-contain"
+            />
+          ) : null}
+        </div>
 
         <div
           className="hidden sm:flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs"
