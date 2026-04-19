@@ -20,7 +20,7 @@ import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { Info, Mic, Video, Type, BookmarkPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const CATEGORIES = ["Motivation", "Technique", "Soft skills", "Situationnel", "Culture fit", "Leadership"];
+const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
 const MAX_CONTENT = 500;
 
 export interface QuestionFormValue {
