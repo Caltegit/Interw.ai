@@ -215,36 +215,41 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       const recruiterEmail = recruiterProfile?.email;
       if (recruiterEmail) {
         const reportUrl = `https://interw.ai/sessions/${session_id}`;
-        const { data: emailData, error: emailErr } = await supabase.functions.invoke(
-          "send-transactional-email",
-          {
-            body: {
-              templateName: "interview-report",
-              recipientEmail: recruiterEmail,
-              replyTo: session.candidate_email,
-              idempotencyKey: `report-${session_id}`,
-              templateData: {
-                candidateName: session.candidate_name,
-                candidateEmail: session.candidate_email,
-                jobTitle: project.job_title,
-                projectTitle: project.title,
-                overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
-                overallGrade: parsed.overall_grade || null,
-                recommendation: parsed.recommendation || null,
-                executiveSummary: parsed.executive_summary || "",
-                strengths: parsed.strengths || [],
-                areasForImprovement: parsed.areas_for_improvement || [],
-                criteriaScores,
-                questionEvaluations: parsed.question_evaluations || {},
-                reportUrl,
-              },
-            },
+        const emailRes = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY,
+            "Content-Type": "application/json",
           },
-        );
-        if (emailErr) {
-          console.error("Failed to send report email:", emailErr.message || emailErr);
+          body: JSON.stringify({
+            templateName: "interview-report",
+            recipientEmail: recruiterEmail,
+            replyTo: session.candidate_email,
+            idempotencyKey: `report-${session_id}`,
+            templateData: {
+              candidateName: session.candidate_name,
+              candidateEmail: session.candidate_email,
+              jobTitle: project.job_title,
+              projectTitle: project.title,
+              overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+              overallGrade: parsed.overall_grade || null,
+              recommendation: parsed.recommendation || null,
+              executiveSummary: parsed.executive_summary || "",
+              strengths: parsed.strengths || [],
+              areasForImprovement: parsed.areas_for_improvement || [],
+              criteriaScores,
+              questionEvaluations: parsed.question_evaluations || {},
+              reportUrl,
+            },
+          }),
+        });
+        if (!emailRes.ok) {
+          const errBody = await emailRes.text();
+          console.error("Failed to send report email:", emailRes.status, errBody);
         } else {
-          console.log("Report email enqueued for", recruiterEmail, emailData);
+          const okBody = await emailRes.json().catch(() => ({}));
+          console.log("Report email enqueued for", recruiterEmail, okBody);
         }
       } else {
         console.warn("No recruiter email found for project", project.id);
