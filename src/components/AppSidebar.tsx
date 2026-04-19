@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ const navItems = [
 
 const librarySubItems = [
   { title: "Questions", url: "/library/questions", icon: MessageSquare },
+  { title: "Critères", url: "/library/criteria", icon: ListChecks },
   { title: "Intros", url: "/library/intros", icon: Mic },
   { title: "Emails", url: "/library/emails", icon: Mail },
 ];

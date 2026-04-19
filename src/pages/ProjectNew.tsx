@@ -57,6 +57,9 @@ export default function ProjectNew() {
       scoring_scale: string;
       anchors: Record<string, string>;
       applies_to: string;
+      category?: string;
+      from_library?: boolean;
+      save_to_library?: boolean;
     }[]
   >([
     {
@@ -299,6 +302,24 @@ export default function ProjectNew() {
             applies_to: c.applies_to as never,
           })),
         );
+
+        // Save criteria flagged as "save_to_library"
+        const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
+        if (toLibrary.length > 0) {
+          await supabase.from("criteria_templates").insert(
+            toLibrary.map((c) => ({
+              organization_id: "a0000000-0000-0000-0000-000000000001",
+              created_by: user.id,
+              label: c.label,
+              description: c.description,
+              weight: c.weight,
+              scoring_scale: c.scoring_scale as never,
+              applies_to: c.applies_to as never,
+              anchors: c.anchors,
+              category: c.category || null,
+            })),
+          );
+        }
       }
 
       const { data: check } = await supabase
