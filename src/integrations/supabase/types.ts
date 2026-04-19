@@ -921,6 +921,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      seed_default_criteria_templates: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: undefined
+      }
       seed_default_question_templates: {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
