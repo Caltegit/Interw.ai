@@ -46,6 +46,7 @@ export default function ProjectEdit() {
   // Step 1
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
@@ -105,6 +106,7 @@ export default function ProjectEdit() {
       setAutoSkipSilence(project.auto_skip_silence ?? false);
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
+      setTtsProvider(((project as { tts_provider?: string }).tts_provider as "browser" | "elevenlabs") ?? "browser");
       
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
@@ -260,6 +262,7 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
+          tts_provider: ttsProvider,
         } as never)
         .eq("id", id);
 
