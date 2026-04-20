@@ -452,8 +452,12 @@ export default function InterviewStart() {
     }
     // STT
     stopListening();
-    // TTS
+    // TTS (browser + ElevenLabs)
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
     setIsSpeaking(false);
     // Recorder
     if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {
