@@ -27,3 +27,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.seed-e2e-user]
     verify_jwt = false
+
+  [functions.tts-elevenlabs]
+    verify_jwt = false

@@ -70,6 +70,7 @@ export default function ProjectNew() {
   // Step 1
   const [title, setTitle] = useState("Candidature spontanée");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
