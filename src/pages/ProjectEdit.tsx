@@ -502,6 +502,22 @@ export default function ProjectEdit() {
                 <Label>Nom de l'interviewer IA</Label>
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Voix réaliste haute qualité (~0,40 € par entretien). Si désactivé, voix standard du navigateur (gratuit).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ttsProvider === "elevenlabs"}
+                    onCheckedChange={(v) => setTtsProvider(v ? "elevenlabs" : "browser")}
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>Photo du recruteur</Label>
                 <div className="mt-2">
