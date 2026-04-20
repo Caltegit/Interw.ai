@@ -46,6 +46,7 @@ export default function ProjectEdit() {
   // Step 1
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
@@ -105,6 +106,7 @@ export default function ProjectEdit() {
       setAutoSkipSilence(project.auto_skip_silence ?? false);
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
+      setTtsProvider(((project as { tts_provider?: string }).tts_provider as "browser" | "elevenlabs") ?? "browser");
       
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
@@ -260,6 +262,7 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
+          tts_provider: ttsProvider,
         } as never)
         .eq("id", id);
 
@@ -499,6 +502,22 @@ export default function ProjectEdit() {
                 <Label>Nom de l'interviewer IA</Label>
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Voix réaliste haute qualité (~0,40 € par entretien). Si désactivé, voix standard du navigateur (gratuit).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ttsProvider === "elevenlabs"}
+                    onCheckedChange={(v) => setTtsProvider(v ? "elevenlabs" : "browser")}
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>Photo du recruteur</Label>
                 <div className="mt-2">

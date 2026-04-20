@@ -156,18 +156,102 @@ export default function InterviewStart() {
     });
   }, []);
 
-  // TTS: speak text aloud — robust with safety timer + voice fallback
+  // Ref to current ElevenLabs audio (for pause/cancel)
+  const elevenAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Try ElevenLabs first; resolves true if it played, false if we should fallback
+  const tryElevenLabs = useCallback(
+    async (text: string): Promise<boolean> => {
+      const proj = project;
+      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return false;
+
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text, projectId: proj.id }),
+        });
+
+        if (!res.ok) {
+          console.warn("[interview] ElevenLabs HTTP", res.status);
+          return false;
+        }
+
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const j = await res.json().catch(() => ({}));
+          console.log("[interview] ElevenLabs skip:", j?.reason);
+          return false;
+        }
+
+        const blob = await res.blob();
+        if (!blob || blob.size === 0) return false;
+
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        elevenAudioRef.current = audio;
+        setIsSpeaking(true);
+
+        await new Promise<void>((resolve) => {
+          let done = false;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            URL.revokeObjectURL(audioUrl);
+            if (elevenAudioRef.current === audio) elevenAudioRef.current = null;
+            resolve();
+          };
+          audio.onended = finish;
+          audio.onerror = finish;
+          audio.play().catch(finish);
+        });
+
+        setIsSpeaking(false);
+        return true;
+      } catch (e) {
+        console.warn("[interview] ElevenLabs failed, fallback to browser TTS:", e);
+        elevenAudioRef.current = null;
+        setIsSpeaking(false);
+        return false;
+      }
+    },
+    [project],
+  );
+
+  // TTS: speak text aloud — tries ElevenLabs first if enabled, falls back to browser
   const speak = useCallback(
     (text: string): Promise<void> => {
-      return new Promise((resolve) => {
-        if (!ttsEnabled || !window.speechSynthesis || !text?.trim()) {
-          console.log("[interview] TTS skipped (disabled/unsupported/empty)");
+      return new Promise(async (resolve) => {
+        if (!ttsEnabled || !text?.trim()) {
+          console.log("[interview] TTS skipped (disabled/empty)");
           resolve();
           return;
         }
 
         // Track for pause/resume replay
         currentPresentationRef.current = { kind: "tts", text };
+
+        // Try ElevenLabs first
+        const usedEleven = await tryElevenLabs(text);
+        if (usedEleven) {
+          if (currentPresentationRef.current?.kind === "tts") {
+            currentPresentationRef.current = null;
+          }
+          resolve();
+          return;
+        }
+
+        // Fallback: browser TTS
+        if (!window.speechSynthesis) {
+          console.log("[interview] no speechSynthesis available");
+          resolve();
+          return;
+        }
 
         let settled = false;
         // Backup button visible after 4s of TTS (in case it's stuck)
@@ -183,8 +267,6 @@ export default function InterviewStart() {
           clearTimeout(manualBackupTimer);
           console.log("[interview] TTS done:", reason);
           setIsSpeaking(false);
-          // Clear "current presentation" so a pause during the listening phase
-          // is NOT treated as "pendant la question" (would replay stale TTS).
           if (currentPresentationRef.current?.kind === "tts") {
             currentPresentationRef.current = null;
           }
@@ -196,10 +278,8 @@ export default function InterviewStart() {
         } catch {}
 
         const voices = window.speechSynthesis.getVoices();
-        // If voices not loaded yet, skip TTS rather than blocking forever
         if (!voices || voices.length === 0) {
           console.warn("[interview] TTS: no voices available, skipping");
-          // Brief delay to mimic speech rhythm, then resolve
           setTimeout(() => safeResolve("no_voices"), 300);
           return;
         }
@@ -226,7 +306,6 @@ export default function InterviewStart() {
           voices.find((v) => v.lang.startsWith("fr"));
         if (femaleVoice) utterance.voice = femaleVoice;
 
-        // Safety timer: text length / 15 chars per second + 4s buffer (max 20s)
         const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
         const safetyTimer = setTimeout(() => {
           console.warn("[interview] TTS safety timer fired after", safetyMs, "ms");
@@ -257,7 +336,7 @@ export default function InterviewStart() {
         }
       });
     },
-    [ttsEnabled],
+    [ttsEnabled, tryElevenLabs],
   );
 
   // Play question media (audio_url or video_url) if available, otherwise use TTS
@@ -373,8 +452,12 @@ export default function InterviewStart() {
     }
     // STT
     stopListening();
-    // TTS
+    // TTS (browser + ElevenLabs)
     if (window.speechSynthesis) window.speechSynthesis.cancel();
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
     setIsSpeaking(false);
     // Recorder
     if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {

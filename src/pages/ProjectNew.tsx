@@ -70,6 +70,7 @@ export default function ProjectNew() {
   // Step 1
   const [title, setTitle] = useState("Candidature spontanée");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
@@ -199,6 +200,7 @@ export default function ProjectNew() {
           intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
           presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
+          tts_provider: ttsProvider,
         } as never)
         .select()
         .single();
@@ -469,6 +471,22 @@ export default function ProjectNew() {
                 <Label>Nom de l'interviewer IA</Label>
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
+
+              <div className="rounded-lg border border-border bg-card p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Voix réaliste haute qualité (~0,40 € par entretien). Si désactivé, voix standard du navigateur (gratuit).
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ttsProvider === "elevenlabs"}
+                    onCheckedChange={(v) => setTtsProvider(v ? "elevenlabs" : "browser")}
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label>Photo du recruteur</Label>
                 <div className="mt-2">
