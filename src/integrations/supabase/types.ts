@@ -612,6 +612,8 @@ export type Database = {
           slug: string | null
           status: Database["public"]["Enums"]["project_status"]
           title: string
+          tts_provider: string
+          tts_voice_id: string | null
         }
         Insert: {
           ai_persona_name?: string
@@ -636,6 +638,8 @@ export type Database = {
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title: string
+          tts_provider?: string
+          tts_voice_id?: string | null
         }
         Update: {
           ai_persona_name?: string
@@ -660,6 +664,8 @@ export type Database = {
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
+          tts_provider?: string
+          tts_voice_id?: string | null
         }
         Relationships: [
           {
