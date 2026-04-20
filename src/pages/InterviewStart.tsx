@@ -1127,6 +1127,19 @@ export default function InterviewStart() {
     }
   }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
 
+  // Response timer: ticks while candidate is speaking
+  useEffect(() => {
+    if (isListening && !isPaused) {
+      const interval = setInterval(() => setResponseElapsedSec((s) => s + 1), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isListening, isPaused]);
+
+  // Reset response timer when question changes
+  useEffect(() => {
+    setResponseElapsedSec(0);
+  }, [currentQuestionIndex]);
+
   // Reset silence timer on candidate speech activity
   useEffect(() => {
     if (liveTranscript) {
