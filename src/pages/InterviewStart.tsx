@@ -48,6 +48,7 @@ export default function InterviewStart() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
+  const [responseElapsedSec, setResponseElapsedSec] = useState(0);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
@@ -1126,6 +1127,19 @@ export default function InterviewStart() {
     }
   }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
 
+  // Response timer: ticks while candidate is speaking
+  useEffect(() => {
+    if (isListening && !isPaused) {
+      const interval = setInterval(() => setResponseElapsedSec((s) => s + 1), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isListening, isPaused]);
+
+  // Reset response timer when question changes
+  useEffect(() => {
+    setResponseElapsedSec(0);
+  }, [currentQuestionIndex]);
+
   // Reset silence timer on candidate speech activity
   useEffect(() => {
     if (liveTranscript) {
@@ -1351,6 +1365,9 @@ export default function InterviewStart() {
                   if (interviewFinished) return null;
                   const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
+                  const mm = String(Math.floor(responseElapsedSec / 60)).padStart(2, "0");
+                  const ss = String(responseElapsedSec % 60).padStart(2, "0");
+                  const timerLabel = `${mm}:${ss}`;
 
                   if (showBigCta) {
                     return (
@@ -1364,6 +1381,9 @@ export default function InterviewStart() {
                           </span>
                           <span className="text-sm sm:text-base font-semibold text-emerald-700 dark:text-emerald-300">
                             🎙️ À vous !
+                          </span>
+                          <span className="text-xs font-mono tabular-nums text-emerald-700/70 dark:text-emerald-300/70">
+                            {timerLabel}
                           </span>
                         </div>
                         {currentQuestionIndex < 2 && (
@@ -1386,8 +1406,11 @@ export default function InterviewStart() {
                           background: "hsl(var(--l-bg-elev))",
                         }}
                       >
-                        <div className="flex items-center justify-center py-2">
+                        <div className="flex items-center justify-center gap-3 py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
+                          <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                            {timerLabel}
+                          </span>
                         </div>
                         <div className="h-px" style={{ background: "hsl(var(--l-border))" }} />
                         <Button
