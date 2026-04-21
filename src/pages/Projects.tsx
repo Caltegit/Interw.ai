@@ -134,7 +134,12 @@ export default function Projects() {
                         <span className="text-sm font-medium">{sessionCount}</span>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                        {new Date(project.created_at).toLocaleDateString("fr-FR")}
+                        {(() => {
+                          const days = Math.floor((Date.now() - new Date(project.created_at).getTime()) / 86400000);
+                          if (days === 0) return "aujourd'hui";
+                          if (days === 1) return "1 jour";
+                          return `${days} jours`;
+                        })()}
                       </TableCell>
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <Button
