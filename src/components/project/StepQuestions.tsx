@@ -11,6 +11,8 @@ import {
   Sparkles,
   BookmarkPlus,
   Pencil,
+  Lightbulb,
+  Timer,
 } from "lucide-react";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
@@ -55,6 +57,10 @@ export interface Question {
   from_library?: boolean;
   /** true si l'utilisateur veut sauvegarder cette question dans la bibliothèque à la sauvegarde du projet */
   save_to_library?: boolean;
+  /** Indication courte affichée au candidat pendant la réponse */
+  hint_text: string;
+  /** Durée maximale de la réponse en secondes (null = pas de limite) */
+  max_response_seconds: number | null;
 }
 
 export const createEmptyQuestion = (): Question => ({
@@ -72,6 +78,8 @@ export const createEmptyQuestion = (): Question => ({
   videoPreviewUrl: null,
   from_library: false,
   save_to_library: false,
+  hint_text: "",
+  max_response_seconds: null,
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
@@ -144,6 +152,18 @@ function SortableQuestion({
             <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
               <Sparkles className="h-3 w-3" />
               <span className="hidden sm:inline">Relance IA</span>
+            </span>
+          )}
+          {q.hint_text?.trim() && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary" title="Indication candidat">
+              <Lightbulb className="h-3 w-3" />
+            </span>
+          )}
+          {typeof q.max_response_seconds === "number" && q.max_response_seconds > 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary tabular-nums" title="Temps limite de réponse">
+              <Timer className="h-3 w-3" />
+              {String(Math.floor(q.max_response_seconds / 60)).padStart(2, "0")}:
+              {String(q.max_response_seconds % 60).padStart(2, "0")}
             </span>
           )}
           {q.save_to_library && !q.from_library && (
@@ -246,6 +266,8 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       existingAudioUrl: q.audioPreviewUrl,
       existingVideoUrl: q.videoPreviewUrl,
       saveToLibrary: q.save_to_library,
+      hintText: q.hint_text ?? "",
+      maxResponseSeconds: q.max_response_seconds ?? null,
     });
     setFormOpen(true);
   };
@@ -264,6 +286,8 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       videoBlob: form.mediaType === "video" ? form.mediaBlob : null,
       videoPreviewUrl: form.mediaType === "video" ? form.mediaPreviewUrl : null,
       save_to_library: !!form.saveToLibrary,
+      hint_text: form.hintText ?? "",
+      max_response_seconds: form.maxResponseSeconds ?? null,
     };
 
     if (editingIndex === null) {

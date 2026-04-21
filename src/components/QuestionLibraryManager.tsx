@@ -28,6 +28,8 @@ interface QuestionTemplate {
   type: string;
   audio_url: string | null;
   video_url: string | null;
+  hint_text: string | null;
+  max_response_seconds: number | null;
 }
 
 interface QuestionLibraryManagerProps {
@@ -86,6 +88,8 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       mediaPreviewUrl: t.audio_url || t.video_url || null,
       existingAudioUrl: t.audio_url,
       existingVideoUrl: t.video_url,
+      hintText: t.hint_text ?? "",
+      maxResponseSeconds: t.max_response_seconds ?? null,
     });
     setDialogOpen(true);
   };
@@ -134,6 +138,8 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       type: form.mediaType,
       audio_url: audioUrl,
       video_url: videoUrl,
+      hint_text: form.hintText?.trim() || null,
+      max_response_seconds: form.maxResponseSeconds,
     };
 
     const { error } = editingId

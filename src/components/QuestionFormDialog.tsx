@@ -17,11 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
-import { Info, Mic, Video, Type, BookmarkPlus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
 const MAX_CONTENT = 500;
+const MAX_HINT = 300;
+const DEFAULT_TIMER_SECONDS = 600; // 10 min
 
 export interface QuestionFormValue {
   title: string;
@@ -41,6 +44,10 @@ export interface QuestionFormValue {
   existingVideoUrl: string | null;
   /** Optional: save to library checkbox value */
   saveToLibrary?: boolean;
+  /** Indication courte affichée au candidat (optionnelle) */
+  hintText: string;
+  /** Durée maximale de réponse en secondes (null = pas de limite) */
+  maxResponseSeconds: number | null;
 }
 
 export const EMPTY_QUESTION_FORM: QuestionFormValue = {
@@ -55,6 +62,8 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   existingAudioUrl: null,
   existingVideoUrl: null,
   saveToLibrary: false,
+  hintText: "",
+  maxResponseSeconds: null,
 };
 
 interface QuestionFormDialogProps {
@@ -254,6 +263,101 @@ export function QuestionFormDialog({
               </Select>
             </div>
           </section>
+
+          {/* Section Aide candidat (repliée par défaut) */}
+          <Collapsible
+            defaultOpen={!!form.hintText || form.maxResponseSeconds !== null}
+          >
+            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border border-dashed px-3 py-2 text-left hover:bg-muted/30 transition-colors">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Aide candidat
+                <span className="ml-2 normal-case font-normal text-[11px] text-muted-foreground/70">
+                  indication & temps limite (optionnels)
+                </span>
+              </span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5">
+                  <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                  Indication affichée pendant la réponse
+                </Label>
+                <Textarea
+                  id="qfd-hint"
+                  placeholder="Ex : appuie-toi sur un exemple concret de ton dernier poste"
+                  rows={2}
+                  maxLength={MAX_HINT}
+                  value={form.hintText}
+                  onChange={(e) => setForm({ ...form, hintText: e.target.value })}
+                />
+                <span className="block text-right text-[10px] tabular-nums text-muted-foreground">
+                  {form.hintText.length}/{MAX_HINT}
+                </span>
+              </div>
+
+              <div className="space-y-2 rounded-md border bg-muted/10 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="qfd-timer-toggle" className="text-xs flex items-center gap-1.5 cursor-pointer">
+                    <Timer className="h-3.5 w-3.5 text-primary" />
+                    Temps de réponse maximum
+                  </Label>
+                  <Switch
+                    id="qfd-timer-toggle"
+                    checked={form.maxResponseSeconds !== null}
+                    onCheckedChange={(v) =>
+                      setForm({ ...form, maxResponseSeconds: v ? DEFAULT_TIMER_SECONDS : null })
+                    }
+                  />
+                </div>
+
+                {form.maxResponseSeconds !== null && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="qfd-timer-min" className="text-[10px] uppercase text-muted-foreground">
+                          Minutes
+                        </Label>
+                        <Input
+                          id="qfd-timer-min"
+                          type="number"
+                          min={0}
+                          max={59}
+                          value={Math.floor(form.maxResponseSeconds / 60)}
+                          onChange={(e) => {
+                            const min = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
+                            const sec = form.maxResponseSeconds! % 60;
+                            setForm({ ...form, maxResponseSeconds: min * 60 + sec });
+                          }}
+                        />
+                      </div>
+                      <span className="pt-4 text-muted-foreground">:</span>
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="qfd-timer-sec" className="text-[10px] uppercase text-muted-foreground">
+                          Secondes
+                        </Label>
+                        <Input
+                          id="qfd-timer-sec"
+                          type="number"
+                          min={0}
+                          max={59}
+                          value={form.maxResponseSeconds % 60}
+                          onChange={(e) => {
+                            const sec = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
+                            const min = Math.floor(form.maxResponseSeconds! / 60);
+                            setForm({ ...form, maxResponseSeconds: min * 60 + sec });
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Un compte à rebours s'affiche au candidat ; sa réponse est validée automatiquement à la fin du temps.
+                    </p>
+                  </>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Save to library */}
           {showSaveToLibrary && (

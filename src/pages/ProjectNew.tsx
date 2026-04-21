@@ -51,6 +51,8 @@ export default function ProjectNew() {
           audioPreviewUrl: q.audio_url,
           videoPreviewUrl: q.video_url,
           from_library: true,
+          hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
+          max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
         })),
       );
     }
@@ -266,6 +268,8 @@ export default function ProjectNew() {
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
               relance_level: q.relance_level,
+              hint_text: q.hint_text?.trim() || null,
+              max_response_seconds: q.max_response_seconds ?? null,
             })),
           )
           .select();
@@ -334,6 +338,8 @@ export default function ProjectNew() {
                     relance_level: q.relance_level,
                     audio_url: updates.audio_url || null,
                     video_url: updates.video_url || null,
+                    hint_text: q.hint_text?.trim() || null,
+                    max_response_seconds: q.max_response_seconds ?? null,
                   } as never);
                 }
               }

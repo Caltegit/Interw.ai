@@ -63,6 +63,7 @@ export default function InterviewTemplateEdit() {
         title: string; content: string; category: string | null; type: string;
         audio_url: string | null; video_url: string | null;
         follow_up_enabled: boolean; max_follow_ups: number; relance_level: string;
+        hint_text: string | null; max_response_seconds: number | null;
       }>) || [];
       setQuestions(
         qList.map((q) => ({
@@ -77,6 +78,8 @@ export default function InterviewTemplateEdit() {
           audioPreviewUrl: q.audio_url,
           videoPreviewUrl: q.video_url,
           from_library: true,
+          hint_text: q.hint_text ?? "",
+          max_response_seconds: q.max_response_seconds ?? null,
         })),
       );
 
@@ -139,6 +142,8 @@ export default function InterviewTemplateEdit() {
             follow_up_enabled: q.follow_up_enabled,
             max_follow_ups: q.max_follow_ups,
             relance_level: q.relance_level,
+            hint_text: q.hint_text?.trim() || null,
+            max_response_seconds: q.max_response_seconds ?? null,
           })) as never,
         );
       }
