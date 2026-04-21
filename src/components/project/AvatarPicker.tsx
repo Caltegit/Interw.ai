@@ -47,7 +47,8 @@ interface Props {
 export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
-  const isCustom = value && !isPreset && !isPhoto;
+  const isAnimal = value && ANIMAL_AVATARS.some((a) => a.url === value);
+  const isCustom = value && !isPreset && !isPhoto && !isAnimal;
 
   return (
     <div className="space-y-3">
