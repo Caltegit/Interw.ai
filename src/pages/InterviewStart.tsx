@@ -105,14 +105,14 @@ export default function InterviewStart() {
       sessionId: string,
       role: "ai" | "candidate",
       content: string,
-      options?: { questionId?: string | null; videoSegmentUrl?: string | null },
+      options?: { questionId?: string | null; videoSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
         role,
         content,
         question_id: options?.questionId ?? null,
-        is_follow_up: false,
+        is_follow_up: options?.isFollowUp ?? false,
         video_segment_url: options?.videoSegmentUrl ?? null,
       });
 
