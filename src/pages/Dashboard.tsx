@@ -425,9 +425,9 @@ export default function Dashboard() {
                                       .delete()
                                       .eq("session_id", session.id);
                                     await supabase.from("sessions").delete().eq("id", session.id);
-                                    setRecentSessions((prev) =>
-                                      prev.filter((s) => s.id !== session.id),
-                                    );
+                                    if (user?.id) {
+                                      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
+                                    }
                                     toast({ title: "Entretien supprimé" });
                                   }}
                                 >
