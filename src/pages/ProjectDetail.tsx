@@ -264,102 +264,121 @@ export default function ProjectDetail() {
     no: "Défavorable",
   };
 
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (recoFilter !== "all" ? 1 : 0) +
+    (scoreMin !== "" ? 1 : 0) +
+    (scoreMax !== "" ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0);
+
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setRecoFilter("all");
+    setScoreMin("");
+    setScoreMax("");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{project.title}</h1>
+      {/* En-tête condensé */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-2xl font-bold truncate">{project.title}</h1>
+          <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
-            <Button variant="outline" size="sm" onClick={copyProjectLink}>
-              <Copy className="mr-1 h-4 w-4" /> Lien candidat
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={duplicating}>
-              <CopyPlus className="mr-1 h-4 w-4" /> {duplicating ? "Duplication..." : "Dupliquer"}
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {completedSessions.length >= 2 && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/projects/${project.id}/compare`}>
-                  <BarChart3 className="mr-1 h-4 w-4" /> Comparer les candidats
-                </Link>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button variant="outline" size="sm" onClick={copyProjectLink}>
+            <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/projects/${project.id}/edit`}>
+              <Pencil className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Modifier</span>
+            </Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            )}
-            <SaveAsTemplateDialog
-              projectId={project.id}
-              defaultName={project.title}
-              defaultJobTitle={project.job_title}
-              defaultDuration={project.max_duration_minutes}
-              defaultLanguage={project.language}
-            />
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/projects/${project.id}/edit`}>
-                <Pencil className="mr-1 h-4 w-4" /> Modifier
-              </Link>
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-1 h-4 w-4" /> Supprimer
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDuplicate} disabled={duplicating}>
+                <CopyPlus className="mr-2 h-4 w-4" /> {duplicating ? "Duplication…" : "Dupliquer"}
+              </DropdownMenuItem>
+              <SaveAsTemplateDialog
+                projectId={project.id}
+                defaultName={project.title}
+                defaultJobTitle={project.job_title}
+                defaultDuration={project.max_duration_minutes}
+                defaultLanguage={project.language}
+              />
+              {completedSessions.length >= 2 && (
+                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/compare`)}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Comparer les candidats
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-destructive focus:text-destructive"
                   >
-                    Supprimer
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
+      {/* Détails du projet (replié par défaut) */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2">
+            <ChevronDown className="h-4 w-4 mr-1" />
+            Détails du projet
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <Card>
+            <CardContent className="pt-6 space-y-2 text-sm">
+              <p><strong>Description :</strong> {project.description || "—"}</p>
+              <p><strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}</p>
+              <p><strong>Persona IA :</strong> {project.ai_persona_name}</p>
+              <p><strong>Durée max :</strong> {project.max_duration_minutes} min</p>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
       <Tabs defaultValue="sessions">
         <TabsList>
-          <TabsTrigger value="overview">Aperçu</TabsTrigger>
           <TabsTrigger value="sessions">Sessions ({sessions.length})</TabsTrigger>
           <TabsTrigger value="questions">Questions ({questions.length})</TabsTrigger>
           <TabsTrigger value="criteria">Critères ({criteria.length})</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6 space-y-2 text-sm">
-              <p>
-                <strong>Description :</strong> {project.description || "—"}
-              </p>
-              <p>
-                <strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}
-              </p>
-              <p>
-                <strong>Persona IA :</strong> {project.ai_persona_name}
-              </p>
-              <p>
-                <strong>Durée max :</strong> {project.max_duration_minutes} min
-              </p>
-              <p>
-                <strong>Lien :</strong>{" "}
-                <code className="text-xs bg-muted px-2 py-1 rounded">
-                  {window.location.origin}/interview/{project.slug}
-                </code>
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4">
           {/* Pending sessions alert */}
