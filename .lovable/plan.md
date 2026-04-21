@@ -1,96 +1,55 @@
 
 
-## Plan — Sélecteur de voix ElevenLabs avec test audio
+## Plan — Refonte du tableau Projets
 
-### Concept
+### Modifications dans `src/pages/Projects.tsx`
 
-Simplification du plan précédent : pas de réglages avancés (stability/style/etc), juste **genre + sélection de voix ElevenLabs** avec aperçu audio. Modèle figé sur `eleven_turbo_v2_5`.
+**1. En-tête simplifié**
+- Supprimer le titre "Projets" et le sous-titre "Gérez vos campagnes de recrutement"
+- Déplacer le bouton **"Nouveau projet"** en haut à **gauche** (seul élément de l'en-tête)
 
----
+**2. Nouvelles colonnes du tableau**
 
-### Modifications
+Ordre exact :
 
-**1. Base de données — table `projects`**
+| Titre | Statut | Sessions | Créé le | Lien candidat | Modifier | Supprimer |
+|---|---|---|---|---|---|---|
 
-Une seule nouvelle colonne :
-- `tts_voice_gender` (text, défaut `'female'`, valeurs `'female'` | `'male'`)
+- **Sessions** : nouvelle colonne affichant le nombre total de sessions du projet (badge ou texte simple, ex: `12`)
+- **Lien candidat** : bouton icône `Link2` dédié (copie le lien dans le presse-papier)
+- **Modifier** : bouton icône `Pencil` dédié (navigue vers `/projects/:id/edit`)
+- **Supprimer** : bouton icône `Trash2` dédié (ouvre la dialog de confirmation)
+- Suppression du bouton "Voir" et du `DropdownMenu` mobile (actions toutes inline maintenant)
+- La ligne reste cliquable pour naviguer vers le détail du projet (clic en dehors des boutons d'action)
 
-`tts_voice_id` existe déjà (défaut Charlotte FR).
+**3. Récupération du nombre de sessions**
 
-**2. UI Step 1 du wizard (`ProjectNew.tsx`) + `ProjectEdit.tsx`**
+Modifier la requête actuelle :
+```ts
+supabase.from("projects").select("*, sessions(count)")
+```
+→ Postgres retourne `sessions: [{ count: N }]` qu'on lit via `project.sessions?.[0]?.count ?? 0`
 
-Dans la section voix IA, **avant** le toggle ElevenLabs :
+**4. Responsive**
+- Sur mobile (viewport actuel 863px = OK), garder toutes les colonnes visibles avec icônes seules
+- Masquer les libellés texte des boutons d'action sur petits écrans (déjà géré via `sr-only sm:not-sr-only`)
+- Colonne "Créé le" reste masquée sous `sm` (`hidden sm:table-cell`)
 
-- **Radio group "Genre de la voix"** : ⦿ Femme  ⦿ Homme (Femme par défaut)
-  - Quand on change le genre, `tts_voice_id` est réinitialisé à la voix par défaut du genre (Charlotte pour Femme, George pour Homme)
-
-- **Toggle "Voix premium ElevenLabs"** (existant, OFF par défaut)
-
-- **Quand le toggle passe à ON** → ouvre automatiquement une **Dialog** "Choisir la voix ElevenLabs" :
-  - **Dropdown (Select)** filtré selon le genre choisi :
-    - Si Femme : Charlotte (FR) ✨ défaut, Sarah, Alice, Matilda, Lily, Jessica, Laura
-    - Si Homme : George ✨ défaut, Liam, Brian, Daniel, Will, Eric, Chris
-  - **Bouton "🔊 Tester cette voix"** → joue la phrase :
-    > « Bonjour, je suis {ai_persona_name} et je suis ravi que vous choisissiez ma voix pour l'entretien. »
-  - **Boutons** : "Annuler" / "Valider"
-  - Si Annuler → toggle revient à OFF
-  - Si Valider → `tts_voice_id` sauvegardé, toggle reste ON
-
-- Une fois validé, un petit lien "Modifier la voix" sous le toggle rouvre la dialog.
-
-**3. Edge function `tts-elevenlabs` — mise à jour mineure**
-
-- Accepter un mode `preview: true` dans le body :
-  - Reçoit `{ text, voiceId, preview: true }` (sans `projectId`)
-  - Bypasse la vérification `tts_provider === 'elevenlabs'` (pour permettre le test avant sauvegarde)
-  - Réservé aux utilisateurs authentifiés (vérification JWT côté fonction)
-- Mode normal inchangé : `{ text, projectId }` → lit `tts_voice_id` de la BDD
-- Modèle reste `eleven_turbo_v2_5` (pas de changement)
-
-**4. Frontend `InterviewStart.tsx`**
-
-Aucun changement — la voix sélectionnée est lue automatiquement par l'edge function depuis `projects.tts_voice_id`.
-
----
-
-### Architecture
+### Architecture visuelle
 
 ```text
-Step 1 wizard
-  ├─ Genre voix : ⦿ Femme  ○ Homme
-  └─ Toggle "Voix premium ElevenLabs" [OFF]
-        ↓ activation
-        ┌─────────────────────────────┐
-        │ Dialog "Choisir la voix"    │
-        │  Voix : [Charlotte FR ▼]    │
-        │  [🔊 Tester cette voix]      │
-        │         ↓                    │
-        │   POST /tts-elevenlabs       │
-        │   { text, voiceId,           │
-        │     preview: true }          │
-        │         ↓                    │
-        │   MP3 stream → audio.play()  │
-        │                              │
-        │  [Annuler]  [Valider]        │
-        └─────────────────────────────┘
-```
+[+ Nouveau projet]
 
----
+┌──────────┬────────┬──────────┬──────────┬──────────────┬──────────┬───────────┐
+│ Titre    │ Statut │ Sessions │ Créé le  │ Lien candidat│ Modifier │ Supprimer │
+├──────────┼────────┼──────────┼──────────┼──────────────┼──────────┼───────────┤
+│ Projet A │ Actif  │   12     │ 21/04/26 │   [🔗]       │   [✏]    │   [🗑]    │
+└──────────┴────────┴──────────┴──────────┴──────────────┴──────────┴───────────┘
+```
 
 ### Hors scope
 
-- Pas de réglages stability/style/speed (valeurs fixes actuelles)
-- Pas de choix de modèle (turbo v2.5 figé)
-- Pas de clonage de voix
-- Pas de compteur de consommation
-
----
-
-### Étapes d'exécution
-
-1. Migration DB : ajout colonne `tts_voice_gender` sur `projects`
-2. Création composant `src/components/project/VoiceSelectorDialog.tsx`
-3. Intégration radio genre + toggle + dialog dans `ProjectNew.tsx` (Step 1) et `ProjectEdit.tsx`
-4. Mise à jour edge function `tts-elevenlabs` pour le mode `preview`
-5. Test : changer genre, activer toggle, tester chaque voix, valider, démarrer entretien candidat
+- Pas de tri par colonne
+- Pas de pagination
+- Pas de filtres
 
