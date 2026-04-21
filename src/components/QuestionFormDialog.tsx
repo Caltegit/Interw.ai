@@ -3,10 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogContent,
@@ -15,40 +13,53 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer, RotateCcw } from "lucide-react";
+import {
+  Mic,
+  Video,
+  Type,
+  BookmarkPlus,
+  ChevronDown,
+  Lightbulb,
+  Timer,
+  Sparkles,
+  Check,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
 const MAX_CONTENT = 500;
 const MAX_HINT = 300;
-const DEFAULT_TIMER_SECONDS = 600; // 10 min
+
+type MediaType = "written" | "audio" | "video";
+type RelanceLevel = "light" | "medium" | "deep";
+
+const RELANCE_TO_MAX: Record<RelanceLevel, number> = { light: 0, medium: 1, deep: 2 };
+
+const DURATION_PRESETS = [
+  { label: "Pas de limite", value: null as number | null },
+  { label: "1 min", value: 60 },
+  { label: "2 min", value: 120 },
+  { label: "3 min", value: 180 },
+  { label: "5 min", value: 300 },
+];
 
 export interface QuestionFormValue {
   title: string;
   content: string;
   category: string;
-  mediaType: "written" | "audio" | "video";
+  mediaType: MediaType;
   followUp: boolean;
-  /** Niveau de relance IA pour cette question */
-  relanceLevel: "light" | "medium" | "deep";
-  /** Nombre maximum de relances IA pendant l'entretien (0, 1 ou 2) */
+  relanceLevel: RelanceLevel;
   maxFollowUps: number;
-  /** Blob if a new recording was made/imported during this edit */
   mediaBlob: Blob | null;
-  /** Preview URL (existing or freshly created) for audio/video */
   mediaPreviewUrl: string | null;
-  /** Existing remote URL for audio (if any) */
   existingAudioUrl: string | null;
-  /** Existing remote URL for video (if any) */
   existingVideoUrl: string | null;
-  /** Optional: save to library checkbox value */
   saveToLibrary?: boolean;
-  /** Indication courte affichée au candidat (optionnelle) */
   hintText: string;
-  /** Durée maximale de réponse en secondes (null = pas de limite) */
   maxResponseSeconds: number | null;
 }
 
@@ -73,14 +84,41 @@ interface QuestionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initial?: QuestionFormValue;
-  /** Mode édition (change le titre + label du bouton) */
   isEditing?: boolean;
-  /** Affiche la case "Ajouter à ma bibliothèque" (création projet) */
   showSaveToLibrary?: boolean;
-  /** Loader externe (upload en cours) */
   saving?: boolean;
   onSubmit: (value: QuestionFormValue) => void | Promise<void>;
 }
+
+const FORMAT_OPTIONS: {
+  value: MediaType;
+  label: string;
+  hint: string;
+  icon: typeof Type;
+  description: string;
+}[] = [
+  {
+    value: "written",
+    label: "Texte",
+    hint: "Lu par l'IA",
+    icon: Type,
+    description: "La question sera lue à voix haute par l'IA du projet.",
+  },
+  {
+    value: "audio",
+    label: "Audio",
+    hint: "Votre voix",
+    icon: Mic,
+    description: "Enregistrez votre voix. Aucun texte n'est affiché au candidat.",
+  },
+  {
+    value: "video",
+    label: "Vidéo",
+    hint: "Vous à l'écran",
+    icon: Video,
+    description: "Filmez-vous en train de poser la question. Le texte n'est pas nécessaire.",
+  },
+];
 
 export function QuestionFormDialog({
   open,
@@ -94,14 +132,40 @@ export function QuestionFormDialog({
   const { toast } = useToast();
   const [form, setForm] = useState<QuestionFormValue>(initial ?? EMPTY_QUESTION_FORM);
 
-  // Reset form whenever dialog opens with a new initial value
   useEffect(() => {
     if (open) setForm(initial ?? EMPTY_QUESTION_FORM);
   }, [open, initial]);
 
+  const setMediaType = (next: MediaType) => {
+    setForm((f) => ({
+      ...f,
+      mediaType: next,
+      mediaBlob: null,
+      mediaPreviewUrl:
+        next === "audio" ? f.existingAudioUrl : next === "video" ? f.existingVideoUrl : null,
+    }));
+  };
+
+  const setRelance = (lvl: RelanceLevel) => {
+    setForm((f) => ({
+      ...f,
+      relanceLevel: lvl,
+      followUp: lvl !== "light",
+      maxFollowUps: RELANCE_TO_MAX[lvl],
+    }));
+  };
+
+  const setDurationPreset = (value: number | null) => {
+    setForm((f) => ({ ...f, maxResponseSeconds: value }));
+  };
+
+  const isCustomDuration =
+    form.maxResponseSeconds !== null &&
+    !DURATION_PRESETS.some((p) => p.value === form.maxResponseSeconds);
+
   const handleSubmit = async () => {
     if (form.mediaType === "written" && !form.content.trim()) {
-      toast({ title: "Question requise", description: "Saisis le texte de la question.", variant: "destructive" });
+      toast({ title: "Énoncé requis", description: "Saisis le texte de la question.", variant: "destructive" });
       return;
     }
     if ((form.mediaType === "audio" || form.mediaType === "video") && !form.mediaBlob && !form.mediaPreviewUrl) {
@@ -115,48 +179,125 @@ export function QuestionFormDialog({
     await onSubmit(form);
   };
 
+  const currentFormat = FORMAT_OPTIONS.find((o) => o.value === form.mediaType)!;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{isEditing ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
           <DialogDescription>
-            Définis le contenu, le format et le comportement de la question.
+            Choisis d'abord le format, puis renseigne le contenu et les options.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-          {/* Section Question */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Question</h3>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {/* Étape 1 — Format */}
+          <section className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Format
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {FORMAT_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const selected = form.mediaType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setMediaType(opt.value)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-center transition-all",
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40",
+                    )}
+                  >
+                    <Icon className={cn("h-5 w-5", selected ? "text-primary" : "text-muted-foreground")} />
+                    <span className="text-sm font-medium">{opt.label}</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-snug px-0.5">
+              {currentFormat.description}
+            </p>
+          </section>
+
+          {/* Étape 2 — Contenu */}
+          <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
             <div className="space-y-1.5">
-              <Label htmlFor="qfd-title" className="text-xs">Titre court</Label>
+              <Label htmlFor="qfd-title" className="text-xs">Titre interne</Label>
               <Input
                 id="qfd-title"
-                placeholder="Ex: Présentez-vous"
+                placeholder="Nom court visible uniquement par toi"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="qfd-content" className="text-xs">Texte de la question</Label>
-                <span
-                  className={`text-[10px] tabular-nums ${
-                    form.content.length > MAX_CONTENT ? "text-destructive" : "text-muted-foreground"
-                  }`}
-                >
-                  {form.content.length}/{MAX_CONTENT}
-                </span>
+
+            {form.mediaType === "written" && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="qfd-content" className="text-xs">Énoncé lu par l'IA</Label>
+                  <span
+                    className={cn(
+                      "text-[10px] tabular-nums",
+                      form.content.length > MAX_CONTENT ? "text-destructive" : "text-muted-foreground",
+                    )}
+                  >
+                    {form.content.length}/{MAX_CONTENT}
+                  </span>
+                </div>
+                <Textarea
+                  id="qfd-content"
+                  placeholder="Parle-moi de ton parcours..."
+                  rows={3}
+                  value={form.content}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                />
               </div>
-              <Textarea
-                id="qfd-content"
-                placeholder="Parlez-moi de votre parcours..."
-                rows={3}
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-              />
-            </div>
+            )}
+
+            {(form.mediaType === "audio" || form.mediaType === "video") && (
+              <div className="space-y-2">
+                <QuestionMediaEditor
+                  type={form.mediaType}
+                  existingUrl={form.mediaPreviewUrl}
+                  onMediaReady={(blob, url) =>
+                    setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))
+                  }
+                  onClear={() =>
+                    setForm((f) => ({
+                      ...f,
+                      mediaBlob: null,
+                      mediaPreviewUrl: null,
+                      existingAudioUrl: f.mediaType === "audio" ? null : f.existingAudioUrl,
+                      existingVideoUrl: f.mediaType === "video" ? null : f.existingVideoUrl,
+                    }))
+                  }
+                />
+                <Collapsible defaultOpen={!!form.content}>
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left hover:bg-muted/40">
+                    <span className="text-xs text-muted-foreground">
+                      Ajouter un texte de secours
+                      <span className="ml-1 text-[10px]">(optionnel)</span>
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-2">
+                    <Textarea
+                      placeholder="Affiché si le média ne peut pas être lu"
+                      rows={2}
+                      value={form.content}
+                      onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label className="text-xs">Catégorie</Label>
               <Select
@@ -176,243 +317,162 @@ export function QuestionFormDialog({
             </div>
           </section>
 
-          {/* Section Format */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Format de présentation
-            </h3>
-            <ToggleGroup
-              type="single"
-              value={form.mediaType}
-              className="justify-start"
-              onValueChange={(v) => {
-                if (!v) return;
-                const next = v as "written" | "audio" | "video";
-                setForm((f) => ({
-                  ...f,
-                  mediaType: next,
-                  mediaBlob: null,
-                  mediaPreviewUrl:
-                    next === "audio" ? f.existingAudioUrl : next === "video" ? f.existingVideoUrl : null,
-                }));
-              }}
-            >
-              <ToggleGroupItem value="written" className="text-xs gap-1">
-                <Type className="h-3.5 w-3.5" /> Écrite
-              </ToggleGroupItem>
-              <ToggleGroupItem value="audio" className="text-xs gap-1">
-                <Mic className="h-3.5 w-3.5" /> Audio
-              </ToggleGroupItem>
-              <ToggleGroupItem value="video" className="text-xs gap-1">
-                <Video className="h-3.5 w-3.5" /> Vidéo
-              </ToggleGroupItem>
-            </ToggleGroup>
+          {/* Étape 3 — Pendant la réponse */}
+          <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Pendant la réponse
+            </Label>
 
-            {(form.mediaType === "audio" || form.mediaType === "video") && (
-              <QuestionMediaEditor
-                type={form.mediaType}
-                existingUrl={form.mediaPreviewUrl}
-                onMediaReady={(blob, url) =>
-                  setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))
-                }
-                onClear={() =>
-                  setForm((f) => ({
-                    ...f,
-                    mediaBlob: null,
-                    mediaPreviewUrl: null,
-                    existingAudioUrl: f.mediaType === "audio" ? null : f.existingAudioUrl,
-                    existingVideoUrl: f.mediaType === "video" ? null : f.existingVideoUrl,
-                  }))
-                }
-              />
-            )}
-          </section>
-
-          {/* Section Comportement IA */}
-          <section className="space-y-3">
-            <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Comportement IA
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-3 w-3 cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    Niveau de relance et de reformulation de l'IA pour cette question.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </h3>
             <div className="space-y-1.5">
-              <Label className="text-xs">Niveau de relance IA</Label>
-              <Select
-                value={form.relanceLevel}
-                onValueChange={(v) => {
-                  const lvl = v as "light" | "medium" | "deep";
-                  setForm({
-                    ...form,
-                    relanceLevel: lvl,
-                    followUp: lvl !== "light",
-                    maxFollowUps: lvl === "light" ? 0 : lvl === "deep" ? 2 : 1,
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">Léger — pas de relance</SelectItem>
-                  <SelectItem value="medium">Moyen — 1 relance si réponse vague</SelectItem>
-                  <SelectItem value="deep">Approfondi — jusqu'à 2 relances</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5">
+                <Lightbulb className="h-3.5 w-3.5 text-primary" />
+                Indication affichée au candidat
+              </Label>
+              <Textarea
+                id="qfd-hint"
+                placeholder="Pense à donner un exemple concret"
+                rows={2}
+                maxLength={MAX_HINT}
+                value={form.hintText}
+                onChange={(e) => setForm({ ...form, hintText: e.target.value })}
+              />
+              <span className="block text-right text-[10px] tabular-nums text-muted-foreground">
+                {form.hintText.length}/{MAX_HINT}
+              </span>
             </div>
 
-            {form.relanceLevel !== "light" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs flex items-center gap-1.5">
-                  <RotateCcw className="h-3.5 w-3.5 text-primary" />
-                  Nombre maximum de relances IA
-                </Label>
-                <Select
-                  value={String(form.maxFollowUps)}
-                  onValueChange={(v) => setForm({ ...form, maxFollowUps: parseInt(v, 10) })}
+            <div className="space-y-1.5">
+              <Label className="text-xs flex items-center gap-1.5">
+                <Timer className="h-3.5 w-3.5 text-primary" />
+                Temps limite de réponse
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {DURATION_PRESETS.map((p) => {
+                  const active = form.maxResponseSeconds === p.value;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setDurationPreset(p.value)}
+                      className={cn(
+                        "rounded-md border px-2.5 py-1 text-xs transition-colors",
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border hover:bg-muted/60",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, maxResponseSeconds: 90 })}
+                  className={cn(
+                    "rounded-md border px-2.5 py-1 text-xs transition-colors",
+                    isCustomDuration
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-muted/60",
+                  )}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">Aucune</SelectItem>
-                    <SelectItem value="1">1 relance maximum</SelectItem>
-                    <SelectItem value="2">2 relances maximum</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  L'IA décide de relancer si la réponse est trop courte ou floue, dans la limite fixée.
-                </p>
+                  Personnalisé
+                </button>
               </div>
-            )}
+
+              {isCustomDuration && (
+                <div className="flex items-end gap-2 pt-1">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="qfd-timer-min" className="text-[10px] uppercase text-muted-foreground">
+                      Minutes
+                    </Label>
+                    <Input
+                      id="qfd-timer-min"
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={Math.floor((form.maxResponseSeconds ?? 0) / 60)}
+                      onChange={(e) => {
+                        const min = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
+                        const sec = (form.maxResponseSeconds ?? 0) % 60;
+                        setForm({ ...form, maxResponseSeconds: min * 60 + sec });
+                      }}
+                    />
+                  </div>
+                  <span className="pb-2 text-muted-foreground">:</span>
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="qfd-timer-sec" className="text-[10px] uppercase text-muted-foreground">
+                      Secondes
+                    </Label>
+                    <Input
+                      id="qfd-timer-sec"
+                      type="number"
+                      min={0}
+                      max={59}
+                      value={(form.maxResponseSeconds ?? 0) % 60}
+                      onChange={(e) => {
+                        const sec = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
+                        const min = Math.floor((form.maxResponseSeconds ?? 0) / 60);
+                        setForm({ ...form, maxResponseSeconds: min * 60 + sec });
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
-          {/* Section Aide candidat (repliée par défaut) */}
-          <Collapsible
-            defaultOpen={!!form.hintText || form.maxResponseSeconds !== null}
-          >
-            <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md border border-dashed px-3 py-2 text-left hover:bg-muted/30 transition-colors">
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Aide candidat
-                <span className="ml-2 normal-case font-normal text-[11px] text-muted-foreground/70">
-                  indication & temps limite (optionnels)
-                </span>
-              </span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5">
-                  <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                  Indication affichée pendant la réponse
-                </Label>
-                <Textarea
-                  id="qfd-hint"
-                  placeholder="Ex : appuie-toi sur un exemple concret de ton dernier poste"
-                  rows={2}
-                  maxLength={MAX_HINT}
-                  value={form.hintText}
-                  onChange={(e) => setForm({ ...form, hintText: e.target.value })}
-                />
-                <span className="block text-right text-[10px] tabular-nums text-muted-foreground">
-                  {form.hintText.length}/{MAX_HINT}
-                </span>
-              </div>
+          {/* Étape 4 — Relance IA */}
+          <section className="space-y-2 rounded-lg border bg-muted/20 p-3">
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              Relance par l'IA
+            </Label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { v: "light", label: "Aucune", desc: "Passe à la suivante" },
+                { v: "medium", label: "Légère", desc: "1 relance max" },
+                { v: "deep", label: "Approfondie", desc: "2 relances max" },
+              ] as const).map((opt) => {
+                const selected = form.relanceLevel === opt.v;
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setRelance(opt.v)}
+                    className={cn(
+                      "flex flex-col items-start gap-0.5 rounded-md border p-2 text-left transition-all",
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40",
+                    )}
+                  >
+                    <span className="text-xs font-medium">{opt.label}</span>
+                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
 
-              <div className="space-y-2 rounded-md border bg-muted/10 px-3 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <Label htmlFor="qfd-timer-toggle" className="text-xs flex items-center gap-1.5 cursor-pointer">
-                    <Timer className="h-3.5 w-3.5 text-primary" />
-                    Temps de réponse maximum
-                  </Label>
-                  <Switch
-                    id="qfd-timer-toggle"
-                    checked={form.maxResponseSeconds !== null}
-                    onCheckedChange={(v) =>
-                      setForm({ ...form, maxResponseSeconds: v ? DEFAULT_TIMER_SECONDS : null })
-                    }
-                  />
-                </div>
-
-                {form.maxResponseSeconds !== null && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 space-y-1">
-                        <Label htmlFor="qfd-timer-min" className="text-[10px] uppercase text-muted-foreground">
-                          Minutes
-                        </Label>
-                        <Input
-                          id="qfd-timer-min"
-                          type="number"
-                          min={0}
-                          max={59}
-                          value={Math.floor(form.maxResponseSeconds / 60)}
-                          onChange={(e) => {
-                            const min = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
-                            const sec = form.maxResponseSeconds! % 60;
-                            setForm({ ...form, maxResponseSeconds: min * 60 + sec });
-                          }}
-                        />
-                      </div>
-                      <span className="pt-4 text-muted-foreground">:</span>
-                      <div className="flex-1 space-y-1">
-                        <Label htmlFor="qfd-timer-sec" className="text-[10px] uppercase text-muted-foreground">
-                          Secondes
-                        </Label>
-                        <Input
-                          id="qfd-timer-sec"
-                          type="number"
-                          min={0}
-                          max={59}
-                          value={form.maxResponseSeconds % 60}
-                          onChange={(e) => {
-                            const sec = Math.max(0, Math.min(59, parseInt(e.target.value || "0", 10) || 0));
-                            const min = Math.floor(form.maxResponseSeconds! / 60);
-                            setForm({ ...form, maxResponseSeconds: min * 60 + sec });
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
-                      Un compte à rebours s'affiche au candidat ; sa réponse est validée automatiquement à la fin du temps.
-                    </p>
-                  </>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Save to library */}
+          {/* Étape 5 — Sauvegarde bibliothèque */}
           {showSaveToLibrary && (
-            <section className="space-y-2">
-              <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/20 px-3 py-2">
-                <Checkbox
-                  id="qfd-save-lib"
-                  checked={!!form.saveToLibrary}
-                  onCheckedChange={(v) => setForm({ ...form, saveToLibrary: v === true })}
-                  className="mt-0.5"
-                />
-                <Label
-                  htmlFor="qfd-save-lib"
-                  className="cursor-pointer text-sm leading-snug font-normal"
-                >
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
-                    Ajouter à ma bibliothèque
-                  </span>
-                  <span className="block text-xs text-muted-foreground mt-0.5">
-                    La question sera réutilisable dans tes prochains projets.
-                  </span>
-                </Label>
-              </div>
-            </section>
+            <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/20 px-3 py-2">
+              <Checkbox
+                id="qfd-save-lib"
+                checked={!!form.saveToLibrary}
+                onCheckedChange={(v) => setForm({ ...form, saveToLibrary: v === true })}
+                className="mt-0.5"
+              />
+              <Label htmlFor="qfd-save-lib" className="cursor-pointer text-sm leading-snug font-normal">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
+                  Ajouter aussi à la bibliothèque
+                </span>
+                <span className="block text-xs text-muted-foreground mt-0.5">
+                  Réutilisable dans tes prochains projets.
+                </span>
+              </Label>
+            </div>
           )}
         </div>
 
