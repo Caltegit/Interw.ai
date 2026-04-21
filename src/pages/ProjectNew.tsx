@@ -266,6 +266,8 @@ export default function ProjectNew() {
               follow_up_enabled: q.follow_up_enabled,
               max_follow_ups: q.max_follow_ups,
               relance_level: q.relance_level,
+              hint_text: q.hint_text?.trim() || null,
+              max_response_seconds: q.max_response_seconds ?? null,
             })),
           )
           .select();
@@ -334,6 +336,8 @@ export default function ProjectNew() {
                     relance_level: q.relance_level,
                     audio_url: updates.audio_url || null,
                     video_url: updates.video_url || null,
+                    hint_text: q.hint_text?.trim() || null,
+                    max_response_seconds: q.max_response_seconds ?? null,
                   } as never);
                 }
               }
