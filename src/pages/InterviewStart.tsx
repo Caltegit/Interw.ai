@@ -1721,7 +1721,35 @@ export default function InterviewStart() {
             <div className="flex items-center gap-3">
               <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">
                 Question {currentQuestionIndex + 1} / {questions.length}
+                {(() => {
+                  const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
+                  const max = Math.max(
+                    0,
+                    Number((questions[currentQuestionIndex] as any)?.max_follow_ups ?? 0),
+                  );
+                  if (n <= 0) return null;
+                  return (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold">
+                      ↻ Relance {n}{max > 0 ? `/${max}` : ""}
+                    </span>
+                  );
+                })()}
               </span>
+              {aiThinking && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="flex gap-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "240ms" }} />
+                  </span>
+                  L'IA réfléchit…
+                </span>
+              )}
+              {!aiThinking && silenceTier === 1 && (
+                <span className="text-[10px] sm:text-xs text-muted-foreground italic">
+                  Prenez votre temps…
+                </span>
+              )}
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all"
