@@ -1,95 +1,89 @@
 
 
-## Plan — Durcissement architecture (Lots 1, 2, 3)
+## Plan — Tests Playwright pour `InterviewStart`
 
-Exécution complète en autonomie pendant ton dîner. Trois lots enchaînés.
+Ajouter 4 specs E2E qui couvrent les régressions visuelles et fonctionnelles principales du flow candidat **sans** dépendre de l'IA, du STT ou du TTS (trop fragiles en headless). On vise les invariants de l'écran : il charge, il propose la reprise, il enregistre les médias, il survit au refresh.
 
----
+### Modifications côté seed (edge function `seed-e2e-user`)
 
-### Lot 1 — Hygiène (rapide, fort impact)
+Pour rendre les tests rejouables sans collision avec le scénario rapport :
 
-**1.1 Index BDD manquants** — migration SQL ajoutant des index sur les colonnes filtrantes critiques :
-- `sessions(project_id)`, `sessions(token)`, `sessions(status)`
-- `session_messages(session_id)`, `session_messages(question_id)`
-- `reports(session_id)`
-- `questions(project_id, order_index)`
-- `evaluation_criteria(project_id)`
-- `projects(organization_id)`, `projects(slug)`
-- `user_roles(user_id, organization_id)`
-- `transcripts(session_id)`
+- Ajouter une **2e session candidate** dédiée à `InterviewStart`, statut `pending`, token fixe (ex. `e2e-pending-session-token-...`), pas de messages.
+- Ajouter une **3e session de reprise** : statut `in_progress`, token fixe, 2 messages déjà persistés (1 IA + 1 candidat) sur la 1re question, `last_question_index = 1`.
+- Le seed reste idempotent (upsert) et ne touche pas la session complétée existante.
+- Exposer ces deux nouveaux tokens dans `helpers/constants.ts` (champs `pendingSessionToken` et `resumeSessionToken`).
 
-**1.2 Sélection de colonnes ciblée** — remplacer les `select("*")` les plus coûteux dans :
-- `Dashboard.tsx`, `Projects.tsx`, `ProjectDetail.tsx`, `SessionDetail.tsx`, `Settings.tsx`
-- Ne lister que les colonnes vraiment utilisées par le composant.
+### Configuration Playwright
 
-**1.3 Activation React Query** — créer un client centralisé et migrer les fetchs des 5 pages principales :
-- Hooks dédiés par page (`useDashboardData`, `useProjects`, `useProject`, `useSession`, `useSettings`)
-- `staleTime` raisonnable (30 s) + invalidation ciblée après mutations
-- Conserver le comportement existant, juste ajouter le cache
+Mettre à jour `playwright.config.ts` (ou `playwright-fixture.ts` si déjà custom) pour accorder les permissions navigateur nécessaires :
 
----
+- `permissions: ["camera", "microphone"]`
+- `launchOptions.args` : `--use-fake-ui-for-media-stream`, `--use-fake-device-for-media-stream`, `--autoplay-policy=no-user-gesture-required`
 
-### Lot 2 — Refacto `InterviewStart.tsx`
+Cela permet à Chromium de fournir un flux audio/vidéo factice à `getUserMedia` et `MediaRecorder` sans intervention manuelle.
 
-Découper le fichier de 2092 lignes en hooks et sous-composants, sans changer le comportement :
+### Specs ajoutées (dans `tests/e2e/`)
 
-**Hooks extraits dans `src/hooks/interview/`** :
-- `useInterviewSession.ts` — chargement session/projet/questions, statut, reprise
-- `useMediaRecorder.ts` — caméra/micro, MediaRecorder, segments vidéo, retries upload
-- `useSpeechRecognition.ts` — STT navigateur, redémarrage, transcript live
-- `useInterviewTimer.ts` — durée max, compte à rebours, fin auto
-- `useExamRoomLock.ts` — plein écran, beforeunload, popstate, heartbeat
+**`interview-start-loading.spec.ts`** — chargement initial
+- Va sur `/interview/{slug}/start/{pendingSessionToken}`.
+- Attend que l'écran d'accueil de la session s'affiche (avatar IA, bouton « Commencer » / `readyToStart`).
+- Vérifie absence d'erreur console critique (filtre les warnings TTS/ElevenLabs connus).
+- Vérifie présence du nom de l'IA (`Sophie`) et du job (`QA Engineer E2E`).
 
-**Sous-composants dans `src/components/interview/`** :
-- `InterviewHeader.tsx` — barre supérieure avec progression et timer
-- `QuestionDisplay.tsx` — bloc question + média + hint
-- `MessagesPanel.tsx` — historique conversationnel
-- `RecorderControls.tsx` — boutons enregistrer/pause/suivant
-- `ResumePrompt.tsx` — écran « reprendre / recommencer »
+**`interview-start-resume.spec.ts`** — reprise de session
+- Va directement sur `/interview/{slug}/start/{resumeSessionToken}`.
+- Attend l'apparition du dialogue « Reprendre votre entretien ? ».
+- Clique « Reprendre » → vérifie qu'on bascule sur l'écran d'entretien et que le compteur de question est sur la 2e question (index 1).
+- Sous-test : recharge la page, le dialogue de reprise réapparaît (preuve que la persistance fonctionne).
 
-`InterviewStart.tsx` devient un orchestrateur de ~300 lignes assemblant ces blocs. Aucune modification fonctionnelle, juste de la séparation.
+**`interview-start-media.spec.ts`** — enregistrement média
+- Va sur le token pending, lance l'entretien (clic sur « Commencer »).
+- Vérifie qu'un élément `<video>` autoplay est présent et a un `srcObject` (caméra active via fake stream).
+- Vérifie la présence d'un indicateur d'enregistrement (texte « Enregistrement » ou icône micro active).
+- Attend ~3 s, vérifie qu'aucune erreur `getUserMedia` / `MediaRecorder` n'apparaît dans la console.
+- Note : on n'essaie pas de naviguer vers la question suivante via STT — c'est non testable en headless. À la place, on déclenche `handleSendResponseRef` via un `data-testid="next-question-debug"` (voir ci-dessous) **uniquement si** un tel testid existe ; sinon on se limite à vérifier que la 1re question est affichée et que le recorder est en `recording`.
 
----
+**`interview-start-refresh.spec.ts`** — résistance au refresh
+- Démarre l'entretien sur le pending token (passe l'écran d'accueil).
+- Vérifie que la session est passée en BDD à `in_progress` via une requête Supabase REST (clé anon, RLS le permet pour un token public).
+- Refresh la page (`page.reload()`).
+- Vérifie que le dialogue de reprise apparaît automatiquement (puisque session est `in_progress` + au moins 1 message IA persisté).
+- Clique « Recommencer » → la session est purgée et on revient à l'écran d'accueil.
 
-### Lot 3 — Scalabilité moyen terme
+### Petits ajouts non invasifs côté composant
 
-**3.1 Pagination** :
-- `Projects.tsx` : pagination 20 par page avec composant `Pagination` déjà disponible.
-- `ProjectDetail.tsx` : pagination des sessions (20 par page).
-- `AdminEmails.tsx` : pagination si pas déjà présent.
+Pour rendre les éléments interrogeables de façon stable sans changer l'UI :
 
-**3.2 Virtualisation des messages d'entretien** :
-- Dans `MessagesPanel.tsx` (issu du Lot 2), n'afficher que les 30 derniers messages avec un bouton « Voir l'historique complet » qui charge le reste à la demande.
-- Désactiver le scroll smooth au-delà de 50 messages.
+- Ajouter `data-testid` sur les éléments clés de `InterviewStart.tsx` :
+  - `interview-start-screen` (conteneur principal de l'écran d'accueil)
+  - `interview-start-button` (bouton « Commencer »)
+  - `interview-resume-dialog` (dialogue de reprise)
+  - `interview-resume-confirm` / `interview-resume-restart` (boutons du dialogue)
+  - `interview-current-question-index` (badge ou compteur de question)
+  - `interview-self-video` (le `<video>` selfview)
+  - `interview-recording-indicator` (badge « Enregistrement »)
+- Ces `data-testid` ne changent rien au comportement visuel.
 
-**3.3 Logs structurés côté front** :
-- Petit utilitaire `src/lib/logger.ts` avec niveaux (debug/info/warn/error) et contexte automatique (route, user_id, session_id si pertinent).
-- Brancher sur les points critiques : erreurs upload, échecs IA, erreurs auth.
-- Pas de Sentry pour l'instant (nécessite compte externe), mais code prêt à l'accueillir.
+### Ce que ces tests **ne** couvrent pas (assumé)
 
-**3.4 Refacto `<ProjectForm>` partagé** :
-- Extraire la logique commune de `ProjectNew.tsx` et `ProjectEdit.tsx` dans `src/components/project/ProjectForm.tsx`.
-- Les deux pages deviennent de fines enveloppes (chargement initial + soumission).
+- La conversation IA (appel à `ai-conversation-turn`) : non déterministe, hors scope régression UI.
+- Le TTS ElevenLabs / browser : flaky en headless, déjà loggé/géré côté code.
+- La reconnaissance vocale (STT) : impossible sans vrai micro humain.
+- L'analyse vidéo finale : couverte par `report-generation.spec.ts`.
 
----
+### Fichiers touchés
 
-### Hors champ
-
-- Pas de Sentry ou outil de monitoring tiers (nécessite décision produit + compte externe).
-- Pas de read replicas ni d'optimisation infra (prématuré).
-- Pas de modification du moteur IA / rapport (sujet « Analyse 2.0 » séparé).
-- Pas de refonte du flux candidat ni d'UX visible.
-
----
-
-### Fichiers principaux touchés
-
-- **Migration SQL** : indexes
-- **Lot 1** : `Dashboard.tsx`, `Projects.tsx`, `ProjectDetail.tsx`, `SessionDetail.tsx`, `Settings.tsx`, nouveaux hooks dans `src/hooks/queries/`
-- **Lot 2** : `InterviewStart.tsx` (réduit), nouveaux fichiers dans `src/hooks/interview/` et `src/components/interview/`
-- **Lot 3** : `Projects.tsx`, `ProjectDetail.tsx`, `AdminEmails.tsx`, `src/components/interview/MessagesPanel.tsx`, `src/lib/logger.ts`, `src/components/project/ProjectForm.tsx`, `ProjectNew.tsx`, `ProjectEdit.tsx`
+- `supabase/functions/seed-e2e-user/index.ts` — 2 sessions supplémentaires.
+- `tests/e2e/helpers/constants.ts` — nouveaux tokens.
+- `playwright-fixture.ts` ou `playwright.config.ts` — permissions + flags fake media.
+- `tests/e2e/interview-start-loading.spec.ts` (nouveau)
+- `tests/e2e/interview-start-resume.spec.ts` (nouveau)
+- `tests/e2e/interview-start-media.spec.ts` (nouveau)
+- `tests/e2e/interview-start-refresh.spec.ts` (nouveau)
+- `src/pages/InterviewStart.tsx` — ajout de ~6 `data-testid` (zéro changement comportemental).
+- `tests/e2e/README.md` — mise à jour du tableau des scénarios.
 
 ### Stratégie d'exécution
 
-J'enchaîne les trois lots, en testant le build à chaque étape. Si un lot pose problème, je m'arrête, je documente et je laisse les précédents en place. Bon dîner.
+J'enchaîne : seed mis à jour d'abord (déployé automatiquement), puis config Playwright, puis `data-testid`, puis les 4 specs. Je lance les tests à la fin pour valider qu'ils passent, et je documente dans le README ce qui est volontairement hors scope.
 
