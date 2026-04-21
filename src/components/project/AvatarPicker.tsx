@@ -117,7 +117,7 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
       {/* Preset grid */}
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Avatars illustrés
+          Photo recruteur
         </p>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
           {PRESET_AVATARS.map((avatar) => {
