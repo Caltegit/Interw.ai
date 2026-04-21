@@ -19,6 +19,7 @@ import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import Settings from "./pages/Settings";
 import QuestionLibrary from "./pages/QuestionLibrary";
+import LibraryHome from "./pages/LibraryHome";
 import IntroLibrary from "./pages/IntroLibrary";
 import CriteriaLibrary from "./pages/CriteriaLibrary";
 import InterviewTemplates from "./pages/InterviewTemplates";
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />
               <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
+              <Route path="/library" element={<LibraryHome />} />
               <Route path="/library/questions" element={<QuestionLibrary />} />
               <Route path="/library/intros" element={<IntroLibrary />} />
               <Route path="/library/criteria" element={<CriteriaLibrary />} />
