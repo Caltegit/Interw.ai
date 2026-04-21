@@ -11,6 +11,8 @@ import {
   Sparkles,
   BookmarkPlus,
   Pencil,
+  Lightbulb,
+  Timer,
 } from "lucide-react";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
