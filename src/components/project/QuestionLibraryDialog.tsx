@@ -21,6 +21,8 @@ interface Template {
   type: string;
   audio_url: string | null;
   video_url: string | null;
+  hint_text: string | null;
+  max_response_seconds: number | null;
 }
 
 interface QuestionLibraryDialogProps {
@@ -48,7 +50,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       if (!orgId) { setLoading(false); return; }
       supabase
         .from("question_templates")
-        .select("id, title, content, category, follow_up_enabled, max_follow_ups, relance_level, type, audio_url, video_url")
+        .select("id, title, content, category, follow_up_enabled, max_follow_ups, relance_level, type, audio_url, video_url, hint_text, max_response_seconds")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false })
         .then(({ data }) => {
@@ -96,6 +98,8 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         videoPreviewUrl: t.video_url || null,
         from_library: true,
         save_to_library: false,
+        hint_text: (t as { hint_text?: string | null }).hint_text ?? "",
+        max_response_seconds: (t as { max_response_seconds?: number | null }).max_response_seconds ?? null,
       }));
     onSelect(questions);
     onOpenChange(false);

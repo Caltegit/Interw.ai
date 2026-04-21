@@ -286,6 +286,8 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       videoBlob: form.mediaType === "video" ? form.mediaBlob : null,
       videoPreviewUrl: form.mediaType === "video" ? form.mediaPreviewUrl : null,
       save_to_library: !!form.saveToLibrary,
+      hint_text: form.hintText ?? "",
+      max_response_seconds: form.maxResponseSeconds ?? null,
     };
 
     if (editingIndex === null) {
