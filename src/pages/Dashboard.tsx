@@ -445,8 +445,29 @@ export default function Dashboard() {
                         <td className="py-3">
                           <SessionStatusBadge status={session.status} />
                         </td>
-                        <td className="py-3 text-muted-foreground">—</td>
-                        <td className="py-3 text-muted-foreground">—</td>
+                        <td className="py-3">
+                          {reportsBySession[session.id] ? (
+                            <span
+                              className={cn(
+                                "rounded-md border px-2 py-0.5 text-xs font-semibold",
+                                scoreColor(reportsBySession[session.id].score),
+                              )}
+                            >
+                              {reportsBySession[session.id].score}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="py-3">
+                          {reportsBySession[session.id]?.recommendation ? (
+                            <RecommendationBadge
+                              recommendation={reportsBySession[session.id].recommendation}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="py-3 text-muted-foreground">
                           {new Date(session.created_at).toLocaleDateString("fr-FR")}
                         </td>
