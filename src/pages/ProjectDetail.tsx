@@ -279,6 +279,9 @@ export default function ProjectDetail() {
     return list;
   })();
 
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
+  const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
     yes: "Favorable",
