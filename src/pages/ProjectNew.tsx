@@ -22,7 +22,7 @@ import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/
 import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
+const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 
 export default function ProjectNew() {
@@ -577,6 +577,63 @@ export default function ProjectNew() {
                   />
                 </div>
               </div>
+
+              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+                <div>
+                  <Label>Durée maximale (minutes) : {maxDuration}</Label>
+                  <input
+                    type="range"
+                    min={15}
+                    max={60}
+                    value={maxDuration}
+                    onChange={(e) => setMaxDuration(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Passage auto 3s</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est envoyée automatiquement.
+                    </p>
+                  </div>
+                  <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Autoriser le candidat à mettre en pause</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Affiche un bouton « Pause » pendant l'entretien. Le candidat peut figer l'interview et reprendre exactement où il s'était arrêté.
+                    </p>
+                  </div>
+                  <Switch checked={allowPause} onCheckedChange={setAllowPause} />
+                </div>
+                <div>
+                  <Label>Statut</Label>
+                  <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active")}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Brouillon</SelectItem>
+                      <SelectItem value="active">Actif</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Message de fin</Label>
+                  <Textarea
+                    value={completionMessage}
+                    onChange={(e) => setCompletionMessage(e.target.value)}
+                    placeholder={DEFAULT_COMPLETION_MESSAGE}
+                    rows={3}
+                    className="mt-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ce message s'affichera sur l'écran de remerciement après l'entretien.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -662,98 +719,24 @@ export default function ProjectNew() {
 
           {step === 4 && (
             <div className="space-y-4">
-              <div>
-                <Label>Durée maximale (minutes) : {maxDuration}</Label>
-                <input
-                  type="range"
-                  min={15}
-                  max={60}
-                  value={maxDuration}
-                  onChange={(e) => setMaxDuration(Number(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Passage auto 3s</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Si le candidat ne parle pas pendant 5 secondes, un décompte s'affiche et la question suivante est
-                    envoyée automatiquement.
-                  </p>
-                </div>
-                <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Autoriser le candidat à mettre en pause</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Affiche un bouton "Pause" pendant l'entretien. Le candidat peut figer l'interview et reprendre exactement où il s'était arrêté.
-                  </p>
-                </div>
-                <Switch checked={allowPause} onCheckedChange={setAllowPause} />
-              </div>
-              <div>
-                <Label>Statut</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="active">Actif</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Message de fin</Label>
-                <Textarea
-                  value={completionMessage}
-                  onChange={(e) => setCompletionMessage(e.target.value)}
-                  placeholder={DEFAULT_COMPLETION_MESSAGE}
-                  rows={3}
-                  className="mt-1.5"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ce message s'affichera sur l'écran de remerciement après l'entretien.
-                </p>
-              </div>
-
               <Card className="bg-muted/50">
                 <CardHeader>
                   <CardTitle className="text-sm">Récapitulatif</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  <p>
-                    <strong>Titre :</strong> {title}
-                  </p>
-                  <p>
-                    <strong>Langue :</strong> {language === "fr" ? "Français" : "English"}
-                  </p>
-                  <p>
-                    <strong>Persona :</strong> {aiPersonaName}
-                  </p>
-                  <p>
-                    <strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}
-                  </p>
-                  <p>
-                    <strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}
-                  </p>
-                  <p>
-                    <strong>Durée max :</strong> {maxDuration} min
-                  </p>
-                  <p>
-                    <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
-                  </p>
+                  <p><strong>Titre :</strong> {title}</p>
+                  <p><strong>Langue :</strong> {language === "fr" ? "Français" : "English"}</p>
+                  <p><strong>Persona :</strong> {aiPersonaName}</p>
+                  <p><strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}</p>
+                  <p><strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}</p>
+                  <p><strong>Durée max :</strong> {maxDuration} min</p>
+                  <p><strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}</p>
+                  <p><strong>Statut :</strong> {status === "draft" ? "Brouillon" : "Actif"}</p>
                   <p>
                     <strong>Présentation :</strong>{" "}
                     {introType === "audio"
-                      ? introAudioPreviewUrl
-                        ? "Audio ✓"
-                        : "Audio — non défini"
-                      : introVideoPreviewUrl
-                        ? "Vidéo ✓"
-                        : "Vidéo — non définie"}
+                      ? introAudioPreviewUrl ? "Audio ✓" : "Audio — non défini"
+                      : introVideoPreviewUrl ? "Vidéo ✓" : "Vidéo — non définie"}
                   </p>
                 </CardContent>
               </Card>
