@@ -21,9 +21,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, Send, BarChart3, ArrowUpDown } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
 
 export default function ProjectDetail() {
   const { id } = useParams();
