@@ -9,13 +9,9 @@ import man3 from "@/assets/avatars/man-3.jpg";
 
 const PRESET_AVATARS = [
   { seed: "Marie", bg: "b6e3f4" },
-  { seed: "Thomas", bg: "c0aede" },
   { seed: "Sophie", bg: "ffd5dc" },
+  { seed: "Thomas", bg: "c0aede" },
   { seed: "Lucas", bg: "ffdfbf" },
-  { seed: "Emma", bg: "d1f4d1" },
-  { seed: "Antoine", bg: "fde68a" },
-  { seed: "Camille", bg: "fecaca" },
-  { seed: "Julien", bg: "bae6fd" },
 ].map((a) => ({
   url: `https://api.dicebear.com/9.x/personas/svg?seed=${a.seed}&backgroundColor=${a.bg}`,
   seed: a.seed,
