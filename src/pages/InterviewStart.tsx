@@ -124,7 +124,12 @@ export default function InterviewStart() {
     [],
   );
 
-  const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  // Durée max paramétrée au niveau du projet (défaut 15 min, plage 5–60).
+  const maxDurationMinutes = Math.min(60, Math.max(5, Number(project?.max_duration_minutes) || 15));
+  const MAX_DURATION_MS = maxDurationMinutes * 60 * 1000;
+  // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
+  // pour limiter coût et latence sur les entretiens longs.
+  const AI_HISTORY_WINDOW = 12;
   const SILENCE_TIMEOUT_MS = 90 * 1000; // 90 seconds (auto-end fallback)
   const SILENCE_HINT_MS = 8 * 1000; // 8s — show "Prenez votre temps…"
   const SILENCE_NUDGE_MS = 15 * 1000; // 15s — IA encourages locally (no API)
@@ -685,20 +690,34 @@ export default function InterviewStart() {
       questionVideoChunksRef.current = [];
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
 
-      try {
-        const { error: uploadError } = await supabase.storage
-          .from("media")
-          .upload(fileName, blob, { contentType: "video/webm", upsert: true });
-        if (uploadError) {
-          console.error("Question video upload error:", uploadError);
-          return null;
+      // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau
+      // sur les entretiens longs.
+      const backoffs = [1000, 3000, 8000];
+      for (let attempt = 0; attempt < backoffs.length; attempt++) {
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from("media")
+            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
+            return urlData.publicUrl;
+          }
+          console.warn(
+            `Échec upload vidéo question ${questionIndex} (essai ${attempt + 1}/${backoffs.length}):`,
+            uploadError,
+          );
+        } catch (e) {
+          console.warn(
+            `Exception upload vidéo question ${questionIndex} (essai ${attempt + 1}/${backoffs.length}):`,
+            e,
+          );
         }
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-        return urlData.publicUrl;
-      } catch (e) {
-        console.error("Question video upload exception:", e);
-        return null;
+        if (attempt < backoffs.length - 1) {
+          await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        }
       }
+      console.error("Upload vidéo abandonné après 3 essais pour la question", questionIndex);
+      return null;
     },
     [],
   );
