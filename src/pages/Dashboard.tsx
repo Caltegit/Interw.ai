@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardData } from "@/hooks/queries/useDashboardData";
+import { queryKeys } from "@/lib/queryClient";
+import { logger } from "@/lib/logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,132 +85,25 @@ export default function Dashboard() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [stats, setStats] = useState({
+  const queryClient = useQueryClient();
+  const { data } = useDashboardData(user?.id);
+
+  const stats = data?.stats ?? {
     projects: 0,
     projectsThisMonth: 0,
     pending: 0,
     pendingStale: 0,
     completed30d: 0,
-    completedTrendPct: 0 as number | null,
+    completedTrendPct: null as number | null,
     avgScore30d: 0,
-  });
-  const [topCandidates, setTopCandidates] = useState<any[]>([]);
-  const [recoDistribution, setRecoDistribution] = useState<Record<string, number>>({});
-  const [recentSessions, setRecentSessions] = useState<any[]>([]);
-  const [reportsBySession, setReportsBySession] = useState<Record<string, { score: number; recommendation: string | null }>>({});
-  const [stalePending, setStalePending] = useState<any[]>([]);
+  };
+  const topCandidates = data?.topCandidates ?? [];
+  const recoDistribution = data?.recoDistribution ?? {};
+  const recentSessions = data?.recentSessions ?? [];
+  const reportsBySession = data?.reportsBySession ?? {};
 
   const firstName = (profile?.full_name || "").trim().split(" ")[0] || "";
   const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const loadData = async () => {
-      const now = new Date();
-      const since30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      const since60 = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-      const since7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const [
-        { count: projectCount },
-        { count: projectsThisMonthCount },
-        { data: sessions },
-      ] = await Promise.all([
-        supabase.from("projects").select("*", { count: "exact", head: true }).eq("status", "active"),
-        supabase
-          .from("projects")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", startOfMonth.toISOString()),
-        supabase
-          .from("sessions")
-          .select("*, projects!inner(title, job_title)")
-          .order("created_at", { ascending: false })
-          .limit(10),
-      ]);
-
-      // Sessions étendues pour stats 30j / pending stale
-      const { data: pendingAll } = await supabase
-        .from("sessions")
-        .select("id, candidate_name, candidate_email, created_at, project_id, projects!inner(title)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true });
-
-      const pendingCount = pendingAll?.length ?? 0;
-      const staleList = (pendingAll ?? []).filter((s) => new Date(s.created_at) < since7);
-
-      // Reports 60j pour calcul tendance + score moyen + top + distribution
-      const { data: reports } = await supabase
-        .from("reports")
-        .select("overall_score, recommendation, generated_at, session_id, sessions!inner(candidate_name, project_id, projects!inner(title))")
-        .gte("generated_at", since60.toISOString())
-        .order("overall_score", { ascending: false });
-
-      const reports30 = (reports ?? []).filter((r) => new Date(r.generated_at) >= since30);
-      const reportsPrev = (reports ?? []).filter(
-        (r) => new Date(r.generated_at) < since30 && new Date(r.generated_at) >= since60,
-      );
-
-      const avgScore30d =
-        reports30.length > 0
-          ? reports30.reduce((s, r) => s + Number(r.overall_score), 0) / reports30.length
-          : 0;
-
-      const completed30d = reports30.length;
-      const completedPrev = reportsPrev.length;
-      const completedTrendPct =
-        completedPrev > 0
-          ? Math.round(((completed30d - completedPrev) / completedPrev) * 100)
-          : null;
-
-      // Distribution des recommandations
-      const dist: Record<string, number> = {};
-      RECO_ORDER.forEach((k) => (dist[k] = 0));
-      reports30.forEach((r) => {
-        if (r.recommendation && dist[r.recommendation] !== undefined) {
-          dist[r.recommendation]++;
-        }
-      });
-
-      const top = [...reports30]
-        .sort((a, b) => Number(b.overall_score) - Number(a.overall_score))
-        .slice(0, 5);
-
-      setStats({
-        projects: projectCount ?? 0,
-        projectsThisMonth: projectsThisMonthCount ?? 0,
-        pending: pendingCount,
-        pendingStale: staleList.length,
-        completed30d,
-        completedTrendPct,
-        avgScore30d: Math.round(avgScore30d),
-      });
-      setTopCandidates(top);
-      setRecoDistribution(dist);
-      setRecentSessions(sessions ?? []);
-      setStalePending(staleList);
-
-      // Fetch reports for the recent sessions to enrich the table
-      const recentIds = (sessions ?? []).map((s) => s.id);
-      if (recentIds.length > 0) {
-        const { data: recentReports } = await supabase
-          .from("reports")
-          .select("session_id, overall_score, recommendation")
-          .in("session_id", recentIds);
-        const map: Record<string, { score: number; recommendation: string | null }> = {};
-        (recentReports ?? []).forEach((r) => {
-          map[r.session_id] = {
-            score: Math.round(Number(r.overall_score)),
-            recommendation: r.recommendation,
-          };
-        });
-        setReportsBySession(map);
-      }
-    };
-
-    loadData();
-  }, [user]);
 
   const totalReco = Object.values(recoDistribution).reduce((a, b) => a + b, 0);
 
@@ -528,9 +425,9 @@ export default function Dashboard() {
                                       .delete()
                                       .eq("session_id", session.id);
                                     await supabase.from("sessions").delete().eq("id", session.id);
-                                    setRecentSessions((prev) =>
-                                      prev.filter((s) => s.id !== session.id),
-                                    );
+                                    if (user?.id) {
+                                      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
+                                    }
                                     toast({ title: "Entretien supprimé" });
                                   }}
                                 >

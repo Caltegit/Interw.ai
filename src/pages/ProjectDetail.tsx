@@ -64,13 +64,35 @@ export default function ProjectDetail() {
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [savingNote, setSavingNote] = useState<Record<string, boolean>>({});
 
+  // Pagination des sessions filtrées
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
+
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      supabase.from("projects").select("*").eq("id", id).single(),
-      supabase.from("questions").select("*").eq("project_id", id).order("order_index"),
-      supabase.from("evaluation_criteria").select("*").eq("project_id", id).order("order_index"),
-      supabase.from("sessions").select("*").eq("project_id", id).order("created_at", { ascending: false }),
+      supabase
+        .from("projects")
+        .select(
+          "id, title, description, slug, status, language, ai_persona_name, ai_voice, max_duration_minutes, record_audio, record_video, organization_id, created_by, job_title, avatar_image_url, intro_audio_url",
+        )
+        .eq("id", id)
+        .single(),
+      supabase
+        .from("questions")
+        .select("id, project_id, order_index, title, content, type, follow_up_enabled, max_follow_ups")
+        .eq("project_id", id)
+        .order("order_index"),
+      supabase
+        .from("evaluation_criteria")
+        .select("id, project_id, order_index, label, description, weight, scoring_scale, anchors, applies_to")
+        .eq("project_id", id)
+        .order("order_index"),
+      supabase
+        .from("sessions")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false }),
     ]).then(async ([pRes, qRes, cRes, sRes]) => {
       setProject(pRes.data);
       setQuestions(qRes.data ?? []);
@@ -256,6 +278,9 @@ export default function ProjectDetail() {
     });
     return list;
   })();
+
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
+  const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
@@ -510,7 +535,7 @@ export default function ProjectDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSessions.map((s) => {
+                    {pagedSessions.map((s) => {
                       const rep = reportsBySession[s.id];
                       const clickable = s.status === "completed";
                       const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
@@ -615,6 +640,22 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+
+              {filteredSessions.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between text-sm pt-2">
+                  <span className="text-muted-foreground">
+                    Page {page + 1} / {totalSessionsPages}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                      Précédent
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalSessionsPages - 1, p + 1))} disabled={page + 1 >= totalSessionsPages}>
+                      Suivant
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </TabsContent>
