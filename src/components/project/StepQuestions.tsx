@@ -13,6 +13,7 @@ import {
   Pencil,
   Lightbulb,
   Timer,
+  RotateCcw,
 } from "lucide-react";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
