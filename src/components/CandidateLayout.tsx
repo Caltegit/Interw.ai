@@ -61,13 +61,14 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
           minimal ? "py-2.5 px-4" : "py-3 px-5 sm:px-6"
         }`}
       >
-        {/* Org logo only — nothing if no logo */}
-        <div className="flex items-center gap-2 min-h-[28px]">
+        {/* Org logo only — nothing if no logo. Non-cliquable en mode minimal (entretien en cours). */}
+        <div className="flex items-center gap-2 min-h-[28px] pointer-events-none select-none">
           {logoUrl ? (
             <img
               src={logoUrl}
               alt={orgName ? `Logo ${orgName}` : "Logo organisation"}
               className="h-7 w-auto max-w-[160px] object-contain"
+              draggable={false}
             />
           ) : null}
         </div>

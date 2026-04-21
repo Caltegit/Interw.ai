@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
+import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -43,6 +44,13 @@ export default function InterviewStart() {
   const [loading, setLoading] = useState(true);
   const [readyToStart, setReadyToStart] = useState(false);
   const [interviewFinished, setInterviewFinished] = useState(false);
+  // Mode « salle d'examen »
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const isMobileLikeRef = useRef<boolean>(false);
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Reprise de session
+  const [resumePrompt, setResumePrompt] = useState<{ resumeIndex: number } | null>(null);
+  const [restoringMessages, setRestoringMessages] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
@@ -184,6 +192,39 @@ export default function InterviewStart() {
       }
     }, SILENCE_TIMEOUT_MS);
   }, [toast, clearSilenceTier]);
+
+  // Mode « salle d'examen » — listeners actifs uniquement quand l'entretien tourne
+  useEffect(() => {
+    if (!readyToStart || interviewFinished) return;
+
+    // Avertissement avant fermeture / rechargement de l'onglet
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Bloque le retour arrière en re-poussant l'état
+    const onPopState = () => {
+      try {
+        window.history.pushState({ interviewLock: true }, "");
+      } catch {}
+    };
+    window.addEventListener("popstate", onPopState);
+
+    // Suit l'état plein écran pour afficher/cacher le bandeau de rappel
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    setIsFullscreen(Boolean(document.fullscreenElement));
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("popstate", onPopState);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, [readyToStart, interviewFinished]);
 
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
@@ -621,10 +662,67 @@ export default function InterviewStart() {
         .eq("project_id", sess.project_id)
         .order("order_index");
       setQuestions(qs ?? []);
+
+      // Détection d'une reprise possible : session déjà démarrée + au moins un message
+      if (sess.status === "in_progress") {
+        const { count } = await supabase
+          .from("session_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", sess.id);
+        if ((count ?? 0) > 0) {
+          setResumePrompt({ resumeIndex: Math.max(0, Number(sess.last_question_index) || 0) });
+        }
+      }
+
       setLoading(false);
     };
     load();
   }, [token, slug, navigate]);
+
+  // Restaure les messages depuis session_messages et redémarre l'entretien à la bonne question
+  const handleResumeInterview = useCallback(async () => {
+    if (!resumePrompt || !session?.id) return;
+    setRestoringMessages(true);
+    try {
+      const { data: rows } = await supabase
+        .from("session_messages")
+        .select("*")
+        .eq("session_id", session.id)
+        .order("timestamp", { ascending: true });
+      const restored: ChatMessage[] = (rows ?? []).map((r: any) => ({
+        role: r.role,
+        content: r.content,
+      }));
+      setMessages(restored);
+      messagesRef.current = restored;
+      setAiMessages(
+        (rows ?? []).map((r: any) => ({
+          role: r.role === "ai" ? ("assistant" as const) : ("user" as const),
+          content: r.content,
+        })),
+      );
+      setCurrentQuestionIndex(resumePrompt.resumeIndex);
+    } finally {
+      setRestoringMessages(false);
+      setResumePrompt(null);
+    }
+  }, [resumePrompt, session?.id]);
+
+  // Recommence l'entretien depuis zéro : purge les messages déjà persistés
+  const handleRestartInterview = useCallback(async () => {
+    if (!session?.id) return;
+    setRestoringMessages(true);
+    try {
+      await supabase.from("session_messages").delete().eq("session_id", session.id);
+      await supabase
+        .from("sessions")
+        .update({ last_question_index: 0, started_at: null, status: "pending" as any })
+        .eq("id", session.id);
+    } finally {
+      setRestoringMessages(false);
+      setResumePrompt(null);
+    }
+  }, [session?.id]);
 
   // Start camera stream (no global recorder — only per-question recorders)
   const startVideoStream = useCallback(async () => {
@@ -784,11 +882,41 @@ export default function InterviewStart() {
 
     setReadyToStart(true);
 
-    // Mark session as in_progress
+    // Mode « salle d'examen » — plein écran (desktop uniquement)
+    isMobileLikeRef.current =
+      typeof navigator !== "undefined" &&
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (!isMobileLikeRef.current) {
+      try {
+        await document.documentElement.requestFullscreen?.();
+      } catch {
+        // Le navigateur a refusé : on continue sans, le bandeau de rappel restera caché.
+      }
+    }
+
+    // Bloque le retour arrière du navigateur pendant l'entretien
+    try {
+      window.history.pushState({ interviewLock: true }, "");
+    } catch {}
+
+    // Mark session as in_progress + last_activity_at
     supabase
       .from("sessions")
-      .update({ status: "in_progress" as any, started_at: new Date().toISOString() })
+      .update({
+        status: "in_progress" as any,
+        started_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
+      })
       .eq("id", session.id);
+
+    // Heartbeat toutes les 30 s pour conserver une trace d'activité
+    if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+    heartbeatTimerRef.current = setInterval(() => {
+      supabase
+        .from("sessions")
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq("id", session.id);
+    }, 30_000);
 
     // Start camera stream
     await startVideoStream();
@@ -1058,7 +1186,12 @@ export default function InterviewStart() {
     }
 
     setCurrentQuestionIndex(nextQIdx);
-    await speak(transition);
+    if (sessionId) {
+      supabase
+        .from("sessions")
+        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
+        .eq("id", sessionId);
+    }
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
@@ -1143,7 +1276,12 @@ export default function InterviewStart() {
     setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
 
     setCurrentQuestionIndex((prev) => prev + 1);
-    setIsProcessing(false);
+    if (session?.id) {
+      supabase
+        .from("sessions")
+        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
+        .eq("id", session.id);
+    }
 
     // 5. Speak transition + auto-play next question media (or start listening for written)
     await speak(transition);
@@ -1167,9 +1305,17 @@ export default function InterviewStart() {
     if (endInterviewStartedRef.current) return;
     endInterviewStartedRef.current = true;
 
-    // Clear all auto-end timers
+    // Clear all auto-end timers + heartbeat
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    // Quitter le plein écran si on y est
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
     stopListening();
     window.speechSynthesis?.cancel();
 
@@ -1375,6 +1521,43 @@ export default function InterviewStart() {
       </div>
     );
 
+  // Écran de reprise — proposé si une session interrompue est détectée
+  if (resumePrompt && !readyToStart) {
+    return (
+      <CandidateLayout>
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="py-12 space-y-6">
+            <div className="space-y-3">
+              <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre entretien ?</h1>
+              <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Vous avez une session en cours. Vous pouvez la reprendre là où vous en étiez ou tout recommencer depuis le début.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                size="lg"
+                className="candidate-btn-primary w-full h-14 text-base"
+                onClick={handleResumeInterview}
+                disabled={restoringMessages}
+              >
+                Reprendre
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full h-14 text-base"
+                onClick={handleRestartInterview}
+                disabled={restoringMessages}
+              >
+                Recommencer depuis le début
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </CandidateLayout>
+    );
+  }
+
   // Show "ready to start" screen — user must click to enable TTS on mobile
   if (!readyToStart) {
     return (
@@ -1416,8 +1599,17 @@ export default function InterviewStart() {
     );
   }
 
+  // Helper : tenter de revenir en plein écran (clic utilisateur requis)
+  const requestFullscreenAgain = () => {
+    if (isMobileLikeRef.current) return;
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
   return (
     <CandidateLayout minimal>
+      {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
+        <FullscreenPrompt onEnter={requestFullscreenAgain} />
+      )}
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)]">
         {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
         {backgroundSaving > 0 && (
