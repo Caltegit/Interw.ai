@@ -5,6 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type Action = "follow_up" | "next" | "end";
+
+function fallbackParse(text: string): { action: Action; message: string } {
+  // Try to extract a JSON object from the text
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      const obj = JSON.parse(match[0]);
+      if (obj && typeof obj.message === "string") {
+        const action: Action =
+          obj.action === "follow_up" || obj.action === "end" ? obj.action : "next";
+        return { action, message: obj.message };
+      }
+    } catch {}
+  }
+  return { action: "next", message: text.trim() || "Merci. Passons à la suite." };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,38 +43,51 @@ serve(async (req) => {
     const relanceLevel: "light" | "medium" | "deep" =
       rawLevel === "light" || rawLevel === "deep" ? rawLevel : "medium";
 
-    const relanceRules: Record<typeof relanceLevel, string> = {
-      light:
-        "- NIVEAU DE RELANCE (question actuelle) : LÉGER. Ne pose AUCUNE relance. Enchaîne directement la question suivante après un bref acquiescement.\n- Pas de reformulation.",
-      medium:
-        "- NIVEAU DE RELANCE (question actuelle) : MOYEN. Si la réponse du candidat est floue, vague ou très courte (moins de 2 phrases), pose UNE seule relance ciblée pour clarifier ou obtenir un exemple concret (ex : « Pouvez-vous donner un exemple concret ? »). Sinon, n'insiste pas.\n- Avant la question suivante, fais une COURTE reformulation de ce que le candidat vient de dire (1 phrase, ex : « Si je comprends bien, vous avez… »).",
-      deep:
-        "- NIVEAU DE RELANCE (question actuelle) : APPROFONDI. Tu peux poser jusqu'à 2 relances par question pour creuser un mot-clé important mentionné par le candidat ou obtenir des détails concrets (chiffres, exemples, contexte). Reste pertinente, ne creuse pas dans le vide.\n- Avant la question suivante, fais une COURTE reformulation (1 phrase) de la réponse du candidat.\n- Tu peux référencer un point évoqué plus tôt dans l'entretien si c'est pertinent (« Tout à l'heure vous parliez de X… »).",
-    };
+    const followUpsAsked: number = Number(projectContext.followUpsAsked ?? 0);
+    const maxFollowUps: number = Math.max(
+      0,
+      Number(currentQ.maxFollowUps ?? (relanceLevel === "deep" ? 2 : relanceLevel === "medium" ? 1 : 0)),
+    );
+    const isLastQuestion = currentIdx >= questionsList.length - 1;
+    const canFollowUp = relanceLevel !== "light" && followUpsAsked < maxFollowUps;
+
+    // Last candidate message (for word-count heuristic, used in prompt context)
+    const lastCandidate = [...messages].reverse().find((m: any) => m.role === "user");
+    const lastCandidateText: string = (lastCandidate?.content ?? "").toString();
+    const wordCount = lastCandidateText.trim().split(/\s+/).filter(Boolean).length;
+
+    const nextQ = !isLastQuestion ? questionsList[currentIdx + 1] : null;
+    const nextMt = nextQ?.mediaType === "video" ? "VIDÉO" : nextQ?.mediaType === "audio" ? "AUDIO" : nextQ ? "TEXTE" : null;
 
     const systemPrompt = `Tu es ${projectContext.aiPersonaName}, recruteuse IA pour le poste "${projectContext.jobTitle}".
 
-Questions prévues (chacune a son propre niveau de relance) :
-${questionsList.map((q: any, i: number) => {
-  const lvl = q.relanceLevel === "light" || q.relanceLevel === "deep" ? q.relanceLevel : "medium";
-  const lvlLabel = lvl === "light" ? "léger" : lvl === "deep" ? "approfondi" : "moyen";
-  const mt = q.mediaType === "video" ? "VIDÉO" : q.mediaType === "audio" ? "AUDIO" : "TEXTE";
-  return `${i + 1}. [${mt}] (relance ${lvlLabel}) ${q.content}`;
-}).join("\n")}
+CONTEXTE :
+- Question actuelle : ${currentIdx + 1}/${questionsList.length}
+- Niveau de relance : ${relanceLevel}
+- Relances déjà posées sur cette question : ${followUpsAsked} / ${maxFollowUps} max
+- Dernière réponse du candidat : ${wordCount} mots
+- Dernière question posée : « ${currentQ.content ?? ""} »
+${isLastQuestion ? "- C'est la DERNIÈRE question." : `- Question suivante : [${nextMt}] « ${nextQ?.content ?? ""} »`}
 
-Règles de comportement pour LA QUESTION ACTUELLE :
-${relanceRules[relanceLevel]}
-- Varie tes acquiescements de façon naturelle : « Intéressant », « Ok je vois », « Merci pour cet exemple », « D'accord », plutôt que de toujours dire « Merci ».
-- Si la réponse du candidat fait moins de 5 mots ou semble hésitante, propose-lui doucement : « Prenez votre temps, voulez-vous que je reformule la question ? ».
-- Pose les questions une par une dans l'ordre prévu. Une seule à la fois.
-- **IMPORTANT** : Si la question suivante est de type AUDIO ou VIDÉO, NE RÉPÈTE PAS son contenu. Dis seulement une courte transition comme « Écoutez la question suivante » ou « Regardez la question suivante ». Le média sera joué automatiquement.
-- Si la question suivante est de type TEXTE, pose-la normalement dans ta réponse.
-- Quand tu passes à la question suivante, adapte ton comportement de relance au niveau indiqué pour CETTE nouvelle question.
-- Reste professionnelle, chaleureuse, jamais bavarde. Maximum 2-3 phrases courtes par tour.
-- Réponds toujours en français.
-- Quand toutes les questions sont posées, remercie brièvement le candidat et indique que l'entretien est terminé.
-- N'invente JAMAIS de questions hors de la liste fournie.
-- Question actuelle : ${projectContext.currentQuestionNumber}/${projectContext.totalQuestions}`;
+TA TÂCHE : décider si tu poses une RELANCE sur la question actuelle, ou si tu PASSES à la suite.
+
+RÈGLES STRICTES :
+1. Tu dois répondre UNIQUEMENT en JSON valide, format exact :
+   {"action":"follow_up"|"next"|"end","message":"texte court à dire au candidat"}
+2. Si niveau = "light" → action = "next" obligatoirement.
+3. Si relances déjà posées >= max (${maxFollowUps}) → action = "next" obligatoirement.
+4. Si la réponse fait moins de 15 mots OU contient des hésitations vagues (« je sais pas trop », « euh », « peut-être ») ET que tu peux encore relancer → action = "follow_up" recommandé.
+5. Si la réponse est claire, complète et pertinente → action = "next".
+6. Si c'est la DERNIÈRE question et que tu ne relances pas → action = "end".
+7. Le "message" :
+   - Pour "follow_up" : UNE seule question courte de relance (max 2 phrases) qui creuse un point précis de sa réponse. Pas de "Merci".
+   - Pour "next" : courte transition (max 2 phrases). Si la question suivante est AUDIO ou VIDÉO, dis seulement « Écoutez la question suivante » ou « Regardez la question suivante ». Si elle est en TEXTE, pose-la directement.
+   - Pour "end" : remerciement bref (1 phrase) indiquant la fin de l'entretien.
+8. Toujours en français, professionnel et chaleureux.
+9. N'invente JAMAIS de question hors de la liste fournie.
+
+Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -64,11 +95,12 @@ ${relanceRules[relanceLevel]}
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
         ],
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -94,11 +126,29 @@ ${relanceRules[relanceLevel]}
     }
 
     const data = await response.json();
-    const aiMessage = data.choices?.[0]?.message?.content || "Désolé, je n'ai pas pu générer de réponse.";
+    const raw = data.choices?.[0]?.message?.content || "";
+    let parsed = fallbackParse(raw);
 
-    return new Response(JSON.stringify({ message: aiMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Enforce server-side rules
+    if (parsed.action === "follow_up" && !canFollowUp) {
+      parsed = { action: isLastQuestion ? "end" : "next", message: parsed.message };
+    }
+    if (parsed.action === "next" && isLastQuestion) {
+      parsed = { action: "end", message: parsed.message };
+    }
+    if (parsed.action === "end" && !isLastQuestion) {
+      parsed = { action: "next", message: parsed.message };
+    }
+
+    return new Response(
+      JSON.stringify({
+        action: parsed.action,
+        message: parsed.message,
+        // Backward compat with older client code
+        message_legacy: parsed.message,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("ai-conversation-turn error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
