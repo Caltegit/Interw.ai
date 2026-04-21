@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +48,29 @@ const RECO_COLORS: Record<string, string> = {
   no: "bg-destructive",
 };
 
+const QUOTES: { text: string; author: string }[] = [
+  { text: "Le talent gagne des matchs, mais l'esprit d'équipe gagne des championnats.", author: "Michael Jordan" },
+  { text: "Embauchez des gens plus intelligents que vous, puis laissez-les faire leur travail.", author: "Steve Jobs" },
+  { text: "La meilleure façon de prédire l'avenir, c'est de le créer.", author: "Peter Drucker" },
+  { text: "L'attention est la forme la plus rare et la plus pure de la générosité.", author: "Simone Weil" },
+  { text: "Les gens oublieront ce que vous avez dit, mais jamais ce que vous leur avez fait ressentir.", author: "Maya Angelou" },
+  { text: "Choisis un travail que tu aimes, et tu n'auras pas à travailler un seul jour de ta vie.", author: "Confucius" },
+  { text: "La perfection est atteinte quand il n'y a plus rien à retrancher.", author: "Antoine de Saint-Exupéry" },
+  { text: "Pour être irremplaçable, il faut être différent.", author: "Coco Chanel" },
+  { text: "Se réunir est un début, rester ensemble est un progrès, travailler ensemble est la réussite.", author: "Henry Ford" },
+  { text: "La culture mange la stratégie au petit-déjeuner.", author: "Peter Drucker" },
+  { text: "Ne dites pas aux gens comment faire les choses, dites-leur quoi faire et laissez-les vous surprendre.", author: "George S. Patton" },
+  { text: "Le succès, c'est tomber sept fois et se relever huit.", author: "Proverbe japonais" },
+  { text: "Il faut toute une vie pour apprendre à écouter.", author: "Plutarque" },
+  { text: "On ne voit bien qu'avec le cœur. L'essentiel est invisible pour les yeux.", author: "Antoine de Saint-Exupéry" },
+  { text: "Un leader est celui qui connaît le chemin, suit le chemin et montre le chemin.", author: "John C. Maxwell" },
+  { text: "La diversité est une invitation, l'inclusion une décision.", author: "Vernā Myers" },
+  { text: "Le doute est le commencement de la sagesse.", author: "Aristote" },
+  { text: "Faites ce que vous pouvez, avec ce que vous avez, là où vous êtes.", author: "Theodore Roosevelt" },
+  { text: "L'expérience est le nom que chacun donne à ses erreurs.", author: "Oscar Wilde" },
+  { text: "Soyez le changement que vous voulez voir dans le monde.", author: "Mahatma Gandhi" },
+];
+
 function scoreColor(score: number) {
   if (score >= 65) return "bg-success/15 text-success border-success/30";
   if (score >= 45) return "bg-warning/15 text-warning border-warning/30";
@@ -74,6 +97,7 @@ export default function Dashboard() {
   const [stalePending, setStalePending] = useState<any[]>([]);
 
   const firstName = (profile?.full_name || "").trim().split(" ")[0] || "";
+  const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
   useEffect(() => {
     if (!user) return;
@@ -194,7 +218,8 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">
             Bonjour{firstName ? ` ${firstName}` : ""} 👋
           </h1>
-          <p className="text-sm text-muted-foreground">Voici un aperçu de votre activité.</p>
+          <p className="text-sm italic text-muted-foreground mt-1">« {quote.text} »</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5">— {quote.author}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm">
