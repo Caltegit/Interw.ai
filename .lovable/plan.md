@@ -1,117 +1,88 @@
 
 
-## Plan — Refonte du Dashboard
+## Plan — Indication texte + Timer max par question
 
-### Constat actuel
+### Objectif
 
-Le dashboard est sous-exploité :
-- 3 KPI seulement (Projets, En attente, Complétés) — le score moyen est calculé mais jamais affiché
-- Liste des 10 derniers entretiens sans contexte (pas de score, pas de recommandation)
-- Aucun lien rapide pour les actions fréquentes (créer un projet, consulter la bibliothèque)
-- Aucune vue d'ensemble du scoring (top candidats, distribution des recommandations)
-- Aucune tendance temporelle
+Permettre, pour chaque question, d'ajouter :
+1. Une **indication texte** optionnelle (consigne, contexte, exemple)
+2. Un **timer max de réponse** optionnel (minutes + secondes), par défaut 10 min lorsqu'activé
 
-### Refonte proposée
+Ces éléments s'affichent côté candidat sans gêner le déroulé. Les questions existantes ne sont pas affectées.
 
-**1. Bandeau d'accueil + actions rapides**
+---
+
+### 1. Base de données
+
+Migration sur les tables qui stockent les questions :
+
+| Table | Colonnes ajoutées |
+|---|---|
+| `questions` | `hint_text text NULL`, `max_response_seconds int NULL` |
+| `question_templates` | idem |
+| `interview_template_questions` | idem |
+
+- `NULL` = aucun (par défaut). Aucun backfill : toutes les questions existantes restent sans indication ni timer.
+- Pas de contrainte CHECK (validation côté UI : `max_response_seconds` entre 30 et 3600 si défini).
+
+### 2. Création / édition de question
+
+**Fichier** : `src/components/QuestionFormDialog.tsx`
+
+Ajout d'une nouvelle section **« Aide candidat »** (optionnelle, repliée par défaut via un `Collapsible` « + Ajouter une indication ou un temps limite ») :
+
+- **Indication (texte court, max 300 car.)** — Textarea, placeholder : *« Ex : appuie-toi sur un exemple concret de ton dernier poste »*
+- **Temps de réponse maximum** — Switch « Activer un temps limite »
+  - Quand activé : 2 inputs numériques côte à côte → `min` (0-59) + `sec` (0-59), pré-remplis à **10 min / 0 s**
+  - Quand désactivé : aucun timer côté candidat
+- Texte d'aide : *« Si activé, un compte à rebours s'affiche ; le candidat passe à la suite à la fin du temps. »*
+
+Mise à jour du type `QuestionFormValue` : `hintText: string`, `maxResponseSeconds: number | null`.
+
+### 3. Propagation côté projet / templates
+
+**Fichiers** :
+- `src/components/project/StepQuestions.tsx` : étendre l'interface `Question` avec `hint_text` + `max_response_seconds`, propager dans `createEmptyQuestion`, `openEdit`, `handleFormSubmit`.
+- `src/pages/ProjectNew.tsx`, `src/pages/ProjectEdit.tsx` : inclure les 2 nouveaux champs lors de l'`insert`/`update` dans `questions`.
+- `src/pages/InterviewTemplateEdit.tsx` + import depuis bibliothèque : idem pour `interview_template_questions` et `question_templates`.
+- `src/components/project/QuestionLibraryDialog.tsx` + `src/pages/QuestionLibrary.tsx` : preserver les 2 champs lors de l'import/export.
+
+### 4. Affichage côté candidat
+
+**Fichier** : `src/pages/InterviewStart.tsx`
+
+**Emplacement de l'indication** :
+Dans le bandeau de la question en cours (sous le titre/contenu de la question, au-dessus de la zone d'enregistrement). Style discret : encadré gris clair avec icône 💡 + texte. *Recommandation : c'est l'endroit où le regard du candidat se pose juste avant de répondre, donc l'indication est lue au bon moment, sans dupliquer la question elle-même.*
 
 ```
-Bonjour [Prénom] 👋
-[+ Nouveau projet]  [📋 Modèles d'entretien]  [❓ Bibliothèque questions]
-```
-- Salutation personnalisée (extrait `profile.full_name`)
-- 3 boutons d'action rapide vers les pages les plus fréquentes
-
-**2. KPI enrichis (4 cartes au lieu de 3)**
-
-| Carte | Valeur | Détail secondaire |
-|---|---|---|
-| Projets actifs | 5 | +2 ce mois |
-| Candidats en attente | 12 | dont 3 depuis +7j (alerte) |
-| Entretiens complétés (30j) | 28 | +15 % vs période précédente |
-| Score moyen (30j) | 72 % | barre de progression colorée |
-
-Le score moyen utilise déjà `ScoreCircle` — réutilisation possible en mini-format.
-
-**3. Section « Top candidats récents » (nouvelle)**
-
-Carte affichant les 5 candidats avec le meilleur score sur les 30 derniers jours :
-- Nom + projet
-- `ScoreCircle` mini (size 48)
-- `RecommendationBadge` (Favorable / À considérer / Non recommandé)
-- Clic → page session
-
-**4. Section « Distribution des recommandations » (nouvelle)**
-
-Mini-graphique horizontal en barres empilées :
-```
-Favorable      ████████████ 12
-À considérer   ██████ 6
-Non recommandé ███ 3
-```
-Calculé sur les `reports.recommendation` des 30 derniers jours. Clic sur une barre → filtre la liste des entretiens.
-
-**5. Liste « Derniers entretiens » enrichie**
-
-Ajout de 2 colonnes au tableau existant :
-- **Score** : badge coloré (vert ≥65, orange 45-64, rouge <45) ou `—` si non encore noté
-- **Reco** : `RecommendationBadge` compact
-
-Ordre des colonnes : Candidat / Projet / Statut / **Score** / **Reco** / Date / Actions
-
-Suppression du bouton « Voir » texte → ligne entière cliquable pour les sessions complétées (cohérence avec la refonte du Détail Projet).
-
-**6. Alerte candidats inactifs (conditionnelle)**
-
-Si des candidats sont en attente depuis +7 jours :
-```
-⚠ 3 candidats n'ont pas démarré leur entretien depuis plus de 7 jours
-   [Relancer tous] [Voir la liste]
+┌──────────────────────────────────────┐
+│ Question 3/10                        │
+│ Parlez-moi d'une situation difficile │
+│                                      │
+│ 💡 Appuie-toi sur un exemple concret │
+│                                      │
+│         🎤 [Vous écoutez]            │
+│              02:34 / 10:00           │
+└──────────────────────────────────────┘
 ```
 
-### Architecture visuelle
+**Emplacement du timer** :
+Remplacer le compteur `responseElapsedSec` actuel (`02:34`) par un format `02:34 / 10:00` quand `max_response_seconds` est défini. Sinon, on conserve le compteur libre actuel (comportement inchangé pour les anciennes questions).
 
-```text
-Bonjour Camille                                                        
-[+ Nouveau projet]  [📋 Modèles]  [❓ Bibliothèque]                    
+**Comportement** :
+- Lorsque le compteur atteint `max_response_seconds`, déclenchement automatique de `handleEndAnswer()` (= comme si le candidat avait fini de parler) puis passage à la question suivante.
+- Couleurs : vert > 50%, orange entre 25 % et 50 % restants, rouge < 25 %.
+- Réinitialisation à chaque changement de question (déjà géré par l'effet existant sur `currentQuestionIndex`).
 
-┌─────────────┬──────────────┬──────────────┬──────────────┐           
-│ Projets: 5  │ Attente: 12  │ Complétés:28 │ Score: 72%   │           
-│ +2 ce mois  │ ⚠ 3 >7j      │ +15% vs avt  │ ▓▓▓▓▓▓▓░░░   │           
-└─────────────┴──────────────┴──────────────┴──────────────┘           
+### 5. Aperçu RH
 
-⚠ 3 candidats inactifs depuis +7j — [Relancer] [Voir]                  
-
-┌──────────────────────────────┬──────────────────────────────┐        
-│ 🏆 Top candidats (30j)        │ 📊 Recommandations           │        
-│ Marie Dupont   [85%] Favor.   │ Favorable      ████████ 12   │        
-│ Paul Martin    [78%] Favor.   │ À considérer   ████ 6        │        
-│ Léa Chen       [74%] Consid.  │ Non recommandé ██ 3          │        
-└──────────────────────────────┴──────────────────────────────┘        
-
-Derniers entretiens                                                    
-┌───────────┬────────┬────────┬──────┬──────┬────────┬─────┐           
-│ Candidat  │ Projet │ Statut │ Score│ Reco │ Date   │ Act │           
-└───────────┴────────┴────────┴──────┴──────┴────────┴─────┘           
-```
-
-### Modifications techniques
-
-**Fichier modifié** : `src/pages/Dashboard.tsx` (seul fichier touché)
-
-**Nouvelles requêtes** :
-- `reports` filtré sur les 30 derniers jours pour le score moyen, le top candidats et la distribution des recommandations
-- Calcul de la période précédente (30-60j) pour la variation en pourcentage
-- Comptage des sessions `pending` avec `created_at < now() - 7 days`
-
-**Composants réutilisés** : `ScoreCircle`, `RecommendationBadge`, `SessionStatusBadge`, `Card`, `Button`, `AlertDialog` (déjà importés ou existants)
-
-**Nouvelle icône** : `TrendingUp`, `Trophy`, `BarChart3`, `Sparkles` (déjà dans lucide)
+Dans `StepQuestions.tsx`, ajouter de petits indicateurs dans la ligne de chaque question quand ces options sont activées :
+- Pastille `💡` si `hint_text` non vide
+- Pastille `⏱ 10:00` si `max_response_seconds` défini
 
 ### Hors scope
 
-- Pas de graphique avancé (pas d'ajout de Recharts pour cette itération — barres CSS simples suffisent)
-- Pas de filtre temporel (30 jours figé pour l'instant)
-- Pas de notification push ou email automatique pour les candidats inactifs
-- Pas de modification de la sidebar ni des autres pages
+- Pas de timer global d'entretien modifié (le `MAX_DURATION_MS` global de 10 min reste indépendant — il sera traité plus tard si besoin).
+- Pas de notification email candidat sur les indications.
+- Pas de modification des rapports/transcripts.
 
