@@ -17,6 +17,7 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
+import defaultCamilleAvatar from "@/assets/avatars/woman-1.jpg";
 import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/components/project/InterviewTemplatePickerDialog";
 import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -81,8 +82,8 @@ export default function ProjectNew() {
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(defaultCamilleAvatar);
+  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(defaultCamilleAvatar);
   const [introType, setIntroType] = useState<"audio" | "video">("audio");
   const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
   const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);

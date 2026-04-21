@@ -150,7 +150,7 @@ export default function InterviewLanding() {
                 <img
                   src={project.avatar_image_url}
                   alt={project.ai_persona_name || "Recruteur"}
-                  className={`mx-auto h-24 w-24 rounded-full object-cover border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
+                  className={`mx-auto h-24 w-24 rounded-full object-cover object-top border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
                 />
               ) : introMediaType === "audio" ? (
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
