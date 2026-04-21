@@ -18,7 +18,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer } from "lucide-react";
+import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
