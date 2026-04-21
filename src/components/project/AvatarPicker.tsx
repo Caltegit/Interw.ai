@@ -82,9 +82,7 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
 
       {/* Photo avatars */}
       <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Photos réelles
-        </p>
+        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos réelles</p>
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {PHOTO_AVATARS.map((avatar) => {
             const selected = value === avatar.url;
@@ -95,7 +93,9 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
                 onClick={() => onSelectPreset(avatar.url)}
                 className={cn(
                   "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                  selected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border hover:border-primary/50",
+                  selected
+                    ? "border-primary ring-2 ring-primary ring-offset-2"
+                    : "border-border hover:border-primary/50",
                 )}
                 aria-label={`Photo ${avatar.name}`}
                 title={avatar.name}
@@ -116,9 +116,7 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
 
       {/* Preset grid */}
       <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Photo recruteur
-        </p>
+        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Avatar</p>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
           {PRESET_AVATARS.map((avatar) => {
             const selected = value === avatar.url;
@@ -129,7 +127,9 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
                 onClick={() => onSelectPreset(avatar.url)}
                 className={cn(
                   "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                  selected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border hover:border-primary/50",
+                  selected
+                    ? "border-primary ring-2 ring-primary ring-offset-2"
+                    : "border-border hover:border-primary/50",
                 )}
                 aria-label={`Avatar ${avatar.seed}`}
               >
@@ -145,9 +145,7 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
             );
           })}
         </div>
-        {isCustom && (
-          <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>
-        )}
+        {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
       </div>
     </div>
   );
