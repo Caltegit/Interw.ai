@@ -1,88 +1,95 @@
 
 
-## Plan — Indication texte + Timer max par question
+## Plan — Vraies relances IA pendant l'entretien
+
+### Constat (audit du code actuel)
+
+- `handleSendResponse` (l. 920) avance l'UI **avant** la réponse IA → la "relance" générée par `ai-conversation-turn` n'est jamais jouée au candidat, elle sert seulement au rapport.
+- `SILENCE_TIMEOUT_MS = 45s` (l. 128) **termine l'entretien** au lieu de relancer le candidat.
+- `auto_skip_silence` (l. 1175) coupe la parole après 3s + 3s → trop agressif et non configurable par question.
+- `relance_level` (light/medium/deep) est envoyé à l'IA mais sans effet visible côté candidat.
+- Aucune relance déclenchée pendant un silence : seul le bouton « Ma réponse est finie » déclenche un tour IA.
 
 ### Objectif
 
-Permettre, pour chaque question, d'ajouter :
-1. Une **indication texte** optionnelle (consigne, contexte, exemple)
-2. Un **timer max de réponse** optionnel (minutes + secondes), par défaut 10 min lorsqu'activé
+La recruteuse IA doit pouvoir intervenir **avant** de passer à la question suivante :
+1. Si la réponse est trop courte/floue → poser une relance (selon `relance_level`).
+2. Si le candidat reste silencieux trop longtemps → relancer doucement, pas terminer.
+3. Le candidat **entend** la relance, y répond, puis (selon le niveau) une 2ᵉ relance peut suivre, ou on passe à la suite.
 
-Ces éléments s'affichent côté candidat sans gêner le déroulé. Les questions existantes ne sont pas affectées.
+### 1. Nouveau cycle de réponse (cœur du changement)
 
----
+Refonte de `handleSendResponse` dans `src/pages/InterviewStart.tsx` :
 
-### 1. Base de données
+```text
+Candidat clique "Ma réponse est finie"
+        │
+        ▼
+Persist réponse + appel IA (cette fois EN ATTENTE)
+        │
+        ▼
+IA renvoie { action, message }
+   ├─ action = "follow_up" → on JOUE message au candidat (TTS), on relance l'écoute
+   │                          Compteur followUpsAsked[questionIdx]++ (cap = max_follow_ups)
+   ├─ action = "next"      → transition + question suivante (comportement actuel)
+   └─ action = "end"       → fin d'entretien (dernière question OK)
+```
 
-Migration sur les tables qui stockent les questions :
+Côté UI pendant le tour IA : badge discret « L'IA réfléchit… » (≤ 2 s en moyenne) au lieu de montrer un faux silence.
 
-| Table | Colonnes ajoutées |
+### 2. Mise à jour de `ai-conversation-turn`
+
+Fichier : `supabase/functions/ai-conversation-turn/index.ts`
+
+- Forcer une **réponse JSON structurée** :
+  ```json
+  { "action": "follow_up" | "next" | "end", "message": "texte court à dire au candidat" }
+  ```
+- Ajouter au prompt :
+  - Compteur de relances déjà posées sur cette question + plafond (`max_follow_ups`).
+  - Règle : si `relance_level = light` OU `follow_ups_asked >= max_follow_ups` → forcer `action = "next"`.
+  - Si réponse < 15 mots OU vague (« je sais pas trop », « euh ») → privilégier `follow_up`.
+  - Une seule question à la fois, max 2 phrases.
+- Conserver les niveaux light/medium/deep existants pour piloter l'agressivité.
+
+### 3. Relance sur silence (remplace l'auto-skip et le 45s killer)
+
+- `SILENCE_TIMEOUT_MS` passe à **90 s** et **termine** seulement si plus aucune activité depuis le **début** du silence (dernier mot reconnu).
+- Nouveau palier intermédiaire **silence prolongé** :
+  - À **8 s** sans parole → bandeau visuel discret « Prenez votre temps… »
+  - À **15 s** sans parole → l'IA dit une **relance d'encouragement** (sélectionnée parmi 3 phrases courtes localement, **sans appel réseau** pour rester instantané) :
+    - « Prenez votre temps, je vous écoute. »
+    - « Voulez-vous que je reformule la question ? »
+    - « Un exemple concret peut aider, n'hésitez pas. »
+  - À **30 s** supplémentaires sans parole → propose le bouton **« Passer cette question »** (déjà existant, simplement mis en avant).
+- L'auto-skip 3s + 3s actuel devient désactivé par défaut (option `auto_skip_silence` du projet conservée mais OFF).
+
+### 4. Nouveau réglage par question : `max_follow_ups`
+
+- La colonne `max_follow_ups` existe déjà sur `questions`, `question_templates`, `interview_template_questions` (utilisée nulle part côté candidat aujourd'hui).
+- Dans `QuestionFormDialog.tsx`, ajouter dans la section déjà existante « Aide candidat » un sélecteur **« Relances IA max »** : `0 / 1 / 2` (défaut = 1 si `relance_level ≠ light`, sinon 0).
+- Affichage RH dans `StepQuestions.tsx` : pastille « ↻ 2 » quand `max_follow_ups > 0`.
+
+### 5. Détails UX côté candidat
+
+- Quand l'IA pose une relance : la zone reste sur la **même question** (pas de saut de numéro), un petit chevron apparaît : `Question 3/10 · Relance 1`.
+- Le timer max de réponse (`max_response_seconds`) est **réinitialisé** à chaque relance.
+- Le bouton « Ma réponse est finie » reste toujours actif pour passer à la suite immédiatement si le candidat le souhaite.
+- L'historique chat affiche les relances en italique pour les distinguer des questions principales.
+
+### 6. Détails techniques
+
+| Fichier | Changement |
 |---|---|
-| `questions` | `hint_text text NULL`, `max_response_seconds int NULL` |
-| `question_templates` | idem |
-| `interview_template_questions` | idem |
-
-- `NULL` = aucun (par défaut). Aucun backfill : toutes les questions existantes restent sans indication ni timer.
-- Pas de contrainte CHECK (validation côté UI : `max_response_seconds` entre 30 et 3600 si défini).
-
-### 2. Création / édition de question
-
-**Fichier** : `src/components/QuestionFormDialog.tsx`
-
-Ajout d'une nouvelle section **« Aide candidat »** (optionnelle, repliée par défaut via un `Collapsible` « + Ajouter une indication ou un temps limite ») :
-
-- **Indication (texte court, max 300 car.)** — Textarea, placeholder : *« Ex : appuie-toi sur un exemple concret de ton dernier poste »*
-- **Temps de réponse maximum** — Switch « Activer un temps limite »
-  - Quand activé : 2 inputs numériques côte à côte → `min` (0-59) + `sec` (0-59), pré-remplis à **10 min / 0 s**
-  - Quand désactivé : aucun timer côté candidat
-- Texte d'aide : *« Si activé, un compte à rebours s'affiche ; le candidat passe à la suite à la fin du temps. »*
-
-Mise à jour du type `QuestionFormValue` : `hintText: string`, `maxResponseSeconds: number | null`.
-
-### 3. Propagation côté projet / templates
-
-**Fichiers** :
-- `src/components/project/StepQuestions.tsx` : étendre l'interface `Question` avec `hint_text` + `max_response_seconds`, propager dans `createEmptyQuestion`, `openEdit`, `handleFormSubmit`.
-- `src/pages/ProjectNew.tsx`, `src/pages/ProjectEdit.tsx` : inclure les 2 nouveaux champs lors de l'`insert`/`update` dans `questions`.
-- `src/pages/InterviewTemplateEdit.tsx` + import depuis bibliothèque : idem pour `interview_template_questions` et `question_templates`.
-- `src/components/project/QuestionLibraryDialog.tsx` + `src/pages/QuestionLibrary.tsx` : preserver les 2 champs lors de l'import/export.
-
-### 4. Affichage côté candidat
-
-**Fichier** : `src/pages/InterviewStart.tsx`
-
-**Emplacement de l'indication** :
-Dans le bandeau de la question en cours (sous le titre/contenu de la question, au-dessus de la zone d'enregistrement). Style discret : encadré gris clair avec icône 💡 + texte. *Recommandation : c'est l'endroit où le regard du candidat se pose juste avant de répondre, donc l'indication est lue au bon moment, sans dupliquer la question elle-même.*
-
-```
-┌──────────────────────────────────────┐
-│ Question 3/10                        │
-│ Parlez-moi d'une situation difficile │
-│                                      │
-│ 💡 Appuie-toi sur un exemple concret │
-│                                      │
-│         🎤 [Vous écoutez]            │
-│              02:34 / 10:00           │
-└──────────────────────────────────────┘
-```
-
-**Emplacement du timer** :
-Remplacer le compteur `responseElapsedSec` actuel (`02:34`) par un format `02:34 / 10:00` quand `max_response_seconds` est défini. Sinon, on conserve le compteur libre actuel (comportement inchangé pour les anciennes questions).
-
-**Comportement** :
-- Lorsque le compteur atteint `max_response_seconds`, déclenchement automatique de `handleEndAnswer()` (= comme si le candidat avait fini de parler) puis passage à la question suivante.
-- Couleurs : vert > 50%, orange entre 25 % et 50 % restants, rouge < 25 %.
-- Réinitialisation à chaque changement de question (déjà géré par l'effet existant sur `currentQuestionIndex`).
-
-### 5. Aperçu RH
-
-Dans `StepQuestions.tsx`, ajouter de petits indicateurs dans la ligne de chaque question quand ces options sont activées :
-- Pastille `💡` si `hint_text` non vide
-- Pastille `⏱ 10:00` si `max_response_seconds` défini
+| `supabase/functions/ai-conversation-turn/index.ts` | Output JSON `{action, message}` + prompt enrichi avec compteur de relances |
+| `src/pages/InterviewStart.tsx` | `handleSendResponse` attend l'IA avant d'avancer ; nouvel état `followUpsByQuestion`; refonte `resetSilenceTimer` en 3 paliers ; affichage « Relance N » |
+| `src/components/QuestionFormDialog.tsx` | Champ « Relances IA max » (0/1/2) |
+| `src/components/project/StepQuestions.tsx` | Pastille ↻ N |
 
 ### Hors scope
 
-- Pas de timer global d'entretien modifié (le `MAX_DURATION_MS` global de 10 min reste indépendant — il sera traité plus tard si besoin).
-- Pas de notification email candidat sur les indications.
-- Pas de modification des rapports/transcripts.
+- Pas d'ajout de nouvelle colonne DB (toutes existent déjà).
+- Pas de streaming de la réponse IA (latence ~1-2 s acceptable, badge « réfléchit »).
+- Pas de modification du rapport ni du scoring.
+- Pas de relance sur les questions audio/vidéo non encore lues (uniquement après une vraie réponse candidat ou un silence prolongé).
 
