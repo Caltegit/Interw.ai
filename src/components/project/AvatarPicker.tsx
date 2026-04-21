@@ -6,6 +6,10 @@ import woman3 from "@/assets/avatars/woman-3.jpg";
 import man1 from "@/assets/avatars/man-1.jpg";
 import man2 from "@/assets/avatars/man-2.jpg";
 import man3 from "@/assets/avatars/man-3.jpg";
+import animalFox from "@/assets/avatars/animal-fox.jpg";
+import animalOwl from "@/assets/avatars/animal-owl.jpg";
+import animalPanda from "@/assets/avatars/animal-panda.jpg";
+import animalLion from "@/assets/avatars/animal-lion.jpg";
 
 const PRESET_AVATARS = [
   { seed: "Marie", bg: "b6e3f4" },
@@ -24,6 +28,13 @@ const PHOTO_AVATARS = [
   { url: man1, name: "Antoine" },
   { url: man2, name: "Karim" },
   { url: man3, name: "Hugo" },
+];
+
+const ANIMAL_AVATARS = [
+  { url: animalFox, name: "Renard" },
+  { url: animalOwl, name: "Hibou" },
+  { url: animalPanda, name: "Panda" },
+  { url: animalLion, name: "Lion" },
 ];
 
 interface Props {
