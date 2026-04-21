@@ -17,11 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
-import { Info, Mic, Video, Type, BookmarkPlus } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
 const MAX_CONTENT = 500;
+const MAX_HINT = 300;
+const DEFAULT_TIMER_SECONDS = 600; // 10 min
 
 export interface QuestionFormValue {
   title: string;
