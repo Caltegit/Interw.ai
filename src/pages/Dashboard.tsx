@@ -162,6 +162,23 @@ export default function Dashboard() {
       setRecoDistribution(dist);
       setRecentSessions(sessions ?? []);
       setStalePending(staleList);
+
+      // Fetch reports for the recent sessions to enrich the table
+      const recentIds = (sessions ?? []).map((s) => s.id);
+      if (recentIds.length > 0) {
+        const { data: recentReports } = await supabase
+          .from("reports")
+          .select("session_id, overall_score, recommendation")
+          .in("session_id", recentIds);
+        const map: Record<string, { score: number; recommendation: string | null }> = {};
+        (recentReports ?? []).forEach((r) => {
+          map[r.session_id] = {
+            score: Math.round(Number(r.overall_score)),
+            recommendation: r.recommendation,
+          };
+        });
+        setReportsBySession(map);
+      }
     };
 
     loadData();
