@@ -6,6 +6,10 @@ export const SEED = {
   projectId: "e2e0e2e0-0000-0000-0000-000000000010",
   projectSlug: "e2e-test-project",
   sessionId: "e2e0e2e0-0000-0000-0000-000000000040",
+  pendingSessionId: "e2e0e2e0-0000-0000-0000-000000000041",
+  resumeSessionId: "e2e0e2e0-0000-0000-0000-000000000042",
+  pendingSessionToken: "e2e-pending-session-token-aaaaaaaaaaaaaaaaaaaaaaaa",
+  resumeSessionToken: "e2e-resume-session-token-bbbbbbbbbbbbbbbbbbbbbbbbbb",
 } as const;
 
 export const BASE_URL =
