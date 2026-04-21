@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [topCandidates, setTopCandidates] = useState<any[]>([]);
   const [recoDistribution, setRecoDistribution] = useState<Record<string, number>>({});
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
+  const [reportsBySession, setReportsBySession] = useState<Record<string, { score: number; recommendation: string | null }>>({});
   const [stalePending, setStalePending] = useState<any[]>([]);
 
   const firstName = (profile?.full_name || "").trim().split(" ")[0] || "";
