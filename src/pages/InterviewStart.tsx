@@ -1486,13 +1486,25 @@ export default function InterviewStart() {
                 )}
                 {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
                   <div className="mt-3 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleSkipQuestion}
-                      className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                    >
-                      Passer la question
-                    </button>
+                    {silenceTier >= 3 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSkipQuestion}
+                        className="border-warning text-warning hover:bg-warning/10 animate-pulse"
+                      >
+                        Passer la question
+                      </Button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSkipQuestion}
+                        className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                      >
+                        Passer la question
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
