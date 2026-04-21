@@ -1940,7 +1940,7 @@ export default function InterviewStart() {
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
             <div className="flex items-center gap-3">
-              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
                 Question {currentQuestionIndex + 1} / {questions.length}
                 {(() => {
                   const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
