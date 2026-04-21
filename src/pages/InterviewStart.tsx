@@ -1186,7 +1186,12 @@ export default function InterviewStart() {
     }
 
     setCurrentQuestionIndex(nextQIdx);
-    await speak(transition);
+    if (sessionId) {
+      supabase
+        .from("sessions")
+        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
+        .eq("id", sessionId);
+    }
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
@@ -1271,7 +1276,12 @@ export default function InterviewStart() {
     setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
 
     setCurrentQuestionIndex((prev) => prev + 1);
-    setIsProcessing(false);
+    if (session?.id) {
+      supabase
+        .from("sessions")
+        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
+        .eq("id", session.id);
+    }
 
     // 5. Speak transition + auto-play next question media (or start listening for written)
     await speak(transition);
@@ -1295,9 +1305,17 @@ export default function InterviewStart() {
     if (endInterviewStartedRef.current) return;
     endInterviewStartedRef.current = true;
 
-    // Clear all auto-end timers
+    // Clear all auto-end timers + heartbeat
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    // Quitter le plein écran si on y est
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
     stopListening();
     window.speechSynthesis?.cancel();
 
