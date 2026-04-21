@@ -501,12 +501,11 @@ export default function ProjectDetail() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Candidat</th>
-                      <th className="pb-2 font-medium">Email</th>
                       <th className="pb-2 font-medium">Statut</th>
                       <th className="pb-2 font-medium">Score</th>
                       <th className="pb-2 font-medium">Reco</th>
                       <th className="pb-2 font-medium">Date</th>
-                      <th className="pb-2 font-medium min-w-[200px]">Note recruteur</th>
+                      <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
                       <th className="pb-2 font-medium"></th>
                     </tr>
                   </thead>
@@ -521,8 +520,10 @@ export default function ProjectDetail() {
                           className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
                           onClick={onRowClick}
                         >
-                          <td className="py-3">{s.candidate_name}</td>
-                          <td className="py-3">{s.candidate_email}</td>
+                          <td className="py-3">
+                            <p className="font-medium">{s.candidate_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                          </td>
                           <td className="py-3">
                             <SessionStatusBadge status={s.status} />
                           </td>
@@ -535,7 +536,7 @@ export default function ProjectDetail() {
                           <td className="py-3 text-muted-foreground">
                             {new Date(s.created_at).toLocaleDateString("fr-FR")}
                           </td>
-                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-3 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                             {rep ? (
                               <div className="flex items-center gap-1">
                                 <Input
@@ -559,11 +560,6 @@ export default function ProjectDetail() {
                           </td>
                           <td className="py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-1 justify-end">
-                              {s.status === "completed" && (
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link to={`/sessions/${s.id}`}>Voir</Link>
-                                </Button>
-                              )}
                               {s.status === "pending" && (
                                 <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(s.token)}>
                                   <Copy className="mr-1 h-3 w-3" /> Relancer
