@@ -2015,8 +2015,12 @@ export default function InterviewStart() {
               playsInline
               className="w-full h-full object-cover"
               style={{ transform: "scaleX(-1)" }}
+              data-testid="interview-self-video"
             />
-            <div className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold">
+            <div
+              className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold"
+              data-testid="interview-recording-indicator"
+            >
               <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
               REC
             </div>
