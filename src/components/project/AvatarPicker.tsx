@@ -1,5 +1,11 @@
 import { Check, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import woman1 from "@/assets/avatars/woman-1.jpg";
+import woman2 from "@/assets/avatars/woman-2.jpg";
+import woman3 from "@/assets/avatars/woman-3.jpg";
+import man1 from "@/assets/avatars/man-1.jpg";
+import man2 from "@/assets/avatars/man-2.jpg";
+import man3 from "@/assets/avatars/man-3.jpg";
 
 const PRESET_AVATARS = [
   { seed: "Marie", bg: "b6e3f4" },
@@ -15,6 +21,15 @@ const PRESET_AVATARS = [
   seed: a.seed,
 }));
 
+const PHOTO_AVATARS = [
+  { url: woman1, name: "Camille" },
+  { url: woman2, name: "Isabelle" },
+  { url: woman3, name: "Léa" },
+  { url: man1, name: "Antoine" },
+  { url: man2, name: "Karim" },
+  { url: man3, name: "Hugo" },
+];
+
 interface Props {
   value: string | null;
   onSelectPreset: (url: string) => void;
@@ -24,7 +39,8 @@ interface Props {
 
 export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
-  const isCustom = value && !isPreset;
+  const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
+  const isCustom = value && !isPreset && !isPhoto;
 
   return (
     <div className="space-y-3">
@@ -68,10 +84,44 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
         </div>
       </div>
 
+      {/* Photo avatars */}
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Photos réelles
+        </p>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {PHOTO_AVATARS.map((avatar) => {
+            const selected = value === avatar.url;
+            return (
+              <button
+                key={avatar.name}
+                type="button"
+                onClick={() => onSelectPreset(avatar.url)}
+                className={cn(
+                  "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
+                  selected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-border hover:border-primary/50",
+                )}
+                aria-label={`Photo ${avatar.name}`}
+                title={avatar.name}
+              >
+                <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                {selected && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
+                    <div className="rounded-full bg-primary p-1">
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Preset grid */}
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Avatars prédéfinis
+          Avatars illustrés
         </p>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
           {PRESET_AVATARS.map((avatar) => {
