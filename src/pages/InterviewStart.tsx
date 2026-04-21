@@ -1467,7 +1467,7 @@ export default function InterviewStart() {
                       <img
                         src={project?.avatar_image_url || defaultAiAvatar}
                         alt={project?.ai_persona_name || "IA"}
-                        className={`w-full h-full object-cover object-top transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
+                        className={`w-full h-full object-contain bg-muted/30 transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
                       />
                       {isSpeaking && (
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 flex items-end justify-center gap-1.5">
