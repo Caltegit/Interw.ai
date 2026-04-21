@@ -13,6 +13,7 @@ import {
   Pencil,
   Lightbulb,
   Timer,
+  RotateCcw,
 } from "lucide-react";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
@@ -148,10 +149,10 @@ function SortableQuestion({
           <span className="truncate text-sm text-foreground">
             {previewText || `Question ${index + 1}`}
           </span>
-          {q.follow_up_enabled && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
-              <Sparkles className="h-3 w-3" />
-              <span className="hidden sm:inline">Relance IA</span>
+          {q.follow_up_enabled && q.max_follow_ups > 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary" title={`Jusqu'à ${q.max_follow_ups} relance(s) IA`}>
+              <RotateCcw className="h-3 w-3" />
+              {q.max_follow_ups}
             </span>
           )}
           {q.hint_text?.trim() && (
@@ -260,6 +261,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       mediaType: q.mediaType,
       followUp: q.follow_up_enabled,
       relanceLevel: q.relance_level ?? "medium",
+      maxFollowUps: typeof q.max_follow_ups === "number" ? q.max_follow_ups : 1,
       mediaBlob: q.mediaType === "audio" ? q.audioBlob : q.mediaType === "video" ? q.videoBlob : null,
       mediaPreviewUrl:
         q.mediaType === "audio" ? q.audioPreviewUrl : q.mediaType === "video" ? q.videoPreviewUrl : null,
@@ -279,7 +281,10 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       category: form.category,
       mediaType: form.mediaType,
       follow_up_enabled: form.relanceLevel !== "light",
-      max_follow_ups: form.relanceLevel === "deep" ? 2 : form.relanceLevel === "medium" ? 1 : 0,
+      max_follow_ups:
+        form.relanceLevel === "light"
+          ? 0
+          : Math.max(0, Math.min(2, form.maxFollowUps ?? (form.relanceLevel === "deep" ? 2 : 1))),
       relance_level: form.relanceLevel,
       audioBlob: form.mediaType === "audio" ? form.mediaBlob : null,
       audioPreviewUrl: form.mediaType === "audio" ? form.mediaPreviewUrl : null,

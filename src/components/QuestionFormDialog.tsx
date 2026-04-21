@@ -18,7 +18,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer } from "lucide-react";
+import { Info, Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
@@ -34,6 +34,8 @@ export interface QuestionFormValue {
   followUp: boolean;
   /** Niveau de relance IA pour cette question */
   relanceLevel: "light" | "medium" | "deep";
+  /** Nombre maximum de relances IA pendant l'entretien (0, 1 ou 2) */
+  maxFollowUps: number;
   /** Blob if a new recording was made/imported during this edit */
   mediaBlob: Blob | null;
   /** Preview URL (existing or freshly created) for audio/video */
@@ -57,6 +59,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   mediaType: "written",
   followUp: true,
   relanceLevel: "medium",
+  maxFollowUps: 1,
   mediaBlob: null,
   mediaPreviewUrl: null,
   existingAudioUrl: null,
@@ -244,13 +247,15 @@ export function QuestionFormDialog({
               <Label className="text-xs">Niveau de relance IA</Label>
               <Select
                 value={form.relanceLevel}
-                onValueChange={(v) =>
+                onValueChange={(v) => {
+                  const lvl = v as "light" | "medium" | "deep";
                   setForm({
                     ...form,
-                    relanceLevel: v as "light" | "medium" | "deep",
-                    followUp: v !== "light",
-                  })
-                }
+                    relanceLevel: lvl,
+                    followUp: lvl !== "light",
+                    maxFollowUps: lvl === "light" ? 0 : lvl === "deep" ? 2 : 1,
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -262,6 +267,31 @@ export function QuestionFormDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {form.relanceLevel !== "light" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1.5">
+                  <RotateCcw className="h-3.5 w-3.5 text-primary" />
+                  Nombre maximum de relances IA
+                </Label>
+                <Select
+                  value={String(form.maxFollowUps)}
+                  onValueChange={(v) => setForm({ ...form, maxFollowUps: parseInt(v, 10) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Aucune</SelectItem>
+                    <SelectItem value="1">1 relance maximum</SelectItem>
+                    <SelectItem value="2">2 relances maximum</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  L'IA décide de relancer si la réponse est trop courte ou floue, dans la limite fixée.
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Section Aide candidat (repliée par défaut) */}

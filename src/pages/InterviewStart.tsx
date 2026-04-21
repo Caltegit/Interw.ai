@@ -125,19 +125,60 @@ export default function InterviewStart() {
   );
 
   const MAX_DURATION_MS = 10 * 60 * 1000; // 10 minutes
-  const SILENCE_TIMEOUT_MS = 45 * 1000; // 45 seconds
+  const SILENCE_TIMEOUT_MS = 90 * 1000; // 90 seconds (auto-end fallback)
+  const SILENCE_HINT_MS = 8 * 1000; // 8s — show "Prenez votre temps…"
+  const SILENCE_NUDGE_MS = 15 * 1000; // 15s — IA encourages locally (no API)
+  const SILENCE_SKIP_MS = 30 * 1000; // 30s — emphasise the skip button
+
+  // Silence UI tiers
+  const [silenceTier, setSilenceTier] = useState<0 | 1 | 2 | 3>(0);
+  const silenceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceNudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nudgeAlreadyPlayedRef = useRef(false);
+  const speakRef = useRef<((t: string) => Promise<void>) | null>(null);
+
+  // Follow-up tracking per question (key = question index)
+  const [followUpsByQuestion, setFollowUpsByQuestion] = useState<Record<number, number>>({});
+  const followUpsRef = useRef<Record<number, number>>({});
+  const [aiThinking, setAiThinking] = useState(false);
+
+  const clearSilenceTier = useCallback(() => {
+    if (silenceHintTimerRef.current) { clearTimeout(silenceHintTimerRef.current); silenceHintTimerRef.current = null; }
+    if (silenceNudgeTimerRef.current) { clearTimeout(silenceNudgeTimerRef.current); silenceNudgeTimerRef.current = null; }
+    if (silenceSkipTimerRef.current) { clearTimeout(silenceSkipTimerRef.current); silenceSkipTimerRef.current = null; }
+    setSilenceTier(0);
+    nudgeAlreadyPlayedRef.current = false;
+  }, []);
+
   // Reset silence timer (called on any activity)
   const resetSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    clearSilenceTier();
+    silenceHintTimerRef.current = setTimeout(() => setSilenceTier(1), SILENCE_HINT_MS);
+    silenceNudgeTimerRef.current = setTimeout(() => {
+      setSilenceTier(2);
+      if (!nudgeAlreadyPlayedRef.current && !isPausedRef.current) {
+        nudgeAlreadyPlayedRef.current = true;
+        const nudges = [
+          "Prenez votre temps, je vous écoute.",
+          "Voulez-vous que je reformule la question ?",
+          "Un exemple concret peut aider, n'hésitez pas.",
+        ];
+        const text = nudges[Math.floor(Math.random() * nudges.length)];
+        speakRef.current?.(text).catch(() => {});
+      }
+    }, SILENCE_NUDGE_MS);
+    silenceSkipTimerRef.current = setTimeout(() => setSilenceTier(3), SILENCE_SKIP_MS);
     silenceTimerRef.current = setTimeout(() => {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
-        console.log("Auto-ending interview: 45s silence");
-        toast({ title: "Entretien terminé", description: "Fin automatique après 45 secondes de silence." });
+        console.log("Auto-ending interview: 90s silence");
+        toast({ title: "Entretien terminé", description: "Fin automatique après un silence prolongé." });
         endInterviewRef.current?.();
       }
     }, SILENCE_TIMEOUT_MS);
-  }, [toast]);
+  }, [toast, clearSilenceTier]);
 
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
@@ -338,6 +379,11 @@ export default function InterviewStart() {
     },
     [ttsEnabled, tryElevenLabs],
   );
+
+  // Keep speakRef in sync so silence-tier callbacks can play local nudges
+  useEffect(() => {
+    speakRef.current = speak;
+  }, [speak]);
 
   // Play question media (audio_url or video_url) if available, otherwise use TTS
   const speakOrPlayQuestion = useCallback(
@@ -793,9 +839,10 @@ export default function InterviewStart() {
     }
   };
 
-  // Send candidate response — UI advances IMMEDIATELY, persistence + AI run in background.
+  // Send candidate response — awaits AI to decide between follow-up / next / end.
   const handleSendResponse = async () => {
     stopListening();
+    clearSilenceTier();
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
 
     if (!transcript) {
@@ -808,17 +855,18 @@ export default function InterviewStart() {
       return;
     }
 
-    // Snapshot context for background jobs
+    // Snapshot context
     const questionIdx = currentQuestionIndex;
     const sessionId = session?.id as string | undefined;
     const questionIdSnapshot = questions[questionIdx]?.id || null;
+    const followUpsAsked = followUpsRef.current[questionIdx] ?? 0;
     const aiHistorySnapshot: { role: "user" | "assistant"; content: string }[] = [
       ...aiMessages,
       { role: "user", content: transcript },
     ];
     const isLastQuestion = questionIdx >= questions.length - 1;
 
-    // ── 1. Update UI immediately ──
+    // ── 1. Update UI immediately (candidate bubble) ──
     setMessages((prev) => {
       const updated = [...prev, { role: "candidate", content: transcript }];
       messagesRef.current = updated;
@@ -837,7 +885,6 @@ export default function InterviewStart() {
         } catch (e) {
           console.error("Background video upload error:", e);
         }
-        // Insert candidate message (1 retry on failure)
         const insertOnce = () =>
           persistMessage(sessionId, "candidate", transcript, {
             questionId: questionIdSnapshot,
@@ -859,7 +906,6 @@ export default function InterviewStart() {
             });
           }
         }
-        // Update session video_recording_url with first video if missing
         if (videoUrl) {
           try {
             const { data: sessRow } = await supabase
@@ -879,60 +925,87 @@ export default function InterviewStart() {
       trackBackground(persistCandidateJob);
     }
 
-    // ── 3. Background: call AI for transition text + persist (non-blocking, used for report only) ──
-    if (sessionId) {
-      const aiJob = (async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
-            body: {
-              messages: aiHistorySnapshot,
-              projectContext: {
-                aiPersonaName: project?.ai_persona_name ?? "Marie",
-                jobTitle: project?.job_title ?? "",
-                questions: questions.map((q) => ({
-                  content: q.content,
-                  type: q.type,
-                  mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
-                  relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
-                })),
-                currentQuestionNumber: questionIdx + 1,
-                totalQuestions: questions.length,
-              },
-            },
-          });
-          if (error) throw error;
-          const aiResponse = data?.message;
-          if (aiResponse) {
-            try {
-              await persistMessage(sessionId, "ai", aiResponse);
-            } catch (e) {
-              console.error("AI message persist failed:", e);
-            }
-            setAiMessages((prev) => [...prev, { role: "assistant", content: aiResponse }]);
-          }
-        } catch (e) {
-          console.warn("Background AI conversation turn failed (non-blocking):", e);
-        }
-      })();
-      trackBackground(aiJob);
+    // ── 3. Call AI (await this time) to decide next action ──
+    setAiThinking(true);
+    let action: "follow_up" | "next" | "end" = (isLastQuestion ? "end" : "next") as "follow_up" | "next" | "end";
+    let aiMessage = "";
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
+        body: {
+          messages: aiHistorySnapshot,
+          projectContext: {
+            aiPersonaName: project?.ai_persona_name ?? "Marie",
+            jobTitle: project?.job_title ?? "",
+            questions: questions.map((q) => ({
+              content: q.content,
+              type: q.type,
+              mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
+              relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
+              maxFollowUps: typeof (q as any).max_follow_ups === "number" ? (q as any).max_follow_ups : 1,
+            })),
+            currentQuestionNumber: questionIdx + 1,
+            totalQuestions: questions.length,
+            followUpsAsked,
+          },
+        },
+      });
+      if (error) throw error;
+      action = (data?.action as typeof action) ?? action;
+      aiMessage = (data?.message as string) ?? "";
+    } catch (e) {
+      console.warn("AI conversation turn failed, falling back to deterministic flow:", e);
+    }
+    setAiThinking(false);
+
+    // ── 4. FOLLOW-UP branch ──
+    if (action === "follow_up" && aiMessage && !isLastQuestion) {
+      const newCount = followUpsAsked + 1;
+      followUpsRef.current = { ...followUpsRef.current, [questionIdx]: newCount };
+      setFollowUpsByQuestion({ ...followUpsRef.current });
+
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: aiMessage }];
+        messagesRef.current = updated;
+        return updated;
+      });
+      setAiMessages((prev) => [...prev, { role: "assistant", content: aiMessage }]);
+
+      if (sessionId) {
+        trackBackground(persistMessage(sessionId, "ai", aiMessage).catch((e) => {
+          console.error("Follow-up persist failed:", e);
+        }));
+      }
+
+      setResponseElapsedSec(0);
+      await speak(aiMessage);
+      // Resume listening on the same question
+      startQuestionRecording();
+      startListening();
+      resetSilenceTimer();
+      return;
     }
 
-    // ── 4. Advance UI to next question NOW (no await on AI) ──
-    if (isLastQuestion) {
+    // ── 5. END branch ──
+    if (action === "end" || isLastQuestion) {
       setInterviewFinished(true);
-      // Speak short closing then end interview
-      const closing = "Merci pour vos réponses, l'entretien est terminé.";
+      const closing = aiMessage || "Merci pour vos réponses, l'entretien est terminé.";
       setMessages((prev) => {
         const updated = [...prev, { role: "ai", content: closing }];
         messagesRef.current = updated;
         return updated;
       });
+      setAiMessages((prev) => [...prev, { role: "assistant", content: closing }]);
+      if (sessionId) {
+        trackBackground(persistMessage(sessionId, "ai", closing).catch((e) => {
+          console.error("Closing persist failed:", e);
+        }));
+      }
       await speak(closing);
-      // endInterview will flush background jobs with timeout
       endInterviewRef.current?.();
       return;
     }
 
+    // ── 6. NEXT branch ──
     const nextQIdx = questionIdx + 1;
     const nextQ = questions[nextQIdx];
     const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
@@ -942,21 +1015,27 @@ export default function InterviewStart() {
         : "written";
     const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
-    // Local deterministic transition (no AI on critical path)
+    // Use AI message if provided, otherwise fall back to local transition
     const transition =
-      nMediaType === "written"
+      aiMessage ||
+      (nMediaType === "written"
         ? `Merci. Question suivante : ${nextQ.content}`
-        : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`;
+        : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`);
 
     setMessages((prev) => {
       const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
       messagesRef.current = updated;
       return updated;
     });
+    setAiMessages((prev) => [...prev, { role: "assistant", content: transition }]);
+
+    if (sessionId) {
+      trackBackground(persistMessage(sessionId, "ai", transition).catch((e) => {
+        console.error("Transition persist failed:", e);
+      }));
+    }
 
     setCurrentQuestionIndex(nextQIdx);
-
-    // Speak transition + auto-play next media (or start listening for written)
     await speak(transition);
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
       setIsSpeaking(true);
@@ -966,7 +1045,6 @@ export default function InterviewStart() {
         setShouldAutoPlay(true);
         armPlaybackWatchdog();
       }, 30);
-      // onPlaybackEnd (or watchdog) will start recording + listening
     } else {
       startQuestionRecording();
       startListening();
@@ -1173,6 +1251,9 @@ export default function InterviewStart() {
   }, []);
 
   const startAutoSkipTimer = useCallback(() => {
+    // Auto-skip désactivé par défaut au profit de la relance IA + paliers de silence
+    return;
+    // eslint-disable-next-line no-unreachable
     if (!project?.auto_skip_silence) return;
     clearAutoSkip();
     // After 3s of silence, start a 3s countdown then auto-send
@@ -1258,6 +1339,9 @@ export default function InterviewStart() {
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
       if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
       if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
+      if (silenceHintTimerRef.current) clearTimeout(silenceHintTimerRef.current);
+      if (silenceNudgeTimerRef.current) clearTimeout(silenceNudgeTimerRef.current);
+      if (silenceSkipTimerRef.current) clearTimeout(silenceSkipTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
