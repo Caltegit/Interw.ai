@@ -629,10 +629,67 @@ export default function InterviewStart() {
         .eq("project_id", sess.project_id)
         .order("order_index");
       setQuestions(qs ?? []);
+
+      // Détection d'une reprise possible : session déjà démarrée + au moins un message
+      if (sess.status === "in_progress") {
+        const { count } = await supabase
+          .from("session_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", sess.id);
+        if ((count ?? 0) > 0) {
+          setResumePrompt({ resumeIndex: Math.max(0, Number(sess.last_question_index) || 0) });
+        }
+      }
+
       setLoading(false);
     };
     load();
   }, [token, slug, navigate]);
+
+  // Restaure les messages depuis session_messages et redémarre l'entretien à la bonne question
+  const handleResumeInterview = useCallback(async () => {
+    if (!resumePrompt || !session?.id) return;
+    setRestoringMessages(true);
+    try {
+      const { data: rows } = await supabase
+        .from("session_messages")
+        .select("*")
+        .eq("session_id", session.id)
+        .order("timestamp", { ascending: true });
+      const restored: ChatMessage[] = (rows ?? []).map((r: any) => ({
+        role: r.role,
+        content: r.content,
+      }));
+      setMessages(restored);
+      messagesRef.current = restored;
+      setAiMessages(
+        (rows ?? []).map((r: any) => ({
+          role: r.role === "ai" ? ("assistant" as const) : ("user" as const),
+          content: r.content,
+        })),
+      );
+      setCurrentQuestionIndex(resumePrompt.resumeIndex);
+    } finally {
+      setRestoringMessages(false);
+      setResumePrompt(null);
+    }
+  }, [resumePrompt, session?.id]);
+
+  // Recommence l'entretien depuis zéro : purge les messages déjà persistés
+  const handleRestartInterview = useCallback(async () => {
+    if (!session?.id) return;
+    setRestoringMessages(true);
+    try {
+      await supabase.from("session_messages").delete().eq("session_id", session.id);
+      await supabase
+        .from("sessions")
+        .update({ last_question_index: 0, started_at: null, status: "pending" as any })
+        .eq("id", session.id);
+    } finally {
+      setRestoringMessages(false);
+      setResumePrompt(null);
+    }
+  }, [session?.id]);
 
   // Start camera stream (no global recorder — only per-question recorders)
   const startVideoStream = useCallback(async () => {
