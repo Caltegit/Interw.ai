@@ -87,21 +87,38 @@ export function AppSidebar() {
               {/* Bibliothèque with sub-items */}
               <Collapsible open={libraryOpen || collapsed} onOpenChange={setLibraryOpen}>
                 <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      className={`hover:bg-muted/50 ${isLibraryActive ? "bg-muted text-primary font-medium" : ""}`}
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/library"
+                      end
+                      className="hover:bg-muted/50"
+                      activeClassName="bg-muted text-primary font-medium"
+                      onClick={() => setLibraryOpen(true)}
                     >
                       <BookOpen className="mr-2 h-4 w-4" />
                       {!collapsed && (
                         <>
                           <span>Bibliothèque</span>
-                          <ChevronDown
-                            className={`ml-auto h-4 w-4 transition-transform ${libraryOpen ? "rotate-180" : ""}`}
-                          />
+                          <CollapsibleTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setLibraryOpen((v) => !v);
+                              }}
+                              className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+                              aria-label={libraryOpen ? "Réduire" : "Développer"}
+                            >
+                              <ChevronDown
+                                className={`h-4 w-4 transition-transform ${libraryOpen ? "rotate-180" : ""}`}
+                              />
+                            </button>
+                          </CollapsibleTrigger>
                         </>
                       )}
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
+                    </NavLink>
+                  </SidebarMenuButton>
                   {!collapsed && (
                     <CollapsibleContent>
                       <SidebarMenuSub>
