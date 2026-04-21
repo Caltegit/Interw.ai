@@ -1525,7 +1525,7 @@ export default function InterviewStart() {
   if (resumePrompt && !readyToStart) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full text-center">
+        <Card className="max-w-md w-full text-center" data-testid="interview-resume-dialog">
           <CardContent className="py-12 space-y-6">
             <div className="space-y-3">
               <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre entretien ?</h1>
@@ -1539,6 +1539,7 @@ export default function InterviewStart() {
                 className="candidate-btn-primary w-full h-14 text-base"
                 onClick={handleResumeInterview}
                 disabled={restoringMessages}
+                data-testid="interview-resume-confirm"
               >
                 Reprendre
               </Button>
@@ -1548,6 +1549,7 @@ export default function InterviewStart() {
                 className="w-full h-14 text-base"
                 onClick={handleRestartInterview}
                 disabled={restoringMessages}
+                data-testid="interview-resume-restart"
               >
                 Recommencer depuis le début
               </Button>
