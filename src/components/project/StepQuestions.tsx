@@ -260,6 +260,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       mediaType: q.mediaType,
       followUp: q.follow_up_enabled,
       relanceLevel: q.relance_level ?? "medium",
+      maxFollowUps: typeof q.max_follow_ups === "number" ? q.max_follow_ups : 1,
       mediaBlob: q.mediaType === "audio" ? q.audioBlob : q.mediaType === "video" ? q.videoBlob : null,
       mediaPreviewUrl:
         q.mediaType === "audio" ? q.audioPreviewUrl : q.mediaType === "video" ? q.videoPreviewUrl : null,
