@@ -7,13 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -23,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Eye, MoreHorizontal, Link2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -44,7 +37,7 @@ export default function Projects() {
     if (!user) return;
     supabase
       .from("projects")
-      .select("*")
+      .select("*, sessions(count)")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProjects(data ?? []);
@@ -83,11 +76,7 @@ export default function Projects() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Projets</h1>
-          <p className="text-muted-foreground">Gérez vos campagnes de recrutement</p>
-        </div>
+      <div className="flex items-center">
         <Button asChild>
           <Link to="/projects/new">
             <Plus className="mr-2 h-4 w-4" />
@@ -113,13 +102,17 @@ export default function Projects() {
                 <TableRow>
                   <TableHead>Titre</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead className="text-center">Sessions</TableHead>
                   <TableHead className="hidden sm:table-cell">Créé le</TableHead>
-                  <TableHead className="w-[1%] text-right">Actions</TableHead>
+                  <TableHead className="text-center">Lien candidat</TableHead>
+                  <TableHead className="text-center">Modifier</TableHead>
+                  <TableHead className="text-center">Supprimer</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {projects.map((project) => {
                   const status = statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
+                  const sessionCount = project.sessions?.[0]?.count ?? 0;
                   return (
                     <TableRow
                       key={project.id}
@@ -137,72 +130,39 @@ export default function Projects() {
                       <TableCell>
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-sm font-medium">{sessionCount}</span>
+                      </TableCell>
                       <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
                         {new Date(project.created_at).toLocaleDateString("fr-FR")}
                       </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Inline actions on desktop */}
-                          <div className="hidden md:flex items-center gap-1">
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/projects/${project.id}`}>
-                                <Eye className="h-4 w-4" />
-                                <span className="sr-only sm:not-sr-only sm:ml-1">Voir</span>
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(project.slug)}>
-                              <Link2 className="h-4 w-4" />
-                              <span className="sr-only sm:not-sr-only sm:ml-1">Lien candidat</span>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/projects/${project.id}/edit`}>
-                                <Pencil className="h-4 w-4" />
-                                <span className="sr-only sm:not-sr-only sm:ml-1">Modifier</span>
-                              </Link>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setToDelete({ id: project.id, title: project.title })}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only sm:not-sr-only sm:ml-1">Supprimer</span>
-                            </Button>
-                          </div>
-                          {/* Compact menu on mobile */}
-                          <div className="md:hidden">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Voir
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => copyCandidateLink(project.slug)}>
-                                  <Link2 className="mr-2 h-4 w-4" />
-                                  Lien
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/edit`)}>
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => setToDelete({ id: project.id, title: project.title })}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copyCandidateLink(project.slug)}
+                          aria-label="Copier le lien candidat"
+                        >
+                          <Link2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" asChild aria-label="Modifier">
+                          <Link to={`/projects/${project.id}/edit`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setToDelete({ id: project.id, title: project.title })}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
