@@ -1,38 +1,80 @@
 
 
-## Plan — Page d'accueil Bibliothèque
+## Plan — Refonte UX du formulaire de question
 
-Créer une page d'accueil sur `/library` qui présente les 5 types de bibliothèques avec une carte par type, leur utilité et un compteur d'éléments existants.
+Repenser `QuestionFormDialog` pour partir du **format** de la question (Texte / Audio / Vidéo), puis n'afficher que les champs pertinents pour ce format.
 
-### Comportement
+### Nouvelle structure du formulaire
 
-- Nouvelle route `/library` → `src/pages/LibraryHome.tsx`.
-- Le clic sur « Bibliothèque » dans la barre latérale ouvre le sous-menu **et** navigue vers cette page d'accueil.
-- En haut : titre + courte phrase d'introduction.
-- 5 cartes cliquables (grille 1/2/3 colonnes selon la taille d'écran), une par bibliothèque :
+**Étape 1 — Choix du format (en haut, visuel)**
 
-| Carte | Icône | Description courte | Compteur |
-|---|---|---|---|
-| Entretiens types | ClipboardList | Modèles d'entretiens prêts à dupliquer pour lancer un projet en quelques secondes. | nombre d'`interview_templates` |
-| Questions | MessageSquare | Vos questions réutilisables (texte, audio, vidéo) avec niveau de relance et indications. | `question_templates` |
-| Critères d'évaluation | ListChecks | Critères pondérés réutilisables avec ancrages de notation pour homogénéiser vos rapports. | `criteria_templates` |
-| Intros | Mic | Messages d'accueil audio ou vidéo joués au candidat avant l'entretien. | `intro_templates` |
-| Emails | Mail | Modèles d'emails personnalisés (invitation, rappel, résultat). | `email_templates` |
+3 grandes cartes cliquables côte à côte (radio visuel) :
 
-Chaque carte : icône colorée à gauche, titre, description sur 2 lignes max, badge avec le nombre d'éléments, flèche `→` au survol. Hover : léger scale + bordure primary.
+```text
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│  📝      │ │  🎤      │ │  🎥      │
+│  Texte   │ │  Audio   │ │  Vidéo   │
+│ Lu par IA│ │ Voix réelle│ │ Vous à l'écran│
+└──────────┘ └──────────┘ └──────────┘
+```
+
+Sous les cartes, une phrase de contexte qui change selon le format choisi :
+- Texte : « La question sera lue par la voix de l'IA du projet. »
+- Audio : « Enregistrez votre voix. Aucun texte ne sera affiché au candidat. »
+- Vidéo : « Filmez-vous en train de poser la question. Le texte n'est pas nécessaire. »
+
+**Étape 2 — Contenu (adapté au format)**
+
+| Format | Champs affichés |
+|---|---|
+| **Texte** | Titre interne (court) · Énoncé (textarea, lu par l'IA) · Catégorie |
+| **Audio** | Titre interne · Enregistreur audio · Catégorie · *(Énoncé optionnel, replié sous « Ajouter un texte de secours »)* |
+| **Vidéo** | Titre interne · Enregistreur vidéo · Catégorie · *(Énoncé optionnel, replié sous « Ajouter un texte de secours »)* |
+
+Le « Titre interne » est expliqué par un placeholder : « Nom court visible uniquement par vous ».
+
+**Étape 3 — Options pour le candidat (toujours visibles, regroupées)**
+
+Carte « Pendant la réponse » :
+- Indication affichée au candidat (`hint_text`) — avec une icône ampoule et un placeholder type « Pensez à donner un exemple concret ».
+- Temps limite de réponse (`max_response_seconds`) — sélecteur rapide (Pas de limite / 1 min / 2 min / 3 min / 5 min / Personnalisé).
+
+**Étape 4 — Relance IA (regroupée)**
+
+Carte « Relance par l'IA » :
+- Niveau de relance avec 3 options visuelles :
+  - Aucune (l'IA passe à la suivante)
+  - Légère (1 relance max)
+  - Approfondie (2 relances max)
+- Le compteur `max_follow_ups` est déduit automatiquement, plus de champ séparé.
+
+**Étape 5 — Sauvegarde (en bas, discret)**
+
+Case à cocher « Ajouter aussi à la bibliothèque » (uniquement à la création, pas à l'édition d'une question issue de la bibliothèque, comportement actuel conservé).
+
+### Changements visuels
+
+- Hauteur du dialogue stable : tout tient dans un `max-h-[85vh]` avec scroll interne, plus de saut de layout au changement de format.
+- Sections séparées par de fines cartes (`rounded-lg border bg-muted/30 p-3`) avec un titre court — pas de gros headers.
+- Boutons d'action en footer fixe : « Annuler » / « Enregistrer ».
+- Suppression des labels redondants ; un seul libellé clair par champ.
+
+### Fichiers touchés
+
+- `src/components/QuestionFormDialog.tsx` — refonte complète du rendu, la structure de `QuestionFormValue` reste identique (aucune migration nécessaire).
+- Aucune modification de `StepQuestions.tsx` ni de `QuestionLibraryManager.tsx` — ils consomment le même contrat `QuestionFormValue`.
+- Aucune modification de base de données.
 
 ### Détails techniques
 
-**Fichiers créés**
-- `src/pages/LibraryHome.tsx` : composant page. Récupère l'`organization_id` via `get_user_organization_id`, puis 5 requêtes `select count` en parallèle (`Promise.all`) pour afficher les compteurs. Skeleton pendant le chargement.
-
-**Fichiers modifiés**
-- `src/App.tsx` : ajouter `<Route path="/library" element={<LibraryHome />} />`.
-- `src/components/AppSidebar.tsx` : transformer le `CollapsibleTrigger` en double comportement — clic = navigation vers `/library` ET ouverture du sous-menu. Solution simple : envelopper l'icône+label dans un `NavLink` vers `/library`, et garder un petit chevron à droite qui gère uniquement le toggle du sous-menu (`onClick` avec `e.stopPropagation` + `e.preventDefault`).
+- Le sélecteur de format devient un `RadioGroup` stylé en cartes (réutilise `@/components/ui/radio-group`).
+- La logique `relanceLevel` → `maxFollowUps` est centralisée dans le formulaire : `light=0`, `medium=1`, `deep=2`. Le champ numérique `maxFollowUps` disparaît de l'UI mais reste dans `QuestionFormValue` (calculé à la soumission) pour ne rien casser côté `StepQuestions`.
+- Le champ « Énoncé » reste dans le state même pour Audio/Vidéo (replié), pour préserver la compatibilité avec les imports bibliothèque qui ont déjà un texte.
+- Le sélecteur de durée propose des presets + un mode « Personnalisé » qui ouvre un petit input minutes/secondes.
 
 ### Hors champ
 
-- Pas de modification des 5 pages existantes.
-- Pas de nouveau type de bibliothèque.
-- Pas de recherche transverse entre bibliothèques (à envisager plus tard).
+- Pas de changement sur l'enregistrement audio/vidéo lui-même (`QuestionMediaRecorder` réutilisé tel quel).
+- Pas de changement sur la bibliothèque ni sur le schéma de données.
+- Pas de wizard multi-étapes — tout reste dans un seul dialogue, juste mieux organisé.
 
