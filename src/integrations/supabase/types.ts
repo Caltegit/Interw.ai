@@ -353,8 +353,10 @@ export type Database = {
           content: string
           created_at: string
           follow_up_enabled: boolean
+          hint_text: string | null
           id: string
           max_follow_ups: number
+          max_response_seconds: number | null
           order_index: number
           relance_level: string
           template_id: string
@@ -368,8 +370,10 @@ export type Database = {
           content: string
           created_at?: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           order_index?: number
           relance_level?: string
           template_id: string
@@ -383,8 +387,10 @@ export type Database = {
           content?: string
           created_at?: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           order_index?: number
           relance_level?: string
           template_id?: string
@@ -688,8 +694,10 @@ export type Database = {
           created_at: string
           created_by: string
           follow_up_enabled: boolean
+          hint_text: string | null
           id: string
           max_follow_ups: number
+          max_response_seconds: number | null
           organization_id: string
           relance_level: string
           title: string
@@ -703,8 +711,10 @@ export type Database = {
           created_at?: string
           created_by: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           organization_id: string
           relance_level?: string
           title?: string
@@ -718,8 +728,10 @@ export type Database = {
           created_at?: string
           created_by?: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           organization_id?: string
           relance_level?: string
           title?: string
@@ -742,8 +754,10 @@ export type Database = {
           content: string
           created_at: string
           follow_up_enabled: boolean
+          hint_text: string | null
           id: string
           max_follow_ups: number
+          max_response_seconds: number | null
           order_index: number
           project_id: string
           relance_level: string
@@ -757,8 +771,10 @@ export type Database = {
           content: string
           created_at?: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           order_index?: number
           project_id: string
           relance_level?: string
@@ -772,8 +788,10 @@ export type Database = {
           content?: string
           created_at?: string
           follow_up_enabled?: boolean
+          hint_text?: string | null
           id?: string
           max_follow_ups?: number
+          max_response_seconds?: number | null
           order_index?: number
           project_id?: string
           relance_level?: string
