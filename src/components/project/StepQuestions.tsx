@@ -57,6 +57,10 @@ export interface Question {
   from_library?: boolean;
   /** true si l'utilisateur veut sauvegarder cette question dans la bibliothèque à la sauvegarde du projet */
   save_to_library?: boolean;
+  /** Indication courte affichée au candidat pendant la réponse */
+  hint_text: string;
+  /** Durée maximale de la réponse en secondes (null = pas de limite) */
+  max_response_seconds: number | null;
 }
 
 export const createEmptyQuestion = (): Question => ({
@@ -74,6 +78,8 @@ export const createEmptyQuestion = (): Question => ({
   videoPreviewUrl: null,
   from_library: false,
   save_to_library: false,
+  hint_text: "",
+  max_response_seconds: null,
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
