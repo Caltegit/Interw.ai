@@ -1454,14 +1454,35 @@ export default function InterviewStart() {
                   </div>
                 )}
 
+                {/* Indication candidat */}
+                {currentQ?.hint_text?.trim() && (
+                  <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 flex items-start gap-2">
+                    <span aria-hidden="true">💡</span>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
+                      {currentQ.hint_text}
+                    </p>
+                  </div>
+                )}
+
                 {/* Bandeau d'état */}
                 {(() => {
                   if (interviewFinished) return null;
                   const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
+                  const maxSec = (currentQ?.max_response_seconds as number | null | undefined) ?? null;
                   const mm = String(Math.floor(responseElapsedSec / 60)).padStart(2, "0");
                   const ss = String(responseElapsedSec % 60).padStart(2, "0");
-                  const timerLabel = `${mm}:${ss}`;
+                  let timerLabel = `${mm}:${ss}`;
+                  let timerColorClass = "text-muted-foreground";
+                  if (maxSec && maxSec > 0) {
+                    const remaining = Math.max(0, maxSec - responseElapsedSec);
+                    const rmm = String(Math.floor(maxSec / 60)).padStart(2, "0");
+                    const rss = String(maxSec % 60).padStart(2, "0");
+                    timerLabel = `${mm}:${ss} / ${rmm}:${rss}`;
+                    const ratio = remaining / maxSec;
+                    if (ratio < 0.25) timerColorClass = "text-destructive font-semibold";
+                    else if (ratio < 0.5) timerColorClass = "text-warning";
+                  }
 
                   if (showBigCta) {
                     return (
