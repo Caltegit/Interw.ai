@@ -1,59 +1,40 @@
 
 
-## Diagnostic — entretiens longs (10–30 min)
+## Plan — Mode « salle d'examen » pour l'entretien candidat
 
-J'ai relu le moteur d'entretien. La base est saine, mais plusieurs points vont coincer dès qu'on dépasse 10 minutes. Voici le constat puis un plan d'amélioration priorisé.
+Quatre protections à ajouter autour de la session d'entretien, dans `src/pages/InterviewStart.tsx` (et un petit ajout BDD pour la reprise).
 
-### Ce qui tient la route
+### 1. Plein écran au démarrage
 
-- **Vidéo segmentée par question** : chaque réponse est uploadée en `.webm` séparément (`q0.webm`, `q1.webm`…). Pas de gros fichier final, pas de risque de perdre 30 min d'enregistrement si la fin échoue. Très bien.
-- **Persistance message par message** dans `session_messages` au fil de l'eau. Si le candidat ferme l'onglet, l'historique est préservé.
-- **Pause / reprise** déjà gérée avec replay de la question.
+- Au clic sur « Commencer la session » (ou dès la première question lue), appel `document.documentElement.requestFullscreen()`.
+- Si le candidat sort du plein écran (touche Échap), on n'interrompt pas l'entretien mais on affiche un bandeau discret en haut : « Revenir en plein écran » (bouton). Pas de blocage agressif.
+- Sur mobile (où le plein écran est limité / non pertinent), on détecte et on n'essaie pas — pas d'erreur visible.
 
-### Risques identifiés sur des entretiens longs
+### 2. Avertissement avant fermeture
 
-| # | Problème | Gravité | Détail |
-|---|---------|---------|--------|
-| 1 | **Limite dure de 10 min** (`MAX_DURATION_MS = 10 * 60 * 1000`) qui coupe l'entretien | Bloquant | Toi-même tu parles de 10–30 min, le code coupe à 10 min pile. |
-| 2 | **STT navigateur (`webkitSpeechRecognition`)** | Élevé | Au-delà de 5–10 min, Chrome coupe régulièrement la session (perte de mots, redémarrages). Sur Safari iOS, c'est pire. Pas de fallback serveur. |
-| 3 | **Historique IA non plafonné** envoyé à chaque tour | Moyen | `aiMessages` grossit indéfiniment → coût et latence du LLM montent à chaque question. À 20 questions × relances, le prompt devient lourd. |
-| 4 | **Tous les messages restent en mémoire React** + auto-scroll | Faible-moyen | 100+ bulles + transcript live re-rendent à chaque keystroke vocal. Sur mobile, ça lague. |
-| 5 | **Stream vidéo + MediaRecorder en continu 30 min** | Moyen | Risque d'OOM sur mobile bas de gamme, surchauffe, batterie. Pas de reprise si le MediaRecorder plante. |
-| 6 | **Réseau instable non géré** | Élevé | Si l'upload d'un segment vidéo échoue (`return null`), on continue sans retry. Sur 30 min en wifi capricieux, garanti d'en perdre. |
-| 7 | **Pas de heartbeat / reprise de session** | Moyen | Si l'onglet est rechargé à la 20ᵉ minute, l'entretien est perdu (pas de mécanisme de reprise depuis `session_messages`). |
-| 8 | **Génération de rapport** : `generate-report` reçoit toute la transcription d'un coup | À vérifier | Sur 30 min × relances, la transcription peut dépasser le contexte du modèle ou rallonger fortement le temps de génération. |
+- Pendant que la session est `in_progress`, on attache un listener `beforeunload` qui déclenche le prompt natif du navigateur.
+- On retire le listener dès que la session passe en `completed` ou est explicitement abandonnée, pour ne pas bloquer la redirection finale.
 
-### Plan d'amélioration proposé (par priorité)
+### 3. Reprise de session
 
-**P0 — Indispensables avant de tester du long**
+- **BDD** : ajouter `sessions.last_question_index` (int, défaut 0) et `sessions.last_activity_at` (timestamptz). Migration simple, pas d'impact sur l'existant.
+- **Côté candidat** : à l'ouverture de `/interview/:slug/start/:token`, si la session existe déjà avec `status = 'in_progress'` et au moins un message dans `session_messages`, afficher un écran « Reprendre votre entretien ? » avec deux boutons : *Reprendre* (recharge l'historique depuis `session_messages` et repart à `last_question_index`) ou *Recommencer* (réinitialise les messages et repart à 0).
+- Mise à jour de `last_question_index` à chaque passage de question, et `last_activity_at` au fil de l'eau (heartbeat léger toutes les 30 s).
 
-1. **Durée max paramétrable par projet** : champ `projects.max_duration_minutes` (défaut 15, plage 5–45). Remplacer la constante en dur. Affiché dans le formulaire de création de projet, à côté de la limite de réponse par question.
-2. **Retry + file d'attente sur upload vidéo** : 3 tentatives avec backoff (1s, 3s, 8s). Si toujours en échec, on garde le blob en IndexedDB et on retente en arrière-plan. Le message texte est persisté quoi qu'il arrive.
-3. **Plafond d'historique IA** : ne garder que les N derniers échanges (genre 6 derniers tours) + un résumé court des questions précédentes injecté dans le system prompt. Réduit coût, latence, et risque de dépasser le contexte.
+### 4. Verrouillage de la navigation
 
-**P1 — Robustesse**
+- Bloquer le retour arrière du navigateur pendant l'entretien : `history.pushState` au démarrage + listener `popstate` qui re-pousse l'état (le bouton retour ne fait rien).
+- Aucun lien sortant n'est affiché pendant l'entretien (à vérifier dans le layout candidat — déjà minimal, juste le logo org en header). Si besoin, retirer tout lien cliquable du header pendant `in_progress`.
 
-4. **Reprise de session** : si le candidat recharge la page avec le même token et que `session.status = in_progress`, proposer « Reprendre l'entretien ? ». On reconstruit l'état depuis `session_messages` et on repart à la question suivante non répondue.
-5. **Heartbeat de session** : ping `sessions.last_activity_at` toutes les 30 s. Permet de détecter les abandons et d'éviter qu'une session « zombie » bloque le candidat.
-6. **STT plus robuste** : 
-   - Restart automatique du `SpeechRecognition` toutes les 50 s même sans erreur (Chrome a une limite molle vers 60 s).
-   - Fallback : si on détecte 3 `onerror` de suite, on bascule sur un mode « enregistrer puis transcrire » avec une edge function (Whisper / Lovable AI) sur le segment audio de la question.
+### Fichiers touchés
 
-**P2 — Performance UI**
+- `src/pages/InterviewStart.tsx` — plein écran, beforeunload, blocage popstate, heartbeat, écran de reprise.
+- `src/components/CandidateLayout.tsx` — désactiver le clic sur le logo pendant l'entretien (mode `minimal`).
+- **Migration SQL** — ajouter `last_question_index` et `last_activity_at` à `sessions`.
 
-7. **Virtualisation de la liste de messages** au-delà de 30 bulles (ou simplement `overflow + scroll vers le bas` sans tout remonter dans le DOM). Désactiver l'auto-scroll smooth après 50 messages.
-8. **Limite de `liveTranscript`** affiché : tronquer à 500 caractères (on garde le full en ref pour l'envoi).
+### Hors champ
 
-**P3 — Rapport long**
-
-9. **Rapport en deux passes** quand l'entretien dépasse 15 min : 
-   - Pass 1 : résumé par question (parallèle, court)
-   - Pass 2 : synthèse globale + scoring à partir des résumés
-   - Évite les timeouts de l'edge function et améliore la qualité.
-
-### Ce que je propose comme prochaine étape
-
-Plutôt que tout faire d'un coup, attaquer **P0 uniquement** d'abord (1, 2, 3) — c'est ce qui débloque réellement le test des entretiens longs. P1 et P2 viennent après ton premier vrai test, en fonction de ce que tu constates.
-
-Tu veux que je parte sur P0 ?
+- Pas de plein écran forcé / verrouillé (impossible techniquement sans extension, et hostile UX).
+- Pas de détection de changement d'onglet / triche (sujet séparé, à traiter plus tard si besoin).
+- Pas de modification du flux RH ni des autres pages candidat.
 
