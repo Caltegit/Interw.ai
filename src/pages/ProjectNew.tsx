@@ -206,6 +206,8 @@ export default function ProjectNew() {
           presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
           completion_message: completionMessage.trim() || null,
           tts_provider: ttsProvider,
+          tts_voice_gender: ttsVoiceGender,
+          tts_voice_id: ttsVoiceId,
         } as never)
         .select()
         .single();

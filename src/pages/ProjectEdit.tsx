@@ -112,6 +112,9 @@ export default function ProjectEdit() {
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
       setTtsProvider(((project as { tts_provider?: string }).tts_provider as "browser" | "elevenlabs") ?? "browser");
+      const loadedGender = (((project as { tts_voice_gender?: string }).tts_voice_gender as VoiceGender) ?? "female");
+      setTtsVoiceGender(loadedGender);
+      setTtsVoiceId((project as { tts_voice_id?: string | null }).tts_voice_id ?? getDefaultVoiceForGender(loadedGender));
       
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
@@ -268,6 +271,8 @@ export default function ProjectEdit() {
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
           tts_provider: ttsProvider,
+          tts_voice_gender: ttsVoiceGender,
+          tts_voice_id: ttsVoiceId,
         } as never)
         .eq("id", id);
 
