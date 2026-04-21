@@ -951,7 +951,7 @@ export default function InterviewStart() {
     try {
       const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
         body: {
-          messages: aiHistorySnapshot,
+          messages: aiHistorySnapshot.slice(-AI_HISTORY_WINDOW),
           projectContext: {
             aiPersonaName: project?.ai_persona_name ?? "Marie",
             jobTitle: project?.job_title ?? "",
