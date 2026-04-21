@@ -380,6 +380,11 @@ export default function InterviewStart() {
     [ttsEnabled, tryElevenLabs],
   );
 
+  // Keep speakRef in sync so silence-tier callbacks can play local nudges
+  useEffect(() => {
+    speakRef.current = speak;
+  }, [speak]);
+
   // Play question media (audio_url or video_url) if available, otherwise use TTS
   const speakOrPlayQuestion = useCallback(
     async (text: string, question?: any) => {
