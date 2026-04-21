@@ -479,8 +479,30 @@ export default function ProjectNew() {
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-start justify-between gap-4">
+              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Genre de la voix</Label>
+                  <RadioGroup
+                    value={ttsVoiceGender}
+                    onValueChange={(v) => {
+                      const g = v as VoiceGender;
+                      setTtsVoiceGender(g);
+                      setTtsVoiceId(getDefaultVoiceForGender(g));
+                    }}
+                    className="flex gap-6"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="female" id="voice-gender-female-new" />
+                      <Label htmlFor="voice-gender-female-new" className="cursor-pointer font-normal">Femme</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="male" id="voice-gender-male-new" />
+                      <Label htmlFor="voice-gender-male-new" className="cursor-pointer font-normal">Homme</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
                     <p className="text-xs text-muted-foreground">
@@ -489,10 +511,41 @@ export default function ProjectNew() {
                   </div>
                   <Switch
                     checked={ttsProvider === "elevenlabs"}
-                    onCheckedChange={(v) => setTtsProvider(v ? "elevenlabs" : "browser")}
+                    onCheckedChange={(v) => {
+                      if (v) {
+                        setVoiceDialogOpen(true);
+                      } else {
+                        setTtsProvider("browser");
+                      }
+                    }}
                   />
                 </div>
+
+                {ttsProvider === "elevenlabs" && (
+                  <button
+                    type="button"
+                    onClick={() => setVoiceDialogOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Modifier la voix
+                  </button>
+                )}
               </div>
+
+              <VoiceSelectorDialog
+                open={voiceDialogOpen}
+                onOpenChange={setVoiceDialogOpen}
+                gender={ttsVoiceGender}
+                initialVoiceId={ttsVoiceId}
+                personaName={aiPersonaName}
+                onConfirm={(id) => {
+                  setTtsVoiceId(id);
+                  setTtsProvider("elevenlabs");
+                }}
+                onCancel={() => {
+                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
+                }}
+              />
 
               <div>
                 <Label>Photo du recruteur</Label>
