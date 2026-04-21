@@ -1599,8 +1599,17 @@ export default function InterviewStart() {
     );
   }
 
+  // Helper : tenter de revenir en plein écran (clic utilisateur requis)
+  const requestFullscreenAgain = () => {
+    if (isMobileLikeRef.current) return;
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
   return (
     <CandidateLayout minimal>
+      {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
+        <FullscreenPrompt onEnter={requestFullscreenAgain} />
+      )}
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)]">
         {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
         {backgroundSaving > 0 && (
