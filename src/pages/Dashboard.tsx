@@ -229,12 +229,6 @@ export default function Dashboard() {
             </Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/interview-templates">
-              <LayoutTemplate className="h-4 w-4" />
-              Modèles
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
             <Link to="/question-library">
               <BookOpen className="h-4 w-4" />
               Bibliothèque
