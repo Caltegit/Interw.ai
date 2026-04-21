@@ -21,9 +21,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, Send, BarChart3, ArrowUpDown } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -254,135 +264,141 @@ export default function ProjectDetail() {
     no: "Défavorable",
   };
 
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (recoFilter !== "all" ? 1 : 0) +
+    (scoreMin !== "" ? 1 : 0) +
+    (scoreMax !== "" ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0);
+
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setRecoFilter("all");
+    setScoreMin("");
+    setScoreMax("");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{project.title}</h1>
+      {/* En-tête condensé */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <h1 className="text-2xl font-bold truncate">{project.title}</h1>
+          <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
-            <Button variant="outline" size="sm" onClick={copyProjectLink}>
-              <Copy className="mr-1 h-4 w-4" /> Lien candidat
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={duplicating}>
-              <CopyPlus className="mr-1 h-4 w-4" /> {duplicating ? "Duplication..." : "Dupliquer"}
-            </Button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {completedSessions.length >= 2 && (
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/projects/${project.id}/compare`}>
-                  <BarChart3 className="mr-1 h-4 w-4" /> Comparer les candidats
-                </Link>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button variant="outline" size="sm" onClick={copyProjectLink}>
+            <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/projects/${project.id}/edit`}>
+              <Pencil className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Modifier</span>
+            </Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
-            )}
-            <SaveAsTemplateDialog
-              projectId={project.id}
-              defaultName={project.title}
-              defaultJobTitle={project.job_title}
-              defaultDuration={project.max_duration_minutes}
-              defaultLanguage={project.language}
-            />
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/projects/${project.id}/edit`}>
-                <Pencil className="mr-1 h-4 w-4" /> Modifier
-              </Link>
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-1 h-4 w-4" /> Supprimer
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDuplicate} disabled={duplicating}>
+                <CopyPlus className="mr-2 h-4 w-4" /> {duplicating ? "Duplication…" : "Dupliquer"}
+              </DropdownMenuItem>
+              <SaveAsTemplateDialog
+                projectId={project.id}
+                defaultName={project.title}
+                defaultJobTitle={project.job_title}
+                defaultDuration={project.max_duration_minutes}
+                defaultLanguage={project.language}
+              />
+              {completedSessions.length >= 2 && (
+                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/compare`)}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Comparer les candidats
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem
+                    onSelect={(e) => e.preventDefault()}
+                    className="text-destructive focus:text-destructive"
                   >
-                    Supprimer
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
+      {/* Détails du projet (replié par défaut) */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2">
+            <ChevronDown className="h-4 w-4 mr-1" />
+            Détails du projet
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <Card>
+            <CardContent className="pt-6 space-y-2 text-sm">
+              <p><strong>Description :</strong> {project.description || "—"}</p>
+              <p><strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}</p>
+              <p><strong>Persona IA :</strong> {project.ai_persona_name}</p>
+              <p><strong>Durée max :</strong> {project.max_duration_minutes} min</p>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
       <Tabs defaultValue="sessions">
         <TabsList>
-          <TabsTrigger value="overview">Aperçu</TabsTrigger>
           <TabsTrigger value="sessions">Sessions ({sessions.length})</TabsTrigger>
           <TabsTrigger value="questions">Questions ({questions.length})</TabsTrigger>
           <TabsTrigger value="criteria">Critères ({criteria.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardContent className="pt-6 space-y-2 text-sm">
-              <p>
-                <strong>Description :</strong> {project.description || "—"}
-              </p>
-              <p>
-                <strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}
-              </p>
-              <p>
-                <strong>Persona IA :</strong> {project.ai_persona_name}
-              </p>
-              <p>
-                <strong>Durée max :</strong> {project.max_duration_minutes} min
-              </p>
-              <p>
-                <strong>Lien :</strong>{" "}
-                <code className="text-xs bg-muted px-2 py-1 rounded">
-                  {window.location.origin}/interview/{project.slug}
-                </code>
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="sessions" className="space-y-4">
-          {/* Pending sessions alert */}
+          {/* Alerte fine candidats en attente */}
           {pendingSessions.length > 0 && (
-            <Card className="border-warning/50 bg-warning/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Send className="h-4 w-4 text-warning" />
-                  {pendingSessions.length} candidat(s) en attente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Ces candidats n'ont pas encore commencé leur entretien. Copiez leur lien pour les relancer.
-                </p>
-                <div className="space-y-2">
-                  {pendingSessions.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{s.candidate_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>depuis {Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000)}j</span>
-                        <Button variant="outline" size="sm" onClick={() => copyCandidateLink(s.token)}>
-                          <Copy className="mr-1 h-3 w-3" /> Relancer
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between gap-2 rounded-md border border-warning/50 bg-warning/5 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                <span className="truncate">
+                  {pendingSessions.length} candidat{pendingSessions.length > 1 ? "s" : ""} en attente
+                </span>
+              </div>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-warning"
+                onClick={() => setStatusFilter("pending")}
+              >
+                Voir uniquement les en attente
+              </Button>
+            </div>
           )}
 
           {sessions.length === 0 ? (
@@ -391,84 +407,105 @@ export default function ProjectDetail() {
             </p>
           ) : (
             <>
-              {/* Filters */}
-              <Card>
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Input
-                      placeholder="Rechercher (nom ou email)…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="max-w-xs"
-                    />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[160px]"><SelectValue placeholder="Statut" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous statuts</SelectItem>
-                        <SelectItem value="pending">En attente</SelectItem>
-                        <SelectItem value="in_progress">En cours</SelectItem>
-                        <SelectItem value="completed">Terminé</SelectItem>
-                        <SelectItem value="expired">Expiré</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={recoFilter} onValueChange={setRecoFilter}>
-                      <SelectTrigger className="w-[180px]"><SelectValue placeholder="Recommandation" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes recos</SelectItem>
-                        <SelectItem value="strong_yes">Très favorable</SelectItem>
-                        <SelectItem value="yes">Favorable</SelectItem>
-                        <SelectItem value="maybe">Mitigé</SelectItem>
-                        <SelectItem value="no">Défavorable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Score min"
-                      value={scoreMin}
-                      onChange={(e) => setScoreMin(e.target.value)}
-                      className="w-[110px]"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Score max"
-                      value={scoreMax}
-                      onChange={(e) => setScoreMax(e.target.value)}
-                      className="w-[110px]"
-                    />
-                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" />
-                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto" />
-                    <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
-                      const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
-                      setSortKey(k); setSortDir(d);
-                    }}>
-                      <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date-desc">Date (récent)</SelectItem>
-                        <SelectItem value="date-asc">Date (ancien)</SelectItem>
-                        <SelectItem value="score-desc">Score (haut)</SelectItem>
-                        <SelectItem value="score-asc">Score (bas)</SelectItem>
-                        <SelectItem value="name-asc">Nom (A-Z)</SelectItem>
-                        <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {filteredSessions.length} session(s) sur {sessions.length}
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Barre filtres compacte */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Rechercher (nom ou email)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="max-w-xs h-9"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <SlidersHorizontal className="h-4 w-4 mr-1" />
+                      Filtres{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-80 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Statut</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous statuts</SelectItem>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="completed">Terminé</SelectItem>
+                          <SelectItem value="expired">Expiré</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Recommandation</Label>
+                      <Select value={recoFilter} onValueChange={setRecoFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          <SelectItem value="strong_yes">Très favorable</SelectItem>
+                          <SelectItem value="yes">Favorable</SelectItem>
+                          <SelectItem value="maybe">Mitigé</SelectItem>
+                          <SelectItem value="no">Défavorable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Score min</Label>
+                        <Input type="number" value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Score max</Label>
+                        <Input type="number" value={scoreMax} onChange={(e) => setScoreMax(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Du</Label>
+                        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Au</Label>
+                        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
+                      Réinitialiser
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+                <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
+                  const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
+                  setSortKey(k); setSortDir(d);
+                }}>
+                  <SelectTrigger className="w-auto h-9 gap-1">
+                    <ArrowUpDown className="h-3 w-3" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date-desc">Date (récent)</SelectItem>
+                    <SelectItem value="date-asc">Date (ancien)</SelectItem>
+                    <SelectItem value="score-desc">Score (haut)</SelectItem>
+                    <SelectItem value="score-asc">Score (bas)</SelectItem>
+                    <SelectItem value="name-asc">Nom (A-Z)</SelectItem>
+                    <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {filteredSessions.length} / {sessions.length}
+                </span>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Candidat</th>
-                      <th className="pb-2 font-medium">Email</th>
                       <th className="pb-2 font-medium">Statut</th>
                       <th className="pb-2 font-medium">Score</th>
                       <th className="pb-2 font-medium">Reco</th>
                       <th className="pb-2 font-medium">Date</th>
-                      <th className="pb-2 font-medium min-w-[200px]">Note recruteur</th>
+                      <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
                       <th className="pb-2 font-medium"></th>
                     </tr>
                   </thead>
@@ -483,8 +520,10 @@ export default function ProjectDetail() {
                           className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
                           onClick={onRowClick}
                         >
-                          <td className="py-3">{s.candidate_name}</td>
-                          <td className="py-3">{s.candidate_email}</td>
+                          <td className="py-3">
+                            <p className="font-medium">{s.candidate_name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                          </td>
                           <td className="py-3">
                             <SessionStatusBadge status={s.status} />
                           </td>
@@ -497,7 +536,7 @@ export default function ProjectDetail() {
                           <td className="py-3 text-muted-foreground">
                             {new Date(s.created_at).toLocaleDateString("fr-FR")}
                           </td>
-                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                          <td className="py-3 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                             {rep ? (
                               <div className="flex items-center gap-1">
                                 <Input
@@ -521,11 +560,6 @@ export default function ProjectDetail() {
                           </td>
                           <td className="py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex gap-1 justify-end">
-                              {s.status === "completed" && (
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link to={`/sessions/${s.id}`}>Voir</Link>
-                                </Button>
-                              )}
                               {s.status === "pending" && (
                                 <Button variant="ghost" size="sm" onClick={() => copyCandidateLink(s.token)}>
                                   <Copy className="mr-1 h-3 w-3" /> Relancer
