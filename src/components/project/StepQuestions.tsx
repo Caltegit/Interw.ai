@@ -266,6 +266,8 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       existingAudioUrl: q.audioPreviewUrl,
       existingVideoUrl: q.videoPreviewUrl,
       saveToLibrary: q.save_to_library,
+      hintText: q.hint_text ?? "",
+      maxResponseSeconds: q.max_response_seconds ?? null,
     });
     setFormOpen(true);
   };
