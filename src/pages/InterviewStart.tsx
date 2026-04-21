@@ -1251,6 +1251,9 @@ export default function InterviewStart() {
   }, []);
 
   const startAutoSkipTimer = useCallback(() => {
+    // Auto-skip désactivé par défaut au profit de la relance IA + paliers de silence
+    return;
+    // eslint-disable-next-line no-unreachable
     if (!project?.auto_skip_silence) return;
     clearAutoSkip();
     // After 3s of silence, start a 3s countdown then auto-send
