@@ -1525,7 +1525,7 @@ export default function InterviewStart() {
   if (resumePrompt && !readyToStart) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full text-center">
+        <Card className="max-w-md w-full text-center" data-testid="interview-resume-dialog">
           <CardContent className="py-12 space-y-6">
             <div className="space-y-3">
               <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre entretien ?</h1>
@@ -1539,6 +1539,7 @@ export default function InterviewStart() {
                 className="candidate-btn-primary w-full h-14 text-base"
                 onClick={handleResumeInterview}
                 disabled={restoringMessages}
+                data-testid="interview-resume-confirm"
               >
                 Reprendre
               </Button>
@@ -1548,6 +1549,7 @@ export default function InterviewStart() {
                 className="w-full h-14 text-base"
                 onClick={handleRestartInterview}
                 disabled={restoringMessages}
+                data-testid="interview-resume-restart"
               >
                 Recommencer depuis le début
               </Button>
@@ -1562,7 +1564,7 @@ export default function InterviewStart() {
   if (!readyToStart) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full text-center">
+        <Card className="max-w-md w-full text-center" data-testid="interview-start-screen">
           <CardContent className="py-12 space-y-6">
             <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
               <div
@@ -1589,7 +1591,12 @@ export default function InterviewStart() {
                 Soyez naturel.le et souriez vous êtes filmé.e !
               </p>
             </div>
-            <Button size="lg" className="candidate-btn-primary w-full h-16 text-xl" onClick={beginInterview}>
+            <Button
+              size="lg"
+              className="candidate-btn-primary w-full h-16 text-xl"
+              onClick={beginInterview}
+              data-testid="interview-start-button"
+            >
               <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer la session
             </Button>
@@ -1933,7 +1940,7 @@ export default function InterviewStart() {
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
             <div className="flex items-center gap-3">
-              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
                 Question {currentQuestionIndex + 1} / {questions.length}
                 {(() => {
                   const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
@@ -2008,8 +2015,12 @@ export default function InterviewStart() {
               playsInline
               className="w-full h-full object-cover"
               style={{ transform: "scaleX(-1)" }}
+              data-testid="interview-self-video"
             />
-            <div className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold">
+            <div
+              className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold"
+              data-testid="interview-recording-indicator"
+            >
               <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
               REC
             </div>
