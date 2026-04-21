@@ -105,14 +105,14 @@ export default function InterviewStart() {
       sessionId: string,
       role: "ai" | "candidate",
       content: string,
-      options?: { questionId?: string | null; videoSegmentUrl?: string | null },
+      options?: { questionId?: string | null; videoSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
         role,
         content,
         question_id: options?.questionId ?? null,
-        is_follow_up: false,
+        is_follow_up: options?.isFollowUp ?? false,
         video_segment_url: options?.videoSegmentUrl ?? null,
       });
 
@@ -971,7 +971,10 @@ export default function InterviewStart() {
       setAiMessages((prev) => [...prev, { role: "assistant", content: aiMessage }]);
 
       if (sessionId) {
-        trackBackground(persistMessage(sessionId, "ai", aiMessage).catch((e) => {
+        trackBackground(persistMessage(sessionId, "ai", aiMessage, {
+          questionId: questions[questionIdx]?.id ?? null,
+          isFollowUp: true,
+        }).catch((e) => {
           console.error("Follow-up persist failed:", e);
         }));
       }
@@ -1486,13 +1489,25 @@ export default function InterviewStart() {
                 )}
                 {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
                   <div className="mt-3 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={handleSkipQuestion}
-                      className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                    >
-                      Passer la question
-                    </button>
+                    {silenceTier >= 3 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSkipQuestion}
+                        className="border-warning text-warning hover:bg-warning/10 animate-pulse"
+                      >
+                        Passer la question
+                      </Button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSkipQuestion}
+                        className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
+                      >
+                        Passer la question
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1709,7 +1724,35 @@ export default function InterviewStart() {
             <div className="flex items-center gap-3">
               <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">
                 Question {currentQuestionIndex + 1} / {questions.length}
+                {(() => {
+                  const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
+                  const max = Math.max(
+                    0,
+                    Number((questions[currentQuestionIndex] as any)?.max_follow_ups ?? 0),
+                  );
+                  if (n <= 0) return null;
+                  return (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold">
+                      ↻ Relance {n}{max > 0 ? `/${max}` : ""}
+                    </span>
+                  );
+                })()}
               </span>
+              {aiThinking && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="flex gap-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "240ms" }} />
+                  </span>
+                  L'IA réfléchit…
+                </span>
+              )}
+              {!aiThinking && silenceTier === 1 && (
+                <span className="text-[10px] sm:text-xs text-muted-foreground italic">
+                  Prenez votre temps…
+                </span>
+              )}
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all"
