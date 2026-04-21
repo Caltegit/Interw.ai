@@ -179,6 +179,57 @@ Deno.serve(async (req) => {
     // 11. Delete any pre-existing report for this session so the test always re-generates
     await admin.from("reports").delete().eq("session_id", FIXED.sessionId);
 
+    // 12. Sessions dédiées aux tests Playwright de l'écran InterviewStart.
+    //     - Pending : session vierge, statut "pending", aucun message.
+    //     - Resume  : session "in_progress" avec 1 message IA + 1 candidat sur la 1re question.
+    //     Les deux sont reset à chaque appel pour rester déterministes.
+
+    // -- Pending session : on remet à zéro les champs susceptibles d'avoir été modifiés
+    //    par un test précédent (status, started_at, last_question_index...).
+    await admin.from("session_messages").delete().eq("session_id", FIXED.pendingSessionId);
+    await admin.from("sessions").upsert({
+      id: FIXED.pendingSessionId,
+      project_id: FIXED.projectId,
+      candidate_name: "E2E Pending",
+      candidate_email: "e2e-pending@example.com",
+      status: "pending",
+      token: FIXED.pendingToken,
+      started_at: null,
+      completed_at: null,
+      duration_seconds: null,
+      consent_given_at: new Date().toISOString(),
+      last_question_index: 0,
+      last_activity_at: null,
+    });
+
+    // -- Resume session : statut in_progress + 2 messages persistés sur la 1re question.
+    await admin.from("session_messages").delete().eq("session_id", FIXED.resumeSessionId);
+    await admin.from("sessions").upsert({
+      id: FIXED.resumeSessionId,
+      project_id: FIXED.projectId,
+      candidate_name: "E2E Resume",
+      candidate_email: "e2e-resume@example.com",
+      status: "in_progress",
+      token: FIXED.resumeToken,
+      started_at: new Date(Date.now() - 600_000).toISOString(),
+      completed_at: null,
+      duration_seconds: null,
+      consent_given_at: new Date(Date.now() - 600_000).toISOString(),
+      last_question_index: 1,
+      last_activity_at: new Date(Date.now() - 300_000).toISOString(),
+    });
+    await admin.from("session_messages").upsert([
+      {
+        id: FIXED.rm1, session_id: FIXED.resumeSessionId, question_id: FIXED.q1, role: "ai",
+        content: "Pouvez-vous vous présenter en quelques minutes ?", is_follow_up: false,
+      },
+      {
+        id: FIXED.rm2, session_id: FIXED.resumeSessionId, question_id: FIXED.q1, role: "candidate",
+        content: "Bonjour, je suis E2E Resume, candidat de test pour la reprise de session.",
+        is_follow_up: false,
+      },
+    ]);
+
     return new Response(JSON.stringify({
       ok: true,
       credentials: { email: FIXED.email, password: FIXED.password },
