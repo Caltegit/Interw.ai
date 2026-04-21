@@ -1,101 +1,117 @@
 
 
-## Plan — Allègement de la page Détail Projet
+## Plan — Refonte du Dashboard
 
-### Constat
+### Constat actuel
 
-La page actuelle est surchargée :
-- En-tête à 2 lignes avec 6 boutons (Lien candidat, Dupliquer, Comparer, Sauver template, Modifier, Supprimer)
-- Carte de filtres **toujours visible** avec 8 contrôles (recherche, statut, reco, score min, score max, date début, date fin, tri)
-- Onglet "Aperçu" qui répète des infos déjà visibles ailleurs
-- Bandeau "candidats en attente" volumineux qui duplique la liste
+Le dashboard est sous-exploité :
+- 3 KPI seulement (Projets, En attente, Complétés) — le score moyen est calculé mais jamais affiché
+- Liste des 10 derniers entretiens sans contexte (pas de score, pas de recommandation)
+- Aucun lien rapide pour les actions fréquentes (créer un projet, consulter la bibliothèque)
+- Aucune vue d'ensemble du scoring (top candidats, distribution des recommandations)
+- Aucune tendance temporelle
 
-### Modifications dans `src/pages/ProjectDetail.tsx`
+### Refonte proposée
 
-**1. En-tête condensé (1 seule ligne)**
-
-```
-[Titre projet]  [Badge statut]                    [🔗 Lien] [✏ Modifier] [⋯ Plus ▾]
-```
-
-- Garder visibles : **Lien candidat**, **Modifier**
-- Regrouper dans un menu déroulant **« Plus »** (DropdownMenu) :
-  - Dupliquer
-  - Sauvegarder comme modèle
-  - Comparer les candidats (si ≥2 sessions terminées)
-  - Supprimer (en rouge, en bas)
-- Suppression du sous-titre redondant
-
-**2. Onglet « Aperçu » supprimé**
-
-Les infos (description, langue, persona, durée, lien) sont déplacées :
-- **Lien candidat** : déjà accessible via bouton "Lien" en en-tête
-- **Description / persona / durée / langue** : affichées dans une petite carte compacte **au-dessus de la liste des sessions** uniquement si l'utilisateur clique sur **« Détails du projet ▾ »** (Collapsible replié par défaut)
-
-L'onglet par défaut devient directement **Sessions**.
-
-**3. Filtres masqués derrière un lien**
-
-Comportement demandé :
-- Au-dessus de la liste : ligne unique avec
-  - Champ de **recherche** (toujours visible — usage le plus fréquent)
-  - Lien texte **« Filtres »** (icône `SlidersHorizontal`) avec compteur si filtres actifs : `Filtres (2)`
-  - Lien texte **« Trier : Date (récent) ▾ »** (Select compact)
-  - Compteur résultats à droite : `12 / 45`
-- Clic sur **« Filtres »** → ouvre un **Popover** (ou Sheet sur mobile) contenant :
-  - Statut
-  - Recommandation
-  - Score min / max (sur une ligne)
-  - Date début / fin (sur une ligne)
-  - Bouton **« Réinitialiser »** en bas
-- Si aucun filtre actif, le Popover s'ouvre vide ; sinon les valeurs sont préremplies
-
-**4. Bandeau « candidats en attente » allégé**
-
-Au lieu d'une grande carte qui liste chaque candidat en attente (déjà présents dans le tableau ci-dessous), remplacer par une **alerte fine d'une ligne** :
+**1. Bandeau d'accueil + actions rapides**
 
 ```
-⚠ 3 candidats en attente — [Voir uniquement les en attente]
+Bonjour [Prénom] 👋
+[+ Nouveau projet]  [📋 Modèles d'entretien]  [❓ Bibliothèque questions]
+```
+- Salutation personnalisée (extrait `profile.full_name`)
+- 3 boutons d'action rapide vers les pages les plus fréquentes
+
+**2. KPI enrichis (4 cartes au lieu de 3)**
+
+| Carte | Valeur | Détail secondaire |
+|---|---|---|
+| Projets actifs | 5 | +2 ce mois |
+| Candidats en attente | 12 | dont 3 depuis +7j (alerte) |
+| Entretiens complétés (30j) | 28 | +15 % vs période précédente |
+| Score moyen (30j) | 72 % | barre de progression colorée |
+
+Le score moyen utilise déjà `ScoreCircle` — réutilisation possible en mini-format.
+
+**3. Section « Top candidats récents » (nouvelle)**
+
+Carte affichant les 5 candidats avec le meilleur score sur les 30 derniers jours :
+- Nom + projet
+- `ScoreCircle` mini (size 48)
+- `RecommendationBadge` (Favorable / À considérer / Non recommandé)
+- Clic → page session
+
+**4. Section « Distribution des recommandations » (nouvelle)**
+
+Mini-graphique horizontal en barres empilées :
+```
+Favorable      ████████████ 12
+À considérer   ██████ 6
+Non recommandé ███ 3
+```
+Calculé sur les `reports.recommendation` des 30 derniers jours. Clic sur une barre → filtre la liste des entretiens.
+
+**5. Liste « Derniers entretiens » enrichie**
+
+Ajout de 2 colonnes au tableau existant :
+- **Score** : badge coloré (vert ≥65, orange 45-64, rouge <45) ou `—` si non encore noté
+- **Reco** : `RecommendationBadge` compact
+
+Ordre des colonnes : Candidat / Projet / Statut / **Score** / **Reco** / Date / Actions
+
+Suppression du bouton « Voir » texte → ligne entière cliquable pour les sessions complétées (cohérence avec la refonte du Détail Projet).
+
+**6. Alerte candidats inactifs (conditionnelle)**
+
+Si des candidats sont en attente depuis +7 jours :
+```
+⚠ 3 candidats n'ont pas démarré leur entretien depuis plus de 7 jours
+   [Relancer tous] [Voir la liste]
 ```
 
-Le lien applique automatiquement `statusFilter = "pending"`. Suppression de la liste dupliquée.
-
-**5. Colonnes du tableau sessions allégées**
-
-- Fusionner **Candidat + Email** en une seule colonne (nom en gras, email en petit gris dessous) → libère ~20% de largeur
-- Masquer **Note recruteur** sous `lg` (déjà longue, accessible en cliquant sur la ligne)
-- Action **Supprimer** : icône seule (déjà OK), action **Voir** : retirer le bouton (la ligne est déjà cliquable pour les terminés)
-- Action **Relancer** sur les `pending` : garder
-
-### Architecture visuelle après refonte
+### Architecture visuelle
 
 ```text
-Titre projet  [Actif]                    [🔗 Lien] [✏ Modifier] [⋯ ▾]
-▸ Détails du projet
+Bonjour Camille                                                        
+[+ Nouveau projet]  [📋 Modèles]  [❓ Bibliothèque]                    
 
-[ Sessions (12) ]  [ Questions (5) ]  [ Critères (4) ]
+┌─────────────┬──────────────┬──────────────┬──────────────┐           
+│ Projets: 5  │ Attente: 12  │ Complétés:28 │ Score: 72%   │           
+│ +2 ce mois  │ ⚠ 3 >7j      │ +15% vs avt  │ ▓▓▓▓▓▓▓░░░   │           
+└─────────────┴──────────────┴──────────────┴──────────────┘           
 
-⚠ 3 candidats en attente — Voir uniquement les en attente
+⚠ 3 candidats inactifs depuis +7j — [Relancer] [Voir]                  
 
-[🔍 Rechercher…]   [⚙ Filtres (2)]   [↕ Date (récent) ▾]        12 / 45
+┌──────────────────────────────┬──────────────────────────────┐        
+│ 🏆 Top candidats (30j)        │ 📊 Recommandations           │        
+│ Marie Dupont   [85%] Favor.   │ Favorable      ████████ 12   │        
+│ Paul Martin    [78%] Favor.   │ À considérer   ████ 6        │        
+│ Léa Chen       [74%] Consid.  │ Non recommandé ██ 3          │        
+└──────────────────────────────┴──────────────────────────────┘        
 
-┌──────────────────┬────────┬───────┬──────┬──────────┬────────────┐
-│ Candidat         │ Statut │ Score │ Reco │ Date     │   Actions  │
-│  email           │        │       │      │          │            │
-├──────────────────┼────────┼───────┼──────┼──────────┼────────────┤
-│ Marie Dupont     │ ✓ Term │  8.2  │ Fav. │ 21/04/26 │   [🗑]     │
-│  marie@x.com     │        │       │      │          │            │
-└──────────────────┴────────┴───────┴──────┴──────────┴────────────┘
+Derniers entretiens                                                    
+┌───────────┬────────┬────────┬──────┬──────┬────────┬─────┐           
+│ Candidat  │ Projet │ Statut │ Score│ Reco │ Date   │ Act │           
+└───────────┴────────┴────────┴──────┴──────┴────────┴─────┘           
 ```
 
-### Fichiers modifiés
+### Modifications techniques
 
-- `src/pages/ProjectDetail.tsx` (seul fichier touché)
-- Imports ajoutés : `DropdownMenu*`, `Popover*`, `Collapsible*`, `SlidersHorizontal`, `MoreHorizontal`, `ChevronDown`
+**Fichier modifié** : `src/pages/Dashboard.tsx` (seul fichier touché)
+
+**Nouvelles requêtes** :
+- `reports` filtré sur les 30 derniers jours pour le score moyen, le top candidats et la distribution des recommandations
+- Calcul de la période précédente (30-60j) pour la variation en pourcentage
+- Comptage des sessions `pending` avec `created_at < now() - 7 days`
+
+**Composants réutilisés** : `ScoreCircle`, `RecommendationBadge`, `SessionStatusBadge`, `Card`, `Button`, `AlertDialog` (déjà importés ou existants)
+
+**Nouvelle icône** : `TrendingUp`, `Trophy`, `BarChart3`, `Sparkles` (déjà dans lucide)
 
 ### Hors scope
 
-- Pas de changement de logique métier (filtres, tri, suppression fonctionnent à l'identique)
-- Pas de nouvelle requête DB
-- Pas de modif des onglets Questions / Critères
+- Pas de graphique avancé (pas d'ajout de Recharts pour cette itération — barres CSS simples suffisent)
+- Pas de filtre temporel (30 jours figé pour l'instant)
+- Pas de notification push ou email automatique pour les candidats inactifs
+- Pas de modification de la sidebar ni des autres pages
 
