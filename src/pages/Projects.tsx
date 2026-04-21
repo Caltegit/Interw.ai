@@ -103,7 +103,7 @@ export default function Projects() {
                   <TableHead>Titre</TableHead>
                   <TableHead>Statut</TableHead>
                   <TableHead className="text-center">Sessions</TableHead>
-                  <TableHead className="hidden sm:table-cell">Créé le</TableHead>
+                  <TableHead className="hidden sm:table-cell">Depuis</TableHead>
                   <TableHead className="text-center">Lien candidat</TableHead>
                   <TableHead className="text-center">Modifier</TableHead>
                   <TableHead className="text-center">Supprimer</TableHead>
