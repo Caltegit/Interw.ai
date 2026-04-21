@@ -280,7 +280,10 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
       category: form.category,
       mediaType: form.mediaType,
       follow_up_enabled: form.relanceLevel !== "light",
-      max_follow_ups: form.relanceLevel === "deep" ? 2 : form.relanceLevel === "medium" ? 1 : 0,
+      max_follow_ups:
+        form.relanceLevel === "light"
+          ? 0
+          : Math.max(0, Math.min(2, form.maxFollowUps ?? (form.relanceLevel === "deep" ? 2 : 1))),
       relance_level: form.relanceLevel,
       audioBlob: form.mediaType === "audio" ? form.mediaBlob : null,
       audioPreviewUrl: form.mediaType === "audio" ? form.mediaPreviewUrl : null,
