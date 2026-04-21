@@ -622,15 +622,7 @@ export default function ProjectEdit() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Passage auto 3s</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Si le candidat ne parle pas pendant 3 secondes, la question suivante est envoyée automatiquement.
-                    </p>
-                  </div>
-                  <Switch checked={autoSkipSilence} onCheckedChange={setAutoSkipSilence} />
-                </div>
+                {/* Passage auto 3s — masqué temporairement, fonctionnalité désactivée */}
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <Label>Autoriser le candidat à mettre en pause</Label>
