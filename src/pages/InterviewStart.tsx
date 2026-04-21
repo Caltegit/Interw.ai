@@ -849,11 +849,41 @@ export default function InterviewStart() {
 
     setReadyToStart(true);
 
-    // Mark session as in_progress
+    // Mode « salle d'examen » — plein écran (desktop uniquement)
+    isMobileLikeRef.current =
+      typeof navigator !== "undefined" &&
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (!isMobileLikeRef.current) {
+      try {
+        await document.documentElement.requestFullscreen?.();
+      } catch {
+        // Le navigateur a refusé : on continue sans, le bandeau de rappel restera caché.
+      }
+    }
+
+    // Bloque le retour arrière du navigateur pendant l'entretien
+    try {
+      window.history.pushState({ interviewLock: true }, "");
+    } catch {}
+
+    // Mark session as in_progress + last_activity_at
     supabase
       .from("sessions")
-      .update({ status: "in_progress" as any, started_at: new Date().toISOString() })
+      .update({
+        status: "in_progress" as any,
+        started_at: new Date().toISOString(),
+        last_activity_at: new Date().toISOString(),
+      })
       .eq("id", session.id);
+
+    // Heartbeat toutes les 30 s pour conserver une trace d'activité
+    if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+    heartbeatTimerRef.current = setInterval(() => {
+      supabase
+        .from("sessions")
+        .update({ last_activity_at: new Date().toISOString() })
+        .eq("id", session.id);
+    }, 30_000);
 
     // Start camera stream
     await startVideoStream();
