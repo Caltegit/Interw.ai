@@ -34,6 +34,8 @@ export interface QuestionFormValue {
   followUp: boolean;
   /** Niveau de relance IA pour cette question */
   relanceLevel: "light" | "medium" | "deep";
+  /** Nombre maximum de relances IA pendant l'entretien (0, 1 ou 2) */
+  maxFollowUps: number;
   /** Blob if a new recording was made/imported during this edit */
   mediaBlob: Blob | null;
   /** Preview URL (existing or freshly created) for audio/video */
@@ -57,6 +59,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   mediaType: "written",
   followUp: true,
   relanceLevel: "medium",
+  maxFollowUps: 1,
   mediaBlob: null,
   mediaPreviewUrl: null,
   existingAudioUrl: null,
