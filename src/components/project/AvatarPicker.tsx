@@ -6,6 +6,10 @@ import woman3 from "@/assets/avatars/woman-3.jpg";
 import man1 from "@/assets/avatars/man-1.jpg";
 import man2 from "@/assets/avatars/man-2.jpg";
 import man3 from "@/assets/avatars/man-3.jpg";
+import animalFox from "@/assets/avatars/animal-fox.jpg";
+import animalOwl from "@/assets/avatars/animal-owl.jpg";
+import animalPanda from "@/assets/avatars/animal-panda.jpg";
+import animalLion from "@/assets/avatars/animal-lion.jpg";
 
 const PRESET_AVATARS = [
   { seed: "Marie", bg: "b6e3f4" },
@@ -26,6 +30,13 @@ const PHOTO_AVATARS = [
   { url: man3, name: "Hugo" },
 ];
 
+const ANIMAL_AVATARS = [
+  { url: animalFox, name: "Renard" },
+  { url: animalOwl, name: "Hibou" },
+  { url: animalPanda, name: "Panda" },
+  { url: animalLion, name: "Lion" },
+];
+
 interface Props {
   value: string | null;
   onSelectPreset: (url: string) => void;
@@ -36,7 +47,8 @@ interface Props {
 export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
-  const isCustom = value && !isPreset && !isPhoto;
+  const isAnimal = value && ANIMAL_AVATARS.some((a) => a.url === value);
+  const isCustom = value && !isPreset && !isPhoto && !isAnimal;
 
   return (
     <div className="space-y-3">
@@ -114,7 +126,40 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
         </div>
       </div>
 
-      {/* Preset grid */}
+      {/* Animal avatars */}
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Animaux</p>
+        <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+          {ANIMAL_AVATARS.map((avatar) => {
+            const selected = value === avatar.url;
+            return (
+              <button
+                key={avatar.name}
+                type="button"
+                onClick={() => onSelectPreset(avatar.url)}
+                className={cn(
+                  "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
+                  selected
+                    ? "border-primary ring-2 ring-primary ring-offset-2"
+                    : "border-border hover:border-primary/50",
+                )}
+                aria-label={`Avatar ${avatar.name}`}
+                title={avatar.name}
+              >
+                <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                {selected && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
+                    <div className="rounded-full bg-primary p-1">
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    </div>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Avatar</p>
         <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
