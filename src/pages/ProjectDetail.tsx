@@ -535,7 +535,7 @@ export default function ProjectDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredSessions.map((s) => {
+                    {pagedSessions.map((s) => {
                       const rep = reportsBySession[s.id];
                       const clickable = s.status === "completed";
                       const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
@@ -640,6 +640,22 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+
+              {filteredSessions.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between text-sm pt-2">
+                  <span className="text-muted-foreground">
+                    Page {page + 1} / {totalSessionsPages}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                      Précédent
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalSessionsPages - 1, p + 1))} disabled={page + 1 >= totalSessionsPages}>
+                      Suivant
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </TabsContent>
