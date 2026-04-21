@@ -798,8 +798,8 @@ export default function InterviewStart() {
     maxDurationTimerRef.current = setTimeout(() => {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
-        console.log("Auto-ending interview: 10min max duration");
-        toast({ title: "Entretien terminé", description: "La durée maximale de 10 minutes a été atteinte." });
+        console.log(`Auto-ending interview: ${maxDurationMinutes}min max duration`);
+        toast({ title: "Entretien terminé", description: `La durée maximale de ${maxDurationMinutes} minutes a été atteinte.` });
         endInterviewRef.current?.();
       }
     }, MAX_DURATION_MS);
