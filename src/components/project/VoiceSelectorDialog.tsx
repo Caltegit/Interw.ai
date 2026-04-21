@@ -82,7 +82,7 @@ export function VoiceSelectorDialog({ open, onOpenChange, gender, initialVoiceId
       const text = `Bonjour, je suis ${cleanName} et je suis ravi que vous choisissiez ma voix pour l'entretien.`;
 
       const { data: { session } } = await supabase.auth.getSession();
-      const projectId = (import.meta as { env: { VITE_SUPABASE_PROJECT_ID: string } }).env.VITE_SUPABASE_PROJECT_ID;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
       const url = `https://${projectId}.functions.supabase.co/tts-elevenlabs`;
 
       const res = await fetch(url, {
