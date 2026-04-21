@@ -228,12 +228,6 @@ export default function Dashboard() {
               Nouveau projet
             </Link>
           </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/question-library">
-              <BookOpen className="h-4 w-4" />
-              Bibliothèque
-            </Link>
-          </Button>
         </div>
       </div>
 
