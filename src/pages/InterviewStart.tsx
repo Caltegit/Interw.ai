@@ -193,6 +193,39 @@ export default function InterviewStart() {
     }, SILENCE_TIMEOUT_MS);
   }, [toast, clearSilenceTier]);
 
+  // Mode « salle d'examen » — listeners actifs uniquement quand l'entretien tourne
+  useEffect(() => {
+    if (!readyToStart || interviewFinished) return;
+
+    // Avertissement avant fermeture / rechargement de l'onglet
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // Bloque le retour arrière en re-poussant l'état
+    const onPopState = () => {
+      try {
+        window.history.pushState({ interviewLock: true }, "");
+      } catch {}
+    };
+    window.addEventListener("popstate", onPopState);
+
+    // Suit l'état plein écran pour afficher/cacher le bandeau de rappel
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    setIsFullscreen(Boolean(document.fullscreenElement));
+
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("popstate", onPopState);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, [readyToStart, interviewFinished]);
+
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
 
