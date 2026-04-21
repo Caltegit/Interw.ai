@@ -149,10 +149,10 @@ function SortableQuestion({
           <span className="truncate text-sm text-foreground">
             {previewText || `Question ${index + 1}`}
           </span>
-          {q.follow_up_enabled && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
-              <Sparkles className="h-3 w-3" />
-              <span className="hidden sm:inline">Relance IA</span>
+          {q.follow_up_enabled && q.max_follow_ups > 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary" title={`Jusqu'à ${q.max_follow_ups} relance(s) IA`}>
+              <RotateCcw className="h-3 w-3" />
+              {q.max_follow_ups}
             </span>
           )}
           {q.hint_text?.trim() && (
