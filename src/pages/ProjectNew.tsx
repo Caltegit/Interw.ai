@@ -82,8 +82,8 @@ export default function ProjectNew() {
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
   const [aiVoice, setAiVoice] = useState<string>("female_fr");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(defaultCamilleAvatar);
+  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(defaultCamilleAvatar);
   const [introType, setIntroType] = useState<"audio" | "video">("audio");
   const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
   const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);
