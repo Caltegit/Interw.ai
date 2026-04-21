@@ -154,6 +154,18 @@ function SortableQuestion({
               <span className="hidden sm:inline">Relance IA</span>
             </span>
           )}
+          {q.hint_text?.trim() && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary" title="Indication candidat">
+              <Lightbulb className="h-3 w-3" />
+            </span>
+          )}
+          {typeof q.max_response_seconds === "number" && q.max_response_seconds > 0 && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary tabular-nums" title="Temps limite de réponse">
+              <Timer className="h-3 w-3" />
+              {String(Math.floor(q.max_response_seconds / 60)).padStart(2, "0")}:
+              {String(q.max_response_seconds % 60).padStart(2, "0")}
+            </span>
+          )}
           {q.save_to_library && !q.from_library && (
             <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
               <BookmarkPlus className="h-3 w-3" />
