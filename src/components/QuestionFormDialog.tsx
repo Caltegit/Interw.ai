@@ -44,6 +44,10 @@ export interface QuestionFormValue {
   existingVideoUrl: string | null;
   /** Optional: save to library checkbox value */
   saveToLibrary?: boolean;
+  /** Indication courte affichée au candidat (optionnelle) */
+  hintText: string;
+  /** Durée maximale de réponse en secondes (null = pas de limite) */
+  maxResponseSeconds: number | null;
 }
 
 export const EMPTY_QUESTION_FORM: QuestionFormValue = {
@@ -58,6 +62,8 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   existingAudioUrl: null,
   existingVideoUrl: null,
   saveToLibrary: false,
+  hintText: "",
+  maxResponseSeconds: null,
 };
 
 interface QuestionFormDialogProps {
