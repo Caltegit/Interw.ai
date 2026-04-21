@@ -84,6 +84,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       mediaType: (t.type as "written" | "audio" | "video") || "written",
       followUp: t.follow_up_enabled,
       relanceLevel: ((t.relance_level as "light" | "medium" | "deep") ?? "medium"),
+      maxFollowUps: typeof t.max_follow_ups === "number" ? t.max_follow_ups : 1,
       mediaBlob: null,
       mediaPreviewUrl: t.audio_url || t.video_url || null,
       existingAudioUrl: t.audio_url,
