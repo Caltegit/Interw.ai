@@ -51,6 +51,8 @@ export default function ProjectNew() {
           audioPreviewUrl: q.audio_url,
           videoPreviewUrl: q.video_url,
           from_library: true,
+          hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
+          max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
         })),
       );
     }
