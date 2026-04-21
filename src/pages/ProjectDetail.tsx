@@ -381,37 +381,24 @@ export default function ProjectDetail() {
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
-          {/* Pending sessions alert */}
+          {/* Alerte fine candidats en attente */}
           {pendingSessions.length > 0 && (
-            <Card className="border-warning/50 bg-warning/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Send className="h-4 w-4 text-warning" />
-                  {pendingSessions.length} candidat(s) en attente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Ces candidats n'ont pas encore commencé leur entretien. Copiez leur lien pour les relancer.
-                </p>
-                <div className="space-y-2">
-                  {pendingSessions.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{s.candidate_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>depuis {Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000)}j</span>
-                        <Button variant="outline" size="sm" onClick={() => copyCandidateLink(s.token)}>
-                          <Copy className="mr-1 h-3 w-3" /> Relancer
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-between gap-2 rounded-md border border-warning/50 bg-warning/5 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                <span className="truncate">
+                  {pendingSessions.length} candidat{pendingSessions.length > 1 ? "s" : ""} en attente
+                </span>
+              </div>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-warning"
+                onClick={() => setStatusFilter("pending")}
+              >
+                Voir uniquement les en attente
+              </Button>
+            </div>
           )}
 
           {sessions.length === 0 ? (
@@ -420,72 +407,94 @@ export default function ProjectDetail() {
             </p>
           ) : (
             <>
-              {/* Filters */}
-              <Card>
-                <CardContent className="pt-4 space-y-3">
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Input
-                      placeholder="Rechercher (nom ou email)…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="max-w-xs"
-                    />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-[160px]"><SelectValue placeholder="Statut" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Tous statuts</SelectItem>
-                        <SelectItem value="pending">En attente</SelectItem>
-                        <SelectItem value="in_progress">En cours</SelectItem>
-                        <SelectItem value="completed">Terminé</SelectItem>
-                        <SelectItem value="expired">Expiré</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={recoFilter} onValueChange={setRecoFilter}>
-                      <SelectTrigger className="w-[180px]"><SelectValue placeholder="Recommandation" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Toutes recos</SelectItem>
-                        <SelectItem value="strong_yes">Très favorable</SelectItem>
-                        <SelectItem value="yes">Favorable</SelectItem>
-                        <SelectItem value="maybe">Mitigé</SelectItem>
-                        <SelectItem value="no">Défavorable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      type="number"
-                      placeholder="Score min"
-                      value={scoreMin}
-                      onChange={(e) => setScoreMin(e.target.value)}
-                      className="w-[110px]"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Score max"
-                      value={scoreMax}
-                      onChange={(e) => setScoreMax(e.target.value)}
-                      className="w-[110px]"
-                    />
-                    <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" />
-                    <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto" />
-                    <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
-                      const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
-                      setSortKey(k); setSortDir(d);
-                    }}>
-                      <SelectTrigger className="w-[180px]"><ArrowUpDown className="h-3 w-3 mr-1" /><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="date-desc">Date (récent)</SelectItem>
-                        <SelectItem value="date-asc">Date (ancien)</SelectItem>
-                        <SelectItem value="score-desc">Score (haut)</SelectItem>
-                        <SelectItem value="score-asc">Score (bas)</SelectItem>
-                        <SelectItem value="name-asc">Nom (A-Z)</SelectItem>
-                        <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {filteredSessions.length} session(s) sur {sessions.length}
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Barre filtres compacte */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  placeholder="Rechercher (nom ou email)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="max-w-xs h-9"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <SlidersHorizontal className="h-4 w-4 mr-1" />
+                      Filtres{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-80 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Statut</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tous statuts</SelectItem>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="in_progress">En cours</SelectItem>
+                          <SelectItem value="completed">Terminé</SelectItem>
+                          <SelectItem value="expired">Expiré</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Recommandation</Label>
+                      <Select value={recoFilter} onValueChange={setRecoFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          <SelectItem value="strong_yes">Très favorable</SelectItem>
+                          <SelectItem value="yes">Favorable</SelectItem>
+                          <SelectItem value="maybe">Mitigé</SelectItem>
+                          <SelectItem value="no">Défavorable</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Score min</Label>
+                        <Input type="number" value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Score max</Label>
+                        <Input type="number" value={scoreMax} onChange={(e) => setScoreMax(e.target.value)} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Du</Label>
+                        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Au</Label>
+                        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
+                      Réinitialiser
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+                <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
+                  const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
+                  setSortKey(k); setSortDir(d);
+                }}>
+                  <SelectTrigger className="w-auto h-9 gap-1">
+                    <ArrowUpDown className="h-3 w-3" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date-desc">Date (récent)</SelectItem>
+                    <SelectItem value="date-asc">Date (ancien)</SelectItem>
+                    <SelectItem value="score-desc">Score (haut)</SelectItem>
+                    <SelectItem value="score-asc">Score (bas)</SelectItem>
+                    <SelectItem value="name-asc">Nom (A-Z)</SelectItem>
+                    <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {filteredSessions.length} / {sessions.length}
+                </span>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
