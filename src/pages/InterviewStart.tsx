@@ -1521,6 +1521,43 @@ export default function InterviewStart() {
       </div>
     );
 
+  // Écran de reprise — proposé si une session interrompue est détectée
+  if (resumePrompt && !readyToStart) {
+    return (
+      <CandidateLayout>
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="py-12 space-y-6">
+            <div className="space-y-3">
+              <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre entretien ?</h1>
+              <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Vous avez une session en cours. Vous pouvez la reprendre là où vous en étiez ou tout recommencer depuis le début.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                size="lg"
+                className="candidate-btn-primary w-full h-14 text-base"
+                onClick={handleResumeInterview}
+                disabled={restoringMessages}
+              >
+                Reprendre
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full h-14 text-base"
+                onClick={handleRestartInterview}
+                disabled={restoringMessages}
+              >
+                Recommencer depuis le début
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </CandidateLayout>
+    );
+  }
+
   // Show "ready to start" screen — user must click to enable TTS on mobile
   if (!readyToStart) {
     return (
