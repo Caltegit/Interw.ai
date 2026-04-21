@@ -47,6 +47,9 @@ export default function ProjectEdit() {
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
+  const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>("female");
+  const [ttsVoiceId, setTtsVoiceId] = useState<string>(getDefaultVoiceForGender("female"));
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");

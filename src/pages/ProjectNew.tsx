@@ -18,6 +18,8 @@ import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
 import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/components/project/InterviewTemplatePickerDialog";
+import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
@@ -71,6 +73,9 @@ export default function ProjectNew() {
   const [title, setTitle] = useState("Candidature spontanée");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
+  const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>("female");
+  const [ttsVoiceId, setTtsVoiceId] = useState<string>(getDefaultVoiceForGender("female"));
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
