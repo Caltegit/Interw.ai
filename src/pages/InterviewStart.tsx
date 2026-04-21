@@ -1339,6 +1339,9 @@ export default function InterviewStart() {
       if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
       if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
       if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
+      if (silenceHintTimerRef.current) clearTimeout(silenceHintTimerRef.current);
+      if (silenceNudgeTimerRef.current) clearTimeout(silenceNudgeTimerRef.current);
+      if (silenceSkipTimerRef.current) clearTimeout(silenceSkipTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
