@@ -927,7 +927,7 @@ export default function InterviewStart() {
 
     // ── 3. Call AI (await this time) to decide next action ──
     setAiThinking(true);
-    let action: "follow_up" | "next" | "end" = isLastQuestion ? "end" : "next";
+    let action: "follow_up" | "next" | "end" = (isLastQuestion ? "end" : "next") as "follow_up" | "next" | "end";
     let aiMessage = "";
     try {
       const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
