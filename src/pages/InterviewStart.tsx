@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
+import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -43,6 +44,13 @@ export default function InterviewStart() {
   const [loading, setLoading] = useState(true);
   const [readyToStart, setReadyToStart] = useState(false);
   const [interviewFinished, setInterviewFinished] = useState(false);
+  // Mode « salle d'examen »
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const isMobileLikeRef = useRef<boolean>(false);
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Reprise de session
+  const [resumePrompt, setResumePrompt] = useState<{ resumeIndex: number } | null>(null);
+  const [restoringMessages, setRestoringMessages] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
