@@ -971,7 +971,10 @@ export default function InterviewStart() {
       setAiMessages((prev) => [...prev, { role: "assistant", content: aiMessage }]);
 
       if (sessionId) {
-        trackBackground(persistMessage(sessionId, "ai", aiMessage).catch((e) => {
+        trackBackground(persistMessage(sessionId, "ai", aiMessage, {
+          questionId: questions[questionIdx]?.id ?? null,
+          isFollowUp: true,
+        }).catch((e) => {
           console.error("Follow-up persist failed:", e);
         }));
       }
