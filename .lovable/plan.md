@@ -1,38 +1,38 @@
 
 
-## Plan — Citation inspirante sur le Dashboard
+## Plan — Page d'accueil Bibliothèque
 
-Remplacer le sous-titre statique « Voici un aperçu de votre activité. » par une citation courte tirée d'une liste, qui change à chaque chargement du Dashboard.
+Créer une page d'accueil sur `/library` qui présente les 5 types de bibliothèques avec une carte par type, leur utilité et un compteur d'éléments existants.
 
 ### Comportement
 
-- Une liste d'environ 20 citations courtes (2 lignes max) sur les thèmes du recrutement, du talent, de l'écoute et de la décision.
-- À chaque montage du composant `Dashboard`, une citation est tirée au hasard.
-- Affichage sous le « Bonjour {prénom} 👋 », en italique discret, avec l'auteur précédé d'un tiret cadratin.
+- Nouvelle route `/library` → `src/pages/LibraryHome.tsx`.
+- Le clic sur « Bibliothèque » dans la barre latérale ouvre le sous-menu **et** navigue vers cette page d'accueil.
+- En haut : titre + courte phrase d'introduction.
+- 5 cartes cliquables (grille 1/2/3 colonnes selon la taille d'écran), une par bibliothèque :
 
-### Exemple de rendu
+| Carte | Icône | Description courte | Compteur |
+|---|---|---|---|
+| Entretiens types | ClipboardList | Modèles d'entretiens prêts à dupliquer pour lancer un projet en quelques secondes. | nombre d'`interview_templates` |
+| Questions | MessageSquare | Vos questions réutilisables (texte, audio, vidéo) avec niveau de relance et indications. | `question_templates` |
+| Critères d'évaluation | ListChecks | Critères pondérés réutilisables avec ancrages de notation pour homogénéiser vos rapports. | `criteria_templates` |
+| Intros | Mic | Messages d'accueil audio ou vidéo joués au candidat avant l'entretien. | `intro_templates` |
+| Emails | Mail | Modèles d'emails personnalisés (invitation, rappel, résultat). | `email_templates` |
 
-```
-Bonjour Marc 👋
-« Le talent gagne des matchs, mais l'esprit d'équipe gagne des championnats. »
-— Michael Jordan
-```
+Chaque carte : icône colorée à gauche, titre, description sur 2 lignes max, badge avec le nombre d'éléments, flèche `→` au survol. Hover : léger scale + bordure primary.
 
 ### Détails techniques
 
-**Fichier modifié** : `src/pages/Dashboard.tsx` uniquement.
+**Fichiers créés**
+- `src/pages/LibraryHome.tsx` : composant page. Récupère l'`organization_id` via `get_user_organization_id`, puis 5 requêtes `select count` en parallèle (`Promise.all`) pour afficher les compteurs. Skeleton pendant le chargement.
 
-- Ajout d'une constante `QUOTES` (tableau d'objets `{ text, author }`) en haut du fichier, hors composant.
-- Ajout d'un `useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], [])` pour figer la citation pendant la session de visite de la page.
-- Remplacement du `<p>` actuel par deux lignes : la citation en italique + l'auteur en plus petit et plus pâle.
-
-### Liste de citations (sélection)
-
-Mélange de citations sur le recrutement, le leadership, l'écoute et la décision — toutes courtes, toutes attribuées à un auteur connu (Steve Jobs, Peter Drucker, Simone Weil, Maya Angelou, Confucius, Antoine de Saint-Exupéry, Coco Chanel, Henry Ford, etc.).
+**Fichiers modifiés**
+- `src/App.tsx` : ajouter `<Route path="/library" element={<LibraryHome />} />`.
+- `src/components/AppSidebar.tsx` : transformer le `CollapsibleTrigger` en double comportement — clic = navigation vers `/library` ET ouverture du sous-menu. Solution simple : envelopper l'icône+label dans un `NavLink` vers `/library`, et garder un petit chevron à droite qui gère uniquement le toggle du sous-menu (`onClick` avec `e.stopPropagation` + `e.preventDefault`).
 
 ### Hors champ
 
-- Pas de stockage en base, pas d'API externe.
-- Pas de bouton « nouvelle citation » (le rechargement de la page suffit).
-- Pas de traduction dynamique : citations en français uniquement.
+- Pas de modification des 5 pages existantes.
+- Pas de nouveau type de bibliothèque.
+- Pas de recherche transverse entre bibliothèques (à envisager plus tard).
 
