@@ -1564,7 +1564,7 @@ export default function InterviewStart() {
   if (!readyToStart) {
     return (
       <CandidateLayout>
-        <Card className="max-w-md w-full text-center">
+        <Card className="max-w-md w-full text-center" data-testid="interview-start-screen">
           <CardContent className="py-12 space-y-6">
             <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
               <div
@@ -1591,7 +1591,12 @@ export default function InterviewStart() {
                 Soyez naturel.le et souriez vous êtes filmé.e !
               </p>
             </div>
-            <Button size="lg" className="candidate-btn-primary w-full h-16 text-xl" onClick={beginInterview}>
+            <Button
+              size="lg"
+              className="candidate-btn-primary w-full h-16 text-xl"
+              onClick={beginInterview}
+              data-testid="interview-start-button"
+            >
               <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer la session
             </Button>
