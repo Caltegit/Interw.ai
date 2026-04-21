@@ -1,0 +1,35 @@
+# Durcissement architecture — état d'avancement
+
+## ✅ Lot 1 — Hygiène (FAIT)
+
+- **1.1 Index BDD** : 28 nouveaux index ajoutés via migration sur sessions, session_messages, reports, questions, evaluation_criteria, projects, user_roles, profiles, transcripts, templates, etc.
+- **1.2 Sélection ciblée** : `select("*")` remplacés par colonnes explicites dans Dashboard, Projects, ProjectDetail.
+- **1.3 React Query** :
+  - `src/lib/queryClient.ts` — client centralisé (staleTime 30s, gcTime 5min, retry 1)
+  - `src/hooks/queries/useDashboardData.ts` — Dashboard cache + invalidation
+  - `src/hooks/queries/useProjectsList.ts` — Projects cache + invalidation
+  - Migrations : Dashboard et Projects utilisent désormais le cache.
+
+## ⚠️ Lot 2 — Refacto InterviewStart (NON FAIT — décision pragmatique)
+
+`InterviewStart.tsx` (2092 lignes) est le fichier le plus critique en production. Le refactoriser sans suite de tests dédiée est trop risqué pour un dîner.
+
+**Recommandation pour la prochaine fois** :
+1. Ajouter d'abord 5-10 tests Playwright qui couvrent les flux critiques (start, record, pause, complete, resume).
+2. Puis extraire dans cet ordre : `useExamRoomLock` → `useInterviewTimer` → `useSpeechRecognition` → `useMediaRecorder` → `useInterviewSession`.
+3. Tester après chaque extraction.
+
+## ✅ Lot 3 partiel — Scalabilité (FAIT en partie)
+
+- **3.1 Pagination** : ✅ Projects (20/page), ✅ ProjectDetail sessions (20/page). AdminEmails l'avait déjà.
+- **3.2 Virtualisation messages** : ❌ dépend du Lot 2.
+- **3.3 Logger** : ✅ `src/lib/logger.ts` + branchement auth (user_id auto). Utilisé sur erreurs critiques (delete projet).
+- **3.4 ProjectForm partagé** : ❌ refacto risquée, à faire avec tests.
+
+## Ce qui reste à faire (sessions futures)
+
+- Migrer SessionDetail et Settings vers React Query.
+- Brancher logger.error sur les points critiques de InterviewStart (uploads, IA, STT).
+- Refacto InterviewStart (Lot 2) avec tests préalables.
+- Refacto ProjectForm partagé (Lot 3.4).
+- Virtualisation des messages d'entretien (Lot 3.2).
