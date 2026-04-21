@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectsList } from "@/hooks/queries/useProjectsList";
+import { queryKeys } from "@/lib/queryClient";
+import { logger } from "@/lib/logger";
+
+const PAGE_SIZE = 20;
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Brouillon", variant: "secondary" },
@@ -29,21 +35,16 @@ export default function Projects() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: projects = [], isLoading } = useProjectsList(user?.id);
   const [toDelete, setToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [page, setPage] = useState(0);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("projects")
-      .select("*, sessions(count)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setProjects(data ?? []);
-        setLoading(false);
-      });
-  }, [user]);
+  const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
+  const pageProjects = useMemo(
+    () => projects.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [projects, page],
+  );
 
   const copyCandidateLink = (slug: string | null) => {
     if (!slug) {
@@ -58,15 +59,19 @@ export default function Projects() {
     if (!toDelete) return;
     const { error } = await supabase.rpc("delete_project", { _project_id: toDelete.id });
     if (error) {
+      logger.error("project_delete_failed", { projectId: toDelete.id, error: error.message });
       toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
     } else {
-      setProjects((prev) => prev.filter((p) => p.id !== toDelete.id));
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects(user.id) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
+      }
       toast({ title: "Projet supprimé" });
     }
     setToDelete(null);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -110,7 +115,7 @@ export default function Projects() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projects.map((project) => {
+                {pageProjects.map((project) => {
                   const status = statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
                   const sessionCount = project.sessions?.[0]?.count ?? 0;
                   return (
@@ -176,6 +181,32 @@ export default function Projects() {
             </Table>
           </CardContent>
         </Card>
+      )}
+
+      {projects.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">
+            Page {page + 1} / {totalPages} — {projects.length} projets
+          </span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+            >
+              Précédent
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={page + 1 >= totalPages}
+            >
+              Suivant
+            </Button>
+          </div>
+        </div>
       )}
 
       <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
