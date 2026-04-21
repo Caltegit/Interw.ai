@@ -613,6 +613,7 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status"]
           title: string
           tts_provider: string
+          tts_voice_gender: string
           tts_voice_id: string | null
         }
         Insert: {
@@ -639,6 +640,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"]
           title: string
           tts_provider?: string
+          tts_voice_gender?: string
           tts_voice_id?: string | null
         }
         Update: {
@@ -665,6 +667,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"]
           title?: string
           tts_provider?: string
+          tts_voice_gender?: string
           tts_voice_id?: string | null
         }
         Relationships: [

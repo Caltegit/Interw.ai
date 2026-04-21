@@ -17,6 +17,8 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
+import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const STEPS = ["Informations", "Intro", "Questions", "Critères", "Publication"];
 const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
@@ -47,6 +49,9 @@ export default function ProjectEdit() {
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<"fr" | "en">("fr");
   const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
+  const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>("female");
+  const [ttsVoiceId, setTtsVoiceId] = useState<string>(getDefaultVoiceForGender("female"));
+  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
   // Step 2
   const [aiPersonaName, setAiPersonaName] = useState("Marie");
@@ -107,6 +112,9 @@ export default function ProjectEdit() {
       setAllowPause((project as { allow_pause?: boolean }).allow_pause ?? false);
       setCompletionMessage((project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE);
       setTtsProvider(((project as { tts_provider?: string }).tts_provider as "browser" | "elevenlabs") ?? "browser");
+      const loadedGender = (((project as { tts_voice_gender?: string }).tts_voice_gender as VoiceGender) ?? "female");
+      setTtsVoiceGender(loadedGender);
+      setTtsVoiceId((project as { tts_voice_id?: string | null }).tts_voice_id ?? getDefaultVoiceForGender(loadedGender));
       
       setExistingAvatarUrl(project.avatar_image_url);
       setAvatarPreview(project.avatar_image_url);
@@ -263,6 +271,8 @@ export default function ProjectEdit() {
           presentation_video_url: presentationVideoUrl,
           completion_message: completionMessage.trim() || null,
           tts_provider: ttsProvider,
+          tts_voice_gender: ttsVoiceGender,
+          tts_voice_id: ttsVoiceId,
         } as never)
         .eq("id", id);
 
@@ -503,8 +513,30 @@ export default function ProjectEdit() {
                 <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-start justify-between gap-4">
+              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Genre de la voix</Label>
+                  <RadioGroup
+                    value={ttsVoiceGender}
+                    onValueChange={(v) => {
+                      const g = v as VoiceGender;
+                      setTtsVoiceGender(g);
+                      setTtsVoiceId(getDefaultVoiceForGender(g));
+                    }}
+                    className="flex gap-6"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="female" id="voice-gender-female-edit" />
+                      <Label htmlFor="voice-gender-female-edit" className="cursor-pointer font-normal">Femme</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="male" id="voice-gender-male-edit" />
+                      <Label htmlFor="voice-gender-male-edit" className="cursor-pointer font-normal">Homme</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
                     <p className="text-xs text-muted-foreground">
@@ -513,10 +545,41 @@ export default function ProjectEdit() {
                   </div>
                   <Switch
                     checked={ttsProvider === "elevenlabs"}
-                    onCheckedChange={(v) => setTtsProvider(v ? "elevenlabs" : "browser")}
+                    onCheckedChange={(v) => {
+                      if (v) {
+                        setVoiceDialogOpen(true);
+                      } else {
+                        setTtsProvider("browser");
+                      }
+                    }}
                   />
                 </div>
+
+                {ttsProvider === "elevenlabs" && (
+                  <button
+                    type="button"
+                    onClick={() => setVoiceDialogOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Modifier la voix
+                  </button>
+                )}
               </div>
+
+              <VoiceSelectorDialog
+                open={voiceDialogOpen}
+                onOpenChange={setVoiceDialogOpen}
+                gender={ttsVoiceGender}
+                initialVoiceId={ttsVoiceId}
+                personaName={aiPersonaName}
+                onConfirm={(id) => {
+                  setTtsVoiceId(id);
+                  setTtsProvider("elevenlabs");
+                }}
+                onCancel={() => {
+                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
+                }}
+              />
 
               <div>
                 <Label>Photo du recruteur</Label>
