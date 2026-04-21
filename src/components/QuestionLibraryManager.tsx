@@ -135,7 +135,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
         (form.mediaType === "audio" ? "Question audio" : form.mediaType === "video" ? "Question vidéo" : ""),
       category: form.category || null,
       follow_up_enabled: form.followUp,
-      max_follow_ups: form.followUp ? 2 : 0,
+      max_follow_ups: form.followUp ? Math.max(0, Math.min(2, form.maxFollowUps ?? 1)) : 0,
       type: form.mediaType,
       audio_url: audioUrl,
       video_url: videoUrl,
