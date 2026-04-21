@@ -17,6 +17,7 @@ import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
+import defaultCamilleAvatar from "@/assets/avatars/woman-1.jpg";
 import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/components/project/InterviewTemplatePickerDialog";
 import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
