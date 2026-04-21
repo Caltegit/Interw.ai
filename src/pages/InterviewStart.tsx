@@ -1223,6 +1223,17 @@ export default function InterviewStart() {
     setResponseElapsedSec(0);
   }, [currentQuestionIndex]);
 
+  // Auto-end answer when per-question timer expires
+  useEffect(() => {
+    const q = questions[currentQuestionIndex];
+    const max = q?.max_response_seconds as number | null | undefined;
+    if (!isListening || isPaused || !max || max <= 0) return;
+    if (responseElapsedSec >= max) {
+      console.log("[interview] per-question timer expired — auto-sending response");
+      handleSendResponseRef.current?.();
+    }
+  }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions]);
+
   // Reset silence timer on candidate speech activity
   useEffect(() => {
     if (liveTranscript) {
