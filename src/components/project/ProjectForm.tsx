@@ -53,7 +53,9 @@ export interface ProjectFormState {
   avatarFile: File | null;
   avatarPreview: string | null;
   presetAvatarUrl: string | null;
-  introType: "audio" | "video";
+  introEnabled: boolean;
+  introMode: IntroMode;
+  introText: string;
   introAudioBlob: Blob | null;
   introAudioPreviewUrl: string | null;
   introVideoFile: File | null;
@@ -139,7 +141,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [avatarFile, setAvatarFile] = useState<File | null>(initial.avatarFile);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(initial.avatarPreview);
   const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(initial.presetAvatarUrl);
-  const [introType, setIntroType] = useState<"audio" | "video">(initial.introType);
+  const [introEnabled, setIntroEnabled] = useState(initial.introEnabled);
+  const [introMode, setIntroMode] = useState<IntroMode>(initial.introMode);
+  const [introText, setIntroText] = useState(initial.introText);
   const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(initial.introAudioBlob);
   const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(initial.introAudioPreviewUrl);
   const [introVideoFile, setIntroVideoFile] = useState<File | null>(initial.introVideoFile);
@@ -178,7 +182,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       avatarFile,
       avatarPreview,
       presetAvatarUrl,
-      introType,
+      introEnabled,
+      introMode,
+      introText,
       introAudioBlob,
       introAudioPreviewUrl,
       introVideoFile,
