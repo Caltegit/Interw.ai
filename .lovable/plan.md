@@ -1,60 +1,57 @@
 
 
-## Bug : nouvelle organisation = pas de projet seedé ni de bibliothèques accessibles
+## Adapter l'écran candidat à la hauteur de l'écran (sans scroll) et déplacer le retour vidéo
 
-### Cause racine
+### Problèmes actuels (sur ordinateur)
 
-À la création d'une organisation depuis SuperAdmin :
-1. L'org est insérée **sans `owner_id`** (le futur admin n'existe pas encore).
-2. Une invitation email est envoyée.
-3. **Tant que l'admin invité n'a pas accepté l'invitation**, `owner_id` reste vide.
+1. Le conteneur principal utilise `min-h-[calc(100vh-4rem)]` (hauteur **minimale**), donc le contenu peut déborder verticalement et forcer un scroll.
+2. La grille interne a `pb-32 sm:pb-24` (gros padding-bas) qui repousse tout vers le bas et provoque un dépassement.
+3. Le footer affiche d'abord la barre d'avancement, puis en dessous le retour vidéo (à droite). Tu veux l'inverse : **le retour vidéo au-dessus de la barre d'avancement**, à droite.
+4. L'avatar IA est en `lg:max-h-[70vh]` mais sans contrainte parent stricte, il continue de pousser la page.
 
-Le seed complet (projet « Candidature spontanée - TEST - », 6 modèles d'entretien, 10 critères) est déclenché par `trg_seed_on_owner_set`, qui ne s'exécute que **lorsque `owner_id` passe de NULL à une valeur**. Donc tant que personne n'a cliqué sur l'email d'invitation, l'org est vide côté projet et modèles, et **personne n'a accès** (l'admin invité n'a ni profil rattaché, ni rôle).
+### Changements (uniquement sur ordinateur, mobile inchangé)
 
-C'est pour ça que ta nouvelle org « TEST 3 » montre 0 projet, 0 modèle d'entretien et que tu ne vois rien dans les bibliothèques : tu regardes probablement depuis ton compte super-admin, qui n'est rattaché à **aucune** organisation, donc `get_user_organization_id()` te renvoie autre chose (ton org « UBIQ »).
+Fichier touché : `src/pages/InterviewStart.tsx`.
 
-### Vérification
+#### 1. Forcer la page à tenir dans la fenêtre
 
-État réel des 5 dernières orgs en base :
+- Remplacer `min-h-[calc(100vh-4rem)]` par `lg:h-[calc(100vh-4rem)] lg:overflow-hidden` sur le conteneur racine de l'entretien. Sur mobile, on garde le comportement actuel (`min-h-screen`, scroll possible).
+- La grille centrale passe de `flex-1 ... py-6 sm:py-8 pb-32 sm:pb-24` à `lg:flex-1 lg:min-h-0 lg:py-4 lg:pb-2` pour récupérer l'espace volé par le padding.
 
-| Org | owner_id | Projets | Questions | Critères | Modèles d'entretien |
-|---|---|---|---|---|---|
-| TEST 3 (créée aujourd'hui) | **vide** | 0 | 50 | 10 | **0** |
-| UBIQ | rempli | 1 | 50 | 10 | 6 |
-| With Gardner | **vide** | 0 | 51 | 10 | **0** |
-| ALBO INC | **vide** | 0 | 0 | 0 | 0 |
+#### 2. Contraindre l'avatar IA en hauteur
 
-Confirmation : sans `owner_id` → pas de projet démo, pas de modèles d'entretien.
+- L'avatar carré utilisera `lg:h-full lg:w-auto lg:aspect-square lg:max-h-full` à la place du `aspect-square` global, dans une colonne `lg:min-h-0 lg:flex lg:items-center lg:justify-center`. L'image reste centrée et ne pousse plus la page.
 
-### Solution proposée
+#### 3. Réorganiser le footer (retour vidéo au-dessus de la barre)
 
-**Déclencher le seed complet dès la création de l'org**, sans attendre l'acceptation, en utilisant le super-admin appelant comme `_created_by` technique pour les seeds.
+Le bloc footer (`!interviewFinished && (...)`) est restructuré ainsi sur ordinateur :
 
-#### Changements
+```
+┌─────────────────────────────────────────────────────────┐
+│ [actions centrées : Arrêter / Pause]    [retour vidéo] │  ← ligne 1
+├─────────────────────────────────────────────────────────┤
+│ Question 3/5    [============progression===]            │  ← ligne 2
+└─────────────────────────────────────────────────────────┘
+```
 
-1. **Nouvelle migration SQL** : remplacer le trigger AFTER INSERT actuel (qui ne seed que les questions) par un trigger qui appelle aussi les 3 autres seeds (critères, modèles d'entretien, projet démo). Le `_created_by` utilisé sera `auth.uid()` (le super-admin qui crée l'org).
+- Ligne 1 : la grille `[1fr_auto_1fr]` actuelle (vide / actions centrées / retour vidéo à droite) passe **en premier**.
+- Ligne 2 : la barre d'avancement + libellé « Question x / y » + indicateurs IA (« L'IA réfléchit… ») passe **en second**, juste avant la fin.
+- Le retour vidéo conserve sa taille actuelle (`80×56` mobile, `100×72` desktop) et son bouton « Afficher / Masquer ma vidéo ».
 
-2. **Garde-fou idempotence** : `seed_demo_project` vérifie déjà l'existence avant insertion → rejouer ne crée pas de doublon. Idem pour les 3 autres seeds (filtrent par titre/label).
+#### 4. Réduire les paddings verticaux du footer pour libérer de la place
 
-3. **Backfill optionnel** : un bloc `DO $$` qui parcourt les orgs existantes sans projet démo et sans modèles d'entretien et qui seed pour le compte du super-admin (premier user avec rôle `super_admin`). Cela rattrape « TEST 3 » et « With Gardner » qui sont actuellement bloquées.
+- Footer : `py-3 sm:py-4` → `lg:py-2`, `space-y-2` → `lg:space-y-1.5`.
 
-4. **Ce qui reste inchangé** :
-   - `accept_invitation` continue de seeder (idempotent, donc sans effet si déjà fait).
-   - Le rôle admin de l'utilisateur invité est toujours assigné lors de l'acceptation (c'est un cas distinct, on n'y touche pas).
-   - Aucun changement côté UI ni côté front.
+### Ce qui ne change pas
 
-### Conséquences attendues
-
-- Toute nouvelle org créée depuis SuperAdmin aura immédiatement : 1 projet « Candidature spontanée - TEST - » avec ses 5 questions, 50 modèles de questions, 10 modèles de critères, 6 modèles d'entretien.
-- Les orgs existantes vides (TEST 3, With Gardner) seront rattrapées par le backfill.
-- L'admin invité, quand il acceptera, héritera d'une org déjà prête.
+- Mobile : aucun changement visuel ni structurel (scroll conservé si nécessaire).
+- Toute la logique d'entretien (questions, IA, enregistrement, transcription, raccourcis clavier, plein écran).
+- Les composants `MicVolumeMeter`, `QuestionMediaPlayer`, `FullscreenPrompt`.
+- La page de fin d'entretien (`interviewFinished`) garde son CTA et son layout.
+- Aucun changement BDD, aucune nouvelle dépendance.
 
 ### Hors champ
 
-- Le fait que l'admin invité n'apparaisse pas tant qu'il n'a pas accepté l'invitation n'est pas un bug et ne change pas. Si tu veux pouvoir « voir » le contenu d'une org en tant que super-admin sans en faire partie, c'est un autre sujet (RLS super-admin déjà partielle, à ouvrir séparément si besoin).
-- Pas de changement sur le seed E2E ni sur la fonction `seed-e2e-user`.
-
-### Fichier touché
-
-- Une nouvelle migration SQL : remplacement du trigger `seed_default_question_templates_trigger` (ou ajout d'un nouveau trigger AFTER INSERT plus complet) + bloc de backfill pour les orgs existantes vides.
+- Page `InterviewDeviceTest` (test caméra/micro avant entretien) : non concernée.
+- Adaptation pour très petites hauteurs ordinateur (< 600 px) : si l'avatar devait encore être trop grand, on pourra l'ajuster dans une seconde itération.
 
