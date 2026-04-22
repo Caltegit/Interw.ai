@@ -27,7 +27,7 @@ const initialState: ProjectFormState = {
   avatarFile: null,
   avatarPreview: defaultCamilleAvatar,
   presetAvatarUrl: defaultCamilleAvatar,
-  introEnabled: true,
+  introEnabled: false,
   introMode: "text",
   introText: "",
   introAudioBlob: null,
