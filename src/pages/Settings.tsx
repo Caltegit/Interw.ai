@@ -11,6 +11,8 @@ import { OrgMembers } from "@/components/OrgMembers";
 import { OrgLogoUpload } from "@/components/OrgLogoUpload";
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { slugify, SLUG_REGEX } from "@/lib/slug";
+import { useOrganization, useUpdateOrganization } from "@/hooks/queries/useOrganization";
+import { useUpdateProfile } from "@/hooks/queries/useProfile";
 
 export default function Settings() {
   const { profile, user } = useAuth();
@@ -18,45 +20,41 @@ export default function Settings() {
   const { isAdmin, organizationId: orgId, loading: roleLoading } = useOrgRole();
 
   const [fullName, setFullName] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
+  const updateProfile = useUpdateProfile(user?.id);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  const { data: org } = useOrganization(orgId);
+  const updateOrg = useUpdateOrganization(orgId);
   const [orgName, setOrgName] = useState("");
   const [orgSlug, setOrgSlug] = useState("");
   const [initialSlug, setInitialSlug] = useState("");
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
-  const [savingOrg, setSavingOrg] = useState(false);
+  const [orgInitialized, setOrgInitialized] = useState(false);
 
   useEffect(() => {
     if (profile) setFullName(profile.full_name || "");
   }, [profile]);
 
   useEffect(() => {
-    if (!orgId) return;
-    supabase.from("organizations").select("*").eq("id", orgId).single().then(({ data }) => {
-      if (data) {
-        setOrgName(data.name);
-        setOrgSlug((data as any).slug || "");
-        setInitialSlug((data as any).slug || "");
-        setOrgLogo(data.logo_url || null);
-      }
-    });
-  }, [orgId]);
+    if (org && !orgInitialized) {
+      setOrgName(org.name);
+      setOrgSlug(org.slug || "");
+      setInitialSlug(org.slug || "");
+      setOrgLogo(org.logo_url || null);
+      setOrgInitialized(true);
+    }
+  }, [org, orgInitialized]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    setSavingProfile(true);
     try {
-      const { error } = await supabase.from("profiles").update({ full_name: fullName }).eq("user_id", user.id);
-      if (error) throw error;
+      await updateProfile.mutateAsync({ fullName });
       toast({ title: "Profil mis à jour !" });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
-      setSavingProfile(false);
     }
   };
 
@@ -94,7 +92,6 @@ export default function Settings() {
       });
       return;
     }
-    setSavingOrg(true);
     try {
       // Vérif unicité si changé
       if (trimmedSlug && trimmedSlug !== initialSlug) {
@@ -106,21 +103,14 @@ export default function Settings() {
           .maybeSingle();
         if (existing) {
           toast({ title: "Cet identifiant est déjà utilisé.", variant: "destructive" });
-          setSavingOrg(false);
           return;
         }
       }
-      const { error } = await supabase
-        .from("organizations")
-        .update({ name: orgName, slug: trimmedSlug || initialSlug })
-        .eq("id", orgId);
-      if (error) throw error;
+      await updateOrg.mutateAsync({ name: orgName, slug: trimmedSlug || initialSlug });
       setInitialSlug(trimmedSlug || initialSlug);
       toast({ title: "Organisation mise à jour !" });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
-      setSavingOrg(false);
     }
   };
 
@@ -153,9 +143,9 @@ export default function Settings() {
             <Label>Nom complet</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Votre nom" />
           </div>
-          <Button onClick={handleSaveProfile} disabled={savingProfile} size="sm">
+          <Button onClick={handleSaveProfile} disabled={updateProfile.isPending} size="sm">
             <Save className="mr-2 h-4 w-4" />
-            {savingProfile ? "Enregistrement..." : "Enregistrer"}
+            {updateProfile.isPending ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </CardContent>
       </Card>
@@ -247,9 +237,9 @@ export default function Settings() {
             />
           )}
           {isAdmin && (
-            <Button onClick={handleSaveOrg} disabled={savingOrg} size="sm">
+            <Button onClick={handleSaveOrg} disabled={updateOrg.isPending} size="sm">
               <Save className="mr-2 h-4 w-4" />
-              {savingOrg ? "Enregistrement..." : "Enregistrer"}
+              {updateOrg.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           )}
         </CardContent>

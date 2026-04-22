@@ -28,7 +28,7 @@
 
 ## Ce qui reste à faire (sessions futures)
 
-- Migrer SessionDetail et Settings vers React Query.
+- ~~Migrer SessionDetail et Settings vers React Query.~~ ✅ FAIT (hooks `useSessionDetail`, `useOrganization`, `useProfile`).
 - Brancher logger.error sur les points critiques de InterviewStart (uploads, IA, STT).
 - Refacto InterviewStart (Lot 2) avec tests préalables.
 - Refacto ProjectForm partagé (Lot 3.4).

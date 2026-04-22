@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
@@ -12,92 +11,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { ArrowLeft, Clock, Calendar, Video, MessageSquare, Share2, Copy, Check, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useSessionDetail,
+  useUpdateRecruiterNotes,
+  useCreateReportShare,
+} from "@/hooks/queries/useSessionDetail";
 
 export default function SessionDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [session, setSession] = useState<any>(null);
-  const [report, setReport] = useState<any>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const { data, isLoading } = useSessionDetail(id);
+  const session = data?.session ?? null;
+  const report = data?.report ?? null;
+  const messages = data?.messages ?? [];
+  const shareUrl = data?.shareUrl ?? null;
+
   const [recruiterNotes, setRecruiterNotes] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [notesInitialized, setNotesInitialized] = useState(false);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const updateNotes = useUpdateRecruiterNotes(id);
+  const createShare = useCreateReportShare(id);
+
+  // Initialise les notes une seule fois quand le rapport arrive
   useEffect(() => {
-    if (!id) return;
+    if (report?.id && !notesInitialized) {
+      setRecruiterNotes(report.recruiter_notes ?? "");
+      setNotesInitialized(true);
+    }
+  }, [report?.id, report?.recruiter_notes, notesInitialized]);
 
-    let cancelled = false;
-
-    const loadSessionDetail = async () => {
-      const [sRes, rRes, mRes] = await Promise.all([
-        supabase.from("sessions").select("*, projects(*)").eq("id", id).single(),
-        supabase.from("reports").select("*").eq("session_id", id).maybeSingle(),
-        supabase.from("session_messages").select("*").eq("session_id", id).order("timestamp"),
-      ]);
-
-      if (cancelled) return;
-
-      setSession(sRes.data);
-      setReport(rRes.data ?? null);
-      setMessages(mRes.data ?? []);
-      setRecruiterNotes(rRes.data?.recruiter_notes ?? "");
-      setLoading(false);
-
-      if (rRes.data?.id) {
-        supabase
-          .from("report_shares" as any)
-          .select("share_token, is_active")
-          .eq("report_id", rRes.data.id)
-          .eq("is_active", true)
-          .limit(1)
-          .then(({ data: shares }: any) => {
-            if (!cancelled && shares?.[0]) {
-              setShareUrl(`${window.location.origin}/shared-report/${shares[0].share_token}`);
-            }
-          });
-      }
-    };
-
-    loadSessionDetail();
-
-    const poll = window.setInterval(loadSessionDetail, 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(poll);
-    };
-  }, [id]);
-
+  // Sauvegarde auto avec debounce
   useEffect(() => {
-    if (!report?.id) return;
+    if (!report?.id || !notesInitialized) return;
+    if ((report.recruiter_notes ?? "") === recruiterNotes) return;
     const timeout = setTimeout(() => {
-      supabase.from("reports").update({ recruiter_notes: recruiterNotes }).eq("id", report.id);
+      updateNotes.mutate({ reportId: report.id, notes: recruiterNotes });
     }, 1000);
     return () => clearTimeout(timeout);
-  }, [recruiterNotes, report?.id]);
+  }, [recruiterNotes, report?.id, report?.recruiter_notes, notesInitialized]);
 
   const handleShare = async () => {
     if (!report?.id || !user) return;
-    setSharing(true);
     try {
-      const { data, error } = await (supabase.from("report_shares" as any) as any)
-        .insert({ report_id: report.id, created_by: user.id })
-        .select("share_token")
-        .single();
-
-      if (error) throw error;
-
-      const url = `${window.location.origin}/shared-report/${data.share_token}`;
-      setShareUrl(url);
+      const url = await createShare.mutateAsync({ reportId: report.id, userId: user.id });
       await navigator.clipboard.writeText(url);
       toast({ title: "Lien de partage créé et copié !" });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
-      setSharing(false);
     }
   };
 
@@ -109,7 +72,7 @@ export default function SessionDetail() {
     toast({ title: "Lien copié !" });
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (isLoading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!session) return <p>Session introuvable</p>;
 
   const project = session.projects;
@@ -199,9 +162,9 @@ export default function SessionDetail() {
                       {copied ? "Copié !" : "Copier le lien de partage"}
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing}>
+                    <Button variant="outline" size="sm" onClick={handleShare} disabled={createShare.isPending}>
                       <Share2 className="mr-1 h-4 w-4" />
-                      {sharing ? "Génération..." : "Partager ce rapport"}
+                      {createShare.isPending ? "Génération..." : "Partager ce rapport"}
                     </Button>
                   )}
                 </div>
