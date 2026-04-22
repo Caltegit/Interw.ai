@@ -267,7 +267,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {header}
-        {!isEdit && (
+        {!isEdit && step === 0 && (
           <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
             <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
           </Button>
