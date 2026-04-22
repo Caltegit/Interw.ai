@@ -162,9 +162,9 @@ export default function SessionDetail() {
                       {copied ? "Copié !" : "Copier le lien de partage"}
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm" onClick={handleShare} disabled={sharing}>
+                    <Button variant="outline" size="sm" onClick={handleShare} disabled={createShare.isPending}>
                       <Share2 className="mr-1 h-4 w-4" />
-                      {sharing ? "Génération..." : "Partager ce rapport"}
+                      {createShare.isPending ? "Génération..." : "Partager ce rapport"}
                     </Button>
                   )}
                 </div>
