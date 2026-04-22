@@ -89,7 +89,7 @@ export default function InterviewDeviceTest() {
 
   const handleContinue = () => {
     stopAll();
-    navigate(`/interview/${slug}/start/${token}`);
+    navigate(`/session/${slug}/start/${token}`);
   };
 
   const canContinue = micStatus === "ok";

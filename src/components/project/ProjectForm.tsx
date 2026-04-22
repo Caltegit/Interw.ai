@@ -221,7 +221,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         {header}
         {!isEdit && (
           <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un entretien type
+            <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
           </Button>
         )}
       </div>
@@ -268,7 +268,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 />
               </div>
               <div>
-                <Label>Langue de l'entretien</Label>
+                <Label>Langue de l'session</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
                   <SelectTrigger>
                     <SelectValue />
@@ -315,7 +315,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
                     <p className="text-xs text-muted-foreground">
-                      Voix réaliste haute qualité (~0,40 € par entretien). Si désactivé, voix standard du navigateur
+                      Voix réaliste haute qualité (~0,40 € par session). Si désactivé, voix standard du navigateur
                       (gratuit).
                     </p>
                   </div>
@@ -400,7 +400,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <div>
                     <Label>Autoriser le candidat à mettre en pause</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un bouton « Pause » pendant l'entretien. Le candidat peut figer l'interview et reprendre
+                      Affiche un bouton « Pause » pendant l'session. Le candidat peut figer l'interview et reprendre
                       exactement où il s'était arrêté.
                     </p>
                   </div>
@@ -429,7 +429,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     className="mt-1.5"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Ce message s'affichera sur l'écran de remerciement après l'entretien.
+                    Ce message s'affichera sur l'écran de remerciement après l'session.
                   </p>
                 </div>
               </div>

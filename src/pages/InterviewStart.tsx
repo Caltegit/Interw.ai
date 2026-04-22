@@ -141,7 +141,7 @@ export default function InterviewStart() {
   const maxDurationMinutes = Math.min(60, Math.max(5, Number(project?.max_duration_minutes) || 15));
   const MAX_DURATION_MS = maxDurationMinutes * 60 * 1000;
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
-  // pour limiter coût et latence sur les entretiens longs.
+  // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
   const SILENCE_TIMEOUT_MS = 90 * 1000; // 90 seconds (auto-end fallback)
   const SILENCE_HINT_MS = 8 * 1000; // 8s — show "Prenez votre temps…"
@@ -192,13 +192,13 @@ export default function InterviewStart() {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
         console.log("Auto-ending interview: 90s silence");
-        toast({ title: "Entretien terminé", description: "Fin automatique après un silence prolongé." });
+        toast({ title: "Session terminé", description: "Fin automatique après un silence prolongé." });
         endInterviewRef.current?.();
       }
     }, SILENCE_TIMEOUT_MS);
   }, [toast, clearSilenceTier]);
 
-  // Mode « salle d'examen » — listeners actifs uniquement quand l'entretien tourne
+  // Mode « salle d'examen » — listeners actifs uniquement quand l'session tourne
   useEffect(() => {
     if (!readyToStart || interviewFinished) return;
 
@@ -602,7 +602,7 @@ export default function InterviewStart() {
     maxDurationTimerRef.current = setTimeout(() => {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
-        toast({ title: "Entretien terminé", description: "La durée maximale a été atteinte." });
+        toast({ title: "Session terminé", description: "La durée maximale a été atteinte." });
         endInterviewRef.current?.();
       }
     }, remaining);
@@ -662,7 +662,7 @@ export default function InterviewStart() {
       const { data: sessions } = await supabase.from("sessions").select("*").eq("token", token).limit(1);
       const sess = sessions?.[0];
       if (!sess) {
-        navigate(`/interview/${slug}`);
+        navigate(`/session/${slug}`);
         return;
       }
 
@@ -692,7 +692,7 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
-  // Restaure les messages depuis session_messages et redémarre l'entretien à la bonne question
+  // Restaure les messages depuis session_messages et redémarre l'session à la bonne question
   const handleResumeInterview = useCallback(async () => {
     if (!resumePrompt || !session?.id) return;
     setRestoringMessages(true);
@@ -721,7 +721,7 @@ export default function InterviewStart() {
     }
   }, [resumePrompt, session?.id]);
 
-  // Recommence l'entretien depuis zéro : purge messages BDD + fichiers media uploadés
+  // Recommence l'session depuis zéro : purge messages BDD + fichiers media uploadés
   const handleRestartInterview = useCallback(async () => {
     if (!session?.id) return;
     setRestoringMessages(true);
@@ -824,7 +824,7 @@ export default function InterviewStart() {
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
 
       // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau
-      // sur les entretiens longs.
+      // sur les sessions longs.
       const backoffs = [1000, 3000, 8000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
         try {
@@ -933,7 +933,7 @@ export default function InterviewStart() {
       }
     }
 
-    // Bloque le retour arrière du navigateur pendant l'entretien
+    // Bloque le retour arrière du navigateur pendant l'session
     try {
       window.history.pushState({ interviewLock: true }, "");
     } catch {}
@@ -966,7 +966,7 @@ export default function InterviewStart() {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
         console.log(`Auto-ending interview: ${maxDurationMinutes}min max duration`);
-        toast({ title: "Entretien terminé", description: `La durée maximale de ${maxDurationMinutes} minutes a été atteinte.` });
+        toast({ title: "Session terminé", description: `La durée maximale de ${maxDurationMinutes} minutes a été atteinte.` });
         endInterviewRef.current?.();
       }
     }, MAX_DURATION_MS);
@@ -982,8 +982,8 @@ export default function InterviewStart() {
     const isFirstQMedia = firstQMediaType !== "written";
 
     const greeting = isFirstQMedia
-      ? `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet entretien pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
+      ? `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet session pour le poste de ${project.job_title}. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+      : `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet session pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
@@ -1002,7 +1002,7 @@ export default function InterviewStart() {
     } catch {
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer le début de l'entretien.",
+        description: "Impossible d'enregistrer le début de l'session.",
         variant: "destructive",
       });
     }
@@ -1098,7 +1098,7 @@ export default function InterviewStart() {
             console.error("Candidate message insert failed after retry:", e2);
             toast({
               title: "Sauvegarde échouée",
-              description: "Une réponse n'a pas pu être enregistrée. L'entretien continue.",
+              description: "Une réponse n'a pas pu être enregistrée. L'session continue.",
               variant: "destructive",
             });
           }
@@ -1200,7 +1200,7 @@ export default function InterviewStart() {
     // ── 5. END branch ──
     if (action === "end" || isLastQuestion) {
       setInterviewFinished(true);
-      const closing = aiMessage || "Merci pour vos réponses, l'entretien est terminé.";
+      const closing = aiMessage || "Merci pour vos réponses, l'session est terminé.";
       setMessages((prev) => {
         const updated = [...prev, { role: "ai", content: closing }];
         messagesRef.current = updated;
@@ -1404,7 +1404,7 @@ export default function InterviewStart() {
     // Redirect IMMEDIATELY — finalize in background.
     // The Complete page will display a "Recording in progress…" state until
     // sessions.status === 'completed', then auto-switch to the final screen.
-    navigate(`/interview/${slug}/complete/${token}`);
+    navigate(`/session/${slug}/complete/${token}`);
 
     // Run finalization async in the background (no await on UI)
     (async () => {
@@ -1627,7 +1627,7 @@ export default function InterviewStart() {
         <Card className="max-w-md w-full text-center" data-testid="interview-resume-dialog">
           <CardContent className="py-12 space-y-6">
             <div className="space-y-3">
-              <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre entretien ?</h1>
+              <h1 className="text-xl font-bold candidate-gradient-text">Reprendre votre session ?</h1>
               <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
                 Vous avez une session en cours. Vous pouvez la reprendre là où vous en étiez ou tout recommencer depuis le début.
               </p>
@@ -2021,11 +2021,11 @@ export default function InterviewStart() {
                   );
                 })()}
 
-                {/* CTA "Terminer l'entretien" si fini */}
+                {/* CTA "Terminer l'session" si fini */}
                 {interviewFinished && (
                   <div className="flex flex-col items-center gap-2">
                     <Button className="w-full h-16 text-lg rounded-2xl" size="lg" variant="destructive" onClick={endInterview}>
-                      Terminer l'entretien
+                      Terminer l'session
                     </Button>
                   </div>
                 )}
@@ -2035,7 +2035,7 @@ export default function InterviewStart() {
           );
         })()}
 
-        {/* ── Footer : progression + Arrêter l'entretien ── */}
+        {/* ── Footer : progression + Arrêter l'session ── */}
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
             <div className="flex items-center gap-3">
@@ -2085,7 +2085,7 @@ export default function InterviewStart() {
                 className="gap-2 text-muted-foreground hover:text-destructive"
               >
                 <PhoneOff className="h-4 w-4" />
-                Arrêter l'entretien
+                Arrêter l'session
               </Button>
               {project?.allow_pause && (
                 <Button
@@ -2154,10 +2154,10 @@ export default function InterviewStart() {
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
           <DialogHeader>
-            <DialogTitle>Terminer l'entretien ?</DialogTitle>
+            <DialogTitle>Terminer l'session ?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Êtes-vous sûr de vouloir mettre fin à l'entretien ? Cette action est irréversible.
+            Êtes-vous sûr de vouloir mettre fin à l'session ? Cette action est irréversible.
           </p>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" className="w-full sm:w-auto min-h-[44px]" onClick={() => setShowEndDialog(false)}>

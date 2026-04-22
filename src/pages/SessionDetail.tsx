@@ -339,7 +339,7 @@ export default function SessionDetail() {
                 <Card>
                   <CardContent className="py-8 text-center">
                     <p className="text-muted-foreground">Rapport non encore généré</p>
-                    <p className="text-xs text-muted-foreground mt-1">Le rapport sera généré automatiquement après l'analyse de l'entretien.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Le rapport sera généré automatiquement après l'analyse de l'session.</p>
                   </CardContent>
                 </Card>
               )}

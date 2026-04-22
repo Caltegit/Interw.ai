@@ -93,7 +93,7 @@ export default function InterviewTemplates() {
       .insert({
         organization_id: orgId,
         created_by: user.id,
-        name: "Nouvel entretien type",
+        name: "Nouvel session type",
         description: "",
         category: null,
         job_title: "",
@@ -107,7 +107,7 @@ export default function InterviewTemplates() {
       toast({ title: "Erreur", description: error?.message, variant: "destructive" });
       return;
     }
-    navigate(`/library/interviews/${(data as { id: string }).id}`);
+    navigate(`/library/sessions/${(data as { id: string }).id}`);
   };
 
   const handleDuplicate = async (tpl: InterviewTemplate) => {
@@ -187,9 +187,9 @@ export default function InterviewTemplates() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">Entretiens</h1>
+          <h1 className="text-2xl font-bold">Sessions</h1>
           <p className="text-muted-foreground">
-            Modèles d'entretien réutilisables (questions + critères) pour démarrer un projet en 1 clic.
+            Modèles de session réutilisables (questions + critères) pour démarrer un projet en 1 clic.
           </p>
         </div>
         <Button onClick={handleCreate}>
@@ -233,7 +233,7 @@ export default function InterviewTemplates() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Aucun entretien type. Créez-en un pour commencer.
+            Aucun session type. Créez-en un pour commencer.
           </CardContent>
         </Card>
       ) : (
@@ -264,7 +264,7 @@ export default function InterviewTemplates() {
                 </div>
                 <div className="flex gap-1 pt-2 mt-auto">
                   <Button asChild variant="outline" size="sm" className="flex-1">
-                    <Link to={`/library/interviews/${tpl.id}`}>
+                    <Link to={`/library/sessions/${tpl.id}`}>
                       <Pencil className="mr-1 h-3 w-3" /> Modifier
                     </Link>
                   </Button>

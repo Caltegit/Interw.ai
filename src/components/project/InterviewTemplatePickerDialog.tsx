@@ -162,7 +162,7 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Choisir un entretien type</DialogTitle>
+          <DialogTitle>Choisir un session type</DialogTitle>
           <DialogDescription>
             Démarrer rapidement à partir d'un modèle. Vous pourrez tout modifier ensuite.
           </DialogDescription>

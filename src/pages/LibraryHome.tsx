@@ -22,10 +22,10 @@ interface LibraryItem {
 const ITEMS: LibraryItem[] = [
   {
     key: "interviews",
-    title: "Entretiens types",
-    description: "Modèles d'entretiens prêts à dupliquer pour lancer un projet en quelques secondes.",
+    title: "Sessions types",
+    description: "Modèles de sessions prêts à dupliquer pour lancer un projet en quelques secondes.",
     icon: ClipboardList,
-    url: "/library/interviews",
+    url: "/library/sessions",
     table: "interview_templates",
     iconClass: "bg-primary/10 text-primary",
   },
@@ -50,7 +50,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "intros",
     title: "Intros",
-    description: "Messages d'accueil audio ou vidéo joués au candidat avant l'entretien.",
+    description: "Messages d'accueil audio ou vidéo joués au candidat avant l'session.",
     icon: Mic,
     url: "/library/intros",
     table: "intro_templates",
@@ -114,7 +114,7 @@ export default function LibraryHome() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Bibliothèques</h1>
         <p className="mt-2 text-muted-foreground">
-          Réutilisez vos modèles pour gagner du temps et garder une qualité constante d'un entretien à l'autre.
+          Réutilisez vos modèles pour gagner du temps et garder une qualité constante d'un session à l'autre.
         </p>
       </div>
 

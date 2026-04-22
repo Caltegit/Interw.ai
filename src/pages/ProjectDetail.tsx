@@ -138,13 +138,13 @@ export default function ProjectDetail() {
 
   const copyProjectLink = () => {
     if (!project?.slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}`);
     toast({ title: "Lien copié !" });
   };
 
   const copyCandidateLink = (token: string) => {
     if (!project?.slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}/start/${token}`);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}/start/${token}`);
     toast({ title: "Lien de relance copié !" });
   };
 
@@ -598,9 +598,9 @@ export default function ProjectDetail() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                                    <AlertDialogTitle>Supprimer cet session ?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Cette action supprimera l'entretien de {s.candidate_name}, y compris la transcription,
+                                      Cette action supprimera l'session de {s.candidate_name}, y compris la transcription,
                                       le rapport et les vidéos associées. Cette action est irréversible.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
@@ -624,7 +624,7 @@ export default function ProjectDetail() {
                                         await supabase.from("transcripts").delete().eq("session_id", s.id);
                                         await supabase.from("sessions").delete().eq("id", s.id);
                                         setSessions((prev) => prev.filter((ss) => ss.id !== s.id));
-                                        toast({ title: "Entretien supprimé" });
+                                        toast({ title: "Session supprimé" });
                                       }}
                                     >
                                       Supprimer

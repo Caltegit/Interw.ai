@@ -77,7 +77,7 @@ export default function InterviewLanding() {
       .single();
 
     if (err || !session) {
-      setError("Impossible de démarrer l'entretien. Réessayez.");
+      setError("Impossible de démarrer l'session. Réessayez.");
       setStarting(false);
       return;
     }
@@ -93,7 +93,7 @@ export default function InterviewLanding() {
       setShowIntroMedia(true);
       setStarting(false);
     } else {
-      navigate(`/interview/${slug}/test/${session.token}`);
+      navigate(`/session/${slug}/test/${session.token}`);
     }
   };
 
@@ -114,7 +114,7 @@ export default function InterviewLanding() {
 
   const handleProceedToInterview = () => {
     if (sessionToken) {
-      navigate(`/interview/${slug}/test/${sessionToken}`);
+      navigate(`/session/${slug}/test/${sessionToken}`);
     }
   };
 
@@ -162,8 +162,8 @@ export default function InterviewLanding() {
                 <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
                 <p className="text-sm" style={{ color: "rgba(245, 240, 232, 0.65)" }}>
                   {introMediaType === "video"
-                    ? "Regardez cette vidéo avant de commencer votre entretien."
-                    : "Écoutez ce message avant de commencer votre entretien."}
+                    ? "Regardez cette vidéo avant de commencer votre session."
+                    : "Écoutez ce message avant de commencer votre session."}
                 </p>
               </div>
 
@@ -293,7 +293,7 @@ export default function InterviewLanding() {
         </Card>
 
         <p className="text-xs text-center" style={{ color: "rgba(245, 240, 232, 0.4)" }}>
-          Cet entretien sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
+          Cet session sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
           acceptez ces conditions.
         </p>
       </div>

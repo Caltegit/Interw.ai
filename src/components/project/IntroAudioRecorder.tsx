@@ -144,7 +144,7 @@ export function IntroAudioRecorder({
       <div className="space-y-1">
         <Label>Message vocal d'introduction (optionnel)</Label>
         <p className="text-xs text-muted-foreground">
-          Enregistrez un message qui sera lu au candidat avant le début de l'entretien.
+          Enregistrez un message qui sera lu au candidat avant le début de l'session.
         </p>
       </div>
 

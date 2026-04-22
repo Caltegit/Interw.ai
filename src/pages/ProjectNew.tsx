@@ -56,7 +56,7 @@ const initialState: ProjectFormState = {
     {
       label: "Fit culturel & envie sincère",
       description:
-        "Alignement réel avec les valeurs et l'ambiance Morning. Capacité à dire ce qu'on a vraiment envie de faire, au-delà du discours poli d'entretien.",
+        "Alignement réel avec les valeurs et l'ambiance Morning. Capacité à dire ce qu'on a vraiment envie de faire, au-delà du discours poli de session.",
       weight: 30,
       scoring_scale: "0-5",
       anchors: {},

@@ -22,7 +22,7 @@ export default function FullscreenPrompt({ onEnter }: FullscreenPromptProps) {
     >
       <div className="flex items-center gap-2 text-xs sm:text-sm">
         <Maximize2 className="h-4 w-4" style={{ color: "hsl(var(--l-accent))" }} />
-        <span>Entretien hors plein écran</span>
+        <span>Session hors plein écran</span>
       </div>
       <Button size="sm" variant="outline" onClick={onEnter} className="h-8">
         Revenir en plein écran

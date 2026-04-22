@@ -26,8 +26,8 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    document.title = "Interw.ai — Entretiens vidéo IA pour le recrutement";
-    const desc = "Interw.ai automatise vos entretiens de présélection : entretien vidéo conversationnel mené par une IA, scoring objectif, rapports détaillés.";
+    document.title = "Interw.ai — Sessions vidéo IA pour le recrutement";
+    const desc = "Interw.ai automatise vos sessions de présélection : session vidéo conversationnel mené par une IA, scoring objectif, rapports détaillés.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -73,15 +73,15 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 pt-24 pb-28 text-center md:pt-32 md:pb-36">
           <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "hsl(var(--l-border))", color: "hsl(var(--l-fg-dim))" }}>
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--l-accent))" }} />
-            Plateforme d'entretien IA pour les RH
+            Plateforme de session IA pour les RH
           </div>
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
             <span className="landing-gradient-text">Présélectionnez 10× plus vite.</span>
             <br />
-            <span className="landing-accent-text">Avec un entretien IA.</span>
+            <span className="landing-accent-text">Avec un session IA.</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Interw.ai mène des entretiens vidéo conversationnels à la place de vos recruteurs.
+            Interw.ai mène des sessions vidéo conversationnels à la place de vos recruteurs.
             Scoring objectif, rapports détaillés, expérience candidat soignée.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -141,16 +141,16 @@ export default function Landing() {
                 <span className="landing-gradient-text">La présélection vous coûte des heures.</span>
               </h2>
               <p className="mt-5 text-base leading-relaxed" style={{ color: "hsl(var(--l-fg-dim))" }}>
-                Les recruteurs passent en moyenne 23 minutes par candidat en entretien téléphonique.
+                Les recruteurs passent en moyenne 23 minutes par candidat en session téléphonique.
                 Multiplié par 50 candidatures, c'est une semaine entière par poste.
                 Et les biais inconscients restent inévitables.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { k: "10×", v: "plus rapide qu'un entretien téléphonique" },
+                { k: "10×", v: "plus rapide qu'un session téléphonique" },
                 { k: "100%", v: "des candidats évalués sur les mêmes critères" },
-                { k: "24/7", v: "vos candidats passent l'entretien quand ils veulent" },
+                { k: "24/7", v: "vos candidats passent l'session quand ils veulent" },
                 { k: "0", v: "biais lié à la fatigue du recruteur" },
               ].map((s) => (
                 <div key={s.k} className="landing-card p-5">
@@ -180,7 +180,7 @@ export default function Landing() {
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Brain, title: "Entretien IA conversationnel", desc: "Une IA mène l'entretien, pose des questions de suivi pertinentes et adapte le ton à chaque candidat." },
+              { icon: Brain, title: "Session IA conversationnel", desc: "Une IA mène l'session, pose des questions de suivi pertinentes et adapte le ton à chaque candidat." },
               { icon: LineChart, title: "Scoring automatique", desc: "Chaque réponse est notée selon vos critères d'évaluation. Transparent, objectif, reproductible." },
               { icon: ClipboardList, title: "Rapports détaillés", desc: "Synthèse exécutive, points forts, axes d'amélioration, recommandation. Prêt à partager." },
               { icon: Library, title: "Bibliothèque de questions", desc: "Réutilisez vos meilleures questions et vos critères entre projets. Capitalisez sur votre expertise." },
@@ -214,7 +214,7 @@ export default function Landing() {
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
               { n: "01", icon: ClipboardList, title: "Créez votre projet", desc: "Définissez le poste, vos questions, vos critères de scoring. Quelques minutes suffisent." },
-              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent l'entretien depuis leur navigateur, quand ils veulent." },
+              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent l'session depuis leur navigateur, quand ils veulent." },
               { n: "03", icon: CheckCircle2, title: "Recevez les rapports", desc: "Une note globale, une recommandation, et tous les détails. Décidez en quelques minutes." },
             ].map((s) => (
               <div key={s.n} className="landing-card relative p-6">
@@ -234,7 +234,7 @@ export default function Landing() {
       <section className="border-t landing-divider">
         <div className="mx-auto max-w-4xl px-6 py-28 text-center">
           <h2 className="text-4xl font-semibold md:text-5xl landing-gradient-text">
-            Prêt à transformer vos entretiens ?
+            Prêt à transformer vos sessions ?
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
             Réservez une démo de 20 minutes. On vous montre comment Interw.ai s'intègre à votre process.

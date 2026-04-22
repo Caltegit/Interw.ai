@@ -79,7 +79,7 @@ export function VoiceSelectorDialog({ open, onOpenChange, gender, initialVoiceId
     setTesting(true);
     try {
       const cleanName = (personaName || "votre interviewer").trim();
-      const text = `Bonjour, je suis ${cleanName} et je suis ravi que vous choisissiez ma voix pour l'entretien.`;
+      const text = `Bonjour, je suis ${cleanName} et je suis ravi que vous choisissiez ma voix pour l'session.`;
 
       const { data: { session } } = await supabase.auth.getSession();
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;

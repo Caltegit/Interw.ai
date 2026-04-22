@@ -167,7 +167,7 @@ export default function InterviewTemplateEdit() {
       }
 
       toast({ title: "Modèle enregistré" });
-      navigate("/library/interviews");
+      navigate("/library/sessions");
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });
     } finally {
@@ -187,7 +187,7 @@ export default function InterviewTemplateEdit() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" asChild>
-          <Link to="/library/interviews">
+          <Link to="/library/sessions">
             <ChevronLeft className="mr-1 h-4 w-4" /> Retour
           </Link>
         </Button>
@@ -210,7 +210,7 @@ export default function InterviewTemplateEdit() {
             <CardContent className="pt-6 space-y-4">
               <div>
                 <Label>Nom du modèle *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Entretien Commercial Junior" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Session Commercial Junior" />
               </div>
               <div>
                 <Label>Description</Label>

@@ -1,5 +1,22 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
+
+// Redirige les anciennes routes /interview/:slug/{test|start|complete}/:token
+// vers la nouvelle structure /session/... pour ne pas casser les liens déjà envoyés.
+const LegacyInterviewRedirect = ({ to }: { to: "test" | "start" | "complete" }) => {
+  const { slug, token } = useParams();
+  return <Navigate to={`/session/${slug}/${to}/${token ?? ""}`.replace(/\/$/, "")} replace />;
+};
+
+const LegacyInterviewLandingRedirect = () => {
+  const { slug } = useParams();
+  return <Navigate to={`/session/${slug}`} replace />;
+};
+
+const LegacyLibraryInterviewRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/library/sessions/${id}`} replace />;
+};
 import { queryClient } from "@/lib/queryClient";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -54,11 +71,21 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InviteSignup />} />
-            <Route path="/interview/:slug" element={<InterviewLanding />} />
-            <Route path="/interview/:slug/test/:token" element={<InterviewDeviceTest />} />
-            <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
-            <Route path="/interview/:slug/complete/:token" element={<InterviewComplete />} />
-            <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
+
+            {/* Session candidat — routes actuelles */}
+            <Route path="/session/:slug" element={<InterviewLanding />} />
+            <Route path="/session/:slug/test/:token" element={<InterviewDeviceTest />} />
+            <Route path="/session/:slug/start/:token" element={<InterviewStart />} />
+            <Route path="/session/:slug/complete/:token" element={<InterviewComplete />} />
+            <Route path="/session/:slug/complete" element={<InterviewComplete />} />
+
+            {/* Redirections des anciennes routes /interview pour ne pas casser les liens déjà envoyés */}
+            <Route path="/interview/:slug" element={<LegacyInterviewLandingRedirect />} />
+            <Route path="/interview/:slug/test/:token" element={<LegacyInterviewRedirect to="test" />} />
+            <Route path="/interview/:slug/start/:token" element={<LegacyInterviewRedirect to="start" />} />
+            <Route path="/interview/:slug/complete/:token" element={<LegacyInterviewRedirect to="complete" />} />
+            <Route path="/interview/:slug/complete" element={<LegacyInterviewRedirect to="complete" />} />
+
             <Route path="/shared-report/:token" element={<SharedReport />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
@@ -77,8 +104,10 @@ const App = () => (
               <Route path="/library/questions" element={<QuestionLibrary />} />
               <Route path="/library/intros" element={<IntroLibrary />} />
               <Route path="/library/criteria" element={<CriteriaLibrary />} />
-              <Route path="/library/interviews" element={<InterviewTemplates />} />
-              <Route path="/library/interviews/:id" element={<InterviewTemplateEdit />} />
+              <Route path="/library/interviews" element={<Navigate to="/library/sessions" replace />} />
+              <Route path="/library/interviews/:id" element={<LegacyLibraryInterviewRedirect />} />
+              <Route path="/library/sessions" element={<InterviewTemplates />} />
+              <Route path="/library/sessions/:id" element={<InterviewTemplateEdit />} />
               <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />

@@ -102,7 +102,7 @@ serve(async (req) => {
       : "Aucun critère spécifique défini. Évalue sur: communication, pertinence des réponses, motivation, compétences techniques.";
 
     // Call AI to generate report
-    const aiPrompt = `Tu es un expert en recrutement. Analyse cette transcription d'entretien et génère un rapport structuré.
+    const aiPrompt = `Tu es un expert en recrutement. Analyse cette transcription de session et génère un rapport structuré.
 
 Poste: ${project.job_title}
 Candidat: ${session.candidate_name}
