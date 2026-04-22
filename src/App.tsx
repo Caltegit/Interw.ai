@@ -1,5 +1,17 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
+
+// Redirige les anciennes routes /interview/:slug/{test|start|complete}/:token
+// vers la nouvelle structure /session/... pour ne pas casser les liens déjà envoyés.
+const LegacyInterviewRedirect = ({ to }: { to: "test" | "start" | "complete" }) => {
+  const { slug, token } = useParams();
+  return <Navigate to={`/session/${slug}/${to}/${token ?? ""}`.replace(/\/$/, "")} replace />;
+};
+
+const LegacyLibraryInterviewRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/library/sessions/${id}`} replace />;
+};
 import { queryClient } from "@/lib/queryClient";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
