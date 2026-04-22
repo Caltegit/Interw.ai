@@ -22,7 +22,7 @@
 ## ✅ Lot 3 partiel — Scalabilité (FAIT en partie)
 
 - **3.1 Pagination** : ✅ Projects (20/page), ✅ ProjectDetail sessions (20/page). AdminEmails l'avait déjà.
-- **3.2 Virtualisation messages** : ❌ dépend du Lot 2.
+- **3.2 Virtualisation messages** : ✅ FAIT pour `SessionDetail` via `VirtualizedMessageList` (`@tanstack/react-virtual`). InterviewStart n'affiche pas de liste — non concerné.
 - **3.3 Logger** : ✅ `src/lib/logger.ts` + branchement auth (user_id auto). Utilisé sur erreurs critiques (delete projet).
 - **3.4 ProjectForm partagé** : ❌ refacto risquée, à faire avec tests.
 
