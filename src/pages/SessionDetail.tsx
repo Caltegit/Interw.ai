@@ -16,6 +16,7 @@ import {
   useUpdateRecruiterNotes,
   useCreateReportShare,
 } from "@/hooks/queries/useSessionDetail";
+import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
 export default function SessionDetail() {
   const { id } = useParams();
@@ -195,25 +196,12 @@ export default function SessionDetail() {
                       Aucun message enregistré pour cette session.
                     </div>
                   ) : (
-                    <div className="max-h-[600px] overflow-y-auto divide-y">
-                      {messages.map((m, i) => (
-                        <div
-                          key={m.id}
-                          className={`px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer ${activeMessageIndex === i ? "bg-primary/5" : ""}`}
-                          onClick={() => setActiveMessageIndex(i)}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium">
-                              {m.role === "ai" ? `🤖 ${project?.ai_persona_name || "IA"}` : "👤 Candidat"}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(m.timestamp).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                            </span>
-                          </div>
-                          <p className="text-sm leading-relaxed">{m.content}</p>
-                        </div>
-                      ))}
-                    </div>
+                    <VirtualizedMessageList
+                      messages={messages}
+                      aiPersonaName={project?.ai_persona_name}
+                      activeIndex={activeMessageIndex}
+                      onSelect={setActiveMessageIndex}
+                    />
                   )}
                 </CardContent>
               </Card>
