@@ -2116,46 +2116,7 @@ export default function InterviewStart() {
 
         {/* ── Footer : progression + actions + retour vidéo ── */}
         {!interviewFinished && (
-          <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
-                Question {currentQuestionIndex + 1} / {questions.length}
-                {(() => {
-                  const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
-                  const max = Math.max(
-                    0,
-                    Number((questions[currentQuestionIndex] as any)?.max_follow_ups ?? 0),
-                  );
-                  if (n <= 0) return null;
-                  return (
-                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold">
-                      ↻ Relance {n}{max > 0 ? `/${max}` : ""}
-                    </span>
-                  );
-                })()}
-              </span>
-              {aiThinking && (
-                <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
-                  <span className="flex gap-0.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "120ms" }} />
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "240ms" }} />
-                  </span>
-                  L'IA réfléchit…
-                </span>
-              )}
-              {!aiThinking && silenceTier === 1 && (
-                <span className="text-[10px] sm:text-xs text-muted-foreground italic">
-                  Prenez votre temps…
-                </span>
-              )}
-              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                />
-              </div>
-            </div>
+          <div className="border-t border-border/50 py-3 sm:py-4 lg:py-2 space-y-2 lg:space-y-1.5">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
               {/* Spacer gauche */}
               <div />
@@ -2227,6 +2188,45 @@ export default function InterviewStart() {
                     </button>
                   </>
                 )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
+                Question {currentQuestionIndex + 1} / {questions.length}
+                {(() => {
+                  const n = followUpsByQuestion[currentQuestionIndex] ?? 0;
+                  const max = Math.max(
+                    0,
+                    Number((questions[currentQuestionIndex] as any)?.max_follow_ups ?? 0),
+                  );
+                  if (n <= 0) return null;
+                  return (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[10px] font-semibold">
+                      ↻ Relance {n}{max > 0 ? `/${max}` : ""}
+                    </span>
+                  );
+                })()}
+              </span>
+              {aiThinking && (
+                <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="flex gap-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: "240ms" }} />
+                  </span>
+                  L'IA réfléchit…
+                </span>
+              )}
+              {!aiThinking && silenceTier === 1 && (
+                <span className="text-[10px] sm:text-xs text-muted-foreground italic">
+                  Prenez votre temps…
+                </span>
+              )}
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
+                />
               </div>
             </div>
           </div>
