@@ -1,59 +1,48 @@
 
 
-## Bug : relances IA qui se superposent à la question suivante
+## Bug : bibliothèques vides pour `c+3@bap.fr`
 
-### Cause
+### Cause racine
 
-Dans `src/pages/InterviewStart.tsx` :
+Ce compte **n'a jamais accepté son invitation** dans l'organisation « TEST 3 » :
 
-1. `handleSendResponse` (qui déclenche la décision IA puis la relance ou la transition) **ne met jamais `isProcessing` à `true`**. Pendant qu'il attend la fin de la TTS de relance (`await speak(aiMessage)` ligne 1233), le bouton « Passer la question » reste actif.
-2. `handleSkipQuestion` annule bien la TTS du navigateur (`window.speechSynthesis.cancel()`) mais **n'arrête pas l'audio ElevenLabs en cours** (`elevenAudioRef.current` n'est pas mis en pause). Si la voix ElevenLabs est activée (cas par défaut), la relance continue à parler par dessus la transition « Passons à la question suivante ».
-3. Même quand l'audio est coupé, `handleSendResponse` continue son exécution après l'`await` (il appelle `startQuestionRecording` / `startListening` sur l'ancienne question) en parallèle de la nouvelle question lancée par le skip → état STT corrompu.
+- `profiles.organization_id` = `NULL` pour cet utilisateur
+- `user_roles` = vide
+- L'organisation « TEST 3 » existe (créée le 22/04 à 20:56) mais `owner_id = NULL`
+- Une invitation `pending` est bien présente, valable jusqu'au 29/04
 
-### Correctifs (un seul fichier : `src/pages/InterviewStart.tsx`)
+Conséquence : `get_user_organization_id(auth.uid())` renvoie `NULL`, donc toutes les requêtes des bibliothèques (questions, critères, intros, sessions types, emails) renvoient zéro ligne — RLS fonctionne normalement, c'est juste qu'il n'y a aucune org rattachée.
 
-#### 1. Couper l'audio ElevenLabs dans le skip
+De plus, comme `owner_id` est encore `NULL` sur l'organisation, **le seed des bibliothèques par défaut n'a jamais été déclenché** (le trigger `trg_seed_on_owner_set` ne s'exécute qu'au moment où `owner_id` passe de NULL à une vraie valeur, ce qui se produit dans `accept_invitation` pour le premier accepté).
 
-Dans `handleSkipQuestion`, juste après le `window.speechSynthesis?.cancel()` existant, ajouter la coupure de la voix ElevenLabs :
-```
-if (elevenAudioRef.current) {
-  try { elevenAudioRef.current.pause(); } catch {}
-  elevenAudioRef.current = null;
-}
-setIsSpeaking(false);
-```
+### Correctif (3 étapes via une migration SQL ponctuelle)
 
-#### 2. Jeton d'annulation pour interrompre une relance IA en cours
+#### 1. Rattacher manuellement l'utilisateur à l'organisation « TEST 3 »
 
-Ajouter un `turnAbortRef = useRef<{ aborted: boolean } | null>(null)`.
+- `UPDATE profiles SET organization_id = '3c370947…' WHERE user_id = 'fec21331…'`
+- `UPDATE organizations SET owner_id = 'fec21331…' WHERE id = '3c370947…' AND owner_id IS NULL`
+- Marquer l'invitation comme `accepted` pour éviter qu'il essaie de l'utiliser à nouveau.
 
-- Au début de `handleSendResponse` : créer un nouveau jeton `const token = { aborted: false }; turnAbortRef.current = token;` et passer ce jeton aux étapes critiques (vérifier `token.aborted` après chaque `await speak(...)`, après l'appel IA, et avant tout `startListening` / `setCurrentQuestionIndex` / `setMessages` qui suivent).
-- Au début de `handleSkipQuestion` : marquer `if (turnAbortRef.current) turnAbortRef.current.aborted = true;`.
-- Dans `handleSendResponse`, dès qu'on voit `token.aborted === true`, on `return` immédiatement sans modifier l'état (la nouvelle question est déjà gérée par le skip).
+#### 2. Lui assigner le rôle `admin` sur cette org
 
-#### 3. Protéger `handleSendResponse` avec `isProcessing`
+- `INSERT INTO user_roles (user_id, role, organization_id) VALUES (…, 'admin', …) ON CONFLICT DO NOTHING`
 
-- Au tout début : `if (isProcessing) return;` puis `setIsProcessing(true);`.
-- Dans le `finally`, remettre `setIsProcessing(false);` **sauf** si on a abandonné (pour ne pas écraser l'état remis par le skip).
+#### 3. Déclencher le seed complet des bibliothèques
 
-Ça désactive automatiquement le bouton « Passer la question » pendant le traitement IA et la TTS de relance, évitant le double-clic. Mais comme on veut quand même pouvoir interrompre (cf. demande utilisateur « quand on clic sur passer à la question suivante il faut couper les relances »), le bouton « Passer » doit rester cliquable même si `isProcessing` est vrai. On va donc :
+Appeler les 4 fonctions de seed pour cette org + ce créateur :
+- `seed_default_question_templates`
+- `seed_default_criteria_templates`
+- `seed_default_interview_templates`
+- `seed_demo_project`
 
-- Garder `disabled = isProcessing` pour les autres boutons,
-- **Mais retirer ce disabled pour « Passer la question »** : il devient toujours cliquable hors `interviewFinished`. Le jeton d'annulation (étape 2) garantit la cohérence d'état.
+Après ça, à sa prochaine actualisation, il verra les ~50 questions, 10 critères, 6 sessions types et le projet de démo « Candidature spontanée - TEST - ».
 
-#### 4. Empêcher la double TTS de transition après skip
+### À confirmer
 
-Avant de prononcer la transition dans `handleSkipQuestion` (`await speak(transition)` ligne 1417), s'assurer que toute lecture résiduelle est bien stoppée (déjà fait pour browser TTS, on ajoute ElevenLabs en étape 1).
+L'invitation a été envoyée **il y a ~2 h**. Deux scénarios possibles :
 
-### Ce qui ne change pas
+1. **Il n'a jamais cliqué sur le lien d'invitation reçu par email** → le bon réflexe est qu'il clique dessus pour passer normalement par `accept_invitation` (qui fait tout ce qui est ci-dessus automatiquement). Aucune migration requise.
+2. **Le lien ne fonctionne pas / il l'a perdu** → on applique le correctif manuel ci-dessus.
 
-- Logique IA (`ai-conversation-turn`), comptage des relances, niveaux de relance.
-- Layout, design, mobile.
-- Comportement quand l'IA enchaîne naturellement (pas de skip) : toujours `await speak(...)` avant la question suivante, donc pas de superposition.
-- Page de fin, raccourcis clavier, plein écran.
-
-### Hors champ
-
-- Pas de timeout maximum sur la TTS de relance (déjà 20 s côté browser TTS).
-- Pas de changement dans le edge function `ai-conversation-turn`.
+Quelle option ?
 
