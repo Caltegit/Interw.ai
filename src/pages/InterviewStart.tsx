@@ -924,6 +924,11 @@ export default function InterviewStart() {
     const q = questions[qIndex];
     if (q?.video_url) currentPresentationRef.current = { kind: "media", mediaType: "video" };
     else if (q?.audio_url) currentPresentationRef.current = { kind: "media", mediaType: "audio" };
+    else {
+      // Cas limite : aucune média mais on a quand même appelé markMediaPresentation.
+      // On loggue pour identifier les flux qui sortent du cadre attendu.
+      console.warn("[interview] markMediaPresentation : question sans média", { qIndex, qId: q?.id });
+    }
   }, [questions]);
 
   const armPlaybackWatchdog = useCallback(() => {
