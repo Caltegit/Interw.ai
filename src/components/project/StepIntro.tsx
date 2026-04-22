@@ -3,14 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Sparkles, Mic, Video, Play, Pause, Loader2 } from "lucide-react";
+import { Play, Pause, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
+import { IntroFormatPicker, type IntroFormat } from "@/components/library/IntroFormatPicker";
 
-export type IntroMode = "text" | "tts" | "audio" | "video";
+export type IntroMode = IntroFormat;
 
 interface StepIntroProps {
   introEnabled: boolean;
