@@ -1803,9 +1803,9 @@ export default function InterviewStart() {
               ? "audio"
               : "written";
           return (
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-center py-6 sm:py-8 pb-32 sm:pb-24">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-center py-6 sm:py-8 pb-32 sm:pb-24 lg:py-4 lg:pb-2 lg:min-h-0">
               {/* ── Colonne gauche : Avatar IA (2/3 desktop) ── */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 lg:h-full lg:min-h-0 lg:flex lg:items-center lg:justify-center">
                 {questionType === "video" && currentQ?.video_url ? (
                   <div className="relative w-full mx-auto max-w-3xl">
                     <QuestionMediaPlayer
