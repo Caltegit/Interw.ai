@@ -1216,6 +1216,15 @@ export default function InterviewStart() {
         .eq("id", sessionId);
     }
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      // 1) D'abord on prononce la phrase de transition (« Écoutez la question
+      //    suivante. ») — on attend qu'elle soit terminée pour éviter qu'elle
+      //    se superpose au média de la question suivante.
+      setIsSpeaking(true);
+      setShouldAutoPlay(false);
+      currentPresentationRef.current = { kind: "tts", text: transition };
+      await speak(transition);
+      if (isPausedRef.current) return;
+      // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(nextQIdx);
@@ -1224,6 +1233,10 @@ export default function InterviewStart() {
         armPlaybackWatchdog();
       }, 30);
     } else {
+      // Question écrite : on prononce la transition (qui contient déjà la
+      // question), puis on écoute.
+      await speak(transition);
+      if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
     }
