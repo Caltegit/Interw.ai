@@ -1911,6 +1911,7 @@ export default function InterviewStart() {
                 {/* Question text (for written/audio) */}
                 {currentQ && questionType !== "video" && (
                   <QuestionMediaPlayer
+                    key={`q-audio-${currentQuestionIndex}`}
                     ref={featuredPlayerRef}
                     type={questionType}
                     content={currentQ.content}
