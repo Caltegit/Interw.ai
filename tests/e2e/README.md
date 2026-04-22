@@ -51,6 +51,7 @@ npx playwright test --ui
 | `interview-start-refresh.spec.ts` | Candidat anon | Session passe en `in_progress`, survit au refresh, recommencement OK |
 | `interview-start-restart-cleanup.spec.ts` | Candidat anon | « Recommencer » purge `session_messages` + reset `last_question_index`/`status` en BDD |
 | `interview-start-restart-media-cleanup.spec.ts` | Candidat anon | « Recommencer » purge aussi les fichiers media uploadés (`interviews/{sessionId}/`) |
+| `interview-media-no-overlap.spec.ts` | Candidat anon | Aucune superposition audio/vidéo : au plus 1 piste média/TTS active à la fois |
 
 ## Limites assumées
 
