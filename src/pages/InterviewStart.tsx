@@ -254,6 +254,9 @@ export default function InterviewStart() {
   // Ref to current ElevenLabs audio (for pause/cancel)
   const elevenAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Jeton d'annulation pour interrompre une relance IA en cours (utilisé par "Passer la question").
+  const turnAbortRef = useRef<{ aborted: boolean } | null>(null);
+
   // Try ElevenLabs first; resolves true if it played, false if we should fallback
   const tryElevenLabs = useCallback(
     async (text: string): Promise<boolean> => {
@@ -1065,6 +1068,14 @@ export default function InterviewStart() {
 
   // Send candidate response — awaits AI to decide between follow-up / next / end.
   const handleSendResponse = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    // Nouveau jeton pour ce tour : "Passer la question" peut le marquer aborted
+    // pour interrompre toute suite (TTS de relance, MAJ d'état, redémarrage STT).
+    const token = { aborted: false };
+    turnAbortRef.current = token;
+    let aborted = false;
+    try {
     stopListening();
     clearSilenceTier();
     // Stoppe immédiatement toute lecture média en cours pour éviter qu'elle se
@@ -1085,6 +1096,7 @@ export default function InterviewStart() {
       startListening();
       // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
       resetSilenceTimer();
+      setIsProcessing(false);
       return;
     }
 
@@ -1203,6 +1215,7 @@ export default function InterviewStart() {
       });
     }
     setAiThinking(false);
+    if (token.aborted) { aborted = true; return; }
 
     // ── 4. FOLLOW-UP branch ──
     if (action === "follow_up" && aiMessage && !isLastQuestion) {
@@ -1231,6 +1244,7 @@ export default function InterviewStart() {
       // met en pause pendant la relance — on rejouera la TTS, pas le média).
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
@@ -1255,6 +1269,7 @@ export default function InterviewStart() {
         }));
       }
       await speak(closing);
+      if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
       return;
     }
@@ -1304,6 +1319,7 @@ export default function InterviewStart() {
       setShouldAutoPlay(false);
       currentPresentationRef.current = { kind: "tts", text: transition };
       await speak(transition);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
       setIsSpeaking(true);
@@ -1317,22 +1333,35 @@ export default function InterviewStart() {
       // Question écrite : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
       await speak(transition);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
+    }
+    } finally {
+      if (!aborted) setIsProcessing(false);
     }
   };
 
   // Skip the current question — go directly to the next one without calling AI
   const handleSkipQuestion = async () => {
-    if (isProcessing || interviewFinished) return;
+    if (interviewFinished) return;
+    // Marque le tour IA en cours comme abandonné pour qu'il n'écrase pas l'état
+    // de la question suivante.
+    if (turnAbortRef.current) turnAbortRef.current.aborted = true;
+    // Coupe immédiatement toute TTS en cours (navigateur + ElevenLabs).
+    window.speechSynthesis?.cancel();
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
+    setIsSpeaking(false);
     const isLast = currentQuestionIndex >= questions.length - 1;
     // Sur la dernière question, "Passer" termine la session.
     if (isLast) {
       try { featuredPlayerRef.current?.stop(); } catch {}
       featuredPlayerRef.current = null;
       stopListening();
-      window.speechSynthesis?.cancel();
       await endInterview();
       return;
     }
@@ -1876,8 +1905,9 @@ export default function InterviewStart() {
                 {!interviewFinished && (() => {
                   const isLastQ = currentQuestionIndex >= questions.length - 1;
                   const label = isLastQ ? "Terminer la session" : "Passer la question";
-                  // Désactivé pendant le traitement de la transition pour éviter les double-clics.
-                  const disabled = isProcessing;
+                  // Le bouton reste cliquable même pendant une relance IA :
+                  // le clic interrompt la TTS en cours et passe à la suite.
+                  const disabled = false;
                   return (
                     <div className="mt-3 flex justify-center">
                       {silenceTier >= 3 ? (
