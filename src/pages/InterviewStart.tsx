@@ -85,6 +85,9 @@ export default function InterviewStart() {
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSttResultAtRef = useRef<number>(0);
+  const startListeningRef = useRef<(() => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
