@@ -1022,9 +1022,10 @@ export default function InterviewStart() {
     const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
     const isFirstQMedia = firstQMediaType !== "written";
 
+    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
     const greeting = isFirstQMedia
-      ? `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet session pour le poste de ${project.job_title}. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${session.candidate_name}, je suis ${project.ai_persona_name ?? "l'IA"}. Bienvenue pour cet session pour le poste de ${project.job_title}. Commençons avec la première question : ${questions[0].content}`;
+      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${questions[0].content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
