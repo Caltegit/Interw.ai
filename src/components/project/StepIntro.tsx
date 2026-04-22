@@ -126,20 +126,30 @@ export function StepIntro({
       {introEnabled && (
         <>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Format de l'intro</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-sm font-medium">Format de l'intro</Label>
+              <IntroLibraryDialog
+                type={introMode}
+                onSelect={(item) => {
+                  if (introMode === "text" || introMode === "tts") {
+                    setIntroText(item.intro_text || "");
+                  } else if (introMode === "audio") {
+                    setIntroAudioBlob(null);
+                    setIntroAudioPreviewUrl(item.audio_url);
+                  } else if (introMode === "video") {
+                    setIntroVideoFile(null);
+                    setIntroVideoPreviewUrl(item.video_url);
+                  }
+                }}
+              />
+            </div>
             <IntroFormatPicker value={introMode} onChange={setIntroMode} />
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
             {introMode === "text" && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label>Message à afficher</Label>
-                  <IntroLibraryDialog
-                    type="text"
-                    onSelect={(item) => setIntroText(item.intro_text || "")}
-                  />
-                </div>
+                <Label>Message à afficher</Label>
                 <Textarea
                   rows={6}
                   placeholder="Bonjour et bienvenue. Voici quelques mots avant de commencer…"
@@ -168,13 +178,7 @@ export function StepIntro({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label>Texte à lire</Label>
-                    <IntroLibraryDialog
-                      type="tts"
-                      onSelect={(item) => setIntroText(item.intro_text || "")}
-                    />
-                  </div>
+                  <Label>Texte à lire</Label>
                   <Textarea
                     rows={6}
                     placeholder="Bonjour, je suis ravi de vous recevoir aujourd'hui…"
@@ -207,45 +211,23 @@ export function StepIntro({
             )}
 
             {introMode === "audio" && (
-              <>
-                <div className="flex justify-end">
-                  <IntroLibraryDialog
-                    type="audio"
-                    onSelect={(item) => {
-                      setIntroAudioBlob(null);
-                      setIntroAudioPreviewUrl(item.audio_url);
-                    }}
-                  />
-                </div>
-                <IntroAudioRecorder
-                  existingUrl={introAudioPreviewUrl}
-                  onAudioReady={({ blob, previewUrl }) => {
-                    setIntroAudioBlob(blob);
-                    setIntroAudioPreviewUrl(previewUrl);
-                  }}
-                />
-              </>
+              <IntroAudioRecorder
+                existingUrl={introAudioPreviewUrl}
+                onAudioReady={({ blob, previewUrl }) => {
+                  setIntroAudioBlob(blob);
+                  setIntroAudioPreviewUrl(previewUrl);
+                }}
+              />
             )}
 
             {introMode === "video" && (
-              <>
-                <div className="flex justify-end">
-                  <IntroLibraryDialog
-                    type="video"
-                    onSelect={(item) => {
-                      setIntroVideoFile(null);
-                      setIntroVideoPreviewUrl(item.video_url);
-                    }}
-                  />
-                </div>
-                <IntroVideoRecorder
-                  existingUrl={introVideoPreviewUrl}
-                  onVideoReady={({ file, previewUrl }) => {
-                    setIntroVideoFile(file);
-                    setIntroVideoPreviewUrl(previewUrl);
-                  }}
-                />
-              </>
+              <IntroVideoRecorder
+                existingUrl={introVideoPreviewUrl}
+                onVideoReady={({ file, previewUrl }) => {
+                  setIntroVideoFile(file);
+                  setIntroVideoPreviewUrl(previewUrl);
+                }}
+              />
             )}
           </div>
         </>
