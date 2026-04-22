@@ -1345,14 +1345,23 @@ export default function InterviewStart() {
 
   // Skip the current question — go directly to the next one without calling AI
   const handleSkipQuestion = async () => {
-    if (isProcessing || interviewFinished) return;
+    if (interviewFinished) return;
+    // Marque le tour IA en cours comme abandonné pour qu'il n'écrase pas l'état
+    // de la question suivante.
+    if (turnAbortRef.current) turnAbortRef.current.aborted = true;
+    // Coupe immédiatement toute TTS en cours (navigateur + ElevenLabs).
+    window.speechSynthesis?.cancel();
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
+    setIsSpeaking(false);
     const isLast = currentQuestionIndex >= questions.length - 1;
     // Sur la dernière question, "Passer" termine la session.
     if (isLast) {
       try { featuredPlayerRef.current?.stop(); } catch {}
       featuredPlayerRef.current = null;
       stopListening();
-      window.speechSynthesis?.cancel();
       await endInterview();
       return;
     }
@@ -1896,8 +1905,9 @@ export default function InterviewStart() {
                 {!interviewFinished && (() => {
                   const isLastQ = currentQuestionIndex >= questions.length - 1;
                   const label = isLastQ ? "Terminer la session" : "Passer la question";
-                  // Désactivé pendant le traitement de la transition pour éviter les double-clics.
-                  const disabled = isProcessing;
+                  // Le bouton reste cliquable même pendant une relance IA :
+                  // le clic interrompt la TTS en cours et passe à la suite.
+                  const disabled = false;
                   return (
                     <div className="mt-3 flex justify-center">
                       {silenceTier >= 3 ? (
