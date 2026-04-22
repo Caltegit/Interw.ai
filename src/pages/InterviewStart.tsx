@@ -2082,9 +2082,10 @@ export default function InterviewStart() {
                         }`}
                       >
                         {isProcessing ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-warning animate-pulse" />
-                            Analyse de votre réponse…
+                          <span className="inline-flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-warning animate-bounce" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-warning animate-bounce" style={{ animationDelay: "120ms" }} />
+                            <span className="h-1.5 w-1.5 rounded-full bg-warning animate-bounce" style={{ animationDelay: "240ms" }} />
                           </span>
                         ) : isSpeaking ? (
                           <span className="inline-flex items-center gap-2">
