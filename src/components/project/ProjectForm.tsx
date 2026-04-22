@@ -6,13 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronRight, Mic, Video, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
-import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
-import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
-import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
+import { StepIntro, type IntroMode } from "@/components/project/StepIntro";
 import { AvatarPicker } from "@/components/project/AvatarPicker";
 import {
   InterviewTemplatePickerDialog,

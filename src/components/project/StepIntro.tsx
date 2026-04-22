@@ -1,0 +1,271 @@
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { FileText, Sparkles, Mic, Video, Play, Pause, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
+import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
+import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
+
+export type IntroMode = "text" | "tts" | "audio" | "video";
+
+interface StepIntroProps {
+  introEnabled: boolean;
+  setIntroEnabled: (v: boolean) => void;
+  introMode: IntroMode;
+  setIntroMode: (m: IntroMode) => void;
+  introText: string;
+  setIntroText: (t: string) => void;
+
+  introAudioPreviewUrl: string | null;
+  setIntroAudioBlob: (b: Blob | null) => void;
+  setIntroAudioPreviewUrl: (u: string | null) => void;
+
+  introVideoPreviewUrl: string | null;
+  setIntroVideoFile: (f: File | null) => void;
+  setIntroVideoPreviewUrl: (u: string | null) => void;
+
+  ttsVoiceId: string;
+  avatarPreview: string | null;
+  aiPersonaName: string;
+}
+
+const FORMATS: { mode: IntroMode; icon: typeof FileText; title: string; desc: string }[] = [
+  { mode: "text", icon: FileText, title: "Texte à lire", desc: "Le candidat lit votre message à l'écran." },
+  { mode: "tts", icon: Sparkles, title: "Texte lu par l'IA", desc: "L'IA lit votre texte avec la voix et l'avatar choisis." },
+  { mode: "audio", icon: Mic, title: "Audio", desc: "Vous enregistrez ou téléversez un message vocal." },
+  { mode: "video", icon: Video, title: "Vidéo", desc: "Vous enregistrez ou téléversez une vidéo de présentation." },
+];
+
+export function StepIntro({
+  introEnabled,
+  setIntroEnabled,
+  introMode,
+  setIntroMode,
+  introText,
+  setIntroText,
+  introAudioPreviewUrl,
+  setIntroAudioBlob,
+  setIntroAudioPreviewUrl,
+  introVideoPreviewUrl,
+  setIntroVideoFile,
+  setIntroVideoPreviewUrl,
+  ttsVoiceId,
+  avatarPreview,
+  aiPersonaName,
+}: StepIntroProps) {
+  const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
+  const handlePreviewTts = async () => {
+    const text = introText.trim();
+    if (!text) {
+      toast({ title: "Saisissez d'abord un texte à prévisualiser.", variant: "destructive" });
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ text, voiceId: ttsVoiceId, preview: true }),
+      });
+      const ct = res.headers.get("Content-Type") || "";
+      if (!ct.includes("audio")) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.reason || "Lecture impossible");
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(objectUrl);
+      audioRef.current = audio;
+      audio.onended = () => {
+        setPlaying(false);
+        URL.revokeObjectURL(objectUrl);
+      };
+      audio.onpause = () => setPlaying(false);
+      audio.onplay = () => setPlaying(true);
+      await audio.play();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Prévisualisation impossible", description: msg, variant: "destructive" });
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const stopPreview = () => {
+    audioRef.current?.pause();
+    setPlaying(false);
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-lg border border-border bg-card p-5 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <Label className="text-base font-medium">Diffuser une intro avant les questions</Label>
+            <p className="text-sm text-muted-foreground">
+              L'intro est le premier contact entre votre entreprise et le candidat. Elle permet de présenter le poste,
+              l'équipe et de mettre le candidat à l'aise avant les questions.
+            </p>
+          </div>
+          <Switch checked={introEnabled} onCheckedChange={setIntroEnabled} />
+        </div>
+      </div>
+
+      {introEnabled && (
+        <>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Format de l'intro</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {FORMATS.map((f) => {
+                const Icon = f.icon;
+                const selected = introMode === f.mode;
+                return (
+                  <button
+                    key={f.mode}
+                    type="button"
+                    onClick={() => setIntroMode(f.mode)}
+                    className={`text-left rounded-lg border p-4 transition-colors ${
+                      selected
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/30"
+                        : "border-border bg-card hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="font-medium text-sm">{f.title}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{f.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-5 space-y-4">
+            {introMode === "text" && (
+              <div className="space-y-2">
+                <Label>Message à afficher</Label>
+                <Textarea
+                  rows={6}
+                  placeholder="Bonjour et bienvenue. Voici quelques mots avant de commencer…"
+                  value={introText}
+                  onChange={(e) => setIntroText(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Le candidat verra ce texte avant de démarrer. Soignez le ton.
+                </p>
+              </div>
+            )}
+
+            {introMode === "tts" && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  {avatarPreview && (
+                    <img
+                      src={avatarPreview}
+                      alt={aiPersonaName}
+                      className="h-12 w-12 rounded-full object-cover object-top border border-border"
+                    />
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    Lu par <span className="font-medium text-foreground">{aiPersonaName || "votre IA"}</span> avec la
+                    voix configurée à l'étape précédente.
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Texte à lire</Label>
+                  <Textarea
+                    rows={6}
+                    placeholder="Bonjour, je suis ravi de vous recevoir aujourd'hui…"
+                    value={introText}
+                    onChange={(e) => setIntroText(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={playing ? stopPreview : handlePreviewTts}
+                  disabled={previewing}
+                >
+                  {previewing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Génération…
+                    </>
+                  ) : playing ? (
+                    <>
+                      <Pause className="mr-2 h-4 w-4" /> Stop
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" /> Prévisualiser la lecture
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {introMode === "audio" && (
+              <>
+                <div className="flex justify-end">
+                  <IntroLibraryDialog
+                    type="audio"
+                    onSelect={(item) => {
+                      setIntroAudioBlob(null);
+                      setIntroAudioPreviewUrl(item.audio_url);
+                    }}
+                  />
+                </div>
+                <IntroAudioRecorder
+                  existingUrl={introAudioPreviewUrl}
+                  onAudioReady={({ blob, previewUrl }) => {
+                    setIntroAudioBlob(blob);
+                    setIntroAudioPreviewUrl(previewUrl);
+                  }}
+                />
+              </>
+            )}
+
+            {introMode === "video" && (
+              <>
+                <div className="flex justify-end">
+                  <IntroLibraryDialog
+                    type="video"
+                    onSelect={(item) => {
+                      setIntroVideoFile(null);
+                      setIntroVideoPreviewUrl(item.video_url);
+                    }}
+                  />
+                </div>
+                <IntroVideoRecorder
+                  existingUrl={introVideoPreviewUrl}
+                  onVideoReady={({ file, previewUrl }) => {
+                    setIntroVideoFile(file);
+                    setIntroVideoPreviewUrl(previewUrl);
+                  }}
+                />
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
