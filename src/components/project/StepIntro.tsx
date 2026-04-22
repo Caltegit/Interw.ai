@@ -133,7 +133,13 @@ export function StepIntro({
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
             {introMode === "text" && (
               <div className="space-y-2">
-                <Label>Message à afficher</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Message à afficher</Label>
+                  <IntroLibraryDialog
+                    type="text"
+                    onSelect={(item) => setIntroText(item.intro_text || "")}
+                  />
+                </div>
                 <Textarea
                   rows={6}
                   placeholder="Bonjour et bienvenue. Voici quelques mots avant de commencer…"
