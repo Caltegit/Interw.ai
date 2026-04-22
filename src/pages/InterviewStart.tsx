@@ -1784,7 +1784,7 @@ export default function InterviewStart() {
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
-      <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)]">
+      <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:overflow-hidden">
         {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
         {backgroundSaving > 0 && (
           <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md py-2 -mx-2 sm:-mx-4 px-2 sm:px-4 flex justify-end">
