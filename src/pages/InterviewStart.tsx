@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
+import { logger } from "@/lib/logger";
 
 // Extend window for webkitSpeechRecognition
 declare global {
