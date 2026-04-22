@@ -2,117 +2,39 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft, ChevronRight, Upload, X, Mic, Video, Sparkles } from "lucide-react";
-import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
-import { StepCriteria } from "@/components/project/StepCriteria";
-import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
-import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
-import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
-import { AvatarPicker } from "@/components/project/AvatarPicker";
+import { createEmptyQuestion } from "@/components/project/StepQuestions";
 import defaultCamilleAvatar from "@/assets/avatars/woman-1.jpg";
-import { InterviewTemplatePickerDialog, type InterviewTemplatePayload } from "@/components/project/InterviewTemplatePickerDialog";
-import { VoiceSelectorDialog, getDefaultVoiceForGender, type VoiceGender } from "@/components/project/VoiceSelectorDialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDialog";
+import {
+  ProjectForm,
+  DEFAULT_COMPLETION_MESSAGE,
+  type ProjectFormState,
+} from "@/components/project/ProjectForm";
 
-const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
-const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
+const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
 
-export default function ProjectNew() {
-  const { profile, user } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [step, setStep] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-
-  const applyTemplate = (tpl: InterviewTemplatePayload) => {
-    if (tpl.name) setTitle(tpl.name);
-    if (tpl.default_language) setLanguage(tpl.default_language);
-    if (tpl.default_duration_minutes) setMaxDuration(tpl.default_duration_minutes);
-    if (tpl.questions.length) {
-      setQuestions(
-        tpl.questions.map((q) => ({
-          ...createEmptyQuestion(),
-          title: q.title,
-          content: q.content,
-          category: q.category || "",
-          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
-          follow_up_enabled: q.follow_up_enabled,
-          max_follow_ups: q.max_follow_ups,
-          relance_level: q.relance_level,
-          audioPreviewUrl: q.audio_url,
-          videoPreviewUrl: q.video_url,
-          from_library: true,
-          hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
-          max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
-        })),
-      );
-    }
-    if (tpl.criteria.length) {
-      setCriteria(
-        tpl.criteria.map((c) => ({
-          label: c.label,
-          description: c.description,
-          weight: c.weight,
-          scoring_scale: c.scoring_scale,
-          applies_to: c.applies_to,
-          anchors: c.anchors,
-          from_library: true,
-        })),
-      );
-    }
-    toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
-  };
-
-  // Step 1
-  const [title, setTitle] = useState("Candidature spontanée");
-  const [language, setLanguage] = useState<"fr" | "en">("fr");
-  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("browser");
-  const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>("female");
-  const [ttsVoiceId, setTtsVoiceId] = useState<string>(getDefaultVoiceForGender("female"));
-  const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
-
-  // Step 2
-  const [aiPersonaName, setAiPersonaName] = useState("Marie");
-  const [aiVoice, setAiVoice] = useState<string>("female_fr");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(defaultCamilleAvatar);
-  const [presetAvatarUrl, setPresetAvatarUrl] = useState<string | null>(defaultCamilleAvatar);
-  const [introType, setIntroType] = useState<"audio" | "video">("audio");
-  const [introAudioBlob, setIntroAudioBlob] = useState<Blob | null>(null);
-  const [introAudioPreviewUrl, setIntroAudioPreviewUrl] = useState<string | null>(null);
-  const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
-  const [introVideoPreviewUrl, setIntroVideoPreviewUrl] = useState<string | null>(null);
-
-  // Step 3
-  const [questions, setQuestions] = useState<Question[]>([
+const initialState: ProjectFormState = {
+  title: "Candidature spontanée",
+  language: "fr",
+  ttsProvider: "browser",
+  ttsVoiceGender: "female",
+  ttsVoiceId: getDefaultVoiceForGender("female"),
+  aiPersonaName: "Marie",
+  aiVoice: "female_fr",
+  avatarFile: null,
+  avatarPreview: defaultCamilleAvatar,
+  presetAvatarUrl: defaultCamilleAvatar,
+  introType: "audio",
+  introAudioBlob: null,
+  introAudioPreviewUrl: null,
+  introVideoFile: null,
+  introVideoPreviewUrl: null,
+  questions: [
     { ...createEmptyQuestion(), title: "Bien-être", content: "Comment ça va aujourd'hui ?" },
     { ...createEmptyQuestion(), title: "Culture", content: "Tu penses quoi de Morning ?" },
-  ]);
-  
-
-  // Step 4
-  const [criteria, setCriteria] = useState<
-    {
-      label: string;
-      description: string;
-      weight: number;
-      scoring_scale: string;
-      anchors: Record<string, string>;
-      applies_to: string;
-      category?: string;
-      from_library?: boolean;
-      save_to_library?: boolean;
-    }[]
-  >([
+  ],
+  criteria: [
     {
       label: "Entrepreneur de son périmètre",
       description:
@@ -140,27 +62,23 @@ export default function ProjectNew() {
       anchors: {},
       applies_to: "all_questions",
     },
-  ]);
+  ],
+  maxDuration: 30,
+  recordAudio: true,
+  recordVideo: false,
+  status: "active",
+  autoSkipSilence: true,
+  allowPause: false,
+  completionMessage: DEFAULT_COMPLETION_MESSAGE,
+};
 
-  // Step 5
-  const [maxDuration, setMaxDuration] = useState(30);
-  const [recordAudio, setRecordAudio] = useState(true);
-  const [recordVideo, setRecordVideo] = useState(false);
-  const [status, setStatus] = useState<"draft" | "active">("active");
-  const [autoSkipSilence, setAutoSkipSilence] = useState(true);
-  const [allowPause, setAllowPause] = useState(false);
-  const [completionMessage, setCompletionMessage] = useState(DEFAULT_COMPLETION_MESSAGE);
+export default function ProjectNew() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [saving, setSaving] = useState(false);
 
-  const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
-
-  const canProceed = () => {
-    if (step === 0) return title.trim();
-    if (step === 2) return questions.some((q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl);
-    if (step === 3) return criteria.some((c) => c.label.trim()) && totalWeight === 100;
-    return true;
-  };
-
-  const handleSave = async () => {
+  const handleSave = async (s: ProjectFormState) => {
     if (!user) {
       toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
       return;
@@ -169,18 +87,20 @@ export default function ProjectNew() {
     setSaving(true);
     try {
       const slug =
-        title
+        s.title
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)/g, "") +
         "-" +
         Date.now().toString(36);
 
-      let avatarUrl: string | null = presetAvatarUrl;
-      if (avatarFile) {
-        const ext = avatarFile.name.split(".").pop() || "png";
+      let avatarUrl: string | null = s.presetAvatarUrl;
+      if (s.avatarFile) {
+        const ext = s.avatarFile.name.split(".").pop() || "png";
         const path = `avatars/${slug}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("media").upload(path, avatarFile, { upsert: true });
+        const { error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(path, s.avatarFile, { upsert: true });
         if (uploadError) throw uploadError;
         const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
         avatarUrl = urlData.publicUrl;
@@ -189,72 +109,71 @@ export default function ProjectNew() {
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
-          organization_id: "a0000000-0000-0000-0000-000000000001",
+          organization_id: DEFAULT_ORG_ID,
           created_by: user.id,
-          title,
-          job_title: title,
+          title: s.title,
+          job_title: s.title,
           description: "",
-          language,
-          ai_persona_name: aiPersonaName,
-          ai_voice: aiVoice as never,
-          max_duration_minutes: maxDuration,
-          record_audio: recordAudio,
-          record_video: recordVideo,
-          status,
-          auto_skip_silence: autoSkipSilence,
-          allow_pause: allowPause,
+          language: s.language,
+          ai_persona_name: s.aiPersonaName,
+          ai_voice: s.aiVoice as never,
+          max_duration_minutes: s.maxDuration,
+          record_audio: s.recordAudio,
+          record_video: s.recordVideo,
+          status: s.status,
+          auto_skip_silence: s.autoSkipSilence,
+          allow_pause: s.allowPause,
           slug,
           avatar_image_url: avatarUrl,
-          intro_audio_url: introType === "audio" && introAudioPreviewUrl && !introAudioPreviewUrl.startsWith("blob:") ? introAudioPreviewUrl : null,
-          presentation_video_url: introType === "video" && introVideoPreviewUrl && !introVideoPreviewUrl.startsWith("blob:") ? introVideoPreviewUrl : null,
-          completion_message: completionMessage.trim() || null,
-          tts_provider: ttsProvider,
-          tts_voice_gender: ttsVoiceGender,
-          tts_voice_id: ttsVoiceId,
+          intro_audio_url:
+            s.introType === "audio" && s.introAudioPreviewUrl && !s.introAudioPreviewUrl.startsWith("blob:")
+              ? s.introAudioPreviewUrl
+              : null,
+          presentation_video_url:
+            s.introType === "video" && s.introVideoPreviewUrl && !s.introVideoPreviewUrl.startsWith("blob:")
+              ? s.introVideoPreviewUrl
+              : null,
+          completion_message: s.completionMessage.trim() || null,
+          tts_provider: s.ttsProvider,
+          tts_voice_gender: s.ttsVoiceGender,
+          tts_voice_id: s.ttsVoiceId,
         } as never)
         .select()
         .single();
 
       if (error) throw error;
 
-      if (introType === "audio" && introAudioBlob) {
+      if (s.introType === "audio" && s.introAudioBlob) {
         const introPath = `intro/${project.id}.webm`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
-          .upload(introPath, introAudioBlob, { contentType: "audio/webm", upsert: true });
-
+          .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
         if (introUploadError) throw introUploadError;
-
         const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
-        const introAudioUrl = introUrlData.publicUrl;
-
         const { error: introUpdateError } = await supabase
           .from("projects")
-          .update({ intro_audio_url: introAudioUrl } as never)
+          .update({ intro_audio_url: introUrlData.publicUrl } as never)
           .eq("id", project.id);
-
         if (introUpdateError) throw introUpdateError;
       }
 
-      if (introType === "video" && introVideoFile) {
+      if (s.introType === "video" && s.introVideoFile) {
         const videoPath = `presentation/${project.id}.webm`;
         const { error: videoUploadError } = await supabase.storage
           .from("media")
-          .upload(videoPath, introVideoFile, { contentType: introVideoFile.type, upsert: true });
-
+          .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
         if (videoUploadError) throw videoUploadError;
-
         const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
-
         const { error: videoUpdateError } = await supabase
           .from("projects")
           .update({ presentation_video_url: videoUrlData.publicUrl } as never)
           .eq("id", project.id);
-
         if (videoUpdateError) throw videoUpdateError;
       }
 
-      const validQuestions = questions.filter((q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl);
+      const validQuestions = s.questions.filter(
+        (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
+      );
       if (validQuestions.length > 0) {
         const insertedQuestions = await supabase
           .from("questions")
@@ -290,7 +209,6 @@ export default function ProjectNew() {
                 updates.audio_url = aUrl.publicUrl;
               }
             } else if (q.audioPreviewUrl && !q.audioPreviewUrl.startsWith("blob:")) {
-              // URL from library import — reuse directly
               updates.audio_url = q.audioPreviewUrl;
             }
 
@@ -304,30 +222,25 @@ export default function ProjectNew() {
                 updates.video_url = vUrl.publicUrl;
               }
             } else if (q.videoPreviewUrl && !q.videoPreviewUrl.startsWith("blob:")) {
-              // URL from library import — reuse directly
               updates.video_url = q.videoPreviewUrl;
             }
 
             if (Object.keys(updates).length > 0) {
-              await supabase
-                .from("questions")
-                .update(updates as never)
-                .eq("id", qId);
+              await supabase.from("questions").update(updates as never).eq("id", qId);
             }
 
-            // Save to library if requested
             if (q.save_to_library && !q.from_library) {
               const contentText = q.content.trim() || q.title || "";
               if (contentText) {
                 const { data: existing } = await supabase
                   .from("question_templates")
                   .select("id")
-                  .eq("organization_id", "a0000000-0000-0000-0000-000000000001")
+                  .eq("organization_id", DEFAULT_ORG_ID)
                   .eq("content", contentText)
                   .maybeSingle();
                 if (!existing) {
                   await supabase.from("question_templates").insert({
-                    organization_id: "a0000000-0000-0000-0000-000000000001",
+                    organization_id: DEFAULT_ORG_ID,
                     created_by: user.id,
                     title: q.title || contentText.slice(0, 60),
                     content: contentText,
@@ -348,7 +261,7 @@ export default function ProjectNew() {
         }
       }
 
-      const validCriteria = criteria.filter((c) => c.label.trim());
+      const validCriteria = s.criteria.filter((c) => c.label.trim());
       if (validCriteria.length > 0) {
         await supabase.from("evaluation_criteria").insert(
           validCriteria.map((c, i) => ({
@@ -363,12 +276,11 @@ export default function ProjectNew() {
           })),
         );
 
-        // Save criteria flagged as "save_to_library"
         const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
         if (toLibrary.length > 0) {
           await supabase.from("criteria_templates").insert(
             toLibrary.map((c) => ({
-              organization_id: "a0000000-0000-0000-0000-000000000001",
+              organization_id: DEFAULT_ORG_ID,
               created_by: user.id,
               label: c.label,
               description: c.description,
@@ -409,348 +321,13 @@ export default function ProjectNew() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h1 className="text-2xl font-bold">Nouveau projet</h1>
-        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-          <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un entretien type
-        </Button>
-      </div>
-
-      <InterviewTemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onApply={applyTemplate} />
-
-      <div className="flex items-center gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <button
-              onClick={() => i < step && setStep(i)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                i === step
-                  ? "bg-primary text-primary-foreground"
-                  : i < step
-                    ? "cursor-pointer bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}
-            </button>
-            <span className={`hidden text-sm sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>
-              {s}
-            </span>
-            {i < STEPS.length - 1 && <div className="h-px w-4 bg-border sm:w-8" />}
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setStep(step - 1)} disabled={step === 0}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Précédent
-        </Button>
-        {step < STEPS.length - 1 ? (
-          <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-            Suivant <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        ) : (
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Création..." : "Créer le projet"}
-          </Button>
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          {step === 0 && (
-            <div className="space-y-4">
-              <div>
-                <Label>Titre *</Label>
-                <Input
-                  placeholder="CDI Développeur Full-Stack Paris"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Langue de l'entretien</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Nom de l'interviewer IA</Label>
-                <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Genre de la voix</Label>
-                  <RadioGroup
-                    value={ttsVoiceGender}
-                    onValueChange={(v) => {
-                      const g = v as VoiceGender;
-                      setTtsVoiceGender(g);
-                      setTtsVoiceId(getDefaultVoiceForGender(g));
-                    }}
-                    className="flex gap-6"
-                  >
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="female" id="voice-gender-female-new" />
-                      <Label htmlFor="voice-gender-female-new" className="cursor-pointer font-normal">Femme</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <RadioGroupItem value="male" id="voice-gender-male-new" />
-                      <Label htmlFor="voice-gender-male-new" className="cursor-pointer font-normal">Homme</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Voix réaliste haute qualité (~0,40 € par entretien). Si désactivé, voix standard du navigateur (gratuit).
-                    </p>
-                  </div>
-                  <Switch
-                    checked={ttsProvider === "elevenlabs"}
-                    onCheckedChange={(v) => {
-                      if (v) {
-                        setVoiceDialogOpen(true);
-                      } else {
-                        setTtsProvider("browser");
-                      }
-                    }}
-                  />
-                </div>
-
-                {ttsProvider === "elevenlabs" && (
-                  <button
-                    type="button"
-                    onClick={() => setVoiceDialogOpen(true)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Modifier la voix
-                  </button>
-                )}
-              </div>
-
-              <VoiceSelectorDialog
-                open={voiceDialogOpen}
-                onOpenChange={setVoiceDialogOpen}
-                gender={ttsVoiceGender}
-                initialVoiceId={ttsVoiceId}
-                personaName={aiPersonaName}
-                onConfirm={(id) => {
-                  setTtsVoiceId(id);
-                  setTtsProvider("elevenlabs");
-                }}
-                onCancel={() => {
-                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
-                }}
-              />
-
-              <div>
-                <Label>Photo du recruteur</Label>
-                <div className="mt-2">
-                  <AvatarPicker
-                    value={presetAvatarUrl ?? avatarPreview}
-                    onSelectPreset={(url) => {
-                      setPresetAvatarUrl(url);
-                      setAvatarFile(null);
-                      setAvatarPreview(null);
-                    }}
-                    onUpload={(file) => {
-                      setAvatarFile(file);
-                      setAvatarPreview(URL.createObjectURL(file));
-                      setPresetAvatarUrl(null);
-                    }}
-                    onClear={() => {
-                      setAvatarFile(null);
-                      setAvatarPreview(null);
-                      setPresetAvatarUrl(null);
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-                <div>
-                  <Label>Durée maximale (minutes) : {maxDuration}</Label>
-                  <input
-                    type="range"
-                    min={15}
-                    max={60}
-                    value={maxDuration}
-                    onChange={(e) => setMaxDuration(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-                {/* Passage auto 3s — masqué temporairement, fonctionnalité désactivée */}
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Autoriser le candidat à mettre en pause</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un bouton « Pause » pendant l'entretien. Le candidat peut figer l'interview et reprendre exactement où il s'était arrêté.
-                    </p>
-                  </div>
-                  <Switch checked={allowPause} onCheckedChange={setAllowPause} />
-                </div>
-                <div>
-                  <Label>Statut</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "active")}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Brouillon</SelectItem>
-                      <SelectItem value="active">Actif</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Message de fin</Label>
-                  <Textarea
-                    value={completionMessage}
-                    onChange={(e) => setCompletionMessage(e.target.value)}
-                    placeholder={DEFAULT_COMPLETION_MESSAGE}
-                    rows={3}
-                    className="mt-1.5"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Ce message s'affichera sur l'écran de remerciement après l'entretien.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">Message d'introduction</h2>
-                <p className="text-sm text-muted-foreground">
-                  Cette intro sera diffusée au candidat avant le début des questions.
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={introType === "audio" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setIntroType("audio");
-                        setIntroVideoFile(null);
-                        setIntroVideoPreviewUrl(null);
-                      }}
-                    >
-                      <Mic className="mr-1 h-4 w-4" /> Audio
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={introType === "video" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setIntroType("video");
-                        setIntroAudioBlob(null);
-                        setIntroAudioPreviewUrl(null);
-                      }}
-                    >
-                      <Video className="mr-1 h-4 w-4" /> Vidéo
-                    </Button>
-                  </div>
-                  <IntroLibraryDialog
-                    type={introType}
-                    onSelect={(item) => {
-                      if (introType === "audio") {
-                        setIntroAudioBlob(null);
-                        setIntroAudioPreviewUrl(item.audio_url);
-                      } else {
-                        setIntroVideoFile(null);
-                        setIntroVideoPreviewUrl(item.video_url);
-                      }
-                    }}
-                  />
-                </div>
-
-                {introType === "audio" ? (
-                  <IntroAudioRecorder
-                    existingUrl={introAudioPreviewUrl}
-                    onAudioReady={({ blob, previewUrl }) => {
-                      setIntroAudioBlob(blob);
-                      setIntroAudioPreviewUrl(previewUrl);
-                    }}
-                  />
-                ) : (
-                  <IntroVideoRecorder
-                    existingUrl={introVideoPreviewUrl}
-                    onVideoReady={({ file, previewUrl }) => {
-                      setIntroVideoFile(file);
-                      setIntroVideoPreviewUrl(previewUrl);
-                    }}
-                  />
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  💡 Astuce : enregistrez une intro chaleureuse pour mettre le candidat à l'aise.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
-
-          {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <Card className="bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="text-sm">Récapitulatif</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p><strong>Titre :</strong> {title}</p>
-                  <p><strong>Langue :</strong> {language === "fr" ? "Français" : "English"}</p>
-                  <p><strong>Persona :</strong> {aiPersonaName}</p>
-                  <p><strong>Questions :</strong> {questions.filter((q) => q.content.trim()).length}</p>
-                  <p><strong>Critères :</strong> {criteria.filter((c) => c.label.trim()).length}</p>
-                  <p><strong>Durée max :</strong> {maxDuration} min</p>
-                  <p><strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}</p>
-                  <p><strong>Statut :</strong> {status === "draft" ? "Brouillon" : "Actif"}</p>
-                  <p>
-                    <strong>Présentation :</strong>{" "}
-                    {introType === "audio"
-                      ? introAudioPreviewUrl ? "Audio ✓" : "Audio — non défini"
-                      : introVideoPreviewUrl ? "Vidéo ✓" : "Vidéo — non définie"}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setStep(step - 1)} disabled={step === 0}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Précédent
-        </Button>
-        {step < STEPS.length - 1 ? (
-          <Button onClick={() => setStep(step + 1)} disabled={!canProceed()}>
-            Suivant <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        ) : (
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Création..." : "Créer le projet"}
-          </Button>
-        )}
-      </div>
-    </div>
+    <ProjectForm
+      mode="create"
+      initial={initialState}
+      onSubmit={handleSave}
+      saving={saving}
+      header={<h1 className="text-2xl font-bold">Nouveau projet</h1>}
+      submitLabel={{ idle: "Créer le projet", busy: "Création..." }}
+    />
   );
 }

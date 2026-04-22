@@ -24,7 +24,7 @@
 - **3.1 Pagination** : ✅ Projects (20/page), ✅ ProjectDetail sessions (20/page). AdminEmails l'avait déjà.
 - **3.2 Virtualisation messages** : ✅ FAIT pour `SessionDetail` via `VirtualizedMessageList` (`@tanstack/react-virtual`). InterviewStart n'affiche pas de liste — non concerné.
 - **3.3 Logger** : ✅ `src/lib/logger.ts` + branchement auth (user_id auto). Utilisé sur erreurs critiques (delete projet).
-- **3.4 ProjectForm partagé** : ❌ refacto risquée, à faire avec tests.
+- **3.4 ProjectForm partagé** : ✅ FAIT. `src/components/project/ProjectForm.tsx` centralise UI + état du wizard (5 étapes). `ProjectNew.tsx` (756 → ~290 lignes) et `ProjectEdit.tsx` (792 → ~340 lignes) deviennent des wrappers focalisés sur la persistance. Test E2E `project-edit.spec.ts` ajouté en filet de sécurité.
 
 ## Ce qui reste à faire (sessions futures)
 
