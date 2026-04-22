@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Pencil, Trash2, Copy, FileText, ListChecks, Clock } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Copy, FileText, ListChecks, Clock, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -263,9 +263,14 @@ export default function InterviewTemplates() {
                   </span>
                 </div>
                 <div className="flex gap-1 pt-2 mt-auto">
-                  <Button asChild variant="outline" size="sm" className="flex-1">
+                  <Button asChild size="sm" className="flex-1">
+                    <Link to={`/projects/new?template=${tpl.id}`}>
+                      <Sparkles className="mr-1 h-3 w-3" /> Utiliser
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" aria-label="Modifier">
                     <Link to={`/library/sessions/${tpl.id}`}>
-                      <Pencil className="mr-1 h-3 w-3" /> Modifier
+                      <Pencil className="h-4 w-4" />
                     </Link>
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => handleDuplicate(tpl)} aria-label="Dupliquer">
