@@ -138,7 +138,9 @@ export default function ProjectEdit() {
         avatarFile: null,
         avatarPreview: project.avatar_image_url,
         presetAvatarUrl: null,
-        introType,
+        introEnabled: dbEnabled,
+        introMode,
+        introText,
         introAudioBlob: null,
         introAudioPreviewUrl,
         introVideoFile: null,
@@ -178,8 +180,9 @@ export default function ProjectEdit() {
         avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
-      let introAudioUrl: string | null = s.introType === "audio" ? s.introAudioPreviewUrl : null;
-      if (s.introType === "audio" && s.introAudioBlob) {
+      let introAudioUrl: string | null =
+        s.introEnabled && s.introMode === "audio" ? s.introAudioPreviewUrl : null;
+      if (s.introEnabled && s.introMode === "audio" && s.introAudioBlob) {
         const introPath = `intro/${id}.webm`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
@@ -189,8 +192,9 @@ export default function ProjectEdit() {
         introAudioUrl = `${introUrlData.publicUrl}?t=${Date.now()}`;
       }
 
-      let presentationVideoUrl: string | null = s.introType === "video" ? s.introVideoPreviewUrl : null;
-      if (s.introType === "video" && s.introVideoFile) {
+      let presentationVideoUrl: string | null =
+        s.introEnabled && s.introMode === "video" ? s.introVideoPreviewUrl : null;
+      if (s.introEnabled && s.introMode === "video" && s.introVideoFile) {
         const videoPath = `presentation/${id}.webm`;
         const { error: videoUploadError } = await supabase.storage
           .from("media")
@@ -199,6 +203,11 @@ export default function ProjectEdit() {
         const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
         presentationVideoUrl = `${videoUrlData.publicUrl}?t=${Date.now()}`;
       }
+
+      const introTextValue =
+        s.introEnabled && (s.introMode === "text" || s.introMode === "tts")
+          ? s.introText.trim() || null
+          : null;
 
       const { error: updateError } = await supabase
         .from("projects")
@@ -215,6 +224,9 @@ export default function ProjectEdit() {
           auto_skip_silence: s.autoSkipSilence,
           allow_pause: s.allowPause,
           avatar_image_url: avatarUrl,
+          intro_enabled: s.introEnabled,
+          intro_mode: s.introEnabled ? s.introMode : null,
+          intro_text: introTextValue,
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: s.completionMessage.trim() || null,
