@@ -1194,6 +1194,10 @@ export type Database = {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
       }
+      seed_demo_project: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: undefined
+      }
       slugify: { Args: { _input: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
     }
