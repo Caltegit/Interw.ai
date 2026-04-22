@@ -1,37 +1,44 @@
 
 
-## Plan — Brancher `logger.error` sur les points critiques d'`InterviewStart`
+## Topo — Ce qui reste à faire
 
-Ajouter de la visibilité sur les bugs production dans le fichier le plus sensible (`InterviewStart.tsx`), sans rien refactoriser. Uniquement de l'instrumentation.
+### Lot 2 — Refacto `InterviewStart.tsx` (2092 lignes) — RISQUÉ
 
-### Points d'instrumentation
+Découper le fichier le plus critique en hooks spécialisés. À ne lancer **qu'après** avoir étoffé la suite E2E.
 
-Dans `src/pages/InterviewStart.tsx`, brancher `logger.error` sur les blocs `catch` critiques avec un contexte structuré :
+**Pré-requis : 5 nouveaux tests Playwright**
+- Pause / reprise pendant l'enregistrement
+- Échec STT (Web Speech indisponible)
+- Échec upload segment (storage down)
+- Sortie plein écran pendant l'entretien
+- Réponse vide / silence prolongé
 
-1. **Accès média (getUserMedia)** — événement `interview_media_access_failed` avec `{ sessionId, mode: "audio"|"video", error }`
-2. **MediaRecorder (start/stop/dataavailable)** — événement `interview_recorder_failed` avec `{ sessionId, phase, error }`
-3. **Upload des segments audio/vidéo vers Storage** — événement `interview_upload_failed` avec `{ sessionId, questionIndex, segmentType, error }`
-4. **Speech-to-Text (Web Speech API erreurs + onerror)** — événement `interview_stt_failed` avec `{ sessionId, errorCode, error }`
-5. **Appels à l'edge function `ai-conversation-turn`** — événement `interview_ai_turn_failed` avec `{ sessionId, questionIndex, error }`
-6. **Appel à l'edge function `tts-elevenlabs`** — événement `interview_tts_failed` avec `{ sessionId, voiceId, error }`
-7. **Génération du rapport (`generate-report`)** — événement `interview_report_generation_failed` avec `{ sessionId, error }`
-8. **Mise à jour de la session (status, completed_at, etc.)** — événement `interview_session_update_failed` avec `{ sessionId, fields, error }`
+**Extractions, dans cet ordre (un hook = un commit testable)**
+1. `useExamRoomLock` — plein écran, focus onglet, anti-triche
+2. `useInterviewTimer` — chrono global et par question
+3. `useSpeechRecognition` — Web Speech API (start, stop, onresult, onerror)
+4. `useMediaRecorder` — caméra + micro + segments
+5. `useInterviewSession` — orchestration IA, persistance, navigation entre questions
 
-### Règles d'instrumentation
+Cible : `InterviewStart.tsx` < 400 lignes, uniquement de l'assemblage.
 
-- Utiliser `logger.error` (pas `console.error`) pour que ça parte dans le buffer interne et soit prêt pour un futur Sentry.
-- Toujours passer `sessionId` quand disponible.
-- Ne JAMAIS logger de PII candidat (nom, email, contenu des transcripts).
-- Garder les `toast` existants côté UI : le logger n'est qu'un ajout, pas un remplacement.
-- Garder les `console.warn` non-critiques tels quels (debug local).
+### Lot 3.2 — Virtualisation des messages
 
-### Hors champ
+Brancher `@tanstack/react-virtual` sur les listes longues :
+- Historique des messages dans `InterviewStart` (peut dépasser 100 items)
+- Liste des messages dans `SessionDetail`
 
-- Aucun changement de comportement, d'UI ou de logique.
-- Pas de refacto d'`InterviewStart` (Lot 2, plus tard avec tests).
-- Pas de service externe type Sentry — le logger garde déjà un buffer en mémoire, prêt à être branché plus tard.
+Gain : scroll fluide même sur entretiens d'1h+.
 
-### Fichier touché
+### Lot 3.4 — Composant `<ProjectForm />` partagé
 
-- `src/pages/InterviewStart.tsx` (modifications ciblées dans les `catch` blocs uniquement)
+Fusionner la logique dupliquée entre `ProjectNew.tsx` et `ProjectEdit.tsx` dans un seul composant. Pré-requis : tests E2E sur création + édition (création existe déjà, édition à ajouter).
+
+### Ordre recommandé
+
+1. **Lot 3.2** d'abord — petit, isolé, gain visible immédiat.
+2. **Lot 3.4** ensuite — refacto modérée avec un test E2E à ajouter.
+3. **Lot 2** en dernier — gros chantier, à faire posément avec les 5 tests en filet.
+
+Dis-moi par lequel on commence.
 
