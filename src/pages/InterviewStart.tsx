@@ -1243,6 +1243,7 @@ export default function InterviewStart() {
       // met en pause pendant la relance — on rejouera la TTS, pas le média).
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
