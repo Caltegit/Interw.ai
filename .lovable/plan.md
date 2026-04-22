@@ -1,82 +1,69 @@
 
 
-## Étape Intro améliorée — 4 formats
+## Solidification de l'enchaînement des questions
 
-Refonte de l'étape **Intro** du wizard `Nouveau projet` / `Modifier projet`.
+Quatre bugs identifiés, plan de correction ciblé.
 
-### Nouveau comportement
+### Bug 1 — `isProcessing` coincé à `true` après "Passer"
 
-**Bloc 1 — Activer l'intro (toggle)**
+`handleSkipQuestion` met `setIsProcessing(true)` au début, mais ne le repasse **jamais** à `false`. Résultat : l'écran reste bloqué sur **« Analyse de votre réponse… »** (capture d'écran fournie) et tous les boutons disparaissent (le bouton « Passer » est masqué quand `isProcessing`).
 
-- Switch **« Diffuser une intro avant les questions »** (Oui / Non).
-- Texte explicatif sous le switch :
-  > L'intro est le premier contact entre votre entreprise et le candidat. Elle permet de présenter le poste, l'équipe et de mettre le candidat à l'aise avant les questions.
-- Si **Non** → aucune intro n'est diffusée, on saute directement aux questions côté candidat.
+**Fix** : ajouter `setIsProcessing(false)` à la fin de `handleSkipQuestion` (et dans un `try/finally` pour couvrir une éventuelle exception pendant `speak`).
 
-**Bloc 2 — Choix du format (visible si Oui)**
+### Bug 2 — Superposition de médias entre les questions
 
-4 cartes cliquables côte à côte (responsive : grille 2×2 sur petit écran) :
+Le même `featuredPlayerRef` est attaché à **deux** `<QuestionMediaPlayer>` différents (un pour la vidéo en colonne gauche, un pour audio/written en colonne droite). Lors d'une transition audio → vidéo, le `ref.current.stop()` agit sur le mauvais composant et l'ancien média continue de jouer par-dessus la TTS de transition.
 
-| Format | Description courte | Ce qui s'affiche en dessous une fois sélectionné |
-|---|---|---|
-| **Texte à lire** | Le candidat lit un message à l'écran | `<Textarea>` du message d'intro |
-| **Texte lu par l'IA** | L'IA lit votre texte avec la voix et l'avatar choisis | `<Textarea>` + rappel de la voix/avatar configurés à l'étape 1 + bouton « Prévisualiser » (TTS via `tts-elevenlabs`) |
-| **Audio** | Vous enregistrez ou téléchargez un message vocal | `<IntroAudioRecorder>` existant + bouton bibliothèque |
-| **Vidéo** | Vous enregistrez ou téléchargez une vidéo de présentation | `<IntroVideoRecorder>` existant + bouton bibliothèque |
+De plus, le `QuestionMediaPlayer` n'a pas de `key={currentQuestionIndex}`, donc son état interne (`hasFinished`, `progress`, `<audio>` element) survit entre deux questions du même type.
 
-### Changements base de données
+**Fix** :
+- Forcer le remontage en ajoutant `key={`q-${currentQuestionIndex}`}` aux deux `QuestionMediaPlayer`.
+- Avant chaque transition (`handleSendResponse`, `handleSkipQuestion`), appeler `featuredPlayerRef.current?.stop()` **avant** de changer `currentQuestionIndex` (déjà fait), puis nullifier le ref `featuredPlayerRef.current = null` pour qu'il se rebinde proprement sur le nouveau composant.
 
-Migration ajoutant à la table `projects` :
-- `intro_enabled boolean default true` — toggle activé / désactivé
-- `intro_mode text` — `'text' | 'tts' | 'audio' | 'video'` (nullable, contrainte CHECK)
-- `intro_text text` — contenu pour modes `text` et `tts` (nullable)
+### Bug 3 — Bouton « Passer la question » qui disparaît
 
-Les colonnes existantes `intro_audio_url` et `presentation_video_url` sont conservées telles quelles.
+Le bouton est conditionné à `!isProcessing && currentQuestionIndex < questions.length - 1`. Trois problèmes :
+- Bug 1 le masque (corrigé ci-dessus).
+- Il disparaît sur la **dernière question**. Or si la STT meurt sur la dernière question (cas du screenshot), le candidat n'a **aucune issue de secours**.
+- Il disparaît pendant `isSpeaking` alors que c'est précisément un moment où on voudrait pouvoir passer.
 
-### Changements front
+**Fix** :
+- Toujours afficher un bouton « Passer la question » quand `!interviewFinished` (y compris sur la dernière → comportement = terminer la session).
+- Sur la dernière question, le libellé devient « **Terminer la session** » et appelle `endInterview` au lieu de `handleSkipQuestion`.
+- Garder le bouton visible aussi pendant `isSpeaking` (utile pour couper court si l'IA parle trop longtemps).
 
-**`ProjectFormState`** (dans `ProjectForm.tsx`) :
-- Remplacer `introType: "audio" | "video"` par :
-  - `introEnabled: boolean`
-  - `introMode: "text" | "tts" | "audio" | "video"`
-  - `introText: string`
-- Conserver `introAudioBlob/PreviewUrl`, `introVideoFile/PreviewUrl`.
+### Bug 4 — STT qui reste coincée (l'IA ne détecte plus la parole)
 
-**Composant `StepIntro` extrait** (`src/components/project/StepIntro.tsx`) :
-- Encapsule le switch, les 4 cartes de choix, et le rendu conditionnel selon `introMode`.
-- Carte « Texte lu par l'IA » : Textarea + bouton « Prévisualiser la lecture » qui appelle l'edge function existante `tts-elevenlabs` avec `ttsVoiceId` du formulaire.
+Sur Chrome, `webkitSpeechRecognition` peut s'arrêter silencieusement après un long silence ou une perte audio temporaire. Le code actuel auto-restart dans `onend` mais :
+- Si `recognition.start()` lève (la session a déjà été arrêtée), on ne tente jamais une nouvelle instance.
+- Aucun watchdog ne détecte que la STT est morte alors qu'on est censé écouter.
 
-**Persistance (`ProjectNew.tsx` + `ProjectEdit.tsx`)** :
-- Mapping vers les nouvelles colonnes selon `introEnabled` + `introMode`.
-- Si `introEnabled === false` : tout à `null`, `intro_enabled = false`.
-- Modes `text`/`tts` : sauvegarder `intro_text` + `intro_mode`, vider audio/vidéo.
-- Modes `audio`/`video` : flux actuel inchangé.
+**Fix** :
+- Dans `onend`, si l'auto-restart `recognitionRef.current.start()` échoue (catch), recréer **une nouvelle instance** via `startListening()` au lieu d'abandonner.
+- Ajouter un **watchdog de vivacité STT** : pendant la phase d'écoute, si aucun `onresult` n'a été reçu pendant 10 secondes ET que `liveTranscript` est vide, redémarrer la recognition (`stopListening()` + `startListening()`).
+- Ce watchdog est posé/clearé dans `startListening` / `stopListening` et reset à chaque `onresult`.
 
-**Lecture côté candidat (`InterviewLanding.tsx`)** :
-- Lire `project.intro_enabled` + `project.intro_mode`.
-- `text` → afficher le texte dans une carte avec bouton « J'ai lu, continuer ».
-- `tts` → afficher avatar + lire `intro_text` via `tts-elevenlabs` (réutiliser le pattern déjà en place pour les questions TTS).
-- `audio` / `video` → comportement actuel.
-- Si `intro_enabled === false` ou `intro_mode === null` → skip directement.
+### Bug 5 — Petits durcissements
 
-**Récapitulatif (étape 4)** :
-- Affiche « Intro : Désactivée » ou « Intro : Texte / Texte IA / Audio / Vidéo ✓ ».
-
-**Modèles d'intro (`InterviewTemplatePickerDialog`)** : hors scope ici, la table `intro_templates` reste audio/vidéo uniquement.
+- `markMediaPresentation` ne fait rien si la question n'a ni audio ni vidéo → ajouter un log warning pour détecter les cas limites.
+- Dans `handleSendResponse`, si la STT n'a rien capté (transcript vide) on appelle `startListening()` mais sans relancer `resetSilenceTimer()` → le compteur de silence ne repart pas. Ajouter le reset.
 
 ### Fichiers touchés
 
-- **Créés** : `src/components/project/StepIntro.tsx`, migration `add_intro_mode_to_projects`
-- **Modifiés** :
-  - `src/components/project/ProjectForm.tsx` — nouveau state + extraction de l'étape 1 vers `StepIntro`
-  - `src/pages/ProjectNew.tsx` — mapping persistance
-  - `src/pages/ProjectEdit.tsx` — chargement + mapping persistance
-  - `src/pages/InterviewLanding.tsx` — gestion des 4 modes côté candidat
-  - `supabase/functions/get-email-template-defaults` ou edge fn TTS : aucun changement, on réutilise `tts-elevenlabs`
+- **Modifié** : `src/pages/InterviewStart.tsx`
+  - `handleSkipQuestion` : `setIsProcessing(false)` final + try/finally
+  - JSX : `key={`q-${currentQuestionIndex}`}` sur les 2 `QuestionMediaPlayer`
+  - `featuredPlayerRef.current = null` après `stop()` lors des transitions
+  - Bouton « Passer / Terminer » toujours visible (conditions assouplies)
+  - `startListening` : watchdog de vivacité STT (10s sans `onresult`)
+  - `recognition.onend` : fallback recréation d'instance si `start()` échoue
+  - `handleSendResponse` (branche transcript vide) : `resetSilenceTimer()`
+- **Modifié** : `src/components/interview/QuestionMediaPlayer.tsx`
+  - Aucun changement nécessaire si `key` est posé côté parent.
 
 ### Hors champ
 
-- Pas de changement dans la bibliothèque d'intros (reste audio/vidéo).
-- Pas de migration des projets existants : valeurs par défaut sûres (`intro_enabled = true`, `intro_mode` déduit à la volée si `intro_audio_url`/`presentation_video_url` est présent).
-- Pas de refonte visuelle des autres étapes du wizard.
+- Pas de refonte de l'architecture STT (pas de Whisper / Deepgram).
+- Pas de changement BDD.
+- Pas de modification de l'UI globale, seulement les conditions d'affichage du bouton « Passer ».
 
