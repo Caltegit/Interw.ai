@@ -1076,6 +1076,8 @@ export default function InterviewStart() {
         variant: "destructive",
       });
       startListening();
+      // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
+      resetSilenceTimer();
       return;
     }
 
