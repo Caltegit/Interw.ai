@@ -34,12 +34,6 @@ interface StepIntroProps {
   aiPersonaName: string;
 }
 
-const FORMATS: { mode: IntroMode; icon: typeof FileText; title: string; desc: string }[] = [
-  { mode: "text", icon: FileText, title: "Texte à lire", desc: "Le candidat lit votre message à l'écran." },
-  { mode: "tts", icon: Sparkles, title: "Texte lu par l'IA", desc: "L'IA lit votre texte avec la voix et l'avatar choisis." },
-  { mode: "audio", icon: Mic, title: "Audio", desc: "Vous enregistrez ou téléversez un message vocal." },
-  { mode: "video", icon: Video, title: "Vidéo", desc: "Vous enregistrez ou téléversez une vidéo de présentation." },
-];
 
 export function StepIntro({
   introEnabled,
