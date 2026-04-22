@@ -54,11 +54,21 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InviteSignup />} />
-            <Route path="/interview/:slug" element={<InterviewLanding />} />
-            <Route path="/interview/:slug/test/:token" element={<InterviewDeviceTest />} />
-            <Route path="/interview/:slug/start/:token" element={<InterviewStart />} />
-            <Route path="/interview/:slug/complete/:token" element={<InterviewComplete />} />
-            <Route path="/interview/:slug/complete" element={<InterviewComplete />} />
+
+            {/* Session candidat — routes actuelles */}
+            <Route path="/session/:slug" element={<InterviewLanding />} />
+            <Route path="/session/:slug/test/:token" element={<InterviewDeviceTest />} />
+            <Route path="/session/:slug/start/:token" element={<InterviewStart />} />
+            <Route path="/session/:slug/complete/:token" element={<InterviewComplete />} />
+            <Route path="/session/:slug/complete" element={<InterviewComplete />} />
+
+            {/* Redirections des anciennes routes /interview pour ne pas casser les liens déjà envoyés */}
+            <Route path="/interview/:slug" element={<Navigate to="/session/:slug" replace />} />
+            <Route path="/interview/:slug/test/:token" element={<LegacyInterviewRedirect to="test" />} />
+            <Route path="/interview/:slug/start/:token" element={<LegacyInterviewRedirect to="start" />} />
+            <Route path="/interview/:slug/complete/:token" element={<LegacyInterviewRedirect to="complete" />} />
+            <Route path="/interview/:slug/complete" element={<LegacyInterviewRedirect to="complete" />} />
+
             <Route path="/shared-report/:token" element={<SharedReport />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
