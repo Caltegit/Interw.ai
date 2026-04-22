@@ -85,6 +85,9 @@ export default function InterviewStart() {
   const streamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSttResultAtRef = useRef<number>(0);
+  const startListeningRef = useRef<(() => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -494,6 +497,8 @@ export default function InterviewStart() {
         candidateTranscriptRef.current += final;
       }
       setLiveTranscript(candidateTranscriptRef.current + interim);
+      // Watchdog : on a reçu de l'audio reconnu → la STT est vivante.
+      lastSttResultAtRef.current = Date.now();
     };
 
     recognition.onerror = (event: any) => {
@@ -514,12 +519,21 @@ export default function InterviewStart() {
     recognition.onend = () => {
       console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
       // Auto-restart if we should still be listening (use ref, not stale state)
-      if (isListeningRef.current && !isPausedRef.current && recognitionRef.current) {
+      if (isListeningRef.current && !isPausedRef.current) {
         try {
-          recognitionRef.current.start();
+          recognitionRef.current?.start();
           console.log("[interview] STT auto-restarted");
         } catch (e) {
-          console.warn("[interview] STT restart failed:", e);
+          console.warn("[interview] STT restart failed — recreating instance:", e);
+          // Fallback : l'instance est probablement morte, on en recrée une neuve.
+          isListeningRef.current = false;
+          if (recognitionRef.current) {
+            try { recognitionRef.current.onend = null; } catch {}
+            recognitionRef.current = null;
+          }
+          setTimeout(() => {
+            if (!isPausedRef.current) startListeningRef.current?.();
+          }, 200);
         }
       }
     };
@@ -527,11 +541,30 @@ export default function InterviewStart() {
     recognition.start();
     isListeningRef.current = true;
     setIsListening(true);
+
+    // Watchdog de vivacité STT : si aucun onresult depuis 10s pendant
+    // l'écoute active, on force un redémarrage complet de la recognition.
+    if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
+    lastSttResultAtRef.current = Date.now();
+    sttWatchdogRef.current = setInterval(() => {
+      if (!isListeningRef.current || isPausedRef.current) return;
+      const idle = Date.now() - lastSttResultAtRef.current;
+      if (idle > 10000 && !candidateTranscriptRef.current.trim()) {
+        console.warn("[interview] STT watchdog : silence > 10s, redémarrage de la reconnaissance.");
+        lastSttResultAtRef.current = Date.now();
+        try { recognitionRef.current?.stop(); } catch {}
+        // onend fera le restart automatiquement (ou recréera l'instance).
+      }
+    }, 2000);
   }, [toast]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
+    if (sttWatchdogRef.current) {
+      clearInterval(sttWatchdogRef.current);
+      sttWatchdogRef.current = null;
+    }
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       try { recognitionRef.current.stop(); } catch {}
@@ -891,6 +924,11 @@ export default function InterviewStart() {
     const q = questions[qIndex];
     if (q?.video_url) currentPresentationRef.current = { kind: "media", mediaType: "video" };
     else if (q?.audio_url) currentPresentationRef.current = { kind: "media", mediaType: "audio" };
+    else {
+      // Cas limite : aucune média mais on a quand même appelé markMediaPresentation.
+      // On loggue pour identifier les flux qui sortent du cadre attendu.
+      console.warn("[interview] markMediaPresentation : question sans média", { qIndex, qId: q?.id });
+    }
   }, [questions]);
 
   const armPlaybackWatchdog = useCallback(() => {
@@ -1034,6 +1072,8 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     clearPlaybackWatchdog();
     try { featuredPlayerRef.current?.stop(); } catch {}
+    // On libère la ref pour qu'elle se rebinde proprement sur le nouveau composant.
+    featuredPlayerRef.current = null;
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
 
     if (!transcript) {
@@ -1043,6 +1083,8 @@ export default function InterviewStart() {
         variant: "destructive",
       });
       startListening();
+      // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
+      resetSilenceTimer();
       return;
     }
 
@@ -1284,96 +1326,117 @@ export default function InterviewStart() {
   // Skip the current question — go directly to the next one without calling AI
   const handleSkipQuestion = async () => {
     if (isProcessing || interviewFinished) return;
-    if (currentQuestionIndex >= questions.length - 1) return;
+    const isLast = currentQuestionIndex >= questions.length - 1;
+    // Sur la dernière question, "Passer" termine la session.
+    if (isLast) {
+      try { featuredPlayerRef.current?.stop(); } catch {}
+      featuredPlayerRef.current = null;
+      stopListening();
+      window.speechSynthesis?.cancel();
+      await endInterview();
+      return;
+    }
 
     setIsProcessing(true);
-
-    // 1. Stop listening + reset transcript + stop any media playback in progress
-    stopListening();
-    candidateTranscriptRef.current = "";
-    setLiveTranscript("");
-    clearAutoSkip();
-    setShouldAutoPlay(false);
-    clearPlaybackWatchdog();
-    try { featuredPlayerRef.current?.stop(); } catch {}
-    window.speechSynthesis?.cancel();
-
-    // 2. Stop & upload current question recording
-    const questionIdx = currentQuestionIndex;
-    let questionVideoUrl: string | null = null;
-    if (session?.id) {
-      questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
-    }
-
-    // 3. Persist a marker message so the report knows the question was skipped
-    const skipMarker = "[Question passée]";
-    setMessages((prev) => {
-      const updated = [...prev, { role: "candidate", content: skipMarker }];
-      messagesRef.current = updated;
-      return updated;
-    });
-    if (session?.id) {
-      try {
-        await persistMessage(session.id, "candidate", skipMarker, {
-          questionId: questions[questionIdx]?.id || null,
-          videoSegmentUrl: questionVideoUrl,
-        });
-      } catch {
-        // non-blocking
-      }
-    }
-    setAiMessages((prev) => [...prev, { role: "user" as const, content: skipMarker }]);
-
-    // 4. Build next question transition
-    const nextQIdx = currentQuestionIndex + 1;
-    const nextQ = questions[nextQIdx];
-    const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
-      ? "video"
-      : nextQ?.audio_url
-        ? "audio"
-        : "written";
-    const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
-
-    const transition =
-      nMediaType === "written"
-        ? `Passons à la question suivante : ${nextQ.content}`
-        : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
-
-    setMessages((prev) => {
-      const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
-      messagesRef.current = updated;
-      return updated;
-    });
-    if (session?.id) {
-      try {
-        await persistMessage(session.id, "ai", transition);
-      } catch {
-        // non-blocking
-      }
-    }
-    setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
-
-    setCurrentQuestionIndex((prev) => prev + 1);
-    if (session?.id) {
-      supabase
-        .from("sessions")
-        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-        .eq("id", session.id);
-    }
-
-    // 5. Speak transition + auto-play next question media (or start listening for written)
-    await speak(transition);
-    if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
-      setIsSpeaking(true);
+    try {
+      // 1. Stop listening + reset transcript + stop any media playback in progress
+      stopListening();
+      candidateTranscriptRef.current = "";
+      setLiveTranscript("");
+      clearAutoSkip();
       setShouldAutoPlay(false);
-      markMediaPresentation(nextQIdx);
-      setTimeout(() => {
-        setShouldAutoPlay(true);
-        armPlaybackWatchdog();
-      }, 30);
-    } else {
-      startQuestionRecording();
-      startListening();
+      clearPlaybackWatchdog();
+      try { featuredPlayerRef.current?.stop(); } catch {}
+      featuredPlayerRef.current = null;
+      window.speechSynthesis?.cancel();
+
+      // 2. Stop & upload current question recording
+      const questionIdx = currentQuestionIndex;
+      let questionVideoUrl: string | null = null;
+      if (session?.id) {
+        questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
+      }
+
+      // 3. Persist a marker message so the report knows the question was skipped
+      const skipMarker = "[Question passée]";
+      setMessages((prev) => {
+        const updated = [...prev, { role: "candidate", content: skipMarker }];
+        messagesRef.current = updated;
+        return updated;
+      });
+      if (session?.id) {
+        try {
+          await persistMessage(session.id, "candidate", skipMarker, {
+            questionId: questions[questionIdx]?.id || null,
+            videoSegmentUrl: questionVideoUrl,
+          });
+        } catch {
+          // non-bloquant
+        }
+      }
+      setAiMessages((prev) => [...prev, { role: "user" as const, content: skipMarker }]);
+
+      // 4. Build next question transition
+      const nextQIdx = currentQuestionIndex + 1;
+      const nextQ = questions[nextQIdx];
+      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+        ? "video"
+        : nextQ?.audio_url
+          ? "audio"
+          : "written";
+      const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+
+      const transition =
+        nMediaType === "written"
+          ? `Passons à la question suivante : ${nextQ.content}`
+          : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
+
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        messagesRef.current = updated;
+        return updated;
+      });
+      if (session?.id) {
+        try {
+          await persistMessage(session.id, "ai", transition);
+        } catch {
+          // non-bloquant
+        }
+      }
+      setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
+
+      setCurrentQuestionIndex((prev) => prev + 1);
+      if (session?.id) {
+        supabase
+          .from("sessions")
+          .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
+          .eq("id", session.id);
+      }
+
+      // 5. Speak transition + auto-play next question media (or start listening for written)
+      await speak(transition);
+      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        markMediaPresentation(nextQIdx);
+        setTimeout(() => {
+          setShouldAutoPlay(true);
+          armPlaybackWatchdog();
+        }, 30);
+      } else {
+        startQuestionRecording();
+        startListening();
+      }
+    } catch (e) {
+      console.error("[interview] handleSkipQuestion failed", e);
+      logger.error("interview_skip_failed", {
+        sessionId: session?.id ?? null,
+        questionIndex: currentQuestionIndex,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      // Toujours débloquer l'UI, sinon le bouton "Passer" disparaît à jamais.
+      setIsProcessing(false);
     }
   };
 
@@ -1484,6 +1547,11 @@ export default function InterviewStart() {
   useEffect(() => {
     handleSendResponseRef.current = handleSendResponse;
   });
+
+  // Keep startListeningRef in sync (utilisé par le fallback STT depuis onend).
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   // Spacebar shortcut to validate the answer (same conditions as the "Ma réponse est terminée" button)
   useEffect(() => {
@@ -1741,6 +1809,7 @@ export default function InterviewStart() {
                 {questionType === "video" && currentQ?.video_url ? (
                   <div className="relative w-full mx-auto max-w-3xl">
                     <QuestionMediaPlayer
+                      key={`q-video-${currentQuestionIndex}`}
                       ref={featuredPlayerRef}
                       type="video"
                       content={currentQ.content}
@@ -1804,29 +1873,37 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 )}
-                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
-                  <div className="mt-3 flex justify-center">
-                    {silenceTier >= 3 ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleSkipQuestion}
-                        className="border-warning text-warning hover:bg-warning/10 animate-pulse"
-                      >
-                        Passer la question
-                      </Button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSkipQuestion}
-                        className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                      >
-                        Passer la question
-                      </button>
-                    )}
-                  </div>
-                )}
+                {!interviewFinished && (() => {
+                  const isLastQ = currentQuestionIndex >= questions.length - 1;
+                  const label = isLastQ ? "Terminer la session" : "Passer la question";
+                  // Désactivé pendant le traitement de la transition pour éviter les double-clics.
+                  const disabled = isProcessing;
+                  return (
+                    <div className="mt-3 flex justify-center">
+                      {silenceTier >= 3 ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleSkipQuestion}
+                          disabled={disabled}
+                          className="border-warning text-warning hover:bg-warning/10 animate-pulse"
+                        >
+                          {label}
+                        </Button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSkipQuestion}
+                          disabled={disabled}
+                          className="text-xs text-muted-foreground hover:text-foreground underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {label}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
@@ -1834,6 +1911,7 @@ export default function InterviewStart() {
                 {/* Question text (for written/audio) */}
                 {currentQ && questionType !== "video" && (
                   <QuestionMediaPlayer
+                    key={`q-audio-${currentQuestionIndex}`}
                     ref={featuredPlayerRef}
                     type={questionType}
                     content={currentQ.content}
