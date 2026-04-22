@@ -28,7 +28,7 @@ const navItems = [
 ];
 
 const librarySubItems = [
-  { title: "Sessions", url: "/library/interviews", icon: ClipboardList },
+  { title: "Modèles", url: "/library/sessions", icon: ClipboardList },
   { title: "Questions", url: "/library/questions", icon: MessageSquare },
   { title: "Critères", url: "/library/criteria", icon: ListChecks },
   { title: "Intros", url: "/library/intros", icon: Mic },

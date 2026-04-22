@@ -107,7 +107,7 @@ export default function InterviewTemplates() {
       toast({ title: "Erreur", description: error?.message, variant: "destructive" });
       return;
     }
-    navigate(`/library/interviews/${(data as { id: string }).id}`);
+    navigate(`/library/sessions/${(data as { id: string }).id}`);
   };
 
   const handleDuplicate = async (tpl: InterviewTemplate) => {
@@ -264,7 +264,7 @@ export default function InterviewTemplates() {
                 </div>
                 <div className="flex gap-1 pt-2 mt-auto">
                   <Button asChild variant="outline" size="sm" className="flex-1">
-                    <Link to={`/library/interviews/${tpl.id}`}>
+                    <Link to={`/library/sessions/${tpl.id}`}>
                       <Pencil className="mr-1 h-3 w-3" /> Modifier
                     </Link>
                   </Button>
