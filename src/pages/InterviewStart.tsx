@@ -1067,6 +1067,8 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     clearPlaybackWatchdog();
     try { featuredPlayerRef.current?.stop(); } catch {}
+    // On libère la ref pour qu'elle se rebinde proprement sur le nouveau composant.
+    featuredPlayerRef.current = null;
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
 
     if (!transcript) {
