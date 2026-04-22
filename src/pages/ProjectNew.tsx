@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -9,8 +9,10 @@ import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDial
 import {
   ProjectForm,
   DEFAULT_COMPLETION_MESSAGE,
+  mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
 
 const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
 
@@ -76,7 +78,37 @@ export default function ProjectNew() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get("template");
   const [saving, setSaving] = useState(false);
+  const [formInitial, setFormInitial] = useState<ProjectFormState>(initialState);
+  const [templateLoading, setTemplateLoading] = useState(!!templateId);
+
+  useEffect(() => {
+    if (!templateId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const payload = await loadInterviewTemplate(templateId);
+        if (cancelled) return;
+        if (!payload) {
+          toast({
+            title: "Modèle introuvable",
+            description: "Le formulaire est vide.",
+            variant: "destructive",
+          });
+        } else {
+          setFormInitial((s) => mergeTemplateIntoState(s, payload));
+          toast({ title: "Modèle appliqué", description: payload.name });
+        }
+      } finally {
+        if (!cancelled) setTemplateLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [templateId, toast]);
 
   const handleSave = async (s: ProjectFormState) => {
     if (!user) {
@@ -320,10 +352,18 @@ export default function ProjectNew() {
     }
   };
 
+  if (templateLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <ProjectForm
       mode="create"
-      initial={initialState}
+      initial={formInitial}
       onSubmit={handleSave}
       saving={saving}
       header={<h1 className="text-2xl font-bold">Nouveau projet</h1>}

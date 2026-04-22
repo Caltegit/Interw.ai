@@ -71,6 +71,50 @@ export interface ProjectFormState {
   completionMessage: string;
 }
 
+export function mergeTemplateIntoState(
+  state: ProjectFormState,
+  tpl: InterviewTemplatePayload,
+): ProjectFormState {
+  return {
+    ...state,
+    title: tpl.name || state.title,
+    language: tpl.default_language || state.language,
+    maxDuration: tpl.default_duration_minutes || state.maxDuration,
+    questions: tpl.questions.length
+      ? tpl.questions.map((q) => ({
+          ...createEmptyQuestion(),
+          title: q.title,
+          content: q.content,
+          category: q.category || "",
+          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as
+            | "written"
+            | "audio"
+            | "video",
+          follow_up_enabled: q.follow_up_enabled,
+          max_follow_ups: q.max_follow_ups,
+          relance_level: q.relance_level,
+          audioPreviewUrl: q.audio_url,
+          videoPreviewUrl: q.video_url,
+          from_library: true,
+          hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
+          max_response_seconds:
+            (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
+        }))
+      : state.questions,
+    criteria: tpl.criteria.length
+      ? tpl.criteria.map((c) => ({
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: c.scoring_scale,
+          applies_to: c.applies_to,
+          anchors: c.anchors,
+          from_library: true,
+        }))
+      : state.criteria,
+  };
+}
+
 export interface ProjectFormProps {
   mode: "create" | "edit";
   initial: ProjectFormState;
