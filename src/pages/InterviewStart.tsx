@@ -1215,6 +1215,7 @@ export default function InterviewStart() {
       });
     }
     setAiThinking(false);
+    if (token.aborted) { aborted = true; return; }
 
     // ── 4. FOLLOW-UP branch ──
     if (action === "follow_up" && aiMessage && !isLastQuestion) {
@@ -1268,6 +1269,7 @@ export default function InterviewStart() {
         }));
       }
       await speak(closing);
+      if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
       return;
     }
@@ -1317,6 +1319,7 @@ export default function InterviewStart() {
       setShouldAutoPlay(false);
       currentPresentationRef.current = { kind: "tts", text: transition };
       await speak(transition);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
       setIsSpeaking(true);
@@ -1330,9 +1333,13 @@ export default function InterviewStart() {
       // Question écrite : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
       await speak(transition);
+      if (token.aborted) { aborted = true; return; }
       if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
+    }
+    } finally {
+      if (!aborted) setIsProcessing(false);
     }
   };
 
