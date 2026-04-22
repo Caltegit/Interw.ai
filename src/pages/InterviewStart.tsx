@@ -1146,7 +1146,11 @@ export default function InterviewStart() {
       }
 
       setResponseElapsedSec(0);
+      // Marque la relance comme présentation TTS en cours (utile si l'utilisateur
+      // met en pause pendant la relance — on rejouera la TTS, pas le média).
+      currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
+      if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
       startListening();
