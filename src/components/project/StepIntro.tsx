@@ -127,30 +127,7 @@ export function StepIntro({
         <>
           <div className="space-y-2">
             <Label className="text-sm font-medium">Format de l'intro</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {FORMATS.map((f) => {
-                const Icon = f.icon;
-                const selected = introMode === f.mode;
-                return (
-                  <button
-                    key={f.mode}
-                    type="button"
-                    onClick={() => setIntroMode(f.mode)}
-                    className={`text-left rounded-lg border p-4 transition-colors ${
-                      selected
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/30"
-                        : "border-border bg-card hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="font-medium text-sm">{f.title}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{f.desc}</p>
-                  </button>
-                );
-              })}
-            </div>
+            <IntroFormatPicker value={introMode} onChange={setIntroMode} />
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
