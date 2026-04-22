@@ -462,8 +462,10 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          intro_text: string | null
           name: string
           organization_id: string
+          tts_voice_id: string | null
           type: string
           video_url: string | null
         }
@@ -473,8 +475,10 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
+          intro_text?: string | null
           name: string
           organization_id: string
+          tts_voice_id?: string | null
           type: string
           video_url?: string | null
         }
@@ -484,8 +488,10 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          intro_text?: string | null
           name?: string
           organization_id?: string
+          tts_voice_id?: string | null
           type?: string
           video_url?: string | null
         }

@@ -3,14 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Sparkles, Mic, Video, Play, Pause, Loader2 } from "lucide-react";
+import { Play, Pause, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
 import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
+import { IntroFormatPicker, type IntroFormat } from "@/components/library/IntroFormatPicker";
 
-export type IntroMode = "text" | "tts" | "audio" | "video";
+export type IntroMode = IntroFormat;
 
 interface StepIntroProps {
   introEnabled: boolean;
@@ -33,12 +34,6 @@ interface StepIntroProps {
   aiPersonaName: string;
 }
 
-const FORMATS: { mode: IntroMode; icon: typeof FileText; title: string; desc: string }[] = [
-  { mode: "text", icon: FileText, title: "Texte à lire", desc: "Le candidat lit votre message à l'écran." },
-  { mode: "tts", icon: Sparkles, title: "Texte lu par l'IA", desc: "L'IA lit votre texte avec la voix et l'avatar choisis." },
-  { mode: "audio", icon: Mic, title: "Audio", desc: "Vous enregistrez ou téléversez un message vocal." },
-  { mode: "video", icon: Video, title: "Vidéo", desc: "Vous enregistrez ou téléversez une vidéo de présentation." },
-];
 
 export function StepIntro({
   introEnabled,
@@ -132,36 +127,19 @@ export function StepIntro({
         <>
           <div className="space-y-2">
             <Label className="text-sm font-medium">Format de l'intro</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {FORMATS.map((f) => {
-                const Icon = f.icon;
-                const selected = introMode === f.mode;
-                return (
-                  <button
-                    key={f.mode}
-                    type="button"
-                    onClick={() => setIntroMode(f.mode)}
-                    className={`text-left rounded-lg border p-4 transition-colors ${
-                      selected
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/30"
-                        : "border-border bg-card hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="font-medium text-sm">{f.title}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{f.desc}</p>
-                  </button>
-                );
-              })}
-            </div>
+            <IntroFormatPicker value={introMode} onChange={setIntroMode} />
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
             {introMode === "text" && (
               <div className="space-y-2">
-                <Label>Message à afficher</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Message à afficher</Label>
+                  <IntroLibraryDialog
+                    type="text"
+                    onSelect={(item) => setIntroText(item.intro_text || "")}
+                  />
+                </div>
                 <Textarea
                   rows={6}
                   placeholder="Bonjour et bienvenue. Voici quelques mots avant de commencer…"
@@ -190,7 +168,13 @@ export function StepIntro({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Texte à lire</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Texte à lire</Label>
+                    <IntroLibraryDialog
+                      type="tts"
+                      onSelect={(item) => setIntroText(item.intro_text || "")}
+                    />
+                  </div>
                   <Textarea
                     rows={6}
                     placeholder="Bonjour, je suis ravi de vous recevoir aujourd'hui…"
