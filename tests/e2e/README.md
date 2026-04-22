@@ -50,6 +50,7 @@ npx playwright test --ui
 | `interview-start-media.spec.ts` | Candidat anon | `getUserMedia` + `MediaRecorder` activés (flux factices Chromium) |
 | `interview-start-refresh.spec.ts` | Candidat anon | Session passe en `in_progress`, survit au refresh, recommencement OK |
 | `interview-start-restart-cleanup.spec.ts` | Candidat anon | « Recommencer » purge `session_messages` + reset `last_question_index`/`status` en BDD |
+| `interview-start-restart-media-cleanup.spec.ts` | Candidat anon | « Recommencer » purge aussi les fichiers media uploadés (`interviews/{sessionId}/`) |
 
 ## Limites assumées
 
