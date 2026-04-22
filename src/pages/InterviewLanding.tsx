@@ -93,7 +93,7 @@ export default function InterviewLanding() {
       setShowIntroMedia(true);
       setStarting(false);
     } else {
-      navigate(`/interview/${slug}/test/${session.token}`);
+      navigate(`/session/${slug}/test/${session.token}`);
     }
   };
 
@@ -114,7 +114,7 @@ export default function InterviewLanding() {
 
   const handleProceedToInterview = () => {
     if (sessionToken) {
-      navigate(`/interview/${slug}/test/${sessionToken}`);
+      navigate(`/session/${slug}/test/${sessionToken}`);
     }
   };
 

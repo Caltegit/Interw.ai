@@ -138,13 +138,13 @@ export default function ProjectDetail() {
 
   const copyProjectLink = () => {
     if (!project?.slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}`);
     toast({ title: "Lien copié !" });
   };
 
   const copyCandidateLink = (token: string) => {
     if (!project?.slug) return;
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${project.slug}/start/${token}`);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}/start/${token}`);
     toast({ title: "Lien de relance copié !" });
   };
 

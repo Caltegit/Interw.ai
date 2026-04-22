@@ -51,7 +51,7 @@ export default function Projects() {
       toast({ title: "Lien indisponible", description: "Ce projet n'a pas de slug défini.", variant: "destructive" });
       return;
     }
-    navigator.clipboard.writeText(`${window.location.origin}/interview/${slug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/session/${slug}`);
     toast({ title: "Lien candidat copié !" });
   };
 

@@ -8,6 +8,11 @@ const LegacyInterviewRedirect = ({ to }: { to: "test" | "start" | "complete" }) 
   return <Navigate to={`/session/${slug}/${to}/${token ?? ""}`.replace(/\/$/, "")} replace />;
 };
 
+const LegacyInterviewLandingRedirect = () => {
+  const { slug } = useParams();
+  return <Navigate to={`/session/${slug}`} replace />;
+};
+
 const LegacyLibraryInterviewRedirect = () => {
   const { id } = useParams();
   return <Navigate to={`/library/sessions/${id}`} replace />;
@@ -75,7 +80,7 @@ const App = () => (
             <Route path="/session/:slug/complete" element={<InterviewComplete />} />
 
             {/* Redirections des anciennes routes /interview pour ne pas casser les liens déjà envoyés */}
-            <Route path="/interview/:slug" element={<Navigate to="/session/:slug" replace />} />
+            <Route path="/interview/:slug" element={<LegacyInterviewLandingRedirect />} />
             <Route path="/interview/:slug/test/:token" element={<LegacyInterviewRedirect to="test" />} />
             <Route path="/interview/:slug/start/:token" element={<LegacyInterviewRedirect to="start" />} />
             <Route path="/interview/:slug/complete/:token" element={<LegacyInterviewRedirect to="complete" />} />

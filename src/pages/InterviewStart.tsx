@@ -662,7 +662,7 @@ export default function InterviewStart() {
       const { data: sessions } = await supabase.from("sessions").select("*").eq("token", token).limit(1);
       const sess = sessions?.[0];
       if (!sess) {
-        navigate(`/interview/${slug}`);
+        navigate(`/session/${slug}`);
         return;
       }
 
@@ -1404,7 +1404,7 @@ export default function InterviewStart() {
     // Redirect IMMEDIATELY — finalize in background.
     // The Complete page will display a "Recording in progress…" state until
     // sessions.status === 'completed', then auto-switch to the final screen.
-    navigate(`/interview/${slug}/complete/${token}`);
+    navigate(`/session/${slug}/complete/${token}`);
 
     // Run finalization async in the background (no await on UI)
     (async () => {

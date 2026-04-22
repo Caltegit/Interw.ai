@@ -111,7 +111,7 @@ export default function OrgPublic() {
                   )}
                   {p.slug && (
                     <Button asChild size="sm">
-                      <Link to={`/interview/${p.slug}`}>
+                      <Link to={`/session/${p.slug}`}>
                         Postuler <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
