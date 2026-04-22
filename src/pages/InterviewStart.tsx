@@ -126,7 +126,11 @@ export default function InterviewStart() {
       });
 
       if (error) {
-        console.error("Failed to persist message:", error);
+        logger.error("interview_message_persist_failed", {
+          role,
+          isFollowUp: options?.isFollowUp ?? false,
+          error: error.message,
+        });
         throw error;
       }
     },
@@ -302,7 +306,11 @@ export default function InterviewStart() {
         setIsSpeaking(false);
         return true;
       } catch (e) {
-        console.warn("[interview] ElevenLabs failed, fallback to browser TTS:", e);
+        logger.error("interview_tts_failed", {
+          sessionId: session?.id ?? null,
+          voiceId: project?.tts_voice_id ?? null,
+          error: e instanceof Error ? e.message : String(e),
+        });
         elevenAudioRef.current = null;
         setIsSpeaking(false);
         return false;
@@ -494,6 +502,10 @@ export default function InterviewStart() {
       if (event.error === "no-speech" || event.error === "aborted") {
         return;
       }
+      logger.error("interview_stt_failed", {
+        sessionId: session?.id ?? null,
+        errorCode: event?.error ?? "unknown",
+      });
       // Other errors: stop listening
       isListeningRef.current = false;
       setIsListening(false);
@@ -749,7 +761,11 @@ export default function InterviewStart() {
         videoRef.current.play();
       }
     } catch (err) {
-      console.error("Camera access error:", err);
+      logger.error("interview_media_access_failed", {
+        sessionId: session?.id ?? null,
+        mode: "video",
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast({
         title: "Caméra inaccessible",
         description: "Veuillez autoriser l'accès à la caméra.",
@@ -781,7 +797,11 @@ export default function InterviewStart() {
       };
       recorder.start(500);
     } catch (e) {
-      console.error("Question recorder error:", e);
+      logger.error("interview_recorder_failed", {
+        sessionId: session?.id ?? null,
+        phase: "start",
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
   }, [getSupportedMimeType]);
 
@@ -829,7 +849,11 @@ export default function InterviewStart() {
           await new Promise((r) => setTimeout(r, backoffs[attempt]));
         }
       }
-      console.error("Upload vidéo abandonné après 3 essais pour la question", questionIndex);
+      logger.error("interview_upload_failed", {
+        sessionId,
+        questionIndex,
+        segmentType: "video",
+      });
       return null;
     },
     [],
@@ -1050,7 +1074,13 @@ export default function InterviewStart() {
         try {
           videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
         } catch (e) {
-          console.error("Background video upload error:", e);
+          logger.error("interview_upload_failed", {
+            sessionId,
+            questionIndex: questionIdx,
+            segmentType: "video",
+            phase: "background",
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
         const insertOnce = () =>
           persistMessage(sessionId, "candidate", transcript, {
@@ -1085,7 +1115,11 @@ export default function InterviewStart() {
               setSession((prev: any) => (prev ? { ...prev, video_recording_url: videoUrl } : prev));
             }
           } catch (e) {
-            console.error("Session video url update error:", e);
+            logger.error("interview_session_update_failed", {
+              sessionId,
+              fields: ["video_recording_url"],
+              error: e instanceof Error ? e.message : String(e),
+            });
           }
         }
       })();
@@ -1120,7 +1154,11 @@ export default function InterviewStart() {
       action = (data?.action as typeof action) ?? action;
       aiMessage = (data?.message as string) ?? "";
     } catch (e) {
-      console.warn("AI conversation turn failed, falling back to deterministic flow:", e);
+      logger.error("interview_ai_turn_failed", {
+        sessionId: sessionId ?? null,
+        questionIndex: questionIdx,
+        error: e instanceof Error ? e.message : String(e),
+      });
     }
     setAiThinking(false);
 
@@ -1374,7 +1412,15 @@ export default function InterviewStart() {
       try {
         // Stop per-question recorder if still running and upload last segment
         if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
-          try { await stopAndUploadQuestionVideo(sessionId, questionIndex); } catch (e) { console.error(e); }
+          try { await stopAndUploadQuestionVideo(sessionId, questionIndex); } catch (e) {
+            logger.error("interview_upload_failed", {
+              sessionId,
+              questionIndex,
+              segmentType: "video",
+              phase: "finalize",
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         }
 
         // Stop camera stream
@@ -1406,12 +1452,25 @@ export default function InterviewStart() {
           const { error: reportError } = await supabase.functions.invoke("generate-report", {
             body: { session_id: sessionId },
           });
-          if (reportError) console.error("Report generation error:", reportError);
+          if (reportError) {
+            logger.error("interview_report_generation_failed", {
+              sessionId,
+              error: reportError.message ?? String(reportError),
+            });
+          }
         } catch (e) {
-          console.error("Report generation exception:", e);
+          logger.error("interview_report_generation_failed", {
+            sessionId,
+            error: e instanceof Error ? e.message : String(e),
+          });
         }
       } catch (e) {
-        console.error("Background finalize error:", e);
+        logger.error("interview_session_update_failed", {
+          sessionId,
+          fields: ["status", "completed_at", "duration_seconds"],
+          phase: "finalize",
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     })();
   };
