@@ -143,9 +143,9 @@ export default function Settings() {
             <Label>Nom complet</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Votre nom" />
           </div>
-          <Button onClick={handleSaveProfile} disabled={savingProfile} size="sm">
+          <Button onClick={handleSaveProfile} disabled={updateProfile.isPending} size="sm">
             <Save className="mr-2 h-4 w-4" />
-            {savingProfile ? "Enregistrement..." : "Enregistrer"}
+            {updateProfile.isPending ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </CardContent>
       </Card>
@@ -237,9 +237,9 @@ export default function Settings() {
             />
           )}
           {isAdmin && (
-            <Button onClick={handleSaveOrg} disabled={savingOrg} size="sm">
+            <Button onClick={handleSaveOrg} disabled={updateOrg.isPending} size="sm">
               <Save className="mr-2 h-4 w-4" />
-              {savingOrg ? "Enregistrement..." : "Enregistrer"}
+              {updateOrg.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           )}
         </CardContent>
