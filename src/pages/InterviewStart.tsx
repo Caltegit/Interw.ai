@@ -2113,7 +2113,7 @@ export default function InterviewStart() {
           );
         })()}
 
-        {/* ── Footer : progression + Arrêter l'session ── */}
+        {/* ── Footer : progression + actions + retour vidéo ── */}
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 space-y-2">
             <div className="flex items-center gap-3">
@@ -2155,77 +2155,80 @@ export default function InterviewStart() {
                 />
               </div>
             </div>
-            <div className="flex justify-center items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEndDialog(true)}
-                className="gap-2 text-muted-foreground hover:text-destructive"
-              >
-                <PhoneOff className="h-4 w-4" />
-                Arrêter l'session
-              </Button>
-              {project?.allow_pause && (
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              {/* Spacer gauche */}
+              <div />
+              {/* Actions centrées */}
+              <div className="flex items-center gap-2 justify-center">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={pauseInterview}
-                  className="gap-2 text-muted-foreground"
-                  style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+                  onClick={() => setShowEndDialog(true)}
+                  className="gap-2 text-muted-foreground hover:text-destructive"
                 >
-                  <Pause className="h-4 w-4" />
-                  Mettre en pause
+                  <PhoneOff className="h-4 w-4" />
+                  Arrêter l'session
                 </Button>
-              )}
+                {project?.allow_pause && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={pauseInterview}
+                    className="gap-2 text-muted-foreground"
+                    style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+                  >
+                    <Pause className="h-4 w-4" />
+                    Mettre en pause
+                  </Button>
+                )}
+              </div>
+              {/* Retour vidéo à droite */}
+              <div className="flex justify-end items-center">
+                {showSelfView ? (
+                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[80px] h-[56px] sm:w-[100px] sm:h-[72px]">
+                    <video
+                      ref={videoRef}
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ transform: "scaleX(-1)" }}
+                      data-testid="interview-self-video"
+                    />
+                    <div
+                      className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
+                      data-testid="interview-recording-indicator"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+                      <span className="hidden sm:inline">REC</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSelfView(false)}
+                      className="absolute bottom-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                      aria-label="Masquer mon retour vidéo"
+                      title="Masquer mon retour vidéo"
+                    >
+                      <EyeOff className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Vidéo cachée pour garder le flux actif */}
+                    <video ref={videoRef} muted playsInline className="hidden" style={{ transform: "scaleX(-1)" }} />
+                    <button
+                      type="button"
+                      onClick={() => setShowSelfView(true)}
+                      className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+                      aria-label="Afficher mon retour vidéo"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Afficher ma vidéo</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* ── PIP retour vidéo candidat (fixe en bas-gauche) ── */}
-      <div className="fixed bottom-3 left-3 sm:bottom-4 sm:left-4 z-50 flex items-end gap-2">
-        {showSelfView ? (
-          <div className="relative rounded-xl overflow-hidden bg-black border-2 border-emerald-500/40 shadow-2xl w-[96px] h-[68px] sm:w-[160px] sm:h-[115px]">
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-              style={{ transform: "scaleX(-1)" }}
-              data-testid="interview-self-video"
-            />
-            <div
-              className="absolute top-1 right-1 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1.5 py-0.5 rounded text-[9px] font-semibold"
-              data-testid="interview-recording-indicator"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-              REC
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowSelfView(false)}
-              className="absolute bottom-1 right-1 h-6 w-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
-              aria-label="Masquer mon retour vidéo"
-              title="Masquer mon retour vidéo"
-            >
-              <EyeOff className="h-3 w-3 text-white" />
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* Hidden video keeps stream alive even when masqué */}
-            <video ref={videoRef} muted playsInline className="hidden" style={{ transform: "scaleX(-1)" }} />
-            <button
-              type="button"
-              onClick={() => setShowSelfView(true)}
-              className="flex items-center gap-1.5 rounded-full bg-background/90 backdrop-blur border border-border shadow-lg px-3 py-1.5 text-xs font-medium hover:bg-background transition-colors"
-              aria-label="Afficher mon retour vidéo"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <Eye className="h-3.5 w-3.5" />
-              Afficher ma vidéo
-            </button>
-          </>
         )}
       </div>
 
