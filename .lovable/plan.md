@@ -1,54 +1,44 @@
 
 
-## Lot 3.4 — Composant `<ProjectForm />` partagé
+## Bouton « Utiliser » sur les modèles de session
 
-Fusionner la logique dupliquée entre `ProjectNew.tsx` et `ProjectEdit.tsx` dans un seul composant réutilisable.
+Ajouter un bouton **« Utiliser »** sur chaque carte de la page `Bibliothèque > Modèles` (`/library/sessions`) qui lance la création d'un projet pré-rempli avec le contenu du modèle.
 
-### Pré-requis
+### Fonctionnement
 
-Avant la refacto, ajouter **1 test E2E sur l'édition de projet** (la création est déjà couverte par `project-creation.spec.ts`). Filet de sécurité minimum pour détecter une régression.
+1. **Sur la carte modèle** : nouveau bouton primaire « Utiliser » (icône `Sparkles` ou `Play`) à côté de « Modifier ». Clic → navigue vers `/projects/new?template=<id>`.
 
-- `tests/e2e/project-edit.spec.ts` — RH ouvre le projet seed, modifie le titre, sauvegarde, vérifie la persistance après reload.
+2. **Sur `/projects/new`** : si `?template=<id>` est présent dans l'URL :
+   - Charger le modèle (mêmes requêtes que `InterviewTemplatePickerDialog.handleApply`) au montage.
+   - Construire le `InterviewTemplatePayload` et appliquer au formulaire avant le premier rendu (titre, langue, durée, questions, critères).
+   - Afficher un toast discret « Modèle appliqué : <nom> ».
+   - En cas d'échec (modèle introuvable / autre org), toast d'erreur + formulaire vierge habituel.
 
-### Refacto
+### Refacto minimale
 
-1. **Créer `src/components/project/ProjectForm.tsx`** — composant unique qui prend en props :
-   - `mode: "create" | "edit"`
-   - `initialData?: ProjectData` (undefined en création)
-   - `onSubmit: (data) => Promise<void>`
-   - Gère les 4 étapes du wizard (poste, questions, critères, validation), l'état local, les dialogs (bibliothèque questions, critères, intro, voix, template).
+Pour éviter la duplication de la logique de chargement du modèle, extraire une petite fonction utilitaire :
+- **Nouveau** : `src/components/project/loadInterviewTemplate.ts` → fonction `loadInterviewTemplate(id: string): Promise<InterviewTemplatePayload | null>` qui factorise les 3 requêtes Supabase (template + questions + criteria) actuellement inlinées dans `InterviewTemplatePickerDialog`.
+- `InterviewTemplatePickerDialog` réutilise cette fonction.
 
-2. **Simplifier `ProjectNew.tsx`** — devient un wrapper :
-   - Charge les defaults (org, voix par défaut, etc.)
-   - Rend `<ProjectForm mode="create" onSubmit={handleCreate} />`
-   - Gère la redirection après création.
+### Pré-remplissage côté ProjectNew
 
-3. **Simplifier `ProjectEdit.tsx`** — devient un wrapper :
-   - Charge le projet existant (questions + critères + intro)
-   - Rend `<ProjectForm mode="edit" initialData={project} onSubmit={handleUpdate} />`
-   - Gère la redirection après update.
-
-### Règles
-
-- Aucun changement de comportement visible (UI identique, mêmes étapes, mêmes validations).
-- Garder les composants enfants existants (`StepQuestions`, `StepCriteria`, `IntroLibraryDialog`, etc.) tels quels.
-- Vérifier que le test E2E création **et** le nouveau test E2E édition passent après refacto.
-
-### Hors champ
-
-- Pas de redesign du wizard.
-- Pas de changement de schéma BDD.
-- Pas de touche à `InterviewStart` (Lot 2, plus tard).
+`ProjectNew.tsx` :
+- Lit `searchParams.get("template")`.
+- Si présent : `useEffect` au montage → `loadInterviewTemplate(id)` → applique au state initial via la même mécanique que `ProjectForm.applyTemplate` (extraire la logique d'`applyTemplate` en une fonction pure `mergeTemplateIntoState(state, payload)` exportée depuis `ProjectForm.tsx` pour être réutilisable côté `ProjectNew`).
+- Le `ProjectForm` reçoit alors un `initial` déjà rempli.
 
 ### Fichiers touchés
 
-- **Créés** : `src/components/project/ProjectForm.tsx`, `tests/e2e/project-edit.spec.ts`
-- **Modifiés** : `src/pages/ProjectNew.tsx`, `src/pages/ProjectEdit.tsx`, `.lovable/architecture-hardening-status.md`, `tests/e2e/README.md`
+- **Créé** : `src/components/project/loadInterviewTemplate.ts`
+- **Modifiés** :
+  - `src/pages/InterviewTemplates.tsx` — bouton « Utiliser » sur chaque carte
+  - `src/pages/ProjectNew.tsx` — lecture `?template=<id>` + pré-remplissage
+  - `src/components/project/ProjectForm.tsx` — exporter `mergeTemplateIntoState`
+  - `src/components/project/InterviewTemplatePickerDialog.tsx` — utiliser `loadInterviewTemplate`
 
-### Ordre d'exécution
+### Hors champ
 
-1. Écrire `project-edit.spec.ts` et le faire passer contre la version actuelle.
-2. Créer `ProjectForm.tsx` à partir de `ProjectNew.tsx` (le plus complet des deux).
-3. Migrer `ProjectNew` en wrapper, vérifier le test création.
-4. Migrer `ProjectEdit` en wrapper, vérifier le test édition.
+- Pas de changement BDD.
+- Pas de modification du wizard ni des étapes.
+- Pas de déduplication des projets créés depuis le même modèle.
 
