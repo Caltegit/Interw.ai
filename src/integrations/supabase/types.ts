@@ -608,6 +608,9 @@ export type Database = {
           expires_at: string | null
           id: string
           intro_audio_url: string | null
+          intro_enabled: boolean
+          intro_mode: string | null
+          intro_text: string | null
           job_title: string
           language: Database["public"]["Enums"]["project_language"]
           max_duration_minutes: number
@@ -635,6 +638,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           intro_audio_url?: string | null
+          intro_enabled?: boolean
+          intro_mode?: string | null
+          intro_text?: string | null
           job_title?: string
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number
@@ -662,6 +668,9 @@ export type Database = {
           expires_at?: string | null
           id?: string
           intro_audio_url?: string | null
+          intro_enabled?: boolean
+          intro_mode?: string | null
+          intro_text?: string | null
           job_title?: string
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number

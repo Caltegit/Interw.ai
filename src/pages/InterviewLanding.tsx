@@ -20,12 +20,14 @@ export default function InterviewLanding() {
 
   // Intermediate media screen state
   const [showIntroMedia, setShowIntroMedia] = useState(false);
-  const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | null>(null);
+  const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | "text" | "tts" | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -82,14 +84,22 @@ export default function InterviewLanding() {
       return;
     }
 
-    if (project.presentation_video_url) {
+    const introEnabled = project.intro_enabled !== false;
+    const dbMode: string | null = project.intro_mode ?? null;
+    let mode: "text" | "tts" | "audio" | "video" | null = null;
+    if (introEnabled) {
+      if (dbMode === "text" || dbMode === "tts" || dbMode === "audio" || dbMode === "video") {
+        mode = dbMode;
+      } else if (project.presentation_video_url) {
+        mode = "video";
+      } else if (project.intro_audio_url) {
+        mode = "audio";
+      }
+    }
+
+    if (mode) {
       setSessionToken(session.token);
-      setIntroMediaType("video");
-      setShowIntroMedia(true);
-      setStarting(false);
-    } else if (project.intro_audio_url) {
-      setSessionToken(session.token);
-      setIntroMediaType("audio");
+      setIntroMediaType(mode);
       setShowIntroMedia(true);
       setStarting(false);
     } else {
@@ -97,13 +107,48 @@ export default function InterviewLanding() {
     }
   };
 
-  const handlePlayMedia = () => {
+  const handlePlayMedia = async () => {
     if (introMediaType === "audio" && introAudioRef.current) {
       introAudioRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
       introVideoRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
+    } else if (introMediaType === "tts") {
+      const text = (project?.intro_text || "").trim();
+      if (!text) {
+        setMediaFinished(true);
+        return;
+      }
+      setTtsLoading(true);
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, projectId: project.id }),
+        });
+        const ct = res.headers.get("Content-Type") || "";
+        if (!ct.includes("audio")) {
+          setMediaFinished(true);
+          return;
+        }
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(objectUrl);
+        ttsAudioRef.current = audio;
+        audio.onended = () => {
+          setMediaPlaying(false);
+          setMediaFinished(true);
+          URL.revokeObjectURL(objectUrl);
+        };
+        await audio.play();
+        setMediaPlaying(true);
+      } catch {
+        setMediaFinished(true);
+      } finally {
+        setTtsLoading(false);
+      }
     }
   };
 
@@ -146,13 +191,13 @@ export default function InterviewLanding() {
         <div className="animate-fade-in">
           <Card className={`${introMediaType === "video" ? "max-w-2xl" : "max-w-md"} w-full overflow-hidden`}>
             <CardContent className="py-8 space-y-6 text-center">
-              {introMediaType === "audio" && project.avatar_image_url ? (
+              {(introMediaType === "audio" || introMediaType === "tts" || introMediaType === "text") && project.avatar_image_url ? (
                 <img
                   src={project.avatar_image_url}
                   alt={project.ai_persona_name || "Recruteur"}
                   className={`mx-auto h-24 w-24 rounded-full object-cover object-top border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
                 />
-              ) : introMediaType === "audio" ? (
+              ) : (introMediaType === "audio" || introMediaType === "tts") ? (
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
                   <Volume2 className="h-8 w-8" style={{ color: "#d4a574" }} />
                 </div>
@@ -163,7 +208,9 @@ export default function InterviewLanding() {
                 <p className="text-sm" style={{ color: "rgba(245, 240, 232, 0.65)" }}>
                   {introMediaType === "video"
                     ? "Regardez cette vidéo avant de commencer votre session."
-                    : "Écoutez ce message avant de commencer votre session."}
+                    : introMediaType === "text"
+                      ? "Lisez ce message avant de commencer votre session."
+                      : "Écoutez ce message avant de commencer votre session."}
                 </p>
               </div>
 
@@ -183,37 +230,55 @@ export default function InterviewLanding() {
                 />
               )}
 
-              {!mediaPlaying && !mediaFinished && (
-                <Button size="lg" className="w-full group transition-all duration-300" onClick={handlePlayMedia}>
-                  <Play className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
-                  {introMediaType === "video" ? "Regarder la vidéo" : "Écouter le message"}
+              {introMediaType === "text" && (
+                <div
+                  className="text-left rounded-xl border p-5 whitespace-pre-wrap text-sm leading-relaxed"
+                  style={{ borderColor: "rgba(245, 240, 232, 0.12)", backgroundColor: "rgba(255,255,255,0.02)" }}
+                >
+                  {project.intro_text}
+                </div>
+              )}
+
+              {introMediaType === "text" ? (
+                <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
+                  <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                  J'ai lu, continuer
                 </Button>
-              )}
+              ) : (
+                <>
+                  {!mediaPlaying && !mediaFinished && (
+                    <Button size="lg" className="w-full group transition-all duration-300" onClick={handlePlayMedia} disabled={ttsLoading}>
+                      <Play className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                      {ttsLoading ? "Chargement..." : introMediaType === "video" ? "Regarder la vidéo" : "Écouter le message"}
+                    </Button>
+                  )}
 
-              {mediaPlaying && introMediaType === "audio" && (
-                <div className="flex flex-col items-center gap-3 animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <span className="h-2.5 w-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574" }} />
-                    <span className="h-3.5 w-3.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.2s" }} />
-                    <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.4s" }} />
-                    <span className="text-sm font-medium" style={{ color: "#d4a574" }}>Lecture en cours...</span>
-                  </div>
-                </div>
-              )}
+                  {mediaPlaying && (introMediaType === "audio" || introMediaType === "tts") && (
+                    <div className="flex flex-col items-center gap-3 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <span className="h-2.5 w-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574" }} />
+                        <span className="h-3.5 w-3.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.2s" }} />
+                        <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.4s" }} />
+                        <span className="text-sm font-medium" style={{ color: "#d4a574" }}>Lecture en cours...</span>
+                      </div>
+                    </div>
+                  )}
 
-              {mediaFinished && (
-                <div className="space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-center gap-2" style={{ color: "#4ade80" }}>
-                    <CheckCircle className="h-5 w-5" />
-                    <span className="text-sm font-medium">
-                      {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
-                    </span>
-                  </div>
-                  <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
-                    <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
-                    Commencer la session
-                  </Button>
-                </div>
+                  {mediaFinished && (
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-center gap-2" style={{ color: "#4ade80" }}>
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="text-sm font-medium">
+                          {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
+                        </span>
+                      </div>
+                      <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
+                        <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                        Commencer la session
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

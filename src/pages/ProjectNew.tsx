@@ -27,7 +27,9 @@ const initialState: ProjectFormState = {
   avatarFile: null,
   avatarPreview: defaultCamilleAvatar,
   presetAvatarUrl: defaultCamilleAvatar,
-  introType: "audio",
+  introEnabled: true,
+  introMode: "text",
+  introText: "",
   introAudioBlob: null,
   introAudioPreviewUrl: null,
   introVideoFile: null,
@@ -157,12 +159,18 @@ export default function ProjectNew() {
           allow_pause: s.allowPause,
           slug,
           avatar_image_url: avatarUrl,
+          intro_enabled: s.introEnabled,
+          intro_mode: s.introEnabled ? s.introMode : null,
+          intro_text:
+            s.introEnabled && (s.introMode === "text" || s.introMode === "tts")
+              ? s.introText.trim() || null
+              : null,
           intro_audio_url:
-            s.introType === "audio" && s.introAudioPreviewUrl && !s.introAudioPreviewUrl.startsWith("blob:")
+            s.introEnabled && s.introMode === "audio" && s.introAudioPreviewUrl && !s.introAudioPreviewUrl.startsWith("blob:")
               ? s.introAudioPreviewUrl
               : null,
           presentation_video_url:
-            s.introType === "video" && s.introVideoPreviewUrl && !s.introVideoPreviewUrl.startsWith("blob:")
+            s.introEnabled && s.introMode === "video" && s.introVideoPreviewUrl && !s.introVideoPreviewUrl.startsWith("blob:")
               ? s.introVideoPreviewUrl
               : null,
           completion_message: s.completionMessage.trim() || null,
@@ -175,7 +183,7 @@ export default function ProjectNew() {
 
       if (error) throw error;
 
-      if (s.introType === "audio" && s.introAudioBlob) {
+      if (s.introEnabled && s.introMode === "audio" && s.introAudioBlob) {
         const introPath = `intro/${project.id}.webm`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
@@ -189,7 +197,7 @@ export default function ProjectNew() {
         if (introUpdateError) throw introUpdateError;
       }
 
-      if (s.introType === "video" && s.introVideoFile) {
+      if (s.introEnabled && s.introMode === "video" && s.introVideoFile) {
         const videoPath = `presentation/${project.id}.webm`;
         const { error: videoUploadError } = await supabase.storage
           .from("media")
