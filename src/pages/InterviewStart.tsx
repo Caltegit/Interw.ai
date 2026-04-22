@@ -1809,6 +1809,7 @@ export default function InterviewStart() {
                 {questionType === "video" && currentQ?.video_url ? (
                   <div className="relative w-full mx-auto max-w-3xl">
                     <QuestionMediaPlayer
+                      key={`q-video-${currentQuestionIndex}`}
                       ref={featuredPlayerRef}
                       type="video"
                       content={currentQ.content}
