@@ -1096,6 +1096,7 @@ export default function InterviewStart() {
       startListening();
       // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
       resetSilenceTimer();
+      setIsProcessing(false);
       return;
     }
 
