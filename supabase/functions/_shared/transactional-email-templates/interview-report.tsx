@@ -67,10 +67,10 @@ const InterviewReportEmail = ({
   return (
     <Html lang="fr" dir="ltr">
       <Head />
-      <Preview>Rapport d'entretien — {candidateName} — Score {overallScore}/100</Preview>
+      <Preview>Rapport de session — {candidateName} — Score {overallScore}/100</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Nouveau rapport d'entretien</Heading>
+          <Heading style={h1}>Nouveau rapport de session</Heading>
           <Text style={subtitle}>
             <strong>{candidateName}</strong>
             {jobTitle ? <> — {jobTitle}</> : null}
@@ -154,7 +154,7 @@ const InterviewReportEmail = ({
 export const template = {
   component: InterviewReportEmail,
   subject: (data: Record<string, any>) => `interw.ai - ${data?.candidateName ?? 'Candidat'}`,
-  displayName: 'Rapport d\'entretien',
+  displayName: 'Rapport d\'session',
   previewData: {
     candidateName: 'Jane Doe',
     candidateEmail: 'jane@example.com',
