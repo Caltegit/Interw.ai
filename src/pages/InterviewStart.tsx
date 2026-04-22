@@ -514,12 +514,21 @@ export default function InterviewStart() {
     recognition.onend = () => {
       console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
       // Auto-restart if we should still be listening (use ref, not stale state)
-      if (isListeningRef.current && !isPausedRef.current && recognitionRef.current) {
+      if (isListeningRef.current && !isPausedRef.current) {
         try {
-          recognitionRef.current.start();
+          recognitionRef.current?.start();
           console.log("[interview] STT auto-restarted");
         } catch (e) {
-          console.warn("[interview] STT restart failed:", e);
+          console.warn("[interview] STT restart failed — recreating instance:", e);
+          // Fallback : l'instance est probablement morte, on en recrée une neuve.
+          isListeningRef.current = false;
+          if (recognitionRef.current) {
+            try { recognitionRef.current.onend = null; } catch {}
+            recognitionRef.current = null;
+          }
+          setTimeout(() => {
+            if (!isPausedRef.current) startListeningRef.current?.();
+          }, 200);
         }
       }
     };
@@ -527,6 +536,21 @@ export default function InterviewStart() {
     recognition.start();
     isListeningRef.current = true;
     setIsListening(true);
+
+    // Watchdog de vivacité STT : si aucun onresult depuis 10s pendant
+    // l'écoute active, on force un redémarrage complet de la recognition.
+    if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
+    lastSttResultAtRef.current = Date.now();
+    sttWatchdogRef.current = setInterval(() => {
+      if (!isListeningRef.current || isPausedRef.current) return;
+      const idle = Date.now() - lastSttResultAtRef.current;
+      if (idle > 10000 && !candidateTranscriptRef.current.trim()) {
+        console.warn("[interview] STT watchdog : silence > 10s, redémarrage de la reconnaissance.");
+        lastSttResultAtRef.current = Date.now();
+        try { recognitionRef.current?.stop(); } catch {}
+        // onend fera le restart automatiquement (ou recréera l'instance).
+      }
+    }, 2000);
   }, [toast]);
 
   // STT: stop listening
