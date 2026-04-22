@@ -561,6 +561,10 @@ export default function InterviewStart() {
   // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
+    if (sttWatchdogRef.current) {
+      clearInterval(sttWatchdogRef.current);
+      sttWatchdogRef.current = null;
+    }
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       try { recognitionRef.current.stop(); } catch {}
