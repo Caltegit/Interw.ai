@@ -1,57 +1,59 @@
 
 
-## Adapter l'écran candidat à la hauteur de l'écran (sans scroll) et déplacer le retour vidéo
+## Bug : relances IA qui se superposent à la question suivante
 
-### Problèmes actuels (sur ordinateur)
+### Cause
 
-1. Le conteneur principal utilise `min-h-[calc(100vh-4rem)]` (hauteur **minimale**), donc le contenu peut déborder verticalement et forcer un scroll.
-2. La grille interne a `pb-32 sm:pb-24` (gros padding-bas) qui repousse tout vers le bas et provoque un dépassement.
-3. Le footer affiche d'abord la barre d'avancement, puis en dessous le retour vidéo (à droite). Tu veux l'inverse : **le retour vidéo au-dessus de la barre d'avancement**, à droite.
-4. L'avatar IA est en `lg:max-h-[70vh]` mais sans contrainte parent stricte, il continue de pousser la page.
+Dans `src/pages/InterviewStart.tsx` :
 
-### Changements (uniquement sur ordinateur, mobile inchangé)
+1. `handleSendResponse` (qui déclenche la décision IA puis la relance ou la transition) **ne met jamais `isProcessing` à `true`**. Pendant qu'il attend la fin de la TTS de relance (`await speak(aiMessage)` ligne 1233), le bouton « Passer la question » reste actif.
+2. `handleSkipQuestion` annule bien la TTS du navigateur (`window.speechSynthesis.cancel()`) mais **n'arrête pas l'audio ElevenLabs en cours** (`elevenAudioRef.current` n'est pas mis en pause). Si la voix ElevenLabs est activée (cas par défaut), la relance continue à parler par dessus la transition « Passons à la question suivante ».
+3. Même quand l'audio est coupé, `handleSendResponse` continue son exécution après l'`await` (il appelle `startQuestionRecording` / `startListening` sur l'ancienne question) en parallèle de la nouvelle question lancée par le skip → état STT corrompu.
 
-Fichier touché : `src/pages/InterviewStart.tsx`.
+### Correctifs (un seul fichier : `src/pages/InterviewStart.tsx`)
 
-#### 1. Forcer la page à tenir dans la fenêtre
+#### 1. Couper l'audio ElevenLabs dans le skip
 
-- Remplacer `min-h-[calc(100vh-4rem)]` par `lg:h-[calc(100vh-4rem)] lg:overflow-hidden` sur le conteneur racine de l'entretien. Sur mobile, on garde le comportement actuel (`min-h-screen`, scroll possible).
-- La grille centrale passe de `flex-1 ... py-6 sm:py-8 pb-32 sm:pb-24` à `lg:flex-1 lg:min-h-0 lg:py-4 lg:pb-2` pour récupérer l'espace volé par le padding.
-
-#### 2. Contraindre l'avatar IA en hauteur
-
-- L'avatar carré utilisera `lg:h-full lg:w-auto lg:aspect-square lg:max-h-full` à la place du `aspect-square` global, dans une colonne `lg:min-h-0 lg:flex lg:items-center lg:justify-center`. L'image reste centrée et ne pousse plus la page.
-
-#### 3. Réorganiser le footer (retour vidéo au-dessus de la barre)
-
-Le bloc footer (`!interviewFinished && (...)`) est restructuré ainsi sur ordinateur :
-
+Dans `handleSkipQuestion`, juste après le `window.speechSynthesis?.cancel()` existant, ajouter la coupure de la voix ElevenLabs :
 ```
-┌─────────────────────────────────────────────────────────┐
-│ [actions centrées : Arrêter / Pause]    [retour vidéo] │  ← ligne 1
-├─────────────────────────────────────────────────────────┤
-│ Question 3/5    [============progression===]            │  ← ligne 2
-└─────────────────────────────────────────────────────────┘
+if (elevenAudioRef.current) {
+  try { elevenAudioRef.current.pause(); } catch {}
+  elevenAudioRef.current = null;
+}
+setIsSpeaking(false);
 ```
 
-- Ligne 1 : la grille `[1fr_auto_1fr]` actuelle (vide / actions centrées / retour vidéo à droite) passe **en premier**.
-- Ligne 2 : la barre d'avancement + libellé « Question x / y » + indicateurs IA (« L'IA réfléchit… ») passe **en second**, juste avant la fin.
-- Le retour vidéo conserve sa taille actuelle (`80×56` mobile, `100×72` desktop) et son bouton « Afficher / Masquer ma vidéo ».
+#### 2. Jeton d'annulation pour interrompre une relance IA en cours
 
-#### 4. Réduire les paddings verticaux du footer pour libérer de la place
+Ajouter un `turnAbortRef = useRef<{ aborted: boolean } | null>(null)`.
 
-- Footer : `py-3 sm:py-4` → `lg:py-2`, `space-y-2` → `lg:space-y-1.5`.
+- Au début de `handleSendResponse` : créer un nouveau jeton `const token = { aborted: false }; turnAbortRef.current = token;` et passer ce jeton aux étapes critiques (vérifier `token.aborted` après chaque `await speak(...)`, après l'appel IA, et avant tout `startListening` / `setCurrentQuestionIndex` / `setMessages` qui suivent).
+- Au début de `handleSkipQuestion` : marquer `if (turnAbortRef.current) turnAbortRef.current.aborted = true;`.
+- Dans `handleSendResponse`, dès qu'on voit `token.aborted === true`, on `return` immédiatement sans modifier l'état (la nouvelle question est déjà gérée par le skip).
+
+#### 3. Protéger `handleSendResponse` avec `isProcessing`
+
+- Au tout début : `if (isProcessing) return;` puis `setIsProcessing(true);`.
+- Dans le `finally`, remettre `setIsProcessing(false);` **sauf** si on a abandonné (pour ne pas écraser l'état remis par le skip).
+
+Ça désactive automatiquement le bouton « Passer la question » pendant le traitement IA et la TTS de relance, évitant le double-clic. Mais comme on veut quand même pouvoir interrompre (cf. demande utilisateur « quand on clic sur passer à la question suivante il faut couper les relances »), le bouton « Passer » doit rester cliquable même si `isProcessing` est vrai. On va donc :
+
+- Garder `disabled = isProcessing` pour les autres boutons,
+- **Mais retirer ce disabled pour « Passer la question »** : il devient toujours cliquable hors `interviewFinished`. Le jeton d'annulation (étape 2) garantit la cohérence d'état.
+
+#### 4. Empêcher la double TTS de transition après skip
+
+Avant de prononcer la transition dans `handleSkipQuestion` (`await speak(transition)` ligne 1417), s'assurer que toute lecture résiduelle est bien stoppée (déjà fait pour browser TTS, on ajoute ElevenLabs en étape 1).
 
 ### Ce qui ne change pas
 
-- Mobile : aucun changement visuel ni structurel (scroll conservé si nécessaire).
-- Toute la logique d'entretien (questions, IA, enregistrement, transcription, raccourcis clavier, plein écran).
-- Les composants `MicVolumeMeter`, `QuestionMediaPlayer`, `FullscreenPrompt`.
-- La page de fin d'entretien (`interviewFinished`) garde son CTA et son layout.
-- Aucun changement BDD, aucune nouvelle dépendance.
+- Logique IA (`ai-conversation-turn`), comptage des relances, niveaux de relance.
+- Layout, design, mobile.
+- Comportement quand l'IA enchaîne naturellement (pas de skip) : toujours `await speak(...)` avant la question suivante, donc pas de superposition.
+- Page de fin, raccourcis clavier, plein écran.
 
 ### Hors champ
 
-- Page `InterviewDeviceTest` (test caméra/micro avant entretien) : non concernée.
-- Adaptation pour très petites hauteurs ordinateur (< 600 px) : si l'avatar devait encore être trop grand, on pourra l'ajuster dans une seconde itération.
+- Pas de timeout maximum sur la TTS de relance (déjà 20 s côté browser TTS).
+- Pas de changement dans le edge function `ai-conversation-turn`.
 
