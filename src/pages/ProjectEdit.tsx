@@ -41,16 +41,25 @@ export default function ProjectEdit() {
 
       const loadedGender = (((project as { tts_voice_gender?: string }).tts_voice_gender as VoiceGender) ?? "female");
 
-      let introType: "audio" | "video" = "audio";
-      let introAudioPreviewUrl: string | null = null;
-      let introVideoPreviewUrl: string | null = null;
-      if (project.presentation_video_url) {
-        introType = "video";
-        introVideoPreviewUrl = project.presentation_video_url;
-      } else if (project.intro_audio_url) {
-        introType = "audio";
-        introAudioPreviewUrl = project.intro_audio_url;
+      const projAny = project as unknown as {
+        intro_enabled?: boolean | null;
+        intro_mode?: string | null;
+        intro_text?: string | null;
+        intro_audio_url?: string | null;
+        presentation_video_url?: string | null;
+      };
+      const dbEnabled = projAny.intro_enabled ?? true;
+      let introMode: "text" | "tts" | "audio" | "video" = "text";
+      if (projAny.intro_mode === "text" || projAny.intro_mode === "tts" || projAny.intro_mode === "audio" || projAny.intro_mode === "video") {
+        introMode = projAny.intro_mode;
+      } else if (projAny.presentation_video_url) {
+        introMode = "video";
+      } else if (projAny.intro_audio_url) {
+        introMode = "audio";
       }
+      const introText = projAny.intro_text ?? "";
+      const introAudioPreviewUrl = projAny.intro_audio_url ?? null;
+      const introVideoPreviewUrl = projAny.presentation_video_url ?? null;
 
       const { data: questionsData } = await supabase
         .from("questions")
