@@ -166,7 +166,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       return questions.some(
         (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
       );
-    if (step === 3) return criteria.some((c) => c.label.trim()) && totalWeight === 100;
+    if (step === 3) return criteria.some((c) => c.label.trim());
     return true;
   };
 
