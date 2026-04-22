@@ -230,6 +230,22 @@ Deno.serve(async (req) => {
       },
     ]);
 
+    // 13. Fichier media factice pour la resume session (utilisé par le test de cleanup
+    //     vérifiant que « Recommencer » purge aussi le storage). Idempotent : upsert.
+    try {
+      const fakeBytes = new Uint8Array([
+        0x1a, 0x45, 0xdf, 0xa3, 0x9f, 0x42, 0x86, 0x81, 0x01, 0x42, 0xf7, 0x81, 0x01,
+      ]); // header EBML/WebM minimal (assez pour être stocké comme blob)
+      await admin.storage
+        .from("media")
+        .upload(`interviews/${FIXED.resumeSessionId}/q0.webm`, fakeBytes, {
+          contentType: "video/webm",
+          upsert: true,
+        });
+    } catch (e) {
+      console.warn("seed-e2e-user: impossible d'uploader le fichier media factice", e);
+    }
+
     return new Response(JSON.stringify({
       ok: true,
       credentials: { email: FIXED.email, password: FIXED.password },

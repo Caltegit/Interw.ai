@@ -708,11 +708,25 @@ export default function InterviewStart() {
     }
   }, [resumePrompt, session?.id]);
 
-  // Recommence l'entretien depuis zéro : purge les messages déjà persistés
+  // Recommence l'entretien depuis zéro : purge messages BDD + fichiers media uploadés
   const handleRestartInterview = useCallback(async () => {
     if (!session?.id) return;
     setRestoringMessages(true);
     try {
+      // 1. Purge des fichiers media uploadés sous interviews/{sessionId}/
+      try {
+        const { data: files } = await supabase.storage
+          .from("media")
+          .list(`interviews/${session.id}`, { limit: 1000 });
+        if (files && files.length > 0) {
+          const paths = files.map((f) => `interviews/${session.id}/${f.name}`);
+          await supabase.storage.from("media").remove(paths);
+        }
+      } catch (e) {
+        console.warn("Échec purge media lors du restart:", e);
+      }
+
+      // 2. Purge BDD
       await supabase.from("session_messages").delete().eq("session_id", session.id);
       await supabase
         .from("sessions")
