@@ -1,44 +1,82 @@
 
 
-## Bouton « Utiliser » sur les modèles de session
+## Étape Intro améliorée — 4 formats
 
-Ajouter un bouton **« Utiliser »** sur chaque carte de la page `Bibliothèque > Modèles` (`/library/sessions`) qui lance la création d'un projet pré-rempli avec le contenu du modèle.
+Refonte de l'étape **Intro** du wizard `Nouveau projet` / `Modifier projet`.
 
-### Fonctionnement
+### Nouveau comportement
 
-1. **Sur la carte modèle** : nouveau bouton primaire « Utiliser » (icône `Sparkles` ou `Play`) à côté de « Modifier ». Clic → navigue vers `/projects/new?template=<id>`.
+**Bloc 1 — Activer l'intro (toggle)**
 
-2. **Sur `/projects/new`** : si `?template=<id>` est présent dans l'URL :
-   - Charger le modèle (mêmes requêtes que `InterviewTemplatePickerDialog.handleApply`) au montage.
-   - Construire le `InterviewTemplatePayload` et appliquer au formulaire avant le premier rendu (titre, langue, durée, questions, critères).
-   - Afficher un toast discret « Modèle appliqué : <nom> ».
-   - En cas d'échec (modèle introuvable / autre org), toast d'erreur + formulaire vierge habituel.
+- Switch **« Diffuser une intro avant les questions »** (Oui / Non).
+- Texte explicatif sous le switch :
+  > L'intro est le premier contact entre votre entreprise et le candidat. Elle permet de présenter le poste, l'équipe et de mettre le candidat à l'aise avant les questions.
+- Si **Non** → aucune intro n'est diffusée, on saute directement aux questions côté candidat.
 
-### Refacto minimale
+**Bloc 2 — Choix du format (visible si Oui)**
 
-Pour éviter la duplication de la logique de chargement du modèle, extraire une petite fonction utilitaire :
-- **Nouveau** : `src/components/project/loadInterviewTemplate.ts` → fonction `loadInterviewTemplate(id: string): Promise<InterviewTemplatePayload | null>` qui factorise les 3 requêtes Supabase (template + questions + criteria) actuellement inlinées dans `InterviewTemplatePickerDialog`.
-- `InterviewTemplatePickerDialog` réutilise cette fonction.
+4 cartes cliquables côte à côte (responsive : grille 2×2 sur petit écran) :
 
-### Pré-remplissage côté ProjectNew
+| Format | Description courte | Ce qui s'affiche en dessous une fois sélectionné |
+|---|---|---|
+| **Texte à lire** | Le candidat lit un message à l'écran | `<Textarea>` du message d'intro |
+| **Texte lu par l'IA** | L'IA lit votre texte avec la voix et l'avatar choisis | `<Textarea>` + rappel de la voix/avatar configurés à l'étape 1 + bouton « Prévisualiser » (TTS via `tts-elevenlabs`) |
+| **Audio** | Vous enregistrez ou téléchargez un message vocal | `<IntroAudioRecorder>` existant + bouton bibliothèque |
+| **Vidéo** | Vous enregistrez ou téléchargez une vidéo de présentation | `<IntroVideoRecorder>` existant + bouton bibliothèque |
 
-`ProjectNew.tsx` :
-- Lit `searchParams.get("template")`.
-- Si présent : `useEffect` au montage → `loadInterviewTemplate(id)` → applique au state initial via la même mécanique que `ProjectForm.applyTemplate` (extraire la logique d'`applyTemplate` en une fonction pure `mergeTemplateIntoState(state, payload)` exportée depuis `ProjectForm.tsx` pour être réutilisable côté `ProjectNew`).
-- Le `ProjectForm` reçoit alors un `initial` déjà rempli.
+### Changements base de données
+
+Migration ajoutant à la table `projects` :
+- `intro_enabled boolean default true` — toggle activé / désactivé
+- `intro_mode text` — `'text' | 'tts' | 'audio' | 'video'` (nullable, contrainte CHECK)
+- `intro_text text` — contenu pour modes `text` et `tts` (nullable)
+
+Les colonnes existantes `intro_audio_url` et `presentation_video_url` sont conservées telles quelles.
+
+### Changements front
+
+**`ProjectFormState`** (dans `ProjectForm.tsx`) :
+- Remplacer `introType: "audio" | "video"` par :
+  - `introEnabled: boolean`
+  - `introMode: "text" | "tts" | "audio" | "video"`
+  - `introText: string`
+- Conserver `introAudioBlob/PreviewUrl`, `introVideoFile/PreviewUrl`.
+
+**Composant `StepIntro` extrait** (`src/components/project/StepIntro.tsx`) :
+- Encapsule le switch, les 4 cartes de choix, et le rendu conditionnel selon `introMode`.
+- Carte « Texte lu par l'IA » : Textarea + bouton « Prévisualiser la lecture » qui appelle l'edge function existante `tts-elevenlabs` avec `ttsVoiceId` du formulaire.
+
+**Persistance (`ProjectNew.tsx` + `ProjectEdit.tsx`)** :
+- Mapping vers les nouvelles colonnes selon `introEnabled` + `introMode`.
+- Si `introEnabled === false` : tout à `null`, `intro_enabled = false`.
+- Modes `text`/`tts` : sauvegarder `intro_text` + `intro_mode`, vider audio/vidéo.
+- Modes `audio`/`video` : flux actuel inchangé.
+
+**Lecture côté candidat (`InterviewLanding.tsx`)** :
+- Lire `project.intro_enabled` + `project.intro_mode`.
+- `text` → afficher le texte dans une carte avec bouton « J'ai lu, continuer ».
+- `tts` → afficher avatar + lire `intro_text` via `tts-elevenlabs` (réutiliser le pattern déjà en place pour les questions TTS).
+- `audio` / `video` → comportement actuel.
+- Si `intro_enabled === false` ou `intro_mode === null` → skip directement.
+
+**Récapitulatif (étape 4)** :
+- Affiche « Intro : Désactivée » ou « Intro : Texte / Texte IA / Audio / Vidéo ✓ ».
+
+**Modèles d'intro (`InterviewTemplatePickerDialog`)** : hors scope ici, la table `intro_templates` reste audio/vidéo uniquement.
 
 ### Fichiers touchés
 
-- **Créé** : `src/components/project/loadInterviewTemplate.ts`
+- **Créés** : `src/components/project/StepIntro.tsx`, migration `add_intro_mode_to_projects`
 - **Modifiés** :
-  - `src/pages/InterviewTemplates.tsx` — bouton « Utiliser » sur chaque carte
-  - `src/pages/ProjectNew.tsx` — lecture `?template=<id>` + pré-remplissage
-  - `src/components/project/ProjectForm.tsx` — exporter `mergeTemplateIntoState`
-  - `src/components/project/InterviewTemplatePickerDialog.tsx` — utiliser `loadInterviewTemplate`
+  - `src/components/project/ProjectForm.tsx` — nouveau state + extraction de l'étape 1 vers `StepIntro`
+  - `src/pages/ProjectNew.tsx` — mapping persistance
+  - `src/pages/ProjectEdit.tsx` — chargement + mapping persistance
+  - `src/pages/InterviewLanding.tsx` — gestion des 4 modes côté candidat
+  - `supabase/functions/get-email-template-defaults` ou edge fn TTS : aucun changement, on réutilise `tts-elevenlabs`
 
 ### Hors champ
 
-- Pas de changement BDD.
-- Pas de modification du wizard ni des étapes.
-- Pas de déduplication des projets créés depuis le même modèle.
+- Pas de changement dans la bibliothèque d'intros (reste audio/vidéo).
+- Pas de migration des projets existants : valeurs par défaut sûres (`intro_enabled = true`, `intro_mode` déduit à la volée si `intro_audio_url`/`presentation_video_url` est présent).
+- Pas de refonte visuelle des autres étapes du wizard.
 
