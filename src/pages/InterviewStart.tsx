@@ -497,6 +497,8 @@ export default function InterviewStart() {
         candidateTranscriptRef.current += final;
       }
       setLiveTranscript(candidateTranscriptRef.current + interim);
+      // Watchdog : on a reçu de l'audio reconnu → la STT est vivante.
+      lastSttResultAtRef.current = Date.now();
     };
 
     recognition.onerror = (event: any) => {
