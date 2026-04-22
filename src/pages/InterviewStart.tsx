@@ -1872,29 +1872,37 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 )}
-                {!interviewFinished && !isProcessing && currentQuestionIndex < questions.length - 1 && (
-                  <div className="mt-3 flex justify-center">
-                    {silenceTier >= 3 ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleSkipQuestion}
-                        className="border-warning text-warning hover:bg-warning/10 animate-pulse"
-                      >
-                        Passer la question
-                      </Button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSkipQuestion}
-                        className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                      >
-                        Passer la question
-                      </button>
-                    )}
-                  </div>
-                )}
+                {!interviewFinished && (() => {
+                  const isLastQ = currentQuestionIndex >= questions.length - 1;
+                  const label = isLastQ ? "Terminer la session" : "Passer la question";
+                  // Désactivé pendant le traitement de la transition pour éviter les double-clics.
+                  const disabled = isProcessing;
+                  return (
+                    <div className="mt-3 flex justify-center">
+                      {silenceTier >= 3 ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleSkipQuestion}
+                          disabled={disabled}
+                          className="border-warning text-warning hover:bg-warning/10 animate-pulse"
+                        >
+                          {label}
+                        </Button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSkipQuestion}
+                          disabled={disabled}
+                          className="text-xs text-muted-foreground hover:text-foreground underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {label}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
