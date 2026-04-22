@@ -1004,6 +1004,11 @@ export default function InterviewStart() {
   const handleSendResponse = async () => {
     stopListening();
     clearSilenceTier();
+    // Stoppe immédiatement toute lecture média en cours pour éviter qu'elle se
+    // superpose à la TTS de relance ou à la transition vers la question suivante.
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    try { featuredPlayerRef.current?.stop(); } catch {}
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
 
     if (!transcript) {
@@ -1141,7 +1146,11 @@ export default function InterviewStart() {
       }
 
       setResponseElapsedSec(0);
+      // Marque la relance comme présentation TTS en cours (utile si l'utilisateur
+      // met en pause pendant la relance — on rejouera la TTS, pas le média).
+      currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
+      if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
       startListening();
@@ -1207,6 +1216,15 @@ export default function InterviewStart() {
         .eq("id", sessionId);
     }
     if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      // 1) D'abord on prononce la phrase de transition (« Écoutez la question
+      //    suivante. ») — on attend qu'elle soit terminée pour éviter qu'elle
+      //    se superpose au média de la question suivante.
+      setIsSpeaking(true);
+      setShouldAutoPlay(false);
+      currentPresentationRef.current = { kind: "tts", text: transition };
+      await speak(transition);
+      if (isPausedRef.current) return;
+      // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(nextQIdx);
@@ -1215,6 +1233,10 @@ export default function InterviewStart() {
         armPlaybackWatchdog();
       }, 30);
     } else {
+      // Question écrite : on prononce la transition (qui contient déjà la
+      // question), puis on écoute.
+      await speak(transition);
+      if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
     }
@@ -1227,11 +1249,14 @@ export default function InterviewStart() {
 
     setIsProcessing(true);
 
-    // 1. Stop listening + reset transcript
+    // 1. Stop listening + reset transcript + stop any media playback in progress
     stopListening();
     candidateTranscriptRef.current = "";
     setLiveTranscript("");
     clearAutoSkip();
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    try { featuredPlayerRef.current?.stop(); } catch {}
     window.speechSynthesis?.cancel();
 
     // 2. Stop & upload current question recording
