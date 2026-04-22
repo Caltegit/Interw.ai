@@ -1249,11 +1249,14 @@ export default function InterviewStart() {
 
     setIsProcessing(true);
 
-    // 1. Stop listening + reset transcript
+    // 1. Stop listening + reset transcript + stop any media playback in progress
     stopListening();
     candidateTranscriptRef.current = "";
     setLiveTranscript("");
     clearAutoSkip();
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    try { featuredPlayerRef.current?.stop(); } catch {}
     window.speechSynthesis?.cancel();
 
     // 2. Stop & upload current question recording
