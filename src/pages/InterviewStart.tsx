@@ -1004,6 +1004,11 @@ export default function InterviewStart() {
   const handleSendResponse = async () => {
     stopListening();
     clearSilenceTier();
+    // Stoppe immédiatement toute lecture média en cours pour éviter qu'elle se
+    // superpose à la TTS de relance ou à la transition vers la question suivante.
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    try { featuredPlayerRef.current?.stop(); } catch {}
     const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
 
     if (!transcript) {
