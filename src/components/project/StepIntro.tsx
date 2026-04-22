@@ -168,7 +168,13 @@ export function StepIntro({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Texte à lire</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>Texte à lire</Label>
+                    <IntroLibraryDialog
+                      type="tts"
+                      onSelect={(item) => setIntroText(item.intro_text || "")}
+                    />
+                  </div>
                   <Textarea
                     rows={6}
                     placeholder="Bonjour, je suis ravi de vous recevoir aujourd'hui…"
