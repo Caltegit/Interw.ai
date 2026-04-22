@@ -38,6 +38,30 @@ npx playwright test tests/e2e/project-creation.spec.ts
 npx playwright test --ui
 ```
 
+## Exécution automatique (CI GitHub Actions)
+
+Les tests tournent automatiquement à chaque push sur `main` (et peuvent être déclenchés
+manuellement depuis l'onglet **Actions** du repo, bouton **Run workflow**).
+
+Workflow : `.github/workflows/e2e.yml`. Il installe Node 20, Chromium, puis lance
+`npx playwright test` contre la preview Lovable.
+
+### Prérequis (une seule fois)
+
+Dans le repo GitHub : **Settings → Secrets and variables → Actions → New repository secret** :
+- `E2E_TEST_EMAIL` = `e2e-test@interw.ai`
+- `E2E_TEST_PASSWORD` = `E2eTest!2026`
+
+### Récupérer les résultats
+
+- **E-mail GitHub** à chaque exécution (succès et échec) avec lien vers le run.
+- **Onglet Actions** du repo : historique complet, statut ✅ / ❌, logs.
+- **En cas d'échec uniquement** : rapport HTML Playwright + vidéos, captures et traces
+  conservés 14 jours en tant qu'artefacts téléchargeables depuis la page du run.
+
+Pour activer les e-mails de succès en plus des échecs : profil GitHub → **Settings →
+Notifications → Actions** → cocher *Send notifications for failed AND successful workflows*.
+
 ## Scénarios
 
 | Fichier | Acteur | Couvre |
