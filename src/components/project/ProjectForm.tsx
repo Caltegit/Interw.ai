@@ -485,79 +485,23 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           )}
 
           {step === 1 && (
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">Message d'introduction</h2>
-                <p className="text-sm text-muted-foreground">
-                  Cette intro sera diffusée au candidat avant le début des questions.
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={introType === "audio" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setIntroType("audio");
-                        setIntroVideoFile(null);
-                        setIntroVideoPreviewUrl(null);
-                      }}
-                    >
-                      <Mic className="mr-1 h-4 w-4" /> Audio
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={introType === "video" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setIntroType("video");
-                        setIntroAudioBlob(null);
-                        setIntroAudioPreviewUrl(null);
-                      }}
-                    >
-                      <Video className="mr-1 h-4 w-4" /> Vidéo
-                    </Button>
-                  </div>
-                  <IntroLibraryDialog
-                    type={introType}
-                    onSelect={(item) => {
-                      if (introType === "audio") {
-                        setIntroAudioBlob(null);
-                        setIntroAudioPreviewUrl(item.audio_url);
-                      } else {
-                        setIntroVideoFile(null);
-                        setIntroVideoPreviewUrl(item.video_url);
-                      }
-                    }}
-                  />
-                </div>
-
-                {introType === "audio" ? (
-                  <IntroAudioRecorder
-                    existingUrl={introAudioPreviewUrl}
-                    onAudioReady={({ blob, previewUrl }) => {
-                      setIntroAudioBlob(blob);
-                      setIntroAudioPreviewUrl(previewUrl);
-                    }}
-                  />
-                ) : (
-                  <IntroVideoRecorder
-                    existingUrl={introVideoPreviewUrl}
-                    onVideoReady={({ file, previewUrl }) => {
-                      setIntroVideoFile(file);
-                      setIntroVideoPreviewUrl(previewUrl);
-                    }}
-                  />
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  💡 Astuce : enregistrez une intro chaleureuse pour mettre le candidat à l'aise.
-                </p>
-              </div>
-            </div>
+            <StepIntro
+              introEnabled={introEnabled}
+              setIntroEnabled={setIntroEnabled}
+              introMode={introMode}
+              setIntroMode={setIntroMode}
+              introText={introText}
+              setIntroText={setIntroText}
+              introAudioPreviewUrl={introAudioPreviewUrl}
+              setIntroAudioBlob={setIntroAudioBlob}
+              setIntroAudioPreviewUrl={setIntroAudioPreviewUrl}
+              introVideoPreviewUrl={introVideoPreviewUrl}
+              setIntroVideoFile={setIntroVideoFile}
+              setIntroVideoPreviewUrl={setIntroVideoPreviewUrl}
+              ttsVoiceId={ttsVoiceId}
+              avatarPreview={avatarPreview}
+              aiPersonaName={aiPersonaName}
+            />
           )}
 
           {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
@@ -603,14 +547,24 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     {status === "draft" ? "Brouillon" : status === "active" ? "Actif" : "Archivé"}
                   </p>
                   <p>
-                    <strong>Présentation :</strong>{" "}
-                    {introType === "audio"
-                      ? introAudioPreviewUrl
-                        ? "Audio ✓"
-                        : "Audio — non défini"
-                      : introVideoPreviewUrl
-                        ? "Vidéo ✓"
-                        : "Vidéo — non définie"}
+                    <strong>Intro :</strong>{" "}
+                    {!introEnabled
+                      ? "Désactivée"
+                      : introMode === "text"
+                        ? introText.trim()
+                          ? "Texte ✓"
+                          : "Texte — non défini"
+                        : introMode === "tts"
+                          ? introText.trim()
+                            ? "Texte lu par l'IA ✓"
+                            : "Texte lu par l'IA — non défini"
+                          : introMode === "audio"
+                            ? introAudioPreviewUrl
+                              ? "Audio ✓"
+                              : "Audio — non défini"
+                            : introVideoPreviewUrl
+                              ? "Vidéo ✓"
+                              : "Vidéo — non définie"}
                   </p>
                 </CardContent>
               </Card>
