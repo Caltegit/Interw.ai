@@ -1,29 +1,33 @@
 
 
-## Retrait du texte « Analyse de la question » entre les questions
+## Ajustement du projet de démo seedé à la création d'une organisation
 
-### Comportement souhaité
+### Objectif
 
-Pendant le temps de traitement IA entre deux questions, plus de texte explicatif. À la place, un petit indicateur visuel discret (3 points animés ou spinner) suffit à faire patienter le candidat.
+Aligner le projet « Candidature spontanée » créé automatiquement à chaque nouvelle organisation sur le libellé exact demandé.
 
-### Changement
+### Changements
 
-Dans `src/pages/InterviewStart.tsx`, localiser le bloc qui affiche « Analyse de la question… » (ou variante « L'IA réfléchit… », « Analyse en cours… ») dans la zone de transition entre questions, et :
+Modifier la fonction SQL `seed_demo_project` (via une migration) :
 
-- Supprimer le label texte.
-- Conserver uniquement les 3 points animés (déjà présents dans le footer via `animate-bounce`) ou un spinner Loader2 discret, centré.
+1. **Titre** : `Candidature spontanée` → `Candidature spontanée - TEST -`
+2. **Texte d'intro** : remplacer la dernière phrase
+   - Avant : « …customiser. À suivre, 5 questions lues par l'IA. »
+   - Après : « …modifier. Suivrons 5 questions pour le candidat. »
+3. **Garde anti-doublon** : la condition `WHERE title = 'Candidature spontanée'` devient `WHERE title = 'Candidature spontanée - TEST -'` pour rester idempotente sur les nouvelles organisations.
 
-### Note
+### Ce qui ne change pas
 
-Le footer contient déjà un indicateur « L'IA réfléchit… » avec 3 points. Si le texte à retirer est ailleurs (overlay plein écran ou message inter-questions), je le repère par recherche (`Analyse`, `analyse de la question`) et j'enlève uniquement la chaîne texte tout en gardant l'animation.
+- Les 5 questions (déjà identiques au mot près à ta demande).
+- Les 10 critères d'évaluation seedés au niveau organisation.
+- Les paramètres voix (Marie, ElevenLabs), durée, langue.
+- Les organisations **déjà existantes** : leur projet actuel n'est pas renommé.
 
 ### Fichier touché
 
-- `src/pages/InterviewStart.tsx` — un seul bloc à éditer.
+- Une nouvelle migration SQL avec un `CREATE OR REPLACE FUNCTION public.seed_demo_project(...)` intégrant les trois modifications.
 
-### Hors champ
+### À confirmer après approbation
 
-- Aucun changement BDD.
-- Pas de modification de la logique IA ni du timing.
-- Le footer « L'IA réfléchit… » du bas reste si l'utilisateur le souhaite ; à confirmer si à retirer aussi.
+Souhaites-tu aussi renommer rétroactivement les projets « Candidature spontanée » existants des organisations déjà créées en « Candidature spontanée - TEST - » ? Par défaut, la migration ne touche que les nouvelles organisations.
 
