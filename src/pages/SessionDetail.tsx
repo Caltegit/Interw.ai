@@ -72,7 +72,7 @@ export default function SessionDetail() {
     toast({ title: "Lien copié !" });
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  if (isLoading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   if (!session) return <p>Session introuvable</p>;
 
   const project = session.projects;
