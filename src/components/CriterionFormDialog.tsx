@@ -105,20 +105,6 @@ export function CriterionFormDialog({
             </div>
           </section>
 
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notation</h3>
-            <div className="space-y-1.5 max-w-[140px]">
-              <Label className="text-xs">Poids %</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={form.weight}
-                onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
-              />
-            </div>
-          </section>
-
           {showSaveToLibrary && (
             <section className="space-y-2">
               <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/20 px-3 py-2">
