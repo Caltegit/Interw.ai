@@ -29,7 +29,7 @@
 ## Ce qui reste à faire (sessions futures)
 
 - ~~Migrer SessionDetail et Settings vers React Query.~~ ✅ FAIT (hooks `useSessionDetail`, `useOrganization`, `useProfile`).
-- Brancher logger.error sur les points critiques de InterviewStart (uploads, IA, STT).
+- ~~Brancher logger.error sur les points critiques de InterviewStart (uploads, IA, STT).~~ ✅ FAIT (média, recorder, uploads, STT, AI turn, TTS, génération rapport, mises à jour session).
 - Refacto InterviewStart (Lot 2) avec tests préalables.
 - Refacto ProjectForm partagé (Lot 3.4).
 - Virtualisation des messages d'entretien (Lot 3.2).
