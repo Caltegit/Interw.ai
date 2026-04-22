@@ -87,8 +87,10 @@ const App = () => (
               <Route path="/library/questions" element={<QuestionLibrary />} />
               <Route path="/library/intros" element={<IntroLibrary />} />
               <Route path="/library/criteria" element={<CriteriaLibrary />} />
-              <Route path="/library/interviews" element={<InterviewTemplates />} />
-              <Route path="/library/interviews/:id" element={<InterviewTemplateEdit />} />
+              <Route path="/library/interviews" element={<Navigate to="/library/sessions" replace />} />
+              <Route path="/library/interviews/:id" element={<LegacyLibraryInterviewRedirect />} />
+              <Route path="/library/sessions" element={<InterviewTemplates />} />
+              <Route path="/library/sessions/:id" element={<InterviewTemplateEdit />} />
               <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/settings" element={<Settings />} />
