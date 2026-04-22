@@ -1548,6 +1548,11 @@ export default function InterviewStart() {
     handleSendResponseRef.current = handleSendResponse;
   });
 
+  // Keep startListeningRef in sync (utilisé par le fallback STT depuis onend).
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
+
   // Spacebar shortcut to validate the answer (same conditions as the "Ma réponse est terminée" button)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
