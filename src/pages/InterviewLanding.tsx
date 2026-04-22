@@ -20,12 +20,14 @@ export default function InterviewLanding() {
 
   // Intermediate media screen state
   const [showIntroMedia, setShowIntroMedia] = useState(false);
-  const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | null>(null);
+  const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | "text" | "tts" | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [ttsLoading, setTtsLoading] = useState(false);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -82,14 +84,22 @@ export default function InterviewLanding() {
       return;
     }
 
-    if (project.presentation_video_url) {
+    const introEnabled = project.intro_enabled !== false;
+    const dbMode: string | null = project.intro_mode ?? null;
+    let mode: "text" | "tts" | "audio" | "video" | null = null;
+    if (introEnabled) {
+      if (dbMode === "text" || dbMode === "tts" || dbMode === "audio" || dbMode === "video") {
+        mode = dbMode;
+      } else if (project.presentation_video_url) {
+        mode = "video";
+      } else if (project.intro_audio_url) {
+        mode = "audio";
+      }
+    }
+
+    if (mode) {
       setSessionToken(session.token);
-      setIntroMediaType("video");
-      setShowIntroMedia(true);
-      setStarting(false);
-    } else if (project.intro_audio_url) {
-      setSessionToken(session.token);
-      setIntroMediaType("audio");
+      setIntroMediaType(mode);
       setShowIntroMedia(true);
       setStarting(false);
     } else {
@@ -97,13 +107,48 @@ export default function InterviewLanding() {
     }
   };
 
-  const handlePlayMedia = () => {
+  const handlePlayMedia = async () => {
     if (introMediaType === "audio" && introAudioRef.current) {
       introAudioRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
       introVideoRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
+    } else if (introMediaType === "tts") {
+      const text = (project?.intro_text || "").trim();
+      if (!text) {
+        setMediaFinished(true);
+        return;
+      }
+      setTtsLoading(true);
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text, projectId: project.id }),
+        });
+        const ct = res.headers.get("Content-Type") || "";
+        if (!ct.includes("audio")) {
+          setMediaFinished(true);
+          return;
+        }
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(objectUrl);
+        ttsAudioRef.current = audio;
+        audio.onended = () => {
+          setMediaPlaying(false);
+          setMediaFinished(true);
+          URL.revokeObjectURL(objectUrl);
+        };
+        await audio.play();
+        setMediaPlaying(true);
+      } catch {
+        setMediaFinished(true);
+      } finally {
+        setTtsLoading(false);
+      }
     }
   };
 
