@@ -112,7 +112,7 @@ export default function SharedReport() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold">Rapport d'entretien</h1>
+        <h1 className="text-2xl font-bold">Rapport de session</h1>
         {session && (
           <div>
             <p className="text-lg font-medium">{session.candidate_name}</p>

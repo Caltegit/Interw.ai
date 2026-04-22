@@ -210,7 +210,7 @@ export default function InterviewTemplateEdit() {
             <CardContent className="pt-6 space-y-4">
               <div>
                 <Label>Nom du modèle *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Entretien Commercial Junior" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Session Commercial Junior" />
               </div>
               <div>
                 <Label>Description</Label>

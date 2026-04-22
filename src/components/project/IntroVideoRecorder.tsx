@@ -116,7 +116,7 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
       <div className="space-y-1">
         <Label>Vidéo de présentation (optionnel)</Label>
         <p className="text-xs text-muted-foreground">
-          Enregistrez ou importez une vidéo qui sera montrée au candidat avant le début de l'entretien.
+          Enregistrez ou importez une vidéo qui sera montrée au candidat avant le début de l'session.
         </p>
       </div>
 

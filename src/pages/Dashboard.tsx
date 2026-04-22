@@ -313,10 +313,10 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Derniers entretiens */}
+      {/* Derniers sessions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Derniers entretiens</CardTitle>
+          <CardTitle className="text-base">Derniers sessions</CardTitle>
         </CardHeader>
         <CardContent>
           {recentSessions.length === 0 ? (
@@ -394,9 +394,9 @@ export default function Dashboard() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Supprimer cet entretien ?</AlertDialogTitle>
+                                <AlertDialogTitle>Supprimer cet session ?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Cette action supprimera l'entretien de {session.candidate_name} et
+                                  Cette action supprimera l'session de {session.candidate_name} et
                                   toutes les données associées. Irréversible.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
@@ -428,7 +428,7 @@ export default function Dashboard() {
                                     if (user?.id) {
                                       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
                                     }
-                                    toast({ title: "Entretien supprimé" });
+                                    toast({ title: "Session supprimé" });
                                   }}
                                 >
                                   Supprimer

@@ -24,11 +24,11 @@ import { useState } from "react";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Entretiens", url: "/projects", icon: FolderKanban },
+  { title: "Sessions", url: "/projects", icon: FolderKanban },
 ];
 
 const librarySubItems = [
-  { title: "Entretiens", url: "/library/interviews", icon: ClipboardList },
+  { title: "Sessions", url: "/library/interviews", icon: ClipboardList },
   { title: "Questions", url: "/library/questions", icon: MessageSquare },
   { title: "Critères", url: "/library/criteria", icon: ListChecks },
   { title: "Intros", url: "/library/intros", icon: Mic },

@@ -61,7 +61,7 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
           minimal ? "py-2.5 px-4" : "py-3 px-5 sm:px-6"
         }`}
       >
-        {/* Org logo only — nothing if no logo. Non-cliquable en mode minimal (entretien en cours). */}
+        {/* Org logo only — nothing if no logo. Non-cliquable en mode minimal (session en cours). */}
         <div className="flex items-center gap-2 min-h-[28px] pointer-events-none select-none">
           {logoUrl ? (
             <img
@@ -82,7 +82,7 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
           }}
         >
           <ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
-          <span>Entretien sécurisé</span>
+          <span>Session sécurisé</span>
         </div>
       </header>
 

@@ -123,7 +123,7 @@ export function SaveAsTemplateDialog({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sauvegarder comme entretien type</DialogTitle>
+            <DialogTitle>Sauvegarder comme session type</DialogTitle>
             <DialogDescription>
               Crée un modèle réutilisable à partir des questions et critères de ce projet.
             </DialogDescription>

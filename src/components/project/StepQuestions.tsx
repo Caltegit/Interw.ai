@@ -316,7 +316,7 @@ export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-base font-semibold">Questions d'entretien</Label>
+          <Label className="text-base font-semibold">Questions de session</Label>
           <p className="text-sm text-muted-foreground">
             {questions.filter((q) => q.title.trim() || q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl).length} question(s) — glissez pour réordonner
           </p>
