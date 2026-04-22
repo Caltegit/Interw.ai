@@ -254,6 +254,9 @@ export default function InterviewStart() {
   // Ref to current ElevenLabs audio (for pause/cancel)
   const elevenAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Jeton d'annulation pour interrompre une relance IA en cours (utilisé par "Passer la question").
+  const turnAbortRef = useRef<{ aborted: boolean } | null>(null);
+
   // Try ElevenLabs first; resolves true if it played, false if we should fallback
   const tryElevenLabs = useCallback(
     async (text: string): Promise<boolean> => {
