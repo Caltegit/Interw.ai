@@ -49,6 +49,7 @@ npx playwright test --ui
 | `interview-start-resume.spec.ts` | Candidat anon | Reprise d'une session interrompue + persistance après refresh |
 | `interview-start-media.spec.ts` | Candidat anon | `getUserMedia` + `MediaRecorder` activés (flux factices Chromium) |
 | `interview-start-refresh.spec.ts` | Candidat anon | Session passe en `in_progress`, survit au refresh, recommencement OK |
+| `interview-start-restart-cleanup.spec.ts` | Candidat anon | « Recommencer » purge `session_messages` + reset `last_question_index`/`status` en BDD |
 
 ## Limites assumées
 
