@@ -1068,6 +1068,14 @@ export default function InterviewStart() {
 
   // Send candidate response — awaits AI to decide between follow-up / next / end.
   const handleSendResponse = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+    // Nouveau jeton pour ce tour : "Passer la question" peut le marquer aborted
+    // pour interrompre toute suite (TTS de relance, MAJ d'état, redémarrage STT).
+    const token = { aborted: false };
+    turnAbortRef.current = token;
+    let aborted = false;
+    try {
     stopListening();
     clearSilenceTier();
     // Stoppe immédiatement toute lecture média en cours pour éviter qu'elle se
