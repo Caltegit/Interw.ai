@@ -11,28 +11,31 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Video, Library } from "lucide-react";
+import { Library } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { INTRO_FORMAT_META, type IntroFormat } from "@/components/library/IntroFormatPicker";
 
-interface IntroTemplate {
+export interface IntroTemplateItem {
   id: string;
   name: string;
-  type: "audio" | "video";
+  type: IntroFormat;
   audio_url: string | null;
   video_url: string | null;
   description: string | null;
+  intro_text: string | null;
+  tts_voice_id: string | null;
 }
 
 interface Props {
-  type: "audio" | "video";
-  onSelect: (item: IntroTemplate) => void;
+  type: IntroFormat;
+  onSelect: (item: IntroTemplateItem) => void;
 }
 
 export function IntroLibraryDialog({ type, onSelect }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<IntroTemplate[]>([]);
+  const [items, setItems] = useState<IntroTemplateItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -52,7 +55,7 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      setItems((data as unknown as IntroTemplate[]) || []);
+      setItems((data as unknown as IntroTemplateItem[]) || []);
     }
     setLoading(false);
   }, [user, type, toast]);
@@ -61,6 +64,9 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
     if (open) load();
   }, [open, load]);
 
+  const meta = INTRO_FORMAT_META[type];
+  const Icon = meta.icon;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
@@ -68,7 +74,7 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
       </Button>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bibliothèque d'intros — {type === "audio" ? "Audio" : "Vidéo"}</DialogTitle>
+          <DialogTitle>Bibliothèque d'intros — {meta.label}</DialogTitle>
           <DialogDescription>Sélectionnez une intro pour l'utiliser dans ce projet.</DialogDescription>
         </DialogHeader>
 
@@ -78,7 +84,7 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
           </div>
         ) : items.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune intro {type} dans la bibliothèque. Créez-en une depuis la page Bibliothèque &gt; Intros.
+            Aucune intro {meta.label.toLowerCase()} dans la bibliothèque. Créez-en une depuis Bibliothèque &gt; Intros.
           </p>
         ) : (
           <div className="space-y-3">
@@ -86,24 +92,25 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
               <Card key={item.id} className="cursor-pointer hover:border-primary transition-colors">
                 <CardContent className="space-y-2 pt-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="font-medium">{item.name}</h4>
                       {item.description && (
                         <p className="text-xs text-muted-foreground">{item.description}</p>
                       )}
                     </div>
-                    <Badge variant={item.type === "audio" ? "secondary" : "default"}>
-                      {item.type === "audio" ? (
-                        <Mic className="h-3 w-3" />
-                      ) : (
-                        <Video className="h-3 w-3" />
-                      )}
+                    <Badge variant="secondary">
+                      <Icon className="mr-1 h-3 w-3" /> {meta.label}
                     </Badge>
                   </div>
-                  {item.type === "audio" && item.audio_url && (
+                  {(type === "text" || type === "tts") && item.intro_text && (
+                    <p className="text-sm whitespace-pre-wrap line-clamp-4 rounded-md bg-muted/40 p-2">
+                      {item.intro_text}
+                    </p>
+                  )}
+                  {type === "audio" && item.audio_url && (
                     <audio controls src={item.audio_url} className="w-full" />
                   )}
-                  {item.type === "video" && item.video_url && (
+                  {type === "video" && item.video_url && (
                     <video controls src={item.video_url} className="w-full rounded" />
                   )}
                   <Button
