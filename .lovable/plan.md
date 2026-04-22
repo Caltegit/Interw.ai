@@ -1,44 +1,54 @@
 
 
-## Topo — Ce qui reste à faire
+## Lot 3.4 — Composant `<ProjectForm />` partagé
 
-### Lot 2 — Refacto `InterviewStart.tsx` (2092 lignes) — RISQUÉ
+Fusionner la logique dupliquée entre `ProjectNew.tsx` et `ProjectEdit.tsx` dans un seul composant réutilisable.
 
-Découper le fichier le plus critique en hooks spécialisés. À ne lancer **qu'après** avoir étoffé la suite E2E.
+### Pré-requis
 
-**Pré-requis : 5 nouveaux tests Playwright**
-- Pause / reprise pendant l'enregistrement
-- Échec STT (Web Speech indisponible)
-- Échec upload segment (storage down)
-- Sortie plein écran pendant l'entretien
-- Réponse vide / silence prolongé
+Avant la refacto, ajouter **1 test E2E sur l'édition de projet** (la création est déjà couverte par `project-creation.spec.ts`). Filet de sécurité minimum pour détecter une régression.
 
-**Extractions, dans cet ordre (un hook = un commit testable)**
-1. `useExamRoomLock` — plein écran, focus onglet, anti-triche
-2. `useInterviewTimer` — chrono global et par question
-3. `useSpeechRecognition` — Web Speech API (start, stop, onresult, onerror)
-4. `useMediaRecorder` — caméra + micro + segments
-5. `useInterviewSession` — orchestration IA, persistance, navigation entre questions
+- `tests/e2e/project-edit.spec.ts` — RH ouvre le projet seed, modifie le titre, sauvegarde, vérifie la persistance après reload.
 
-Cible : `InterviewStart.tsx` < 400 lignes, uniquement de l'assemblage.
+### Refacto
 
-### Lot 3.2 — Virtualisation des messages
+1. **Créer `src/components/project/ProjectForm.tsx`** — composant unique qui prend en props :
+   - `mode: "create" | "edit"`
+   - `initialData?: ProjectData` (undefined en création)
+   - `onSubmit: (data) => Promise<void>`
+   - Gère les 4 étapes du wizard (poste, questions, critères, validation), l'état local, les dialogs (bibliothèque questions, critères, intro, voix, template).
 
-Brancher `@tanstack/react-virtual` sur les listes longues :
-- Historique des messages dans `InterviewStart` (peut dépasser 100 items)
-- Liste des messages dans `SessionDetail`
+2. **Simplifier `ProjectNew.tsx`** — devient un wrapper :
+   - Charge les defaults (org, voix par défaut, etc.)
+   - Rend `<ProjectForm mode="create" onSubmit={handleCreate} />`
+   - Gère la redirection après création.
 
-Gain : scroll fluide même sur entretiens d'1h+.
+3. **Simplifier `ProjectEdit.tsx`** — devient un wrapper :
+   - Charge le projet existant (questions + critères + intro)
+   - Rend `<ProjectForm mode="edit" initialData={project} onSubmit={handleUpdate} />`
+   - Gère la redirection après update.
 
-### Lot 3.4 — Composant `<ProjectForm />` partagé
+### Règles
 
-Fusionner la logique dupliquée entre `ProjectNew.tsx` et `ProjectEdit.tsx` dans un seul composant. Pré-requis : tests E2E sur création + édition (création existe déjà, édition à ajouter).
+- Aucun changement de comportement visible (UI identique, mêmes étapes, mêmes validations).
+- Garder les composants enfants existants (`StepQuestions`, `StepCriteria`, `IntroLibraryDialog`, etc.) tels quels.
+- Vérifier que le test E2E création **et** le nouveau test E2E édition passent après refacto.
 
-### Ordre recommandé
+### Hors champ
 
-1. **Lot 3.2** d'abord — petit, isolé, gain visible immédiat.
-2. **Lot 3.4** ensuite — refacto modérée avec un test E2E à ajouter.
-3. **Lot 2** en dernier — gros chantier, à faire posément avec les 5 tests en filet.
+- Pas de redesign du wizard.
+- Pas de changement de schéma BDD.
+- Pas de touche à `InterviewStart` (Lot 2, plus tard).
 
-Dis-moi par lequel on commence.
+### Fichiers touchés
+
+- **Créés** : `src/components/project/ProjectForm.tsx`, `tests/e2e/project-edit.spec.ts`
+- **Modifiés** : `src/pages/ProjectNew.tsx`, `src/pages/ProjectEdit.tsx`, `.lovable/architecture-hardening-status.md`, `tests/e2e/README.md`
+
+### Ordre d'exécution
+
+1. Écrire `project-edit.spec.ts` et le faire passer contre la version actuelle.
+2. Créer `ProjectForm.tsx` à partir de `ProjectNew.tsx` (le plus complet des deux).
+3. Migrer `ProjectNew` en wrapper, vérifier le test création.
+4. Migrer `ProjectEdit` en wrapper, vérifier le test édition.
 
