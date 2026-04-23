@@ -196,7 +196,12 @@ export default function SuperAdminOrgDetail() {
                 {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
                 {!m.role && <Badge variant="outline">Sans rôle</Badge>}
                 <AlertDialog>
-                  <AlertDialogTrigger asChild>
+                  <AlertDialogTrigger
+                    asChild
+                    onClick={(e) => {
+                      if (m.user_id === currentUser?.id) e.preventDefault();
+                    }}
+                  >
                     <Button
                       variant="ghost"
                       size="icon"
