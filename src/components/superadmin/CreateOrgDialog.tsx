@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
@@ -16,33 +18,34 @@ export function CreateOrgDialog({ onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [orgName, setOrgName] = useState("");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminName, setAdminName] = useState("");
+  const [pricing, setPricing] = useState("");
+  const [clientNotes, setClientNotes] = useState("");
+  const [seedLibraries, setSeedLibraries] = useState(true);
+
+  const reset = () => {
+    setOrgName("");
+    setPricing("");
+    setClientNotes("");
+    setSeedLibraries(true);
+  };
 
   const handleCreate = async () => {
-    if (!orgName.trim() || !adminEmail.trim()) return;
+    if (!orgName.trim()) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("superadmin-create-org", {
         body: {
           org_name: orgName.trim(),
-          admin_email: adminEmail.trim().toLowerCase(),
-          admin_full_name: adminName.trim() || undefined,
+          pricing: pricing.trim() || undefined,
+          client_notes: clientNotes.trim() || undefined,
+          seed_libraries: seedLibraries,
         },
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 
-      const wasInvited = (data as { invited?: boolean })?.invited;
-      toast({
-        title: "Organisation créée",
-        description: wasInvited
-          ? `Invitation envoyée à ${adminEmail}`
-          : `Compte existant rattaché à ${adminEmail}`,
-      });
-      setOrgName("");
-      setAdminEmail("");
-      setAdminName("");
+      toast({ title: "Organisation créée" });
+      reset();
       setOpen(false);
       onCreated();
     } catch (error) {
@@ -65,26 +68,39 @@ export function CreateOrgDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            L'admin sera rattaché immédiatement. Un email lui sera envoyé pour définir son mot de passe s'il n'a pas encore de compte.
+            Vous pourrez ajouter des utilisateurs depuis la fiche de l'organisation.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="orgName">Nom de l'organisation *</Label>
+            <Label htmlFor="orgName">Nom *</Label>
             <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Acme Inc." />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminName">Nom de l'admin (optionnel)</Label>
-            <Input id="adminName" value={adminName} onChange={(e) => setAdminName(e.target.value)} placeholder="Jean Dupont" />
+            <Label htmlFor="pricing">Tarif</Label>
+            <Input id="pricing" value={pricing} onChange={(e) => setPricing(e.target.value)} placeholder="99 €/mois" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="adminEmail">Email de l'admin *</Label>
-            <Input id="adminEmail" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} placeholder="admin@acme.com" />
+            <Label htmlFor="clientNotes">Note client</Label>
+            <Textarea
+              id="clientNotes"
+              value={clientNotes}
+              onChange={(e) => setClientNotes(e.target.value)}
+              placeholder="Informations internes sur ce client"
+              rows={3}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="seedLibraries" className="cursor-pointer">Charger les bibliothèques de modèles par défaut</Label>
+              <p className="text-xs text-muted-foreground">Questions, critères, modèles d'entretien et projet de démonstration.</p>
+            </div>
+            <Switch id="seedLibraries" checked={seedLibraries} onCheckedChange={setSeedLibraries} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Annuler</Button>
-          <Button onClick={handleCreate} disabled={loading || !orgName.trim() || !adminEmail.trim()}>
+          <Button onClick={handleCreate} disabled={loading || !orgName.trim()}>
             {loading ? "Création..." : "Créer"}
           </Button>
         </DialogFooter>
