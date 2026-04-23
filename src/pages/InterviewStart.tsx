@@ -1727,19 +1727,19 @@ export default function InterviewStart() {
     }
 
     setIsProcessing(true);
+    // Nouveau bloc question : invalide tout watchdog/callback antérieur.
+    currentBlockIdRef.current += 1;
+    const skipBlock = currentBlockIdRef.current;
     try {
       // 1. Stop listening + reset transcript + stop any media playback in progress
       stopListening();
       candidateTranscriptRef.current = "";
       setLiveTranscript("");
       clearAutoSkip();
-      setShouldAutoPlay(false);
-      clearPlaybackWatchdog();
-      try { featuredPlayerRef.current?.stop(); } catch {}
+      cancelAll();
       featuredPlayerRef.current = null;
-      window.speechSynthesis?.cancel();
 
-      // 2. Stop & upload current question recording
+      // 2. Stop & upload current question recording — AWAIT pour garantir la persistance.
       const questionIdx = currentQuestionIndex;
       let questionVideoUrl: string | null = null;
       if (session?.id) {
@@ -1765,10 +1765,10 @@ export default function InterviewStart() {
       }
       setAiMessages((prev) => [...prev, { role: "user" as const, content: skipMarker }]);
 
-      // 4. Build next question transition
+      // 4. Build next question transition + PREP_MEDIA
       const nextQIdx = currentQuestionIndex + 1;
       const nextQ = questions[nextQIdx];
-      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+      let nMediaType: "written" | "audio" | "video" = nextQ?.video_url
         ? "video"
         : nextQ?.audio_url
           ? "audio"
@@ -1776,13 +1776,27 @@ export default function InterviewStart() {
       const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
       if (nMediaUrl) prefetchMedia(nMediaUrl);
 
+      // Vérifie que le média est téléchargeable. Sinon, bascule en texte.
+      if (nMediaUrl) {
+        const ready = await prepareMediaUrl(nMediaUrl);
+        if (!ready) {
+          console.warn("[interview] Skip → question média indisponible, bascule en texte");
+          toast({
+            title: "Lecture du texte",
+            description: "Problème de chargement de la question, lecture du texte à la place.",
+          });
+          nMediaType = "written";
+        }
+      }
+      if (skipBlock !== currentBlockIdRef.current) return;
+
       const transition =
         nMediaType === "written"
           ? `Passons à la question suivante : ${nextQ.content}`
           : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
 
       setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaType === "written" ? null : nMediaUrl }];
         messagesRef.current = updated;
         return updated;
       });
@@ -1805,13 +1819,16 @@ export default function InterviewStart() {
 
       // 5. Speak transition + auto-play next question media (or start listening for written)
       await speak(transition);
-      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      if (skipBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+      if (nMediaType !== "written") {
         setIsSpeaking(true);
         setShouldAutoPlay(false);
         markMediaPresentation(nextQIdx);
         setTimeout(() => {
+          if (skipBlock !== currentBlockIdRef.current) return;
           setShouldAutoPlay(true);
-          armPlaybackWatchdog();
+          armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
         startQuestionRecording();
