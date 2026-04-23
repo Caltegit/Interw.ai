@@ -79,21 +79,19 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
           </div>
         )}
         <div className="flex-1">
-          <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors">
+          <button
+            type="button"
+            onClick={() => setUploadOpen(true)}
+            className="mt-2 inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
+          >
             <Upload className="h-4 w-4" />
             Télécharger
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onUpload(file);
-              }}
-            />
-          </label>
+          </button>
+          <p className="mt-1 text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
         </div>
       </div>
+
+      <AvatarUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
 
       {/* Photo avatars */}
       <div>
