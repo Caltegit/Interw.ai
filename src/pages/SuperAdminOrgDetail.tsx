@@ -226,6 +226,50 @@ export default function SuperAdminOrgDetail() {
       </Card>
 
       <EditOrgDialog open={editOpen} onOpenChange={setEditOpen} org={org} onUpdated={refresh} />
+
+      <EditUserDialog
+        open={!!editingUser}
+        onOpenChange={(o) => !o && setEditingUser(null)}
+        user={
+          editingUser
+            ? {
+                user_id: editingUser.user_id,
+                email: editingUser.email,
+                full_name: editingUser.full_name,
+                organization_id: org.id,
+                roles: editingUser.role ? [editingUser.role] : [],
+              }
+            : null
+        }
+        onUpdated={() => {
+          setEditingUser(null);
+          refresh();
+        }}
+      />
+
+      <AlertDialog open={!!deletingUser} onOpenChange={(o) => !o && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingUser?.email} sera définitivement supprimé. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
