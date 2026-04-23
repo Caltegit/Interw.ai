@@ -1569,16 +1569,21 @@ export default function InterviewStart() {
     }
 
     // ── 6. NEXT branch ──
+    // Nouveau bloc question : invalide tout watchdog/callback du tour précédent.
+    currentBlockIdRef.current += 1;
+    const nextBlock = currentBlockIdRef.current;
+    cancelAll();
+
     const nextQIdx = questionIdx + 1;
     const nextQ = questions[nextQIdx];
-    const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+    let nMediaType: "written" | "audio" | "video" = nextQ?.video_url
       ? "video"
       : nextQ?.audio_url
         ? "audio"
         : "written";
     const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
-    // Précharge le média pendant que la TTS de transition est prononcée.
+    // Précharge le média pendant la TTS de transition.
     if (nMediaUrl) prefetchMedia(nMediaUrl);
 
     // Use AI message if provided, otherwise fall back to local transition
@@ -1601,6 +1606,48 @@ export default function InterviewStart() {
       }));
     }
 
+    // CLOSE_PREV : on attend que l'upload du segment N-1 + l'insert du message
+    // candidat soient terminés AVANT de basculer l'index de question.
+    if (persistCandidatePromise) {
+      try { await persistCandidatePromise; } catch {}
+      if (token.aborted) { aborted = true; return; }
+    }
+
+    // PREP_MEDIA : si la question suivante a un média, on vérifie qu'il est
+    // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
+    if (nMediaUrl) {
+      // Lance la prononciation de la transition + la préparation du média en parallèle.
+      // On attendra explicitement les deux avant de jouer.
+      const transitionPromise = (async () => {
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        currentPresentationRef.current = { kind: "tts", text: transition };
+        await speak(transition);
+      })();
+      const mediaReady = await prepareMediaUrl(nMediaUrl);
+      await transitionPromise;
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+
+      if (!mediaReady) {
+        console.warn("[interview] Question média indisponible — bascule en texte");
+        toast({
+          title: "Lecture du texte",
+          description: "Problème de chargement de la question, lecture du texte à la place.",
+        });
+        nMediaType = "written";
+        // On change l'affichage du dernier message AI pour retirer le média.
+        setMessages((prev) => {
+          const updated = prev.map((m, i) =>
+            i === prev.length - 1 && m.role === "ai" ? { ...m, mediaType: "written" as const, mediaUrl: null } : m,
+          );
+          messagesRef.current = updated;
+          return updated;
+        });
+      }
+    }
+
     setCurrentQuestionIndex(nextQIdx);
     if (sessionId) {
       supabase
@@ -1608,29 +1655,33 @@ export default function InterviewStart() {
         .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
         .eq("id", sessionId);
     }
-    if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
-      // 1) D'abord on prononce la phrase de transition (« Écoutez la question
-      //    suivante. ») — on attend qu'elle soit terminée pour éviter qu'elle
-      //    se superpose au média de la question suivante.
-      setIsSpeaking(true);
-      setShouldAutoPlay(false);
-      currentPresentationRef.current = { kind: "tts", text: transition };
-      await speak(transition);
-      if (token.aborted) { aborted = true; return; }
-      if (isPausedRef.current) return;
-      // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
+
+    if (nMediaType !== "written") {
+      // PLAY_MEDIA : déclencher l'autoplay (le player attend canplaythrough).
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(nextQIdx);
       setTimeout(() => {
+        if (nextBlock !== currentBlockIdRef.current) return;
         setShouldAutoPlay(true);
-        armPlaybackWatchdog();
+        armPlaybackWatchdog(nextBlock);
       }, 30);
+    } else if (nMediaUrl) {
+      // Cas fallback : média indisponible, on lit le contenu texte de la question.
+      const fallbackText = `Voici la question : ${nextQ.content}`;
+      currentPresentationRef.current = { kind: "tts", text: fallbackText };
+      await speak(fallbackText);
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+      startQuestionRecording();
+      startListening();
     } else {
-      // Question écrite : on prononce la transition (qui contient déjà la
+      // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
       await speak(transition);
       if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
