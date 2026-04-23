@@ -164,10 +164,27 @@ export function MediaRecorderField({
 
   const clearMedia = () => {
     if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    if (audioRef.current) {
+      try { audioRef.current.pause(); } catch { /* noop */ }
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load?.();
+    }
+    if (playbackVideoRef.current) {
+      try { playbackVideoRef.current.pause(); } catch { /* noop */ }
+      playbackVideoRef.current.removeAttribute("src");
+      playbackVideoRef.current.load?.();
+    }
     setPreviewUrl(null);
     setDuration(0);
     setPlaying(false);
     onClear?.();
+  };
+
+  // « Refaire » : on nettoie tout PUIS on relance immédiatement (même geste utilisateur).
+  const retake = () => {
+    clearMedia();
+    // Lance l'enregistrement immédiatement — getUserMedia gère le prompt.
+    void startRecording();
   };
 
   const togglePlay = async () => {
