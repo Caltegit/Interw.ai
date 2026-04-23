@@ -870,6 +870,7 @@ export type Database = {
           executive_summary: string
           flagged_moments: Json | null
           generated_at: string
+          highlight_clips: Json
           id: string
           overall_grade: string | null
           overall_score: number
@@ -881,6 +882,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           session_id: string
+          stats: Json
           strengths: string[] | null
         }
         Insert: {
@@ -889,6 +891,7 @@ export type Database = {
           executive_summary?: string
           flagged_moments?: Json | null
           generated_at?: string
+          highlight_clips?: Json
           id?: string
           overall_grade?: string | null
           overall_score?: number
@@ -900,6 +903,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id: string
+          stats?: Json
           strengths?: string[] | null
         }
         Update: {
@@ -908,6 +912,7 @@ export type Database = {
           executive_summary?: string
           flagged_moments?: Json | null
           generated_at?: string
+          highlight_clips?: Json
           id?: string
           overall_grade?: string | null
           overall_score?: number
@@ -919,6 +924,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id?: string
+          stats?: Json
           strengths?: string[] | null
         }
         Relationships: [
