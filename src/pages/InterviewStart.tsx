@@ -2058,15 +2058,7 @@ export default function InterviewStart() {
         </div>
       )}
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:overflow-hidden">
-        {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
-        {backgroundSaving > 0 && (
-          <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md py-2 -mx-2 sm:-mx-4 px-2 sm:px-4 flex justify-end">
-            <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60 animate-pulse" />
-              Sauvegarde…
-            </span>
-          </div>
-        )}
+        {/* Indicateur de sauvegarde affiché en pastille discrète bas-droite (RecordingStatusBadge). */}
 
         {(() => {
           const currentQ = questions[currentQuestionIndex];
