@@ -73,46 +73,25 @@ Deno.serve(async (req) => {
       if (counter > 50) return json({ error: "Impossible de générer un slug unique" }, 500);
     }
 
-    if (seedLibraries) {
-      // Insertion avec owner_id = super admin pour déclencher le seed via trigger trg_seed_on_owner_set
-      const { data: org, error: orgErr } = await admin
-        .from("organizations")
-        .insert({
-          name: orgName,
-          slug: candidate,
-          pricing,
-          client_notes: clientNotes,
-          owner_id: user.id,
-          session_credits_unlimited: creditsUnlimited,
-          session_credits_total: creditsTotal,
-        })
-        .select()
-        .single();
-      if (orgErr) throw orgErr;
+    // Création sans owner — le trigger trg_seed_org_question_templates seed les bibliothèques
+    // (questions, critères, modèles d'entretien) via le fallback super admin.
+    // Le projet de démo sera créé plus tard, dans accept_invitation, au moment où le premier owner rejoint.
+    const { data: org, error: orgErr } = await admin
+      .from("organizations")
+      .insert({
+        name: orgName,
+        slug: candidate,
+        pricing,
+        client_notes: clientNotes,
+        owner_id: null,
+        session_credits_unlimited: creditsUnlimited,
+        session_credits_total: creditsTotal,
+      })
+      .select()
+      .single();
+    if (orgErr) throw orgErr;
 
-      // On retire immédiatement l'owner pour ne pas verrouiller l'org sur le super admin
-      await admin.from("organizations").update({ owner_id: null }).eq("id", org.id);
-
-      return json({ success: true, organization_id: org.id, seeded: true });
-    } else {
-      // Pas de seed : insertion sans owner_id
-      const { data: org, error: orgErr } = await admin
-        .from("organizations")
-        .insert({
-          name: orgName,
-          slug: candidate,
-          pricing,
-          client_notes: clientNotes,
-          owner_id: null,
-          session_credits_unlimited: creditsUnlimited,
-          session_credits_total: creditsTotal,
-        })
-        .select()
-        .single();
-      if (orgErr) throw orgErr;
-
-      return json({ success: true, organization_id: org.id, seeded: false });
-    }
+    return json({ success: true, organization_id: org.id, seeded: seedLibraries });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return json({ error: msg }, 500);
