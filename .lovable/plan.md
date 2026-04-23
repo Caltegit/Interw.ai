@@ -1,59 +1,30 @@
 
 
-## Aperçu vidéo en direct avant l'enregistrement
+## Correction du bug d'impersonation
 
-### Le problème
+### Le diagnostic
 
-Aujourd'hui, quand on clique sur « Enregistrer vidéo » (intro projet ou question), la caméra s'allume et l'enregistrement démarre **immédiatement**. Le candidat-recruteur n'a aucun moment pour se cadrer, vérifier la lumière ou ajuster sa posture avant que ça tourne.
+L'edge function `superadmin-impersonate` renvoie une erreur non-2xx quand on clique sur la flèche « Prendre la main ». La cause la plus probable : `admin.auth.admin.generateLink` échoue parce que l'URL `redirectTo` (basée sur l'`origin` de la requête, par ex. `https://id-preview--xxx.lovable.app/dashboard`) n'est pas dans la liste blanche des URL de redirection autorisées du projet Lovable Cloud.
 
-### La solution proposée : un mode « miroir » avec compte à rebours
+Aucun log d'erreur détaillé n'est actuellement émis, ce qui empêche de confirmer à 100% — donc on corrige **ET** on ajoute des logs.
 
-Le clic sur « Enregistrer vidéo » ne lance plus directement la capture. À la place, un nouveau panneau s'ouvre avec **trois étapes claires** :
+### La correction
 
-**1. Aperçu (mode miroir)**
-- La caméra s'allume immédiatement, le flux vidéo s'affiche en **miroir** (effet selfie naturel) dans un cadre arrondi.
-- Une jauge de niveau micro en bas du cadre confirme que le son est capté.
-- Deux boutons : **« Démarrer l'enregistrement »** (primary) et **« Annuler »** (qui coupe la caméra).
-- Texte d'aide : « Cadrez-vous, vérifiez la lumière puis lancez l'enregistrement. »
+**Fichier modifié : `supabase/functions/superadmin-impersonate/index.ts`**
 
-**2. Compte à rebours (3 → 2 → 1)**
-- Au clic sur « Démarrer », un overlay semi-transparent affiche un compte à rebours **3, 2, 1** par-dessus le flux miroir.
-- L'enregistrement démarre uniquement à la fin du décompte.
+1. **Ajouter du logging** sur chaque étape pour voir précisément où ça casse (vérification super admin, récupération user, génération du lien) — visible ensuite dans les logs edge functions.
 
-**3. Enregistrement**
-- L'aperçu reste affiché (toujours en miroir pour le confort visuel), avec :
-  - Pastille rouge clignotante + libellé « Enregistrement »
-  - **Chronomètre** (mm:ss) qui s'incrémente
-  - Bouton « Arrêter »
+2. **Rendre `redirectTo` optionnel et tolérant** : si `generateLink` échoue avec un `redirectTo`, faire un second essai sans `redirectTo`. Le lien magique tombera alors sur l'URL par défaut du site, ce qui suffit pour ouvrir une session.
 
-Une fois arrêté, l'aperçu de relecture s'affiche **sans miroir** (comme la vidéo finale sera vue par le candidat).
+3. **Renvoyer le message d'erreur Supabase** dans la réponse JSON (au lieu d'un message générique) pour que le toast côté front affiche la vraie cause.
 
-### Améliorations annexes
+**Fichier modifié : `src/pages/SuperAdminOrgDetail.tsx`**
 
-- **Audio** : ajout d'une jauge de niveau micro animée pendant l'enregistrement audio (intro et questions), pour confirmer visuellement que la voix est captée.
-- **Format vidéo** : cadre passé de `max-w-xs` à `max-w-md` avec ratio 16:9 fixé (`aspect-video`) pour un rendu plus pro et cohérent.
-- **Bouton « Refaire »** : sur la relecture finale, un bouton « Refaire la prise » à côté de « Supprimer » pour relancer directement l'aperçu sans avoir à supprimer puis recliquer.
-
-### Détails techniques
-
-**Fichiers modifiés :**
-- `src/components/project/IntroVideoRecorder.tsx`
-- `src/components/project/QuestionMediaRecorder.tsx`
-- `src/components/project/IntroAudioRecorder.tsx` (jauge micro uniquement)
-
-**Nouveau composant partagé :**
-- `src/components/project/VideoRecorderPanel.tsx` — gère les 3 états (`preview` | `countdown` | `recording`), le flux `getUserMedia`, le compte à rebours, le chrono, la jauge micro via `AudioContext` + `AnalyserNode`. Réutilisé par l'intro et les questions.
-- `src/components/project/MicLevelMeter.tsx` — petite barre horizontale animée (5-10 segments) alimentée par un `AnalyserNode`. Réutilisée pour l'audio seul aussi.
-
-**Logique clé :**
-- `getUserMedia` est appelé dès l'ouverture du panneau (état `preview`), pas au clic sur « Démarrer ».
-- Le flux est attaché à `<video muted autoPlay playsInline style={{ transform: 'scaleX(-1)' }}>` pour l'effet miroir pendant la capture (le fichier enregistré reste non-miroir, c'est uniquement un effet CSS).
-- Le `MediaRecorder` n'est instancié et démarré qu'à la fin du compte à rebours.
-- Au démontage ou annulation : `stream.getTracks().forEach(t => t.stop())` + fermeture de l'`AudioContext`.
+4. **Garde-fou côté UI** : empêcher l'ouverture du `AlertDialog` quand le bouton est désactivé (le `disabled` sur l'enfant d'un `AlertDialogTrigger asChild` ne bloque pas toujours le clic). On déplace la condition sur le `AlertDialogTrigger` lui-même via un `onClick` qui appelle `e.preventDefault()` si l'utilisateur cible est l'utilisateur courant.
 
 ### Hors champ
 
-- Pas de sélection de la caméra/micro source (toujours le périphérique par défaut). À ajouter plus tard si besoin.
-- Pas de filtres ni d'arrière-plan flouté.
-- Pas de re-trim de la vidéo enregistrée.
+- Pas de changement de la mécanique d'impersonation (toujours via magic link + retour avec `stopImpersonation`).
+- Pas de modification de `src/lib/impersonation.ts` ni du bandeau orange.
+- Si après correction l'erreur persiste à cause de la liste blanche des URL de redirection, on ajoutera l'URL preview Lovable dans la config auth dans un second temps.
 
