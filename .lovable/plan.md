@@ -1,54 +1,47 @@
 
 
-## Projet démo : copie indépendante par organisation
+## Impersonation : prendre la main sur un compte utilisateur
 
-### Le problème
+### Ce qui change
 
-Aujourd'hui, quand le super admin crée une organisation, le trigger `trg_seed_on_owner_set` exécute `seed_demo_project(_org_id, _created_by)` avec `_created_by = owner_id`. Mais lors de la création d'org via la fonction `superadmin-create-org`, l'`owner_id` est mis temporairement au super admin (pour déclencher le seed) puis remis à `NULL`. Résultat : le projet démo de chaque organisation a `created_by = <super admin>`, alors qu'il devrait appartenir à l'organisation elle-même.
+Sur la table des utilisateurs (Console Super Admin → onglet Utilisateurs **et** fiche organisation), une nouvelle icône **flèche** (`LogIn`) apparaît à gauche du crayon « Modifier » sur chaque ligne.
 
-Conséquences concrètes :
-- Quand un membre de l'org (ex : `c+7@bap.fr`) ouvre la page candidat connecté, les RLS de `questions` et `projects` filtrent sur `created_by = auth.uid()` → 0 question retournée → bouton « Lancer la session » bloqué.
-- Le membre ne peut ni modifier, ni supprimer le projet démo de sa propre organisation.
-- Le projet est techniquement « lié » au super admin alors qu'il devrait être autonome dans chaque org.
+Au clic :
+1. Confirmation : « Prendre la main sur le compte de `email@x.fr` ? Vous serez déconnecté de votre session super admin. »
+2. Le super admin est connecté à la place de l'utilisateur cible et redirigé vers `/dashboard`.
+3. Un bandeau orange persistant s'affiche en haut de l'application : « 👤 Vous êtes connecté en tant que **email@x.fr** (impersonation) — [Revenir à mon compte] ».
+4. Le clic sur « Revenir à mon compte » reconnecte le super admin sur sa session d'origine et le ramène à la console super admin.
 
-### Le correctif
+L'icône n'est jamais affichée sur sa propre ligne (impossible de s'impersonifier soi-même).
 
-**1. Réattribuer les projets démo existants**
-Mettre à jour le `created_by` de chaque projet démo existant pour pointer vers l'`owner_id` de son organisation (ou à défaut, le premier admin de cette org). Cela débloque immédiatement c+7 et tous les autres membres.
+### Comment ça fonctionne (technique)
 
-**2. Corriger le flux de création d'organisation** (`superadmin-create-org`)
-Au lieu de s'appuyer sur le trigger `trg_seed_on_owner_set` avec un owner temporaire, créer l'org sans owner (`owner_id = NULL`) et laisser `trg_seed_org_question_templates` faire son travail — ce trigger gère déjà le cas « pas d'owner » et utilisera le super admin comme créateur des **templates** (libraries de questions/critères/templates d'entretien partagés). Mais on **ne** crée **pas** le projet démo à ce moment-là.
+**Edge function `superadmin-impersonate`** (nouvelle, `verify_jwt = false` géré en code) :
+- Vérifie que l'appelant est super admin via `is_super_admin`.
+- Génère un **magic link** pour l'utilisateur cible avec `admin.generateLink({ type: 'magiclink', email })`.
+- Retourne l'`action_link` (URL de connexion à usage unique).
 
-Le projet démo sera créé plus tard, dans `accept_invitation`, au moment où le **vrai owner** rejoint l'organisation. Ainsi `created_by` = vrai owner de l'org, pas le super admin.
+**Front**
+- `src/lib/impersonation.ts` (nouveau) : helpers `startImpersonation(userId, email)` et `stopImpersonation()`.
+  - `start` : sauvegarde la session super admin courante (`supabase.auth.getSession()`) dans `localStorage` sous la clé `impersonation_origin_session`, appelle l'edge function, puis redirige `window.location.href = action_link`.
+  - Au retour du magic link, la nouvelle session écrase l'ancienne — le marqueur `localStorage` reste, ce qui déclenche le bandeau.
+  - `stop` : récupère le marqueur, appelle `supabase.auth.setSession({ access_token, refresh_token })` avec les tokens d'origine, supprime le marqueur, redirige vers `/superadmin`.
 
-**3. Adapter `accept_invitation`**
-Quand un user accepte l'invitation et devient owner (cas `_current_owner IS NULL`), appeler `seed_demo_project(_org_id, _user_id)` pour créer la copie démo avec lui comme propriétaire.
+- `src/components/ImpersonationBanner.tsx` (nouveau) : bandeau orange fixé en haut, affiché uniquement si `localStorage.impersonation_origin_session` est présent. Bouton « Revenir à mon compte ».
+- Monté une seule fois dans `src/App.tsx` (hors routes, au-dessus de `<Routes>`).
 
-**4. Élargir les RLS pour éviter ce type de blocage à l'avenir**
-Ajouter sur `projects`, `questions`, `evaluation_criteria` des politiques SELECT/UPDATE/DELETE pour les **membres de l'organisation** (pas seulement le créateur). Aujourd'hui seul `created_by` peut éditer un projet, ce qui pose problème dès qu'un autre recruteur de la même org veut intervenir. Politiques ajoutées :
-- `Org members can view/update/delete org projects`
-- `Org members can manage org project questions`
-- `Org members can manage org project criteria`
-- `Super admins can view/update all projects/questions/criteria`
+- `src/components/superadmin/UsersTable.tsx` et `src/pages/SuperAdminOrgDetail.tsx` : ajouter l'icône `LogIn` (lucide) avec `AlertDialog` de confirmation, désactivée pour `u.user_id === me?.id`.
 
-Cela respecte le principe « l'organisation possède le projet », pas l'individu.
+### Sécurité
 
-### Détails techniques
-
-**Migration SQL** :
-- `UPDATE projects SET created_by = COALESCE(o.owner_id, ...) FROM organizations o WHERE projects.organization_id = o.id AND projects.title = 'Candidature spontanée - TEST -'` (correctif des données existantes — utilise l'owner si défini, sinon le premier admin de l'org via `user_roles`).
-- `CREATE POLICY` sur `projects`, `questions`, `evaluation_criteria` pour les membres de l'organisation et les super admins (SELECT, UPDATE, DELETE — INSERT reste sur `created_by = auth.uid()`).
-- Mise à jour de `accept_invitation` pour appeler `seed_demo_project` quand le user devient owner.
-
-**Edge function** `supabase/functions/superadmin-create-org/index.ts` :
-- Supprimer le hack « set owner_id puis NULL » — créer directement avec `owner_id = NULL`.
-- Le seeding des templates (questions, critères, templates d'entretien) continue via `trg_seed_org_question_templates` qui gère déjà le fallback super admin.
-- Le projet démo n'est plus créé ici — il le sera quand le premier owner rejoindra via `accept_invitation`.
-
-**Aucun changement front.**
+- L'edge function vérifie le rôle super admin **côté serveur** via service role + `is_super_admin`. Aucun contournement possible côté client.
+- Le magic link généré est à usage unique et expire rapidement (paramètre Supabase par défaut, ~1h).
+- Les tokens d'origine sont stockés en `localStorage` côté navigateur du super admin uniquement — pas de risque de fuite côté utilisateur cible.
+- Aucune trace n'est laissée dans le compte cible (pas de modification de données auth).
 
 ### Hors champ
 
-- Pas de transfert d'ownership rétroactif des autres projets créés par le super admin pour le compte d'organisations (s'il y en a, à traiter séparément).
-- Pas de refonte des politiques `created_by` pour les autres tables (transcripts, reports, sessions) — elles passent déjà par la jointure `projects.created_by`, donc elles bénéficieront des nouvelles politiques d'org via une mise à jour parallèle si besoin (à voir dans un second temps si vous rencontrez le même symptôme côté rapports).
+- Pas de log d'audit des impersonations en base — à ajouter dans un second temps si besoin de conformité (table `audit_log` avec qui, quand, qui).
+- Pas de limite de durée d'impersonation côté serveur — repose sur la durée de session standard.
+- Pas de notification email à l'utilisateur impersonifié.
 
