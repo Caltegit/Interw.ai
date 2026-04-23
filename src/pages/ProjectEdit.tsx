@@ -456,6 +456,7 @@ export default function ProjectEdit() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
