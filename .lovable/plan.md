@@ -1,38 +1,99 @@
 
 
-## Bandeau d'enregistrement candidat — version discrète
+## Refonte du rapport d'entretien
 
-### Problème
+### Constat
 
-Pendant l'entretien, le composant `RecordingStatusBadge` est positionné en haut et provoque un re-layout/clignotement de tout l'écran à chaque changement d'état (recording on/off, upload en cours). En plus, c'est visuellement trop présent pour le candidat.
+Le rapport actuel (page interne `SessionDetail`, page partagée `SharedReport`, email transactionnel `interview-report`) est complet mais brut : 3 onglets en vrac, pas de hiérarchie claire, pas de stats clés en un coup d'œil, pas de "best of" vidéo, durée minimale dans l'email. Le recruteur doit scroller et chercher.
 
-### Correctif
+### Ce qu'on construit
 
-**1. Repositionner le badge en bas à droite, en overlay fixe**
+**1. Nouveau bandeau d'en-tête « Vue d'ensemble »** (page interne + page partagée)
 
-Le composant existe déjà (`src/components/interview/RecordingStatusBadge.tsx`) et est en réalité **déjà positionné `fixed bottom-4 right-4`**. Le bandeau blanc qui clignote n'est donc pas lui — c'est probablement une instance dupliquée ou un autre indicateur dans `InterviewStart.tsx`. À vérifier en lecture du fichier mais le correctif final sera :
+Une carte unique en haut, pleine largeur, qui remplace les deux blocs séparés (vidéo + score). On y voit en 2 secondes :
 
-- Garder un seul indicateur, en bas à droite, **petit point coloré** + tooltip au survol (au lieu d'un badge avec texte).
-- Supprimer toute version "bandeau" en haut de l'écran.
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  [Score 82] [Recommandé] [B]    Jane Doe — Dév Full-Stack   │
+│                                  Recrutement Q1 · 23/04/2026 │
+│                                                              │
+│  ⏱ 12 min 34 s   💬 18 échanges   🎥 5 réponses vidéo        │
+│  📊 4 critères   ❓ 5 questions évaluées                     │
+└─────────────────────────────────────────────────────────────┘
+```
 
-**2. Supprimer le clignotement**
+**2. Onglets repensés en 4 sections claires**
 
-- Remplacer le rendu conditionnel `if (!recording && pendingUploads === 0) return null;` par un rendu permanent avec opacité animée → pas de mount/unmount, pas de reflow.
-- Utiliser `transition-opacity duration-300` pour les changements d'état.
-- Indicateur réduit à un **pastille 8px** colorée (rouge pulsé = enregistrement, ambre = sauvegarde, vert = OK) en bas à droite, sans texte.
-- Texte accessible via `aria-label` + `title` (tooltip natif au survol) pour rester accessible sans pollution visuelle.
+- **Synthèse** (par défaut) — résumé exécutif + points forts + axes d'amélioration côte à côte, scores par critère avec barres, recommandation finale détaillée.
+- **Questions & vidéos** — fusion des onglets « Vidéos » et « Évaluations par question » qui font aujourd'hui doublon. Une carte par question : vidéo de la réponse + question posée + score /10 + commentaire IA + transcription de la réponse repliable.
+- **Transcription complète** — inchangé, juste renommé.
+- **Best-of vidéo** — nouveau (voir point 3).
 
-**3. Vérifier qu'il n'y a pas d'autre bandeau**
+**3. Best-of automatique de l'entretien (1 minute)**
 
-Lire `InterviewStart.tsx` pour identifier d'éventuels autres bandeaux d'état (FullscreenPrompt, etc.) qui s'afficheraient en haut pendant l'enregistrement, et les rendre tout aussi discrets ou les retirer du flux d'enregistrement.
+Nouvelle Edge Function `generate-highlight-reel` qui :
+- Sélectionne les **3 meilleures réponses** du candidat (top 3 par score `question_evaluations`).
+- Tronque chaque clip à ~20 s max côté lecteur (via `currentTime` + `pause()` au bout de 20 s ; pas de ré-encodage serveur).
+- Les enchaîne dans un mini-lecteur custom (`HighlightReelPlayer`) : enchaînement automatique avec libellé "Question X · Score Y/10" en overlay.
+- Pas de ffmpeg côté serveur (trop lourd pour edge function). On gère la concaténation côté client en JavaScript avec un seul `<video>` qui change de source.
 
-### Fichiers touchés
+L'email transactionnel reçoit en pièce jointe un **lien direct** vers ce best-of (page publique dédiée `/highlights/<token>`), pas la vidéo elle-même. Pourquoi : 
+- Mailgun limite les pièces jointes à ~25 Mo, une vidéo dépasse vite.
+- Le lien marche partout, traçable, expirable.
+- Le recruteur ouvre, voit le best-of en 1 minute, puis va vers le rapport complet via le bouton existant.
 
-- `src/components/interview/RecordingStatusBadge.tsx` — passe en pastille discrète bas-droite, sans clignotement.
-- `src/pages/InterviewStart.tsx` — retirer toute autre bannière d'enregistrement en haut si présente.
+**4. Email transactionnel enrichi**
+
+Le template `interview-report.tsx` actuel manque de stats clés. On ajoute en haut, juste sous le score :
+
+```text
+⏱ Durée : 12 min 34 s
+💬 18 échanges  ·  🎥 5 réponses vidéo
+🏆 Top moment : Question 3 (score 9/10)
+```
+
+Et un nouveau **CTA principal** : `[ ▶ Voir le best-of (1 min) ]` au-dessus du `[ Voir le rapport complet ]`. Les deux liens cohabitent.
+
+**5. Mini-stats partout**
+
+Une petite carte « En chiffres » dans la colonne gauche du rapport (interne + partagé) :
+- Durée totale
+- Nombre de relances IA
+- Temps de parole candidat (estimé via somme des `audio_duration` ou longueur `content`)
+- Score moyen par critère
+- Question la mieux notée / la moins bien notée
+
+### Détails techniques
+
+**Sélection du best-of (côté `generate-highlight-reel`)**
+- Trier `question_evaluations` par `score` desc, prendre les 3 premiers.
+- Pour chaque, retrouver le `session_messages` correspondant (`role=candidate`, `question_id` ou index).
+- Stocker la liste `{video_url, question, score, start, end}` dans une nouvelle colonne `reports.highlight_clips jsonb` (default `[]`).
+- Émettre un token public `report_shares` réutilisé (déjà en place) ou créer `highlight_shares` (préférence : réutiliser `report_shares` avec un flag `kind` pour éviter une 2e table).
+
+**Migration SQL**
+```sql
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS highlight_clips jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS stats jsonb NOT NULL DEFAULT '{}'::jsonb;
+-- stats = { ai_followups, candidate_speech_chars, avg_criteria_score, best_question_idx, worst_question_idx }
+```
+
+**Fichiers touchés**
+- `src/pages/SessionDetail.tsx` — refonte en-tête + onglets fusionnés + carte stats.
+- `src/pages/SharedReport.tsx` — même refonte appliquée + onglet Best-of.
+- `src/components/session/HighlightReelPlayer.tsx` — **nouveau**, lecteur séquentiel client-side.
+- `src/components/session/SessionStatsCard.tsx` — **nouveau**, mini stats clés.
+- `src/components/session/OverviewHeader.tsx` — **nouveau**, en-tête unifié.
+- `src/pages/HighlightsPublic.tsx` — **nouveau**, page publique `/highlights/:token`.
+- `supabase/functions/generate-report/index.ts` — calcule `stats` + `highlight_clips`, ajoute leur passage à l'email.
+- `supabase/functions/_shared/transactional-email-templates/interview-report.tsx` — ajout stats clés + bouton Best-of, durée bien visible.
+- Nouvelle migration SQL pour les 2 colonnes ajoutées.
+- `App.tsx` — route publique `/highlights/:token`.
 
 ### Hors champ
 
-- Refonte du `FullscreenPrompt` (déjà discret en haut, utile, à garder).
-- Changement du système de sauvegarde lui-même.
+- Génération vidéo serveur (ré-encodage ffmpeg) — non rentable, on assemble côté client.
+- PDF du rapport — déjà discuté, pas demandé ici.
+- Sous-titres burnés sur le best-of — on garde les sous-titres au-dessus de la vidéo (transcript) plutôt que dans la vidéo.
+- Pièce jointe vidéo dans l'email — limite Mailgun + Lovable Email ne supporte pas les pièces jointes (lien à la place).
 
