@@ -384,41 +384,69 @@ export default function ProjectEdit() {
         }
       }
 
-      await supabase.from("evaluation_criteria").delete().eq("project_id", id);
-
+      // ===== Synchronisation des critères (merge ciblé, vérification des erreurs) =====
       const validCriteria = s.criteria.filter((c) => c.label.trim());
-      if (validCriteria.length > 0) {
-        await supabase.from("evaluation_criteria").insert(
-          validCriteria.map((c, i) => ({
-            project_id: id,
-            order_index: i,
-            label: c.label,
-            description: c.description,
-            weight: c.weight,
-            scoring_scale: c.scoring_scale as never,
-            anchors: c.anchors,
-            applies_to: c.applies_to as never,
-          })),
-        );
 
-        const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
-        if (toLibrary.length > 0) {
-          const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
-          if (orgData) {
-            await supabase.from("criteria_templates").insert(
-              toLibrary.map((c) => ({
-                organization_id: orgData,
-                created_by: user.id,
-                label: c.label,
-                description: c.description,
-                weight: c.weight,
-                scoring_scale: c.scoring_scale as never,
-                applies_to: c.applies_to as never,
-                anchors: c.anchors,
-                category: c.category || null,
-              })),
-            );
-          }
+      const { data: existingCritDb, error: existingCritErr } = await supabase
+        .from("evaluation_criteria")
+        .select("id")
+        .eq("project_id", id);
+      if (existingCritErr) throw existingCritErr;
+      const existingCritIds = new Set((existingCritDb ?? []).map((r) => r.id));
+      const submittedCritIds = new Set(
+        validCriteria.map((c) => c.id).filter((x): x is string => Boolean(x)),
+      );
+
+      // Suppressions ciblées
+      const critToRemove = [...existingCritIds].filter((cid) => !submittedCritIds.has(cid));
+      for (const cid of critToRemove) {
+        const { error: delErr } = await supabase.from("evaluation_criteria").delete().eq("id", cid);
+        if (delErr) throw delErr;
+      }
+
+      // Update / Insert
+      for (let i = 0; i < validCriteria.length; i++) {
+        const c = validCriteria[i];
+        const payload = {
+          order_index: i,
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: c.scoring_scale as never,
+          anchors: c.anchors,
+          applies_to: c.applies_to as never,
+        };
+        if (c.id && existingCritIds.has(c.id)) {
+          const { error: upErr } = await supabase
+            .from("evaluation_criteria")
+            .update(payload as never)
+            .eq("id", c.id);
+          if (upErr) throw upErr;
+        } else {
+          const { error: insErr } = await supabase
+            .from("evaluation_criteria")
+            .insert({ ...payload, project_id: id } as never);
+          if (insErr) throw insErr;
+        }
+      }
+
+      const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
+      if (toLibrary.length > 0) {
+        const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+        if (orgData) {
+          await supabase.from("criteria_templates").insert(
+            toLibrary.map((c) => ({
+              organization_id: orgData,
+              created_by: user.id,
+              label: c.label,
+              description: c.description,
+              weight: c.weight,
+              scoring_scale: c.scoring_scale as never,
+              applies_to: c.applies_to as never,
+              anchors: c.anchors,
+              category: c.category || null,
+            })),
+          );
         }
       }
 
