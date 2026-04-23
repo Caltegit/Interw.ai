@@ -116,6 +116,7 @@ export function MediaRecorderField({
         onMediaReady(blob, url);
         if (timerRef.current) window.clearInterval(timerRef.current);
         timerRef.current = null;
+        mediaRecorderRef.current = null;
       };
 
       setElapsed(0);
