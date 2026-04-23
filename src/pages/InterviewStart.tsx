@@ -1001,7 +1001,7 @@ export default function InterviewStart() {
         error: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [getSupportedMimeType, session?.id, trackBackground, uploadChunk]);
+  }, [getSupportedMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
 
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
