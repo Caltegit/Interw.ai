@@ -1,102 +1,71 @@
 
 
-## Sécuriser l'enchaînement des questions — un bloc « début / fin » par question
+## Bug : doublement des questions à chaque modification de projet
 
-### Constat
+### Cause exacte (confirmée en base)
 
-Aujourd'hui, le passage d'une question à l'autre est rapide mais fragile :
+Dans `src/pages/ProjectEdit.tsx`, la sauvegarde fait :
 
-- La TTS de transition, le média de la question, les relances et le redémarrage de l'écoute peuvent se chevaucher si une étape est lente (mobile, réseau).
-- Le watchdog de 7 s peut basculer en écoute alors que le média n'a pas encore commencé à jouer (réseau lent).
-- L'upload du segment vidéo de la question précédente part en tâche de fond ; en cas de coupure réseau, on n'a pas de garantie qu'il est bien parti avant de basculer.
-- Pas de vérification explicite que le fichier média de la question est téléchargeable avant de commencer.
-
-### Principe : chaque question = un bloc séquentiel avec verrou
-
-Une seule fonction `runQuestionBlock(qIdx)` orchestre la question, étape par étape, avec un verrou `blockLockRef` qui empêche tout déclenchement parallèle (relance, autoplay, watchdog) tant que le bloc précédent n'est pas explicitement « fermé ».
-
-Étapes garanties dans l'ordre :
-
-```text
-[Bloc question N]
-  1. CLOSE_PREV    → stop TTS, stop player, stop STT, stop MediaRecorder
-                    → flush upload du segment N-1 (await, avec retry)
-                    → persist message « fin question N-1 »
-  2. PREP_MEDIA    → si N a un média :
-                       fetch(url) avec timeout 8 s + retry 1×
-                       => si échec : badge « Question texte (média indisponible) »
-                          et on lit le contenu en TTS à la place
-  3. SPEAK_INTRO   → TTS de transition (await fin réelle, pas approximative)
-  4. PLAY_MEDIA    → si média : attendre canplaythrough avant play()
-                                attendre l'event ended (watchdog 20 s, réarmé sur progress)
-  5. OPEN_LISTEN   → démarrer MediaRecorder de la question N
-                    → démarrer STT
-                    → démarrer chrono silence
-  6. (attend la réponse candidat ou « Passer »)
+```ts
+await supabase.from("questions").delete().eq("project_id", id);
+// puis insert des nouvelles questions
 ```
 
-Tant que l'étape en cours n'a pas résolu, aucune autre étape du bloc ne peut démarrer. Plus de superposition possible, même en cas de relance rapide ou de clic candidat trop tôt.
+Mais la table `session_messages` a une clé étrangère vers `questions.id` avec **`ON DELETE NO ACTION`**. Donc dès qu'**une seule** question du projet est référencée par un message d'une session passée, le `DELETE` global échoue. Le code **n'inspecte jamais l'erreur retournée par `.delete()`**, l'enchaîne avec l'`INSERT`, et toutes les questions sont dupliquées.
 
-### Détails par garantie demandée
+J'ai vérifié en base : sur 4 projets concernés, on retrouve exactement ce motif (anciennes questions intactes + un nouveau jeu identique inséré plusieurs heures/jours plus tard, parfois 2 ou 3 fois). Sur le projet "Chef de Produit", une seule question (`order_index = 0`) est encore liée à un `session_message` — il a suffi d'elle pour bloquer la suppression de tout le lot.
 
-**1) Pas de superposition (questions / relances / TTS / média)**
+Le même bug existe dans `evaluation_criteria` au niveau code (mêmes ligne `delete().insert()` non vérifiées), même si la FK n'est pas la même.
 
-- Un seul `currentBlockId` (incrémenté à chaque question/relance). Tout callback (`onPlaybackEnd`, watchdog, retour TTS, retour STT) compare son `blockId` au `currentBlockId` au moment de s'exécuter ; s'il est obsolète, il ne fait rien.
-- À l'entrée de chaque étape : `cancelAll()` qui appelle :
-  - `window.speechSynthesis.cancel()`
-  - `elevenAudioRef.pause()`
-  - `featuredPlayerRef.stop()`
-  - `recognition.stop()`
-  - `mediaRecorder.stop()` si encore actif
-- Les relances passent par le même mécanisme : une relance ouvre un sous-bloc `runFollowUpBlock()` qui suit les mêmes étapes 1→5, sans jamais préparer un nouveau média.
+### Correction à apporter
 
-**2) Vérifier que la question est bien chargée avant de la lire**
+**1) `src/pages/ProjectEdit.tsx` — remplacer le « delete + insert » par un upsert / merge intelligent**
 
-Nouvelle étape `PREP_MEDIA` :
+Au lieu de tout supprimer puis réinsérer, on va :
 
-- `await fetch(url, { cache: "force-cache" })` puis lire `response.blob()` → garantit que les octets sont bien dans le cache navigateur.
-- Timeout 8 s + 1 retry. Si les deux échouent :
-  - On affiche un mini-message « Problème de chargement de la question, lecture du texte à la place ».
-  - On bascule la question en mode `written` pour ce candidat (en mémoire, pas en base).
-  - Le bloc continue normalement (TTS du contenu de la question).
-- Pendant `PREP_MEDIA`, indicateur visible « Préparation de la question… » (déjà présent partiellement, on le rend systématique).
-- `QuestionMediaPlayer` : on attend `canplaythrough` (et plus seulement `canplay`) avant `play()` pour s'assurer que le navigateur estime pouvoir lire jusqu'à la fin sans rebuffering.
+- Charger l'état actuel des questions du projet (id, order_index, contenu, etc.).
+- Comparer avec l'état soumis par le formulaire :
+  - **Mises à jour** : pour chaque question existante encore présente (matchée par `id` interne du formulaire), faire un `UPDATE` ciblé.
+  - **Insertions** : pour les nouvelles questions sans id, faire un `INSERT`.
+  - **Suppressions** : pour les questions retirées du formulaire, tenter un `DELETE` ciblé. Si le delete échoue parce que la question est référencée par des `session_messages`, on bascule en **soft-disable** : on garde la question en base, mais on lui retire son `order_index` du projet en la marquant "archivée" (cf. point 3).
+- Vérifier le `error` retourné par chaque appel Supabase et **lever** une exception si un delete échoue, pour que le toast d'erreur s'affiche au lieu de continuer silencieusement.
 
-**3) Tout est bien enregistré au fur et à mesure**
+Pour réaliser le matching côté formulaire, on stockera l'`id` Supabase d'une question existante dans l'objet `Question` (champ `id?: string` à ajouter dans `StepQuestions.tsx` et à propager via `ProjectEdit.tsx` au chargement). Les nouvelles questions ajoutées dans le formulaire restent sans `id`.
 
-- L'étape `CLOSE_PREV` **attend** (await) la fin de l'upload du segment vidéo de la question précédente avant de passer à la suivante. Si l'upload échoue après 2 retries, on affiche un toast non bloquant mais on logge l'erreur côté serveur (`logger.error`).
-- L'insert du message candidat passe lui aussi en `await` à l'intérieur de `CLOSE_PREV` (avec retry 2× déjà existant).
-- Un compteur `pendingUploads` reste affiché via `RecordingStatusBadge` (déjà en place).
-- À la fin de chaque bloc, on met à jour `sessions.last_question_index` **après** confirmation que le segment N-1 est bien persisté → en cas de reprise, on ne saute pas une question dont la vidéo n'est pas montée.
+**2) `src/pages/ProjectEdit.tsx` — protection anti double-clic / double-submit**
 
-**4) Watchdog plus intelligent**
+- Ajouter un `useRef` `savingRef` qui bloque toute nouvelle exécution de `handleSave` tant que la précédente n'est pas terminée. Le bouton est déjà `disabled` via `saving`, mais ce filet de sécurité empêche les rebonds React stricts ou les remounts.
 
-- Watchdog de 20 s (au lieu de 7 s) après `play()`, et **ne peut pas** déclencher `forceStartListening` tant qu'aucun event `playing` n'a été reçu sur le `<audio>/<video>`. S'il n'a jamais joué : on affiche le bouton manuel « Lire la question » et on n'avance pas tout seul.
-- Si `playing` a été reçu et que le média se bloque ensuite, watchdog réarmé sur `progress`. Si vraiment plus rien pendant 15 s → on coupe et on passe en écoute (la question a au moins été partiellement entendue).
+**3) Migration BDD — préparer le « soft-disable » des questions référencées**
 
-### Modifications de fichiers
+Ajouter une colonne `archived_at TIMESTAMPTZ NULL` sur `questions`. Quand on tente de supprimer une question qui possède des `session_messages`, on l'archive plutôt :
 
-- `src/pages/InterviewStart.tsx`
-  - Ajouter `blockLockRef`, `currentBlockIdRef`, helper `cancelAll()`.
-  - Refactor de `beginInterview`, `handleSendResponse` (branches NEXT et FOLLOW_UP), `handleSkipQuestion` pour qu'ils délèguent à un seul `runQuestionBlock(qIdx, { isFirst, transitionText })` et un `runFollowUpBlock(text)`.
-  - Ajouter `prepareMedia(url)` qui retourne `{ ok: true } | { ok: false }`.
-  - `CLOSE_PREV` : passer en `await` la persistance du message candidat et l'upload du segment.
+- L'éditeur de projet ne charge que les questions où `archived_at IS NULL`.
+- Les écrans de session/rapport, eux, peuvent toujours retrouver le contenu de la question pour l'historique.
 
-- `src/components/interview/QuestionMediaPlayer.tsx`
-  - Attendre `canplaythrough` (avec timeout 10 s) avant `play()`.
-  - Watchdog 20 s qui ne déclenche `onPlaybackEnd` que si `playing` a été reçu au moins une fois ; sinon expose le bouton « Lire la question ».
-  - Exposer une nouvelle méthode `prepare()` via `ref` pour précharger sans jouer (utilisée par `PREP_MEDIA`).
+C'est plus propre que de laisser des FK orphelines ou que de risquer un DELETE qui plante.
 
-### Compromis assumé
+**4) `src/pages/ProjectEdit.tsx` — appliquer le même pattern aux critères**
 
-- Entre deux questions, on ajoute typiquement 0,3 à 1,5 s d'attente (préchargement + flush upload). C'est exactement ce que tu acceptes : un peu moins fluide, mais aucune question manquée et aucune réponse perdue.
-- En cas de média totalement injoignable, le candidat continue avec la version texte plutôt que de bloquer.
+Mêmes corrections sur `evaluation_criteria` : matching par `id`, update / insert / delete ciblés, vérification des erreurs. Pas de soft-disable nécessaire, car aucune autre table ne référence `evaluation_criteria.id`.
+
+**5) Nettoyage des doublons existants**
+
+Une migration de nettoyage pour les 4 projets impactés :
+
+- Pour chaque `(project_id, order_index)`, garder la question la **plus récente** (celle qui correspond à l'état attendu par l'utilisateur), supprimer les autres **uniquement si elles ne sont référencées par aucun `session_message`**.
+- Pour les anciennes questions encore liées à un message : les marquer `archived_at = now()` (après l'ajout de la colonne) pour qu'elles disparaissent de l'éditeur sans casser l'historique.
 
 ### Vérification après implémentation
 
-1. Sur mobile en « Slow 4G » : enchaîner 5 questions audio → toutes doivent être lues du début à la fin avant l'écoute candidat.
-2. Couper le réseau juste avant la question 3 → message « lecture du texte à la place » apparaît, l'entretien continue.
-3. Provoquer une relance IA → la TTS de relance ne démarre jamais avant l'arrêt complet du média précédent ; le micro ne s'ouvre qu'après la fin de la TTS.
-4. Vérifier en base que chaque message candidat a bien un `video_segment_url` non null (sauf coupure réseau).
-5. Recharger la page au milieu d'une question → la reprise repart sur la bonne question (last_question_index correct).
+1. Modifier le projet "Chef de Produit" : enregistrer plusieurs fois → la base ne doit jamais dépasser le nombre de questions affichées dans l'éditeur.
+2. Modifier un projet qui a déjà des sessions terminées (questions référencées) : la sauvegarde réussit, les questions liées à des messages sont conservées en arrière-plan (archivées) et n'apparaissent plus dans l'éditeur.
+3. Recharger la page après modif → on retrouve exactement ce qu'on a sauvegardé, pas de doublons.
+4. Cliquer 3 fois rapidement sur "Enregistrer" → un seul appel passe.
+
+### Hors champ
+
+- Pas de refonte du `ProjectForm` partagé : on touche uniquement à la logique de persistance dans `ProjectEdit.tsx` et au type `Question` pour porter l'`id`.
+- Pas de modification du parcours candidat ni de l'orchestration des questions en entretien.
+- Pas de changement sur `ProjectNew.tsx` (création) qui n'a pas le problème (toujours un INSERT pur).
 
