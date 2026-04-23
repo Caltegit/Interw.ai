@@ -1283,28 +1283,45 @@ export default function InterviewStart() {
     resetSilenceTimer();
 
     const q0 = questions[0];
-    const firstQMediaType: "written" | "audio" | "video" = q0?.video_url
+    let firstQMediaType: "written" | "audio" | "video" = q0?.video_url
       ? "video"
       : q0?.audio_url
         ? "audio"
         : "written";
     const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
+
+    // Nouveau bloc : tout watchdog/callback antérieur sera ignoré.
+    currentBlockIdRef.current += 1;
+    const myBlock = currentBlockIdRef.current;
+
+    // Préparer le média de la 1ère question AVANT de prononcer la salutation.
+    // Sur réseau lent, on aura le temps de bufferiser pendant le greeting.
+    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+    let firstQMediaReady = false;
+    if (firstQMediaUrl) {
+      firstQMediaReady = await prepareMediaUrl(firstQMediaUrl);
+      if (!firstQMediaReady) {
+        console.warn("[interview] Première question : média indisponible, bascule en texte");
+        toast({
+          title: "Lecture du texte",
+          description: "Problème de chargement de la question, lecture du texte à la place.",
+        });
+        firstQMediaType = "written";
+      }
+    }
     const isFirstQMedia = firstQMediaType !== "written";
 
     const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
     const greeting = isFirstQMedia
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${questions[0].content}`;
-
-    // Précharge la 1ère question pendant la TTS du greeting (gain crucial mobile)
-    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
       role: "ai",
       content: greeting,
       mediaType: firstQMediaType,
-      mediaUrl: firstQMediaUrl,
+      mediaUrl: isFirstQMedia ? firstQMediaUrl : null,
     };
     setMessages([chatMsg]);
     messagesRef.current = [chatMsg];
@@ -1323,13 +1340,15 @@ export default function InterviewStart() {
 
     // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
     await speak(greeting);
+    // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
+    if (myBlock !== currentBlockIdRef.current) return;
     if (isFirstQMedia) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(0);
       setTimeout(() => {
         setShouldAutoPlay(true);
-        armPlaybackWatchdog();
+        armPlaybackWatchdog(myBlock);
       }, 30);
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
