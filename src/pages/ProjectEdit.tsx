@@ -168,6 +168,8 @@ export default function ProjectEdit() {
 
   const handleSave = async (s: ProjectFormState) => {
     if (!id || !user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       // Avatar : si nouveau fichier => upload ; sinon, garder preview (preset choisi) ou avatar existant.
