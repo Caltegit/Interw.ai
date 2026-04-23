@@ -22,6 +22,22 @@ declare global {
   }
 }
 
+// Précharge un fichier média (audio/vidéo) dans le cache HTTP du navigateur
+// pour permettre une lecture immédiate au moment de l'affichage. Important sur
+// mobile où le buffering peut être lent.
+const prefetchedUrls = new Set<string>();
+function prefetchMedia(url: string | null | undefined) {
+  if (!url || prefetchedUrls.has(url)) return;
+  prefetchedUrls.add(url);
+  try {
+    fetch(url, { method: "GET", cache: "force-cache" }).catch((err) => {
+      console.warn("[prefetchMedia] failed for", url, err);
+    });
+  } catch (err) {
+    console.warn("[prefetchMedia] threw for", url, err);
+  }
+}
+
 export default function InterviewStart() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
