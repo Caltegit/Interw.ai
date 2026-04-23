@@ -24,6 +24,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/AppLayout";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -65,6 +66,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ImpersonationBanner />
           <Routes>
             {/* Public landing */}
             <Route path="/" element={<Landing />} />

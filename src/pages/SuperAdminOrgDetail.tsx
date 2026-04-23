@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2, LogIn } from "lucide-react";
+import { startImpersonation } from "@/lib/impersonation";
 import { CreateUserInOrgDialog } from "@/components/superadmin/CreateUserInOrgDialog";
 import { EditOrgDialog } from "@/components/superadmin/EditOrgDialog";
 import { EditUserDialog } from "@/components/superadmin/EditUserDialog";
@@ -17,6 +18,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -193,6 +195,40 @@ export default function SuperAdminOrgDetail() {
                 {m.role === "recruiter" && <Badge variant="secondary">Recruteur</Badge>}
                 {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
                 {!m.role && <Badge variant="outline">Sans rôle</Badge>}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={m.user_id === currentUser?.id}
+                      title={m.user_id === currentUser?.id ? "Impossible de se connecter à son propre compte" : "Prendre la main sur ce compte"}
+                    >
+                      <LogIn className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Prendre la main sur {m.email} ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Vous serez connecté à la place de cet utilisateur. Un bandeau vous permettra de revenir à votre compte super administrateur à tout moment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            await startImpersonation(m.user_id, m.email);
+                          } catch (e: any) {
+                            toast({ title: "Erreur", description: e?.message ?? "Impossible de prendre la main", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Prendre la main
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="ghost" size="icon" onClick={() => setEditingUser(m)} title="Modifier">
                   <Pencil className="h-4 w-4" />
                 </Button>
