@@ -1,80 +1,56 @@
 
 
-## Le projet démo existe mais n'est pas visible par le nouvel admin
+## Bouton « Lancer la session » qui ne réagit pas
 
 ### Diagnostic
 
-J'ai vérifié en base pour `c+5@bap.fr` (org `TEST 5`) :
+J'ai reproduit le parcours sur ton lien. Le projet, la session et les 5 questions existent bien en base. Mais en lisant le code de `src/pages/InterviewStart.tsx` :
 
-- ✅ Profil créé, rattaché à l'organisation
-- ✅ 50 question_templates, 10 criteria_templates, 6 interview_templates seedés
-- ✅ **Le projet « Candidature spontanée - TEST - » existe bien** (id `383a5311…`, status `active`)
-- ❌ **Mais `created_by` = `fb1046b7…` (toi, super-admin) au lieu de `5e9408af…` (le nouvel utilisateur invité)**
+- Ligne 1985-1993 : le bouton **« Lancer la session »** n'a **aucun attribut `disabled`** — il est donc visuellement cliquable.
+- Ligne 1143-1144 : son `onClick` (`beginInterview`) commence par `if (!session || !project || questions.length === 0) return;` → **silencieusement ignoré** si une de ces 3 données n'est pas chargée.
+- Ligne 814-848 : ces données sont chargées par un `useEffect` qui dépend du `token` dans l'URL. Si la requête est lente ou échoue (ex. cache, RLS, réseau), `loading` reste à `true` et l'écran « Prêt à démarrer ? » ne devrait pas s'afficher du tout — sauf cas de race où `loading` passe `false` pendant que `session` ou `questions` sont encore `null`.
 
-### Cause
+**Résultat côté candidat** : il voit le bouton « Lancer la session », clique → rien ne se passe. C'est exactement la perception « bouton inactif ».
 
-Dans `accept_invitation`, quand un invité devient le **premier utilisateur** d'une org créée par un super-admin, on appelle :
+À noter : sur le projet démo `candidature-spontanee-bc62f202`, j'ai vérifié — il y a bien 5 questions actives. Donc le souci n'est pas en base, c'est purement côté client.
 
-```sql
-PERFORM public.seed_demo_project(_org_id, _user_id);
+### Ce qu'on corrige
+
+**1. Rendre le bouton vraiment réactif et donner un feedback**
+
+- Ajouter `disabled={!session || !project || questions.length === 0}` sur le bouton, pour qu'il apparaisse explicitement grisé tant que les données ne sont pas prêtes (au lieu d'un faux clic mort).
+- Quand le bouton est désactivé, afficher un petit texte « Préparation de la session… » sous le bouton, avec un mini spinner.
+- Ajouter un `data-testid` séparé (`interview-start-button-disabled`) pour les tests E2E.
+
+**2. Garantir que l'écran « Prêt à démarrer ? » ne s'affiche pas trop tôt**
+
+Aujourd'hui la condition d'affichage est `if (!readyToStart)` (ligne 1955), sans vérifier que `session` et `questions` sont chargés. On ajoute :
+
+```tsx
+if (!readyToStart && (!session || !project || questions.length === 0)) {
+  return <écran de chargement /> // au lieu de l'écran avec le bouton
+}
 ```
 
-→ `_user_id` est bien le nouvel utilisateur, donc en théorie OK.
+→ Le candidat ne voit plus jamais le bouton avant que tout soit prêt.
 
-**MAIS** le projet a été créé avec `created_by = fb1046b7…` (toi). C'est parce que la fonction `seed_demo_project` a en réalité été déclenchée **plus tôt**, par le trigger `trg_seed_org_question_templates` quand **tu as créé l'organisation via le superadmin** (avec `auth.uid()` = toi). Le seed du projet démo s'est donc fait avec ton id comme `created_by`.
+**3. Logger l'échec silencieux pour ne plus passer à côté**
 
-Conséquence : la RLS `Users can view own projects` filtre sur `created_by = auth.uid()`, donc le nouvel utilisateur ne voit pas le projet (alors qu'il appartient à son organisation).
+Dans `beginInterview`, remplacer le `return` muet par un log d'erreur structuré (`logger.error("interview_begin_blocked", { ... })`) avec les 3 conditions, plus un toast utilisateur « Impossible de démarrer pour le moment, rechargez la page. » Ça nous donne une trace si le cas se reproduit.
 
-### Correctif
+**4. Bonus langue**
 
-**1. Migration immédiate** (réparer les projets démo orphelins) :
+J'ai vu plusieurs incohérences en passant : « Cet session » (CandidateLayout), « Avec un session IA » (Landing), « Impossible de démarrer l'session » (InterviewLanding). Ces fautes existent aussi dans `InterviewStart`. Je nettoie en même temps les occurrences les plus visibles côté candidat — sans toucher à la logique.
 
-```sql
--- Réassigne created_by au owner_id de l'org pour les projets démo
--- dont le créateur n'est pas membre de l'organisation
-UPDATE public.projects p
-SET created_by = o.owner_id
-FROM public.organizations o
-WHERE p.organization_id = o.id
-  AND p.title = 'Candidature spontanée - TEST -'
-  AND o.owner_id IS NOT NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM public.profiles pr
-    WHERE pr.user_id = p.created_by
-      AND pr.organization_id = p.organization_id
-  );
-```
+### Fichiers touchés
 
-**2. Élargir la visibilité projet aux membres de l'org** (vraie correction de fond) :
-
-Aujourd'hui un projet n'est visible que par son créateur, pas par les autres admins de l'org. C'est restrictif et c'est exactement la cause du bug. Nouvelle policy SELECT :
-
-```sql
-CREATE POLICY "Org members can view org projects"
-ON public.projects FOR SELECT TO authenticated
-USING (organization_id = public.get_user_organization_id(auth.uid()));
-```
-
-(On garde les policies UPDATE/DELETE/INSERT actuelles basées sur `created_by` pour ne pas changer la sécurité d'écriture.)
-
-**3. Empêcher la récidive** dans `trg_seed_org_question_templates` :
-
-Ne pas seeder le projet démo si `auth.uid()` n'est pas le futur owner — laisser ce seed à `accept_invitation` qui sait qui est le vrai utilisateur. Modification du trigger :
-
-```sql
--- Dans trg_seed_org_question_templates : ne PAS appeler seed_demo_project
--- quand le créateur est un super_admin différent du owner_id (cas création
--- par superadmin via dialog). On laisse accept_invitation s'en charger.
-IF NEW.owner_id IS NULL OR _creator = NEW.owner_id THEN
-  PERFORM public.seed_demo_project(NEW.id, _creator);
-END IF;
-```
-
-### Fichier touché
-
-- Une nouvelle migration SQL avec les 3 blocs ci-dessus (UPDATE de réparation + nouvelle policy + correction du trigger).
+- `src/pages/InterviewStart.tsx` : conditions du rendu, attribut `disabled`, log + toast, corrections de langue.
+- `src/pages/InterviewLanding.tsx` : « l'session » → « la session ».
+- `src/pages/Landing.tsx` : « un session » → « une session », « session vidéo conversationnel » → « entretiens vidéo conversationnels ».
+- `src/components/CandidateLayout.tsx` : « Cet session » → « Cette session ».
 
 ### Hors champ
 
-- Refonte complète des policies RLS sur les autres tables liées (questions, sessions, reports). On peut le faire dans un second temps si tu veux que les membres d'une org voient aussi les sessions/rapports des projets de leurs collègues.
+- Refactoring complet de `InterviewStart` (déjà discuté, déjà refusé).
+- Changement du flux de seed des projets démo (déjà corrigé dans la migration précédente).
 
