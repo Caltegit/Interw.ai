@@ -20,6 +20,14 @@ interface QuestionEval {
   comment?: string
 }
 
+interface SessionStats {
+  duration_seconds?: number
+  exchanges_count?: number
+  video_answers_count?: number
+  best_question_idx?: number
+  best_question_score?: number
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
@@ -34,6 +42,8 @@ interface InterviewReportProps {
   criteriaScores?: Record<string, CriteriaScore>
   questionEvaluations?: Record<string, QuestionEval>
   reportUrl?: string
+  highlightsUrl?: string | null
+  stats?: SessionStats
 }
 
 const recommendationLabel = (r?: string | null) => {
@@ -44,6 +54,13 @@ const recommendationLabel = (r?: string | null) => {
     case 'no': return '❌ Non recommandé'
     default: return '—'
   }
+}
+
+const formatDuration = (s?: number) => {
+  if (!s || s <= 0) return '—'
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m} min ${sec.toString().padStart(2, '0')} s`
 }
 
 const InterviewReportEmail = ({
@@ -60,6 +77,8 @@ const InterviewReportEmail = ({
   criteriaScores = {},
   questionEvaluations = {},
   reportUrl = '#',
+  highlightsUrl = null,
+  stats = {},
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
   const questionList = Object.values(questionEvaluations)
@@ -89,7 +108,26 @@ const InterviewReportEmail = ({
             <Text style={recoText}>{recommendationLabel(recommendation)}</Text>
           </Section>
 
-          <Button href={reportUrl} style={button}>Voir le rapport complet</Button>
+          <Section style={statsBox}>
+            <Text style={statRow}>
+              <strong>⏱ Durée :</strong> {formatDuration(stats.duration_seconds)}
+            </Text>
+            <Text style={statRow}>
+              <strong>💬 Échanges :</strong> {stats.exchanges_count ?? 0}
+              {' · '}
+              <strong>🎥 Réponses vidéo :</strong> {stats.video_answers_count ?? 0}
+            </Text>
+            {typeof stats.best_question_idx === 'number' && stats.best_question_score ? (
+              <Text style={statRow}>
+                <strong>🏆 Top moment :</strong> Question {stats.best_question_idx + 1} (score {stats.best_question_score}/10)
+              </Text>
+            ) : null}
+          </Section>
+
+          {highlightsUrl ? (
+            <Button href={highlightsUrl} style={primaryButton}>▶ Voir le best-of (1 min)</Button>
+          ) : null}
+          <Button href={reportUrl} style={secondaryButton}>Voir le rapport complet</Button>
 
           <Hr style={hr} />
 
@@ -174,7 +212,15 @@ export const template = {
       '0': { question: 'Présentez-vous', score: 9, comment: 'Présentation très structurée.' },
       '1': { question: 'Pourquoi notre entreprise ?', score: 7, comment: 'Motivation correcte mais générique.' },
     },
+    stats: {
+      duration_seconds: 754,
+      exchanges_count: 18,
+      video_answers_count: 5,
+      best_question_idx: 0,
+      best_question_score: 9,
+    },
     reportUrl: 'https://interw.ai/sessions/abc',
+    highlightsUrl: 'https://interw.ai/highlights/abc',
   },
 } satisfies TemplateEntry
 
@@ -191,13 +237,20 @@ const scoreBox = {
   backgroundColor: '#EEF2FF',
   borderRadius: '8px',
   padding: '16px',
-  margin: '16px 0',
+  margin: '16px 0 8px',
   textAlign: 'center' as const,
 }
+const statsBox = {
+  backgroundColor: '#F9FAFB',
+  borderRadius: '8px',
+  padding: '12px 16px',
+  margin: '0 0 16px',
+}
+const statRow = { fontSize: '13px', color: '#374151', margin: '4px 0', lineHeight: '1.5' }
 const scoreLabel = { fontSize: '12px', color: '#6b7280', margin: '0', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }
 const scoreValue = { fontSize: '28px', fontWeight: 'bold', color: PRIMARY, margin: '4px 0' }
 const recoText = { fontSize: '14px', color: '#374151', margin: '4px 0 0' }
-const button = {
+const primaryButton = {
   backgroundColor: PRIMARY,
   color: '#ffffff',
   padding: '12px 24px',
@@ -206,7 +259,19 @@ const button = {
   fontSize: '14px',
   fontWeight: 'bold',
   display: 'inline-block',
-  margin: '8px 0 16px',
+  margin: '0 8px 8px 0',
+}
+const secondaryButton = {
+  backgroundColor: '#ffffff',
+  color: PRIMARY,
+  padding: '11px 23px',
+  borderRadius: '6px',
+  textDecoration: 'none',
+  fontSize: '14px',
+  fontWeight: 'bold',
+  display: 'inline-block',
+  margin: '0 0 16px',
+  border: `1px solid ${PRIMARY}`,
 }
 const card = {
   border: '1px solid #e5e7eb',
