@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Video, Square, Trash2, Play, Pause, Upload } from "lucide-react";
+import { Video, Trash2, Play, Pause, Upload, RotateCcw } from "lucide-react";
+import { VideoRecorderPanel } from "./VideoRecorderPanel";
 
 interface IntroVideoRecorderProps {
   onVideoReady?: (video: { file: File | null; previewUrl: string | null }) => void;
@@ -15,56 +16,18 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
   const [videoUrl, setVideoUrl] = useState<string | null>(existingUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const previewRef = useRef<HTMLVideoElement | null>(null);
 
-  // Once isRecording becomes true and the preview element mounts, attach the stream
   useEffect(() => {
-    if (isRecording && previewRef.current && streamRef.current) {
-      previewRef.current.srcObject = streamRef.current;
-      previewRef.current.play().catch(() => {});
-    }
-  }, [isRecording]);
+    setVideoUrl(existingUrl);
+  }, [existingUrl]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        if (previewRef.current) previewRef.current.srcObject = null;
-
-        const blob = new Blob(chunksRef.current, { type: "video/webm" });
-        const file = new File([blob], "intro-video.webm", { type: "video/webm" });
-        const previewUrl = URL.createObjectURL(blob);
-        setVideoFile(file);
-        setVideoUrl(previewUrl);
-        onVideoReady?.({ file, previewUrl });
-      };
-
-      mediaRecorder.start(500);
-      // Set recording AFTER stream is ready — the useEffect will attach srcObject once the element mounts
-      setIsRecording(true);
-    } catch {
-      toast({ title: "Erreur", description: "Impossible d'accéder à la caméra.", variant: "destructive" });
-    }
-  };
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
+  const handleRecorderComplete = ({ blob, previewUrl }: { blob: Blob; previewUrl: string }) => {
+    const file = new File([blob], "intro-video.webm", { type: "video/webm" });
+    setVideoFile(file);
+    setVideoUrl(previewUrl);
     setIsRecording(false);
+    onVideoReady?.({ file, previewUrl });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,6 +59,15 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
     toast({ title: "Vidéo supprimée" });
   };
 
+  const retake = () => {
+    if (videoUrl?.startsWith("blob:")) URL.revokeObjectURL(videoUrl);
+    setVideoUrl(null);
+    setVideoFile(null);
+    setIsPlaying(false);
+    onVideoReady?.({ file: null, previewUrl: null });
+    setIsRecording(true);
+  };
+
   const togglePlay = async () => {
     if (!videoRef.current) return;
     if (isPlaying) {
@@ -116,29 +88,15 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
       <div className="space-y-1">
         <Label>Vidéo de présentation (optionnel)</Label>
         <p className="text-xs text-muted-foreground">
-          Enregistrez ou importez une vidéo qui sera montrée au candidat avant le début de l'session.
+          Enregistrez ou importez une vidéo qui sera montrée au candidat avant le début de la session.
         </p>
       </div>
 
       {isRecording && (
-        <div className="space-y-2">
-          <video
-            ref={previewRef}
-            muted
-            autoPlay
-            playsInline
-            className="w-full max-w-xs max-h-[180px] rounded-lg border border-border bg-black object-cover"
-          />
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-sm text-destructive">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-              Enregistrement...
-            </span>
-            <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-              <Square className="mr-1 h-4 w-4" /> Arrêter
-            </Button>
-          </div>
-        </div>
+        <VideoRecorderPanel
+          onComplete={handleRecorderComplete}
+          onCancel={() => setIsRecording(false)}
+        />
       )}
 
       {videoUrl && !isRecording && (
@@ -148,12 +106,15 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
             src={videoUrl}
             onEnded={() => setIsPlaying(false)}
             playsInline
-            className="w-full max-w-xs max-h-[180px] rounded-lg border border-border object-cover"
+            className="w-full max-w-md rounded-lg border border-border aspect-video object-cover bg-black"
           />
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={togglePlay}>
               {isPlaying ? <Pause className="mr-1 h-4 w-4" /> : <Play className="mr-1 h-4 w-4" />}
               {isPlaying ? "Pause" : "Lecture"}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={retake}>
+              <RotateCcw className="mr-1 h-4 w-4" /> Refaire la prise
             </Button>
             <Button type="button" variant="destructive" size="sm" onClick={deleteVideo}>
               <Trash2 className="mr-1 h-4 w-4" /> Supprimer
@@ -164,7 +125,7 @@ export function IntroVideoRecorder({ onVideoReady, existingUrl = null }: IntroVi
 
       {!videoUrl && !isRecording && (
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={startRecording}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsRecording(true)}>
             <Video className="mr-1 h-4 w-4" /> Enregistrer
           </Button>
           <label>
