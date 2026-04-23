@@ -1,42 +1,59 @@
 
 
-## Mise à jour du projet démo « Candidature spontanée - TEST »
+## Aperçu vidéo en direct avant l'enregistrement
 
-### Ce qui change
+### Le problème
 
-Modifications appliquées à la fonction de seed `seed_demo_project` (utilisée à chaque création d'organisation) **et** rétroactivement à tous les projets démo existants en base.
+Aujourd'hui, quand on clique sur « Enregistrer vidéo » (intro projet ou question), la caméra s'allume et l'enregistrement démarre **immédiatement**. Le candidat-recruteur n'a aucun moment pour se cadrer, vérifier la lumière ou ajuster sa posture avant que ça tourne.
 
-**1. Pause autorisée par défaut**
-`allow_pause` passe de `false` à `true`.
+### La solution proposée : un mode « miroir » avec compte à rebours
 
-**2. Message d'intro mis à jour**
-Nouveau texte :
-> Bienvenue dans cette session de test. Voici le message de bienvenue que vous pouvez modifier. Suivrons 5 questions pour le candidat.
+Le clic sur « Enregistrer vidéo » ne lance plus directement la capture. À la place, un nouveau panneau s'ouvre avec **trois étapes claires** :
 
-**3. Trois critères d'évaluation préremplis** (au lieu d'aucun aujourd'hui)
-- Clarté du discours
-- Motivation & adhésion au poste
-- Adéquation culturelle
+**1. Aperçu (mode miroir)**
+- La caméra s'allume immédiatement, le flux vidéo s'affiche en **miroir** (effet selfie naturel) dans un cadre arrondi.
+- Une jauge de niveau micro en bas du cadre confirme que le son est capté.
+- Deux boutons : **« Démarrer l'enregistrement »** (primary) et **« Annuler »** (qui coupe la caméra).
+- Texte d'aide : « Cadrez-vous, vérifiez la lumière puis lancez l'enregistrement. »
 
-Chaque critère reprend la description et le scoring de la bibliothèque par défaut (`seed_default_criteria_templates`), avec un poids de 33-34 % et un scoring `0-5`, applicable à toutes les questions.
+**2. Compte à rebours (3 → 2 → 1)**
+- Au clic sur « Démarrer », un overlay semi-transparent affiche un compte à rebours **3, 2, 1** par-dessus le flux miroir.
+- L'enregistrement démarre uniquement à la fin du décompte.
+
+**3. Enregistrement**
+- L'aperçu reste affiché (toujours en miroir pour le confort visuel), avec :
+  - Pastille rouge clignotante + libellé « Enregistrement »
+  - **Chronomètre** (mm:ss) qui s'incrémente
+  - Bouton « Arrêter »
+
+Une fois arrêté, l'aperçu de relecture s'affiche **sans miroir** (comme la vidéo finale sera vue par le candidat).
+
+### Améliorations annexes
+
+- **Audio** : ajout d'une jauge de niveau micro animée pendant l'enregistrement audio (intro et questions), pour confirmer visuellement que la voix est captée.
+- **Format vidéo** : cadre passé de `max-w-xs` à `max-w-md` avec ratio 16:9 fixé (`aspect-video`) pour un rendu plus pro et cohérent.
+- **Bouton « Refaire »** : sur la relecture finale, un bouton « Refaire la prise » à côté de « Supprimer » pour relancer directement l'aperçu sans avoir à supprimer puis recliquer.
 
 ### Détails techniques
 
-**Migration SQL** (un seul fichier) :
+**Fichiers modifiés :**
+- `src/components/project/IntroVideoRecorder.tsx`
+- `src/components/project/QuestionMediaRecorder.tsx`
+- `src/components/project/IntroAudioRecorder.tsx` (jauge micro uniquement)
 
-1. `CREATE OR REPLACE FUNCTION public.seed_demo_project(...)` — version mise à jour :
-   - `allow_pause = true` dans l'`INSERT` du projet.
-   - `intro_text` = nouveau message.
-   - Après l'`INSERT` des questions, ajout d'un `INSERT INTO public.evaluation_criteria` avec les 3 critères (label, description, weight, scoring_scale, applies_to, order_index).
+**Nouveau composant partagé :**
+- `src/components/project/VideoRecorderPanel.tsx` — gère les 3 états (`preview` | `countdown` | `recording`), le flux `getUserMedia`, le compte à rebours, le chrono, la jauge micro via `AudioContext` + `AnalyserNode`. Réutilisé par l'intro et les questions.
+- `src/components/project/MicLevelMeter.tsx` — petite barre horizontale animée (5-10 segments) alimentée par un `AnalyserNode`. Réutilisée pour l'audio seul aussi.
 
-2. **Rétroactif** sur les projets existants nommés `'Candidature spontanée - TEST -'` :
-   - `UPDATE projects SET allow_pause = true, intro_text = '<nouveau texte>'`.
-   - Pour chaque projet démo existant qui n'a pas encore de critères : `INSERT INTO evaluation_criteria` les 3 critères. Idempotent via `WHERE NOT EXISTS`.
-
-**Aucun changement front.** Les nouveaux projets démo créés via `accept_invitation` ou `trg_seed_org_question_templates` utiliseront automatiquement la nouvelle version de `seed_demo_project`.
+**Logique clé :**
+- `getUserMedia` est appelé dès l'ouverture du panneau (état `preview`), pas au clic sur « Démarrer ».
+- Le flux est attaché à `<video muted autoPlay playsInline style={{ transform: 'scaleX(-1)' }}>` pour l'effet miroir pendant la capture (le fichier enregistré reste non-miroir, c'est uniquement un effet CSS).
+- Le `MediaRecorder` n'est instancié et démarré qu'à la fin du compte à rebours.
+- Au démontage ou annulation : `stream.getTracks().forEach(t => t.stop())` + fermeture de l'`AudioContext`.
 
 ### Hors champ
 
-- Le titre du projet, les questions, l'avatar, la voix et la durée restent inchangés.
-- Les projets démo déjà personnalisés par un recruteur (critères ajoutés ou message modifié) : le `UPDATE` écrase `allow_pause` et `intro_text`. Si vous voulez préserver les éventuelles personnalisations existantes, dites-le et on conditionne l'update aux valeurs par défaut d'origine.
+- Pas de sélection de la caméra/micro source (toujours le périphérique par défaut). À ajouter plus tard si besoin.
+- Pas de filtres ni d'arrière-plan flouté.
+- Pas de re-trim de la vidéo enregistrée.
 
