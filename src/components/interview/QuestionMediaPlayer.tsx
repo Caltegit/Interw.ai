@@ -6,6 +6,8 @@ export interface QuestionMediaPlayerHandle {
   play: () => void;
   stop: () => void;
   restart: () => void;
+  /** Précharge le média (sans lecture) jusqu'à canplaythrough. Résout true si prêt. */
+  prepare: () => Promise<boolean>;
 }
 
 interface QuestionMediaPlayerProps {
