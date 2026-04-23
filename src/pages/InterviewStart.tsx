@@ -977,7 +977,7 @@ export default function InterviewStart() {
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       const sessionId = session?.id ?? null;
-      const questionIndex = currentQuestionIndexRef.current;
+      const questionIndex = currentQuestionIndex;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return;
