@@ -547,6 +547,8 @@ export type Database = {
           name: string
           owner_id: string | null
           pricing: string | null
+          session_credits_total: number | null
+          session_credits_unlimited: boolean
           slug: string
         }
         Insert: {
@@ -557,6 +559,8 @@ export type Database = {
           name: string
           owner_id?: string | null
           pricing?: string | null
+          session_credits_total?: number | null
+          session_credits_unlimited?: boolean
           slug: string
         }
         Update: {
@@ -567,6 +571,8 @@ export type Database = {
           name?: string
           owner_id?: string | null
           pricing?: string | null
+          session_credits_total?: number | null
+          session_credits_unlimited?: boolean
           slug?: string
         }
         Relationships: []

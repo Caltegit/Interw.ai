@@ -22,6 +22,7 @@ import {
   BookOpen,
   LayoutTemplate,
   AlertTriangle,
+  Coins,
 } from "lucide-react";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
@@ -101,6 +102,13 @@ export default function Dashboard() {
   const recoDistribution = data?.recoDistribution ?? {};
   const recentSessions = data?.recentSessions ?? [];
   const reportsBySession = data?.reportsBySession ?? {};
+  const credits = data?.credits ?? { unlimited: true, total: null as number | null, used: 0 };
+  const creditsPct =
+    !credits.unlimited && credits.total && credits.total > 0
+      ? Math.min(100, Math.round((credits.used / credits.total) * 100))
+      : 0;
+  const creditsBarColor =
+    creditsPct >= 100 ? "bg-destructive" : creditsPct >= 70 ? "bg-warning" : "bg-success";
 
   const firstName = (profile?.full_name || "").trim().split(" ")[0] || "";
   const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
@@ -127,6 +135,44 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Crédits de sessions */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Coins className="h-4 w-4 text-primary" />
+            Crédits de sessions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {credits.unlimited ? (
+            <div>
+              <div className="text-2xl font-bold">Illimité</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {credits.used} session{credits.used > 1 ? "s" : ""} réalisée{credits.used > 1 ? "s" : ""}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="text-2xl font-bold">
+                {credits.used} <span className="text-base font-normal text-muted-foreground">/ {credits.total ?? 0} sessions utilisées</span>
+              </div>
+              <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn("h-full transition-all", creditsBarColor)}
+                  style={{ width: `${creditsPct}%` }}
+                />
+              </div>
+              {creditsPct >= 100 && (
+                <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Quota atteint — pensez à augmenter votre plafond
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* KPI */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

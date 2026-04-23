@@ -48,6 +48,12 @@ Deno.serve(async (req) => {
     const pricing: string | null = body.pricing ? String(body.pricing).trim() : null;
     const clientNotes: string | null = body.client_notes ? String(body.client_notes).trim() : null;
     const seedLibraries: boolean = body.seed_libraries !== false; // défaut true
+    const creditsUnlimited: boolean = body.session_credits_unlimited !== false; // défaut true
+    const creditsTotalRaw = body.session_credits_total;
+    const creditsTotal: number | null =
+      !creditsUnlimited && creditsTotalRaw !== undefined && creditsTotalRaw !== null && creditsTotalRaw !== ""
+        ? Math.max(0, Math.floor(Number(creditsTotalRaw)))
+        : null;
 
     if (!orgName) return json({ error: "Nom d'organisation requis" }, 400);
 
@@ -77,6 +83,8 @@ Deno.serve(async (req) => {
           pricing,
           client_notes: clientNotes,
           owner_id: user.id,
+          session_credits_unlimited: creditsUnlimited,
+          session_credits_total: creditsTotal,
         })
         .select()
         .single();
@@ -96,6 +104,8 @@ Deno.serve(async (req) => {
           pricing,
           client_notes: clientNotes,
           owner_id: null,
+          session_credits_unlimited: creditsUnlimited,
+          session_credits_total: creditsTotal,
         })
         .select()
         .single();

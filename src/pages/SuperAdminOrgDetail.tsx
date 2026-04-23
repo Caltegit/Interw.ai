@@ -29,6 +29,8 @@ interface OrgDetail {
   client_notes: string | null;
   owner_id: string | null;
   created_at: string;
+  session_credits_unlimited: boolean;
+  session_credits_total: number | null;
 }
 
 interface Member {
@@ -68,7 +70,7 @@ export default function SuperAdminOrgDetail() {
     (async () => {
       setLoading(true);
       const [orgRes, profilesRes, rolesRes, projectsRes] = await Promise.all([
-        supabase.from("organizations").select("id, name, logo_url, pricing, client_notes, owner_id, created_at").eq("id", orgId).maybeSingle(),
+        supabase.from("organizations").select("id, name, logo_url, pricing, client_notes, owner_id, created_at, session_credits_unlimited, session_credits_total").eq("id", orgId).maybeSingle(),
         supabase.from("profiles").select("id, user_id, full_name, email").eq("organization_id", orgId),
         supabase.from("user_roles").select("user_id, role").eq("organization_id", orgId),
         supabase.from("projects").select("id, title, status, created_at").eq("organization_id", orgId).order("created_at", { ascending: false }),
@@ -151,6 +153,14 @@ export default function SuperAdminOrgDetail() {
             <p className="text-sm">{org.pricing || "—"}</p>
           </div>
           <div>
+            <p className="text-xs uppercase text-muted-foreground">Crédits de sessions</p>
+            <p className="text-sm">
+              {org.session_credits_unlimited
+                ? "Illimité"
+                : `${org.session_credits_total ?? 0} crédits`}
+            </p>
+          </div>
+          <div className="sm:col-span-2">
             <p className="text-xs uppercase text-muted-foreground">Note client</p>
             <p className="text-sm whitespace-pre-wrap">{org.client_notes || "—"}</p>
           </div>
