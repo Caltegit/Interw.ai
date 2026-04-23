@@ -6,6 +6,8 @@ export interface QuestionMediaPlayerHandle {
   play: () => void;
   stop: () => void;
   restart: () => void;
+  /** Précharge le média (sans lecture) jusqu'à canplaythrough. Résout true si prêt. */
+  prepare: () => Promise<boolean>;
 }
 
 interface QuestionMediaPlayerProps {
@@ -38,9 +40,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const animFrameRef = useRef<number>();
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canplayWaitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True dès que l'élément a réellement émis « playing » au moins une fois.
+  const hasEverPlayedRef = useRef(false);
 
-  const STALL_TIMEOUT_MS = 12000;
-  const CANPLAY_TIMEOUT_MS = 6000;
+  const STALL_TIMEOUT_MS = 20000; // 20 s — laisse le temps au mobile de bufferiser
+  const CANPLAY_TIMEOUT_MS = 10000; // 10 s — attente de canplaythrough avant lecture
 
   const getEl = () => type === "video" ? videoPlayerRef.current : audioRef.current;
 
@@ -63,12 +67,16 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     }
   };
 
-  // Fallback: if media stalls/suspends for too long, show manual play button
+  // Watchdog : si le média ne progresse plus assez longtemps, on bascule en
+  // « manual play ». Important : on ne déclare jamais la lecture « terminée »
+  // par stall — on laisse le parent décider.
   const armStallTimer = () => {
     if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
     stallTimerRef.current = setTimeout(() => {
       console.warn("[QuestionMediaPlayer] media stalled — showing manual play");
       setIsBuffering(false);
+      // Si on n'a JAMAIS joué, on propose un bouton manuel et on n'appelle pas onPlaybackEnd.
+      // Si on a déjà joué (lecture interrompue), idem : le parent décidera via son propre watchdog.
       setNeedsManualPlay(true);
     }, STALL_TIMEOUT_MS);
   };
@@ -99,36 +107,70 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     const el = getEl();
     if (!el) return;
 
-    // Si déjà prêt à lire, on démarre immédiatement
-    if (el.readyState >= 3) {
+    // Si déjà prêt à lire jusqu'au bout, on démarre immédiatement
+    if (el.readyState >= 4) {
       setIsBuffering(false);
       startPlayback();
       armStallTimer();
       return;
     }
 
-    // Sinon on attend canplay (avec garde de 6s)
+    // Sinon on attend canplaythrough (avec garde de 10s) — plus sûr que canplay
+    // car le navigateur estime pouvoir lire jusqu'à la fin sans rebuffering.
     setIsBuffering(true);
     if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
 
-    const onCanPlay = () => {
+    const onReady = () => {
       if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
-      el.removeEventListener("canplay", onCanPlay);
+      el.removeEventListener("canplaythrough", onReady);
+      el.removeEventListener("canplay", onReady);
       setIsBuffering(false);
       startPlayback();
       armStallTimer();
     };
-    el.addEventListener("canplay", onCanPlay);
+    el.addEventListener("canplaythrough", onReady);
+    // Filet de sécurité : sur certains navigateurs canplaythrough n'arrive jamais.
+    el.addEventListener("canplay", onReady);
 
     canplayWaitRef.current = setTimeout(() => {
-      el.removeEventListener("canplay", onCanPlay);
-      console.warn("[QuestionMediaPlayer] canplay timeout — showing manual play");
+      el.removeEventListener("canplaythrough", onReady);
+      el.removeEventListener("canplay", onReady);
+      console.warn("[QuestionMediaPlayer] canplaythrough timeout — showing manual play");
       setIsBuffering(false);
       setNeedsManualPlay(true);
     }, CANPLAY_TIMEOUT_MS);
 
     // Force le chargement
     try { el.load(); } catch {}
+  };
+
+  /** Précharge le média jusqu'à canplaythrough sans déclencher la lecture. */
+  const prepareMedia = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const el = getEl();
+      if (!el) {
+        resolve(false);
+        return;
+      }
+      if (el.readyState >= 4) {
+        resolve(true);
+        return;
+      }
+      let done = false;
+      const finish = (ok: boolean) => {
+        if (done) return;
+        done = true;
+        el.removeEventListener("canplaythrough", onReady);
+        el.removeEventListener("canplay", onReady);
+        clearTimeout(timer);
+        resolve(ok);
+      };
+      const onReady = () => finish(true);
+      el.addEventListener("canplaythrough", onReady);
+      el.addEventListener("canplay", onReady);
+      const timer = setTimeout(() => finish(false), CANPLAY_TIMEOUT_MS);
+      try { el.load(); } catch {}
+    });
   };
 
   const handleMediaError = (e: any) => {
@@ -158,6 +200,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
         el.currentTime = 0;
       } catch {}
     }
+    hasEverPlayedRef.current = false;
     setIsPlaying(false);
     setProgress(0);
     setHasFinished(false);
@@ -198,6 +241,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     armStallTimer();
   };
   const handlePlaying = () => {
+    hasEverPlayedRef.current = true;
     setIsBuffering(false);
     clearStallTimer();
   };
@@ -206,11 +250,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     armStallTimer();
   };
 
-  // Expose play/stop/restart via ref
+  // Expose play/stop/restart/prepare via ref
   useImperativeHandle(ref, () => ({
     play: () => doPlay(),
     stop: () => doStop(),
     restart: () => doRestart(),
+    prepare: () => prepareMedia(),
   }));
 
   // Auto-play + reset finished state when media changes
@@ -218,6 +263,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     setHasFinished(false);
     setProgress(0);
     setNeedsManualPlay(false);
+    hasEverPlayedRef.current = false;
     if (autoPlay && type !== "written") {
       const timer = setTimeout(() => doPlay(), 200);
       return () => clearTimeout(timer);

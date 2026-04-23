@@ -38,6 +38,31 @@ function prefetchMedia(url: string | null | undefined) {
   }
 }
 
+// Vérifie qu'un média est réellement téléchargeable avant de le présenter au
+// candidat. Timeout 8 s + 1 retry. Retourne true si les octets sont en cache,
+// false sinon (le caller bascule alors en mode texte).
+async function prepareMediaUrl(url: string): Promise<boolean> {
+  const attempt = async (): Promise<boolean> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url, { method: "GET", cache: "force-cache", signal: controller.signal });
+      if (!res.ok) return false;
+      // Lire le blob garantit que les octets sont bien dans le cache.
+      await res.blob();
+      return true;
+    } catch (e) {
+      console.warn("[prepareMediaUrl] attempt failed", url, e);
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  if (await attempt()) return true;
+  // Retry unique
+  return attempt();
+}
+
 export default function InterviewStart() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
@@ -120,6 +145,10 @@ export default function InterviewStart() {
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  // Identifiant monotone du « bloc question » courant. Tout callback (watchdog,
+  // onPlaybackEnd, retour TTS) compare son blockId à celui-ci pour ignorer les
+  // évènements obsolètes — empêche les superpositions entre questions/relances.
+  const currentBlockIdRef = useRef(0);
   // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
   const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showManualContinue, setShowManualContinue] = useState(false);
@@ -1140,20 +1169,40 @@ export default function InterviewStart() {
     }
   }, [questions]);
 
-  const armPlaybackWatchdog = useCallback(() => {
+  const armPlaybackWatchdog = useCallback((blockId?: number) => {
     clearPlaybackWatchdog();
-    console.log("[interview] watchdog armed (manual btn @3s, hard fallback @7s)");
-    // After 3s of "Préparation", offer a manual button as backup
+    const myBlock = blockId ?? currentBlockIdRef.current;
+    console.log("[interview] watchdog armed (manual btn @5s, hard fallback @25s) block=", myBlock);
+    // After 5s of "Préparation", offer a manual button as backup
     manualContinueTimerRef.current = setTimeout(() => {
       if (!isPausedRef.current) setShowManualContinue(true);
-    }, 3000);
-    // Hard fallback after 7s if onPlaybackEnd never fires
+    }, 5000);
+    // Hard fallback after 25s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
       if (isPausedRef.current) return;
-      console.warn("[interview] Playback watchdog triggered after 7s — forcing listening");
+      // Bloc obsolète : on ne touche à rien.
+      if (myBlock !== currentBlockIdRef.current) {
+        console.log("[interview] watchdog ignored — stale block", myBlock, "current=", currentBlockIdRef.current);
+        return;
+      }
+      console.warn("[interview] Playback watchdog triggered after 25s — forcing listening");
       forceStartListening();
-    }, 7000);
+    }, 25000);
   }, [clearPlaybackWatchdog, forceStartListening]);
+
+  // cancelAll : coupe TOUTES les sources sonores/écoute du tour précédent
+  // avant de démarrer un nouveau bloc. Empêche les superpositions.
+  const cancelAll = useCallback(() => {
+    try { window.speechSynthesis?.cancel(); } catch {}
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
+    try { featuredPlayerRef.current?.stop(); } catch {}
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    setIsSpeaking(false);
+  }, [clearPlaybackWatchdog]);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
@@ -1234,28 +1283,45 @@ export default function InterviewStart() {
     resetSilenceTimer();
 
     const q0 = questions[0];
-    const firstQMediaType: "written" | "audio" | "video" = q0?.video_url
+    let firstQMediaType: "written" | "audio" | "video" = q0?.video_url
       ? "video"
       : q0?.audio_url
         ? "audio"
         : "written";
     const firstQMediaUrl = q0?.video_url || q0?.audio_url || null;
+
+    // Nouveau bloc : tout watchdog/callback antérieur sera ignoré.
+    currentBlockIdRef.current += 1;
+    const myBlock = currentBlockIdRef.current;
+
+    // Préparer le média de la 1ère question AVANT de prononcer la salutation.
+    // Sur réseau lent, on aura le temps de bufferiser pendant le greeting.
+    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+    let firstQMediaReady = false;
+    if (firstQMediaUrl) {
+      firstQMediaReady = await prepareMediaUrl(firstQMediaUrl);
+      if (!firstQMediaReady) {
+        console.warn("[interview] Première question : média indisponible, bascule en texte");
+        toast({
+          title: "Lecture du texte",
+          description: "Problème de chargement de la question, lecture du texte à la place.",
+        });
+        firstQMediaType = "written";
+      }
+    }
     const isFirstQMedia = firstQMediaType !== "written";
 
     const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
     const greeting = isFirstQMedia
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${questions[0].content}`;
-
-    // Précharge la 1ère question pendant la TTS du greeting (gain crucial mobile)
-    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
       role: "ai",
       content: greeting,
       mediaType: firstQMediaType,
-      mediaUrl: firstQMediaUrl,
+      mediaUrl: isFirstQMedia ? firstQMediaUrl : null,
     };
     setMessages([chatMsg]);
     messagesRef.current = [chatMsg];
@@ -1274,13 +1340,15 @@ export default function InterviewStart() {
 
     // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
     await speak(greeting);
+    // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
+    if (myBlock !== currentBlockIdRef.current) return;
     if (isFirstQMedia) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(0);
       setTimeout(() => {
         setShouldAutoPlay(true);
-        armPlaybackWatchdog();
+        armPlaybackWatchdog(myBlock);
       }, 30);
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
@@ -1345,9 +1413,11 @@ export default function InterviewStart() {
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
-    // ── 2. Background: stop & upload current question video, persist candidate message ──
+    // ── 2. Upload + persist en parallèle de l'appel IA, mais on conservera la
+    // Promise pour pouvoir l'awaiter AVANT la bascule (CLOSE_PREV solide).
+    let persistCandidatePromise: Promise<void> | null = null;
     if (sessionId) {
-      const persistCandidateJob = (async () => {
+      persistCandidatePromise = (async () => {
         let videoUrl: string | null = null;
         try {
           videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
@@ -1376,7 +1446,7 @@ export default function InterviewStart() {
             console.error("Candidate message insert failed after retry:", e2);
             toast({
               title: "Sauvegarde échouée",
-              description: "Une réponse n'a pas pu être enregistrée. L'session continue.",
+              description: "Une réponse n'a pas pu être enregistrée. La session continue.",
               variant: "destructive",
             });
           }
@@ -1401,7 +1471,7 @@ export default function InterviewStart() {
           }
         }
       })();
-      trackBackground(persistCandidateJob);
+      trackBackground(persistCandidatePromise);
     }
 
     // ── 3. Call AI (await this time) to decide next action ──
@@ -1443,6 +1513,12 @@ export default function InterviewStart() {
 
     // ── 4. FOLLOW-UP branch ──
     if (action === "follow_up" && aiMessage && !isLastQuestion) {
+      // Sous-bloc relance : on invalide watchdog/callbacks précédents et on
+      // coupe toute lecture résiduelle avant de prononcer la relance.
+      currentBlockIdRef.current += 1;
+      const followBlock = currentBlockIdRef.current;
+      cancelAll();
+
       const newCount = followUpsAsked + 1;
       followUpsRef.current = { ...followUpsRef.current, [questionIdx]: newCount };
       setFollowUpsByQuestion({ ...followUpsRef.current });
@@ -1463,12 +1539,18 @@ export default function InterviewStart() {
         }));
       }
 
+      // CLOSE_PREV : attendre l'upload du segment précédent + insert candidat
+      // pour qu'on n'écrive pas par-dessus pendant la relance.
+      if (persistCandidatePromise) {
+        try { await persistCandidatePromise; } catch {}
+        if (token.aborted) { aborted = true; return; }
+      }
+
       setResponseElapsedSec(0);
-      // Marque la relance comme présentation TTS en cours (utile si l'utilisateur
-      // met en pause pendant la relance — on rejouera la TTS, pas le média).
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
       if (token.aborted) { aborted = true; return; }
+      if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
@@ -1499,16 +1581,21 @@ export default function InterviewStart() {
     }
 
     // ── 6. NEXT branch ──
+    // Nouveau bloc question : invalide tout watchdog/callback du tour précédent.
+    currentBlockIdRef.current += 1;
+    const nextBlock = currentBlockIdRef.current;
+    cancelAll();
+
     const nextQIdx = questionIdx + 1;
     const nextQ = questions[nextQIdx];
-    const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+    let nMediaType: "written" | "audio" | "video" = nextQ?.video_url
       ? "video"
       : nextQ?.audio_url
         ? "audio"
         : "written";
     const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
-    // Précharge le média pendant que la TTS de transition est prononcée.
+    // Précharge le média pendant la TTS de transition.
     if (nMediaUrl) prefetchMedia(nMediaUrl);
 
     // Use AI message if provided, otherwise fall back to local transition
@@ -1531,6 +1618,48 @@ export default function InterviewStart() {
       }));
     }
 
+    // CLOSE_PREV : on attend que l'upload du segment N-1 + l'insert du message
+    // candidat soient terminés AVANT de basculer l'index de question.
+    if (persistCandidatePromise) {
+      try { await persistCandidatePromise; } catch {}
+      if (token.aborted) { aborted = true; return; }
+    }
+
+    // PREP_MEDIA : si la question suivante a un média, on vérifie qu'il est
+    // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
+    if (nMediaUrl) {
+      // Lance la prononciation de la transition + la préparation du média en parallèle.
+      // On attendra explicitement les deux avant de jouer.
+      const transitionPromise = (async () => {
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        currentPresentationRef.current = { kind: "tts", text: transition };
+        await speak(transition);
+      })();
+      const mediaReady = await prepareMediaUrl(nMediaUrl);
+      await transitionPromise;
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+
+      if (!mediaReady) {
+        console.warn("[interview] Question média indisponible — bascule en texte");
+        toast({
+          title: "Lecture du texte",
+          description: "Problème de chargement de la question, lecture du texte à la place.",
+        });
+        nMediaType = "written";
+        // On change l'affichage du dernier message AI pour retirer le média.
+        setMessages((prev) => {
+          const updated = prev.map((m, i) =>
+            i === prev.length - 1 && m.role === "ai" ? { ...m, mediaType: "written" as const, mediaUrl: null } : m,
+          );
+          messagesRef.current = updated;
+          return updated;
+        });
+      }
+    }
+
     setCurrentQuestionIndex(nextQIdx);
     if (sessionId) {
       supabase
@@ -1538,29 +1667,33 @@ export default function InterviewStart() {
         .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
         .eq("id", sessionId);
     }
-    if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
-      // 1) D'abord on prononce la phrase de transition (« Écoutez la question
-      //    suivante. ») — on attend qu'elle soit terminée pour éviter qu'elle
-      //    se superpose au média de la question suivante.
-      setIsSpeaking(true);
-      setShouldAutoPlay(false);
-      currentPresentationRef.current = { kind: "tts", text: transition };
-      await speak(transition);
-      if (token.aborted) { aborted = true; return; }
-      if (isPausedRef.current) return;
-      // 2) Puis on bascule en présentation média et on déclenche l'autoplay.
+
+    if (nMediaType !== "written") {
+      // PLAY_MEDIA : déclencher l'autoplay (le player attend canplaythrough).
       setIsSpeaking(true);
       setShouldAutoPlay(false);
       markMediaPresentation(nextQIdx);
       setTimeout(() => {
+        if (nextBlock !== currentBlockIdRef.current) return;
         setShouldAutoPlay(true);
-        armPlaybackWatchdog();
+        armPlaybackWatchdog(nextBlock);
       }, 30);
+    } else if (nMediaUrl) {
+      // Cas fallback : média indisponible, on lit le contenu texte de la question.
+      const fallbackText = `Voici la question : ${nextQ.content}`;
+      currentPresentationRef.current = { kind: "tts", text: fallbackText };
+      await speak(fallbackText);
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+      startQuestionRecording();
+      startListening();
     } else {
-      // Question écrite : on prononce la transition (qui contient déjà la
+      // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
       await speak(transition);
       if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       startQuestionRecording();
       startListening();
@@ -1594,19 +1727,19 @@ export default function InterviewStart() {
     }
 
     setIsProcessing(true);
+    // Nouveau bloc question : invalide tout watchdog/callback antérieur.
+    currentBlockIdRef.current += 1;
+    const skipBlock = currentBlockIdRef.current;
     try {
       // 1. Stop listening + reset transcript + stop any media playback in progress
       stopListening();
       candidateTranscriptRef.current = "";
       setLiveTranscript("");
       clearAutoSkip();
-      setShouldAutoPlay(false);
-      clearPlaybackWatchdog();
-      try { featuredPlayerRef.current?.stop(); } catch {}
+      cancelAll();
       featuredPlayerRef.current = null;
-      window.speechSynthesis?.cancel();
 
-      // 2. Stop & upload current question recording
+      // 2. Stop & upload current question recording — AWAIT pour garantir la persistance.
       const questionIdx = currentQuestionIndex;
       let questionVideoUrl: string | null = null;
       if (session?.id) {
@@ -1632,10 +1765,10 @@ export default function InterviewStart() {
       }
       setAiMessages((prev) => [...prev, { role: "user" as const, content: skipMarker }]);
 
-      // 4. Build next question transition
+      // 4. Build next question transition + PREP_MEDIA
       const nextQIdx = currentQuestionIndex + 1;
       const nextQ = questions[nextQIdx];
-      const nMediaType: "written" | "audio" | "video" = nextQ?.video_url
+      let nMediaType: "written" | "audio" | "video" = nextQ?.video_url
         ? "video"
         : nextQ?.audio_url
           ? "audio"
@@ -1643,13 +1776,27 @@ export default function InterviewStart() {
       const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
       if (nMediaUrl) prefetchMedia(nMediaUrl);
 
+      // Vérifie que le média est téléchargeable. Sinon, bascule en texte.
+      if (nMediaUrl) {
+        const ready = await prepareMediaUrl(nMediaUrl);
+        if (!ready) {
+          console.warn("[interview] Skip → question média indisponible, bascule en texte");
+          toast({
+            title: "Lecture du texte",
+            description: "Problème de chargement de la question, lecture du texte à la place.",
+          });
+          nMediaType = "written";
+        }
+      }
+      if (skipBlock !== currentBlockIdRef.current) return;
+
       const transition =
         nMediaType === "written"
           ? `Passons à la question suivante : ${nextQ.content}`
           : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
 
       setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaType === "written" ? null : nMediaUrl }];
         messagesRef.current = updated;
         return updated;
       });
@@ -1672,13 +1819,16 @@ export default function InterviewStart() {
 
       // 5. Speak transition + auto-play next question media (or start listening for written)
       await speak(transition);
-      if (nextQ && (nextQ.audio_url || nextQ.video_url)) {
+      if (skipBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+      if (nMediaType !== "written") {
         setIsSpeaking(true);
         setShouldAutoPlay(false);
         markMediaPresentation(nextQIdx);
         setTimeout(() => {
+          if (skipBlock !== currentBlockIdRef.current) return;
           setShouldAutoPlay(true);
-          armPlaybackWatchdog();
+          armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
         startQuestionRecording();
