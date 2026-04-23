@@ -1641,6 +1641,7 @@ export default function InterviewStart() {
           ? "audio"
           : "written";
       const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+      if (nMediaUrl) prefetchMedia(nMediaUrl);
 
       const transition =
         nMediaType === "written"
