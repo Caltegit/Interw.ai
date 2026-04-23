@@ -146,17 +146,30 @@ export default function InterviewStart() {
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
-  const SILENCE_TIMEOUT_MS = 90 * 1000; // 90 seconds (auto-end fallback)
-  const SILENCE_HINT_MS = 8 * 1000; // 8s — show "Prenez votre temps…"
-  const SILENCE_NUDGE_MS = 15 * 1000; // 15s — IA encourages locally (no API)
-  const SILENCE_SKIP_MS = 30 * 1000; // 30s — emphasise the skip button
+  // Cadence des relances en cas de silence du candidat.
+  const SILENCE_HINT_MS = 5 * 1000;          // 5s — indice visuel discret
+  const SILENCE_NUDGE_1_MS = 8 * 1000;       // 8s — 1ʳᵉ relance vocale
+  const SILENCE_NUDGE_2_MS = 13 * 1000;      // 13s — 2ᵉ relance vocale
+  const SILENCE_NUDGE_3_MS = 18 * 1000;      // 18s — 3ᵉ relance vocale
+  const SILENCE_AUTOPAUSE_MS = 25 * 1000;    // 25s — mise en pause automatique
+  const SILENCE_END_WARNING_MS = 55 * 1000;  // 55s = pause + 30s — avertissement de fin
+  const SILENCE_TIMEOUT_MS = 65 * 1000;      // 65s = avertissement + 10s — arrêt forcé
+  const END_COUNTDOWN_SECONDS = 10;
 
-  // Silence UI tiers
+  // Silence UI tiers (1 = indice, 2 = relance vocale, 3 = bouton « Passer » mis en avant)
   const [silenceTier, setSilenceTier] = useState<0 | 1 | 2 | 3>(0);
   const silenceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const nudgeAlreadyPlayedRef = useRef(false);
+  const silenceNudge1TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceNudge2TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceNudge3TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceAutoPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceEndWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const nudge1PlayedRef = useRef(false);
+  const nudge2PlayedRef = useRef(false);
+  const nudge3PlayedRef = useRef(false);
+  const autoPausedRef = useRef(false);
+  const [endCountdown, setEndCountdown] = useState<number | null>(null);
   const speakRef = useRef<((t: string) => Promise<void>) | null>(null);
 
   // Follow-up tracking per question (key = question index)
@@ -164,42 +177,132 @@ export default function InterviewStart() {
   const followUpsRef = useRef<Record<number, number>>({});
   const [aiThinking, setAiThinking] = useState(false);
 
+  // Refs avant pour éviter les dépendances circulaires entre callbacks.
+  const pauseInterviewRef = useRef<(() => void) | null>(null);
+  const armEndWarningRef = useRef<(() => void) | null>(null);
+
+  const clearEndCountdown = useCallback(() => {
+    if (silenceEndWarningTimerRef.current) {
+      clearTimeout(silenceEndWarningTimerRef.current);
+      silenceEndWarningTimerRef.current = null;
+    }
+    if (endCountdownIntervalRef.current) {
+      clearInterval(endCountdownIntervalRef.current);
+      endCountdownIntervalRef.current = null;
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    setEndCountdown(null);
+  }, []);
+
   const clearSilenceTier = useCallback(() => {
     if (silenceHintTimerRef.current) { clearTimeout(silenceHintTimerRef.current); silenceHintTimerRef.current = null; }
-    if (silenceNudgeTimerRef.current) { clearTimeout(silenceNudgeTimerRef.current); silenceNudgeTimerRef.current = null; }
-    if (silenceSkipTimerRef.current) { clearTimeout(silenceSkipTimerRef.current); silenceSkipTimerRef.current = null; }
+    if (silenceNudge1TimerRef.current) { clearTimeout(silenceNudge1TimerRef.current); silenceNudge1TimerRef.current = null; }
+    if (silenceNudge2TimerRef.current) { clearTimeout(silenceNudge2TimerRef.current); silenceNudge2TimerRef.current = null; }
+    if (silenceNudge3TimerRef.current) { clearTimeout(silenceNudge3TimerRef.current); silenceNudge3TimerRef.current = null; }
+    if (silenceAutoPauseTimerRef.current) { clearTimeout(silenceAutoPauseTimerRef.current); silenceAutoPauseTimerRef.current = null; }
     setSilenceTier(0);
-    nudgeAlreadyPlayedRef.current = false;
+    nudge1PlayedRef.current = false;
+    nudge2PlayedRef.current = false;
+    nudge3PlayedRef.current = false;
+  }, []);
+
+  const playNudge = useCallback((slot: 1 | 2 | 3, text: string) => {
+    if (isPausedRef.current || autoEndTriggeredRef.current) return;
+    const ref = slot === 1 ? nudge1PlayedRef : slot === 2 ? nudge2PlayedRef : nudge3PlayedRef;
+    if (ref.current) return;
+    ref.current = true;
+    speakRef.current?.(text).catch(() => {});
   }, []);
 
   // Reset silence timer (called on any activity)
   const resetSilenceTimer = useCallback(() => {
-    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    // Toute activité annule aussi un éventuel cycle d'arrêt en cours.
+    clearEndCountdown();
+    autoPausedRef.current = false;
     clearSilenceTier();
+
     silenceHintTimerRef.current = setTimeout(() => setSilenceTier(1), SILENCE_HINT_MS);
-    silenceNudgeTimerRef.current = setTimeout(() => {
+    silenceNudge1TimerRef.current = setTimeout(() => {
       setSilenceTier(2);
-      if (!nudgeAlreadyPlayedRef.current && !isPausedRef.current) {
-        nudgeAlreadyPlayedRef.current = true;
-        const nudges = [
-          "Prenez votre temps, je vous écoute.",
-          "Voulez-vous que je reformule la question ?",
-          "Un exemple concret peut aider, n'hésitez pas.",
-        ];
-        const text = nudges[Math.floor(Math.random() * nudges.length)];
-        speakRef.current?.(text).catch(() => {});
-      }
-    }, SILENCE_NUDGE_MS);
-    silenceSkipTimerRef.current = setTimeout(() => setSilenceTier(3), SILENCE_SKIP_MS);
+      playNudge(1, "Prenez votre temps, je vous écoute.");
+    }, SILENCE_NUDGE_1_MS);
+    silenceNudge2TimerRef.current = setTimeout(() => {
+      setSilenceTier(2);
+      playNudge(2, "Souhaitez-vous que je reformule la question ?");
+    }, SILENCE_NUDGE_2_MS);
+    silenceNudge3TimerRef.current = setTimeout(() => {
+      setSilenceTier(3);
+      playNudge(3, "Un exemple concret peut aider, n'hésitez pas.");
+    }, SILENCE_NUDGE_3_MS);
+    silenceAutoPauseTimerRef.current = setTimeout(() => {
+      if (isPausedRef.current || autoEndTriggeredRef.current) return;
+      autoPausedRef.current = true;
+      toast({
+        title: "Session mise en pause",
+        description: "Reprenez quand vous êtes prêt.",
+      });
+      speakRef.current?.("Je mets l'entretien en pause, reprenez quand vous voulez.").catch(() => {});
+      pauseInterviewRef.current?.();
+      armEndWarningRef.current?.();
+    }, SILENCE_AUTOPAUSE_MS);
+  }, [toast, clearSilenceTier, clearEndCountdown, playNudge]);
+
+  // Arme l'avertissement de fin + le compte à rebours d'arrêt forcé,
+  // déclenchés depuis l'état de pause automatique.
+  const armEndWarning = useCallback(() => {
+    if (silenceEndWarningTimerRef.current) clearTimeout(silenceEndWarningTimerRef.current);
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+    // Délai entre la mise en pause auto et l'avertissement vocal.
+    const warningDelay = SILENCE_END_WARNING_MS - SILENCE_AUTOPAUSE_MS;
+    silenceEndWarningTimerRef.current = setTimeout(() => {
+      if (!autoPausedRef.current || autoEndTriggeredRef.current) return;
+      speakRef
+        .current?.(
+          "Il semblerait que vous ne soyez plus là. Je vais arrêter cette session dans quelques secondes.",
+        )
+        .catch(() => {});
+      // Compte à rebours visible.
+      setEndCountdown(END_COUNTDOWN_SECONDS);
+      let remaining = END_COUNTDOWN_SECONDS;
+      endCountdownIntervalRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          if (endCountdownIntervalRef.current) {
+            clearInterval(endCountdownIntervalRef.current);
+            endCountdownIntervalRef.current = null;
+          }
+          setEndCountdown(0);
+        } else {
+          setEndCountdown(remaining);
+        }
+      }, 1000);
+    }, warningDelay);
+
+    // Arrêt forcé.
     silenceTimerRef.current = setTimeout(() => {
-      if (!autoEndTriggeredRef.current) {
-        autoEndTriggeredRef.current = true;
-        console.log("Auto-ending interview: 90s silence");
-        toast({ title: "Session terminé", description: "Fin automatique après un silence prolongé." });
-        endInterviewRef.current?.();
+      if (autoEndTriggeredRef.current || !autoPausedRef.current) return;
+      autoEndTriggeredRef.current = true;
+      setEndCountdown(null);
+      if (endCountdownIntervalRef.current) {
+        clearInterval(endCountdownIntervalRef.current);
+        endCountdownIntervalRef.current = null;
       }
-    }, SILENCE_TIMEOUT_MS);
-  }, [toast, clearSilenceTier]);
+      toast({
+        title: "Session terminée",
+        description: "Aucune activité détectée.",
+      });
+      endInterviewRef.current?.();
+    }, SILENCE_TIMEOUT_MS - SILENCE_AUTOPAUSE_MS);
+  }, [toast]);
+
+  // Synchronise le ref de armEndWarning (utilisé depuis resetSilenceTimer).
+  useEffect(() => {
+    armEndWarningRef.current = armEndWarning;
+  }, [armEndWarning]);
 
   // Mode « salle d'examen » — listeners actifs uniquement quand l'session tourne
   useEffect(() => {
