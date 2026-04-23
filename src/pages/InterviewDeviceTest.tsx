@@ -175,11 +175,6 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Microphone</span>
               </div>
-              {micStatus === "idle" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
-                  Tester
-                </Button>
-              )}
               {micStatus === "error" && (
                 <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
                   Réessayer
