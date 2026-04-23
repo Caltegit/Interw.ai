@@ -1513,6 +1513,12 @@ export default function InterviewStart() {
 
     // ── 4. FOLLOW-UP branch ──
     if (action === "follow_up" && aiMessage && !isLastQuestion) {
+      // Sous-bloc relance : on invalide watchdog/callbacks précédents et on
+      // coupe toute lecture résiduelle avant de prononcer la relance.
+      currentBlockIdRef.current += 1;
+      const followBlock = currentBlockIdRef.current;
+      cancelAll();
+
       const newCount = followUpsAsked + 1;
       followUpsRef.current = { ...followUpsRef.current, [questionIdx]: newCount };
       setFollowUpsByQuestion({ ...followUpsRef.current });
@@ -1533,12 +1539,18 @@ export default function InterviewStart() {
         }));
       }
 
+      // CLOSE_PREV : attendre l'upload du segment précédent + insert candidat
+      // pour qu'on n'écrive pas par-dessus pendant la relance.
+      if (persistCandidatePromise) {
+        try { await persistCandidatePromise; } catch {}
+        if (token.aborted) { aborted = true; return; }
+      }
+
       setResponseElapsedSec(0);
-      // Marque la relance comme présentation TTS en cours (utile si l'utilisateur
-      // met en pause pendant la relance — on rejouera la TTS, pas le média).
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
       await speak(aiMessage);
       if (token.aborted) { aborted = true; return; }
+      if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
       startQuestionRecording();
