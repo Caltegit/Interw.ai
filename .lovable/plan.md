@@ -1,68 +1,50 @@
 
-## Correction du bug persistant de prise en main
 
-### Cause confirmée
+## Diagnostic et correction du bug audio sur mobile
 
-Le bug n’est plus lié au `redirectTo` en premier lieu. Les logs montrent clairement :
+### Cause du problème
 
-```text
-[impersonate] Unexpected error: userClient.auth.getClaims is not a function
-```
+Tu as bien observé le motif :
+- **L’intro est lue normalement** parce qu’elle passe par la TTS (ElevenLabs ou voix navigateur). Pour ElevenLabs, le code récupère **tout le blob audio** avant d’appeler `play()`, donc dès que ça démarre, ça joue.
+- **Les questions enregistrées (audio/vidéo)** passent par un `<audio>` ou `<video>` avec `preload="metadata"` et un `src` pointant vers Lovable Storage. Sur mobile, surtout en 4G/3G ou Wi‑Fi faible, quand le code appelle `play()` 200 ms après le montage, le navigateur n’a chargé que les métadonnées — pas assez d’octets pour démarrer la lecture. Résultat sur iOS Safari et Android Chrome : la lecture stagne, l’événement `playing` n’est jamais émis, et au bout de 5 s le **watchdog `armStallTimer`** (dans `QuestionMediaPlayer.tsx`) appelle `onPlaybackEnd()` → l’app passe à l’écoute candidat **sans qu’aucun son n’ait été émis**.
+- Quand le réseau est rapide, ça passe → c’est bien intermittent comme tu le décris.
 
-Donc la fonction `superadmin-impersonate` casse avant même la génération du lien magique, ce qui provoque côté interface le message générique « non-2xx status code ».
+Ce n’est donc pas un problème de permissions audio mobile (sinon l’intro non plus ne marcherait pas), c’est un problème de **buffering insuffisant avant lecture**.
 
 ### Ce qui va être corrigé
 
-**Fichier modifié : `supabase/functions/superadmin-impersonate/index.ts`**
+**1. Forcer un préchargement plus agressif des médias de question** — `src/components/interview/QuestionMediaPlayer.tsx`
+- Passer `preload="auto"` au lieu de `preload="metadata"` sur les `<audio>` et `<video>` en variante « featured ».
+- Avant d’appeler `play()`, attendre l’événement `canplay` (avec un délai de garde de 6 s). Ainsi, sur réseau lent on attend que le navigateur ait assez bufferisé au lieu de déclencher `play()` à vide.
+- Allonger le watchdog de stall de 5 s à 12 s, et le **réarmer** sur `waiting` plutôt que de conclure « lecture terminée ». On ne déclenche `onPlaybackEnd` par stall qu’en dernier recours.
+- Ajouter un écouteur `progress` qui réinitialise le watchdog tant que le buffer continue de se remplir.
 
-1. **Remplacer la vérification du user courant**
-   - Supprimer l’appel à `userClient.auth.getClaims(token)` qui n’existe pas dans la version réellement utilisée par la fonction.
-   - Utiliser une méthode compatible pour valider la session et récupérer l’utilisateur appelant :
-     - soit `userClient.auth.getUser()`,
-     - soit `userClient.auth.getUser(token)`.
-   - Le `callerId` viendra de `user.id`.
+**2. Précharger la prochaine question pendant la TTS de transition** — `src/pages/InterviewStart.tsx`
+- Quand l’IA prononce la phrase de transition entre deux questions, lancer en parallèle un `fetch(question.audio_url)` (ou `video_url`) pour mettre le fichier en cache HTTP du navigateur. Au moment où la question s’affiche, le `<audio>` se montera sur un fichier déjà téléchargé → lecture instantanée, même sur mobile.
+- Idem pour la **première question** : déclencher le préchargement dès la fin de l’intro TTS plutôt qu’au montage du player.
 
-2. **Aligner la version du client backend**
-   - Passer l’import vers une version récente et cohérente avec les autres fonctions du projet.
-   - Cela évite les écarts d’API entre fonctions super admin.
+**3. Indicateur visuel « Chargement de la question… »** — `QuestionMediaPlayer.tsx`
+- Afficher un petit spinner discret (« Chargement audio… ») tant que `canplay` n’est pas atteint, pour que le candidat comprenne ce qui se passe au lieu de croire que rien ne marche.
+- Sur stall réel (timeout dépassé), afficher un bouton « Lire la question » qui force une nouvelle tentative de `play()` sur clic utilisateur (geste explicite = contournement des restrictions mobiles).
 
-3. **Conserver le correctif déjà prévu sur le lien magique**
-   - 1er essai avec `redirectTo`
-   - repli sans `redirectTo` si besoin
-   - logs détaillés sur chaque étape
-
-4. **Durcir les réponses d’erreur**
-   - Retourner un JSON clair pour :
-     - absence d’authentification
-     - utilisateur non super admin
-     - utilisateur cible introuvable
-     - échec de génération du lien
-   - Garder les logs serveur lisibles pour diagnostiquer vite si un autre blocage apparaît.
-
-**Fichier modifié : `src/lib/impersonation.ts`**
-
-5. **Améliorer le message affiché côté interface**
-   - Aujourd’hui, `supabase.functions.invoke()` remonte surtout une erreur générique si la fonction répond en 4xx/5xx.
-   - Ajouter un traitement pour lire le message renvoyé par la fonction quand c’est possible, afin d’éviter le toast flou « non-2xx status code ».
-
-### Résultat attendu
-
-Quand un super admin clique sur « Prendre la main » :
-- la fonction valide correctement l’utilisateur courant ;
-- le lien magique est généré ;
-- la redirection se fait vers le compte ciblé ;
-- en cas de nouveau problème, le message affiché sera explicite au lieu du message générique actuel.
-
-### Vérification
-
-Après implémentation, test manuel du parcours :
-1. ouvrir une organisation en super admin ;
-2. cliquer sur « Prendre la main » sur un autre utilisateur ;
-3. vérifier la connexion au compte cible ;
-4. vérifier aussi le cas d’échec pour confirmer que le message affiché est lisible.
+**4. Test de débit côté candidat** — réponse à ta question
+- **Oui**, c’est une bonne idée — on l’ajoute à l’écran `InterviewDeviceTest.tsx` qui fait déjà la vérification micro/caméra.
+- Mesure simple : télécharger un asset connu (par ex. l’avatar IA ou un fichier de test de ~200 KB) et chronométrer pour estimer le débit en kbps. On affiche :
+  - **Vert** ≥ 1 Mbps : « Connexion bonne »
+  - **Orange** 300 kbps – 1 Mbps : « Connexion limitée — l’entretien fonctionnera mais les médias peuvent être lents à charger »
+  - **Rouge** < 300 kbps : « Connexion très faible — risque de problèmes »
+- C’est informatif uniquement (pas bloquant), et ça donne au candidat un signal clair en cas de souci.
 
 ### Hors champ
 
-- Pas de changement du mécanisme global d’impersonation.
-- Pas de refonte de l’écran super admin.
-- Pas de changement du bandeau de retour au compte d’origine.
+- Pas de transcodage des fichiers audio/vidéo côté serveur (compression plus agressive). On peut l’ajouter plus tard si le problème persiste.
+- Pas de re-hébergement des fichiers sur un CDN dédié — Lovable Storage suffit avec le préchargement.
+- Pas de fallback automatique « audio désactivé » sur connexion lente — on préfère que le candidat décide.
+
+### Vérification après implémentation
+
+1. Tester sur mobile en throttling réseau « Slow 4G » dans les DevTools → la première question doit jouer son audio.
+2. Tester l’enchaînement de 3 questions consécutives → aucune ne doit sauter.
+3. Vérifier qu’en cas de vrai stall (réseau coupé), le bouton « Lire la question » apparaît et permet de relancer.
+4. Vérifier que la jauge de débit affiche un état cohérent sur l’écran de test.
+
