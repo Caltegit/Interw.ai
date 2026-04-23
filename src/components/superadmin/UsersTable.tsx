@@ -119,6 +119,40 @@ export function UsersTable({ refreshKey = 0, onChange }: Props) {
               </TableCell>
               <TableCell>{new Date(u.created_at).toLocaleDateString("fr-FR")}</TableCell>
               <TableCell className="text-right">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={u.user_id === me?.id}
+                      title="Prendre la main sur ce compte"
+                    >
+                      <LogIn className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Prendre la main sur {u.email} ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Vous serez connecté à la place de cet utilisateur. Un bandeau vous permettra de revenir à votre compte super administrateur à tout moment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            await startImpersonation(u.user_id, u.email);
+                          } catch (e: any) {
+                            toast({ title: "Erreur", description: e?.message ?? "Impossible de prendre la main", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Prendre la main
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="ghost" size="icon" onClick={() => { setEditing(u); setEditOpen(true); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
