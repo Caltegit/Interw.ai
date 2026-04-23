@@ -200,6 +200,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
         el.currentTime = 0;
       } catch {}
     }
+    hasEverPlayedRef.current = false;
     setIsPlaying(false);
     setProgress(0);
     setHasFinished(false);
@@ -240,6 +241,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     armStallTimer();
   };
   const handlePlaying = () => {
+    hasEverPlayedRef.current = true;
     setIsBuffering(false);
     clearStallTimer();
   };
@@ -248,11 +250,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     armStallTimer();
   };
 
-  // Expose play/stop/restart via ref
+  // Expose play/stop/restart/prepare via ref
   useImperativeHandle(ref, () => ({
     play: () => doPlay(),
     stop: () => doStop(),
     restart: () => doRestart(),
+    prepare: () => prepareMedia(),
   }));
 
   // Auto-play + reset finished state when media changes
