@@ -1,69 +1,68 @@
 
 
-## Cadence de relance plus rapide + auto-pause + auto-arrêt
+## Upload incrémental : ce qui existe et ce qu'on améliore
 
-### Aujourd'hui
+### Ce qui se passe déjà aujourd'hui (bonne nouvelle)
 
-Quand le candidat ne dit rien après une question :
-- **8 s** : indice texte « Prenez votre temps… »
-- **15 s** : l'IA dit une phrase d'encouragement (« Voulez-vous que je reformule ? »)
-- **30 s** : on met en avant le bouton « Passer la question »
-- **90 s** : fin automatique de la session, sans prévenir le candidat
+L'enregistrement n'est **pas** transmis d'un seul bloc à la fin. Le code (`src/pages/InterviewStart.tsx`) tourne déjà en mode incrémental :
 
-C'est trop mou : la première relance vocale arrive à 15 s alors qu'un silence gênant se ressent dès 5 s.
+- Un `MediaRecorder` distinct est démarré **à chaque question**, avec un timeslice de 500 ms (les chunks s'accumulent côté navigateur en flux continu).
+- Dès que le candidat valide sa réponse, le segment vidéo de cette question est immédiatement uploadé vers Storage (`stopAndUploadQuestionVideo`) avec retry exponentiel (1 s / 3 s / 8 s).
+- L'URL est stockée dans `session_messages.video_segment_url`, et la première URL devient aussi `sessions.video_recording_url`.
+- L'upload se fait **en arrière-plan** (`trackBackground`), pendant que l'IA prépare la question suivante. Le candidat n'attend rien.
+- À la fin de l'entretien, on redirige le candidat **immédiatement** vers la page « Complete » et on finalise en tâche de fond. Seul reste le segment de la **dernière question** à pousser, plus la mise à jour `status = completed`.
 
-### Nouvelle cadence proposée
+Donc l'impression de « tout charger d'un coup à la fin » vient surtout du tout dernier segment (la dernière réponse) qui, par construction, ne peut être uploadé qu'après son clic « Terminer ». Sur une longue réponse finale, ça peut faire quelques secondes de latence visible.
 
-| Délai cumulé | Action |
-|---|---|
-| **5 s** | Indice discret à l'écran : « Je vous écoute… » (pas de voix, juste visuel) |
-| **8 s** | **1ʳᵉ relance vocale** courte : « Prenez votre temps, je vous écoute. » |
-| **13 s** (5 s après la 1ʳᵉ) | **2ᵉ relance vocale** : « Souhaitez-vous que je reformule la question ? » |
-| **18 s** (5 s après) | **3ᵉ relance vocale** : « Un exemple concret peut aider, n'hésitez pas. » |
-| **25 s** | **Mise en pause automatique** de la session (même comportement que le bouton Pause). Toast : « Session mise en pause — reprenez quand vous êtes prêt. » L'IA dit aussi « Je mets l'entretien en pause, reprenez quand vous voulez. » |
-| **+ 30 s sans reprise** (depuis la pause) | **Avertissement vocal de fin** : « Il semblerait que vous ne soyez plus là. Je vais arrêter cette session dans quelques secondes. » + compte à rebours 10 s visible à l'écran |
-| **+ 10 s** | **Arrêt forcé** de la session (même flux que le bouton « Arrêter ») |
+### Ce qu'on améliore quand même
 
-Au moindre signe de vie (parole détectée par STT, clic, frappe clavier, sortie de pause manuelle), tous les compteurs sont remis à zéro.
+Trois points concrets pour rendre la perception encore plus fluide et garantir le nettoyage des sessions abandonnées.
+
+**1. Streaming continu vers Storage pendant la question (le chunk part avant la fin)**
+
+Aujourd'hui les chunks de 500 ms sont gardés en RAM jusqu'au `recorder.stop()`. On va les pousser au fur et à mesure :
+
+- Pour chaque chunk reçu dans `recorder.ondataavailable`, on l'envoie directement dans `media/interviews/{sessionId}/q{index}/chunk-{n}.webm` sans attendre la fin de la question.
+- À la fin de la question, on poste un petit fichier `manifest.json` qui liste les chunks dans l'ordre.
+- Côté lecture (rapport recruteur), on lit le manifest et on concatène les segments via un `MediaSource` (ou plus simple : on garde aussi le blob assemblé final comme fallback, uploadé en tâche de fond — mais l'expérience candidat n'attend plus rien).
+
+Avantage : à l'instant où le candidat clique « Terminer », il ne reste que 0–500 ms de données à pousser, plus le manifest. Plus de pic de bande passante en fin de session.
+
+**2. Indicateur discret de sauvegarde**
+
+Petit badge en bas à droite pendant l'entretien : « Enregistrement en cours ✓ » qui passe à « Sauvegarde… » pendant un upload de chunk en cours, et à « Tout est sauvegardé ✓ » quand la file est vide. Ça rassure et ça rend le mécanisme visible.
+
+**3. Nettoyage automatique des sessions abandonnées**
+
+Aujourd'hui, si le candidat ferme l'onglet en cours d'entretien, les chunks déjà uploadés restent orphelins dans Storage et la session reste en `pending` ou `in_progress` à vie.
+
+On ajoute une fonction edge planifiée `cleanup-abandoned-sessions` (lancée toutes les heures via `pg_cron`) qui :
+
+- Cherche les sessions `status IN ('pending','in_progress')` dont `last_activity_at < now() - 2 heures`.
+- Pour chacune : supprime les fichiers `interviews/{sessionId}/*` du bucket `media`, supprime les `session_messages` associés, puis supprime la session.
+- Logue un compteur (nombre de sessions purgées) pour suivi.
+
+On garde un délai de 2 h pour absorber les coupures réseau temporaires (le candidat peut revenir et reprendre via le mécanisme de resume existant).
+
+**Cas explicite « le candidat n'arrive pas au bout » :** déjà géré côté UX (resume possible jusqu'à 2 h, puis purge). Pas besoin de bouton « j'abandonne » côté candidat — la fermeture d'onglet suffit, le ménage se fait tout seul.
+
+### Ce qu'on ne change pas
+
+- L'API publique des composants et hooks.
+- Le format des `session_messages` (on rajoute juste une colonne optionnelle `video_chunks_manifest_url` si on garde le streaming par chunks, sinon rien).
+- Le flux de génération du rapport.
+- Le mécanisme de resume (`last_activity_at`).
 
 ### Détails techniques
 
-Tout se passe dans `src/pages/InterviewStart.tsx`, dans le bloc déjà existant qui gère le silence (`resetSilenceTimer`, `clearSilenceTier`, constantes `SILENCE_*_MS`).
-
-1. **Constantes** : remplacer les valeurs actuelles par
-   ```
-   SILENCE_HINT_MS = 5_000
-   SILENCE_NUDGE_1_MS = 8_000
-   SILENCE_NUDGE_2_MS = 13_000
-   SILENCE_NUDGE_3_MS = 18_000
-   SILENCE_AUTOPAUSE_MS = 25_000
-   SILENCE_END_WARNING_MS = 55_000   // = autopause + 30 s
-   SILENCE_TIMEOUT_MS = 65_000       // = warning + 10 s
-   ```
-
-2. **Refs et timers** : ajouter trois timers (`silenceNudge2TimerRef`, `silenceNudge3TimerRef`, `silenceAutoPauseTimerRef`, `silenceEndWarningTimerRef`) et nettoyer dans `clearSilenceTier`.
-
-3. **Anti-spam vocal** : remplacer le booléen `nudgeAlreadyPlayedRef` par trois booléens (`nudge1Played`, `nudge2Played`, `nudge3Played`) ou un compteur, pour ne pas répéter une relance déjà jouée si le timer est rappelé.
-
-4. **Garde-fous existants à conserver** :
-   - Ne rien faire si `isPausedRef.current` (sauf le timer warning/end qui démarre justement quand on est en pause auto).
-   - Ne pas parler par-dessus une lecture TTS en cours (existe déjà dans `speakRef`).
-   - Ne pas déclencher si `autoEndTriggeredRef.current` est vrai.
-
-5. **Auto-pause** : appeler la même fonction que le bouton « Mettre en pause » (à repérer dans le fichier — probablement `setIsPaused(true)` + flag ref). Marquer un nouveau ref `autoPausedRef = true` pour distinguer de la pause manuelle, et armer le warning + arrêt depuis ce moment-là.
-
-6. **Avertissement de fin** : nouveau state `endCountdown: number | null` affiché en gros à l'écran (overlay sur la carte d'entretien) avec un compte à rebours 10 → 0. Lecture vocale unique de la phrase d'avertissement via `speakRef.current`.
-
-7. **Reprise manuelle** = annulation : si le candidat clique sur « Reprendre » pendant la pause auto, on annule warning + arrêt et on relance le cycle silence normal.
-
-8. **Arrêt forcé** : appeler `endInterviewRef.current?.()` (déjà utilisé par le timeout 90 s actuel) avec un toast clair « Session terminée — aucune activité détectée ».
-
-### Fichier touché
-
-- `src/pages/InterviewStart.tsx` (uniquement la zone des constantes, refs, `clearSilenceTier`, `resetSilenceTimer`, plus un petit overlay JSX pour le compte à rebours).
+- **Fichier principal** : `src/pages/InterviewStart.tsx` — modifier `startQuestionRecording` et `stopAndUploadQuestionVideo` pour pousser les chunks en streaming, et ajouter un état `uploadQueueSize` exposé via un nouveau composant `RecordingStatusBadge`.
+- **Migration DB** : une nouvelle colonne nullable `session_messages.video_chunks_manifest_url text` (uniquement si on adopte le manifest ; sinon zéro migration).
+- **Edge function** : `supabase/functions/cleanup-abandoned-sessions/index.ts` (nouveau), avec service role, plus une entrée `pg_cron` programmée toutes les heures dans une migration.
+- **Lecture côté recruteur** : `src/pages/SessionDetail.tsx` lit `video_recording_url` en priorité (fallback existant), et si absent reconstruit depuis le manifest. La majorité des sessions auront déjà `video_recording_url` rempli, donc rien ne change visuellement.
 
 ### Hors champ
 
-- Réglages personnalisables par projet (on garde des constantes en dur — ajustables plus tard si besoin).
-- Détection acoustique fine côté micro pour distinguer « silence total » vs « bruit de fond » : on s'appuie sur les résultats STT comme aujourd'hui.
+- Streaming WebRTC vers un serveur média (overkill pour ce besoin).
+- Compression côté client avant upload (le navigateur encode déjà en VP9/Opus).
+- Reprise d'upload après coupure réseau pendant l'entretien (le retry exponentiel actuel suffit pour les coupures < 12 s).
 
