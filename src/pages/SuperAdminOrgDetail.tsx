@@ -101,6 +101,25 @@ export default function SuperAdminOrgDetail() {
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
+  const handleDelete = async () => {
+    if (!deletingUser) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("superadmin-manage-user", {
+        body: { action: "delete", user_id: deletingUser.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Utilisateur supprimé" });
+      setDeletingUser(null);
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading || !org) {
     return (
       <div className="container mx-auto p-6 flex justify-center">
