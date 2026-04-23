@@ -724,8 +724,17 @@ export default function InterviewStart() {
     setIsPaused(true);
   }, [stopListening]);
 
+  // Synchronise le ref de pauseInterview (utilisé depuis resetSilenceTimer pour
+  // déclencher la mise en pause automatique sans dépendance circulaire).
+  useEffect(() => {
+    pauseInterviewRef.current = pauseInterview;
+  }, [pauseInterview]);
+
   // Resume: replay the question (TTS or media) from the start, or resume listening
   const resumeInterview = useCallback(async () => {
+    // Annule un éventuel cycle d'arrêt si la reprise vient pendant la pause auto.
+    clearEndCountdown();
+    autoPausedRef.current = false;
     setIsPaused(false);
     isPausedRef.current = false;
     const wasDuringQuestion = pausedDuringQuestionRef.current;
