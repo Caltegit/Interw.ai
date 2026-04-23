@@ -154,7 +154,7 @@ const InterviewReportEmail = ({
 export const template = {
   component: InterviewReportEmail,
   subject: (data: Record<string, any>) => `interw.ai - ${data?.candidateName ?? 'Candidat'}`,
-  displayName: 'Rapport d\'session',
+  displayName: 'Rapport de session',
   previewData: {
     candidateName: 'Jane Doe',
     candidateEmail: 'jane@example.com',
