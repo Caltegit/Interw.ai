@@ -21,16 +21,24 @@ export function CreateOrgDialog({ onCreated }: Props) {
   const [pricing, setPricing] = useState("");
   const [clientNotes, setClientNotes] = useState("");
   const [seedLibraries, setSeedLibraries] = useState(true);
+  const [creditsUnlimited, setCreditsUnlimited] = useState(true);
+  const [creditsTotal, setCreditsTotal] = useState("");
 
   const reset = () => {
     setOrgName("");
     setPricing("");
     setClientNotes("");
     setSeedLibraries(true);
+    setCreditsUnlimited(true);
+    setCreditsTotal("");
   };
 
   const handleCreate = async () => {
     if (!orgName.trim()) return;
+    if (!creditsUnlimited && (!creditsTotal.trim() || Number(creditsTotal) < 0)) {
+      toast({ title: "Erreur", description: "Indiquez un nombre de crédits valide", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("superadmin-create-org", {
@@ -39,6 +47,8 @@ export function CreateOrgDialog({ onCreated }: Props) {
           pricing: pricing.trim() || undefined,
           client_notes: clientNotes.trim() || undefined,
           seed_libraries: seedLibraries,
+          session_credits_unlimited: creditsUnlimited,
+          session_credits_total: creditsUnlimited ? null : Number(creditsTotal),
         },
       });
       if (error) throw error;
@@ -89,6 +99,26 @@ export function CreateOrgDialog({ onCreated }: Props) {
               placeholder="Informations internes sur ce client"
               rows={3}
             />
+          </div>
+          <div className="space-y-3 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="creditsUnlimited" className="cursor-pointer">Crédits de sessions illimités</Label>
+              <Switch id="creditsUnlimited" checked={creditsUnlimited} onCheckedChange={setCreditsUnlimited} />
+            </div>
+            {!creditsUnlimited && (
+              <div className="space-y-2">
+                <Label htmlFor="creditsTotal">Nombre de crédits</Label>
+                <Input
+                  id="creditsTotal"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={creditsTotal}
+                  onChange={(e) => setCreditsTotal(e.target.value)}
+                  placeholder="100"
+                />
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
