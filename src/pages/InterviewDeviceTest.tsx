@@ -18,11 +18,14 @@ export default function InterviewDeviceTest() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // Cleanup on unmount
+  // Auto-start tests on mount + cleanup on unmount
   useEffect(() => {
+    testCam();
+    testMic();
     return () => {
       stopAll();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopAll = () => {
