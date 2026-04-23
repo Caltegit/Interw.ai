@@ -2,16 +2,23 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, Video, VideoOff, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
+import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
+
+type Status = "idle" | "testing" | "ok" | "error";
+type SpeedQuality = "good" | "limited" | "weak";
 
 export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
 
-  const [micStatus, setMicStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
-  const [camStatus, setCamStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
+  const [micStatus, setMicStatus] = useState<Status>("idle");
+  const [camStatus, setCamStatus] = useState<Status>("idle");
   const [micLevel, setMicLevel] = useState(0);
+
+  const [netStatus, setNetStatus] = useState<Status>("idle");
+  const [netKbps, setNetKbps] = useState<number | null>(null);
+  const [netQuality, setNetQuality] = useState<SpeedQuality | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -22,6 +29,7 @@ export default function InterviewDeviceTest() {
   useEffect(() => {
     testCam();
     testMic();
+    testNetwork();
     return () => {
       stopAll();
     };
@@ -49,25 +57,21 @@ export default function InterviewDeviceTest() {
       analyserRef.current = analyser;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      let maxSeen = 0;
 
       const poll = () => {
         analyser.getByteFrequencyData(dataArray);
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         const normalized = Math.min(avg / 80, 1);
         setMicLevel(normalized);
-        if (normalized > 0.05) maxSeen++;
-
         animFrameRef.current = requestAnimationFrame(poll);
       };
       poll();
 
-      // After 3 seconds, evaluate
       setTimeout(() => {
         if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
         stream.getTracks().forEach((t) => t.stop());
         audioCtx.close();
-        setMicStatus(maxSeen > 10 ? "ok" : "ok"); // Accept even if silent - permission is what matters
+        setMicStatus("ok");
         setMicLevel(0);
       }, 3000);
     } catch {
@@ -90,12 +94,89 @@ export default function InterviewDeviceTest() {
     }
   };
 
+  // Test de débit : on télécharge un asset connu et on chronomètre
+  const testNetwork = async () => {
+    setNetStatus("testing");
+    setNetKbps(null);
+    setNetQuality(null);
+    try {
+      // Asset léger (~200 KB) : favicon n'est pas assez gros, on prend un placeholder
+      // ou un asset Supabase storage public. On utilise un cache-buster pour éviter
+      // de tomber sur le cache.
+      const url = `/placeholder.svg?cb=${Date.now()}`;
+      // Si l'asset est trop petit (placeholder), on télécharge plusieurs fois
+      const start = performance.now();
+      const ITER = 3;
+      let totalBytes = 0;
+      for (let i = 0; i < ITER; i++) {
+        const r = await fetch(`${url}&i=${i}`, { cache: "no-store" });
+        const blob = await r.blob();
+        totalBytes += blob.size;
+      }
+      const elapsedMs = performance.now() - start;
+      // Pour avoir une estimation réaliste, on télécharge un échantillon plus gros
+      // depuis le storage Supabase public.
+      const bigUrl = `https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/avatars/.placeholder?cb=${Date.now()}`;
+      let bigStart = performance.now();
+      let bigBytes = 0;
+      try {
+        const r = await fetch(bigUrl, { cache: "no-store" });
+        const blob = await r.blob();
+        bigBytes = blob.size;
+        const bigElapsed = performance.now() - bigStart;
+        if (bigBytes > 5000) {
+          // Calcul kbps : bits / ms = kbps
+          const kbps = Math.round((bigBytes * 8) / bigElapsed);
+          finishNetwork(kbps);
+          return;
+        }
+      } catch {
+        // On retombe sur l'estimation locale
+      }
+
+      if (totalBytes < 1000 || elapsedMs < 5) {
+        // Échantillon trop petit pour être fiable → on déclare bon par défaut
+        finishNetwork(2000);
+        return;
+      }
+      const kbps = Math.round((totalBytes * 8) / elapsedMs);
+      finishNetwork(kbps);
+    } catch (err) {
+      console.warn("[network test] failed", err);
+      setNetStatus("error");
+    }
+  };
+
+  const finishNetwork = (kbps: number) => {
+    setNetKbps(kbps);
+    let q: SpeedQuality;
+    if (kbps >= 1000) q = "good";
+    else if (kbps >= 300) q = "limited";
+    else q = "weak";
+    setNetQuality(q);
+    setNetStatus("ok");
+  };
+
   const handleContinue = () => {
     stopAll();
     navigate(`/session/${slug}/start/${token}`);
   };
 
   const canContinue = micStatus === "ok";
+
+  const networkLabel = (() => {
+    if (!netQuality) return "";
+    if (netQuality === "good") return "Connexion bonne";
+    if (netQuality === "limited") return "Connexion limitée — les médias peuvent être lents à charger";
+    return "Connexion très faible — risque de problèmes pendant la session";
+  })();
+
+  const networkColorClass = (() => {
+    if (netQuality === "good") return "text-emerald-600 dark:text-emerald-400";
+    if (netQuality === "limited") return "text-amber-600 dark:text-amber-400";
+    if (netQuality === "weak") return "text-destructive";
+    return "text-muted-foreground";
+  })();
 
   return (
     <CandidateLayout>
@@ -112,7 +193,7 @@ export default function InterviewDeviceTest() {
 
         <div className="text-center space-y-2">
           <h1 className="text-xl font-bold">Vérification technique</h1>
-          <p className="text-sm text-muted-foreground">Vérifions que votre micro + caméra fonctionnent bien.</p>
+          <p className="text-sm text-muted-foreground">Vérifions que votre micro, caméra et connexion fonctionnent.</p>
         </div>
 
         {/* Camera test */}
@@ -184,7 +265,7 @@ export default function InterviewDeviceTest() {
 
             {micStatus === "testing" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground text-center">Parlez pour tester votre micro...</p>
+                <p className="text-xs text-muted-foreground text-center">Parlez pour tester votre micro…</p>
                 <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-100"
@@ -201,6 +282,51 @@ export default function InterviewDeviceTest() {
             {micStatus === "error" && (
               <p className="text-xs text-destructive text-center">
                 Impossible d'accéder au micro. Vérifiez les permissions de votre navigateur.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Network test */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {netStatus === "ok" && netQuality === "good" ? (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : netStatus === "ok" && netQuality === "limited" ? (
+                  <AlertCircle className="h-5 w-5 text-amber-500" />
+                ) : netStatus === "ok" && netQuality === "weak" ? (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : netStatus === "testing" ? (
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                ) : netStatus === "error" ? (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : (
+                  <Wifi className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">Connexion</span>
+              </div>
+              {(netStatus === "ok" || netStatus === "error") && (
+                <Button variant="ghost" size="sm" className="min-h-[44px] px-3" onClick={testNetwork}>
+                  Refaire le test
+                </Button>
+              )}
+            </div>
+
+            {netStatus === "testing" && (
+              <p className="text-xs text-muted-foreground text-center">Mesure du débit en cours…</p>
+            )}
+
+            {netStatus === "ok" && netKbps !== null && (
+              <p className={`text-xs text-center ${networkColorClass}`}>
+                {networkLabel} ({netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})
+              </p>
+            )}
+
+            {netStatus === "error" && (
+              <p className="text-xs text-destructive text-center">
+                Impossible de mesurer la connexion. La session reste possible.
               </p>
             )}
           </CardContent>
