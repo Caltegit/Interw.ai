@@ -1,4 +1,4 @@
-import { Cloud, CloudCheck, CloudUpload } from "lucide-react";
+import { Cloud, CloudUpload, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecordingStatusBadgeProps {
