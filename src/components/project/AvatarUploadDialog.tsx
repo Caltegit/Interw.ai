@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { Area } from "react-easy-crop";
-import { Upload, RotateCw, ImageIcon } from "lucide-react";
+import { Upload, RotateCw, ImageIcon, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -257,42 +257,41 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
                   zoom={zoom}
                   rotation={rotation}
                   aspect={1}
-                  cropShape="round"
-                  showGrid={false}
+                  cropShape="rect"
+                  showGrid={true}
                   onCropChange={setCrop}
                   onZoomChange={setZoom}
                   onCropComplete={onCropComplete}
                 />
               </div>
-              <div className="flex flex-col items-center gap-2 w-56">
-                <p className="text-xs font-medium text-muted-foreground">Aperçu côté candidat</p>
-                <div className="w-full rounded-lg border bg-muted/30 p-3 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <div className="h-10 w-10 shrink-0 rounded-full border bg-muted overflow-hidden flex items-center justify-center">
-                      {previewUrl ? (
-                        <img src={previewUrl} alt="Aperçu avatar" className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 rounded-2xl rounded-tl-sm bg-background border px-3 py-2">
-                      <p className="text-[11px] leading-snug text-foreground">
-                        Bonjour, je suis votre interlocuteur pour cet entretien.
-                      </p>
+              <div className="flex flex-col gap-3 w-56">
+                <div className="space-y-2">
+                  <div className="relative aspect-square w-full rounded-3xl overflow-hidden ring-1 ring-border shadow-sm bg-muted/30">
+                    {previewUrl ? (
+                      <img src={previewUrl} alt="Aperçu candidat" className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-background/80 backdrop-blur px-2 py-0.5 text-[10px] font-medium border">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span>IA</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-14 w-14 shrink-0 rounded-full border-2 border-primary/40 bg-muted overflow-hidden flex items-center justify-center">
-                      {previewUrl ? (
-                        <img src={previewUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground leading-tight">
-                      Avatar affiché pendant la prise de parole
-                    </span>
+                  <p className="text-[11px] text-center text-muted-foreground">Vue pendant l'entretien</p>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t">
+                  <div className="h-10 w-10 shrink-0 rounded-full border bg-muted overflow-hidden flex items-center justify-center">
+                    {previewUrl ? (
+                      <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    )}
                   </div>
+                  <span className="text-[10px] text-muted-foreground leading-tight">
+                    Miniature page d'accueil
+                  </span>
                 </div>
               </div>
             </div>
