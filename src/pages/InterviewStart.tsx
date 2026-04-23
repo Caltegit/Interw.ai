@@ -38,6 +38,31 @@ function prefetchMedia(url: string | null | undefined) {
   }
 }
 
+// Vérifie qu'un média est réellement téléchargeable avant de le présenter au
+// candidat. Timeout 8 s + 1 retry. Retourne true si les octets sont en cache,
+// false sinon (le caller bascule alors en mode texte).
+async function prepareMediaUrl(url: string): Promise<boolean> {
+  const attempt = async (): Promise<boolean> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url, { method: "GET", cache: "force-cache", signal: controller.signal });
+      if (!res.ok) return false;
+      // Lire le blob garantit que les octets sont bien dans le cache.
+      await res.blob();
+      return true;
+    } catch (e) {
+      console.warn("[prepareMediaUrl] attempt failed", url, e);
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  if (await attempt()) return true;
+  // Retry unique
+  return attempt();
+}
+
 export default function InterviewStart() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
