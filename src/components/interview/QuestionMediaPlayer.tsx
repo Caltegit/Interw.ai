@@ -40,9 +40,11 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const animFrameRef = useRef<number>();
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canplayWaitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True dès que l'élément a réellement émis « playing » au moins une fois.
+  const hasEverPlayedRef = useRef(false);
 
-  const STALL_TIMEOUT_MS = 12000;
-  const CANPLAY_TIMEOUT_MS = 6000;
+  const STALL_TIMEOUT_MS = 20000; // 20 s — laisse le temps au mobile de bufferiser
+  const CANPLAY_TIMEOUT_MS = 10000; // 10 s — attente de canplaythrough avant lecture
 
   const getEl = () => type === "video" ? videoPlayerRef.current : audioRef.current;
 
