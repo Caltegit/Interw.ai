@@ -4,10 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase } from "lucide-react";
+import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2 } from "lucide-react";
 import { CreateUserInOrgDialog } from "@/components/superadmin/CreateUserInOrgDialog";
 import { EditOrgDialog } from "@/components/superadmin/EditOrgDialog";
+import { EditUserDialog } from "@/components/superadmin/EditUserDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OrgDetail {
   id: string;
@@ -39,6 +51,7 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -46,6 +59,9 @@ export default function SuperAdminOrgDetail() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingUser, setEditingUser] = useState<Member | null>(null);
+  const [deletingUser, setDeletingUser] = useState<Member | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
@@ -84,6 +100,25 @@ export default function SuperAdminOrgDetail() {
   }, [orgId, refreshKey, navigate, toast]);
 
   const refresh = () => setRefreshKey((k) => k + 1);
+
+  const handleDelete = async () => {
+    if (!deletingUser) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("superadmin-manage-user", {
+        body: { action: "delete", user_id: deletingUser.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Utilisateur supprimé" });
+      setDeletingUser(null);
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading || !org) {
     return (
@@ -148,6 +183,19 @@ export default function SuperAdminOrgDetail() {
                 {m.role === "recruiter" && <Badge variant="secondary">Recruteur</Badge>}
                 {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
                 {!m.role && <Badge variant="outline">Sans rôle</Badge>}
+                <Button variant="ghost" size="icon" onClick={() => setEditingUser(m)} title="Modifier">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeletingUser(m)}
+                  disabled={m.user_id === currentUser?.id}
+                  title={m.user_id === currentUser?.id ? "Vous ne pouvez pas vous supprimer" : "Supprimer"}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}
@@ -178,6 +226,50 @@ export default function SuperAdminOrgDetail() {
       </Card>
 
       <EditOrgDialog open={editOpen} onOpenChange={setEditOpen} org={org} onUpdated={refresh} />
+
+      <EditUserDialog
+        open={!!editingUser}
+        onOpenChange={(o) => !o && setEditingUser(null)}
+        user={
+          editingUser
+            ? {
+                user_id: editingUser.user_id,
+                email: editingUser.email,
+                full_name: editingUser.full_name,
+                organization_id: org.id,
+                roles: editingUser.role ? [editingUser.role] : [],
+              }
+            : null
+        }
+        onUpdated={() => {
+          setEditingUser(null);
+          refresh();
+        }}
+      />
+
+      <AlertDialog open={!!deletingUser} onOpenChange={(o) => !o && setDeletingUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cet utilisateur ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingUser?.email} sera définitivement supprimé. Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
