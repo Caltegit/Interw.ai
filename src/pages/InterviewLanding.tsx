@@ -79,7 +79,7 @@ export default function InterviewLanding() {
       .single();
 
     if (err || !session) {
-      setError("Impossible de démarrer l'session. Réessayez.");
+      setError("Impossible de démarrer la session. Réessayez.");
       setStarting(false);
       return;
     }
@@ -358,7 +358,7 @@ export default function InterviewLanding() {
         </Card>
 
         <p className="text-xs text-center" style={{ color: "rgba(245, 240, 232, 0.4)" }}>
-          Cet session sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
+          Cette session sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
           acceptez ces conditions.
         </p>
       </div>

@@ -82,7 +82,7 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
           }}
         >
           <ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
-          <span>Session sécurisé</span>
+          <span>Session sécurisée</span>
         </div>
       </header>
 
