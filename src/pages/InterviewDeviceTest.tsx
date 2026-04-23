@@ -129,12 +129,11 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Caméra</span>
               </div>
-              {camStatus === "idle" && (
+              {camStatus === "error" && (
                 <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testCam}>
-                  Tester
+                  Réessayer
                 </Button>
               )}
-              {camStatus === "error" && <span className="text-xs text-destructive">Accès refusé</span>}
             </div>
 
             {camStatus === "testing" && (
