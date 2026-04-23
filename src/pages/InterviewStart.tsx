@@ -1930,6 +1930,24 @@ export default function InterviewStart() {
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
+      {endCountdown !== null && !interviewFinished && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="mx-4 max-w-md rounded-2xl border border-destructive/30 bg-card p-8 text-center shadow-2xl">
+            <p className="text-sm font-medium text-muted-foreground">
+              Aucune activité détectée
+            </p>
+            <p className="mt-2 text-base text-foreground">
+              La session sera arrêtée dans
+            </p>
+            <p className="mt-4 text-6xl font-bold text-destructive tabular-nums">
+              {endCountdown}
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Bougez la souris ou parlez pour continuer.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:overflow-hidden">
         {/* ── Header sticky : indicateur sauvegarde uniquement ── */}
         {backgroundSaving > 0 && (
