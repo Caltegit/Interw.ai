@@ -1247,6 +1247,9 @@ export default function InterviewStart() {
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
       : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${questions[0].content}`;
 
+    // Précharge la 1ère question pendant la TTS du greeting (gain crucial mobile)
+    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
       role: "ai",
