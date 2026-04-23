@@ -51,6 +51,7 @@ export default function SuperAdminOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const [org, setOrg] = useState<OrgDetail | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -58,6 +59,9 @@ export default function SuperAdminOrgDetail() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingUser, setEditingUser] = useState<Member | null>(null);
+  const [deletingUser, setDeletingUser] = useState<Member | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
