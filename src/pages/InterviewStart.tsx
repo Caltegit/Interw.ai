@@ -1169,20 +1169,40 @@ export default function InterviewStart() {
     }
   }, [questions]);
 
-  const armPlaybackWatchdog = useCallback(() => {
+  const armPlaybackWatchdog = useCallback((blockId?: number) => {
     clearPlaybackWatchdog();
-    console.log("[interview] watchdog armed (manual btn @3s, hard fallback @7s)");
-    // After 3s of "Préparation", offer a manual button as backup
+    const myBlock = blockId ?? currentBlockIdRef.current;
+    console.log("[interview] watchdog armed (manual btn @5s, hard fallback @25s) block=", myBlock);
+    // After 5s of "Préparation", offer a manual button as backup
     manualContinueTimerRef.current = setTimeout(() => {
       if (!isPausedRef.current) setShowManualContinue(true);
-    }, 3000);
-    // Hard fallback after 7s if onPlaybackEnd never fires
+    }, 5000);
+    // Hard fallback after 25s if onPlaybackEnd never fires
     playbackWatchdogRef.current = setTimeout(() => {
       if (isPausedRef.current) return;
-      console.warn("[interview] Playback watchdog triggered after 7s — forcing listening");
+      // Bloc obsolète : on ne touche à rien.
+      if (myBlock !== currentBlockIdRef.current) {
+        console.log("[interview] watchdog ignored — stale block", myBlock, "current=", currentBlockIdRef.current);
+        return;
+      }
+      console.warn("[interview] Playback watchdog triggered after 25s — forcing listening");
       forceStartListening();
-    }, 7000);
+    }, 25000);
   }, [clearPlaybackWatchdog, forceStartListening]);
+
+  // cancelAll : coupe TOUTES les sources sonores/écoute du tour précédent
+  // avant de démarrer un nouveau bloc. Empêche les superpositions.
+  const cancelAll = useCallback(() => {
+    try { window.speechSynthesis?.cancel(); } catch {}
+    if (elevenAudioRef.current) {
+      try { elevenAudioRef.current.pause(); } catch {}
+      elevenAudioRef.current = null;
+    }
+    try { featuredPlayerRef.current?.stop(); } catch {}
+    setShouldAutoPlay(false);
+    clearPlaybackWatchdog();
+    setIsSpeaking(false);
+  }, [clearPlaybackWatchdog]);
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
