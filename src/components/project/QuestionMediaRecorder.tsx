@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Video, Square, Trash2, Play, Pause, Upload } from "lucide-react";
+import { Mic, Video, Square, Trash2, Play, Pause, RotateCcw } from "lucide-react";
+import { VideoRecorderPanel } from "./VideoRecorderPanel";
+import { MicLevelMeter } from "./MicLevelMeter";
 
 interface QuestionMediaRecorderProps {
   mode: "audio" | "video";
@@ -13,8 +15,6 @@ interface QuestionMediaRecorderProps {
   onVideoChange: (data: { blob: Blob | null; previewUrl: string | null }) => void;
 }
 
-type RecordingType = "audio" | "video" | null;
-
 export function QuestionMediaRecorder({
   mode,
   audioBlob,
@@ -25,30 +25,36 @@ export function QuestionMediaRecorder({
   onVideoChange,
 }: QuestionMediaRecorderProps) {
   const { toast } = useToast();
-  const [recording, setRecording] = useState<RecordingType>(null);
+  const [recordingAudio, setRecordingAudio] = useState(false);
+  const [recordingVideoOpen, setRecordingVideoOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const previewStreamRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (recording === "video" && previewStreamRef.current && streamRef.current) {
-      previewStreamRef.current.srcObject = streamRef.current;
-      previewStreamRef.current.play().catch(() => {});
-    }
-  }, [recording]);
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      activeStream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [activeStream]);
 
-  const startRecording = async (type: "audio" | "video") => {
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const startAudioRecording = async () => {
     try {
-      const constraints = type === "audio" ? { audio: true } : { audio: true, video: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setActiveStream(stream);
 
-      const mimeType = type === "audio" ? "audio/webm" : "video/webm";
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -58,32 +64,34 @@ export function QuestionMediaRecorder({
 
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach((t) => t.stop());
-        if (previewStreamRef.current) previewStreamRef.current.srcObject = null;
-
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        setActiveStream(null);
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const previewUrl = URL.createObjectURL(blob);
-
-        if (type === "audio") {
-          onAudioChange({ blob, previewUrl });
-        } else {
-          onVideoChange({ blob, previewUrl });
-        }
+        onAudioChange({ blob, previewUrl });
       };
 
       mediaRecorder.start(500);
-      setRecording(type);
+      setRecordingAudio(true);
+      setElapsed(0);
+      timerRef.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
     } catch {
       toast({
         title: "Erreur",
-        description: type === "audio" ? "Impossible d'accéder au micro." : "Impossible d'accéder à la caméra.",
+        description: "Impossible d'accéder au micro.",
         variant: "destructive",
       });
     }
   };
 
-  const stopRecording = () => {
+  const stopAudioRecording = () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
     mediaRecorderRef.current?.stop();
-    setRecording(null);
+    setRecordingAudio(false);
+  };
+
+  const handleVideoComplete = ({ blob, previewUrl }: { blob: Blob; previewUrl: string }) => {
+    onVideoChange({ blob, previewUrl });
+    setRecordingVideoOpen(false);
   };
 
   const deleteMedia = (type: "audio" | "video") => {
@@ -95,6 +103,15 @@ export function QuestionMediaRecorder({
       onVideoChange({ blob: null, previewUrl: null });
     }
     setIsPlaying(false);
+  };
+
+  const retake = (type: "audio" | "video") => {
+    deleteMedia(type);
+    if (type === "audio") {
+      startAudioRecording();
+    } else {
+      setRecordingVideoOpen(true);
+    }
   };
 
   const togglePlayAudio = async () => {
@@ -123,39 +140,26 @@ export function QuestionMediaRecorder({
   const hasVideo = Boolean(videoPreviewUrl);
   const hasMedia = hasAudio || hasVideo;
 
-  if (recording === "video") {
+  if (recordingVideoOpen) {
     return (
-      <div className="space-y-2">
-        <video
-          ref={previewStreamRef}
-          muted
-          autoPlay
-          playsInline
-          className="w-full max-w-xs rounded-lg border border-border bg-black"
-          style={{ minHeight: "160px" }}
-        />
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-xs text-destructive">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
-            Enregistrement vidéo...
-          </span>
-          <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-            <Square className="mr-1 h-3 w-3" /> Stop
-          </Button>
-        </div>
-      </div>
+      <VideoRecorderPanel
+        onComplete={handleVideoComplete}
+        onCancel={() => setRecordingVideoOpen(false)}
+      />
     );
   }
 
-  if (recording === "audio") {
+  if (recordingAudio) {
     return (
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 text-xs text-destructive">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+        <span className="flex items-center gap-2 text-xs text-destructive">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-destructive" />
-          Enregistrement audio...
+          Enregistrement audio
         </span>
-        <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
-          <Square className="mr-1 h-3 w-3" /> Stop
+        <span className="text-xs tabular-nums text-muted-foreground">{formatTime(elapsed)}</span>
+        <MicLevelMeter stream={activeStream} segments={6} />
+        <Button type="button" variant="destructive" size="sm" onClick={stopAudioRecording} className="ml-auto">
+          <Square className="mr-1 h-3 w-3" /> Arrêter
         </Button>
       </div>
     );
@@ -170,6 +174,9 @@ export function QuestionMediaRecorder({
           <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={togglePlayAudio}>
             {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
+          <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => retake("audio")}>
+            <RotateCcw className="h-3 w-3" />
+          </Button>
           <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => deleteMedia("audio")}>
             <Trash2 className="h-3 w-3 text-destructive" />
           </Button>
@@ -183,12 +190,15 @@ export function QuestionMediaRecorder({
             src={videoPreviewUrl!}
             onEnded={() => setIsPlaying(false)}
             playsInline
-            className="w-full max-w-xs rounded-lg border border-border"
+            className="w-full max-w-md rounded-lg border border-border aspect-video object-cover bg-black"
           />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">🎬 Vidéo</span>
             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={togglePlayVideo}>
               {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => retake("video")}>
+              <RotateCcw className="h-3 w-3" />
             </Button>
             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => deleteMedia("video")}>
               <Trash2 className="h-3 w-3 text-destructive" />
@@ -200,12 +210,12 @@ export function QuestionMediaRecorder({
       {!hasMedia && (
         <div className="flex items-center gap-1">
           {mode === "audio" && (
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("audio")}>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={startAudioRecording}>
               <Mic className="mr-1 h-3 w-3" /> Enregistrer audio
             </Button>
           )}
           {mode === "video" && (
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => startRecording("video")}>
+            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setRecordingVideoOpen(true)}>
               <Video className="mr-1 h-3 w-3" /> Enregistrer vidéo
             </Button>
           )}

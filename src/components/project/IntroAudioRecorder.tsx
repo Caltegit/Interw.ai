@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Mic, Square, Trash2, Play, Pause, Upload } from "lucide-react";
+import { MicLevelMeter } from "./MicLevelMeter";
 
 interface IntroAudioRecorderProps {
   projectId?: string;
@@ -24,9 +25,12 @@ export function IntroAudioRecorder({
   const [isPlaying, setIsPlaying] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   const isPersistedMode = Boolean(projectId);
 
@@ -34,12 +38,26 @@ export function IntroAudioRecorder({
     setAudioUrl(existingUrl);
   }, [existingUrl]);
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      activeStream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [activeStream]);
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
+      setActiveStream(stream);
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -47,6 +65,7 @@ export function IntroAudioRecorder({
 
       mediaRecorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
+        setActiveStream(null);
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const previewUrl = URL.createObjectURL(blob);
         setRecordedBlob(blob);
@@ -56,12 +75,15 @@ export function IntroAudioRecorder({
 
       mediaRecorder.start(500);
       setIsRecording(true);
+      setElapsed(0);
+      timerRef.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
     } catch {
       toast({ title: "Erreur", description: "Impossible d'accéder au micro.", variant: "destructive" });
     }
   };
 
   const stopRecording = () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
   };
@@ -144,11 +166,11 @@ export function IntroAudioRecorder({
       <div className="space-y-1">
         <Label>Message vocal d'introduction (optionnel)</Label>
         <p className="text-xs text-muted-foreground">
-          Enregistrez un message qui sera lu au candidat avant le début de l'session.
+          Enregistrez un message qui sera lu au candidat avant le début de la session.
         </p>
       </div>
 
-      {audioUrl && (
+      {audioUrl && !isRecording && (
         <div className="flex flex-wrap items-center gap-2">
           <audio
             ref={audioRef}
@@ -173,12 +195,14 @@ export function IntroAudioRecorder({
       )}
 
       {isRecording && (
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-sm text-destructive">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <span className="flex items-center gap-2 text-sm text-destructive">
             <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-            Enregistrement...
+            Enregistrement
           </span>
-          <Button type="button" variant="destructive" size="sm" onClick={stopRecording}>
+          <span className="text-sm tabular-nums text-muted-foreground">{formatTime(elapsed)}</span>
+          <MicLevelMeter stream={activeStream} />
+          <Button type="button" variant="destructive" size="sm" onClick={stopRecording} className="ml-auto">
             <Square className="mr-1 h-4 w-4" /> Arrêter
           </Button>
         </div>
@@ -196,7 +220,7 @@ export function IntroAudioRecorder({
         </p>
       )}
 
-      {uploading && <span className="text-sm text-muted-foreground">Upload en cours...</span>}
+      {uploading && <span className="text-sm text-muted-foreground">Téléversement en cours...</span>}
     </div>
   );
 }
