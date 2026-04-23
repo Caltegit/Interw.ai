@@ -1,48 +1,54 @@
 
 
-## Crédits de sessions par organisation
+## Projet démo : copie indépendante par organisation
 
-### Ce qui change
+### Le problème
 
-**Super Admin — fiche organisation**
-Deux nouveaux champs dans la création et l'édition d'organisation :
-- **Crédits de sessions illimités** (interrupteur, activé par défaut)
-- **Nombre de crédits** (nombre entier, visible uniquement si l'interrupteur est désactivé)
+Aujourd'hui, quand le super admin crée une organisation, le trigger `trg_seed_on_owner_set` exécute `seed_demo_project(_org_id, _created_by)` avec `_created_by = owner_id`. Mais lors de la création d'org via la fonction `superadmin-create-org`, l'`owner_id` est mis temporairement au super admin (pour déclencher le seed) puis remis à `NULL`. Résultat : le projet démo de chaque organisation a `created_by = <super admin>`, alors qu'il devrait appartenir à l'organisation elle-même.
 
-**Dashboard recruteur**
-Une nouvelle carte « Crédits de sessions » affiche, selon la configuration de l'organisation :
-- « Illimité » si l'organisation n'a pas de quota
-- Sinon « **X / Y** sessions utilisées » avec une barre de progression
-  - Vert si moins de 70 % consommé
-  - Orange entre 70 % et 99 %
-  - Rouge à 100 % ou plus, avec un message « Quota atteint — pensez à augmenter votre plafond »
+Conséquences concrètes :
+- Quand un membre de l'org (ex : `c+7@bap.fr`) ouvre la page candidat connecté, les RLS de `questions` et `projects` filtrent sur `created_by = auth.uid()` → 0 question retournée → bouton « Lancer la session » bloqué.
+- Le membre ne peut ni modifier, ni supprimer le projet démo de sa propre organisation.
+- Le projet est techniquement « lié » au super admin alors qu'il devrait être autonome dans chaque org.
 
-Le décompte correspond au nombre de sessions au statut **completed** dans l'organisation.
+### Le correctif
 
-Quand le quota est atteint, l'invitation de nouveaux candidats reste autorisée — seul un avertissement est affiché (jamais de blocage).
+**1. Réattribuer les projets démo existants**
+Mettre à jour le `created_by` de chaque projet démo existant pour pointer vers l'`owner_id` de son organisation (ou à défaut, le premier admin de cette org). Cela débloque immédiatement c+7 et tous les autres membres.
+
+**2. Corriger le flux de création d'organisation** (`superadmin-create-org`)
+Au lieu de s'appuyer sur le trigger `trg_seed_on_owner_set` avec un owner temporaire, créer l'org sans owner (`owner_id = NULL`) et laisser `trg_seed_org_question_templates` faire son travail — ce trigger gère déjà le cas « pas d'owner » et utilisera le super admin comme créateur des **templates** (libraries de questions/critères/templates d'entretien partagés). Mais on **ne** crée **pas** le projet démo à ce moment-là.
+
+Le projet démo sera créé plus tard, dans `accept_invitation`, au moment où le **vrai owner** rejoint l'organisation. Ainsi `created_by` = vrai owner de l'org, pas le super admin.
+
+**3. Adapter `accept_invitation`**
+Quand un user accepte l'invitation et devient owner (cas `_current_owner IS NULL`), appeler `seed_demo_project(_org_id, _user_id)` pour créer la copie démo avec lui comme propriétaire.
+
+**4. Élargir les RLS pour éviter ce type de blocage à l'avenir**
+Ajouter sur `projects`, `questions`, `evaluation_criteria` des politiques SELECT/UPDATE/DELETE pour les **membres de l'organisation** (pas seulement le créateur). Aujourd'hui seul `created_by` peut éditer un projet, ce qui pose problème dès qu'un autre recruteur de la même org veut intervenir. Politiques ajoutées :
+- `Org members can view/update/delete org projects`
+- `Org members can manage org project questions`
+- `Org members can manage org project criteria`
+- `Super admins can view/update all projects/questions/criteria`
+
+Cela respecte le principe « l'organisation possède le projet », pas l'individu.
 
 ### Détails techniques
 
-**Migration**
-Ajouter sur `organizations` :
-- `session_credits_unlimited boolean NOT NULL DEFAULT true`
-- `session_credits_total integer` (nullable, `>= 0` via trigger de validation)
+**Migration SQL** :
+- `UPDATE projects SET created_by = COALESCE(o.owner_id, ...) FROM organizations o WHERE projects.organization_id = o.id AND projects.title = 'Candidature spontanée - TEST -'` (correctif des données existantes — utilise l'owner si défini, sinon le premier admin de l'org via `user_roles`).
+- `CREATE POLICY` sur `projects`, `questions`, `evaluation_criteria` pour les membres de l'organisation et les super admins (SELECT, UPDATE, DELETE — INSERT reste sur `created_by = auth.uid()`).
+- Mise à jour de `accept_invitation` pour appeler `seed_demo_project` quand le user devient owner.
 
-**Backend**
-- `supabase/functions/superadmin-create-org/index.ts` : accepter `session_credits_unlimited` et `session_credits_total` dans le body et les insérer.
-- Aucune autre fonction touchée — l'édition se fait via update direct (RLS « Org admins / Super admins can update organizations » déjà en place).
+**Edge function** `supabase/functions/superadmin-create-org/index.ts` :
+- Supprimer le hack « set owner_id puis NULL » — créer directement avec `owner_id = NULL`.
+- Le seeding des templates (questions, critères, templates d'entretien) continue via `trg_seed_org_question_templates` qui gère déjà le fallback super admin.
+- Le projet démo n'est plus créé ici — il le sera quand le premier owner rejoindra via `accept_invitation`.
 
-**Front**
-- `src/components/superadmin/CreateOrgDialog.tsx` : ajouter Switch « Crédits illimités » + Input numérique conditionnel.
-- `src/components/superadmin/EditOrgDialog.tsx` : mêmes champs, écriture directe via `supabase.from("organizations").update(...)`.
-- `src/pages/SuperAdminOrgDetail.tsx` : afficher la valeur dans le bloc d'info de l'organisation.
-- `src/hooks/queries/useDashboardData.ts` : récupérer `session_credits_unlimited`, `session_credits_total` de l'organisation du user, et compter les sessions `completed` sur tous les projets de l'organisation. Ajouter au retour `credits: { unlimited, total, used }`.
-- `src/pages/Dashboard.tsx` : nouvelle carte « Crédits de sessions » (4ᵉ ou 5ᵉ KPI) avec barre de progression colorée.
-- `src/integrations/supabase/types.ts` : régénéré automatiquement.
+**Aucun changement front.**
 
 ### Hors champ
 
-- Pas de blocage de création de session (choix retenu : avertir mais autoriser).
-- Pas de gestion de période/renouvellement automatique du quota — c'est un compteur cumulatif sur les sessions completed. Si besoin de remise à zéro mensuelle, à traiter dans un second temps.
-- Pas d'historique des modifications de quota.
+- Pas de transfert d'ownership rétroactif des autres projets créés par le super admin pour le compte d'organisations (s'il y en a, à traiter séparément).
+- Pas de refonte des politiques `created_by` pour les autres tables (transcripts, reports, sessions) — elles passent déjà par la jointure `projects.created_by`, donc elles bénéficieront des nouvelles politiques d'org via une mise à jour parallèle si besoin (à voir dans un second temps si vous rencontrez le même symptôme côté rapports).
 
