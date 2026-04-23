@@ -1,71 +1,76 @@
+## Améliorer l'enregistrement audio/vidéo : une interface unique, fiable partout
 
+### Constat
 
-## Bug : doublement des questions à chaque modification de projet
+Aujourd'hui il existe **trois composants d'enregistrement différents**, chacun avec sa propre logique, ses propres bugs et son propre style :
 
-### Cause exacte (confirmée en base)
+| Composant | Utilisé pour | Problèmes |
+|---|---|---|
+| `IntroVideoRecorder` + `VideoRecorderPanel` | Vidéo d'intro (StepIntro, IntroLibrary) | Compte à rebours 3-2-1 inutile, bouton « Arrêter » qui peut rester bloqué, miroir non rendu en preview après stop |
+| `IntroAudioRecorder` | Audio d'intro (StepIntro, IntroLibrary) | Pas d'import de fichier, pas de re-prise rapide, durée non affichée |
+| `QuestionMediaRecorder` + `VideoRecorderPanel` | Média des questions (StepQuestions) | Même bug d'arrêt vidéo, interface très différente du reste |
+| `QuestionMediaEditor` | Questions (QuestionFormDialog) | Le **plus propre** : démarrer/arrêter direct, import, re-prise, suppression, jauge de niveau, limite de durée |
 
-Dans `src/pages/ProjectEdit.tsx`, la sauvegarde fait :
+Résultat : sur mobile, l'utilisateur ne sait pas toujours comment arrêter, le bouton est parfois caché ou inactif, et l'expérience change d'un écran à l'autre.
 
-```ts
-await supabase.from("questions").delete().eq("project_id", id);
-// puis insert des nouvelles questions
-```
+### Ce qu'on va faire
 
-Mais la table `session_messages` a une clé étrangère vers `questions.id` avec **`ON DELETE NO ACTION`**. Donc dès qu'**une seule** question du projet est référencée par un message d'une session passée, le `DELETE` global échoue. Le code **n'inspecte jamais l'erreur retournée par `.delete()`**, l'enchaîne avec l'`INSERT`, et toutes les questions sont dupliquées.
+**1. Un seul composant : `MediaRecorderField`**
 
-J'ai vérifié en base : sur 4 projets concernés, on retrouve exactement ce motif (anciennes questions intactes + un nouveau jeu identique inséré plusieurs heures/jours plus tard, parfois 2 ou 3 fois). Sur le projet "Chef de Produit", une seule question (`order_index = 0`) est encore liée à un `session_message` — il a suffi d'elle pour bloquer la suppression de tout le lot.
+On promeut `QuestionMediaEditor` au rang de composant officiel et on le renomme `MediaRecorderField` (déplacé dans `src/components/media/`). Il deviendra **le seul** composant d'enregistrement de l'application, utilisé pour :
 
-Le même bug existe dans `evaluation_criteria` au niveau code (mêmes ligne `delete().insert()` non vérifiées), même si la FK n'est pas la même.
+- Audio d'intro projet
+- Vidéo d'intro projet
+- Média de question (audio ou vidéo)
+- Bibliothèque d'intros
+- Bibliothèque de questions
 
-### Correction à apporter
+**2. Améliorations apportées à ce composant unique**
 
-**1) `src/pages/ProjectEdit.tsx` — remplacer le « delete + insert » par un upsert / merge intelligent**
+Pour qu'il couvre tous les cas, on ajoute :
 
-Au lieu de tout supprimer puis réinsérer, on va :
+- **Pas de compte à rebours** : un clic sur « Démarrer » lance immédiatement, un clic sur « Arrêter » termine.
+- **Bouton « Arrêter » très visible** sur mobile : pleine largeur en dessous de la jauge sur petit écran (≤640 px), à droite sur grand écran. Toujours en `position: sticky` dans le bloc rouge pour ne jamais sortir du viewport.
+- **Arrêt fiable** : `setRecording(false)` immédiat, `stop()` enveloppé dans try/catch, fallback qui coupe les tracks manuellement si MediaRecorder ne répond pas.
+- **Aperçu miroir vidéo** pendant l'enregistrement (`scaleX(-1)`).
+- **Jauge de niveau micro** affichée pour audio **et** vidéo (pas seulement audio).
+- **Chronomètre + barre de progression** par rapport à la durée max.
+- **Import de fichier** disponible aussi bien à vide qu'après un enregistrement (déjà en place dans `QuestionMediaEditor`).
+- **Re-prise** : bouton « Refaire » qui relance l'enregistrement directement.
+- **Lecture inline** du résultat (audio ou vidéo) avec contrôles natifs.
+- **Suppression** avec confirmation visuelle.
+- **Optionnel : libellé d'en-tête** (`label`, `description`) pour remplacer les actuels « Message vocal d'introduction » et « Vidéo de présentation ».
 
-- Charger l'état actuel des questions du projet (id, order_index, contenu, etc.).
-- Comparer avec l'état soumis par le formulaire :
-  - **Mises à jour** : pour chaque question existante encore présente (matchée par `id` interne du formulaire), faire un `UPDATE` ciblé.
-  - **Insertions** : pour les nouvelles questions sans id, faire un `INSERT`.
-  - **Suppressions** : pour les questions retirées du formulaire, tenter un `DELETE` ciblé. Si le delete échoue parce que la question est référencée par des `session_messages`, on bascule en **soft-disable** : on garde la question en base, mais on lui retire son `order_index` du projet en la marquant "archivée" (cf. point 3).
-- Vérifier le `error` retourné par chaque appel Supabase et **lever** une exception si un delete échoue, pour que le toast d'erreur s'affiche au lieu de continuer silencieusement.
+**3. Migration des écrans existants**
 
-Pour réaliser le matching côté formulaire, on stockera l'`id` Supabase d'une question existante dans l'objet `Question` (champ `id?: string` à ajouter dans `StepQuestions.tsx` et à propager via `ProjectEdit.tsx` au chargement). Les nouvelles questions ajoutées dans le formulaire restent sans `id`.
+On remplace les usages :
 
-**2) `src/pages/ProjectEdit.tsx` — protection anti double-clic / double-submit**
+- `IntroAudioRecorder` → `<MediaRecorderField type="audio" label="Message vocal d'introduction" ... />`
+- `IntroVideoRecorder` → `<MediaRecorderField type="video" label="Vidéo de présentation" ... />`
+- `QuestionMediaRecorder` → `<MediaRecorderField type={mode} ... />`
 
-- Ajouter un `useRef` `savingRef` qui bloque toute nouvelle exécution de `handleSave` tant que la précédente n'est pas terminée. Le bouton est déjà `disabled` via `saving`, mais ce filet de sécurité empêche les rebonds React stricts ou les remounts.
+Les anciens fichiers (`IntroAudioRecorder.tsx`, `IntroVideoRecorder.tsx`, `QuestionMediaRecorder.tsx`, `VideoRecorderPanel.tsx`) sont **supprimés**.
 
-**3) Migration BDD — préparer le « soft-disable » des questions référencées**
+L'upload Supabase qui était dans `IntroAudioRecorder` (mode `projectId`) est déplacé dans `StepIntro` / `IntroLibrary`, là où il a sa place — le composant d'enregistrement reste **purement UI** et expose juste `onMediaReady(blob, previewUrl)` et `onClear()`.
 
-Ajouter une colonne `archived_at TIMESTAMPTZ NULL` sur `questions`. Quand on tente de supprimer une question qui possède des `session_messages`, on l'archive plutôt :
+**4. Tests manuels après mise en place**
 
-- L'éditeur de projet ne charge que les questions où `archived_at IS NULL`.
-- Les écrans de session/rapport, eux, peuvent toujours retrouver le contenu de la question pour l'historique.
+- Enregistrer une vidéo d'intro depuis StepIntro sur mobile → bouton Arrêter toujours visible, arrêt instantané.
+- Enregistrer un audio d'intro → jauge animée, durée affichée, lecture après stop.
+- Ajouter un média à une question dans le wizard → même interface qu'ailleurs.
+- Importer un fichier vidéo de 50 Mo → preview correcte, sauvegarde OK.
+- Refaire un enregistrement → la caméra/micro se rouvrent proprement sans rester ouvert en arrière-plan.
 
-C'est plus propre que de laisser des FK orphelines ou que de risquer un DELETE qui plante.
+### Détails techniques
 
-**4) `src/pages/ProjectEdit.tsx` — appliquer le même pattern aux critères**
-
-Mêmes corrections sur `evaluation_criteria` : matching par `id`, update / insert / delete ciblés, vérification des erreurs. Pas de soft-disable nécessaire, car aucune autre table ne référence `evaluation_criteria.id`.
-
-**5) Nettoyage des doublons existants**
-
-Une migration de nettoyage pour les 4 projets impactés :
-
-- Pour chaque `(project_id, order_index)`, garder la question la **plus récente** (celle qui correspond à l'état attendu par l'utilisateur), supprimer les autres **uniquement si elles ne sont référencées par aucun `session_message`**.
-- Pour les anciennes questions encore liées à un message : les marquer `archived_at = now()` (après l'ajout de la colonne) pour qu'elles disparaissent de l'éditeur sans casser l'historique.
-
-### Vérification après implémentation
-
-1. Modifier le projet "Chef de Produit" : enregistrer plusieurs fois → la base ne doit jamais dépasser le nombre de questions affichées dans l'éditeur.
-2. Modifier un projet qui a déjà des sessions terminées (questions référencées) : la sauvegarde réussit, les questions liées à des messages sont conservées en arrière-plan (archivées) et n'apparaissent plus dans l'éditeur.
-3. Recharger la page après modif → on retrouve exactement ce qu'on a sauvegardé, pas de doublons.
-4. Cliquer 3 fois rapidement sur "Enregistrer" → un seul appel passe.
+- Nouveau dossier `src/components/media/MediaRecorderField.tsx` (issu de `QuestionMediaEditor` enrichi).
+- Props : `{ type: "audio" | "video"; existingUrl: string | null; onMediaReady: (blob, url) => void; onClear?: () => void; maxDurationSec?: number; label?: string; description?: string; }`.
+- Aucune modification de schéma BDD ni d'edge function.
+- Mises à jour des imports dans : `StepIntro.tsx`, `StepQuestions.tsx`, `IntroLibrary.tsx`, `QuestionFormDialog.tsx`.
+- Suppression des 4 fichiers redondants listés plus haut.
 
 ### Hors champ
 
-- Pas de refonte du `ProjectForm` partagé : on touche uniquement à la logique de persistance dans `ProjectEdit.tsx` et au type `Question` pour porter l'`id`.
-- Pas de modification du parcours candidat ni de l'orchestration des questions en entretien.
-- Pas de changement sur `ProjectNew.tsx` (création) qui n'a pas le problème (toujours un INSERT pur).
-
+- Pas de modification du parcours candidat (qui a sa propre logique d'enregistrement liée à l'IA).
+- Pas de changement du stockage Supabase ni des URLs publiques.
+- Pas d'ajout de nouvelles fonctionnalités (pas de trim, pas de filtres, pas de retake partiel).

@@ -18,8 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Play, Pause, Loader2, Settings2 } from "lucide-react";
-import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
-import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
+import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import {
   IntroFormatPicker,
   INTRO_FORMAT_META,
@@ -437,11 +436,27 @@ export default function IntroLibrary() {
                 )}
 
                 {format === "audio" && (
-                  <IntroAudioRecorder onAudioReady={({ blob }) => setAudioBlob(blob)} />
+                  <MediaRecorderField
+                    type="audio"
+                    existingUrl={null}
+                    onMediaReady={(blob) => setAudioBlob(blob)}
+                    onClear={() => setAudioBlob(null)}
+                  />
                 )}
 
                 {format === "video" && (
-                  <IntroVideoRecorder onVideoReady={({ file }) => setVideoFile(file)} />
+                  <MediaRecorderField
+                    type="video"
+                    existingUrl={null}
+                    onMediaReady={(blob) => {
+                      const file =
+                        blob instanceof File
+                          ? blob
+                          : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
+                      setVideoFile(file);
+                    }}
+                    onClear={() => setVideoFile(null)}
+                  />
                 )}
               </div>
             </div>

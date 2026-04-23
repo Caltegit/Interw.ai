@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { IntroAudioRecorder } from "@/components/project/IntroAudioRecorder";
-import { IntroVideoRecorder } from "@/components/project/IntroVideoRecorder";
+import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import { IntroLibraryDialog } from "@/components/project/IntroLibraryDialog";
 import { IntroFormatPicker, type IntroFormat } from "@/components/library/IntroFormatPicker";
 
@@ -211,21 +210,39 @@ export function StepIntro({
             )}
 
             {introMode === "audio" && (
-              <IntroAudioRecorder
+              <MediaRecorderField
+                type="audio"
+                label="Message vocal d'introduction"
+                description="Enregistrez ou importez un message qui sera lu au candidat avant la session."
                 existingUrl={introAudioPreviewUrl}
-                onAudioReady={({ blob, previewUrl }) => {
+                onMediaReady={(blob, previewUrl) => {
                   setIntroAudioBlob(blob);
                   setIntroAudioPreviewUrl(previewUrl);
+                }}
+                onClear={() => {
+                  setIntroAudioBlob(null);
+                  setIntroAudioPreviewUrl(null);
                 }}
               />
             )}
 
             {introMode === "video" && (
-              <IntroVideoRecorder
+              <MediaRecorderField
+                type="video"
+                label="Vidéo de présentation"
+                description="Enregistrez ou importez une vidéo qui sera montrée au candidat avant la session."
                 existingUrl={introVideoPreviewUrl}
-                onVideoReady={({ file, previewUrl }) => {
+                onMediaReady={(blob, previewUrl) => {
+                  const file =
+                    blob instanceof File
+                      ? blob
+                      : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
                   setIntroVideoFile(file);
                   setIntroVideoPreviewUrl(previewUrl);
+                }}
+                onClear={() => {
+                  setIntroVideoFile(null);
+                  setIntroVideoPreviewUrl(null);
                 }}
               />
             )}

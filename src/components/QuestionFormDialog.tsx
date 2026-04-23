@@ -13,7 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { QuestionMediaEditor } from "@/components/library/QuestionMediaEditor";
+import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Mic,
@@ -262,7 +262,7 @@ export function QuestionFormDialog({
 
             {(form.mediaType === "audio" || form.mediaType === "video") && (
               <div className="space-y-2">
-                <QuestionMediaEditor
+                <MediaRecorderField
                   type={form.mediaType}
                   existingUrl={form.mediaPreviewUrl}
                   onMediaReady={(blob, url) =>
