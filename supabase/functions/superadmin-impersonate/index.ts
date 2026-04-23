@@ -1,10 +1,17 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,30 +22,25 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       console.log("[impersonate] Missing or invalid Authorization header");
-      return new Response(JSON.stringify({ error: "Non autorisé" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Authentification requise" }, 401);
     }
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const token = authHeader.replace("Bearer ", "");
 
     const userClient = createClient(SUPABASE_URL, ANON, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
-    if (claimsErr || !claims?.claims?.sub) {
-      console.log("[impersonate] Claims error:", claimsErr?.message);
-      return new Response(JSON.stringify({ error: "Non autorisé" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+    if (userErr || !userData?.user?.id) {
+      console.log("[impersonate] getUser error:", userErr?.message);
+      return jsonResponse({ error: "Session invalide" }, 401);
     }
 
-    const callerId = claims.claims.sub as string;
+    const callerId = userData.user.id;
     console.log("[impersonate] Caller:", callerId);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
@@ -48,31 +50,23 @@ Deno.serve(async (req) => {
     });
     if (roleErr) {
       console.log("[impersonate] is_super_admin RPC error:", roleErr.message);
+      return jsonResponse({ error: `Vérification du rôle impossible: ${roleErr.message}` }, 500);
     }
     if (!isSuperAdmin) {
       console.log("[impersonate] Caller is not super admin");
-      return new Response(JSON.stringify({ error: "Réservé aux super administrateurs" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Réservé aux super administrateurs" }, 403);
     }
 
     const body = await req.json().catch(() => ({}));
     const targetUserId: string | undefined = body?.user_id;
     if (!targetUserId || typeof targetUserId !== "string") {
-      return new Response(JSON.stringify({ error: "user_id requis" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "user_id requis" }, 400);
     }
 
     const { data: targetUser, error: getErr } = await admin.auth.admin.getUserById(targetUserId);
     if (getErr || !targetUser?.user?.email) {
       console.log("[impersonate] getUserById error:", getErr?.message);
-      return new Response(JSON.stringify({ error: getErr?.message || "Utilisateur introuvable" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: getErr?.message || "Utilisateur introuvable" }, 404);
     }
 
     const targetEmail = targetUser.user.email;
@@ -80,9 +74,9 @@ Deno.serve(async (req) => {
     const redirectTo = origin ? `${origin.replace(/\/$/, "")}/dashboard` : undefined;
     console.log("[impersonate] Target:", targetEmail, "redirectTo:", redirectTo);
 
-    // Première tentative avec redirectTo
     let linkData: any = null;
     let linkErr: any = null;
+
     if (redirectTo) {
       const r = await admin.auth.admin.generateLink({
         type: "magiclink",
@@ -96,7 +90,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Repli sans redirectTo si la première tentative a échoué (ou a été ignorée)
     if (!linkData?.properties?.action_link) {
       const r = await admin.auth.admin.generateLink({
         type: "magiclink",
@@ -110,26 +103,20 @@ Deno.serve(async (req) => {
     }
 
     if (!linkData?.properties?.action_link) {
-      return new Response(
-        JSON.stringify({ error: linkErr?.message || "Impossible de générer le lien" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      return jsonResponse(
+        { error: linkErr?.message || "Impossible de générer le lien magique" },
+        500,
       );
     }
 
     console.log("[impersonate] Link generated successfully for", targetEmail);
-    return new Response(
-      JSON.stringify({
-        action_link: linkData.properties.action_link,
-        email: targetEmail,
-        user_id: targetUserId,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      action_link: linkData.properties.action_link,
+      email: targetEmail,
+      user_id: targetUserId,
+    });
   } catch (e) {
     console.log("[impersonate] Unexpected error:", (e as Error).message);
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: (e as Error).message }, 500);
   }
 });

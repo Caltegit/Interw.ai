@@ -30,7 +30,30 @@ export async function startImpersonation(userId: string, targetEmail: string): P
   const { data, error } = await supabase.functions.invoke("superadmin-impersonate", {
     body: { user_id: userId },
   });
-  if (error) throw error;
+
+  // Tenter d'extraire un message d'erreur lisible depuis la réponse de l'edge function
+  if (error) {
+    let detailedMessage = error.message;
+    try {
+      const ctx = (error as any).context;
+      if (ctx && typeof ctx.json === "function") {
+        const payload = await ctx.json();
+        if (payload?.error) detailedMessage = payload.error;
+      } else if (ctx && typeof ctx.text === "function") {
+        const txt = await ctx.text();
+        try {
+          const parsed = JSON.parse(txt);
+          if (parsed?.error) detailedMessage = parsed.error;
+        } catch {
+          if (txt) detailedMessage = txt;
+        }
+      }
+    } catch {
+      // ignore parsing errors
+    }
+    throw new Error(detailedMessage);
+  }
+
   if ((data as any)?.error) throw new Error((data as any).error);
   const actionLink = (data as any)?.action_link as string | undefined;
   if (!actionLink) throw new Error("Lien d'authentification manquant");
