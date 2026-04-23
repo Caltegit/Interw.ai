@@ -263,6 +263,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     setHasFinished(false);
     setProgress(0);
     setNeedsManualPlay(false);
+    hasEverPlayedRef.current = false;
     if (autoPlay && type !== "written") {
       const timer = setTimeout(() => doPlay(), 200);
       return () => clearTimeout(timer);
