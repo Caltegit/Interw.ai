@@ -4,10 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase } from "lucide-react";
+import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2 } from "lucide-react";
 import { CreateUserInOrgDialog } from "@/components/superadmin/CreateUserInOrgDialog";
 import { EditOrgDialog } from "@/components/superadmin/EditOrgDialog";
+import { EditUserDialog } from "@/components/superadmin/EditUserDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface OrgDetail {
   id: string;
