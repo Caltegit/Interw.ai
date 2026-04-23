@@ -126,71 +126,73 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
         </div>
       </div>
 
-      {/* Animal avatars */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Animaux</p>
-        <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-          {ANIMAL_AVATARS.map((avatar) => {
-            const selected = value === avatar.url;
-            return (
-              <button
-                key={avatar.name}
-                type="button"
-                onClick={() => onSelectPreset(avatar.url)}
-                className={cn(
-                  "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                  selected
-                    ? "border-primary ring-2 ring-primary ring-offset-2"
-                    : "border-border hover:border-primary/50",
-                )}
-                aria-label={`Avatar ${avatar.name}`}
-                title={avatar.name}
-              >
-                <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                {selected && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
-                    <div className="rounded-full bg-primary p-1">
-                      <Check className="h-3 w-3 text-primary-foreground" />
+      {/* Animaux + Avatars sur la même ligne */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Animaux</p>
+          <div className="grid grid-cols-4 gap-3">
+            {ANIMAL_AVATARS.map((avatar) => {
+              const selected = value === avatar.url;
+              return (
+                <button
+                  key={avatar.name}
+                  type="button"
+                  onClick={() => onSelectPreset(avatar.url)}
+                  className={cn(
+                    "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
+                    selected
+                      ? "border-primary ring-2 ring-primary ring-offset-2"
+                      : "border-border hover:border-primary/50",
+                  )}
+                  aria-label={`Avatar ${avatar.name}`}
+                  title={avatar.name}
+                >
+                  <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
+                      <div className="rounded-full bg-primary p-1">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Avatar</p>
-        <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-          {PRESET_AVATARS.map((avatar) => {
-            const selected = value === avatar.url;
-            return (
-              <button
-                key={avatar.seed}
-                type="button"
-                onClick={() => onSelectPreset(avatar.url)}
-                className={cn(
-                  "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                  selected
-                    ? "border-primary ring-2 ring-primary ring-offset-2"
-                    : "border-border hover:border-primary/50",
-                )}
-                aria-label={`Avatar ${avatar.seed}`}
-              >
-                <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                {selected && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
-                    <div className="rounded-full bg-primary p-1">
-                      <Check className="h-3 w-3 text-primary-foreground" />
+        <div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Avatar</p>
+          <div className="grid grid-cols-4 gap-3">
+            {PRESET_AVATARS.map((avatar) => {
+              const selected = value === avatar.url;
+              return (
+                <button
+                  key={avatar.seed}
+                  type="button"
+                  onClick={() => onSelectPreset(avatar.url)}
+                  className={cn(
+                    "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
+                    selected
+                      ? "border-primary ring-2 ring-primary ring-offset-2"
+                      : "border-border hover:border-primary/50",
+                  )}
+                  aria-label={`Avatar ${avatar.seed}`}
+                >
+                  <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                      <div className="rounded-full bg-primary p-1">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
         </div>
-        {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
       </div>
     </div>
   );
