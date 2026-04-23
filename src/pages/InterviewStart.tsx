@@ -1141,7 +1141,21 @@ export default function InterviewStart() {
 
   // Called when user clicks "Démarrer" — runs in user gesture context (needed for mobile TTS)
   const beginInterview = async () => {
-    if (!session || !project || questions.length === 0) return;
+    if (!session || !project || questions.length === 0) {
+      logger.error("interview_begin_blocked", {
+        hasSession: !!session,
+        hasProject: !!project,
+        questionsCount: questions.length,
+        token,
+        slug,
+      });
+      toast({
+        title: "Session non prête",
+        description: "Impossible de démarrer pour le moment. Rechargez la page.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Warm up speech synthesis with a silent utterance (mobile requires gesture)
     if (window.speechSynthesis) {
