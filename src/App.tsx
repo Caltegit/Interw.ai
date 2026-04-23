@@ -66,6 +66,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ImpersonationBanner />
           <Routes>
             {/* Public landing */}
             <Route path="/" element={<Landing />} />
