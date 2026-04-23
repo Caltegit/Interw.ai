@@ -1903,6 +1903,10 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
+              <div className="lg:col-span-1 flex flex-col justify-center gap-4 sm:gap-5">
                 {!interviewFinished && (() => {
                   const isLastQ = currentQuestionIndex >= questions.length - 1;
                   const label = isLastQ ? "Terminer la session" : "Passer la question";
@@ -1910,7 +1914,7 @@ export default function InterviewStart() {
                   // le clic interrompt la TTS en cours et passe à la suite.
                   const disabled = false;
                   return (
-                    <div className="mt-3 flex justify-center">
+                    <div className="flex justify-end">
                       {silenceTier >= 3 ? (
                         <Button
                           type="button"
@@ -1935,10 +1939,6 @@ export default function InterviewStart() {
                     </div>
                   );
                 })()}
-              </div>
-
-              {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
-              <div className="lg:col-span-1 flex flex-col justify-center gap-4 sm:gap-5">
                 {/* Question text (for written/audio) */}
                 {currentQ && questionType !== "video" && (
                   <QuestionMediaPlayer
@@ -2135,7 +2135,7 @@ export default function InterviewStart() {
                 {interviewFinished && (
                   <div className="flex flex-col items-center gap-2">
                     <Button className="w-full h-16 text-lg rounded-2xl" size="lg" variant="destructive" onClick={endInterview}>
-                      Terminer l'session
+                      Terminer la session
                     </Button>
                   </div>
                 )}
@@ -2160,7 +2160,7 @@ export default function InterviewStart() {
                   className="gap-2 text-muted-foreground hover:text-destructive"
                 >
                   <PhoneOff className="h-4 w-4" />
-                  Arrêter l'session
+                  Arrêter la session
                 </Button>
                 {project?.allow_pause && (
                   <Button
