@@ -22,6 +22,22 @@ declare global {
   }
 }
 
+// Précharge un fichier média (audio/vidéo) dans le cache HTTP du navigateur
+// pour permettre une lecture immédiate au moment de l'affichage. Important sur
+// mobile où le buffering peut être lent.
+const prefetchedUrls = new Set<string>();
+function prefetchMedia(url: string | null | undefined) {
+  if (!url || prefetchedUrls.has(url)) return;
+  prefetchedUrls.add(url);
+  try {
+    fetch(url, { method: "GET", cache: "force-cache" }).catch((err) => {
+      console.warn("[prefetchMedia] failed for", url, err);
+    });
+  } catch (err) {
+    console.warn("[prefetchMedia] threw for", url, err);
+  }
+}
+
 export default function InterviewStart() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
@@ -1231,6 +1247,9 @@ export default function InterviewStart() {
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
       : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${questions[0].content}`;
 
+    // Précharge la 1ère question pendant la TTS du greeting (gain crucial mobile)
+    if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
+
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
       role: "ai",
@@ -1489,6 +1508,9 @@ export default function InterviewStart() {
         : "written";
     const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
+    // Précharge le média pendant que la TTS de transition est prononcée.
+    if (nMediaUrl) prefetchMedia(nMediaUrl);
+
     // Use AI message if provided, otherwise fall back to local transition
     const transition =
       aiMessage ||
@@ -1619,6 +1641,7 @@ export default function InterviewStart() {
           ? "audio"
           : "written";
       const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
+      if (nMediaUrl) prefetchMedia(nMediaUrl);
 
       const transition =
         nMediaType === "written"

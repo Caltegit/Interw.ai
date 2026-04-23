@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
-import { Play, Pause, RotateCcw, FileText, Mic, Video } from "lucide-react";
+import { Play, Pause, FileText, Mic, Video, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface QuestionMediaPlayerHandle {
@@ -18,12 +18,6 @@ interface QuestionMediaPlayerProps {
   onPlaybackEnd?: () => void;
 }
 
-const typeConfig = {
-  written: { icon: FileText, label: "Texte", color: "text-blue-400" },
-  audio: { icon: Mic, label: "Audio", color: "text-amber-400" },
-  video: { icon: Video, label: "Vidéo", color: "text-emerald-400" },
-};
-
 const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaPlayerProps>(({
   type,
   content,
@@ -37,12 +31,16 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hasFinished, setHasFinished] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [needsManualPlay, setNeedsManualPlay] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const videoPlayerRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>();
   const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const canplayWaitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { icon: Icon, label, color } = typeConfig[type];
+  const STALL_TIMEOUT_MS = 12000;
+  const CANPLAY_TIMEOUT_MS = 6000;
 
   const getEl = () => type === "video" ? videoPlayerRef.current : audioRef.current;
 
@@ -50,6 +48,8 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+      if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
     };
   }, []);
 
@@ -63,28 +63,14 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     }
   };
 
-  const doPlay = () => {
-    const el = getEl();
-    if (!el) return;
-    const p = el.play();
-    if (p && typeof p.catch === "function") {
-      p.catch((err) => {
-        console.warn("[QuestionMediaPlayer] play() rejected — falling back to onPlaybackEnd", err);
-        // Autoplay blocked or other failure → unblock parent flow
-        setTimeout(() => onPlaybackEnd?.(), 300);
-      });
-    }
-    setIsPlaying(true);
-    animFrameRef.current = requestAnimationFrame(updateProgress);
-  };
-
-  // Fallback: if media stalls/suspends for too long, force the end event
+  // Fallback: if media stalls/suspends for too long, show manual play button
   const armStallTimer = () => {
     if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
     stallTimerRef.current = setTimeout(() => {
-      console.warn("[QuestionMediaPlayer] media stalled — forcing onPlaybackEnd");
-      onPlaybackEnd?.();
-    }, 5000);
+      console.warn("[QuestionMediaPlayer] media stalled — showing manual play");
+      setIsBuffering(false);
+      setNeedsManualPlay(true);
+    }, STALL_TIMEOUT_MS);
   };
   const clearStallTimer = () => {
     if (stallTimerRef.current) {
@@ -93,12 +79,65 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     }
   };
 
+  const startPlayback = () => {
+    const el = getEl();
+    if (!el) return;
+    setNeedsManualPlay(false);
+    const p = el.play();
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("[QuestionMediaPlayer] play() rejected", err);
+        setIsBuffering(false);
+        setNeedsManualPlay(true);
+      });
+    }
+    setIsPlaying(true);
+    animFrameRef.current = requestAnimationFrame(updateProgress);
+  };
+
+  const doPlay = () => {
+    const el = getEl();
+    if (!el) return;
+
+    // Si déjà prêt à lire, on démarre immédiatement
+    if (el.readyState >= 3) {
+      setIsBuffering(false);
+      startPlayback();
+      armStallTimer();
+      return;
+    }
+
+    // Sinon on attend canplay (avec garde de 6s)
+    setIsBuffering(true);
+    if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
+
+    const onCanPlay = () => {
+      if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
+      el.removeEventListener("canplay", onCanPlay);
+      setIsBuffering(false);
+      startPlayback();
+      armStallTimer();
+    };
+    el.addEventListener("canplay", onCanPlay);
+
+    canplayWaitRef.current = setTimeout(() => {
+      el.removeEventListener("canplay", onCanPlay);
+      console.warn("[QuestionMediaPlayer] canplay timeout — showing manual play");
+      setIsBuffering(false);
+      setNeedsManualPlay(true);
+    }, CANPLAY_TIMEOUT_MS);
+
+    // Force le chargement
+    try { el.load(); } catch {}
+  };
+
   const handleMediaError = (e: any) => {
-    console.warn("[QuestionMediaPlayer] media error — forcing onPlaybackEnd", e);
+    console.warn("[QuestionMediaPlayer] media error", e);
     clearStallTimer();
+    if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
+    setIsBuffering(false);
     setIsPlaying(false);
-    setHasFinished(true);
-    onPlaybackEnd?.();
+    setNeedsManualPlay(true);
   };
 
   const doPause = () => {
@@ -111,6 +150,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   const doStop = () => {
     const el = getEl();
     clearStallTimer();
+    if (canplayWaitRef.current) clearTimeout(canplayWaitRef.current);
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     if (el) {
       try {
@@ -121,6 +161,8 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     setIsPlaying(false);
     setProgress(0);
     setHasFinished(false);
+    setIsBuffering(false);
+    setNeedsManualPlay(false);
   };
 
   const doRestart = () => {
@@ -139,9 +181,8 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     else doPause();
   };
 
-  const restart = () => doRestart();
-
   const handleEnded = () => {
+    clearStallTimer();
     setIsPlaying(false);
     setProgress(100);
     setHasFinished(true);
@@ -150,6 +191,19 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
   const handleLoadedMetadata = (el: HTMLAudioElement | HTMLVideoElement) => {
     setDuration(el.duration);
+  };
+
+  const handleWaiting = () => {
+    setIsBuffering(true);
+    armStallTimer();
+  };
+  const handlePlaying = () => {
+    setIsBuffering(false);
+    clearStallTimer();
+  };
+  const handleProgress = () => {
+    // Tant que le buffer se remplit, on réarme le watchdog
+    armStallTimer();
   };
 
   // Expose play/stop/restart via ref
@@ -163,6 +217,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   useEffect(() => {
     setHasFinished(false);
     setProgress(0);
+    setNeedsManualPlay(false);
     if (autoPlay && type !== "written") {
       const timer = setTimeout(() => doPlay(), 200);
       return () => clearTimeout(timer);
@@ -177,7 +232,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
   // ─── FEATURED variant ───
   if (variant === "featured") {
-    // VIDEO featured: just the video, no wrapper/badge/description
+    // VIDEO featured
     if (type === "video" && videoUrl) {
       return (
         <div className="w-full">
@@ -188,13 +243,28 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
               onError={handleMediaError}
-              onStalled={armStallTimer}
-              onSuspend={armStallTimer}
-              onPlaying={clearStallTimer}
-              onWaiting={armStallTimer}
+              onStalled={handleWaiting}
+              onWaiting={handleWaiting}
+              onPlaying={handlePlaying}
+              onProgress={handleProgress}
               className="w-full h-full object-cover"
-              preload="metadata"
+              preload="auto"
+              playsInline
             />
+            {isBuffering && (
+              <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-2 pointer-events-none">
+                <Loader2 className="h-8 w-8 text-white/80 animate-spin" />
+                <span className="text-xs text-white/80">Chargement…</span>
+              </div>
+            )}
+            {needsManualPlay && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <Button onClick={doPlay} size="lg" className="gap-2">
+                  <Play className="h-5 w-5" />
+                  Lire la question
+                </Button>
+              </div>
+            )}
             {hasFinished && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
                 <span className="text-xs text-white/70 uppercase tracking-wide">Lecture terminée</span>
@@ -232,13 +302,23 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               onEnded={handleEnded}
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
               onError={handleMediaError}
-              onStalled={armStallTimer}
-              onSuspend={armStallTimer}
-              onPlaying={clearStallTimer}
-              preload="metadata"
+              onStalled={handleWaiting}
+              onWaiting={handleWaiting}
+              onPlaying={handlePlaying}
+              onProgress={handleProgress}
+              preload="auto"
             />
             <div className="flex items-center gap-3">
-              {!hasFinished ? (
+              {needsManualPlay ? (
+                <Button onClick={doPlay} size="sm" className="gap-2">
+                  <Play className="h-4 w-4" />
+                  Lire la question
+                </Button>
+              ) : isBuffering ? (
+                <div className="h-10 w-10 rounded-full bg-muted/40 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !hasFinished ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -264,13 +344,15 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                {duration > 0 && (
+                {isBuffering ? (
+                  <span className="text-[10px] text-muted-foreground mt-1 block">Chargement audio…</span>
+                ) : duration > 0 ? (
                   <span className="text-[10px] text-muted-foreground mt-1 block">
                     {hasFinished
                       ? "Lecture terminée"
                       : `${formatTime((progress / 100) * duration)} / ${formatTime(duration)}`}
                   </span>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
@@ -346,6 +428,7 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
               onLoadedMetadata={(e) => handleLoadedMetadata(e.currentTarget)}
               className="w-full h-full object-cover"
               preload="metadata"
+              playsInline
             />
             {!isPlaying && !hasFinished && (
               <button
