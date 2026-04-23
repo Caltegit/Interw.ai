@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
+import { RecordingStatusBadge } from "@/components/interview/RecordingStatusBadge";
 import { logger } from "@/lib/logger";
 
 // Extend window for webkitSpeechRecognition
@@ -95,6 +96,12 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
+  // Streaming des chunks vers Storage : index séquentiel et liste des chemins par question.
+  const chunkIndexRef = useRef(0);
+  const uploadedChunkPathsRef = useRef<string[]>([]);
+  const chunkMimeRef = useRef<string>("video/webm");
+  const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
+  const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
@@ -923,27 +930,71 @@ export default function InterviewStart() {
   }, [toast]);
 
   // Start a per-question video recorder (uses same stream)
-  // Detect supported mime type for MediaRecorder
+  // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
+  const uploadChunk = useCallback(
+    async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
+      const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.webm`;
+      const backoffs = [500, 1500, 4000];
+      for (let attempt = 0; attempt < backoffs.length; attempt++) {
+        try {
+          const { error } = await supabase.storage
+            .from("media")
+            .upload(path, blob, { contentType: chunkMimeRef.current, upsert: true });
+          if (!error) {
+            uploadedChunkPathsRef.current.push(path);
+            return path;
+          }
+        } catch {
+          /* retry */
+        }
+        if (attempt < backoffs.length - 1) {
+          await new Promise((r) => setTimeout(r, backoffs[attempt]));
+        }
+      }
+      logger.error("interview_chunk_upload_failed", { sessionId, questionIndex, chunkIdx });
+      return null;
+    },
+    [],
+  );
+
+  // Démarre l'enregistrement d'une question en streamant les chunks vers Storage à la volée.
   const getSupportedMimeType = useCallback(() => {
     const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
     for (const t of types) {
       if (MediaRecorder.isTypeSupported(t)) return t;
     }
-    return undefined; // browser default
+    return undefined;
   }, []);
 
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
     questionVideoChunksRef.current = [];
+    chunkIndexRef.current = 0;
+    uploadedChunkPathsRef.current = [];
     try {
       const mimeType = getSupportedMimeType();
+      chunkMimeRef.current = mimeType ?? "video/webm";
       const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
+      const sessionId = session?.id ?? null;
+      const questionIndex = currentQuestionIndex;
+
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) questionVideoChunksRef.current.push(e.data);
+        if (e.data.size === 0) return;
+        // Garde aussi en mémoire pour le blob final (fallback robuste pour la lecture).
+        questionVideoChunksRef.current.push(e.data);
+        if (!sessionId) return;
+        const idx = chunkIndexRef.current++;
+        setPendingChunkUploads((n) => n + 1);
+        trackBackground(
+          uploadChunk(sessionId, questionIndex, idx, e.data).finally(() => {
+            setPendingChunkUploads((n) => Math.max(0, n - 1));
+          }),
+        );
       };
-      recorder.start(500);
+      recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
+      setIsRecordingActive(true);
     } catch (e) {
       logger.error("interview_recorder_failed", {
         sessionId: session?.id ?? null,
@@ -951,28 +1002,55 @@ export default function InterviewStart() {
         error: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [getSupportedMimeType]);
+  }, [getSupportedMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
 
-  // Stop per-question recorder and upload the video segment
+  // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
     async (sessionId: string, questionIndex: number): Promise<string | null> => {
       const recorder = questionRecorderRef.current;
-      if (!recorder || recorder.state === "inactive") return null;
+      if (!recorder || recorder.state === "inactive") {
+        setIsRecordingActive(false);
+        return null;
+      }
 
       await new Promise<void>((resolve) => {
         recorder.onstop = () => resolve();
         recorder.stop();
       });
       questionRecorderRef.current = null;
+      setIsRecordingActive(false);
 
       if (questionVideoChunksRef.current.length === 0) return null;
 
       const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
+      const chunkPaths = [...uploadedChunkPathsRef.current];
       questionVideoChunksRef.current = [];
+      uploadedChunkPathsRef.current = [];
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
 
-      // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau
-      // sur les sessions longs.
+      // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
+      if (chunkPaths.length > 0) {
+        const manifest = {
+          sessionId,
+          questionIndex,
+          mimeType: chunkMimeRef.current,
+          chunks: chunkPaths,
+          createdAt: new Date().toISOString(),
+        };
+        const manifestPath = `interviews/${sessionId}/q${questionIndex}/manifest.json`;
+        trackBackground(
+          supabase.storage
+            .from("media")
+            .upload(manifestPath, new Blob([JSON.stringify(manifest)], { type: "application/json" }), {
+              contentType: "application/json",
+              upsert: true,
+            })
+            .then(() => {})
+            .catch(() => {}),
+        );
+      }
+
+      // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau.
       const backoffs = [1000, 3000, 8000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
         try {
@@ -1004,7 +1082,7 @@ export default function InterviewStart() {
       });
       return null;
     },
-    [],
+    [trackBackground],
   );
 
   // Watchdog helpers — guarantee transition to listening even if onPlaybackEnd never fires
@@ -1929,6 +2007,12 @@ export default function InterviewStart() {
     <CandidateLayout minimal>
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
+      )}
+      {!interviewFinished && (
+        <RecordingStatusBadge
+          pendingUploads={pendingChunkUploads}
+          recording={isRecordingActive}
+        />
       )}
       {endCountdown !== null && !interviewFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
