@@ -194,6 +194,40 @@ export default function SuperAdminOrgDetail() {
                 {m.role === "recruiter" && <Badge variant="secondary">Recruteur</Badge>}
                 {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
                 {!m.role && <Badge variant="outline">Sans rôle</Badge>}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      disabled={m.user_id === currentUser?.id}
+                      title={m.user_id === currentUser?.id ? "Impossible de se connecter à son propre compte" : "Prendre la main sur ce compte"}
+                    >
+                      <LogIn className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Prendre la main sur {m.email} ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Vous serez connecté à la place de cet utilisateur. Un bandeau vous permettra de revenir à votre compte super administrateur à tout moment.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            await startImpersonation(m.user_id, m.email);
+                          } catch (e: any) {
+                            toast({ title: "Erreur", description: e?.message ?? "Impossible de prendre la main", variant: "destructive" });
+                          }
+                        }}
+                      >
+                        Prendre la main
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="ghost" size="icon" onClick={() => setEditingUser(m)} title="Modifier">
                   <Pencil className="h-4 w-4" />
                 </Button>
