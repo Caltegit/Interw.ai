@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      console.log("[impersonate] Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Non autorisé" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,6 +31,7 @@ Deno.serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data: claims, error: claimsErr } = await userClient.auth.getClaims(token);
     if (claimsErr || !claims?.claims?.sub) {
+      console.log("[impersonate] Claims error:", claimsErr?.message);
       return new Response(JSON.stringify({ error: "Non autorisé" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -37,14 +39,18 @@ Deno.serve(async (req) => {
     }
 
     const callerId = claims.claims.sub as string;
+    console.log("[impersonate] Caller:", callerId);
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Vérifier que l'appelant est super admin
-    const { data: isSuperAdmin } = await admin.rpc("is_super_admin", {
+    const { data: isSuperAdmin, error: roleErr } = await admin.rpc("is_super_admin", {
       _user_id: callerId,
     });
+    if (roleErr) {
+      console.log("[impersonate] is_super_admin RPC error:", roleErr.message);
+    }
     if (!isSuperAdmin) {
+      console.log("[impersonate] Caller is not super admin");
       return new Response(JSON.stringify({ error: "Réservé aux super administrateurs" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,10 +66,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Récupérer l'email de la cible
     const { data: targetUser, error: getErr } = await admin.auth.admin.getUserById(targetUserId);
     if (getErr || !targetUser?.user?.email) {
-      return new Response(JSON.stringify({ error: "Utilisateur introuvable" }), {
+      console.log("[impersonate] getUserById error:", getErr?.message);
+      return new Response(JSON.stringify({ error: getErr?.message || "Utilisateur introuvable" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -72,20 +78,45 @@ Deno.serve(async (req) => {
     const targetEmail = targetUser.user.email;
     const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
     const redirectTo = origin ? `${origin.replace(/\/$/, "")}/dashboard` : undefined;
+    console.log("[impersonate] Target:", targetEmail, "redirectTo:", redirectTo);
 
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: targetEmail,
-      options: redirectTo ? { redirectTo } : undefined,
-    });
+    // Première tentative avec redirectTo
+    let linkData: any = null;
+    let linkErr: any = null;
+    if (redirectTo) {
+      const r = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: targetEmail,
+        options: { redirectTo },
+      });
+      linkData = r.data;
+      linkErr = r.error;
+      if (linkErr) {
+        console.log("[impersonate] generateLink with redirectTo failed:", linkErr.message);
+      }
+    }
 
-    if (linkErr || !linkData?.properties?.action_link) {
+    // Repli sans redirectTo si la première tentative a échoué (ou a été ignorée)
+    if (!linkData?.properties?.action_link) {
+      const r = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: targetEmail,
+      });
+      linkData = r.data;
+      linkErr = r.error;
+      if (linkErr) {
+        console.log("[impersonate] generateLink without redirectTo failed:", linkErr.message);
+      }
+    }
+
+    if (!linkData?.properties?.action_link) {
       return new Response(
         JSON.stringify({ error: linkErr?.message || "Impossible de générer le lien" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    console.log("[impersonate] Link generated successfully for", targetEmail);
     return new Response(
       JSON.stringify({
         action_link: linkData.properties.action_link,
@@ -95,6 +126,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
+    console.log("[impersonate] Unexpected error:", (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
