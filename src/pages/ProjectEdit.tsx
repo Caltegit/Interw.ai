@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ export default function ProjectEdit() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [initial, setInitial] = useState<ProjectFormState | null>(null);
   const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
 
@@ -65,6 +66,7 @@ export default function ProjectEdit() {
         .from("questions")
         .select("*")
         .eq("project_id", id)
+        .is("archived_at", null)
         .order("order_index", { ascending: true });
 
       const questions =
@@ -77,6 +79,7 @@ export default function ProjectEdit() {
                   : "written";
               return {
                 ...createEmptyQuestion(),
+                id: q.id,
                 title: q.title || "",
                 content: q.content || "",
                 type: q.type,
@@ -165,6 +168,8 @@ export default function ProjectEdit() {
 
   const handleSave = async (s: ProjectFormState) => {
     if (!id || !user) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       // Avatar : si nouveau fichier => upload ; sinon, garder preview (preset choisi) ou avatar existant.
@@ -238,141 +243,210 @@ export default function ProjectEdit() {
 
       if (updateError) throw updateError;
 
-      await supabase.from("questions").delete().eq("project_id", id);
-
+      // ===== Synchronisation des questions (merge intelligent, jamais de delete global) =====
       const validQuestions = s.questions.filter(
         (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
       );
 
-      if (validQuestions.length > 0) {
-        const { data: insertedQuestions } = await supabase
-          .from("questions")
-          .insert(
-            validQuestions.map((q, i) => ({
-              project_id: id,
-              order_index: i,
-              title: q.title || q.content.slice(0, 60) || `Question ${i + 1}`,
-              content: q.content.trim() || q.title || `Question ${i + 1}`,
-              type: q.type as never,
-              follow_up_enabled: q.follow_up_enabled,
-              max_follow_ups: q.max_follow_ups,
-              relance_level: q.relance_level,
-              hint_text: q.hint_text?.trim() || null,
-              max_response_seconds: q.max_response_seconds ?? null,
-            })),
-          )
-          .select();
+      // Récupérer les questions actuellement actives en base pour calculer les diffs
+      const { data: existingDb, error: existingErr } = await supabase
+        .from("questions")
+        .select("id")
+        .eq("project_id", id)
+        .is("archived_at", null);
+      if (existingErr) throw existingErr;
+      const existingIds = new Set((existingDb ?? []).map((r) => r.id));
+      const submittedIds = new Set(
+        validQuestions.map((q) => q.id).filter((x): x is string => Boolean(x)),
+      );
 
-        if (insertedQuestions) {
-          let orgIdForLib: string | null = null;
-          const needsLib = validQuestions.some((q) => q.save_to_library && !q.from_library);
-          if (needsLib) {
-            const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
-            orgIdForLib = orgData || null;
+      // 1) Suppressions ciblées (ou archivage si la question est référencée par des messages)
+      const idsToRemove = [...existingIds].filter((qid) => !submittedIds.has(qid));
+      for (const qid of idsToRemove) {
+        const { error: delErr } = await supabase.from("questions").delete().eq("id", qid);
+        if (delErr) {
+          // Probable violation de FK (session_messages) → on archive au lieu de planter
+          const { error: archErr } = await supabase
+            .from("questions")
+            .update({ archived_at: new Date().toISOString() } as never)
+            .eq("id", qid);
+          if (archErr) throw archErr;
+        }
+      }
+
+      // 2) Préparer org pour la bibliothèque (récupéré une seule fois si besoin)
+      let orgIdForLib: string | null = null;
+      const needsLib = validQuestions.some((q) => q.save_to_library && !q.from_library);
+      if (needsLib) {
+        const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+        orgIdForLib = orgData || null;
+      }
+
+      // 3) Update existantes / Insert nouvelles, en préservant l'ordre
+      for (let i = 0; i < validQuestions.length; i++) {
+        const q = validQuestions[i];
+        const basePayload = {
+          order_index: i,
+          title: q.title || q.content.slice(0, 60) || `Question ${i + 1}`,
+          content: q.content.trim() || q.title || `Question ${i + 1}`,
+          type: q.type as never,
+          follow_up_enabled: q.follow_up_enabled,
+          max_follow_ups: q.max_follow_ups,
+          relance_level: q.relance_level,
+          hint_text: q.hint_text?.trim() || null,
+          max_response_seconds: q.max_response_seconds ?? null,
+        };
+
+        let qId: string;
+        if (q.id && existingIds.has(q.id)) {
+          // UPDATE
+          const { error: upErr } = await supabase
+            .from("questions")
+            .update(basePayload as never)
+            .eq("id", q.id);
+          if (upErr) throw upErr;
+          qId = q.id;
+        } else {
+          // INSERT
+          const { data: inserted, error: insErr } = await supabase
+            .from("questions")
+            .insert({ ...basePayload, project_id: id } as never)
+            .select("id")
+            .single();
+          if (insErr || !inserted) throw insErr ?? new Error("Insert question failed");
+          qId = (inserted as { id: string }).id;
+        }
+
+        // Médias éventuels (audio/vidéo)
+        const mediaUpdates: Record<string, string | null> = {};
+        if (q.audioBlob) {
+          const audioPath = `questions/${qId}_audio.webm`;
+          const { error: aErr } = await supabase.storage
+            .from("media")
+            .upload(audioPath, q.audioBlob, { contentType: "audio/webm", upsert: true });
+          if (!aErr) {
+            const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
+            mediaUpdates.audio_url = `${aUrl.publicUrl}?t=${Date.now()}`;
           }
+        } else if (q.audioPreviewUrl && !q.audioPreviewUrl.startsWith("blob:")) {
+          mediaUpdates.audio_url = q.audioPreviewUrl;
+        } else if (q.mediaType !== "audio") {
+          mediaUpdates.audio_url = null;
+        }
 
-          for (let i = 0; i < insertedQuestions.length; i++) {
-            const q = validQuestions[i];
-            const qId = insertedQuestions[i].id;
-            const updates: Record<string, string | null> = {};
+        if (q.videoBlob) {
+          const videoPath = `questions/${qId}_video.webm`;
+          const { error: vErr } = await supabase.storage
+            .from("media")
+            .upload(videoPath, q.videoBlob, { contentType: "video/webm", upsert: true });
+          if (!vErr) {
+            const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
+            mediaUpdates.video_url = `${vUrl.publicUrl}?t=${Date.now()}`;
+          }
+        } else if (q.videoPreviewUrl && !q.videoPreviewUrl.startsWith("blob:")) {
+          mediaUpdates.video_url = q.videoPreviewUrl;
+        } else if (q.mediaType !== "video") {
+          mediaUpdates.video_url = null;
+        }
 
-            if (q.audioBlob) {
-              const audioPath = `questions/${qId}_audio.webm`;
-              const { error: aErr } = await supabase.storage
-                .from("media")
-                .upload(audioPath, q.audioBlob, { contentType: "audio/webm", upsert: true });
-              if (!aErr) {
-                const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
-                updates.audio_url = `${aUrl.publicUrl}?t=${Date.now()}`;
-              }
-            } else if (q.audioPreviewUrl && !q.audioPreviewUrl.startsWith("blob:")) {
-              updates.audio_url = q.audioPreviewUrl;
-            }
+        if (Object.keys(mediaUpdates).length > 0) {
+          await supabase.from("questions").update(mediaUpdates as never).eq("id", qId);
+        }
 
-            if (q.videoBlob) {
-              const videoPath = `questions/${qId}_video.webm`;
-              const { error: vErr } = await supabase.storage
-                .from("media")
-                .upload(videoPath, q.videoBlob, { contentType: "video/webm", upsert: true });
-              if (!vErr) {
-                const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
-                updates.video_url = `${vUrl.publicUrl}?t=${Date.now()}`;
-              }
-            } else if (q.videoPreviewUrl && !q.videoPreviewUrl.startsWith("blob:")) {
-              updates.video_url = q.videoPreviewUrl;
-            }
-
-            if (Object.keys(updates).length > 0) {
-              await supabase.from("questions").update(updates as never).eq("id", qId);
-            }
-
-            if (q.save_to_library && !q.from_library && orgIdForLib) {
-              const contentText = q.content.trim() || q.title || "";
-              if (contentText) {
-                const { data: existing } = await supabase
-                  .from("question_templates")
-                  .select("id")
-                  .eq("organization_id", orgIdForLib)
-                  .eq("content", contentText)
-                  .maybeSingle();
-                if (!existing) {
-                  await supabase.from("question_templates").insert({
-                    organization_id: orgIdForLib,
-                    created_by: user.id,
-                    title: q.title || contentText.slice(0, 60),
-                    content: contentText,
-                    category: q.category || null,
-                    type: q.mediaType,
-                    follow_up_enabled: q.follow_up_enabled,
-                    max_follow_ups: q.max_follow_ups,
-                    relance_level: q.relance_level,
-                    audio_url: (updates.audio_url as string | null) || null,
-                    video_url: (updates.video_url as string | null) || null,
-                    hint_text: q.hint_text?.trim() || null,
-                    max_response_seconds: q.max_response_seconds ?? null,
-                  } as never);
-                }
-              }
+        // Sauvegarde en bibliothèque si demandée
+        if (q.save_to_library && !q.from_library && orgIdForLib) {
+          const contentText = q.content.trim() || q.title || "";
+          if (contentText) {
+            const { data: existing } = await supabase
+              .from("question_templates")
+              .select("id")
+              .eq("organization_id", orgIdForLib)
+              .eq("content", contentText)
+              .maybeSingle();
+            if (!existing) {
+              await supabase.from("question_templates").insert({
+                organization_id: orgIdForLib,
+                created_by: user.id,
+                title: q.title || contentText.slice(0, 60),
+                content: contentText,
+                category: q.category || null,
+                type: q.mediaType,
+                follow_up_enabled: q.follow_up_enabled,
+                max_follow_ups: q.max_follow_ups,
+                relance_level: q.relance_level,
+                audio_url: (mediaUpdates.audio_url as string | null) || null,
+                video_url: (mediaUpdates.video_url as string | null) || null,
+                hint_text: q.hint_text?.trim() || null,
+                max_response_seconds: q.max_response_seconds ?? null,
+              } as never);
             }
           }
         }
       }
 
-      await supabase.from("evaluation_criteria").delete().eq("project_id", id);
-
+      // ===== Synchronisation des critères (merge ciblé, vérification des erreurs) =====
       const validCriteria = s.criteria.filter((c) => c.label.trim());
-      if (validCriteria.length > 0) {
-        await supabase.from("evaluation_criteria").insert(
-          validCriteria.map((c, i) => ({
-            project_id: id,
-            order_index: i,
-            label: c.label,
-            description: c.description,
-            weight: c.weight,
-            scoring_scale: c.scoring_scale as never,
-            anchors: c.anchors,
-            applies_to: c.applies_to as never,
-          })),
-        );
 
-        const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
-        if (toLibrary.length > 0) {
-          const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
-          if (orgData) {
-            await supabase.from("criteria_templates").insert(
-              toLibrary.map((c) => ({
-                organization_id: orgData,
-                created_by: user.id,
-                label: c.label,
-                description: c.description,
-                weight: c.weight,
-                scoring_scale: c.scoring_scale as never,
-                applies_to: c.applies_to as never,
-                anchors: c.anchors,
-                category: c.category || null,
-              })),
-            );
-          }
+      const { data: existingCritDb, error: existingCritErr } = await supabase
+        .from("evaluation_criteria")
+        .select("id")
+        .eq("project_id", id);
+      if (existingCritErr) throw existingCritErr;
+      const existingCritIds = new Set((existingCritDb ?? []).map((r) => r.id));
+      const submittedCritIds = new Set(
+        validCriteria.map((c) => c.id).filter((x): x is string => Boolean(x)),
+      );
+
+      // Suppressions ciblées
+      const critToRemove = [...existingCritIds].filter((cid) => !submittedCritIds.has(cid));
+      for (const cid of critToRemove) {
+        const { error: delErr } = await supabase.from("evaluation_criteria").delete().eq("id", cid);
+        if (delErr) throw delErr;
+      }
+
+      // Update / Insert
+      for (let i = 0; i < validCriteria.length; i++) {
+        const c = validCriteria[i];
+        const payload = {
+          order_index: i,
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: c.scoring_scale as never,
+          anchors: c.anchors,
+          applies_to: c.applies_to as never,
+        };
+        if (c.id && existingCritIds.has(c.id)) {
+          const { error: upErr } = await supabase
+            .from("evaluation_criteria")
+            .update(payload as never)
+            .eq("id", c.id);
+          if (upErr) throw upErr;
+        } else {
+          const { error: insErr } = await supabase
+            .from("evaluation_criteria")
+            .insert({ ...payload, project_id: id } as never);
+          if (insErr) throw insErr;
+        }
+      }
+
+      const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
+      if (toLibrary.length > 0) {
+        const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+        if (orgData) {
+          await supabase.from("criteria_templates").insert(
+            toLibrary.map((c) => ({
+              organization_id: orgData,
+              created_by: user.id,
+              label: c.label,
+              description: c.description,
+              weight: c.weight,
+              scoring_scale: c.scoring_scale as never,
+              applies_to: c.applies_to as never,
+              anchors: c.anchors,
+              category: c.category || null,
+            })),
+          );
         }
       }
 
@@ -382,6 +456,7 @@ export default function ProjectEdit() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

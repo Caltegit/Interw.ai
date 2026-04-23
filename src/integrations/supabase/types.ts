@@ -777,6 +777,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          archived_at: string | null
           audio_url: string | null
           content: string
           created_at: string
@@ -794,6 +795,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          archived_at?: string | null
           audio_url?: string | null
           content: string
           created_at?: string
@@ -811,6 +813,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          archived_at?: string | null
           audio_url?: string | null
           content?: string
           created_at?: string
