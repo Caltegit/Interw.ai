@@ -27,7 +27,7 @@ export default function Landing() {
 
   useEffect(() => {
     document.title = "Interw.ai — Sessions vidéo IA pour le recrutement";
-    const desc = "Interw.ai automatise vos sessions de présélection : session vidéo conversationnel mené par une IA, scoring objectif, rapports détaillés.";
+    const desc = "Interw.ai automatise vos sessions de présélection : entretiens vidéo conversationnels mené par une IA, scoring objectif, rapports détaillés.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -78,7 +78,7 @@ export default function Landing() {
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
             <span className="landing-gradient-text">Présélectionnez 10× plus vite.</span>
             <br />
-            <span className="landing-accent-text">Avec un session IA.</span>
+            <span className="landing-accent-text">Avec une session IA.</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
             Interw.ai mène des sessions vidéo conversationnels à la place de vos recruteurs.
@@ -148,9 +148,9 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { k: "10×", v: "plus rapide qu'un session téléphonique" },
+                { k: "10×", v: "plus rapide qu'une session téléphonique" },
                 { k: "100%", v: "des candidats évalués sur les mêmes critères" },
-                { k: "24/7", v: "vos candidats passent l'session quand ils veulent" },
+                { k: "24/7", v: "vos candidats passent la session quand ils veulent" },
                 { k: "0", v: "biais lié à la fatigue du recruteur" },
               ].map((s) => (
                 <div key={s.k} className="landing-card p-5">
@@ -180,7 +180,7 @@ export default function Landing() {
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Brain, title: "Session IA conversationnel", desc: "Une IA mène l'session, pose des questions de suivi pertinentes et adapte le ton à chaque candidat." },
+              { icon: Brain, title: "Session IA conversationnelle", desc: "Une IA mène la session, pose des questions de suivi pertinentes et adapte le ton à chaque candidat." },
               { icon: LineChart, title: "Scoring automatique", desc: "Chaque réponse est notée selon vos critères d'évaluation. Transparent, objectif, reproductible." },
               { icon: ClipboardList, title: "Rapports détaillés", desc: "Synthèse exécutive, points forts, axes d'amélioration, recommandation. Prêt à partager." },
               { icon: Library, title: "Bibliothèque de questions", desc: "Réutilisez vos meilleures questions et vos critères entre projets. Capitalisez sur votre expertise." },
@@ -214,7 +214,7 @@ export default function Landing() {
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
               { n: "01", icon: ClipboardList, title: "Créez votre projet", desc: "Définissez le poste, vos questions, vos critères de scoring. Quelques minutes suffisent." },
-              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent l'session depuis leur navigateur, quand ils veulent." },
+              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent la session depuis leur navigateur, quand ils veulent." },
               { n: "03", icon: CheckCircle2, title: "Recevez les rapports", desc: "Une note globale, une recommandation, et tous les détails. Décidez en quelques minutes." },
             ].map((s) => (
               <div key={s.n} className="landing-card relative p-6">

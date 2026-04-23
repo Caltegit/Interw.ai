@@ -311,7 +311,7 @@ export default function InterviewStart() {
     armEndWarningRef.current = armEndWarning;
   }, [armEndWarning]);
 
-  // Mode « salle d'examen » — listeners actifs uniquement quand l'session tourne
+  // Mode « salle d'examen » — listeners actifs uniquement quand la session tourne
   useEffect(() => {
     if (!readyToStart || interviewFinished) return;
 
@@ -847,7 +847,7 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
-  // Restaure les messages depuis session_messages et redémarre l'session à la bonne question
+  // Restaure les messages depuis session_messages et redémarre la session à la bonne question
   const handleResumeInterview = useCallback(async () => {
     if (!resumePrompt || !session?.id) return;
     setRestoringMessages(true);
@@ -876,7 +876,7 @@ export default function InterviewStart() {
     }
   }, [resumePrompt, session?.id]);
 
-  // Recommence l'session depuis zéro : purge messages BDD + fichiers media uploadés
+  // Recommence la session depuis zéro : purge messages BDD + fichiers media uploadés
   const handleRestartInterview = useCallback(async () => {
     if (!session?.id) return;
     setRestoringMessages(true);
@@ -1178,7 +1178,7 @@ export default function InterviewStart() {
       }
     }
 
-    // Bloque le retour arrière du navigateur pendant l'session
+    // Bloque le retour arrière du navigateur pendant la session
     try {
       window.history.pushState({ interviewLock: true }, "");
     } catch {}
@@ -1248,7 +1248,7 @@ export default function InterviewStart() {
     } catch {
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer le début de l'session.",
+        description: "Impossible d'enregistrer le début de la session.",
         variant: "destructive",
       });
     }
@@ -1461,7 +1461,7 @@ export default function InterviewStart() {
     // ── 5. END branch ──
     if (action === "end" || isLastQuestion) {
       setInterviewFinished(true);
-      const closing = aiMessage || "Merci pour vos réponses, l'session est terminé.";
+      const closing = aiMessage || "Merci pour vos réponses, la session est terminé.";
       setMessages((prev) => {
         const updated = [...prev, { role: "ai", content: closing }];
         messagesRef.current = updated;
@@ -2374,7 +2374,7 @@ export default function InterviewStart() {
                   );
                 })()}
 
-                {/* CTA "Terminer l'session" si fini */}
+                {/* CTA "Terminer la session" si fini */}
                 {interviewFinished && (
                   <div className="flex flex-col items-center gap-2">
                     <Button className="w-full h-16 text-lg rounded-2xl" size="lg" variant="destructive" onClick={endInterview}>
@@ -2510,10 +2510,10 @@ export default function InterviewStart() {
       <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
           <DialogHeader>
-            <DialogTitle>Terminer l'session ?</DialogTitle>
+            <DialogTitle>Terminer la session ?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Êtes-vous sûr de vouloir mettre fin à l'session ? Cette action est irréversible.
+            Êtes-vous sûr de vouloir mettre fin à la session ? Cette action est irréversible.
           </p>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
             <Button variant="outline" className="w-full sm:w-auto min-h-[44px]" onClick={() => setShowEndDialog(false)}>
