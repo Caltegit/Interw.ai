@@ -14,12 +14,11 @@ export default function InviteSignup() {
   const { toast } = useToast();
   const { session, user } = useAuth();
 
-  const [invitation, setInvitation] = useState<any>(null);
+  const [invitation, setInvitation] = useState<{ status: string; email: string } | null>(null);
   const [orgName, setOrgName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Signup form
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,13 +26,27 @@ export default function InviteSignup() {
 
   useEffect(() => {
     loadInvitation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // If user is already logged in, try to accept the invitation
+  // Si déjà connecté : appel idempotent d'accept_invitation puis redirection
   useEffect(() => {
-    if (user && invitation && invitation.status === "pending") {
-      acceptInvitation();
+    if (user && invitation) {
+      (async () => {
+        try {
+          await supabase.rpc("accept_invitation", {
+            _token: token!,
+            _user_id: user.id,
+          });
+          toast({ title: "Bienvenue !", description: `Vous avez rejoint ${orgName}` });
+          navigate("/dashboard", { replace: true });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Erreur";
+          toast({ title: "Erreur", description: msg, variant: "destructive" });
+        }
+      })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, invitation]);
 
   const loadInvitation = async () => {
@@ -47,7 +60,6 @@ export default function InviteSignup() {
       .from("organization_invitations")
       .select("*, organizations(name)")
       .eq("token", token)
-      .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
@@ -57,25 +69,11 @@ export default function InviteSignup() {
       return;
     }
 
-    setInvitation(data);
+    setInvitation({ status: data.status, email: data.email });
     setEmail(data.email);
-    setOrgName((data as any).organizations?.name || "");
+    const org = (data as { organizations?: { name?: string } }).organizations;
+    setOrgName(org?.name || "");
     setLoading(false);
-  };
-
-  const acceptInvitation = async () => {
-    if (!user || !token) return;
-    try {
-      const { error } = await supabase.rpc("accept_invitation", {
-        _token: token,
-        _user_id: user.id,
-      });
-      if (error) throw error;
-      toast({ title: "Bienvenue !", description: `Vous avez rejoint ${orgName}` });
-      navigate("/dashboard", { replace: true });
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    }
   };
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -96,11 +94,12 @@ export default function InviteSignup() {
       });
       if (signUpError) throw signUpError;
       toast({
-        title: "Compte créé !",
+        title: "Compte créé",
         description: "Vérifiez votre email pour confirmer, puis revenez sur ce lien.",
       });
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -130,14 +129,13 @@ export default function InviteSignup() {
     );
   }
 
-  // If already logged in, show acceptance message
   if (session) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle>Rejoindre {orgName}</CardTitle>
-            <CardDescription>Vous êtes connecté. Acceptation en cours...</CardDescription>
+            <CardDescription>Vous êtes connecté. Finalisation en cours…</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -153,7 +151,7 @@ export default function InviteSignup() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
           <CardDescription>
-            Vous êtes invité à rejoindre <strong>{orgName}</strong>
+            Vous avez été ajouté à <strong>{orgName}</strong>. Définissez votre mot de passe pour vous connecter.
           </CardDescription>
         </CardHeader>
         <CardContent>
