@@ -301,7 +301,7 @@ export function MediaRecorderField({
               variant="outline"
               size="sm"
               className="h-7 px-2 text-xs"
-              onClick={startRecording}
+              onClick={retake}
             >
               <RotateCcw className="mr-1 h-3 w-3" /> Refaire
             </Button>
