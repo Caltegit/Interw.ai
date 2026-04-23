@@ -929,15 +929,6 @@ export default function InterviewStart() {
   }, [toast]);
 
   // Start a per-question video recorder (uses same stream)
-  // Detect supported mime type for MediaRecorder
-  const getSupportedMimeType = useCallback(() => {
-    const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
-    for (const t of types) {
-      if (MediaRecorder.isTypeSupported(t)) return t;
-    }
-    return undefined; // browser default
-  }, []);
-
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
   const uploadChunk = useCallback(
     async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
