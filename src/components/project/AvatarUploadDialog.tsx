@@ -264,14 +264,35 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
                   onCropComplete={onCropComplete}
                 />
               </div>
-              <div className="flex flex-col items-center gap-2 w-24">
-                <p className="text-xs font-medium text-muted-foreground">Aperçu</p>
-                <div className="h-20 w-20 rounded-full border-2 border-primary overflow-hidden bg-muted flex items-center justify-center">
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="Aperçu" className="h-full w-full object-cover" />
-                  ) : (
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                  )}
+              <div className="flex flex-col items-center gap-2 w-56">
+                <p className="text-xs font-medium text-muted-foreground">Aperçu côté candidat</p>
+                <div className="w-full rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="h-10 w-10 shrink-0 rounded-full border bg-muted overflow-hidden flex items-center justify-center">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="Aperçu avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 rounded-2xl rounded-tl-sm bg-background border px-3 py-2">
+                      <p className="text-[11px] leading-snug text-foreground">
+                        Bonjour, je suis votre interlocuteur pour cet entretien.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-14 w-14 shrink-0 rounded-full border-2 border-primary/40 bg-muted overflow-hidden flex items-center justify-center">
+                      {previewUrl ? (
+                        <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground leading-tight">
+                      Avatar affiché pendant la prise de parole
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
