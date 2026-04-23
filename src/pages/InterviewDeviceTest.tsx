@@ -18,11 +18,14 @@ export default function InterviewDeviceTest() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // Cleanup on unmount
+  // Auto-start tests on mount + cleanup on unmount
   useEffect(() => {
+    testCam();
+    testMic();
     return () => {
       stopAll();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopAll = () => {
@@ -126,12 +129,11 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Caméra</span>
               </div>
-              {camStatus === "idle" && (
+              {camStatus === "error" && (
                 <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testCam}>
-                  Tester
+                  Réessayer
                 </Button>
               )}
-              {camStatus === "error" && <span className="text-xs text-destructive">Accès refusé</span>}
             </div>
 
             {camStatus === "testing" && (
@@ -173,11 +175,6 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Microphone</span>
               </div>
-              {micStatus === "idle" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
-                  Tester
-                </Button>
-              )}
               {micStatus === "error" && (
                 <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
                   Réessayer
