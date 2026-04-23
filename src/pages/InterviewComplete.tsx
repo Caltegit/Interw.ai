@@ -124,7 +124,7 @@ export default function InterviewComplete() {
             ) : (
               <div className="space-y-2 animate-fade-in">
                 <h1 className="text-2xl font-bold tracking-tight candidate-gradient-text">
-                  Session terminé, merci !
+                  Session terminée, merci !
                 </h1>
                 <p className="text-base leading-relaxed" style={{ color: "hsl(var(--l-fg) / 0.75)" }}>
                   {message}
