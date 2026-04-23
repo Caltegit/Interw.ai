@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,10 @@ interface OrgRow {
   id: string;
   name: string;
   logo_url: string | null;
+  pricing: string | null;
+  client_notes: string | null;
   created_at: string;
   member_count: number;
-  project_count: number;
 }
 
 interface Props {
@@ -25,9 +27,10 @@ interface Props {
 }
 
 export function OrgsTable({ refreshKey, onChange }: Props) {
+  const navigate = useNavigate();
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const [editing, setEditing] = useState<OrgRow | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const { toast } = useToast();
 
@@ -36,18 +39,16 @@ export function OrgsTable({ refreshKey, onChange }: Props) {
       setLoading(true);
       const { data: orgsData } = await supabase
         .from("organizations")
-        .select("id, name, logo_url, created_at")
+        .select("id, name, logo_url, pricing, client_notes, created_at")
         .order("created_at", { ascending: false });
 
       if (!orgsData) { setOrgs([]); setLoading(false); return; }
 
       const enriched = await Promise.all(
         orgsData.map(async (o) => {
-          const [{ count: members }, { count: projects }] = await Promise.all([
-            supabase.from("profiles").select("id", { count: "exact", head: true }).eq("organization_id", o.id),
-            supabase.from("projects").select("id", { count: "exact", head: true }).eq("organization_id", o.id),
-          ]);
-          return { ...o, member_count: members ?? 0, project_count: projects ?? 0 };
+          const { count: members } = await supabase
+            .from("profiles").select("id", { count: "exact", head: true }).eq("organization_id", o.id);
+          return { ...o, member_count: members ?? 0 };
         })
       );
       setOrgs(enriched);
@@ -59,13 +60,15 @@ export function OrgsTable({ refreshKey, onChange }: Props) {
     const { data, error } = await supabase.functions.invoke("superadmin-delete-org", {
       body: { organization_id: id },
     });
-    if (error || (data as any)?.error) {
-      toast({ title: "Erreur", description: error?.message || (data as any)?.error, variant: "destructive" });
+    if (error || (data as { error?: string })?.error) {
+      toast({ title: "Erreur", description: error?.message || (data as { error?: string })?.error, variant: "destructive" });
     } else {
       toast({ title: "Organisation supprimée" });
       onChange();
     }
   };
+
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   if (loading) return <div className="text-center py-8 text-muted-foreground">Chargement...</div>;
 
@@ -75,26 +78,30 @@ export function OrgsTable({ refreshKey, onChange }: Props) {
         <TableHeader>
           <TableRow>
             <TableHead>Nom</TableHead>
+            <TableHead>Tarif</TableHead>
             <TableHead>Membres</TableHead>
-            <TableHead>Projets</TableHead>
             <TableHead>Créée le</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {orgs.map((org) => (
-            <TableRow key={org.id}>
+            <TableRow
+              key={org.id}
+              className="cursor-pointer"
+              onClick={() => navigate(`/superadmin/orgs/${org.id}`)}
+            >
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {org.logo_url && <img src={org.logo_url} alt="" className="h-6 w-6 rounded object-cover" />}
                   {org.name}
                 </div>
               </TableCell>
+              <TableCell className="text-sm text-muted-foreground">{org.pricing || "—"}</TableCell>
               <TableCell>{org.member_count}</TableCell>
-              <TableCell>{org.project_count}</TableCell>
               <TableCell>{new Date(org.created_at).toLocaleDateString("fr-FR")}</TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" onClick={() => { setEditing({ id: org.id, name: org.name }); setEditOpen(true); }}>
+              <TableCell className="text-right" onClick={stop}>
+                <Button variant="ghost" size="icon" onClick={() => { setEditing(org); setEditOpen(true); }}>
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <AlertDialog>

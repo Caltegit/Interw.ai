@@ -540,27 +540,33 @@ export type Database = {
       }
       organizations: {
         Row: {
+          client_notes: string | null
           created_at: string
           id: string
           logo_url: string | null
           name: string
           owner_id: string | null
+          pricing: string | null
           slug: string
         }
         Insert: {
+          client_notes?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name: string
           owner_id?: string | null
+          pricing?: string | null
           slug: string
         }
         Update: {
+          client_notes?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
           name?: string
           owner_id?: string | null
+          pricing?: string | null
           slug?: string
         }
         Relationships: []
