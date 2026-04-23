@@ -13,7 +13,7 @@ export function RecordingStatusBadge({
   if (!recording && pendingUploads === 0) return null;
 
   const saving = pendingUploads > 0;
-  const Icon = saving ? CloudUpload : recording ? Cloud : CloudCheck;
+  const Icon = saving ? CloudUpload : recording ? Cloud : Check;
   const label = saving
     ? "Sauvegarde en cours…"
     : recording
