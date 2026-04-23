@@ -47,6 +47,7 @@ interface Props {
 }
 
 export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
+  const [uploadOpen, setUploadOpen] = useState(false);
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
   const isAnimal = value && ANIMAL_AVATARS.some((a) => a.url === value);
