@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Check, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AvatarUploadDialog } from "./AvatarUploadDialog";
 import woman1 from "@/assets/avatars/woman-1.jpg";
 import woman2 from "@/assets/avatars/woman-2.jpg";
 import woman3 from "@/assets/avatars/woman-3.jpg";
