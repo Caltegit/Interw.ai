@@ -67,12 +67,16 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     }
   };
 
-  // Fallback: if media stalls/suspends for too long, show manual play button
+  // Watchdog : si le média ne progresse plus assez longtemps, on bascule en
+  // « manual play ». Important : on ne déclare jamais la lecture « terminée »
+  // par stall — on laisse le parent décider.
   const armStallTimer = () => {
     if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
     stallTimerRef.current = setTimeout(() => {
       console.warn("[QuestionMediaPlayer] media stalled — showing manual play");
       setIsBuffering(false);
+      // Si on n'a JAMAIS joué, on propose un bouton manuel et on n'appelle pas onPlaybackEnd.
+      // Si on a déjà joué (lecture interrompue), idem : le parent décidera via son propre watchdog.
       setNeedsManualPlay(true);
     }, STALL_TIMEOUT_MS);
   };
