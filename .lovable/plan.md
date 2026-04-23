@@ -1,53 +1,69 @@
 
 
-## Recalibrer les silences candidat
+## Refonte de la création Organisations & Utilisateurs (Super Admin)
 
-### Constat
+### Ce qui change
 
-Le mécanisme existe déjà dans `InterviewStart.tsx` : 3 relances vocales → mise en pause automatique → avertissement → arrêt forcé. Mais les seuils actuels sont serrés (8 s / 13 s / 18 s / pause à 25 s / arrêt 65 s) et les 3 relances disent des choses différentes. La demande : unifier le message des relances et étendre la pause à **2 minutes** avant l'arrêt.
+**1. Création d'organisation simplifiée**
 
-### Nouveaux seuils
+Le dialogue actuel demande nom + email admin + nom admin (mélange org / user). On le scinde : la création d'organisation ne crée plus l'utilisateur admin. Champs :
 
-| Étape | Délai depuis dernière activité | Action |
-|---|---|---|
-| Indice visuel discret | 8 s | « Prenez votre temps… » sous le micro |
-| 1ʳᵉ relance vocale | 12 s | IA dit : « Prenez votre temps, je vous écoute. » |
-| 2ᵉ relance vocale | 22 s | IA dit : « Prenez votre temps, je vous écoute. » |
-| 3ᵉ relance vocale | 32 s | IA dit : « Prenez votre temps, je vous écoute. » |
-| **Pause forcée** | 42 s | IA dit : « Je mets l'entretien en pause, reprenez quand vous voulez. » + bouton Reprendre mis en avant |
-| Avertissement vocal | pause + **1 min 50 s** | IA dit : « Il semblerait que vous ne soyez plus là. Je vais arrêter cette session dans quelques secondes. » |
-| Compte à rebours visible | 10 s | Affichage du décompte à l'écran |
-| **Arrêt forcé** | pause + **2 min** | Session terminée → page `InterviewComplete` |
+- **Nom** *(obligatoire)*
+- **Tarif** (texte libre, ex. « 99 €/mois ») — optionnel
+- **Note client** (zone de texte) — optionnel  
+- **Charger les bibliothèques de modèles par défaut** — bascule oui/non, par défaut **oui**
 
-Le compteur de 2 min court depuis l'instant de mise en pause forcée. Si le candidat appuie sur Reprendre avant la fin, tout est annulé et le cycle silence repart à zéro.
+Le slug reste généré automatiquement à partir du nom (caché de l'UI).
 
-### Changements concrets
+**2. Création d'utilisateur déplacée dans la fiche organisation**
 
-Dans `src/pages/InterviewStart.tsx` uniquement :
+L'onglet « Utilisateurs » garde sa table de consultation/édition globale, mais **le bouton « Créer un utilisateur » disparaît du niveau global**.
 
-1. **Constantes silence** (autour de la ligne 156-164) :
-   - `SILENCE_HINT_MS = 8 * 1000`
-   - `SILENCE_NUDGE_1_MS = 12 * 1000`
-   - `SILENCE_NUDGE_2_MS = 22 * 1000`
-   - `SILENCE_NUDGE_3_MS = 32 * 1000`
-   - `SILENCE_AUTOPAUSE_MS = 42 * 1000`
-   - `SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 110 * 1000` (1 min 50 s après la pause)
-   - `SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000` (2 min pile après la pause)
-   - `END_COUNTDOWN_SECONDS = 10` (inchangé)
+À la place, dans l'onglet « Organisations », chaque ligne devient cliquable → ouvre une **page « Détail organisation »** (`/superadmin/orgs/:orgId`) qui affiche :
 
-2. **Texte des 3 relances** (lignes 235-246) : les 3 disent désormais la même phrase « Prenez votre temps, je vous écoute. » conformément à la demande.
+- Infos de l'org (nom, tarif, note, date, logo)
+- Liste des membres de cette org (réutilise `OrgMembers` existant)
+- Liste des projets
+- Bouton **« Créer un utilisateur »** dans cette org
 
-3. **Texte de la mise en pause forcée** (ligne 254) : précisé en « J'ai mis l'entretien en pause. Cliquez sur Reprendre quand vous êtes prêt. »
+Le dialogue de création utilisateur depuis cette page :
+- **Email** *
+- **Nom complet** *  (devient obligatoire)
+- **Mot de passe** (optionnel — si vide, invitation envoyée)
+- **Rôle** * (admin / recruiter / viewer — pas de super_admin ici car contextuel à l'org)
 
-4. **Toast de pause auto** (ligne 250-253) : titre « Entretien mis en pause » + description « Reprenez dans les 2 minutes pour continuer. »
+L'organisation est verrouillée sur l'org en cours, plus de sélecteur.
 
-5. **Toast d'arrêt forcé** (ligne 301-304) : description « Aucune reprise après 2 minutes de pause. »
+### Détails techniques
 
-Aucune autre logique à toucher : `pauseInterviewRef` et `armEndWarningRef` existent déjà, le compte à rebours est déjà branché, et `resetSilenceTimer` (appelée à toute activité de parole/clic) annule bien le cycle.
+**Migration SQL**
+```sql
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS pricing text,
+  ADD COLUMN IF NOT EXISTS client_notes text;
+```
+
+**Edge function `superadmin-create-org`** — refonte :
+- Plus d'`admin_email` / `admin_full_name` requis.
+- Accepte : `org_name` *, `pricing?`, `client_notes?`, `seed_libraries?` (bool, défaut true).
+- Si `seed_libraries = false`, on insère l'org **sans** owner_id (le trigger `trg_seed_org_question_templates` n'a pas de creator → ne seede rien) ; si `true`, on positionne owner_id = caller (super admin) le temps du seed, puis on remet `owner_id = NULL` immédiatement après pour ne pas verrouiller l'org sur le super admin. Le trigger `trg_seed_on_owner_set` se déclenchera sur l'écriture initiale et seede templates + projet démo.
+- Plus d'invitation envoyée à la création.
+
+**Edge function `superadmin-manage-user`** (action `create`) — inchangée côté API mais le front ne lui passe plus que `email`, `full_name`, `password?`, `organization_id`, `role` (toujours fournis maintenant).
+
+**Front — nouveaux/modifiés**
+- `src/components/superadmin/CreateOrgDialog.tsx` — refonte complète (4 champs ci-dessus).
+- `src/components/superadmin/EditOrgDialog.tsx` — ajout champs Tarif + Note client.
+- `src/components/superadmin/OrgsTable.tsx` — colonnes Tarif + lien clic sur la ligne, supprimer la colonne projets pour gagner de la place.
+- `src/pages/SuperAdminOrgDetail.tsx` — **nouveau**, route `/superadmin/orgs/:orgId`, contient infos org + membres + bouton créer user contextualisé.
+- `src/components/superadmin/CreateUserInOrgDialog.tsx` — **nouveau**, version simplifiée (org figée, rôle obligatoire, nom obligatoire).
+- `src/pages/SuperAdmin.tsx` — retirer `<CreateUserDialog>` du header de l'onglet Utilisateurs (l'onglet reste consultatif).
+- `src/App.tsx` — ajout route `/superadmin/orgs/:orgId` protégée par `SuperAdminRoute`.
+- `src/integrations/supabase/types.ts` — régénéré auto après migration.
 
 ### Hors champ
 
-- Pas de changement de l'UI du bandeau de pause (déjà en place avec bouton Reprendre).
-- Pas de changement côté serveur ni base de données.
-- Pas de notification email au recruteur sur abandon (à voir dans une autre passe si besoin).
+- L'ancien `CreateUserDialog` (création depuis l'onglet global) est supprimé : si besoin futur de créer un user sans org on le réintroduira.
+- Pas de page de détail utilisateur séparée (l'édition reste via `EditUserDialog`).
+- Le format du champ « Tarif » reste libre (pas de validation montant/devise) — affiné si besoin plus tard.
 
