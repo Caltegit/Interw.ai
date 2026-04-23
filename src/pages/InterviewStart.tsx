@@ -145,6 +145,10 @@ export default function InterviewStart() {
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  // Identifiant monotone du « bloc question » courant. Tout callback (watchdog,
+  // onPlaybackEnd, retour TTS) compare son blockId à celui-ci pour ignorer les
+  // évènements obsolètes — empêche les superpositions entre questions/relances.
+  const currentBlockIdRef = useRef(0);
   // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
   const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showManualContinue, setShowManualContinue] = useState(false);
