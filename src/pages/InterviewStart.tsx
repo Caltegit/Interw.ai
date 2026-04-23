@@ -1967,6 +1967,7 @@ export default function InterviewStart() {
 
   // Show "ready to start" screen — user must click to enable TTS on mobile
   if (!readyToStart) {
+    const dataReady = !!session && !!project && questions.length > 0;
     return (
       <CandidateLayout>
         <Card className="max-w-md w-full text-center" data-testid="interview-start-screen">
@@ -2000,11 +2001,21 @@ export default function InterviewStart() {
               size="lg"
               className="candidate-btn-primary w-full h-16 text-xl"
               onClick={beginInterview}
-              data-testid="interview-start-button"
+              disabled={!dataReady}
+              data-testid={dataReady ? "interview-start-button" : "interview-start-button-disabled"}
             >
               <Volume2 className="mr-2 !h-6 !w-6" />
               Lancer la session
             </Button>
+            {!dataReady && (
+              <div
+                className="flex items-center justify-center gap-2 text-xs"
+                style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+              >
+                <span className="inline-block h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                <span>Préparation de la session…</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </CandidateLayout>
