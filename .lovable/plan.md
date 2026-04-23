@@ -1,30 +1,68 @@
 
+## Correction du bug persistant de prise en main
 
-## Correction du bug d'impersonation
+### Cause confirmée
 
-### Le diagnostic
+Le bug n’est plus lié au `redirectTo` en premier lieu. Les logs montrent clairement :
 
-L'edge function `superadmin-impersonate` renvoie une erreur non-2xx quand on clique sur la flèche « Prendre la main ». La cause la plus probable : `admin.auth.admin.generateLink` échoue parce que l'URL `redirectTo` (basée sur l'`origin` de la requête, par ex. `https://id-preview--xxx.lovable.app/dashboard`) n'est pas dans la liste blanche des URL de redirection autorisées du projet Lovable Cloud.
+```text
+[impersonate] Unexpected error: userClient.auth.getClaims is not a function
+```
 
-Aucun log d'erreur détaillé n'est actuellement émis, ce qui empêche de confirmer à 100% — donc on corrige **ET** on ajoute des logs.
+Donc la fonction `superadmin-impersonate` casse avant même la génération du lien magique, ce qui provoque côté interface le message générique « non-2xx status code ».
 
-### La correction
+### Ce qui va être corrigé
 
 **Fichier modifié : `supabase/functions/superadmin-impersonate/index.ts`**
 
-1. **Ajouter du logging** sur chaque étape pour voir précisément où ça casse (vérification super admin, récupération user, génération du lien) — visible ensuite dans les logs edge functions.
+1. **Remplacer la vérification du user courant**
+   - Supprimer l’appel à `userClient.auth.getClaims(token)` qui n’existe pas dans la version réellement utilisée par la fonction.
+   - Utiliser une méthode compatible pour valider la session et récupérer l’utilisateur appelant :
+     - soit `userClient.auth.getUser()`,
+     - soit `userClient.auth.getUser(token)`.
+   - Le `callerId` viendra de `user.id`.
 
-2. **Rendre `redirectTo` optionnel et tolérant** : si `generateLink` échoue avec un `redirectTo`, faire un second essai sans `redirectTo`. Le lien magique tombera alors sur l'URL par défaut du site, ce qui suffit pour ouvrir une session.
+2. **Aligner la version du client backend**
+   - Passer l’import vers une version récente et cohérente avec les autres fonctions du projet.
+   - Cela évite les écarts d’API entre fonctions super admin.
 
-3. **Renvoyer le message d'erreur Supabase** dans la réponse JSON (au lieu d'un message générique) pour que le toast côté front affiche la vraie cause.
+3. **Conserver le correctif déjà prévu sur le lien magique**
+   - 1er essai avec `redirectTo`
+   - repli sans `redirectTo` si besoin
+   - logs détaillés sur chaque étape
 
-**Fichier modifié : `src/pages/SuperAdminOrgDetail.tsx`**
+4. **Durcir les réponses d’erreur**
+   - Retourner un JSON clair pour :
+     - absence d’authentification
+     - utilisateur non super admin
+     - utilisateur cible introuvable
+     - échec de génération du lien
+   - Garder les logs serveur lisibles pour diagnostiquer vite si un autre blocage apparaît.
 
-4. **Garde-fou côté UI** : empêcher l'ouverture du `AlertDialog` quand le bouton est désactivé (le `disabled` sur l'enfant d'un `AlertDialogTrigger asChild` ne bloque pas toujours le clic). On déplace la condition sur le `AlertDialogTrigger` lui-même via un `onClick` qui appelle `e.preventDefault()` si l'utilisateur cible est l'utilisateur courant.
+**Fichier modifié : `src/lib/impersonation.ts`**
+
+5. **Améliorer le message affiché côté interface**
+   - Aujourd’hui, `supabase.functions.invoke()` remonte surtout une erreur générique si la fonction répond en 4xx/5xx.
+   - Ajouter un traitement pour lire le message renvoyé par la fonction quand c’est possible, afin d’éviter le toast flou « non-2xx status code ».
+
+### Résultat attendu
+
+Quand un super admin clique sur « Prendre la main » :
+- la fonction valide correctement l’utilisateur courant ;
+- le lien magique est généré ;
+- la redirection se fait vers le compte ciblé ;
+- en cas de nouveau problème, le message affiché sera explicite au lieu du message générique actuel.
+
+### Vérification
+
+Après implémentation, test manuel du parcours :
+1. ouvrir une organisation en super admin ;
+2. cliquer sur « Prendre la main » sur un autre utilisateur ;
+3. vérifier la connexion au compte cible ;
+4. vérifier aussi le cas d’échec pour confirmer que le message affiché est lisible.
 
 ### Hors champ
 
-- Pas de changement de la mécanique d'impersonation (toujours via magic link + retour avec `stopImpersonation`).
-- Pas de modification de `src/lib/impersonation.ts` ni du bandeau orange.
-- Si après correction l'erreur persiste à cause de la liste blanche des URL de redirection, on ajoutera l'URL preview Lovable dans la config auth dans un second temps.
-
+- Pas de changement du mécanisme global d’impersonation.
+- Pas de refonte de l’écran super admin.
+- Pas de changement du bandeau de retour au compte d’origine.
