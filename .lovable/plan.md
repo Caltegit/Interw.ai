@@ -1,56 +1,58 @@
 
 
-## Bouton « Lancer la session » qui ne réagit pas
+## Aligner le rapport partagé sur celui du site
 
-### Diagnostic
+### Constat
 
-J'ai reproduit le parcours sur ton lien. Le projet, la session et les 5 questions existent bien en base. Mais en lisant le code de `src/pages/InterviewStart.tsx` :
+La page publique `SharedReport.tsx` (`/shared-report/:token`) affiche aujourd'hui un sous-ensemble du rapport visible côté RH dans `SessionDetail.tsx`. Manquent :
 
-- Ligne 1985-1993 : le bouton **« Lancer la session »** n'a **aucun attribut `disabled`** — il est donc visuellement cliquable.
-- Ligne 1143-1144 : son `onClick` (`beginInterview`) commence par `if (!session || !project || questions.length === 0) return;` → **silencieusement ignoré** si une de ces 3 données n'est pas chargée.
-- Ligne 814-848 : ces données sont chargées par un `useEffect` qui dépend du `token` dans l'URL. Si la requête est lente ou échoue (ex. cache, RLS, réseau), `loading` reste à `true` et l'écran « Prêt à démarrer ? » ne devrait pas s'afficher du tout — sauf cas de race où `loading` passe `false` pendant que `session` ou `questions` sont encore `null`.
+- La **durée** de l'session à côté de la date.
+- L'**onglet Vidéos par question** (1 vidéo par réponse candidat).
+- Le bloc **Évaluations par question** (question + score /10 + vidéo de la réponse + commentaire IA).
+- La **transcription** complète de l'échange.
+- Le **nom de l'IA** affiché dans la transcription pour distinguer les tours.
 
-**Résultat côté candidat** : il voit le bouton « Lancer la session », clique → rien ne se passe. C'est exactement la perception « bouton inactif ».
+À l'inverse, on **ne montre pas** : les notes recruteur (privées), le bouton de partage, le bouton retour projet.
 
-À noter : sur le projet démo `candidature-spontanee-bc62f202`, j'ai vérifié — il y a bien 5 questions actives. Donc le souci n'est pas en base, c'est purement côté client.
+### Ce qu'on construit
 
-### Ce qu'on corrige
+**1. Page `SharedReport.tsx` réorganisée en 2 colonnes (comme le site)**
 
-**1. Rendre le bouton vraiment réactif et donner un feedback**
+Colonne gauche :
+- En-tête candidat (nom, projet, date, **durée** — ajoutée).
+- Carte vidéo principale (déjà là).
+- Carte score global + recommandation + note (déjà là).
 
-- Ajouter `disabled={!session || !project || questions.length === 0}` sur le bouton, pour qu'il apparaisse explicitement grisé tant que les données ne sont pas prêtes (au lieu d'un faux clic mort).
-- Quand le bouton est désactivé, afficher un petit texte « Préparation de la session… » sous le bouton, avec un mini spinner.
-- Ajouter un `data-testid` séparé (`interview-start-button-disabled`) pour les tests E2E.
+Colonne droite, en **onglets** identiques au site :
+- **Transcription** — liste des messages (rôle IA / candidat avec le nom de l'IA), même rendu visuel que `VirtualizedMessageList` mais en version simple sans virtualisation (volume modeste, lecture publique).
+- **Vidéos** — une carte par réponse candidat avec lecteur vidéo et extrait du contenu.
+- **Rapport** — résumé, points forts, axes d'amélioration, scores par critère, **évaluations par question avec vidéo intégrée** (nouveau), barème.
 
-**2. Garantir que l'écran « Prêt à démarrer ? » ne s'affiche pas trop tôt**
+**2. Requête de données enrichie**
 
-Aujourd'hui la condition d'affichage est `if (!readyToStart)` (ligne 1955), sans vérifier que `session` et `questions` sont chargés. On ajoute :
+La page charge déjà `session_messages` partiellement. On élargit la requête pour récupérer `id, role, content, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up` (mêmes colonnes que `useSessionDetail`) et on récupère aussi `ai_persona_name` via `projects` (déjà dans le select à enrichir).
 
-```tsx
-if (!readyToStart && (!session || !project || questions.length === 0)) {
-  return <écran de chargement /> // au lieu de l'écran avec le bouton
-}
-```
+Les RLS en place autorisent déjà l'accès anonyme : `Anon can view session messages` (true), `Anon can view sessions` (true), `Anon can view shared reports` (via `report_shares`). Pas de migration nécessaire.
 
-→ Le candidat ne voit plus jamais le bouton avant que tout soit prêt.
+**3. Sous-composant partagé pour la transcription**
 
-**3. Logger l'échec silencieux pour ne plus passer à côté**
+Pour éviter de dupliquer le rendu, on extrait un petit composant `SimpleMessageList` (non virtualisé) dans `src/components/session/`. Il affiche la même structure visuelle que le site : bulles distinctes IA / candidat, horodatage, indicateur « relance » si `is_follow_up`.
 
-Dans `beginInterview`, remplacer le `return` muet par un log d'erreur structuré (`logger.error("interview_begin_blocked", { ... })`) avec les 3 conditions, plus un toast utilisateur « Impossible de démarrer pour le moment, rechargez la page. » Ça nous donne une trace si le cas se reproduit.
+**4. Petits correctifs en passant**
 
-**4. Bonus langue**
-
-J'ai vu plusieurs incohérences en passant : « Cet session » (CandidateLayout), « Avec un session IA » (Landing), « Impossible de démarrer l'session » (InterviewLanding). Ces fautes existent aussi dans `InterviewStart`. Je nettoie en même temps les occurrences les plus visibles côté candidat — sans toucher à la logique.
+- Coquille « l'analyse de l'session » → « l'analyse de la session » dans `SessionDetail.tsx` ligne 342.
+- Coquille « Rapport d'session » → « Rapport de session » (titre du template email transactionnel `interview-report.tsx`).
 
 ### Fichiers touchés
 
-- `src/pages/InterviewStart.tsx` : conditions du rendu, attribut `disabled`, log + toast, corrections de langue.
-- `src/pages/InterviewLanding.tsx` : « l'session » → « la session ».
-- `src/pages/Landing.tsx` : « un session » → « une session », « session vidéo conversationnel » → « entretiens vidéo conversationnels ».
-- `src/components/CandidateLayout.tsx` : « Cet session » → « Cette session ».
+- `src/pages/SharedReport.tsx` — refonte en 2 colonnes + onglets, ajout durée, transcription, vidéos par question, évaluations par question.
+- `src/components/session/SimpleMessageList.tsx` — **nouveau**, rendu lecture seule de la transcription (réutilisé par la page partagée).
+- `src/pages/SessionDetail.tsx` — fix coquille « l'session ».
+- `supabase/functions/_shared/transcational-email-templates/interview-report.tsx` — fix `displayName`.
 
 ### Hors champ
 
-- Refactoring complet de `InterviewStart` (déjà discuté, déjà refusé).
-- Changement du flux de seed des projets démo (déjà corrigé dans la migration précédente).
+- Streaming/protection avancée des vidéos partagées (signed URLs courtes).
+- Téléchargement PDF du rapport partagé.
+- Filtrage des informations sensibles (email du candidat reste affiché — comportement actuel inchangé).
 
