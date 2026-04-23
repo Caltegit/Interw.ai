@@ -183,6 +183,19 @@ export default function SuperAdminOrgDetail() {
                 {m.role === "recruiter" && <Badge variant="secondary">Recruteur</Badge>}
                 {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
                 {!m.role && <Badge variant="outline">Sans rôle</Badge>}
+                <Button variant="ghost" size="icon" onClick={() => setEditingUser(m)} title="Modifier">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeletingUser(m)}
+                  disabled={m.user_id === currentUser?.id}
+                  title={m.user_id === currentUser?.id ? "Vous ne pouvez pas vous supprimer" : "Supprimer"}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}
