@@ -5,16 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
-import { slugify } from "@/lib/slug";
 
 interface Props {
   onCreated: () => void;
 }
 
 export function CreateOrgDialog({ onCreated }: Props) {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,64 +20,34 @@ export function CreateOrgDialog({ onCreated }: Props) {
   const [adminName, setAdminName] = useState("");
 
   const handleCreate = async () => {
-    if (!user || !orgName.trim() || !adminEmail.trim()) return;
+    if (!orgName.trim() || !adminEmail.trim()) return;
     setLoading(true);
     try {
-      // 1. Créer l'organisation avec slug unique
-      let baseSlug = slugify(orgName.trim()) || "org";
-      let candidate = baseSlug;
-      let counter = 1;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { data: existing } = await supabase
-          .from("organizations")
-          .select("id")
-          .eq("slug", candidate)
-          .maybeSingle();
-        if (!existing) break;
-        counter += 1;
-        candidate = `${baseSlug}-${counter}`;
-      }
-
-      const { data: org, error: orgErr } = await supabase
-        .from("organizations")
-        .insert({ name: orgName.trim(), slug: candidate })
-        .select()
-        .single();
-      if (orgErr) throw orgErr;
-
-      // 2. Créer l'invitation
-      const { data: invitation, error: invErr } = await supabase
-        .from("organization_invitations")
-        .insert({
-          organization_id: org.id,
-          email: adminEmail.trim().toLowerCase(),
-          invited_by: user.id,
-        })
-        .select()
-        .single();
-      if (invErr) throw invErr;
-
-      // 3. Envoyer l'email d'invitation
-      await supabase.functions.invoke("send-invitation", {
+      const { data, error } = await supabase.functions.invoke("superadmin-create-org", {
         body: {
-          email: adminEmail.trim().toLowerCase(),
-          organizationId: org.id,
-          invitationToken: invitation.token,
+          org_name: orgName.trim(),
+          admin_email: adminEmail.trim().toLowerCase(),
+          admin_full_name: adminName.trim() || undefined,
         },
       });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 
+      const wasInvited = (data as { invited?: boolean })?.invited;
       toast({
         title: "Organisation créée",
-        description: `Invitation envoyée à ${adminEmail}`,
+        description: wasInvited
+          ? `Invitation envoyée à ${adminEmail}`
+          : `Compte existant rattaché à ${adminEmail}`,
       });
       setOrgName("");
       setAdminEmail("");
       setAdminName("");
       setOpen(false);
       onCreated();
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Erreur inconnue";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -98,7 +65,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            Une invitation sera envoyée à l'admin pour qu'il rejoigne l'organisation.
+            L'admin sera rattaché immédiatement. Un email lui sera envoyé pour définir son mot de passe s'il n'a pas encore de compte.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -118,7 +85,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Annuler</Button>
           <Button onClick={handleCreate} disabled={loading || !orgName.trim() || !adminEmail.trim()}>
-            {loading ? "Création..." : "Créer et inviter"}
+            {loading ? "Création..." : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>

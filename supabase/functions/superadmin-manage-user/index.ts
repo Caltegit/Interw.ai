@@ -67,6 +67,18 @@ Deno.serve(async (req) => {
           role,
           organization_id: role === "super_admin" ? null : organization_id ?? null,
         });
+
+        // Si admin d'une org sans owner, on le désigne comme owner (déclenche le seed via trigger)
+        if (role === "admin" && organization_id) {
+          const { data: org } = await admin
+            .from("organizations")
+            .select("owner_id")
+            .eq("id", organization_id)
+            .maybeSingle();
+          if (org && !org.owner_id) {
+            await admin.from("organizations").update({ owner_id: newUserId }).eq("id", organization_id);
+          }
+        }
       }
       return json({ success: true, user_id: newUserId, invited });
     }
