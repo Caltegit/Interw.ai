@@ -95,6 +95,12 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
+  // Streaming des chunks vers Storage : index séquentiel et liste des chemins par question.
+  const chunkIndexRef = useRef(0);
+  const uploadedChunkPathsRef = useRef<string[]>([]);
+  const chunkMimeRef = useRef<string>("video/webm");
+  const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
+  const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   // Watchdog: if onPlaybackEnd never fires within 8s, force the listening state
