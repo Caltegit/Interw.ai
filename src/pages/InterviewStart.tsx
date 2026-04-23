@@ -154,13 +154,13 @@ export default function InterviewStart() {
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
   // Cadence des relances en cas de silence du candidat.
-  const SILENCE_HINT_MS = 5 * 1000;          // 5s — indice visuel discret
-  const SILENCE_NUDGE_1_MS = 8 * 1000;       // 8s — 1ʳᵉ relance vocale
-  const SILENCE_NUDGE_2_MS = 13 * 1000;      // 13s — 2ᵉ relance vocale
-  const SILENCE_NUDGE_3_MS = 18 * 1000;      // 18s — 3ᵉ relance vocale
-  const SILENCE_AUTOPAUSE_MS = 25 * 1000;    // 25s — mise en pause automatique
-  const SILENCE_END_WARNING_MS = 55 * 1000;  // 55s = pause + 30s — avertissement de fin
-  const SILENCE_TIMEOUT_MS = 65 * 1000;      // 65s = avertissement + 10s — arrêt forcé
+  const SILENCE_HINT_MS = 8 * 1000;          // 8s — indice visuel discret
+  const SILENCE_NUDGE_1_MS = 12 * 1000;      // 12s — 1ʳᵉ relance vocale
+  const SILENCE_NUDGE_2_MS = 22 * 1000;      // 22s — 2ᵉ relance vocale
+  const SILENCE_NUDGE_3_MS = 32 * 1000;      // 32s — 3ᵉ relance vocale
+  const SILENCE_AUTOPAUSE_MS = 42 * 1000;    // 42s — mise en pause automatique
+  const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 110 * 1000; // pause + 1 min 50 s — avertissement de fin
+  const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
   const END_COUNTDOWN_SECONDS = 10;
 
   // Silence UI tiers (1 = indice, 2 = relance vocale, 3 = bouton « Passer » mis en avant)
@@ -238,20 +238,20 @@ export default function InterviewStart() {
     }, SILENCE_NUDGE_1_MS);
     silenceNudge2TimerRef.current = setTimeout(() => {
       setSilenceTier(2);
-      playNudge(2, "Souhaitez-vous que je reformule la question ?");
+      playNudge(2, "Prenez votre temps, je vous écoute.");
     }, SILENCE_NUDGE_2_MS);
     silenceNudge3TimerRef.current = setTimeout(() => {
       setSilenceTier(3);
-      playNudge(3, "Un exemple concret peut aider, n'hésitez pas.");
+      playNudge(3, "Prenez votre temps, je vous écoute.");
     }, SILENCE_NUDGE_3_MS);
     silenceAutoPauseTimerRef.current = setTimeout(() => {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
       toast({
-        title: "Session mise en pause",
-        description: "Reprenez quand vous êtes prêt.",
+        title: "Entretien mis en pause",
+        description: "Reprenez dans les 2 minutes pour continuer.",
       });
-      speakRef.current?.("Je mets l'entretien en pause, reprenez quand vous voulez.").catch(() => {});
+      speakRef.current?.("J'ai mis l'entretien en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
       pauseInterviewRef.current?.();
       armEndWarningRef.current?.();
     }, SILENCE_AUTOPAUSE_MS);
@@ -300,7 +300,7 @@ export default function InterviewStart() {
       }
       toast({
         title: "Session terminée",
-        description: "Aucune activité détectée.",
+        description: "Aucune reprise après 2 minutes de pause.",
       });
       endInterviewRef.current?.();
     }, SILENCE_TIMEOUT_MS - SILENCE_AUTOPAUSE_MS);
