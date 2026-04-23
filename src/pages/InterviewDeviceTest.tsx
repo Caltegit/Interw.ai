@@ -25,6 +25,8 @@ export default function InterviewDeviceTest() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
+  const autoAdvancedRef = useRef(false);
+
   // Auto-start tests on mount + cleanup on unmount
   useEffect(() => {
     testCam();
@@ -35,6 +37,19 @@ export default function InterviewDeviceTest() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-avance dès que micro + caméra sont OK (le test réseau est informatif)
+  useEffect(() => {
+    if (autoAdvancedRef.current) return;
+    if (micStatus === "ok" && camStatus === "ok") {
+      autoAdvancedRef.current = true;
+      const t = setTimeout(() => {
+        handleContinue();
+      }, 1200);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [micStatus, camStatus]);
 
   const stopAll = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
