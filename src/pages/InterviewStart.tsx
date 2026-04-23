@@ -1508,6 +1508,9 @@ export default function InterviewStart() {
         : "written";
     const nMediaUrl = nextQ?.video_url || nextQ?.audio_url || null;
 
+    // Précharge le média pendant que la TTS de transition est prononcée.
+    if (nMediaUrl) prefetchMedia(nMediaUrl);
+
     // Use AI message if provided, otherwise fall back to local transition
     const transition =
       aiMessage ||
