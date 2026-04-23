@@ -177,11 +177,11 @@ export function CriteriaLibraryManager({ orgId }: Props) {
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <p className="text-sm font-semibold">{t.label}</p>
                   {t.description && <p className="text-sm text-muted-foreground line-clamp-2">{t.description}</p>}
-                  <div className="flex gap-1.5 flex-wrap items-center">
-                    <Badge variant="outline" className="text-xs">Poids {t.weight}%</Badge>
-                    <Badge variant="outline" className="text-xs">{t.scoring_scale}</Badge>
-                    {t.category && <Badge variant="secondary" className="text-xs">{t.category}</Badge>}
-                  </div>
+                  {t.category && (
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      <Badge variant="secondary" className="text-xs">{t.category}</Badge>
+                    </div>
+                  )}
                 </div>
                 <Button size="icon" variant="ghost" onClick={() => openEdit(t)}>
                   <Pencil className="h-4 w-4" />
