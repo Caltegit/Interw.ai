@@ -66,6 +66,7 @@ export default function ProjectEdit() {
         .from("questions")
         .select("*")
         .eq("project_id", id)
+        .is("archived_at", null)
         .order("order_index", { ascending: true });
 
       const questions =
@@ -78,6 +79,7 @@ export default function ProjectEdit() {
                   : "written";
               return {
                 ...createEmptyQuestion(),
+                id: q.id,
                 title: q.title || "",
                 content: q.content || "",
                 type: q.type,
