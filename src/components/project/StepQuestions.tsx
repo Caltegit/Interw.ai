@@ -42,6 +42,8 @@ import {
 } from "@/components/QuestionFormDialog";
 
 export interface Question {
+  /** id Supabase si la question existe déjà en base (sinon nouvelle) */
+  id?: string;
   title: string;
   content: string;
   category: string;
