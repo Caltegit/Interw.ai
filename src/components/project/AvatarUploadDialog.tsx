@@ -65,7 +65,7 @@ async function getCroppedImage(
   return new Promise<File>((resolve, reject) => {
     out.toBlob(
       (blob) => {
-        if (!blob) return reject(new Error("Échec de l'export"));
+        if (!blob) return reject(new Error("EXPORT_BLOB_NULL"));
         resolve(new File([blob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" }));
       },
       "image/jpeg",
@@ -101,15 +101,32 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
   const handleFile = useCallback((file: File | null | undefined) => {
     if (!file) return;
     if (!ACCEPTED.includes(file.type)) {
-      toast({ title: "Format non supporté", description: "Utilisez JPG, PNG ou WebP.", variant: "destructive" });
+      const ext = file.name.split(".").pop()?.toUpperCase() || "inconnu";
+      toast({
+        title: "Format d'image non pris en charge",
+        description: `Le format « ${ext} » n'est pas accepté. Veuillez utiliser une image au format JPG, PNG ou WebP.`,
+        variant: "destructive",
+      });
       return;
     }
     if (file.size > MAX_SIZE) {
-      toast({ title: "Fichier trop volumineux", description: "Taille maximale : 5 Mo.", variant: "destructive" });
+      const sizeMo = (file.size / (1024 * 1024)).toFixed(1);
+      toast({
+        title: "Image trop volumineuse",
+        description: `Votre image fait ${sizeMo} Mo. La taille maximale autorisée est de 5 Mo. Essayez de la compresser ou de la redimensionner.`,
+        variant: "destructive",
+      });
       return;
     }
     const reader = new FileReader();
     reader.onload = () => setImageSrc(reader.result as string);
+    reader.onerror = () => {
+      toast({
+        title: "Lecture impossible",
+        description: "Impossible de lire ce fichier. Il est peut-être corrompu, essayez une autre image.",
+        variant: "destructive",
+      });
+    };
     reader.readAsDataURL(file);
   }, []);
 
@@ -168,7 +185,14 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
       onUpload(file);
       onOpenChange(false);
     } catch (err) {
-      toast({ title: "Erreur", description: "Impossible de traiter l'image.", variant: "destructive" });
+      const reason = err instanceof Error && err.message === "EXPORT_BLOB_NULL"
+        ? "Le navigateur n'a pas pu générer l'image finale."
+        : "Une erreur est survenue pendant le recadrage.";
+      toast({
+        title: "Échec de l'export en 512×512",
+        description: `${reason} Essayez avec une autre image ou rechargez la page.`,
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
