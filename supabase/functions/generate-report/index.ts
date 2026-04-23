@@ -289,6 +289,34 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       } else {
         const normalizedEmail = recruiterEmail.toLowerCase();
         const reportUrl = `https://interw.ai/sessions/${session_id}`;
+
+        // Auto-create a public share token so highlights + shared report links work from the email
+        let highlightsUrl: string | null = null;
+        try {
+          if (insertedReport?.id) {
+            const { data: existingShare } = await supabase
+              .from("report_shares")
+              .select("share_token")
+              .eq("report_id", insertedReport.id)
+              .eq("is_active", true)
+              .maybeSingle();
+            let shareToken = existingShare?.share_token ?? null;
+            if (!shareToken) {
+              const { data: newShare } = await supabase
+                .from("report_shares")
+                .insert({ report_id: insertedReport.id, created_by: project.created_by })
+                .select("share_token")
+                .single();
+              shareToken = newShare?.share_token ?? null;
+            }
+            if (shareToken && highlightClips.length > 0) {
+              highlightsUrl = `https://interw.ai/highlights/${shareToken}`;
+            }
+          }
+        } catch (e) {
+          console.warn("Could not create share token for highlights:", e);
+        }
+
         const templateData = {
           candidateName: session.candidate_name,
           candidateEmail: session.candidate_email,
@@ -303,6 +331,14 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
           criteriaScores,
           questionEvaluations: parsed.question_evaluations || {},
           reportUrl,
+          highlightsUrl,
+          stats: {
+            duration_seconds: stats.duration_seconds,
+            exchanges_count: stats.exchanges_count,
+            video_answers_count: stats.video_answers_count,
+            best_question_idx: bestQuestionIdx,
+            best_question_score: bestQuestionScore,
+          },
         };
 
         // 1. Suppression check
