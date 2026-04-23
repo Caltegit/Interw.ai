@@ -1413,9 +1413,11 @@ export default function InterviewStart() {
     setLiveTranscript("");
     candidateTranscriptRef.current = "";
 
-    // ── 2. Background: stop & upload current question video, persist candidate message ──
+    // ── 2. Upload + persist en parallèle de l'appel IA, mais on conservera la
+    // Promise pour pouvoir l'awaiter AVANT la bascule (CLOSE_PREV solide).
+    let persistCandidatePromise: Promise<void> | null = null;
     if (sessionId) {
-      const persistCandidateJob = (async () => {
+      persistCandidatePromise = (async () => {
         let videoUrl: string | null = null;
         try {
           videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
@@ -1444,7 +1446,7 @@ export default function InterviewStart() {
             console.error("Candidate message insert failed after retry:", e2);
             toast({
               title: "Sauvegarde échouée",
-              description: "Une réponse n'a pas pu être enregistrée. L'session continue.",
+              description: "Une réponse n'a pas pu être enregistrée. La session continue.",
               variant: "destructive",
             });
           }
@@ -1469,7 +1471,7 @@ export default function InterviewStart() {
           }
         }
       })();
-      trackBackground(persistCandidateJob);
+      trackBackground(persistCandidatePromise);
     }
 
     // ── 3. Call AI (await this time) to decide next action ──
