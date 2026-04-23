@@ -2007,6 +2007,12 @@ export default function InterviewStart() {
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
+      {!interviewFinished && (
+        <RecordingStatusBadge
+          pendingUploads={pendingChunkUploads}
+          recording={isRecordingActive}
+        />
+      )}
       {endCountdown !== null && !interviewFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="mx-4 max-w-md rounded-2xl border border-destructive/30 bg-card p-8 text-center shadow-2xl">
