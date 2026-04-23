@@ -49,6 +49,7 @@ import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
 import SharedReport from "./pages/SharedReport";
+import HighlightsPublic from "./pages/HighlightsPublic";
 import OrgPublic from "./pages/OrgPublic";
 import Unsubscribe from "./pages/Unsubscribe";
 import SuperAdmin from "./pages/SuperAdmin";
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/interview/:slug/complete" element={<LegacyInterviewRedirect to="complete" />} />
 
             <Route path="/shared-report/:token" element={<SharedReport />} />
+            <Route path="/highlights/:token" element={<HighlightsPublic />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/email-unsubscribe" element={<Unsubscribe />} />

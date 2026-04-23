@@ -196,8 +196,64 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       criteriaScores = mappedScores;
     }
 
+    // ============================================================
+    // Stats + Best-of (highlight clips)
+    // ============================================================
+    const candidateMessages = messages.filter((m: any) => m.role === "candidate");
+    const aiMessages = messages.filter((m: any) => m.role === "ai");
+    const candidateVideos = candidateMessages.filter((m: any) => m.video_segment_url);
+
+    const aiFollowups = aiMessages.filter((m: any) => m.is_follow_up).length;
+    const candidateSpeechChars = candidateMessages.reduce(
+      (acc: number, m: any) => acc + (m.content?.length ?? 0),
+      0,
+    );
+
+    const criteriaScoreValues = Object.values(criteriaScores) as any[];
+    const avgCriteriaScore = criteriaScoreValues.length > 0
+      ? criteriaScoreValues.reduce((acc, c: any) => acc + (Number(c.score) || 0) * (5 / (Number(c.max) || 5)), 0)
+        / criteriaScoreValues.length
+      : 0;
+
+    // Best/worst question + highlight clips selection
+    const evalEntries = Object.entries(parsed.question_evaluations || {}) as [string, any][];
+    const sortedEvals = [...evalEntries].sort(
+      (a, b) => (Number(b[1]?.score) || 0) - (Number(a[1]?.score) || 0),
+    );
+    const bestQuestionIdx = sortedEvals.length > 0 ? parseInt(sortedEvals[0][0]) : null;
+    const worstQuestionIdx = sortedEvals.length > 0 ? parseInt(sortedEvals[sortedEvals.length - 1][0]) : null;
+    const bestQuestionScore = bestQuestionIdx !== null ? Number(sortedEvals[0][1]?.score) : null;
+
+    // Pick top 3 with an actual video
+    const highlightClips: Array<Record<string, unknown>> = [];
+    for (const [key, val] of sortedEvals) {
+      const idx = parseInt(key);
+      const video = candidateVideos[idx] || candidateVideos[idx - 1];
+      if (video?.video_segment_url) {
+        highlightClips.push({
+          video_url: video.video_segment_url,
+          question: val?.question ?? `Question ${idx + 1}`,
+          score: Number(val?.score) || 0,
+          question_index: idx,
+          max_seconds: 20,
+        });
+      }
+      if (highlightClips.length >= 3) break;
+    }
+
+    const stats = {
+      duration_seconds: session.duration_seconds || 0,
+      exchanges_count: messages.length,
+      video_answers_count: candidateVideos.length,
+      ai_followups: aiFollowups,
+      candidate_speech_chars: candidateSpeechChars,
+      avg_criteria_score: Number(avgCriteriaScore.toFixed(2)),
+      best_question_idx: bestQuestionIdx,
+      worst_question_idx: worstQuestionIdx,
+    };
+
     // Save report
-    const { error: reportError } = await supabase.from("reports").insert({
+    const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
       executive_summary: parsed.executive_summary || "",
       overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
@@ -207,7 +263,9 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
       question_evaluations: parsed.question_evaluations || {},
-    });
+      highlight_clips: highlightClips,
+      stats,
+    }).select("id").single();
 
     if (reportError) {
       console.error("Report insert error:", reportError);
@@ -231,6 +289,34 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       } else {
         const normalizedEmail = recruiterEmail.toLowerCase();
         const reportUrl = `https://interw.ai/sessions/${session_id}`;
+
+        // Auto-create a public share token so highlights + shared report links work from the email
+        let highlightsUrl: string | null = null;
+        try {
+          if (insertedReport?.id) {
+            const { data: existingShare } = await supabase
+              .from("report_shares")
+              .select("share_token")
+              .eq("report_id", insertedReport.id)
+              .eq("is_active", true)
+              .maybeSingle();
+            let shareToken = existingShare?.share_token ?? null;
+            if (!shareToken) {
+              const { data: newShare } = await supabase
+                .from("report_shares")
+                .insert({ report_id: insertedReport.id, created_by: project.created_by })
+                .select("share_token")
+                .single();
+              shareToken = newShare?.share_token ?? null;
+            }
+            if (shareToken && highlightClips.length > 0) {
+              highlightsUrl = `https://interw.ai/highlights/${shareToken}`;
+            }
+          }
+        } catch (e) {
+          console.warn("Could not create share token for highlights:", e);
+        }
+
         const templateData = {
           candidateName: session.candidate_name,
           candidateEmail: session.candidate_email,
@@ -245,6 +331,14 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
           criteriaScores,
           questionEvaluations: parsed.question_evaluations || {},
           reportUrl,
+          highlightsUrl,
+          stats: {
+            duration_seconds: stats.duration_seconds,
+            exchanges_count: stats.exchanges_count,
+            video_answers_count: stats.video_answers_count,
+            best_question_idx: bestQuestionIdx,
+            best_question_score: bestQuestionScore,
+          },
         };
 
         // 1. Suppression check
