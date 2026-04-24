@@ -550,22 +550,60 @@ export default function InterviewStart() {
         }
 
         const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
+        const audio = primaryAudioRef.current ?? new Audio();
+        if (!primaryAudioRef.current) primaryAudioRef.current = audio;
+        (audio as any).playsInline = true;
+        audio.setAttribute("playsinline", "");
+        audio.preload = "auto";
+        audio.src = audioUrl;
+        try { audio.load(); } catch {}
         elevenAudioRef.current = audio;
         setIsSpeaking(true);
 
         await new Promise<void>((resolve) => {
           let done = false;
+          let watchdog: ReturnType<typeof setTimeout> | null = null;
+          const cleanup = () => {
+            if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+            audio.onended = null;
+            audio.onerror = null;
+            audio.onplaying = null;
+          };
           const finish = () => {
             if (done) return;
             done = true;
-            URL.revokeObjectURL(audioUrl);
+            cleanup();
+            // Léger délai pour éviter de couper une lecture qui vient juste de finir
+            setTimeout(() => URL.revokeObjectURL(audioUrl), 1000);
             if (elevenAudioRef.current === audio) elevenAudioRef.current = null;
             resolve();
           };
           audio.onended = finish;
           audio.onerror = finish;
-          audio.play().catch(finish);
+          audio.onplaying = () => {
+            if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+            setAudioBlocked(false);
+          };
+          const tryPlay = () => {
+            const p = audio.play();
+            if (p && typeof p.then === "function") {
+              p.catch((err) => {
+                console.warn("[interview] TTS play() rejected", err);
+              });
+            }
+          };
+          tryPlay();
+          watchdog = setTimeout(() => {
+            if (done) return;
+            if (audio.paused || audio.currentTime === 0) {
+              console.warn("[interview] TTS audio blocked — showing unlock overlay");
+              pendingReplayRef.current = () => {
+                setAudioBlocked(false);
+                tryPlay();
+              };
+              setAudioBlocked(true);
+            }
+          }, 2000);
         });
 
         setIsSpeaking(false);
