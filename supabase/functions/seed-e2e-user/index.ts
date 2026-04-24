@@ -256,7 +256,8 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("seed-e2e-user error", err);
-    return new Response(JSON.stringify({ ok: false, error: String(err?.message || err) }), {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

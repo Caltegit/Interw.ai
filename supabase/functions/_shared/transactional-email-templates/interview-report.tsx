@@ -86,7 +86,7 @@ const InterviewReportEmail = ({
   return (
     <Html lang="fr" dir="ltr">
       <Head />
-      <Preview>Rapport de session — {candidateName} — Score {overallScore}/100</Preview>
+      <Preview>{`Rapport de session — ${candidateName} — Score ${overallScore}/100`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Nouveau rapport de session</Heading>
