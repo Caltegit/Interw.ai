@@ -2514,6 +2514,16 @@ export default function InterviewStart() {
       {questionLoading && !bootActive && (
         <QuestionLoadingOverlay percent={questionLoading.percent} label={questionLoading.label} />
       )}
+      {audioBlocked && (
+        <AudioUnlockOverlay
+          onUnlock={() => {
+            const fn = pendingReplayRef.current;
+            pendingReplayRef.current = null;
+            setAudioBlocked(false);
+            try { fn?.(); } catch {}
+          }}
+        />
+      )}
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
