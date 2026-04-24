@@ -2379,19 +2379,28 @@ export default function InterviewStart() {
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions]);
 
-  // Reset silence timer on candidate speech activity
+  // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
+  // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
+  // serait sans cesse réarmé par les transitions et les pauses pourraient se
+  // déclencher au mauvais moment.
   useEffect(() => {
-    if (liveTranscript) {
-      resetSilenceTimer();
-    }
-  }, [liveTranscript, resetSilenceTimer]);
+    if (!liveTranscript) return;
+    if (!isListening || isPaused || isSpeaking || isProcessing) return;
+    if (interviewFinished) return;
+    resetSilenceTimer();
+  }, [liveTranscript, isListening, isPaused, isSpeaking, isProcessing, interviewFinished, resetSilenceTimer]);
 
-  // Also reset silence timer when AI speaks or processing
+  // Quand on quitte la phase d'écoute (IA parle, traitement, pause, fin),
+  // on désarme proprement le minuteur de silence pour éviter toute pause auto
+  // déclenchée pendant une transition.
   useEffect(() => {
-    if (isSpeaking || isProcessing) {
-      resetSilenceTimer();
+    const inListeningPhase =
+      isListening && !isPaused && !isSpeaking && !isProcessing && !interviewFinished;
+    if (!inListeningPhase) {
+      clearSilenceTier();
+      clearEndCountdown();
     }
-  }, [isSpeaking, isProcessing, resetSilenceTimer]);
+  }, [isListening, isPaused, isSpeaking, isProcessing, interviewFinished, clearSilenceTier, clearEndCountdown]);
 
   // Cleanup on unmount
   useEffect(() => {
