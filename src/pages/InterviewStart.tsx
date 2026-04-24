@@ -14,7 +14,7 @@ import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
 import { RecordingStatusBadge } from "@/components/interview/RecordingStatusBadge";
 import { logger } from "@/lib/logger";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
-import InterviewBootProgress, { type BootStep } from "@/components/interview/InterviewBootProgress";
+import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 
 // Extend window for webkitSpeechRecognition
@@ -1371,12 +1371,6 @@ export default function InterviewStart() {
     const updateStep = (key: string, status: BootStepStatus) => {
       setBootSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
     };
-
-    // Greeting (calculé tôt pour pouvoir le warmer côté ElevenLabs)
-    const greetingPreview = isMediaTypeKnownLater(firstQMediaType)
-      ? "" // calculé plus bas
-      : "";
-    // (on calcule le vrai greeting après la prep média, mais on warm avec un texte court)
 
     // ÉTAPE 1 : warm-up TTS — on ping ElevenLabs pour réveiller le service.
     updateStep("voice", "running");
