@@ -1,71 +1,137 @@
-# Fiabiliser la lecture audio des questions sur mobile
+# Stabiliser la gestion du silence côté candidat
 
-## Diagnostic
+## Recommandation
 
-Sur iOS Safari (et certains navigateurs Android), un `audio.play()` n'est autorisé que :
-1. Dans la même pile synchrone qu'un geste utilisateur, **OU**
-2. Sur une instance `HTMLAudioElement` déjà « débloquée » par un geste utilisateur antérieur.
+Oui : je te conseille de supprimer les relances vocales « Prenez votre temps, je vous écoute ».
 
-Aujourd'hui, chaque TTS et chaque média de question crée un **nouveau** `new Audio()` → iOS revoit chaque instance comme non débloquée → silence sans erreur.
+Dans l’état actuel, elles sont fragiles parce qu’elles s’appuient sur le même moteur TTS et sur les mêmes états (`isSpeaking`, `isProcessing`, `liveTranscript`) que le reste de l’entretien. Résultat : elles peuvent se déclencher au mauvais moment, se superposer à une transition, ou réarmer le minuteur alors qu’on est encore dans un changement d’état.
 
-Le warm-up actuel ne sert à rien car il joue puis jette son instance.
+Le comportement le plus stable est :
+- pas de relance vocale pendant le silence,
+- un indice visuel discret si besoin,
+- puis mise en pause automatique,
+- puis arrêt forcé après 2 minutes si le candidat ne reprend pas.
 
-## Action 1 — Instance Audio unique réutilisée (le fix critique)
+## Ce que je ferais
 
-### `src/pages/InterviewStart.tsx`
+### 1. Supprimer les relances vocales de silence
+Dans `src/pages/InterviewStart.tsx` :
+- retirer les 3 timers `SILENCE_NUDGE_1_MS`, `SILENCE_NUDGE_2_MS`, `SILENCE_NUDGE_3_MS`,
+- retirer `playNudge()` et les refs `nudge1PlayedRef`, `nudge2PlayedRef`, `nudge3PlayedRef`,
+- simplifier `resetSilenceTimer()` pour ne garder que :
+  - un palier visuel léger,
+  - un timer unique de pause automatique,
+  - le cycle d’avertissement d’arrêt forcé déjà existant.
 
-- Ajouter `const primaryAudioRef = useRef<HTMLAudioElement | null>(null)`.
-- Dans le handler synchrone du clic « Démarrer la session » (avant tout `await`) :
-  - Créer `const audio = new Audio()`.
-  - Définir `audio.playsInline = true`, `audio.preload = "auto"`.
-  - Lui donner une source data-URI ultra-courte silencieuse.
-  - Appeler `audio.play().catch(() => {})` puis `audio.pause()` immédiatement (toujours dans la pile synchrone du tap).
-  - Stocker dans `primaryAudioRef.current = audio`.
-- Refactorer `tryElevenLabs(text)` : au lieu de `new Audio(blobUrl)`, faire :
-  ```ts
-  const a = primaryAudioRef.current!;
-  a.src = blobUrl;
-  a.load();
-  await a.play();
-  ```
-- Refactorer `playMediaUrl(url)` (audio des questions pré-enregistrées) de la même façon.
-- Retarder `URL.revokeObjectURL` (par ex. dans le `onended` ou avec un délai) pour éviter de couper la lecture en cours.
-- Nettoyer `primaryAudioRef.current` au démontage (pause + src vide).
+### 2. Faire partir le minuteur de silence uniquement pendant la vraie phase d’écoute
+Aujourd’hui, le minuteur est aussi réarmé par :
+- `liveTranscript`,
+- `isSpeaking`,
+- `isProcessing`.
 
-### Impact attendu
-Une fois l'instance débloquée par le tap initial, **tous** les TTS et médias de la session passent sans intervention.
+C’est probablement la source principale des déclenchements au mauvais moment.
 
-## Action 2 — Watchdog audio + overlay de déblocage manuel
+Je remplacerais ça par une logique plus stricte :
+- le minuteur démarre seulement quand la question est finie et que l’écoute candidat commence réellement,
+- il est arrêté dès qu’on sort de cette phase : pause, lecture IA, lecture média, traitement IA, changement de question, envoi de réponse.
 
-### `src/components/interview/AudioUnlockOverlay.tsx` (nouveau)
+Concrètement :
+- supprimer l’effet qui fait `resetSilenceTimer()` sur `isSpeaking || isProcessing`,
+- éviter le reset global à chaque variation de `liveTranscript`,
+- appeler explicitement `resetSilenceTimer()` seulement dans les points d’entrée sûrs :
+  - après `startListening()` quand la question est vraiment ouverte,
+  - après reprise d’une pause quand on revient en écoute,
+  - après une relance IA seulement au moment exact où l’écoute repart.
 
-Composant plein écran (z-index élevé, au-dessus de tout) :
-- Titre : « Activer le son »
-- Texte court : « Touchez le bouton pour activer la lecture audio. »
-- Gros bouton tactile « 🔊 Activer le son » (min-h 56 px).
-- Props : `onUnlock: () => void`.
-- Style cohérent avec `InterviewBootProgress` (même fond blur + couleurs candidate).
+### 3. Ajouter un garde-fou d’éligibilité
+Introduire une condition centrale du type :
+- silence surveillé seulement si `isListening === true`
+- et `isPaused === false`
+- et `isSpeaking === false`
+- et `isProcessing === false`
+- et entretien non terminé.
 
-### `src/pages/InterviewStart.tsx`
+Ainsi, même si un callback retardé survit quelques millisecondes, il ne pourra pas déclencher une pause au mauvais moment.
 
-- Ajouter état `audioBlocked: boolean` et ref `pendingReplayRef = useRef<(() => Promise<void>) | null>(null)`.
-- Dans `tryElevenLabs` et `playMediaUrl`, après le `play()` :
-  - Lancer un timer 2 s.
-  - Si `audio.paused === true` ou `audio.currentTime === 0` à l'expiration → `pendingReplayRef.current = () => a.play()` puis `setAudioBlocked(true)`.
-  - Si la lecture démarre normalement (`onplaying`), annuler le timer.
-- Afficher `<AudioUnlockOverlay onUnlock={handleUnlock} />` quand `audioBlocked === true`.
-- `handleUnlock` :
-  - Appelle `pendingReplayRef.current?.()` (geste utilisateur frais → iOS autorise).
-  - Met `audioBlocked` à `false`.
+### 4. Conserver la mise en pause automatique, mais sobrement
+Je garderais le principe que tu as demandé :
+- absence de parole,
+- mise en pause automatique,
+- message vocal de pause seulement au moment où la pause est décidée,
+- après 2 minutes de pause : avertissement « Dans 5 secondes… »,
+- puis arrêt forcé.
 
-### Impact attendu
-Filet de sécurité pour les rares cas où Action 1 ne suffirait pas (mode économie d'énergie iOS, autoplay restreint plus strict, etc.). N'apparaît jamais en cas normal.
+Autrement dit :
+- une seule parole système importante au moment de la pause,
+- une seule parole système avant l’arrêt forcé,
+- aucune relance intermédiaire.
 
-## Hors scope
-- Pas de changement de schéma DB.
-- Pas de changement du flux de pause/reprise existant.
-- L'écran « Tester mon son » reste optionnel (Action 3 en réserve si jamais 1+2 ne suffisent pas).
+### 5. Stabiliser encore la détection de parole
+Pour éviter les faux silences, je renforcerais aussi :
+- remise à zéro du timer seulement sur vraie activité micro utile,
+- si besoin, seuil minimal de transcript non vide ou activité vocale continue avant de considérer que le candidat a repris,
+- ne pas dépendre d’un `onresult` trop bavard ou trop sensible.
 
-## Fichiers modifiés / créés
-- ✏️ `src/pages/InterviewStart.tsx` (refactor TTS + média + watchdog)
-- ➕ `src/components/interview/AudioUnlockOverlay.tsx` (nouveau)
+Sans changer tout le moteur STT, on peut déjà fiabiliser en considérant que :
+- le minuteur ne repart pas parce que l’IA parle,
+- le minuteur ne repart pas parce qu’un traitement réseau est en cours,
+- il repart seulement parce qu’on est revenu en écoute candidat.
+
+## Autres idées pour stabiliser
+
+### Option A — Mon conseil
+Passer à un modèle simple :
+- 1 indice visuel discret au bout de quelques secondes,
+- pause automatique ensuite,
+- aucun message de relance parlé.
+
+C’est l’option la plus robuste et la plus propre en expérience candidat.
+
+### Option B — Encore plus radicale
+Supprimer aussi l’indice visuel et ne garder que :
+- écoute,
+- pause automatique,
+- message de pause.
+
+C’est le plus simple techniquement, mais un peu plus abrupt côté utilisateur.
+
+### Option C — Stabilisation par état explicite
+Si on veut quelque chose de vraiment solide, on peut formaliser un mini état de phase d’entretien, par exemple :
+- `presentation`
+- `listening`
+- `processing`
+- `paused`
+
+Puis faire dépendre toute la logique de silence de cette phase unique au lieu d’un mélange de booléens. C’est plus robuste pour la suite, mais ça touche davantage `InterviewStart.tsx`.
+
+## Mon conseil final
+
+Pour toi, je ferais :
+- suppression des relances vocales,
+- pause automatique sur silence,
+- logique de silence active uniquement pendant la vraie écoute,
+- conservation du compte à rebours de 2 minutes déjà prévu.
+
+C’est le meilleur compromis entre stabilité, simplicité et risque de régression.
+
+## Détails techniques
+
+Fichier principal : `src/pages/InterviewStart.tsx`
+
+Points à modifier :
+- constantes de silence,
+- `resetSilenceTimer()` et nettoyage des timers,
+- suppression des relances TTS de silence,
+- suppression de l’effet `isSpeaking || isProcessing -> resetSilenceTimer()`,
+- recentrage des appels `resetSilenceTimer()` sur les seules reprises d’écoute,
+- ajout d’un garde-fou central avant toute pause automatique.
+
+Option de durcissement supplémentaire :
+```text
+presentation -> listening -> processing -> listening
+      |             |             |
+      v             v             v
+    paused <--------+-------------+
+```
+
+Si tu valides, j’applique la version simple et robuste : sans relances vocales, avec pause auto propre.

@@ -226,28 +226,22 @@ export default function InterviewStart() {
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
-  // Cadence des relances en cas de silence du candidat.
-  const SILENCE_HINT_MS = 2 * 1000;          // 2s — indice visuel discret
-  const SILENCE_NUDGE_1_MS = 3 * 1000;       // 3s — 1ʳᵉ relance vocale
-  const SILENCE_NUDGE_2_MS = 6 * 1000;       // 6s — 2ᵉ relance vocale
-  const SILENCE_NUDGE_3_MS = 9 * 1000;       // 9s — 3ᵉ relance vocale
-  const SILENCE_AUTOPAUSE_MS = 12 * 1000;    // 12s — mise en pause automatique
+  // Cadence du silence côté candidat.
+  // Aucune relance vocale : un indice visuel discret puis une pause automatique.
+  const SILENCE_HINT_MS = 6 * 1000;          // 6s — indice visuel discret
+  const SILENCE_TIER3_MS = 12 * 1000;        // 12s — bouton « Passer » mis en avant
+  const SILENCE_AUTOPAUSE_MS = 20 * 1000;    // 20s — mise en pause automatique
   const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 115 * 1000; // pause + 1 min 55 s — avertissement de fin
   const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
   const END_COUNTDOWN_SECONDS = 5;
 
-  // Silence UI tiers (1 = indice, 2 = relance vocale, 3 = bouton « Passer » mis en avant)
+  // Palier visuel uniquement (1 = indice, 3 = bouton « Passer » mis en avant).
   const [silenceTier, setSilenceTier] = useState<0 | 1 | 2 | 3>(0);
   const silenceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge1TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge2TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge3TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTier3TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silenceAutoPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silenceEndWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const endCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const nudge1PlayedRef = useRef(false);
-  const nudge2PlayedRef = useRef(false);
-  const nudge3PlayedRef = useRef(false);
   const autoPausedRef = useRef(false);
   const [endCountdown, setEndCountdown] = useState<number | null>(null);
   const speakRef = useRef<((t: string) => Promise<void>) | null>(null);
@@ -301,25 +295,12 @@ export default function InterviewStart() {
 
   const clearSilenceTier = useCallback(() => {
     if (silenceHintTimerRef.current) { clearTimeout(silenceHintTimerRef.current); silenceHintTimerRef.current = null; }
-    if (silenceNudge1TimerRef.current) { clearTimeout(silenceNudge1TimerRef.current); silenceNudge1TimerRef.current = null; }
-    if (silenceNudge2TimerRef.current) { clearTimeout(silenceNudge2TimerRef.current); silenceNudge2TimerRef.current = null; }
-    if (silenceNudge3TimerRef.current) { clearTimeout(silenceNudge3TimerRef.current); silenceNudge3TimerRef.current = null; }
+    if (silenceTier3TimerRef.current) { clearTimeout(silenceTier3TimerRef.current); silenceTier3TimerRef.current = null; }
     if (silenceAutoPauseTimerRef.current) { clearTimeout(silenceAutoPauseTimerRef.current); silenceAutoPauseTimerRef.current = null; }
     setSilenceTier(0);
-    nudge1PlayedRef.current = false;
-    nudge2PlayedRef.current = false;
-    nudge3PlayedRef.current = false;
   }, []);
 
-  const playNudge = useCallback((slot: 1 | 2 | 3, text: string) => {
-    if (isPausedRef.current || autoEndTriggeredRef.current) return;
-    const ref = slot === 1 ? nudge1PlayedRef : slot === 2 ? nudge2PlayedRef : nudge3PlayedRef;
-    if (ref.current) return;
-    ref.current = true;
-    speakRef.current?.(text).catch(() => {});
-  }, []);
-
-  // Reset silence timer (called on any activity)
+  // (Re)arme le minuteur de silence. À n'appeler que dans la vraie phase d'écoute candidat.
   const resetSilenceTimer = useCallback(() => {
     // Toute activité annule aussi un éventuel cycle d'arrêt en cours.
     clearEndCountdown();
@@ -327,18 +308,7 @@ export default function InterviewStart() {
     clearSilenceTier();
 
     silenceHintTimerRef.current = setTimeout(() => setSilenceTier(1), SILENCE_HINT_MS);
-    silenceNudge1TimerRef.current = setTimeout(() => {
-      setSilenceTier(2);
-      playNudge(1, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_1_MS);
-    silenceNudge2TimerRef.current = setTimeout(() => {
-      setSilenceTier(2);
-      playNudge(2, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_2_MS);
-    silenceNudge3TimerRef.current = setTimeout(() => {
-      setSilenceTier(3);
-      playNudge(3, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_3_MS);
+    silenceTier3TimerRef.current = setTimeout(() => setSilenceTier(3), SILENCE_TIER3_MS);
     silenceAutoPauseTimerRef.current = setTimeout(() => {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
@@ -355,7 +325,7 @@ export default function InterviewStart() {
       // et ne perturbe pas le snapshot déjà figé par pauseInterview.
       speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
-  }, [toast, clearSilenceTier, clearEndCountdown, playNudge]);
+  }, [toast, clearSilenceTier, clearEndCountdown]);
 
   // Arme l'avertissement de fin + le compte à rebours d'arrêt forcé,
   // déclenchés depuis l'état de pause automatique.
@@ -2409,19 +2379,28 @@ export default function InterviewStart() {
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions]);
 
-  // Reset silence timer on candidate speech activity
+  // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
+  // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
+  // serait sans cesse réarmé par les transitions et les pauses pourraient se
+  // déclencher au mauvais moment.
   useEffect(() => {
-    if (liveTranscript) {
-      resetSilenceTimer();
-    }
-  }, [liveTranscript, resetSilenceTimer]);
+    if (!liveTranscript) return;
+    if (!isListening || isPaused || isSpeaking || isProcessing) return;
+    if (interviewFinished) return;
+    resetSilenceTimer();
+  }, [liveTranscript, isListening, isPaused, isSpeaking, isProcessing, interviewFinished, resetSilenceTimer]);
 
-  // Also reset silence timer when AI speaks or processing
+  // Quand on quitte la phase d'écoute (IA parle, traitement, pause, fin),
+  // on désarme proprement le minuteur de silence pour éviter toute pause auto
+  // déclenchée pendant une transition.
   useEffect(() => {
-    if (isSpeaking || isProcessing) {
-      resetSilenceTimer();
+    const inListeningPhase =
+      isListening && !isPaused && !isSpeaking && !isProcessing && !interviewFinished;
+    if (!inListeningPhase) {
+      clearSilenceTier();
+      clearEndCountdown();
     }
-  }, [isSpeaking, isProcessing, resetSilenceTimer]);
+  }, [isListening, isPaused, isSpeaking, isProcessing, interviewFinished, clearSilenceTier, clearEndCountdown]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -2434,9 +2413,7 @@ export default function InterviewStart() {
       if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
       if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
       if (silenceHintTimerRef.current) clearTimeout(silenceHintTimerRef.current);
-      if (silenceNudge1TimerRef.current) clearTimeout(silenceNudge1TimerRef.current);
-      if (silenceNudge2TimerRef.current) clearTimeout(silenceNudge2TimerRef.current);
-      if (silenceNudge3TimerRef.current) clearTimeout(silenceNudge3TimerRef.current);
+      if (silenceTier3TimerRef.current) clearTimeout(silenceTier3TimerRef.current);
       if (silenceAutoPauseTimerRef.current) clearTimeout(silenceAutoPauseTimerRef.current);
       if (silenceEndWarningTimerRef.current) clearTimeout(silenceEndWarningTimerRef.current);
       if (endCountdownIntervalRef.current) clearInterval(endCountdownIntervalRef.current);
