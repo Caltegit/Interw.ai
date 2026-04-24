@@ -1,72 +1,93 @@
-## Ajout de 24 nouveaux modèles d'entretien
 
-Ajout de 24 sessions types pré-remplies à la bibliothèque, sur les métiers tertiaires les plus recrutés (finance, juridique, commercial, marketing, support).
 
-### Liste des 24 métiers
+# Plan : Fiabiliser la lecture audio des questions sur mobile + adapter aux connexions lentes
 
-**Finance & Gestion (6)**
-1. Gestionnaire de paie
-2. Contrôleur de gestion
-3. Analyste financier
-4. Chargé de recouvrement
-5. Trésorier
-6. Responsable budgétaire
+## Diagnostic
 
-**Juridique (4)**
-7. Juriste
-8. Compliance Officer
-9. Assistant juridique
-10. Responsable contrats
+Le flow actuel sur mobile a 3 fragilités :
 
-**Commercial & Relation client (6)**
-11. Account Manager
-12. Chargé d'affaires
-13. Customer Success
-14. Administration des ventes
-15. Responsable grands comptes
-16. Chargé de développement
+1. **TTS du greeting démarré sans garantie que la voix est prête** : `beginInterview` lance `speak(greeting)` immédiatement après un warm-up minimal. Sur mobile, `speechSynthesis.getVoices()` peut être vide la première fois et les voix ElevenLabs (fetch réseau) peuvent prendre plusieurs secondes → l'utilisateur n'entend rien et la session démarre dans le silence.
+2. **Aucune mesure du débit réseau** : les relances IA (`follow_up`) sont lancées même si la connexion est trop faible pour streamer le TTS rapidement → silence prolongé entre chaque relance.
+3. **Pas d'indicateur de chargement entre les questions** : entre `prepareMediaUrl` et `speak(transition)`, le candidat voit seulement « IA réfléchit » sans % de progression, ce qui semble figé sur 3G.
 
-**Marketing & Communication (4)**
-17. Chef de projet marketing
-18. Chargé de communication
-19. Traffic Manager
-20. Brand Content
+## Solution proposée
 
-**Coordination & Support (4)**
-21. Chargé de mission
-22. Coordinateur de projets
-23. Assistant de direction
-24. Responsable planning
+### 1. Pré-warm-up TTS solide avant `setReadyToStart(true)`
 
-### Structure de chaque modèle (identique aux 6 existants)
+Dans `beginInterview` (et nouveau bouton « Démarrer ») :
 
-- **Métadonnées** : nom, description, catégorie, intitulé de poste, durée (30-35 min), langue FR
-- **3 critères d'évaluation** pondérés 35/35/30 (Clarté, Motivation, Cohérence du parcours)
-- **10 questions** :
-  - Q0 : brise-glace ✨
-  - Q1 à Q8 : questions métier ciblées (compétences techniques, mises en situation, soft skills propres au métier)
-  - Q9 : mot de la fin 🎯
+- **Étape A (geste utilisateur)** : créer une `SpeechSynthesisUtterance` silencieuse + un `Audio` muet HTML5 → débloque la policy autoplay iOS/Android.
+- **Étape B (préchauffe ElevenLabs)** : si `tts_provider === "elevenlabs"`, faire un appel TTS « ping » avec un texte court (« Bonjour ») et **attendre** la réponse blob avant de continuer. On stocke le blob pour le rejouer comme greeting (zéro latence perçue).
+- **Étape C (préchargement)** : `prepareMediaUrl` du média de la Q1 (déjà en place) + précharge la Q2 en arrière-plan.
+- **Étape D (mesure réseau initiale)** : on chronomètre le temps de la requête TTS warm-up → mesure réelle du débit (`bytes / ms`). Persistée dans un ref.
 
-Ton professionnel, formulations en français soigné, follow-ups activés selon le niveau (light/medium/deep).
+Tant que A+B+C ne sont pas finis, l'écran de démarrage affiche **une barre de progression** (« Préparation de votre session… 40 % ») au lieu d'aller direct au flow.
 
-### Mise en œuvre technique
+### 2. Gate « question prête » avec barre de progression
 
-1. **Migration SQL** : mise à jour de la fonction `seed_default_interview_templates(_org_id, _created_by)` pour inclure les 24 nouveaux modèles en plus des 6 existants. La clause `IF EXISTS ... CONTINUE` empêche les doublons.
+Création d'un overlay `<QuestionLoadingOverlay percent={…} label="Chargement de la question 3/10…" />` affiché entre chaque question.
 
-2. **Backfill des organisations existantes** : exécution d'une boucle qui appelle la fonction de seed pour chaque organisation déjà présente, afin que tous les comptes actuels reçoivent les nouveaux modèles immédiatement.
+Étapes mesurées (poids fixes) :
+- 30 % : upload du segment précédent (déjà awaité)
+- 30 % : décision IA (`ai-conversation-turn`)
+- 30 % : `prepareMediaUrl` ou pré-fetch TTS de transition
+- 10 % : tampon fixe 300 ms pour stabiliser l'UI
 
-```sql
-DO $$
-DECLARE _org RECORD;
-BEGIN
-  FOR _org IN SELECT id, owner_id FROM public.organizations WHERE owner_id IS NOT NULL LOOP
-    PERFORM public.seed_default_interview_templates(_org.id, _org.owner_id);
-  END LOOP;
-END $$;
+L'overlay reste visible **jusqu'à ce que** :
+- le blob audio TTS de la transition soit reçu (pré-fetch ElevenLabs avant `speak`)
+- ET le média de la prochaine question soit `canplaythrough`
+
+→ on gagne la garantie que rien ne joue avant d'être réellement prêt.
+
+### 3. Détection de la qualité réseau et adaptation des relances
+
+**Mesure** :
+- Lecture de `navigator.connection.effectiveType` + `downlink` au start (Chrome/Android, ~80 % des candidats).
+- Mesure runtime : on chronomètre chaque appel TTS ElevenLabs ; on calcule un **EWMA** (moyenne mobile pondérée) des kbps réels.
+- Seuils :
+  - `> 1.5 Mbps` → réseau OK, relances autorisées normalement
+  - `0.5 – 1.5 Mbps` → réseau dégradé, **plafonner les relances à 1 max** (override `maxFollowUps`)
+  - `< 0.5 Mbps` ou `effectiveType === "2g"/"slow-2g"` → **désactiver toutes les relances** (`relanceLevel = "light"` forcé côté client)
+
+**Implémentation** :
+- Nouveau hook `useNetworkQuality()` qui retourne `{ tier: "good"|"degraded"|"poor", measuredKbps }` + un ref muté à chaque mesure.
+- Au moment d'appeler `ai-conversation-turn`, on injecte dans `projectContext` un override `forceMaxFollowUps` calculé selon le tier.
+- L'edge function `ai-conversation-turn` est mise à jour pour respecter `forceMaxFollowUps` (priorité sur `maxFollowUps` de la question).
+- Toast informatif au candidat la 1re fois qu'on dégrade : « Connexion lente détectée, session simplifiée ».
+
+### 4. Fallback texte plus agressif
+
+Si `prepareMediaUrl` échoue **OU** si le tier réseau est `poor`, on bascule directement la question en mode texte affiché (sans tenter le TTS qui prendrait 8 s).
+
+## Changements techniques
+
+| Fichier | Changement |
+|---|---|
+| `src/pages/InterviewStart.tsx` | Refonte de `beginInterview` (warm-up séquentiel + barre de progression). Nouveau state `prepProgress`. Wrapper `prepareNextQuestion()` qui pré-fetch le blob TTS via `tryElevenLabs` avant de `speak()`. Intégration `useNetworkQuality` |
+| `src/components/interview/QuestionLoadingOverlay.tsx` | **Nouveau** : overlay plein écran avec barre `Progress`, label dynamique, animation discrète |
+| `src/components/interview/InterviewBootProgress.tsx` | **Nouveau** : écran de boot avant `readyToStart` (4 étapes cochées + %) |
+| `src/hooks/useNetworkQuality.ts` | **Nouveau** : combine `navigator.connection` + EWMA des mesures TTS, expose `tier` et `measuredKbps`, helper `recordTtsTiming(bytes, ms)` |
+| `supabase/functions/ai-conversation-turn/index.ts` | Lecture de `projectContext.forceMaxFollowUps` (number ≥ 0) ; si défini, plafonne `maxFollowUps`. Si `forceMaxFollowUps === 0`, force `action = "next"` (jamais `follow_up`) |
+
+## Aperçu UI du boot
+
+```text
+┌─────────────────────────────────────┐
+│   Préparation de votre session      │
+│                                     │
+│   ████████████░░░░░░░  60 %         │
+│                                     │
+│   ✓ Voix de l'IA prête              │
+│   ✓ Connexion testée (4G – 3.2 Mbps)│
+│   ⟳ Chargement de la 1ʳᵉ question…  │
+│   ○ Mise en mémoire tampon          │
+└─────────────────────────────────────┘
 ```
 
-3. **Aucun changement front-end** : la page `Sessions` (`InterviewTemplates.tsx`) charge dynamiquement tous les modèles de l'organisation, donc les nouveaux apparaîtront automatiquement.
+## Notes
 
-### Résultat attendu
+- Aucun changement de schéma DB nécessaire.
+- Compatible avec le mode pause/resume existant.
+- Le warm-up ElevenLabs ajoute ~1-2 s au démarrage mais supprime le silence de la 1re question = gros gain UX mobile.
+- Le hook réseau dégrade silencieusement (jamais d'erreur bloquante).
 
-Chaque organisation disposera de **30 sessions types** (6 actuelles + 24 nouvelles) directement utilisables depuis la bibliothèque, avec questions et critères prêts à l'emploi.
