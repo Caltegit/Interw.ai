@@ -2,13 +2,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -83,13 +77,11 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Demander une démo</DialogTitle>
-          <DialogDescription>
-            Laissez-nous votre email et nous vous recontactons sous 24h.
-          </DialogDescription>
+          <DialogDescription>Laissez-nous votre email et nous vous recontactons sous 24h.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="demo-email">Email professionnel *</Label>
+            <Label htmlFor="demo-email">Votre email *</Label>
             <Input
               id="demo-email"
               type="email"
