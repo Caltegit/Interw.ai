@@ -227,14 +227,14 @@ export default function InterviewStart() {
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
   // Cadence des relances en cas de silence du candidat.
-  const SILENCE_HINT_MS = 8 * 1000;          // 8s — indice visuel discret
-  const SILENCE_NUDGE_1_MS = 12 * 1000;      // 12s — 1ʳᵉ relance vocale
-  const SILENCE_NUDGE_2_MS = 22 * 1000;      // 22s — 2ᵉ relance vocale
-  const SILENCE_NUDGE_3_MS = 32 * 1000;      // 32s — 3ᵉ relance vocale
-  const SILENCE_AUTOPAUSE_MS = 42 * 1000;    // 42s — mise en pause automatique
-  const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 110 * 1000; // pause + 1 min 50 s — avertissement de fin
+  const SILENCE_HINT_MS = 2 * 1000;          // 2s — indice visuel discret
+  const SILENCE_NUDGE_1_MS = 3 * 1000;       // 3s — 1ʳᵉ relance vocale
+  const SILENCE_NUDGE_2_MS = 6 * 1000;       // 6s — 2ᵉ relance vocale
+  const SILENCE_NUDGE_3_MS = 9 * 1000;       // 9s — 3ᵉ relance vocale
+  const SILENCE_AUTOPAUSE_MS = 12 * 1000;    // 12s — mise en pause automatique
+  const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 115 * 1000; // pause + 1 min 55 s — avertissement de fin
   const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
-  const END_COUNTDOWN_SECONDS = 10;
+  const END_COUNTDOWN_SECONDS = 5;
 
   // Silence UI tiers (1 = indice, 2 = relance vocale, 3 = bouton « Passer » mis en avant)
   const [silenceTier, setSilenceTier] = useState<0 | 1 | 2 | 3>(0);
