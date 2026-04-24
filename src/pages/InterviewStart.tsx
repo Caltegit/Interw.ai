@@ -16,6 +16,12 @@ import { logger } from "@/lib/logger";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
+import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
+
+// Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
+// principale au sein du geste utilisateur initial (clé sur iOS Safari).
+const SILENT_AUDIO_DATA_URI =
+  "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -89,6 +95,13 @@ export default function InterviewStart() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [readyToStart, setReadyToStart] = useState(false);
+  // Lecture audio bloquée par le navigateur → afficher l'overlay de déblocage.
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  // Action à rejouer après un déblocage manuel utilisateur.
+  const pendingReplayRef = useRef<(() => void) | null>(null);
+  // Instance Audio unique débloquée par le geste utilisateur initial puis
+  // réutilisée pour TOUS les TTS / médias audio de la session (iOS Safari fix).
+  const primaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const [interviewFinished, setInterviewFinished] = useState(false);
   // Mode « salle d'examen »
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -418,15 +431,78 @@ export default function InterviewStart() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup de l'instance Audio principale au démontage
+  useEffect(() => {
+    return () => {
+      const a = primaryAudioRef.current;
+      if (a) {
+        try { a.pause(); a.removeAttribute("src"); a.load(); } catch {}
+      }
+      primaryAudioRef.current = null;
+    };
+  }, []);
+
   // Play a media URL and return a promise that resolves when it ends
-  const playMediaUrl = useCallback((url: string): Promise<void> => {
+  // Helper : joue une URL via l'instance Audio principale (réutilisée pour
+  // préserver le déblocage iOS Safari) et arme un watchdog 2 s qui propose un
+  // bouton « Activer le son » si la lecture ne démarre pas.
+  const playOnPrimary = useCallback((src: string): Promise<void> => {
     return new Promise((resolve) => {
-      const el = new Audio(url);
-      el.onended = () => resolve();
-      el.onerror = () => resolve();
-      el.play().catch(() => resolve());
+      const el = primaryAudioRef.current ?? new Audio();
+      if (!primaryAudioRef.current) primaryAudioRef.current = el;
+      (el as any).playsInline = true;
+      el.setAttribute("playsinline", "");
+      el.preload = "auto";
+      el.src = src;
+      try { el.load(); } catch {}
+      let done = false;
+      let watchdog: ReturnType<typeof setTimeout> | null = null;
+      const cleanup = () => {
+        if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+        el.onended = null;
+        el.onerror = null;
+        el.onplaying = null;
+      };
+      const finish = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve();
+      };
+      el.onended = finish;
+      el.onerror = finish;
+      el.onplaying = () => {
+        if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+        setAudioBlocked(false);
+      };
+      const tryPlay = () => {
+        const p = el.play();
+        if (p && typeof p.then === "function") {
+          p.catch((err) => {
+            console.warn("[interview] audio play() rejected", err);
+          });
+        }
+      };
+      tryPlay();
+      // Watchdog : si après 2 s rien ne joue, on demande un déblocage manuel.
+      watchdog = setTimeout(() => {
+        if (done) return;
+        if (el.paused || el.currentTime === 0) {
+          console.warn("[interview] audio blocked — showing unlock overlay");
+          pendingReplayRef.current = () => {
+            setAudioBlocked(false);
+            tryPlay();
+          };
+          setAudioBlocked(true);
+        }
+      }, 2000);
     });
   }, []);
+
+  const playMediaUrl = useCallback(
+    (url: string): Promise<void> => playOnPrimary(url),
+    [playOnPrimary],
+  );
 
   // Ref to current ElevenLabs audio (for pause/cancel)
   const elevenAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -485,22 +561,60 @@ export default function InterviewStart() {
         }
 
         const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
+        const audio = primaryAudioRef.current ?? new Audio();
+        if (!primaryAudioRef.current) primaryAudioRef.current = audio;
+        (audio as any).playsInline = true;
+        audio.setAttribute("playsinline", "");
+        audio.preload = "auto";
+        audio.src = audioUrl;
+        try { audio.load(); } catch {}
         elevenAudioRef.current = audio;
         setIsSpeaking(true);
 
         await new Promise<void>((resolve) => {
           let done = false;
+          let watchdog: ReturnType<typeof setTimeout> | null = null;
+          const cleanup = () => {
+            if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+            audio.onended = null;
+            audio.onerror = null;
+            audio.onplaying = null;
+          };
           const finish = () => {
             if (done) return;
             done = true;
-            URL.revokeObjectURL(audioUrl);
+            cleanup();
+            // Léger délai pour éviter de couper une lecture qui vient juste de finir
+            setTimeout(() => URL.revokeObjectURL(audioUrl), 1000);
             if (elevenAudioRef.current === audio) elevenAudioRef.current = null;
             resolve();
           };
           audio.onended = finish;
           audio.onerror = finish;
-          audio.play().catch(finish);
+          audio.onplaying = () => {
+            if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+            setAudioBlocked(false);
+          };
+          const tryPlay = () => {
+            const p = audio.play();
+            if (p && typeof p.then === "function") {
+              p.catch((err) => {
+                console.warn("[interview] TTS play() rejected", err);
+              });
+            }
+          };
+          tryPlay();
+          watchdog = setTimeout(() => {
+            if (done) return;
+            if (audio.paused || audio.currentTime === 0) {
+              console.warn("[interview] TTS audio blocked — showing unlock overlay");
+              pendingReplayRef.current = () => {
+                setAudioBlocked(false);
+                tryPlay();
+              };
+              setAudioBlocked(true);
+            }
+          }, 2000);
         });
 
         setIsSpeaking(false);
@@ -1270,12 +1384,23 @@ export default function InterviewStart() {
       } catch {}
     }
     try {
-      // Petit Audio muet pour débloquer la policy autoplay iOS/Android.
-      const silentAudio = new Audio(
-        "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=",
-      );
-      silentAudio.volume = 0;
-      silentAudio.play().catch(() => {});
+      // Crée (ou réutilise) l'instance Audio principale ET la débloque dans la
+      // pile synchrone de ce tap utilisateur. Cette même instance sera ensuite
+      // réutilisée pour tous les TTS et lectures audio de la session — clé
+      // pour iOS Safari qui n'accorde pas l'autoplay aux nouvelles instances.
+      const audio = primaryAudioRef.current ?? new Audio();
+      primaryAudioRef.current = audio;
+      (audio as any).playsInline = true;
+      audio.setAttribute("playsinline", "");
+      audio.preload = "auto";
+      audio.src = SILENT_AUDIO_DATA_URI;
+      try { audio.load(); } catch {}
+      const p = audio.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          try { audio.pause(); audio.currentTime = 0; } catch {}
+        }).catch(() => {});
+      }
     } catch {}
 
     setReadyToStart(true);
@@ -2399,6 +2524,16 @@ export default function InterviewStart() {
       {bootActive && <InterviewBootProgress steps={bootSteps} percent={bootPercent} />}
       {questionLoading && !bootActive && (
         <QuestionLoadingOverlay percent={questionLoading.percent} label={questionLoading.label} />
+      )}
+      {audioBlocked && (
+        <AudioUnlockOverlay
+          onUnlock={() => {
+            const fn = pendingReplayRef.current;
+            pendingReplayRef.current = null;
+            setAudioBlocked(false);
+            try { fn?.(); } catch {}
+          }}
+        />
       )}
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
