@@ -2396,6 +2396,10 @@ export default function InterviewStart() {
 
   return (
     <CandidateLayout minimal>
+      {bootActive && <InterviewBootProgress steps={bootSteps} percent={bootPercent} />}
+      {questionLoading && !bootActive && (
+        <QuestionLoadingOverlay percent={questionLoading.percent} label={questionLoading.label} />
+      )}
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
