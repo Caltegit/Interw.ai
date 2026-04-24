@@ -361,7 +361,7 @@ export default function InterviewStart() {
       if (!autoPausedRef.current || autoEndTriggeredRef.current) return;
       speakRef
         .current?.(
-          "Il semblerait que vous ne soyez plus là. Je vais arrêter cette session dans quelques secondes.",
+          "Dans 5 secondes, je vais forcer l'arrêt de la session.",
         )
         .catch(() => {});
       // Compte à rebours visible.
