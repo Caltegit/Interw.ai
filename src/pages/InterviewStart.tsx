@@ -1261,12 +1261,22 @@ export default function InterviewStart() {
       return;
     }
 
-    // Warm up speech synthesis with a silent utterance (mobile requires gesture)
+    // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
     if (window.speechSynthesis) {
-      const warmup = new SpeechSynthesisUtterance("");
-      warmup.volume = 0;
-      window.speechSynthesis.speak(warmup);
+      try {
+        const warmup = new SpeechSynthesisUtterance("");
+        warmup.volume = 0;
+        window.speechSynthesis.speak(warmup);
+      } catch {}
     }
+    try {
+      // Petit Audio muet pour débloquer la policy autoplay iOS/Android.
+      const silentAudio = new Audio(
+        "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=",
+      );
+      silentAudio.volume = 0;
+      silentAudio.play().catch(() => {});
+    } catch {}
 
     setReadyToStart(true);
 
@@ -1333,8 +1343,61 @@ export default function InterviewStart() {
     currentBlockIdRef.current += 1;
     const myBlock = currentBlockIdRef.current;
 
-    // Préparer le média de la 1ère question AVANT de prononcer la salutation.
-    // Sur réseau lent, on aura le temps de bufferiser pendant le greeting.
+    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
+
+    // ── PHASE BOOT : préparation séquentielle avec barre de progression ──
+    // Étapes :
+    //   1) Voix IA (ElevenLabs warm-up + capture du blob du greeting)
+    //   2) Mesure de connexion (faite implicitement par l'étape 1 via recordTtsTiming)
+    //   3) Préparation du média de la 1ère question (ou rien si question texte)
+    //   4) Buffer 300 ms de stabilisation
+    const usesEleven = project?.tts_provider === "elevenlabs";
+    const initialSteps: BootStep[] = [
+      { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
+      { key: "network", label: "Test de la connexion", status: "pending" },
+      {
+        key: "media",
+        label: firstQMediaUrl
+          ? `Chargement de la 1ʳᵉ question (${firstQMediaType === "video" ? "vidéo" : "audio"})`
+          : "Chargement de la 1ʳᵉ question",
+        status: "pending",
+      },
+      { key: "buffer", label: "Mise en mémoire tampon", status: "pending" },
+    ];
+    setBootSteps(initialSteps);
+    setBootPercent(0);
+    setBootActive(true);
+
+    const updateStep = (key: string, status: BootStepStatus) => {
+      setBootSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
+    };
+
+    // Greeting (calculé tôt pour pouvoir le warmer côté ElevenLabs)
+    const greetingPreview = isMediaTypeKnownLater(firstQMediaType)
+      ? "" // calculé plus bas
+      : "";
+    // (on calcule le vrai greeting après la prep média, mais on warm avec un texte court)
+
+    // ÉTAPE 1 : warm-up TTS — on ping ElevenLabs pour réveiller le service.
+    updateStep("voice", "running");
+    setBootPercent(10);
+    let greetingBlob: Blob | null = null;
+    if (usesEleven) {
+      // On warm avec une phrase courte et neutre pour mesurer le réseau.
+      const warmText = `Bonjour ${firstName || ""}.`.trim();
+      const warmRes = await fetchElevenLabsBlob(warmText);
+      if (warmRes) {
+        recordTtsTiming(warmRes.bytes, warmRes.ms);
+        // On ne stocke pas ce blob comme greeting (texte différent), mais le
+        // service est désormais chaud → l'appel suivant sera rapide.
+      }
+    }
+    updateStep("voice", "done");
+    updateStep("network", "done");
+    setBootPercent(40);
+
+    // ÉTAPE 3 : préparer le média de la Q1
+    updateStep("media", "running");
     if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
     let firstQMediaReady = false;
     if (firstQMediaUrl) {
@@ -1348,12 +1411,35 @@ export default function InterviewStart() {
         firstQMediaType = "written";
       }
     }
+    updateStep("media", "done");
+    setBootPercent(75);
     const isFirstQMedia = firstQMediaType !== "written";
 
-    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
     const greeting = isFirstQMedia
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
       : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+
+    // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
+    if (usesEleven) {
+      const g = await fetchElevenLabsBlob(greeting);
+      if (g) {
+        greetingBlob = g.blob;
+        recordTtsTiming(g.bytes, g.ms);
+      }
+    }
+
+    // ÉTAPE 4 : buffer de stabilisation
+    updateStep("buffer", "running");
+    setBootPercent(95);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStep("buffer", "done");
+    setBootPercent(100);
+    // Petit délai visuel pour montrer le 100 % avant de retirer l'overlay.
+    await new Promise((r) => setTimeout(r, 200));
+    setBootActive(false);
+
+    // À ce stade, si l'utilisateur a quitté/pause, on stoppe tout.
+    if (myBlock !== currentBlockIdRef.current) return;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
@@ -1377,8 +1463,14 @@ export default function InterviewStart() {
       });
     }
 
-    // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
-    await speak(greeting);
+    // Speak the greeting — utilise le blob pré-fetché si disponible (zéro latence).
+    if (usesEleven && greetingBlob) {
+      await tryElevenLabs(greeting, greetingBlob);
+      // Cleanup state similaire à speak()
+      currentPresentationRef.current = null;
+    } else {
+      await speak(greeting);
+    }
     // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
     if (myBlock !== currentBlockIdRef.current) return;
     if (isFirstQMedia) {
