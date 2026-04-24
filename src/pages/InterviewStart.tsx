@@ -2441,7 +2441,7 @@ export default function InterviewStart() {
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-center py-6 sm:py-8 pb-32 sm:pb-24 lg:py-4 lg:pb-2 lg:min-h-0">
               {/* ── Colonne gauche : Avatar IA (2/3 desktop) ── */}
               <div className="lg:col-span-2 lg:h-full lg:min-h-0 lg:flex lg:items-center lg:justify-center">
-                {questionType === "video" && currentQ?.video_url ? (
+                {questionType === "video" && currentQ?.video_url && !interviewFinished ? (
                   <div className="relative w-full mx-auto max-w-3xl">
                     <QuestionMediaPlayer
                       key={`q-video-${currentQuestionIndex}`}
@@ -2545,7 +2545,7 @@ export default function InterviewStart() {
                   );
                 })()}
                 {/* Question text (for written/audio) */}
-                {currentQ && questionType !== "video" && (
+                {currentQ && questionType !== "video" && !interviewFinished && (
                   <QuestionMediaPlayer
                     key={`q-audio-${currentQuestionIndex}`}
                     ref={featuredPlayerRef}
@@ -2566,13 +2566,26 @@ export default function InterviewStart() {
                 )}
 
                 {/* For video questions, also show the question content as text */}
-                {currentQ && questionType === "video" && (
+                {currentQ && questionType === "video" && !interviewFinished && (
                   <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-sm sm:text-base font-medium text-foreground leading-relaxed">
                       {currentQ.content}
                     </p>
                   </div>
                 )}
+
+                {/* Message de clôture */}
+                {interviewFinished && (
+                  <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-2">
+                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                      Entretien terminé
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Merci pour vos réponses. Finalisation en cours…
+                    </p>
+                  </div>
+                )}
+
 
                 {/* Auto-skip countdown */}
                 {autoSkipCountdown !== null && (
