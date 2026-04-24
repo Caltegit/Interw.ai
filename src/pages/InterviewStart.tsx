@@ -2545,7 +2545,7 @@ export default function InterviewStart() {
                   );
                 })()}
                 {/* Question text (for written/audio) */}
-                {currentQ && questionType !== "video" && (
+                {currentQ && questionType !== "video" && !interviewFinished && (
                   <QuestionMediaPlayer
                     key={`q-audio-${currentQuestionIndex}`}
                     ref={featuredPlayerRef}
@@ -2566,13 +2566,26 @@ export default function InterviewStart() {
                 )}
 
                 {/* For video questions, also show the question content as text */}
-                {currentQ && questionType === "video" && (
+                {currentQ && questionType === "video" && !interviewFinished && (
                   <div className="rounded-xl border border-border bg-card p-4">
                     <p className="text-sm sm:text-base font-medium text-foreground leading-relaxed">
                       {currentQ.content}
                     </p>
                   </div>
                 )}
+
+                {/* Message de clôture */}
+                {interviewFinished && (
+                  <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-2">
+                    <p className="text-base sm:text-lg font-semibold text-foreground">
+                      Entretien terminé
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Merci pour vos réponses. Finalisation en cours…
+                    </p>
+                  </div>
+                )}
+
 
                 {/* Auto-skip countdown */}
                 {autoSkipCountdown !== null && (
