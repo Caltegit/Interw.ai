@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
+import candidateView from "@/assets/landing-candidate-view.jpg";
 import {
   ArrowRight,
   Brain,
