@@ -9,27 +9,23 @@ import { useToast } from "@/hooks/use-toast";
 
 export type VoiceGender = "female" | "male";
 
-export const FEMALE_VOICE_DEFAULT_ID = "XB0fDUnXU5powFXDhCwa"; // Charlotte
-export const MALE_VOICE_DEFAULT_ID = "JBFqnCBsd6RMkjVDRZzb"; // George
+export const FEMALE_VOICE_DEFAULT_ID = "McVZb7PHIyDsbVBnY1aP"; // Audrey - FR native
+export const MALE_VOICE_DEFAULT_ID = "IPgYtHTNLjC7Bq7IPHrm"; // Martin - FR natif
 
 export const FEMALE_VOICES = [
-  { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte", description: "FR · douce, naturelle" },
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah", description: "Polyvalente, posée" },
-  { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice", description: "Claire, professionnelle" },
-  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda", description: "Chaleureuse" },
-  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily", description: "Jeune, dynamique" },
-  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica", description: "Expressive" },
-  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura", description: "Sérieuse, claire" },
+  { id: "McVZb7PHIyDsbVBnY1aP", name: "Audrey", description: "FR natif · douce, naturelle" },
+  { id: "kENkNtk0xyzG09WW40xE", name: "Marine", description: "FR natif · jeune, dynamique" },
+  { id: "1a3lMdKLUcfcMtvN772u", name: "Adeline", description: "FR natif · posée, professionnelle" },
+  { id: "tnSpp4vdxKPjI9w0GnoV", name: "Léa", description: "FR natif · chaleureuse" },
+  { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte", description: "Multilingue · léger accent" },
 ];
 
 export const MALE_VOICES = [
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Posée, professionnelle" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam", description: "Dynamique" },
-  { id: "nPczCjzI2devNBz1zQrb", name: "Brian", description: "Grave, sérieuse" },
-  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel", description: "Articulée" },
-  { id: "bIHbv24MWmeRgasZH58o", name: "Will", description: "Naturelle" },
-  { id: "cjVigY5qzO86Huf0OWal", name: "Eric", description: "Chaleureuse" },
-  { id: "iP95p4xoKVk53GoZ742B", name: "Chris", description: "Décontractée" },
+  { id: "IPgYtHTNLjC7Bq7IPHrm", name: "Martin", description: "FR natif · posée, professionnelle" },
+  { id: "AZnzlk1XvdvUeBnXmlld", name: "Guillaume", description: "FR natif · grave, sérieuse" },
+  { id: "GR1Y5x67PsoZPmKj9rA0", name: "Antoine", description: "FR natif · naturelle, articulée" },
+  { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Julien", description: "FR natif · chaleureuse" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Multilingue · léger accent" },
 ];
 
 export function getDefaultVoiceForGender(gender: VoiceGender): string {
