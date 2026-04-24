@@ -232,6 +232,25 @@ export default function InterviewStart() {
   const followUpsRef = useRef<Record<number, number>>({});
   const [aiThinking, setAiThinking] = useState(false);
 
+  // ── Qualité réseau (mesurée via TTS + navigator.connection) ──
+  const { tier: networkTier, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const networkTierRef = useRef<typeof networkTier>("good");
+  const networkWarnedRef = useRef(false);
+  useEffect(() => {
+    networkTierRef.current = networkTier;
+  }, [networkTier]);
+
+  // ── Boot progress (avant la 1ère question) ──
+  const [bootSteps, setBootSteps] = useState<BootStep[]>([]);
+  const [bootPercent, setBootPercent] = useState(0);
+  const [bootActive, setBootActive] = useState(false);
+
+  // ── Overlay de chargement entre deux questions ──
+  const [questionLoading, setQuestionLoading] = useState<{
+    label: string;
+    percent: number;
+  } | null>(null);
+
   // Refs avant pour éviter les dépendances circulaires entre callbacks.
   const pauseInterviewRef = useRef<(() => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
