@@ -277,7 +277,10 @@ export default function InterviewStart() {
   } | null>(null);
 
   // Refs avant pour éviter les dépendances circulaires entre callbacks.
-  const pauseInterviewRef = useRef<(() => void) | null>(null);
+  // pauseSource permet de distinguer une pause manuelle (utilisateur), une pause
+  // automatique (silence prolongé) ou une pause système (replay forcé).
+  type PauseSource = "manual" | "auto-silence";
+  const pauseInterviewRef = useRef<((source?: PauseSource) => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
 
   const clearEndCountdown = useCallback(() => {
