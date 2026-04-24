@@ -434,14 +434,15 @@ export default function InterviewStart() {
   // Jeton d'annulation pour interrompre une relance IA en cours (utilisé par "Passer la question").
   const turnAbortRef = useRef<{ aborted: boolean } | null>(null);
 
-  // Try ElevenLabs first; resolves true if it played, false if we should fallback
-  const tryElevenLabs = useCallback(
-    async (text: string): Promise<boolean> => {
+  // Pré-fetch ElevenLabs sans lecture (utilisé par le warm-up et le pré-chargement
+  // entre questions). Retourne le blob audio + une mesure brute des octets/durée.
+  const fetchElevenLabsBlob = useCallback(
+    async (text: string): Promise<{ blob: Blob; bytes: number; ms: number } | null> => {
       const proj = project;
-      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return false;
-
+      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return null;
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+        const start = performance.now();
         const res = await fetch(url, {
           method: "POST",
           headers: {
@@ -451,21 +452,37 @@ export default function InterviewStart() {
           },
           body: JSON.stringify({ text, projectId: proj.id }),
         });
-
-        if (!res.ok) {
-          console.warn("[interview] ElevenLabs HTTP", res.status);
-          return false;
-        }
-
+        if (!res.ok) return null;
         const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const j = await res.json().catch(() => ({}));
-          console.log("[interview] ElevenLabs skip:", j?.reason);
-          return false;
-        }
-
+        if (ct.includes("application/json")) return null;
         const blob = await res.blob();
-        if (!blob || blob.size === 0) return false;
+        const ms = performance.now() - start;
+        if (!blob || blob.size === 0) return null;
+        return { blob, bytes: blob.size, ms };
+      } catch (e) {
+        console.warn("[interview] fetchElevenLabsBlob failed", e);
+        return null;
+      }
+    },
+    [project],
+  );
+
+  // Try ElevenLabs first; resolves true if it played, false if we should fallback.
+  // Si `prefetchedBlob` est fourni, on saute l'appel réseau (zéro latence perçue).
+  const tryElevenLabs = useCallback(
+    async (text: string, prefetchedBlob?: Blob | null): Promise<boolean> => {
+      const proj = project;
+      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return false;
+
+      try {
+        let blob: Blob | null = prefetchedBlob ?? null;
+        if (!blob) {
+          const fetched = await fetchElevenLabsBlob(text);
+          if (!fetched) return false;
+          blob = fetched.blob;
+          // Mesure réseau : on nourrit l'EWMA.
+          recordTtsTiming(fetched.bytes, fetched.ms);
+        }
 
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
@@ -499,7 +516,7 @@ export default function InterviewStart() {
         return false;
       }
     },
-    [project],
+    [project, fetchElevenLabsBlob, recordTtsTiming, session?.id],
   );
 
   // TTS: speak text aloud — tries ElevenLabs first if enabled, falls back to browser
