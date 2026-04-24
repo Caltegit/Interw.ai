@@ -1782,22 +1782,40 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
     }
 
+    // Si la connexion est très mauvaise, on évite carrément la lecture du média
+    // (qui prendrait trop de temps à se charger) et on bascule en texte d'office.
+    if (nMediaUrl && networkTierRef.current === "poor") {
+      console.warn("[interview] Réseau poor — bascule directe en texte pour la prochaine question");
+      nMediaType = "written";
+      setMessages((prev) => {
+        const updated = prev.map((m, i) =>
+          i === prev.length - 1 && m.role === "ai" ? { ...m, mediaType: "written" as const, mediaUrl: null } : m,
+        );
+        messagesRef.current = updated;
+        return updated;
+      });
+    }
+
     // PREP_MEDIA : si la question suivante a un média, on vérifie qu'il est
     // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
-    if (nMediaUrl) {
-      // Lance la prononciation de la transition + la préparation du média en parallèle.
-      // On attendra explicitement les deux avant de jouer.
-      const transitionPromise = (async () => {
-        setIsSpeaking(true);
-        setShouldAutoPlay(false);
-        currentPresentationRef.current = { kind: "tts", text: transition };
-        await speak(transition);
+    let preparedTransitionBlob: Blob | null = null;
+    if (nMediaUrl && nMediaType !== "written") {
+      // Préparation parallèle : média + blob TTS de la transition.
+      // On attend les DEUX avant de retirer l'overlay et de jouer.
+      const blobPromise = (async () => {
+        if (project?.tts_provider !== "elevenlabs") return null;
+        const f = await fetchElevenLabsBlob(transition);
+        if (!f) return null;
+        recordTtsTiming(f.bytes, f.ms);
+        return f.blob;
       })();
-      const mediaReady = await prepareMediaUrl(nMediaUrl);
-      await transitionPromise;
+      const [mediaReady, blob] = await Promise.all([prepareMediaUrl(nMediaUrl), blobPromise]);
+      preparedTransitionBlob = blob;
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
+
+      setQuestionLoading((prev) => (prev ? { ...prev, percent: 90, label: "Lecture imminente…" } : prev));
 
       if (!mediaReady) {
         console.warn("[interview] Question média indisponible — bascule en texte");
@@ -1815,6 +1833,24 @@ export default function InterviewStart() {
           return updated;
         });
       }
+
+      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition.
+      setQuestionLoading(null);
+      setIsSpeaking(true);
+      setShouldAutoPlay(false);
+      currentPresentationRef.current = { kind: "tts", text: transition };
+      if (preparedTransitionBlob) {
+        await tryElevenLabs(transition, preparedTransitionBlob);
+        currentPresentationRef.current = null;
+      } else {
+        await speak(transition);
+      }
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+    } else {
+      // Pas de média : retirer l'overlay maintenant.
+      setQuestionLoading(null);
     }
 
     setCurrentQuestionIndex(nextQIdx);
