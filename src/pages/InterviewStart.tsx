@@ -17,6 +17,7 @@ import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
+import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
@@ -102,6 +103,17 @@ export default function InterviewStart() {
   // Instance Audio unique débloquée par le geste utilisateur initial puis
   // réutilisée pour TOUS les TTS / médias audio de la session (iOS Safari fix).
   const primaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  // Diagnostic audio : activé via ?debug=audio dans l'URL ou localStorage.audioDebug=1
+  const [audioDebugEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("debug") === "audio" || params.has("audioDebug")) return true;
+      return window.localStorage.getItem("audioDebug") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [interviewFinished, setInterviewFinished] = useState(false);
   // Mode « salle d'examen »
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -2534,6 +2546,9 @@ export default function InterviewStart() {
             try { fn?.(); } catch {}
           }}
         />
+      )}
+      {audioDebugEnabled && (
+        <AudioDebugPanel audioRef={primaryAudioRef} audioBlocked={audioBlocked} />
       )}
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
