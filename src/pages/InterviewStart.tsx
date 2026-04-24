@@ -295,25 +295,12 @@ export default function InterviewStart() {
 
   const clearSilenceTier = useCallback(() => {
     if (silenceHintTimerRef.current) { clearTimeout(silenceHintTimerRef.current); silenceHintTimerRef.current = null; }
-    if (silenceNudge1TimerRef.current) { clearTimeout(silenceNudge1TimerRef.current); silenceNudge1TimerRef.current = null; }
-    if (silenceNudge2TimerRef.current) { clearTimeout(silenceNudge2TimerRef.current); silenceNudge2TimerRef.current = null; }
-    if (silenceNudge3TimerRef.current) { clearTimeout(silenceNudge3TimerRef.current); silenceNudge3TimerRef.current = null; }
+    if (silenceTier3TimerRef.current) { clearTimeout(silenceTier3TimerRef.current); silenceTier3TimerRef.current = null; }
     if (silenceAutoPauseTimerRef.current) { clearTimeout(silenceAutoPauseTimerRef.current); silenceAutoPauseTimerRef.current = null; }
     setSilenceTier(0);
-    nudge1PlayedRef.current = false;
-    nudge2PlayedRef.current = false;
-    nudge3PlayedRef.current = false;
   }, []);
 
-  const playNudge = useCallback((slot: 1 | 2 | 3, text: string) => {
-    if (isPausedRef.current || autoEndTriggeredRef.current) return;
-    const ref = slot === 1 ? nudge1PlayedRef : slot === 2 ? nudge2PlayedRef : nudge3PlayedRef;
-    if (ref.current) return;
-    ref.current = true;
-    speakRef.current?.(text).catch(() => {});
-  }, []);
-
-  // Reset silence timer (called on any activity)
+  // (Re)arme le minuteur de silence. À n'appeler que dans la vraie phase d'écoute candidat.
   const resetSilenceTimer = useCallback(() => {
     // Toute activité annule aussi un éventuel cycle d'arrêt en cours.
     clearEndCountdown();
@@ -321,18 +308,7 @@ export default function InterviewStart() {
     clearSilenceTier();
 
     silenceHintTimerRef.current = setTimeout(() => setSilenceTier(1), SILENCE_HINT_MS);
-    silenceNudge1TimerRef.current = setTimeout(() => {
-      setSilenceTier(2);
-      playNudge(1, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_1_MS);
-    silenceNudge2TimerRef.current = setTimeout(() => {
-      setSilenceTier(2);
-      playNudge(2, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_2_MS);
-    silenceNudge3TimerRef.current = setTimeout(() => {
-      setSilenceTier(3);
-      playNudge(3, "Prenez votre temps, je vous écoute.");
-    }, SILENCE_NUDGE_3_MS);
+    silenceTier3TimerRef.current = setTimeout(() => setSilenceTier(3), SILENCE_TIER3_MS);
     silenceAutoPauseTimerRef.current = setTimeout(() => {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
@@ -349,7 +325,7 @@ export default function InterviewStart() {
       // et ne perturbe pas le snapshot déjà figé par pauseInterview.
       speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
-  }, [toast, clearSilenceTier, clearEndCountdown, playNudge]);
+  }, [toast, clearSilenceTier, clearEndCountdown]);
 
   // Arme l'avertissement de fin + le compte à rebours d'arrêt forcé,
   // déclenchés depuis l'état de pause automatique.
