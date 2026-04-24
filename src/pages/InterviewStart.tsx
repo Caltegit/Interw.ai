@@ -1730,6 +1730,7 @@ export default function InterviewStart() {
           console.error("Closing persist failed:", e);
         }));
       }
+      setQuestionLoading(null);
       await speak(closing);
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
