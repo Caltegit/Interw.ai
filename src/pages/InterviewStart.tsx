@@ -13,6 +13,9 @@ import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
 import { RecordingStatusBadge } from "@/components/interview/RecordingStatusBadge";
 import { logger } from "@/lib/logger";
+import { useNetworkQuality } from "@/hooks/useNetworkQuality";
+import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
+import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -229,6 +232,25 @@ export default function InterviewStart() {
   const followUpsRef = useRef<Record<number, number>>({});
   const [aiThinking, setAiThinking] = useState(false);
 
+  // ── Qualité réseau (mesurée via TTS + navigator.connection) ──
+  const { tier: networkTier, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const networkTierRef = useRef<typeof networkTier>("good");
+  const networkWarnedRef = useRef(false);
+  useEffect(() => {
+    networkTierRef.current = networkTier;
+  }, [networkTier]);
+
+  // ── Boot progress (avant la 1ère question) ──
+  const [bootSteps, setBootSteps] = useState<BootStep[]>([]);
+  const [bootPercent, setBootPercent] = useState(0);
+  const [bootActive, setBootActive] = useState(false);
+
+  // ── Overlay de chargement entre deux questions ──
+  const [questionLoading, setQuestionLoading] = useState<{
+    label: string;
+    percent: number;
+  } | null>(null);
+
   // Refs avant pour éviter les dépendances circulaires entre callbacks.
   const pauseInterviewRef = useRef<(() => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
@@ -412,14 +434,15 @@ export default function InterviewStart() {
   // Jeton d'annulation pour interrompre une relance IA en cours (utilisé par "Passer la question").
   const turnAbortRef = useRef<{ aborted: boolean } | null>(null);
 
-  // Try ElevenLabs first; resolves true if it played, false if we should fallback
-  const tryElevenLabs = useCallback(
-    async (text: string): Promise<boolean> => {
+  // Pré-fetch ElevenLabs sans lecture (utilisé par le warm-up et le pré-chargement
+  // entre questions). Retourne le blob audio + une mesure brute des octets/durée.
+  const fetchElevenLabsBlob = useCallback(
+    async (text: string): Promise<{ blob: Blob; bytes: number; ms: number } | null> => {
       const proj = project;
-      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return false;
-
+      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return null;
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+        const start = performance.now();
         const res = await fetch(url, {
           method: "POST",
           headers: {
@@ -429,21 +452,37 @@ export default function InterviewStart() {
           },
           body: JSON.stringify({ text, projectId: proj.id }),
         });
-
-        if (!res.ok) {
-          console.warn("[interview] ElevenLabs HTTP", res.status);
-          return false;
-        }
-
+        if (!res.ok) return null;
         const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const j = await res.json().catch(() => ({}));
-          console.log("[interview] ElevenLabs skip:", j?.reason);
-          return false;
-        }
-
+        if (ct.includes("application/json")) return null;
         const blob = await res.blob();
-        if (!blob || blob.size === 0) return false;
+        const ms = performance.now() - start;
+        if (!blob || blob.size === 0) return null;
+        return { blob, bytes: blob.size, ms };
+      } catch (e) {
+        console.warn("[interview] fetchElevenLabsBlob failed", e);
+        return null;
+      }
+    },
+    [project],
+  );
+
+  // Try ElevenLabs first; resolves true if it played, false if we should fallback.
+  // Si `prefetchedBlob` est fourni, on saute l'appel réseau (zéro latence perçue).
+  const tryElevenLabs = useCallback(
+    async (text: string, prefetchedBlob?: Blob | null): Promise<boolean> => {
+      const proj = project;
+      if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return false;
+
+      try {
+        let blob: Blob | null = prefetchedBlob ?? null;
+        if (!blob) {
+          const fetched = await fetchElevenLabsBlob(text);
+          if (!fetched) return false;
+          blob = fetched.blob;
+          // Mesure réseau : on nourrit l'EWMA.
+          recordTtsTiming(fetched.bytes, fetched.ms);
+        }
 
         const audioUrl = URL.createObjectURL(blob);
         const audio = new Audio(audioUrl);
@@ -477,7 +516,7 @@ export default function InterviewStart() {
         return false;
       }
     },
-    [project],
+    [project, fetchElevenLabsBlob, recordTtsTiming, session?.id],
   );
 
   // TTS: speak text aloud — tries ElevenLabs first if enabled, falls back to browser
@@ -1222,12 +1261,22 @@ export default function InterviewStart() {
       return;
     }
 
-    // Warm up speech synthesis with a silent utterance (mobile requires gesture)
+    // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
     if (window.speechSynthesis) {
-      const warmup = new SpeechSynthesisUtterance("");
-      warmup.volume = 0;
-      window.speechSynthesis.speak(warmup);
+      try {
+        const warmup = new SpeechSynthesisUtterance("");
+        warmup.volume = 0;
+        window.speechSynthesis.speak(warmup);
+      } catch {}
     }
+    try {
+      // Petit Audio muet pour débloquer la policy autoplay iOS/Android.
+      const silentAudio = new Audio(
+        "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=",
+      );
+      silentAudio.volume = 0;
+      silentAudio.play().catch(() => {});
+    } catch {}
 
     setReadyToStart(true);
 
@@ -1294,8 +1343,55 @@ export default function InterviewStart() {
     currentBlockIdRef.current += 1;
     const myBlock = currentBlockIdRef.current;
 
-    // Préparer le média de la 1ère question AVANT de prononcer la salutation.
-    // Sur réseau lent, on aura le temps de bufferiser pendant le greeting.
+    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
+
+    // ── PHASE BOOT : préparation séquentielle avec barre de progression ──
+    // Étapes :
+    //   1) Voix IA (ElevenLabs warm-up + capture du blob du greeting)
+    //   2) Mesure de connexion (faite implicitement par l'étape 1 via recordTtsTiming)
+    //   3) Préparation du média de la 1ère question (ou rien si question texte)
+    //   4) Buffer 300 ms de stabilisation
+    const usesEleven = project?.tts_provider === "elevenlabs";
+    const initialSteps: BootStep[] = [
+      { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
+      { key: "network", label: "Test de la connexion", status: "pending" },
+      {
+        key: "media",
+        label: firstQMediaUrl
+          ? `Chargement de la 1ʳᵉ question (${firstQMediaType === "video" ? "vidéo" : "audio"})`
+          : "Chargement de la 1ʳᵉ question",
+        status: "pending",
+      },
+      { key: "buffer", label: "Mise en mémoire tampon", status: "pending" },
+    ];
+    setBootSteps(initialSteps);
+    setBootPercent(0);
+    setBootActive(true);
+
+    const updateStep = (key: string, status: BootStepStatus) => {
+      setBootSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
+    };
+
+    // ÉTAPE 1 : warm-up TTS — on ping ElevenLabs pour réveiller le service.
+    updateStep("voice", "running");
+    setBootPercent(10);
+    let greetingBlob: Blob | null = null;
+    if (usesEleven) {
+      // On warm avec une phrase courte et neutre pour mesurer le réseau.
+      const warmText = `Bonjour ${firstName || ""}.`.trim();
+      const warmRes = await fetchElevenLabsBlob(warmText);
+      if (warmRes) {
+        recordTtsTiming(warmRes.bytes, warmRes.ms);
+        // On ne stocke pas ce blob comme greeting (texte différent), mais le
+        // service est désormais chaud → l'appel suivant sera rapide.
+      }
+    }
+    updateStep("voice", "done");
+    updateStep("network", "done");
+    setBootPercent(40);
+
+    // ÉTAPE 3 : préparer le média de la Q1
+    updateStep("media", "running");
     if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
     let firstQMediaReady = false;
     if (firstQMediaUrl) {
@@ -1309,12 +1405,35 @@ export default function InterviewStart() {
         firstQMediaType = "written";
       }
     }
+    updateStep("media", "done");
+    setBootPercent(75);
     const isFirstQMedia = firstQMediaType !== "written";
 
-    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
     const greeting = isFirstQMedia
       ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
       : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+
+    // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
+    if (usesEleven) {
+      const g = await fetchElevenLabsBlob(greeting);
+      if (g) {
+        greetingBlob = g.blob;
+        recordTtsTiming(g.bytes, g.ms);
+      }
+    }
+
+    // ÉTAPE 4 : buffer de stabilisation
+    updateStep("buffer", "running");
+    setBootPercent(95);
+    await new Promise((r) => setTimeout(r, 300));
+    updateStep("buffer", "done");
+    setBootPercent(100);
+    // Petit délai visuel pour montrer le 100 % avant de retirer l'overlay.
+    await new Promise((r) => setTimeout(r, 200));
+    setBootActive(false);
+
+    // À ce stade, si l'utilisateur a quitté/pause, on stoppe tout.
+    if (myBlock !== currentBlockIdRef.current) return;
 
     const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
@@ -1338,8 +1457,14 @@ export default function InterviewStart() {
       });
     }
 
-    // Speak the greeting via TTS, then trigger auto-play on the featured player for media questions
-    await speak(greeting);
+    // Speak the greeting — utilise le blob pré-fetché si disponible (zéro latence).
+    if (usesEleven && greetingBlob) {
+      await tryElevenLabs(greeting, greetingBlob);
+      // Cleanup state similaire à speak()
+      currentPresentationRef.current = null;
+    } else {
+      await speak(greeting);
+    }
     // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
     if (myBlock !== currentBlockIdRef.current) return;
     if (isFirstQMedia) {
@@ -1475,7 +1600,21 @@ export default function InterviewStart() {
     }
 
     // ── 3. Call AI (await this time) to decide next action ──
+    // Overlay de chargement entre questions : on couvre upload + IA + média.
+    setQuestionLoading({ label: "Analyse de votre réponse…", percent: 30 });
     setAiThinking(true);
+    // Override réseau : si la connexion est dégradée/poor, on plafonne (ou supprime) les relances.
+    const forceMaxFollowUps = getForceMaxFollowUps();
+    if (forceMaxFollowUps != null && !networkWarnedRef.current) {
+      networkWarnedRef.current = true;
+      toast({
+        title: "Connexion lente détectée",
+        description:
+          forceMaxFollowUps === 0
+            ? "Session simplifiée : les relances sont désactivées."
+            : "Session simplifiée : relances limitées pour préserver la fluidité.",
+      });
+    }
     let action: "follow_up" | "next" | "end" = (isLastQuestion ? "end" : "next") as "follow_up" | "next" | "end";
     let aiMessage = "";
     try {
@@ -1495,6 +1634,7 @@ export default function InterviewStart() {
             currentQuestionNumber: questionIdx + 1,
             totalQuestions: questions.length,
             followUpsAsked,
+            forceMaxFollowUps,
           },
         },
       });
@@ -1509,6 +1649,7 @@ export default function InterviewStart() {
       });
     }
     setAiThinking(false);
+    setQuestionLoading((prev) => (prev ? { ...prev, percent: 60, label: "Préparation de la suite…" } : prev));
     if (token.aborted) { aborted = true; return; }
 
     // ── 4. FOLLOW-UP branch ──
@@ -1548,7 +1689,22 @@ export default function InterviewStart() {
 
       setResponseElapsedSec(0);
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
-      await speak(aiMessage);
+      // Pré-fetch TTS pour ne dévoiler la question qu'une fois prête à jouer.
+      let followBlob: Blob | null = null;
+      if (project?.tts_provider === "elevenlabs") {
+        const f = await fetchElevenLabsBlob(aiMessage);
+        if (f) {
+          followBlob = f.blob;
+          recordTtsTiming(f.bytes, f.ms);
+        }
+      }
+      setQuestionLoading(null);
+      if (followBlob) {
+        await tryElevenLabs(aiMessage, followBlob);
+        currentPresentationRef.current = null;
+      } else {
+        await speak(aiMessage);
+      }
       if (token.aborted) { aborted = true; return; }
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
@@ -1574,6 +1730,7 @@ export default function InterviewStart() {
           console.error("Closing persist failed:", e);
         }));
       }
+      setQuestionLoading(null);
       await speak(closing);
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
@@ -1625,22 +1782,40 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
     }
 
+    // Si la connexion est très mauvaise, on évite carrément la lecture du média
+    // (qui prendrait trop de temps à se charger) et on bascule en texte d'office.
+    if (nMediaUrl && networkTierRef.current === "poor") {
+      console.warn("[interview] Réseau poor — bascule directe en texte pour la prochaine question");
+      nMediaType = "written";
+      setMessages((prev) => {
+        const updated = prev.map((m, i) =>
+          i === prev.length - 1 && m.role === "ai" ? { ...m, mediaType: "written" as const, mediaUrl: null } : m,
+        );
+        messagesRef.current = updated;
+        return updated;
+      });
+    }
+
     // PREP_MEDIA : si la question suivante a un média, on vérifie qu'il est
     // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
-    if (nMediaUrl) {
-      // Lance la prononciation de la transition + la préparation du média en parallèle.
-      // On attendra explicitement les deux avant de jouer.
-      const transitionPromise = (async () => {
-        setIsSpeaking(true);
-        setShouldAutoPlay(false);
-        currentPresentationRef.current = { kind: "tts", text: transition };
-        await speak(transition);
+    let preparedTransitionBlob: Blob | null = null;
+    if (nMediaUrl && nMediaType !== "written") {
+      // Préparation parallèle : média + blob TTS de la transition.
+      // On attend les DEUX avant de retirer l'overlay et de jouer.
+      const blobPromise = (async () => {
+        if (project?.tts_provider !== "elevenlabs") return null;
+        const f = await fetchElevenLabsBlob(transition);
+        if (!f) return null;
+        recordTtsTiming(f.bytes, f.ms);
+        return f.blob;
       })();
-      const mediaReady = await prepareMediaUrl(nMediaUrl);
-      await transitionPromise;
+      const [mediaReady, blob] = await Promise.all([prepareMediaUrl(nMediaUrl), blobPromise]);
+      preparedTransitionBlob = blob;
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
+
+      setQuestionLoading((prev) => (prev ? { ...prev, percent: 90, label: "Lecture imminente…" } : prev));
 
       if (!mediaReady) {
         console.warn("[interview] Question média indisponible — bascule en texte");
@@ -1658,6 +1833,24 @@ export default function InterviewStart() {
           return updated;
         });
       }
+
+      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition.
+      setQuestionLoading(null);
+      setIsSpeaking(true);
+      setShouldAutoPlay(false);
+      currentPresentationRef.current = { kind: "tts", text: transition };
+      if (preparedTransitionBlob) {
+        await tryElevenLabs(transition, preparedTransitionBlob);
+        currentPresentationRef.current = null;
+      } else {
+        await speak(transition);
+      }
+      if (token.aborted) { aborted = true; return; }
+      if (nextBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
+    } else {
+      // Pas de média : retirer l'overlay maintenant.
+      setQuestionLoading(null);
     }
 
     setCurrentQuestionIndex(nextQIdx);
@@ -2203,6 +2396,10 @@ export default function InterviewStart() {
 
   return (
     <CandidateLayout minimal>
+      {bootActive && <InterviewBootProgress steps={bootSteps} percent={bootPercent} />}
+      {questionLoading && !bootActive && (
+        <QuestionLoadingOverlay percent={questionLoading.percent} label={questionLoading.label} />
+      )}
       {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}

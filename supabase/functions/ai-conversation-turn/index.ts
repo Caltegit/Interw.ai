@@ -44,12 +44,25 @@ serve(async (req) => {
       rawLevel === "light" || rawLevel === "deep" ? rawLevel : "medium";
 
     const followUpsAsked: number = Number(projectContext.followUpsAsked ?? 0);
-    const maxFollowUps: number = Math.max(
+    const baseMaxFollowUps: number = Math.max(
       0,
       Number(currentQ.maxFollowUps ?? (relanceLevel === "deep" ? 2 : relanceLevel === "medium" ? 1 : 0)),
     );
+    // forceMaxFollowUps : override envoyé par le client en cas de réseau dégradé.
+    // Si défini, plafonne maxFollowUps. Si === 0, force action = "next".
+    const rawForce = projectContext.forceMaxFollowUps;
+    const forceMaxFollowUps: number | null =
+      typeof rawForce === "number" && Number.isFinite(rawForce) && rawForce >= 0
+        ? Math.floor(rawForce)
+        : null;
+    const maxFollowUps: number =
+      forceMaxFollowUps != null ? Math.min(baseMaxFollowUps, forceMaxFollowUps) : baseMaxFollowUps;
+    const networkDisablesFollowUps = forceMaxFollowUps === 0;
     const isLastQuestion = currentIdx >= questionsList.length - 1;
-    const canFollowUp = relanceLevel !== "light" && followUpsAsked < maxFollowUps;
+    const canFollowUp =
+      relanceLevel !== "light" &&
+      !networkDisablesFollowUps &&
+      followUpsAsked < maxFollowUps;
 
     // Last candidate message (for word-count heuristic, used in prompt context)
     const lastCandidate = [...messages].reverse().find((m: any) => m.role === "user");
