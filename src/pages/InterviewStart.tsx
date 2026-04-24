@@ -13,6 +13,9 @@ import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
 import { RecordingStatusBadge } from "@/components/interview/RecordingStatusBadge";
 import { logger } from "@/lib/logger";
+import { useNetworkQuality } from "@/hooks/useNetworkQuality";
+import InterviewBootProgress, { type BootStep } from "@/components/interview/InterviewBootProgress";
+import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 
 // Extend window for webkitSpeechRecognition
 declare global {
