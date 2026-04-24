@@ -432,14 +432,65 @@ export default function InterviewStart() {
   }, [messages]);
 
   // Play a media URL and return a promise that resolves when it ends
-  const playMediaUrl = useCallback((url: string): Promise<void> => {
+  // Helper : joue une URL via l'instance Audio principale (réutilisée pour
+  // préserver le déblocage iOS Safari) et arme un watchdog 2 s qui propose un
+  // bouton « Activer le son » si la lecture ne démarre pas.
+  const playOnPrimary = useCallback((src: string): Promise<void> => {
     return new Promise((resolve) => {
-      const el = new Audio(url);
-      el.onended = () => resolve();
-      el.onerror = () => resolve();
-      el.play().catch(() => resolve());
+      const el = primaryAudioRef.current ?? new Audio();
+      if (!primaryAudioRef.current) primaryAudioRef.current = el;
+      el.playsInline = true;
+      el.preload = "auto";
+      el.src = src;
+      try { el.load(); } catch {}
+      let done = false;
+      let watchdog: ReturnType<typeof setTimeout> | null = null;
+      const cleanup = () => {
+        if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+        el.onended = null;
+        el.onerror = null;
+        el.onplaying = null;
+      };
+      const finish = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve();
+      };
+      el.onended = finish;
+      el.onerror = finish;
+      el.onplaying = () => {
+        if (watchdog) { clearTimeout(watchdog); watchdog = null; }
+        setAudioBlocked(false);
+      };
+      const tryPlay = () => {
+        const p = el.play();
+        if (p && typeof p.then === "function") {
+          p.catch((err) => {
+            console.warn("[interview] audio play() rejected", err);
+          });
+        }
+      };
+      tryPlay();
+      // Watchdog : si après 2 s rien ne joue, on demande un déblocage manuel.
+      watchdog = setTimeout(() => {
+        if (done) return;
+        if (el.paused || el.currentTime === 0) {
+          console.warn("[interview] audio blocked — showing unlock overlay");
+          pendingReplayRef.current = () => {
+            setAudioBlocked(false);
+            tryPlay();
+          };
+          setAudioBlocked(true);
+        }
+      }, 2000);
     });
   }, []);
+
+  const playMediaUrl = useCallback(
+    (url: string): Promise<void> => playOnPrimary(url),
+    [playOnPrimary],
+  );
 
   // Ref to current ElevenLabs audio (for pause/cancel)
   const elevenAudioRef = useRef<HTMLAudioElement | null>(null);
