@@ -6,20 +6,26 @@ import {
   ArrowRight,
   Brain,
   CalendarClock,
+  Check,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
+  Clock,
   LineChart,
   Library,
+  Quote,
   ShieldCheck,
   Sparkles,
+  Star,
   Video,
+  X,
 } from "lucide-react";
-
-const CONTACT_EMAIL = "hello@interw.ai";
 
 export default function Landing() {
   const { session, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+
   const openDemo = (e?: React.MouseEvent) => {
     e?.preventDefault();
     setDemoOpen(true);
@@ -27,7 +33,7 @@ export default function Landing() {
 
   useEffect(() => {
     document.title = "Interw.ai — Sessions vidéo IA pour le recrutement";
-    const desc = "Interw.ai automatise vos sessions de présélection : entretiens vidéo conversationnels mené par une IA, scoring objectif, rapports détaillés.";
+    const desc = "Interw.ai automatise vos entretiens de présélection : sessions vidéo conversationnelles menées par une IA, notation objective et rapports détaillés.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -53,15 +59,17 @@ export default function Landing() {
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(var(--l-fg-dim))" }}>
             <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
-            <a href="#how" className="hover:text-white transition-colors">Comment ça marche</a>
-            <a href="#why" className="hover:text-white transition-colors">Pourquoi Interw</a>
+            <a href="#how" className="hover:text-white transition-colors">Fonctionnement</a>
+            <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
+            <a href="#faq" className="hover:text-white transition-colors">Questions</a>
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm hover:text-white transition-colors" style={{ color: "hsl(var(--l-fg-dim))" }}>
               Connexion
             </Link>
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-3.5 w-3.5" /></button>
+              Demander une démo <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </header>
@@ -73,23 +81,29 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 pt-24 pb-28 text-center md:pt-32 md:pb-36">
           <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "hsl(var(--l-border))", color: "hsl(var(--l-fg-dim))" }}>
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--l-accent))" }} />
-            Plateforme de session IA pour les RH
+            Nouveau · Sessions vidéo IA pour les équipes RH
           </div>
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
             <span className="landing-gradient-text">Présélectionnez 10× plus vite.</span>
             <br />
-            <span className="landing-accent-text">Avec une session IA.</span>
+            <span className="landing-accent-text">Sans perdre en qualité.</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Interw.ai mène des sessions vidéo conversationnels à la place de vos recruteurs.
-            Scoring objectif, rapports détaillés, expérience candidat soignée.
+            Interw.ai mène vos entretiens de présélection à votre place : une IA conversationnelle interroge vos candidats,
+            note les réponses sur vos critères et vous remet un rapport complet.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-4 w-4" /></button>
+              Demander une démo <ArrowRight className="h-4 w-4" />
+            </button>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
               Se connecter
             </Link>
+          </div>
+          <div className="landing-fade-up landing-delay-3 mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Sans carte bancaire</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Hébergement européen</span>
+            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Mise en route en 10 min</span>
           </div>
 
           {/* Mock product card */}
@@ -99,14 +113,20 @@ export default function Landing() {
                 <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-                <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>interw.ai/interview</span>
+                <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>interw.ai/session</span>
               </div>
               <div className="grid gap-6 p-6 md:grid-cols-[1fr_280px]">
-                <div className="aspect-video rounded-lg" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.15))", border: "1px solid hsl(var(--l-border))" }}>
+                <div className="relative aspect-video overflow-hidden rounded-lg" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.15))", border: "1px solid hsl(var(--l-border))" }}>
                   <div className="flex h-full items-center justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "hsl(var(--l-accent) / 0.3)" }}>
-                      <Video className="h-7 w-7" />
+                    <div className="relative">
+                      <span className="absolute inset-0 rounded-full" style={{ background: "hsl(var(--l-accent) / 0.4)", filter: "blur(20px)", animation: "halo-breathe 2.5s ease-in-out infinite" }} />
+                      <div className="relative flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "hsl(var(--l-accent) / 0.3)" }}>
+                        <Video className="h-7 w-7" />
+                      </div>
                     </div>
+                  </div>
+                  <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/40 px-2 py-1 text-[11px] backdrop-blur-md">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
                   </div>
                 </div>
                 <div className="space-y-3">
@@ -115,10 +135,14 @@ export default function Landing() {
                     « Pouvez-vous me décrire un projet où vous avez dû gérer un conflit dans votre équipe ? »
                   </p>
                   <div className="space-y-2 pt-3">
-                    {["Communication", "Leadership", "Esprit d'équipe"].map((c) => (
-                      <div key={c} className="flex items-center justify-between rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-bg-elev))", border: "1px solid hsl(var(--l-border))" }}>
-                        <span>{c}</span>
-                        <span style={{ color: "hsl(var(--l-accent))" }}>évalué</span>
+                    {[
+                      { c: "Communication", v: "8.5" },
+                      { c: "Leadership", v: "7.2" },
+                      { c: "Esprit d'équipe", v: "9.0" },
+                    ].map((c) => (
+                      <div key={c.c} className="flex items-center justify-between rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-bg-elev))", border: "1px solid hsl(var(--l-border))" }}>
+                        <span>{c.c}</span>
+                        <span className="font-mono" style={{ color: "hsl(var(--l-accent))" }}>{c.v}/10</span>
                       </div>
                     ))}
                   </div>
@@ -129,28 +153,48 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Social proof — secteurs */}
+      <section className="border-t landing-divider">
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
+            Pensé pour les équipes RH dans tous les secteurs
+          </p>
+          <div className="mt-8 grid grid-cols-2 gap-4 text-center text-sm md:grid-cols-5" style={{ color: "hsl(var(--l-fg-dim))" }}>
+            {["Conseil", "Tech & SaaS", "Retail", "Industrie", "Services"].map((s) => (
+              <div key={s} className="rounded-md py-3" style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}>
+                {s}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Why */}
       <section id="why" className="border-t landing-divider">
         <div className="mx-auto max-w-6xl px-6 py-24">
           <div className="grid gap-12 md:grid-cols-2 md:items-center">
             <div>
               <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-                Le problème
+                Le constat
               </div>
               <h2 className="mt-3 text-3xl md:text-4xl">
                 <span className="landing-gradient-text">La présélection vous coûte des heures.</span>
               </h2>
               <p className="mt-5 text-base leading-relaxed" style={{ color: "hsl(var(--l-fg-dim))" }}>
-                Les recruteurs passent en moyenne 23 minutes par candidat en session téléphonique.
-                Multiplié par 50 candidatures, c'est une semaine entière par poste.
-                Et les biais inconscients restent inévitables.
+                Vos recruteurs passent en moyenne 23 minutes par candidat en entretien téléphonique de présélection.
+                Pour 50 candidatures, cela représente près d'une semaine entière par poste.
+                Et les biais inconscients restent difficiles à éviter.
               </p>
+              <div className="mt-6 inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-accent) / 0.1)", color: "hsl(var(--l-fg))", border: "1px solid hsl(var(--l-accent) / 0.3)" }}>
+                <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
+                Avec Interw.ai, vous ne lisez plus que les meilleurs profils.
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { k: "10×", v: "plus rapide qu'une session téléphonique" },
-                { k: "100%", v: "des candidats évalués sur les mêmes critères" },
-                { k: "24/7", v: "vos candidats passent la session quand ils veulent" },
+                { k: "10×", v: "plus rapide qu'un entretien téléphonique" },
+                { k: "100 %", v: "des candidats évalués sur les mêmes critères" },
+                { k: "24/7", v: "vos candidats passent l'entretien quand ils veulent" },
                 { k: "0", v: "biais lié à la fatigue du recruteur" },
               ].map((s) => (
                 <div key={s.k} className="landing-card p-5">
@@ -158,6 +202,31 @@ export default function Landing() {
                   <div className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{s.v}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Témoignage */}
+      <section className="border-t landing-divider">
+        <div className="mx-auto max-w-4xl px-6 py-20">
+          <div className="landing-card relative p-8 md:p-12">
+            <Quote className="absolute right-6 top-6 h-10 w-10" style={{ color: "hsl(var(--l-accent) / 0.25)" }} />
+            <div className="flex items-center gap-1" style={{ color: "hsl(var(--l-accent))" }}>
+              {[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+            </div>
+            <p className="mt-5 text-xl leading-relaxed md:text-2xl">
+              « On reçoit plus de 100 candidatures par offre. Interw.ai fait la présélection en une nuit
+              et nous remet un classement clair. On gagne deux jours par recrutement. »
+            </p>
+            <div className="mt-6 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
+                CM
+              </div>
+              <div>
+                <div className="text-sm font-medium">Claire M.</div>
+                <div className="text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>Responsable recrutement · cabinet de conseil</div>
+              </div>
             </div>
           </div>
         </div>
@@ -180,11 +249,11 @@ export default function Landing() {
 
           <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {[
-              { icon: Brain, title: "Session IA conversationnelle", desc: "Une IA mène la session, pose des questions de suivi pertinentes et adapte le ton à chaque candidat." },
-              { icon: LineChart, title: "Scoring automatique", desc: "Chaque réponse est notée selon vos critères d'évaluation. Transparent, objectif, reproductible." },
-              { icon: ClipboardList, title: "Rapports détaillés", desc: "Synthèse exécutive, points forts, axes d'amélioration, recommandation. Prêt à partager." },
-              { icon: Library, title: "Bibliothèque de questions", desc: "Réutilisez vos meilleures questions et vos critères entre projets. Capitalisez sur votre expertise." },
-              { icon: Video, title: "Enregistrement vidéo", desc: "Revoyez les moments clés avec les transcripts horodatés. Partagez avec vos managers." },
+              { icon: Brain, title: "Entretien IA conversationnel", desc: "L'IA mène l'entretien, pose des questions de relance pertinentes et adapte son ton à chaque candidat." },
+              { icon: LineChart, title: "Notation automatique", desc: "Chaque réponse est notée selon vos critères d'évaluation. Transparente, objective, reproductible." },
+              { icon: ClipboardList, title: "Rapports détaillés", desc: "Synthèse, points forts, axes d'amélioration, recommandation. Prêt à partager avec vos managers." },
+              { icon: Library, title: "Bibliothèque de questions", desc: "Réutilisez vos meilleures questions et critères entre projets. Capitalisez sur votre expertise." },
+              { icon: Video, title: "Enregistrement vidéo", desc: "Revoyez les moments clés grâce aux transcriptions horodatées. Partagez les extraits importants." },
               { icon: ShieldCheck, title: "RGPD natif", desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable." },
             ].map((f) => (
               <div key={f.title} className="landing-card p-6 transition-transform hover:-translate-y-1">
@@ -204,18 +273,18 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-24">
           <div className="mx-auto max-w-2xl text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Comment ça marche
+              Fonctionnement
             </div>
             <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
-              Trois étapes. Aucun setup compliqué.
+              Trois étapes. Aucune installation.
             </h2>
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
-              { n: "01", icon: ClipboardList, title: "Créez votre projet", desc: "Définissez le poste, vos questions, vos critères de scoring. Quelques minutes suffisent." },
-              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent la session depuis leur navigateur, quand ils veulent." },
-              { n: "03", icon: CheckCircle2, title: "Recevez les rapports", desc: "Une note globale, une recommandation, et tous les détails. Décidez en quelques minutes." },
+              { n: "01", icon: ClipboardList, title: "Créez votre projet", desc: "Définissez le poste, les questions et les critères d'évaluation. Quelques minutes suffisent." },
+              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent l'entretien depuis leur navigateur, à leur rythme." },
+              { n: "03", icon: CheckCircle2, title: "Recevez les rapports", desc: "Une note globale, une recommandation et tous les détails. Décidez en quelques minutes." },
             ].map((s) => (
               <div key={s.n} className="landing-card relative p-6">
                 <div className="text-xs font-mono" style={{ color: "hsl(var(--l-fg-dim))" }}>{s.n}</div>
@@ -230,18 +299,198 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Comparatif */}
+      <section className="border-t landing-divider">
+        <div className="mx-auto max-w-5xl px-6 py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
+              Comparatif
+            </div>
+            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
+              Présélection traditionnelle ou Interw.ai ?
+            </h2>
+          </div>
+
+          <div className="mt-12 overflow-hidden rounded-2xl" style={{ border: "1px solid hsl(var(--l-border))" }}>
+            <div className="grid grid-cols-3 text-sm">
+              <div className="p-4 font-medium" style={{ background: "hsl(var(--l-bg-elev))" }}> </div>
+              <div className="p-4 text-center font-medium" style={{ background: "hsl(var(--l-bg-elev))", color: "hsl(var(--l-fg-dim))" }}>
+                Téléphone / visio
+              </div>
+              <div className="p-4 text-center font-semibold" style={{ background: "hsl(var(--l-accent) / 0.12)" }}>
+                Interw.ai
+              </div>
+            </div>
+            {[
+              { l: "Temps par candidat", a: "20-30 minutes", b: "0 minute pour vous" },
+              { l: "Disponibilité", a: "Heures de bureau", b: "24/7" },
+              { l: "Critères d'évaluation", a: "Variables", b: "Identiques pour tous" },
+              { l: "Biais inconscients", a: "Présents", b: "Réduits" },
+              { l: "Rapport partageable", a: "À rédiger", b: "Généré automatiquement" },
+              { l: "Coût marginal", a: "Élevé", b: "Faible" },
+            ].map((row, idx) => (
+              <div key={row.l} className="grid grid-cols-3 text-sm" style={{ borderTop: "1px solid hsl(var(--l-border))", background: idx % 2 === 1 ? "hsl(var(--l-bg-elev) / 0.4)" : "transparent" }}>
+                <div className="p-4">{row.l}</div>
+                <div className="flex items-center justify-center gap-2 p-4 text-center" style={{ color: "hsl(var(--l-fg-dim))" }}>
+                  <X className="h-4 w-4 text-red-400/70" /> {row.a}
+                </div>
+                <div className="flex items-center justify-center gap-2 p-4 text-center">
+                  <Check className="h-4 w-4" style={{ color: "hsl(var(--l-accent))" }} /> {row.b}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="border-t landing-divider">
+        <div className="mx-auto max-w-5xl px-6 py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
+              Tarifs
+            </div>
+            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
+              Une formule simple, adaptée à votre volume.
+            </h2>
+            <p className="mt-4 text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
+              Sans engagement. Tarification transparente sur devis selon le nombre d'entretiens.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                name: "Découverte",
+                price: "Gratuit",
+                desc: "Pour tester la solution sur un poste.",
+                features: ["1 projet", "10 entretiens inclus", "Rapports détaillés", "Support par email"],
+                cta: "Demander un accès",
+                highlight: false,
+              },
+              {
+                name: "Croissance",
+                price: "Sur devis",
+                desc: "Pour les équipes RH actives.",
+                features: ["Projets illimités", "Entretiens en volume", "Bibliothèque partagée", "Support prioritaire"],
+                cta: "Parler à un expert",
+                highlight: true,
+              },
+              {
+                name: "Entreprise",
+                price: "Sur mesure",
+                desc: "Pour les organisations exigeantes.",
+                features: ["SSO & rôles avancés", "Personnalisation IA", "DPA & engagement RGPD", "Accompagnement dédié"],
+                cta: "Nous contacter",
+                highlight: false,
+              },
+            ].map((p) => (
+              <div
+                key={p.name}
+                className="landing-card relative p-6"
+                style={p.highlight ? { borderColor: "hsl(var(--l-accent) / 0.6)", boxShadow: "0 20px 60px -20px hsl(var(--l-accent) / 0.4)" } : undefined}
+              >
+                {p.highlight && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-medium text-white" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
+                    Le plus choisi
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold">{p.name}</h3>
+                <div className="mt-3 text-3xl font-semibold landing-gradient-text">{p.price}</div>
+                <p className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{p.desc}</p>
+                <ul className="mt-5 space-y-2 text-sm">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(var(--l-accent))" }} />
+                      <span style={{ color: "hsl(var(--l-fg-dim))" }}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={openDemo}
+                  className={`mt-6 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-medium ${p.highlight ? "landing-btn-primary" : "landing-btn-ghost"}`}
+                >
+                  {p.cta} <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t landing-divider">
+        <div className="mx-auto max-w-3xl px-6 py-24">
+          <div className="text-center">
+            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
+              Questions fréquentes
+            </div>
+            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
+              Tout ce que vous voulez savoir.
+            </h2>
+          </div>
+
+          <div className="mt-12 space-y-3">
+            {[
+              {
+                q: "Comment l'IA évalue-t-elle un candidat ?",
+                a: "Vous définissez vos propres critères (compétences, comportements, motivations). L'IA analyse chaque réponse et attribue une note motivée pour chaque critère, en se basant uniquement sur le contenu de l'entretien.",
+              },
+              {
+                q: "Mes candidats acceptent-ils ce format ?",
+                a: "Oui : les candidats apprécient de pouvoir passer l'entretien quand ils veulent, sans pression de planning. Le consentement est demandé clairement avant l'enregistrement.",
+              },
+              {
+                q: "Mes données sont-elles en sécurité ?",
+                a: "Toutes les données sont hébergées dans l'Union européenne. Le consentement candidat est explicite, la durée de conservation est paramétrable, et un engagement RGPD est disponible pour les comptes Entreprise.",
+              },
+              {
+                q: "Combien de temps pour démarrer ?",
+                a: "Une dizaine de minutes. Vous créez votre projet, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
+              },
+              {
+                q: "L'IA remplace-t-elle l'entretien humain ?",
+                a: "Non. Interw.ai automatise la présélection pour vous faire gagner du temps. La décision d'embauche et l'entretien final restent toujours menés par un recruteur.",
+              },
+              {
+                q: "Puis-je personnaliser la voix et le ton de l'IA ?",
+                a: "Oui. Vous choisissez la voix, la langue et le ton. Vous pouvez aussi ajouter une vidéo de présentation au début de l'entretien.",
+              },
+            ].map((item, i) => (
+              <div key={item.q} className="landing-card overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium"
+                >
+                  <span>{item.q}</span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} style={{ color: "hsl(var(--l-fg-dim))" }} />
+                </button>
+                {openFaq === i && (
+                  <div className="px-5 pb-5 text-sm leading-relaxed animate-fade-in" style={{ color: "hsl(var(--l-fg-dim))" }}>
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="border-t landing-divider">
         <div className="mx-auto max-w-4xl px-6 py-28 text-center">
           <h2 className="text-4xl font-semibold md:text-5xl landing-gradient-text">
-            Prêt à transformer vos sessions ?
+            Prêt à transformer vos entretiens ?
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Réservez une démo de 20 minutes. On vous montre comment Interw.ai s'intègre à votre process.
+            Réservez une démonstration de 20 minutes. On vous montre comment Interw.ai s'intègre à votre processus.
           </p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-4 w-4" /></button>
+              Demander une démo <ArrowRight className="h-4 w-4" />
+            </button>
             <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
               Se connecter
             </Link>
@@ -260,8 +509,8 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-5">
             <button type="button" onClick={openDemo} className="hover:text-white transition-colors bg-transparent border-0 p-0 cursor-pointer" style={{ color: "inherit", font: "inherit" }}>Contact</button>
-            <a href="#" className="hover:text-white transition-colors">Mentions légales</a>
-            <a href="#" className="hover:text-white transition-colors">RGPD</a>
+            <Link to="/legal" className="hover:text-white transition-colors">Mentions légales</Link>
+            <Link to="/privacy" className="hover:text-white transition-colors">Confidentialité</Link>
           </div>
         </div>
       </footer>

@@ -27,6 +27,8 @@ import { AppLayout } from "@/components/AppLayout";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 
 import Landing from "./pages/Landing";
+import Legal from "./pages/Legal";
+import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
@@ -70,6 +72,8 @@ const App = () => (
           <Routes>
             {/* Public landing */}
             <Route path="/" element={<Landing />} />
+            <Route path="/legal" element={<Legal />} />
+            <Route path="/privacy" element={<Privacy />} />
 
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
