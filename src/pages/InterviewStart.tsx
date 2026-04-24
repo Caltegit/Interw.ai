@@ -1373,12 +1373,23 @@ export default function InterviewStart() {
       } catch {}
     }
     try {
-      // Petit Audio muet pour débloquer la policy autoplay iOS/Android.
-      const silentAudio = new Audio(
-        "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=",
-      );
-      silentAudio.volume = 0;
-      silentAudio.play().catch(() => {});
+      // Crée (ou réutilise) l'instance Audio principale ET la débloque dans la
+      // pile synchrone de ce tap utilisateur. Cette même instance sera ensuite
+      // réutilisée pour tous les TTS et lectures audio de la session — clé
+      // pour iOS Safari qui n'accorde pas l'autoplay aux nouvelles instances.
+      const audio = primaryAudioRef.current ?? new Audio();
+      primaryAudioRef.current = audio;
+      (audio as any).playsInline = true;
+      audio.setAttribute("playsinline", "");
+      audio.preload = "auto";
+      audio.src = SILENT_AUDIO_DATA_URI;
+      try { audio.load(); } catch {}
+      const p = audio.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          try { audio.pause(); audio.currentTime = 0; } catch {}
+        }).catch(() => {});
+      }
     } catch {}
 
     setReadyToStart(true);
