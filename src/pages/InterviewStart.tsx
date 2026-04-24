@@ -431,6 +431,17 @@ export default function InterviewStart() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Cleanup de l'instance Audio principale au démontage
+  useEffect(() => {
+    return () => {
+      const a = primaryAudioRef.current;
+      if (a) {
+        try { a.pause(); a.removeAttribute("src"); a.load(); } catch {}
+      }
+      primaryAudioRef.current = null;
+    };
+  }, []);
+
   // Play a media URL and return a promise that resolves when it ends
   // Helper : joue une URL via l'instance Audio principale (réutilisée pour
   // préserver le déblocage iOS Safari) et arme un watchdog 2 s qui propose un
