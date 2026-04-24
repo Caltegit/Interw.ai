@@ -277,7 +277,10 @@ export default function InterviewStart() {
   } | null>(null);
 
   // Refs avant pour éviter les dépendances circulaires entre callbacks.
-  const pauseInterviewRef = useRef<(() => void) | null>(null);
+  // pauseSource permet de distinguer une pause manuelle (utilisateur), une pause
+  // automatique (silence prolongé) ou une pause système (replay forcé).
+  type PauseSource = "manual" | "auto-silence";
+  const pauseInterviewRef = useRef<((source?: PauseSource) => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
 
   const clearEndCountdown = useCallback(() => {
@@ -343,9 +346,14 @@ export default function InterviewStart() {
         title: "Entretien mis en pause",
         description: "Reprenez dans les 2 minutes pour continuer.",
       });
-      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
-      pauseInterviewRef.current?.();
+      // IMPORTANT : on déclenche pauseInterview AVANT le TTS d'annonce, pour que
+      // le snapshot capture la vraie présentation en cours (la question), pas le
+      // message « Je vais mettre la session en pause… ».
+      pauseInterviewRef.current?.("auto-silence");
       armEndWarningRef.current?.();
+      // L'annonce vocale arrive juste après — speak() utilise sa propre instance
+      // et ne perturbe pas le snapshot déjà figé par pauseInterview.
+      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
   }, [toast, clearSilenceTier, clearEndCountdown, playNudge]);
 
@@ -897,7 +905,9 @@ export default function InterviewStart() {
   }, []);
 
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
-  const pauseInterview = useCallback(() => {
+  // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
+  // `source` permet de tracer l'origine (clic utilisateur vs silence prolongé).
+  const pauseInterview = useCallback((source: PauseSource = "manual") => {
     isPausedRef.current = true;
     // "Pendant la question" = il y a une présentation en cours (TTS ou média)
     const duringQuestion = currentPresentationRef.current !== null;
@@ -905,7 +915,7 @@ export default function InterviewStart() {
     // Snapshot the presentation NOW — TTS cancellation below would otherwise
     // wipe currentPresentationRef before resume reads it.
     pausedReplayRef.current = currentPresentationRef.current;
-    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "snapshot:", pausedReplayRef.current);
+    console.log("[interview] PAUSE", { source, duringQuestion, snapshot: pausedReplayRef.current });
 
     // Stop the question media player cleanly (resets currentTime + finished state)
     if (duringQuestion) {
@@ -972,6 +982,18 @@ export default function InterviewStart() {
       }
     }, remaining);
 
+    // Helper local : garantit que le recorder tourne. Le ré-instancie si null
+    // ou si MediaRecorder est dans un état terminal (inactive).
+    const ensureRecorder = () => {
+      const rec = questionRecorderRef.current;
+      if (!rec || rec.state === "inactive") {
+        console.log("[interview] RESUME — recorder absent/inactif, redémarrage");
+        startQuestionRecording();
+      } else if (rec.state === "paused") {
+        try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
+      }
+    };
+
     if (wasDuringQuestion && presentation?.kind === "tts") {
       // Replay TTS from the start, then continue the natural flow
       console.log("[interview] Resume: replaying TTS from start");
@@ -983,7 +1005,7 @@ export default function InterviewStart() {
       const q = questions[currentQuestionIndex];
       const hasMedia = !!(q?.audio_url || q?.video_url);
       if (!hasMedia) {
-        startQuestionRecording();
+        ensureRecorder();
         startListening();
         resetSilenceTimer();
       } else {
@@ -1012,9 +1034,9 @@ export default function InterviewStart() {
     }
 
     // Listening phase — resume recorder + STT
-    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
-      try { questionRecorderRef.current.resume(); } catch {}
-    }
+    // Garantit que le bouton « Enregistrer ma réponse » réapparaît même si le
+    // recorder s'est terminé pendant la pause (état "inactive" ou null).
+    ensureRecorder();
     startListening();
     resetSilenceTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2934,7 +2956,7 @@ export default function InterviewStart() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={pauseInterview}
+                    onClick={() => pauseInterview("manual")}
                     className="gap-2 text-muted-foreground"
                     style={{ color: "hsl(var(--l-fg) / 0.6)" }}
                   >
