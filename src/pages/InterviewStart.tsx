@@ -1689,7 +1689,22 @@ export default function InterviewStart() {
 
       setResponseElapsedSec(0);
       currentPresentationRef.current = { kind: "tts", text: aiMessage };
-      await speak(aiMessage);
+      // Pré-fetch TTS pour ne dévoiler la question qu'une fois prête à jouer.
+      let followBlob: Blob | null = null;
+      if (project?.tts_provider === "elevenlabs") {
+        const f = await fetchElevenLabsBlob(aiMessage);
+        if (f) {
+          followBlob = f.blob;
+          recordTtsTiming(f.bytes, f.ms);
+        }
+      }
+      setQuestionLoading(null);
+      if (followBlob) {
+        await tryElevenLabs(aiMessage, followBlob);
+        currentPresentationRef.current = null;
+      } else {
+        await speak(aiMessage);
+      }
       if (token.aborted) { aborted = true; return; }
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
