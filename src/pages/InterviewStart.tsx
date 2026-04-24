@@ -2944,7 +2944,7 @@ export default function InterviewStart() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={pauseInterview}
+                    onClick={() => pauseInterview("manual")}
                     className="gap-2 text-muted-foreground"
                     style={{ color: "hsl(var(--l-fg) / 0.6)" }}
                   >
