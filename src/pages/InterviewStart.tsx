@@ -226,28 +226,22 @@ export default function InterviewStart() {
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
-  // Cadence des relances en cas de silence du candidat.
-  const SILENCE_HINT_MS = 2 * 1000;          // 2s — indice visuel discret
-  const SILENCE_NUDGE_1_MS = 3 * 1000;       // 3s — 1ʳᵉ relance vocale
-  const SILENCE_NUDGE_2_MS = 6 * 1000;       // 6s — 2ᵉ relance vocale
-  const SILENCE_NUDGE_3_MS = 9 * 1000;       // 9s — 3ᵉ relance vocale
-  const SILENCE_AUTOPAUSE_MS = 12 * 1000;    // 12s — mise en pause automatique
+  // Cadence du silence côté candidat.
+  // Aucune relance vocale : un indice visuel discret puis une pause automatique.
+  const SILENCE_HINT_MS = 6 * 1000;          // 6s — indice visuel discret
+  const SILENCE_TIER3_MS = 12 * 1000;        // 12s — bouton « Passer » mis en avant
+  const SILENCE_AUTOPAUSE_MS = 20 * 1000;    // 20s — mise en pause automatique
   const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 115 * 1000; // pause + 1 min 55 s — avertissement de fin
   const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
   const END_COUNTDOWN_SECONDS = 5;
 
-  // Silence UI tiers (1 = indice, 2 = relance vocale, 3 = bouton « Passer » mis en avant)
+  // Palier visuel uniquement (1 = indice, 3 = bouton « Passer » mis en avant).
   const [silenceTier, setSilenceTier] = useState<0 | 1 | 2 | 3>(0);
   const silenceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge1TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge2TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceNudge3TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTier3TimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silenceAutoPauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const silenceEndWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const endCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const nudge1PlayedRef = useRef(false);
-  const nudge2PlayedRef = useRef(false);
-  const nudge3PlayedRef = useRef(false);
   const autoPausedRef = useRef(false);
   const [endCountdown, setEndCountdown] = useState<number | null>(null);
   const speakRef = useRef<((t: string) => Promise<void>) | null>(null);
