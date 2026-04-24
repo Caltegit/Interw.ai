@@ -2547,7 +2547,9 @@ export default function InterviewStart() {
           }}
         />
       )}
-      {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
+      {audioDebugEnabled && (
+        <AudioDebugPanel audioRef={primaryAudioRef} audioBlocked={audioBlocked} />
+      )}
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
       {!interviewFinished && (
