@@ -439,7 +439,8 @@ export default function InterviewStart() {
     return new Promise((resolve) => {
       const el = primaryAudioRef.current ?? new Audio();
       if (!primaryAudioRef.current) primaryAudioRef.current = el;
-      el.playsInline = true;
+      (el as any).playsInline = true;
+      el.setAttribute("playsinline", "");
       el.preload = "auto";
       el.src = src;
       try { el.load(); } catch {}
