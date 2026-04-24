@@ -982,6 +982,18 @@ export default function InterviewStart() {
       }
     }, remaining);
 
+    // Helper local : garantit que le recorder tourne. Le ré-instancie si null
+    // ou si MediaRecorder est dans un état terminal (inactive).
+    const ensureRecorder = () => {
+      const rec = questionRecorderRef.current;
+      if (!rec || rec.state === "inactive") {
+        console.log("[interview] RESUME — recorder absent/inactif, redémarrage");
+        startQuestionRecording();
+      } else if (rec.state === "paused") {
+        try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
+      }
+    };
+
     if (wasDuringQuestion && presentation?.kind === "tts") {
       // Replay TTS from the start, then continue the natural flow
       console.log("[interview] Resume: replaying TTS from start");
@@ -993,7 +1005,7 @@ export default function InterviewStart() {
       const q = questions[currentQuestionIndex];
       const hasMedia = !!(q?.audio_url || q?.video_url);
       if (!hasMedia) {
-        startQuestionRecording();
+        ensureRecorder();
         startListening();
         resetSilenceTimer();
       } else {
@@ -1022,9 +1034,9 @@ export default function InterviewStart() {
     }
 
     // Listening phase — resume recorder + STT
-    if (questionRecorderRef.current && questionRecorderRef.current.state === "paused") {
-      try { questionRecorderRef.current.resume(); } catch {}
-    }
+    // Garantit que le bouton « Enregistrer ma réponse » réapparaît même si le
+    // recorder s'est terminé pendant la pause (état "inactive" ou null).
+    ensureRecorder();
     startListening();
     resetSilenceTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
