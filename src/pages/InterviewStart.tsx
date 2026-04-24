@@ -346,9 +346,14 @@ export default function InterviewStart() {
         title: "Entretien mis en pause",
         description: "Reprenez dans les 2 minutes pour continuer.",
       });
-      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
-      pauseInterviewRef.current?.();
+      // IMPORTANT : on déclenche pauseInterview AVANT le TTS d'annonce, pour que
+      // le snapshot capture la vraie présentation en cours (la question), pas le
+      // message « Je vais mettre la session en pause… ».
+      pauseInterviewRef.current?.("auto-silence");
       armEndWarningRef.current?.();
+      // L'annonce vocale arrive juste après — speak() utilise sa propre instance
+      // et ne perturbe pas le snapshot déjà figé par pauseInterview.
+      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
   }, [toast, clearSilenceTier, clearEndCountdown, playNudge]);
 
