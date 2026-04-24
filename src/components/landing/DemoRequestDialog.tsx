@@ -94,7 +94,7 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="demo-message">Message (optionnel)</Label>
+            <Label htmlFor="demo-message">Un message?</Label>
             <Textarea
               id="demo-message"
               placeholder="Quelques mots sur votre besoin…"
