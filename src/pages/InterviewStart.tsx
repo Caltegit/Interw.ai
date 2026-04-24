@@ -16,6 +16,12 @@ import { logger } from "@/lib/logger";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
+import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
+
+// Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
+// principale au sein du geste utilisateur initial (clé sur iOS Safari).
+const SILENT_AUDIO_DATA_URI =
+  "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
 // Extend window for webkitSpeechRecognition
 declare global {
@@ -89,6 +95,13 @@ export default function InterviewStart() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [readyToStart, setReadyToStart] = useState(false);
+  // Lecture audio bloquée par le navigateur → afficher l'overlay de déblocage.
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  // Action à rejouer après un déblocage manuel utilisateur.
+  const pendingReplayRef = useRef<(() => void) | null>(null);
+  // Instance Audio unique débloquée par le geste utilisateur initial puis
+  // réutilisée pour TOUS les TTS / médias audio de la session (iOS Safari fix).
+  const primaryAudioRef = useRef<HTMLAudioElement | null>(null);
   const [interviewFinished, setInterviewFinished] = useState(false);
   // Mode « salle d'examen »
   const [isFullscreen, setIsFullscreen] = useState(false);
