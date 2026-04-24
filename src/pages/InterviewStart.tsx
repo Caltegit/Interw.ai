@@ -905,7 +905,9 @@ export default function InterviewStart() {
   }, []);
 
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
-  const pauseInterview = useCallback(() => {
+  // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
+  // `source` permet de tracer l'origine (clic utilisateur vs silence prolongé).
+  const pauseInterview = useCallback((source: PauseSource = "manual") => {
     isPausedRef.current = true;
     // "Pendant la question" = il y a une présentation en cours (TTS ou média)
     const duringQuestion = currentPresentationRef.current !== null;
@@ -913,7 +915,7 @@ export default function InterviewStart() {
     // Snapshot the presentation NOW — TTS cancellation below would otherwise
     // wipe currentPresentationRef before resume reads it.
     pausedReplayRef.current = currentPresentationRef.current;
-    console.log("[interview] PAUSE — duringQuestion:", duringQuestion, "snapshot:", pausedReplayRef.current);
+    console.log("[interview] PAUSE", { source, duringQuestion, snapshot: pausedReplayRef.current });
 
     // Stop the question media player cleanly (resets currentTime + finished state)
     if (duringQuestion) {
