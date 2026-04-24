@@ -343,7 +343,7 @@ export default function InterviewStart() {
         title: "Entretien mis en pause",
         description: "Reprenez dans les 2 minutes pour continuer.",
       });
-      speakRef.current?.("J'ai mis l'entretien en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
+      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
       pauseInterviewRef.current?.();
       armEndWarningRef.current?.();
     }, SILENCE_AUTOPAUSE_MS);
