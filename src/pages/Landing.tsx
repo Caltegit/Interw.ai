@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
+import candidateView from "@/assets/landing-candidate-view.jpg";
 import {
   ArrowRight,
   Brain,
@@ -116,16 +117,14 @@ export default function Landing() {
                 <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>interw.ai/session</span>
               </div>
               <div className="grid gap-6 p-6 md:grid-cols-[1fr_280px]">
-                <div className="relative aspect-video overflow-hidden rounded-lg" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.15))", border: "1px solid hsl(var(--l-border))" }}>
-                  <div className="flex h-full items-center justify-center">
-                    <div className="relative">
-                      <span className="absolute inset-0 rounded-full" style={{ background: "hsl(var(--l-accent) / 0.4)", filter: "blur(20px)", animation: "halo-breathe 2.5s ease-in-out infinite" }} />
-                      <div className="relative flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "hsl(var(--l-accent) / 0.3)" }}>
-                        <Video className="h-7 w-7" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/40 px-2 py-1 text-[11px] backdrop-blur-md">
+                <div className="relative aspect-video overflow-hidden rounded-lg" style={{ border: "1px solid hsl(var(--l-border))" }}>
+                  <img
+                    src={candidateView}
+                    alt="Aperçu de la vue candidat pendant un entretien Interw.ai"
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
                   </div>
                 </div>
