@@ -2550,6 +2550,7 @@ export default function InterviewStart() {
       {audioDebugEnabled && (
         <AudioDebugPanel audioRef={primaryAudioRef} audioBlocked={audioBlocked} />
       )}
+      {!isMobileLikeRef.current && !isFullscreen && !interviewFinished && (
         <FullscreenPrompt onEnter={requestFullscreenAgain} />
       )}
       {!interviewFinished && (
