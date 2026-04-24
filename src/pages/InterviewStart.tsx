@@ -2404,9 +2404,7 @@ export default function InterviewStart() {
       if (playbackWatchdogRef.current) clearTimeout(playbackWatchdogRef.current);
       if (manualContinueTimerRef.current) clearTimeout(manualContinueTimerRef.current);
       if (silenceHintTimerRef.current) clearTimeout(silenceHintTimerRef.current);
-      if (silenceNudge1TimerRef.current) clearTimeout(silenceNudge1TimerRef.current);
-      if (silenceNudge2TimerRef.current) clearTimeout(silenceNudge2TimerRef.current);
-      if (silenceNudge3TimerRef.current) clearTimeout(silenceNudge3TimerRef.current);
+      if (silenceTier3TimerRef.current) clearTimeout(silenceTier3TimerRef.current);
       if (silenceAutoPauseTimerRef.current) clearTimeout(silenceAutoPauseTimerRef.current);
       if (silenceEndWarningTimerRef.current) clearTimeout(silenceEndWarningTimerRef.current);
       if (endCountdownIntervalRef.current) clearInterval(endCountdownIntervalRef.current);
