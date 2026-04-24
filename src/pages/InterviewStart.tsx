@@ -1600,7 +1600,21 @@ export default function InterviewStart() {
     }
 
     // ── 3. Call AI (await this time) to decide next action ──
+    // Overlay de chargement entre questions : on couvre upload + IA + média.
+    setQuestionLoading({ label: "Analyse de votre réponse…", percent: 30 });
     setAiThinking(true);
+    // Override réseau : si la connexion est dégradée/poor, on plafonne (ou supprime) les relances.
+    const forceMaxFollowUps = getForceMaxFollowUps();
+    if (forceMaxFollowUps != null && !networkWarnedRef.current) {
+      networkWarnedRef.current = true;
+      toast({
+        title: "Connexion lente détectée",
+        description:
+          forceMaxFollowUps === 0
+            ? "Session simplifiée : les relances sont désactivées."
+            : "Session simplifiée : relances limitées pour préserver la fluidité.",
+      });
+    }
     let action: "follow_up" | "next" | "end" = (isLastQuestion ? "end" : "next") as "follow_up" | "next" | "end";
     let aiMessage = "";
     try {
@@ -1620,6 +1634,7 @@ export default function InterviewStart() {
             currentQuestionNumber: questionIdx + 1,
             totalQuestions: questions.length,
             followUpsAsked,
+            forceMaxFollowUps,
           },
         },
       });
@@ -1634,6 +1649,7 @@ export default function InterviewStart() {
       });
     }
     setAiThinking(false);
+    setQuestionLoading((prev) => (prev ? { ...prev, percent: 60, label: "Préparation de la suite…" } : prev));
     if (token.aborted) { aborted = true; return; }
 
     // ── 4. FOLLOW-UP branch ──
