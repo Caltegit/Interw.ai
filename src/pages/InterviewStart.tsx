@@ -17,6 +17,7 @@ import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
+import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
