@@ -883,20 +883,26 @@ export type Database = {
           areas_for_improvement: string[] | null
           criteria_scores: Json | null
           executive_summary: string
+          executive_summary_short: string | null
           flagged_moments: Json | null
+          followup_questions: Json | null
           generated_at: string
           highlight_clips: Json
           id: string
+          motivation_scores: Json | null
           overall_grade: string | null
           overall_score: number
+          personality_profile: Json | null
           question_evaluations: Json | null
           recommendation:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           recruiter_notes: string | null
+          red_flags: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
           session_id: string
+          soft_skills: Json | null
           stats: Json
           strengths: string[] | null
         }
@@ -904,20 +910,26 @@ export type Database = {
           areas_for_improvement?: string[] | null
           criteria_scores?: Json | null
           executive_summary?: string
+          executive_summary_short?: string | null
           flagged_moments?: Json | null
+          followup_questions?: Json | null
           generated_at?: string
           highlight_clips?: Json
           id?: string
+          motivation_scores?: Json | null
           overall_grade?: string | null
           overall_score?: number
+          personality_profile?: Json | null
           question_evaluations?: Json | null
           recommendation?:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           recruiter_notes?: string | null
+          red_flags?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id: string
+          soft_skills?: Json | null
           stats?: Json
           strengths?: string[] | null
         }
@@ -925,20 +937,26 @@ export type Database = {
           areas_for_improvement?: string[] | null
           criteria_scores?: Json | null
           executive_summary?: string
+          executive_summary_short?: string | null
           flagged_moments?: Json | null
+          followup_questions?: Json | null
           generated_at?: string
           highlight_clips?: Json
           id?: string
+          motivation_scores?: Json | null
           overall_grade?: string | null
           overall_score?: number
+          personality_profile?: Json | null
           question_evaluations?: Json | null
           recommendation?:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           recruiter_notes?: string | null
+          red_flags?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id?: string
+          soft_skills?: Json | null
           stats?: Json
           strengths?: string[] | null
         }
