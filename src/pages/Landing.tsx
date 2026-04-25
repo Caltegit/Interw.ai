@@ -608,7 +608,6 @@ function TutoVideo() {
         poster="/tuto-poster.png"
         controls={started}
         muted
-        defaultMuted
         playsInline
         preload="metadata"
         className="absolute inset-0 h-full w-full object-cover"
