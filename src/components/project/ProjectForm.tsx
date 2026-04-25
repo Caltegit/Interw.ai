@@ -202,6 +202,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       autoSkipSilence,
       allowPause,
       completionMessage,
+      preSessionMessage,
     });
   };
 
