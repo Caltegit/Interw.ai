@@ -16,6 +16,10 @@ export default function InterviewDeviceTest() {
   const navigate = useNavigate();
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
+  const [jobTitle, setJobTitle] = useState<string>("");
+  const [orgName, setOrgName] = useState<string>("");
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
@@ -43,24 +47,33 @@ export default function InterviewDeviceTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Charger le message d'encouragement avant session depuis le projet
+  // Charger infos projet (message + nom poste + org) pour le consentement
   useEffect(() => {
     if (!slug) return;
     (async () => {
       const { data } = await supabase
         .from("projects")
-        .select("pre_session_message")
+        .select("pre_session_message, job_title, title, organizations(name)")
         .eq("slug", slug)
         .maybeSingle();
-      const msg = (data as { pre_session_message?: string | null } | null)?.pre_session_message;
-      if (msg && msg.trim()) setPreSessionMessage(msg.trim());
+      const d = data as
+        | {
+            pre_session_message?: string | null;
+            job_title?: string | null;
+            title?: string | null;
+            organizations?: { name?: string | null } | null;
+          }
+        | null;
+      if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
+      setJobTitle(d?.job_title?.trim() || d?.title?.trim() || "");
+      setOrgName(d?.organizations?.name?.trim() || "");
     })();
   }, [slug]);
 
-  // Auto-avance dès que micro + caméra sont OK (le test réseau est informatif)
+  // Auto-avance dès que micro + caméra sont OK ET consentement coché
   useEffect(() => {
     if (autoAdvancedRef.current) return;
-    if (micStatus === "ok" && camStatus === "ok") {
+    if (micStatus === "ok" && camStatus === "ok" && consentChecked) {
       autoAdvancedRef.current = true;
       const t = setTimeout(() => {
         handleContinue();
@@ -68,7 +81,7 @@ export default function InterviewDeviceTest() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [micStatus, camStatus]);
+  }, [micStatus, camStatus, consentChecked]);
 
   const stopAll = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
