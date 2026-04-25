@@ -15,7 +15,7 @@ import {
   Check,
   Play,
   FileText,
-  Trophy,
+  Video,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,8 +26,6 @@ import {
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { OverviewHeader } from "@/components/session/OverviewHeader";
-import { SessionStatsCard } from "@/components/session/SessionStatsCard";
-import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { ExecutiveSummaryCard } from "@/components/session/ExecutiveSummaryCard";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
@@ -114,8 +112,6 @@ export default function SessionDetail() {
 
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const rawHighlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
-  const stats = (report?.stats as Record<string, any>) ?? {};
 
   const project = session?.projects;
   const projectQuestions = (project?.questions as any[]) ?? [];
@@ -149,19 +145,6 @@ export default function SessionDetail() {
       };
     });
   }, [candidateVideos, questionEvaluations, projectQuestions]);
-
-  // Best-of : si l'IA n'a rien produit, fallback sur les vidéos chronologiques
-  // pour ne jamais afficher une page vide quand il y a des enregistrements.
-  const highlightClips = useMemo<HighlightClip[]>(() => {
-    if (rawHighlightClips.length > 0) return rawHighlightClips;
-    return questionItems.slice(0, 3).map((item) => ({
-      video_url: item.video.video_segment_url,
-      question: item.questionText,
-      score: item.score ?? 0,
-      question_index: item.index,
-      max_seconds: 20,
-    }));
-  }, [rawHighlightClips, questionItems]);
 
   if (isLoading)
     return (
