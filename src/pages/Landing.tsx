@@ -255,7 +255,7 @@ export default function Landing() {
 
       {/* Tutoriel — création d'une session */}
       <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-14">
+        <div className="mx-auto max-w-5xl px-6 py-20">
           <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
             {"\n"}
           </p>
