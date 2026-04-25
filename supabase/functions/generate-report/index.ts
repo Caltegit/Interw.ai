@@ -101,38 +101,34 @@ serve(async (req) => {
       ? criteria.map((c: any) => `- ${c.label} (poids: ${c.weight}%, échelle: ${c.scoring_scale}): ${c.description}`).join("\n")
       : "Aucun critère spécifique défini. Évalue sur: communication, pertinence des réponses, motivation, compétences techniques.";
 
-    // Call AI to generate report
-    const aiPrompt = `Tu es un expert en recrutement. Analyse cette transcription de session et génère un rapport structuré.
+    // Call AI to generate report — using tool calling for structured extraction
+    const systemPrompt = `Tu es un expert en recrutement, psychologie du travail et analyse comportementale.
+Tu analyses des transcriptions d'entretiens vidéo pour fournir au recruteur une vue à 360° du candidat.
+Tu es factuel, nuancé, et tu cites systématiquement des extraits du candidat pour justifier tes analyses.
+Tu ne juges jamais, tu décris ce que la transcription révèle.`;
 
-Poste: ${project.job_title}
-Candidat: ${session.candidate_name}
+    const userPrompt = `Analyse cette transcription d'entretien.
 
-Questions posées:
+Poste : ${project.job_title}
+Candidat : ${session.candidate_name}
+
+Questions posées :
 ${questions.map((q: any, i: number) => `${i + 1}. ${q.content} (type: ${q.type})`).join("\n")}
 
-Critères d'évaluation:
+Critères d'évaluation :
 ${criteriaDesc}
 
-Transcription complète:
+Transcription complète :
 ${fullText}
 
-Génère un rapport JSON avec exactement cette structure:
-{
-  "executive_summary": "Résumé de 3-5 phrases de la performance du candidat",
-  "overall_score": <number 0-100>,
-  "overall_grade": "<A/B/C/D/E>",
-  "recommendation": "<strong_yes|yes|maybe|no>",
-  "strengths": ["point fort 1", "point fort 2", ...],
-  "areas_for_improvement": ["axe 1", "axe 2", ...],
-  "criteria_scores": {
-    "<criteria_id>": { "label": "<nom>", "score": <number>, "max": <number>, "comment": "<commentaire>" }
-  },
-  "question_evaluations": {
-    "<question_index>": { "question": "<texte>", "score": <0-10>, "comment": "<analyse>" }
-  }
-}
-
-IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown.`;
+Produis une analyse complète en utilisant l'outil generate_report.
+- executive_summary : 3-5 phrases bilan global
+- executive_summary_short : UNE phrase de 30 secondes (max 200 caractères) qui dit l'essentiel au recruteur pressé
+- personality_profile : scores Big Five 0-100 + courte interprétation par axe (basée sur la transcription, pas un test psychométrique formel)
+- soft_skills : 3 à 6 soft skills observées, chacune avec une CITATION EXACTE du candidat comme preuve
+- red_flags : signaux à creuser (incohérences, évasivité, manque d'exemples concrets, etc.) — vide si rien à signaler
+- motivation_scores : connaissance entreprise, fit poste, enthousiasme, projection long terme (0-100 chacun)
+- followup_questions : 3 à 5 questions précises à poser en entretien physique pour valider/creuser`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -141,17 +137,152 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
-          { role: "system", content: "Tu es un expert en évaluation de candidats. Tu réponds uniquement en JSON valide." },
-          { role: "user", content: aiPrompt },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "generate_report",
+              description: "Produit le rapport structuré complet d'analyse de la session",
+              parameters: {
+                type: "object",
+                properties: {
+                  executive_summary: { type: "string" },
+                  executive_summary_short: { type: "string", description: "Une phrase, max 200 caractères" },
+                  overall_score: { type: "number", minimum: 0, maximum: 100 },
+                  overall_grade: { type: "string", enum: ["A", "B", "C", "D", "E"] },
+                  recommendation: { type: "string", enum: ["strong_yes", "yes", "maybe", "no"] },
+                  strengths: { type: "array", items: { type: "string" } },
+                  areas_for_improvement: { type: "array", items: { type: "string" } },
+                  criteria_scores: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "object",
+                      properties: {
+                        label: { type: "string" },
+                        score: { type: "number" },
+                        max: { type: "number" },
+                        comment: { type: "string" },
+                      },
+                    },
+                  },
+                  question_evaluations: {
+                    type: "object",
+                    additionalProperties: {
+                      type: "object",
+                      properties: {
+                        question: { type: "string" },
+                        score: { type: "number", minimum: 0, maximum: 10 },
+                        comment: { type: "string" },
+                      },
+                    },
+                  },
+                  personality_profile: {
+                    type: "object",
+                    properties: {
+                      openness: {
+                        type: "object",
+                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                      },
+                      conscientiousness: {
+                        type: "object",
+                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                      },
+                      extraversion: {
+                        type: "object",
+                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                      },
+                      agreeableness: {
+                        type: "object",
+                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                      },
+                      emotional_stability: {
+                        type: "object",
+                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                      },
+                    },
+                  },
+                  soft_skills: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        skill: { type: "string" },
+                        score: { type: "number", minimum: 0, maximum: 10 },
+                        quote: { type: "string", description: "Citation exacte du candidat" },
+                      },
+                      required: ["skill"],
+                    },
+                  },
+                  red_flags: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        type: { type: "string" },
+                        severity: { type: "string", enum: ["low", "medium", "high"] },
+                        description: { type: "string" },
+                        evidence: { type: "string" },
+                      },
+                      required: ["description"],
+                    },
+                  },
+                  motivation_scores: {
+                    type: "object",
+                    properties: {
+                      company_knowledge: { type: "number", minimum: 0, maximum: 100 },
+                      role_fit: { type: "number", minimum: 0, maximum: 100 },
+                      enthusiasm: { type: "number", minimum: 0, maximum: 100 },
+                      long_term_intent: { type: "number", minimum: 0, maximum: 100 },
+                      comment: { type: "string" },
+                    },
+                  },
+                  followup_questions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        question: { type: "string" },
+                        rationale: { type: "string" },
+                      },
+                      required: ["question"],
+                    },
+                  },
+                },
+                required: [
+                  "executive_summary",
+                  "overall_score",
+                  "recommendation",
+                  "strengths",
+                  "areas_for_improvement",
+                ],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "generate_report" } },
       }),
     });
 
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requêtes IA atteinte. Réessayez dans quelques instants." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Crédits IA épuisés. Rechargez l'espace de travail." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "AI evaluation failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -159,16 +290,14 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
     }
 
     const aiData = await aiResponse.json();
-    let reportContent = aiData.choices?.[0]?.message?.content || "";
-
-    // Clean potential markdown code fences
-    reportContent = reportContent.replace(/^```json?\s*/i, "").replace(/\s*```$/i, "").trim();
-
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     let parsed: any;
     try {
-      parsed = JSON.parse(reportContent);
+      const argsStr = toolCall?.function?.arguments;
+      if (!argsStr) throw new Error("No tool call returned");
+      parsed = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
     } catch (e) {
-      console.error("Failed to parse AI report JSON:", reportContent);
+      console.error("Failed to parse AI tool arguments:", e, JSON.stringify(aiData));
       return new Response(JSON.stringify({ error: "Invalid AI report format" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -256,6 +385,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
     const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
       executive_summary: parsed.executive_summary || "",
+      executive_summary_short: parsed.executive_summary_short || null,
       overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
       overall_grade: parsed.overall_grade || null,
       recommendation: parsed.recommendation || null,
@@ -263,6 +393,11 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
       question_evaluations: parsed.question_evaluations || {},
+      personality_profile: parsed.personality_profile || null,
+      soft_skills: parsed.soft_skills || null,
+      red_flags: parsed.red_flags || null,
+      motivation_scores: parsed.motivation_scores || null,
+      followup_questions: parsed.followup_questions || null,
       highlight_clips: highlightClips,
       stats,
     }).select("id").single();
@@ -326,6 +461,9 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, sans aucun texte autour ni markdown
           overallGrade: parsed.overall_grade || null,
           recommendation: parsed.recommendation || null,
           executiveSummary: parsed.executive_summary || "",
+          executiveSummaryShort: parsed.executive_summary_short || null,
+          personalityProfile: parsed.personality_profile || null,
+          followupQuestions: parsed.followup_questions || null,
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
           criteriaScores,

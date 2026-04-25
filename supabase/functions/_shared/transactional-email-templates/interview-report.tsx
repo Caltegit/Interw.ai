@@ -28,6 +28,24 @@ interface SessionStats {
   best_question_score?: number
 }
 
+interface PersonalityTrait {
+  score?: number
+  interpretation?: string
+}
+
+interface PersonalityProfile {
+  openness?: PersonalityTrait
+  conscientiousness?: PersonalityTrait
+  extraversion?: PersonalityTrait
+  agreeableness?: PersonalityTrait
+  emotional_stability?: PersonalityTrait
+}
+
+interface FollowupQuestion {
+  question: string
+  rationale?: string
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
@@ -37,6 +55,9 @@ interface InterviewReportProps {
   overallGrade?: string | null
   recommendation?: string | null
   executiveSummary?: string
+  executiveSummaryShort?: string | null
+  personalityProfile?: PersonalityProfile | null
+  followupQuestions?: FollowupQuestion[] | null
   strengths?: string[]
   areasForImprovement?: string[]
   criteriaScores?: Record<string, CriteriaScore>
@@ -44,6 +65,14 @@ interface InterviewReportProps {
   reportUrl?: string
   highlightsUrl?: string | null
   stats?: SessionStats
+}
+
+const BIG_FIVE_LABELS: Record<keyof PersonalityProfile, string> = {
+  openness: 'Ouverture',
+  conscientiousness: 'Rigueur',
+  extraversion: 'Extraversion',
+  agreeableness: 'Coopération',
+  emotional_stability: 'Stabilité émotionnelle',
 }
 
 const recommendationLabel = (r?: string | null) => {
@@ -72,6 +101,9 @@ const InterviewReportEmail = ({
   overallGrade,
   recommendation,
   executiveSummary = '',
+  executiveSummaryShort = null,
+  personalityProfile = null,
+  followupQuestions = null,
   strengths = [],
   areasForImprovement = [],
   criteriaScores = {},
@@ -82,6 +114,11 @@ const InterviewReportEmail = ({
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
   const questionList = Object.values(questionEvaluations)
+  const personalityEntries = personalityProfile
+    ? (Object.keys(BIG_FIVE_LABELS) as Array<keyof PersonalityProfile>)
+        .map((k) => ({ key: k, label: BIG_FIVE_LABELS[k], trait: personalityProfile[k] }))
+        .filter((e) => e.trait && typeof e.trait.score === 'number')
+    : []
 
   return (
     <Html lang="fr" dir="ltr">
@@ -107,6 +144,13 @@ const InterviewReportEmail = ({
             <Text style={scoreValue}>{overallScore}/100{overallGrade ? ` · ${overallGrade}` : ''}</Text>
             <Text style={recoText}>{recommendationLabel(recommendation)}</Text>
           </Section>
+
+          {executiveSummaryShort ? (
+            <Section style={shortSummaryBox}>
+              <Text style={shortSummaryLabel}>🎯 Résumé en 30 secondes</Text>
+              <Text style={shortSummaryText}>{executiveSummaryShort}</Text>
+            </Section>
+          ) : null}
 
           <Section style={statsBox}>
             <Text style={statRow}>
@@ -148,6 +192,38 @@ const InterviewReportEmail = ({
               <Heading as="h2" style={h2}>Axes d'amélioration</Heading>
               {areasForImprovement.map((s, i) => (
                 <Text key={i} style={listItem}>• {s}</Text>
+              ))}
+            </>
+          )}
+
+          {personalityEntries.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🧠 Profil de personnalité (Big Five)</Heading>
+              {personalityEntries.map(({ key, label, trait }) => {
+                const score = Math.max(0, Math.min(100, trait!.score!))
+                return (
+                  <Section key={key} style={traitRow}>
+                    <Text style={traitLabel}><strong>{label}</strong> — {score}/100</Text>
+                    <div style={{ ...barTrack, marginTop: '4px' }}>
+                      <div style={{ ...barFill, width: `${score}%` }} />
+                    </div>
+                    {trait!.interpretation ? (
+                      <Text style={traitText}>{trait!.interpretation}</Text>
+                    ) : null}
+                  </Section>
+                )
+              })}
+            </>
+          )}
+
+          {followupQuestions && followupQuestions.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>❓ Questions à creuser en entretien</Heading>
+              {followupQuestions.map((q, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>{i + 1}. {q.question}</Text>
+                  {q.rationale ? <Text style={cardText}>{q.rationale}</Text> : null}
+                </Section>
               ))}
             </>
           )}
@@ -202,6 +278,18 @@ export const template = {
     overallGrade: 'B',
     recommendation: 'yes',
     executiveSummary: 'Candidate solide avec une excellente communication et une bonne maîtrise technique.',
+    executiveSummaryShort: 'Profil solide à rencontrer en priorité : communication excellente, vraie motivation, à valider sur le test technique.',
+    personalityProfile: {
+      openness: { score: 78, interpretation: 'Curiosité marquée, apprécie les sujets nouveaux.' },
+      conscientiousness: { score: 82, interpretation: 'Très structurée dans ses réponses.' },
+      extraversion: { score: 65, interpretation: 'À l\'aise à l\'oral sans être démonstrative.' },
+      agreeableness: { score: 70, interpretation: 'Coopérative, oriente ses exemples sur le collectif.' },
+      emotional_stability: { score: 75, interpretation: 'Reste posée sur les questions difficiles.' },
+    },
+    followupQuestions: [
+      { question: 'Pouvez-vous détailler votre approche des tests sur votre dernier projet React ?', rationale: 'À creuser car peu d\'exemples concrets.' },
+      { question: 'Comment gérez-vous un désaccord technique avec un lead ?', rationale: 'Valider la posture en équipe.' },
+    ],
     strengths: ['Communication claire', 'Solide expérience React', 'Bonne motivation'],
     areasForImprovement: ['Approfondir la connaissance des tests', 'Plus de détails sur la gestion d\'état'],
     criteriaScores: {
@@ -283,3 +371,17 @@ const cardTitle = { fontSize: '14px', color: '#111827', margin: '0 0 4px', fontW
 const cardText = { fontSize: '13px', color: '#4b5563', lineHeight: '1.5', margin: '4px 0 0' }
 const hr = { borderColor: '#e5e7eb', margin: '24px 0' }
 const footer = { fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '16px 0 0' }
+const shortSummaryBox = {
+  backgroundColor: '#FEF3C7',
+  borderLeft: `4px solid ${PRIMARY}`,
+  borderRadius: '6px',
+  padding: '12px 16px',
+  margin: '0 0 16px',
+}
+const shortSummaryLabel = { fontSize: '12px', fontWeight: 'bold' as const, color: PRIMARY, margin: '0 0 4px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }
+const shortSummaryText = { fontSize: '15px', color: '#111827', margin: '0', lineHeight: '1.5', fontWeight: 500 as const }
+const traitRow = { margin: '0 0 12px', padding: '0' }
+const traitLabel = { fontSize: '13px', color: '#374151', margin: '0' }
+const traitText = { fontSize: '12px', color: '#6b7280', margin: '4px 0 0', lineHeight: '1.5' }
+const barTrack = { backgroundColor: '#E5E7EB', borderRadius: '4px', height: '6px', width: '100%', overflow: 'hidden' as const }
+const barFill = { backgroundColor: PRIMARY, height: '6px', borderRadius: '4px' }
