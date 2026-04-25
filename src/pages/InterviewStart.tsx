@@ -2548,7 +2548,7 @@ export default function InterviewStart() {
             <div className="space-y-3">
               <h1 className="text-xl font-bold candidate-gradient-text">Prêt à démarrer ?</h1>
               <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
-                Soyez naturel.le et souriez vous êtes filmé.e !
+                {project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !"}
               </p>
             </div>
             <Button

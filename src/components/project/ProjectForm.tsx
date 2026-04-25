@@ -473,7 +473,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </Select>
                 </div>
                 <div>
-                  <Label>Message juste avant la session</Label>
+                  <Label>Message de début</Label>
                   <Textarea
                     value={preSessionMessage}
                     onChange={(e) => setPreSessionMessage(e.target.value)}
