@@ -118,17 +118,7 @@ export default function Landing() {
                 <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>Session en cours...</span>
               </div>
               <div className="grid gap-6 p-6 md:grid-cols-[1fr_280px]">
-                <div className="relative aspect-video overflow-hidden rounded-lg" style={{ border: "1px solid hsl(var(--l-border))" }}>
-                  <img
-                    src={candidateView}
-                    alt="Aperçu de la vue candidat pendant un entretien Interw.ai"
-                    loading="lazy"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
-                  </div>
-                </div>
+                <HeroProductMock />
                 <div className="space-y-3">
                   <div className="text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>Question 2 / 5</div>
                   <p className="text-sm leading-relaxed">
