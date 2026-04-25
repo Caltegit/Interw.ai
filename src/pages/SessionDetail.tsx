@@ -27,6 +27,13 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 import { OverviewHeader } from "@/components/session/OverviewHeader";
 import { SessionStatsCard } from "@/components/session/SessionStatsCard";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
+import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
+import { ExecutiveSummaryCard } from "@/components/session/ExecutiveSummaryCard";
+import { PersonalityRadar } from "@/components/session/PersonalityRadar";
+import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
+import { RedFlagsCard } from "@/components/session/RedFlagsCard";
+import { MotivationScoresCard } from "@/components/session/MotivationScoresCard";
+import { FollowupQuestionsCard } from "@/components/session/FollowupQuestionsCard";
 
 export default function SessionDetail() {
   const { id } = useParams();
