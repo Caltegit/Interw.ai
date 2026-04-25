@@ -92,17 +92,6 @@ function HeroProductMock() {
       <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
       </div>
-      {showVideo && !hasUnmuted && !ended && (
-        <button
-          type="button"
-          onClick={enableSound}
-          className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur-md hover:bg-black/80 transition-colors"
-          aria-label="Activer le son"
-        >
-          <Volume2 className="h-3.5 w-3.5" />
-          Activer le son
-        </button>
-      )}
     </div>
   );
 }
@@ -705,6 +694,21 @@ function TutoVideo() {
               style={{ color: "hsl(var(--l-accent))", fill: "hsl(var(--l-accent))" }}
             />
           </span>
+        </button>
+      )}
+      {started && isMuted && (
+        <button
+          type="button"
+          onClick={handleUnmute}
+          className="absolute right-4 top-4 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-transform hover:scale-105"
+          style={{
+            background: "hsl(0 0% 100% / 0.95)",
+            color: "hsl(var(--l-accent))",
+            boxShadow: "0 10px 30px -10px hsl(var(--l-accent) / 0.6)",
+          }}
+        >
+          <Volume2 className="h-4 w-4" />
+          Activer le son
         </button>
       )}
     </div>
