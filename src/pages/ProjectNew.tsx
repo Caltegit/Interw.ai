@@ -9,6 +9,7 @@ import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDial
 import {
   ProjectForm,
   DEFAULT_COMPLETION_MESSAGE,
+  DEFAULT_PRE_SESSION_MESSAGE,
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
