@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +54,7 @@ export function AppSidebar() {
         ...bottomItems,
         { title: "Super Admin", url: "/admin", icon: Shield },
         { title: "Santé emails", url: "/admin/emails", icon: Mail },
+        { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
       ]
     : bottomItems;
 

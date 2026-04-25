@@ -29,15 +29,14 @@ const composition = await selectComposition({
 
 console.log(`→ Rendering ${composition.durationInFrames} frames @ ${composition.fps}fps`);
 const out = process.argv[2] || "/mnt/documents/tutoriel-creation-session.mp4";
+const videoOnly = out.replace(/\.mp4$/, ".video.mp4");
 await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
-  outputLocation: out,
+  outputLocation: videoOnly,
   puppeteerInstance: browser,
-  muted: false,
-  enforceAudioTrack: true,
-  audioCodec: "aac",
+  muted: true,
   concurrency: 1,
   onProgress: ({ progress }) => {
     if (Math.round(progress * 100) % 10 === 0) {
