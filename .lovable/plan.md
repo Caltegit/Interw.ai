@@ -1,61 +1,40 @@
-# Refonte des 3 tarifs de la landing
+## Diagnostic
 
-## Objectif
+Session `f3632288...` : 5 vidéos candidat bien enregistrées en base, mais le rapport a `question_evaluations: {}` et `highlight_clips: []`. L'IA Gemini n'a pas renvoyé l'évaluation par question (champ non obligatoire dans le tool call + très peu de paroles candidat : 1124 caractères pour 5 questions, durée 1m58).
 
-Remplacer les 3 cartes tarifaires actuelles par une grille plus claire et engageante, alignée sur la stratégie « gratuit à l'usage / mensuel / sur mesure ».
+Conséquences :
+- **Onglet Questions** vide car la boucle d'affichage est pilotée uniquement par `question_evaluations` → les vidéos existantes ne sont jamais montrées
+- **Onglet Best-of** vide car `highlight_clips` est vide
+- **Stats** : pas de "top moment"
 
-## Modification
+## Plan en 3 volets
 
-Section `#pricing` dans `src/pages/Landing.tsx` (lignes 345-419). Seuls le sous-titre et le contenu des 3 cartes changent. La structure visuelle (cards, highlight, CTA) reste identique pour préserver la cohérence du design.
+### 1. Fix UI : toujours afficher les vidéos candidat (`SessionDetail.tsx`)
 
-### Sous-titre
-Remplacer *« Sans engagement. Tarification transparente sur devis selon le nombre d'entretiens. »* par :
-> *« Sans engagement. Payez uniquement ce que vous utilisez, ou passez en illimité. »*
+Refondre l'onglet **Questions** pour qu'il affiche **toujours** les vidéos du candidat, même sans évaluation IA :
+- Construire la liste à partir des `candidateVideos` (avec `question_id`), pas de `question_evaluations`
+- Pour chaque vidéo, joindre l'évaluation IA correspondante via `question_id` (matching fiable au lieu de l'index fragile)
+- Afficher le score + commentaire IA quand dispo, sinon juste la vidéo + le texte de la question (récupéré depuis le message AI précédent ou la table `questions`)
+- Ajouter un message discret "Évaluation IA non disponible pour cette question" si pertinent
 
-### Carte 1 — Gratuit à l'usage
-- **Nom** : Pay as you go
-- **Prix** : 2 € / entretien
-- **Description** : Idéal pour démarrer ou pour les recrutements ponctuels.
-- **Features** :
-  - Inscription gratuite, aucun abonnement
-  - Projets illimités
-  - Rapports IA détaillés
-  - Facturation à l'entretien terminé
-- **CTA** : Commencer gratuitement
-- **Highlight** : non
+Fallback **Best-of** : si `highlight_clips` est vide mais qu'on a des vidéos, proposer un mini best-of basé sur l'ordre chronologique (top 3 vidéos par défaut), au lieu d'afficher "Best-of indisponible".
 
-### Carte 2 — Mensuel (mise en avant)
-- **Nom** : Pro
-- **Prix** : 49 € / mois
-- **Description** : Pour les recruteurs qui interviewent chaque semaine.
-- **Features** :
-  - Entretiens illimités
-  - Bibliothèque de questions et critères partagée
-  - Modèles d'entretien réutilisables
-  - Support prioritaire
-- **CTA** : Démarrer l'essai
-- **Highlight** : oui (badge « Le plus choisi »)
+### 2. Fix génération : rapport robuste (`generate-report/index.ts`)
 
-### Carte 3 — Sur mesure
-- **Nom** : Entreprise
-- **Prix** : Sur mesure
-- **Description** : Pour les organisations à fort volume ou aux exigences spécifiques.
-- **Features** :
-  - Volume négocié et tarif dégressif
-  - SSO, rôles avancés, multi-équipes
-  - Personnalisation IA et voix sur mesure
-  - DPA, engagement RGPD, accompagnement dédié
-- **CTA** : Nous contacter
-- **Highlight** : non
+- Ajouter `question_evaluations` à `required` du tool call → force Gemini à le produire
+- Renforcer le prompt système : exiger une évaluation pour **chaque question posée** (lister explicitement les N questions dans le user prompt)
+- Améliorer le mapping vidéo → utiliser `question_id` du message candidat plutôt que l'index dans le tableau (plus fiable avec follow-ups)
+- Fallback côté code : si `question_evaluations` est vide après l'appel IA, générer un évaluation minimale par défaut (question + score 0 + "non évaluée") pour que les vidéos s'affichent quand même
+- Highlights par défaut : si pas d'évaluations, prendre les 3 premières vidéos chronologiques
 
-## Notes
+### 3. Régénérer le rapport de la session signalée
 
-- Le suffixe « / entretien » et « / mois » sera affiché en plus petit à côté du prix pour rester lisible.
-- Tous les CTA conservent le comportement actuel : ouverture du `DemoRequestDialog` via `openDemo()`.
-- Aucune logique de paiement réelle n'est branchée — c'est un affichage marketing. Si tu veux brancher Stripe pour facturer réellement, c'est un chantier séparé à planifier après.
+Une fois les fixes déployés :
+- Supprimer le rapport actuel de `f3632288-da28-46a8-be5a-54b784cf6d2e` via migration ponctuelle (ou le supprimer manuellement via `read_query` + delete)
+- Relancer `generate-report` pour cette session via `curl_edge_functions`
+- Vérifier que les vidéos et le best-of apparaissent bien sur la page
 
 ## Hors scope
-
-- Mise en place réelle de la facturation (Stripe / Paddle)
-- Limitation technique du nombre d'entretiens selon la formule
-- Page de comparaison détaillée des plans
+- Refonte du player Best-of (déjà fonctionnel)
+- Réenregistrement des vidéos manquantes (toutes présentes en base)
+- Migration pour stocker un mapping `message_id → highlight_clip` (pas nécessaire)

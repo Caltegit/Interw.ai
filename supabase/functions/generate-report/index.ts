@@ -124,6 +124,7 @@ ${fullText}
 Produis une analyse complète en utilisant l'outil generate_report.
 - executive_summary : 3-5 phrases bilan global
 - executive_summary_short : UNE phrase de 30 secondes (max 200 caractères) qui dit l'essentiel au recruteur pressé
+- question_evaluations : OBLIGATOIRE — produis une entrée par question posée, indexée par "0", "1", "2"… correspondant à l'ordre ci-dessus. Chaque entrée doit contenir : question (texte exact), score (0-10), comment (1-2 phrases factuelles). Même si la réponse est très courte ou absente, donne un score (0 si pas de réponse) et un commentaire expliquant ce constat.
 - personality_profile : scores Big Five 0-100 + courte interprétation par axe (basée sur la transcription, pas un test psychométrique formel)
 - soft_skills : 3 à 6 soft skills observées, chacune avec une CITATION EXACTE du candidat comme preuve
 - red_flags : signaux à creuser (incohérences, évasivité, manque d'exemples concrets, etc.) — vide si rien à signaler
@@ -259,6 +260,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
                   "recommendation",
                   "strengths",
                   "areas_for_improvement",
+                  "question_evaluations",
                 ],
               },
             },
@@ -331,6 +333,8 @@ Produis une analyse complète en utilisant l'outil generate_report.
     const candidateMessages = messages.filter((m: any) => m.role === "candidate");
     const aiMessages = messages.filter((m: any) => m.role === "ai");
     const candidateVideos = candidateMessages.filter((m: any) => m.video_segment_url);
+    // Réponses principales (hors follow-ups) — sert pour matcher les questions du projet
+    const mainAnswerVideos = candidateVideos.filter((m: any) => !m.is_follow_up);
 
     const aiFollowups = aiMessages.filter((m: any) => m.is_follow_up).length;
     const candidateSpeechChars = candidateMessages.reduce(
@@ -344,8 +348,26 @@ Produis une analyse complète en utilisant l'outil generate_report.
         / criteriaScoreValues.length
       : 0;
 
+    // Fallback : si l'IA n'a pas produit question_evaluations, on en construit
+    // une minimale à partir des questions du projet pour que la page Questions
+    // affiche les vidéos même sans évaluation IA.
+    let questionEvals: Record<string, any> = parsed.question_evaluations || {};
+    if (Object.keys(questionEvals).length === 0 && questions.length > 0) {
+      const sortedQuestions = [...questions].sort(
+        (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
+      );
+      sortedQuestions.forEach((q: any, idx: number) => {
+        questionEvals[String(idx)] = {
+          question: q.content,
+          question_id: q.id,
+          score: 0,
+          comment: "Évaluation IA indisponible pour cette question.",
+        };
+      });
+    }
+
     // Best/worst question + highlight clips selection
-    const evalEntries = Object.entries(parsed.question_evaluations || {}) as [string, any][];
+    const evalEntries = Object.entries(questionEvals) as [string, any][];
     const sortedEvals = [...evalEntries].sort(
       (a, b) => (Number(b[1]?.score) || 0) - (Number(a[1]?.score) || 0),
     );
@@ -353,11 +375,22 @@ Produis une analyse complète en utilisant l'outil generate_report.
     const worstQuestionIdx = sortedEvals.length > 0 ? parseInt(sortedEvals[sortedEvals.length - 1][0]) : null;
     const bestQuestionScore = bestQuestionIdx !== null ? Number(sortedEvals[0][1]?.score) : null;
 
-    // Pick top 3 with an actual video
+    // Index vidéos par question_id pour un matching fiable
+    const videoByQuestionId = new Map<string, any>();
+    for (const v of mainAnswerVideos) {
+      if (v.question_id && !videoByQuestionId.has(v.question_id)) {
+        videoByQuestionId.set(v.question_id, v);
+      }
+    }
+
+    // Top 3 highlights : on essaie d'abord par question_id, fallback sur l'index
     const highlightClips: Array<Record<string, unknown>> = [];
     for (const [key, val] of sortedEvals) {
       const idx = parseInt(key);
-      const video = candidateVideos[idx] || candidateVideos[idx - 1];
+      const video =
+        (val?.question_id && videoByQuestionId.get(val.question_id)) ||
+        mainAnswerVideos[idx] ||
+        candidateVideos[idx];
       if (video?.video_segment_url) {
         highlightClips.push({
           video_url: video.video_segment_url,
@@ -392,7 +425,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
       strengths: parsed.strengths || [],
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
-      question_evaluations: parsed.question_evaluations || {},
+      question_evaluations: questionEvals,
       personality_profile: parsed.personality_profile || null,
       soft_skills: parsed.soft_skills || null,
       red_flags: parsed.red_flags || null,
@@ -467,7 +500,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
           criteriaScores,
-          questionEvaluations: parsed.question_evaluations || {},
+          questionEvaluations: questionEvals,
           reportUrl,
           highlightsUrl,
           stats: {

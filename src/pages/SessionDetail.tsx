@@ -95,8 +95,54 @@ export default function SessionDetail() {
 
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const highlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
+  const rawHighlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
   const stats = (report?.stats as Record<string, any>) ?? {};
+
+  const project = session?.projects;
+  const projectQuestions = (project?.questions as any[]) ?? [];
+
+  // Construit la vue "Questions" à partir des vidéos candidat (réponses principales,
+  // hors follow-ups). Joint l'évaluation IA via question_id quand disponible,
+  // sinon retombe sur l'index. Les vidéos sont toujours affichées, même sans IA.
+  const questionItems = useMemo(() => {
+    const mainAnswers = candidateVideos.filter((m: any) => !m.is_follow_up);
+    const evalByQuestionId = new Map<string, any>();
+    const evalByIndex = new Map<number, any>();
+    Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
+      const idx = parseInt(key);
+      if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
+      if (val?.question_id) evalByQuestionId.set(val.question_id, val);
+    });
+
+    return mainAnswers.map((video: any, idx: number) => {
+      const evalEntry =
+        (video.question_id && evalByQuestionId.get(video.question_id)) ||
+        evalByIndex.get(idx);
+      const projectQ = video.question_id
+        ? projectQuestions.find((q: any) => q.id === video.question_id)
+        : projectQuestions[idx];
+      return {
+        index: idx,
+        video,
+        questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
+        score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
+        comment: evalEntry?.comment ?? "",
+      };
+    });
+  }, [candidateVideos, questionEvaluations, projectQuestions]);
+
+  // Best-of : si l'IA n'a rien produit, fallback sur les vidéos chronologiques
+  // pour ne jamais afficher une page vide quand il y a des enregistrements.
+  const highlightClips = useMemo<HighlightClip[]>(() => {
+    if (rawHighlightClips.length > 0) return rawHighlightClips;
+    return questionItems.slice(0, 3).map((item) => ({
+      video_url: item.video.video_segment_url,
+      question: item.questionText,
+      score: item.score ?? 0,
+      question_index: item.index,
+      max_seconds: 20,
+    }));
+  }, [rawHighlightClips, questionItems]);
 
   if (isLoading)
     return (
@@ -106,7 +152,7 @@ export default function SessionDetail() {
     );
   if (!session) return <p>Session introuvable.</p>;
 
-  const project = session.projects;
+  
 
   return (
     <div className="space-y-6">
@@ -278,44 +324,44 @@ export default function SessionDetail() {
             </TabsContent>
 
             <TabsContent value="questions" className="mt-4 space-y-4">
-              {Object.keys(questionEvaluations).length === 0 && candidateVideos.length === 0 ? (
+              {questionItems.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune évaluation par question disponible.
+                    Aucune réponse vidéo enregistrée pour cette session.
                   </CardContent>
                 </Card>
               ) : (
-                Object.entries(questionEvaluations).map(([key, val]: [string, any]) => {
-                  const qIndex = parseInt(key);
-                  const matchingVideo = candidateVideos[qIndex] || candidateVideos[qIndex - 1];
-                  return (
-                    <Card key={key}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="flex-1 text-sm">
-                            Q{qIndex + 1} — {val.question || `Question ${qIndex + 1}`}
-                          </CardTitle>
-                          <Badge variant="outline">{val.score}/10</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {matchingVideo?.video_segment_url && (
-                          <div className="overflow-hidden rounded-lg bg-muted aspect-video">
-                            <video
-                              src={matchingVideo.video_segment_url}
-                              controls
-                              preload="metadata"
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
+                questionItems.map((item) => (
+                  <Card key={item.video.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="flex-1 text-sm">
+                          Q{item.index + 1} — {item.questionText}
+                        </CardTitle>
+                        {item.score !== null && (
+                          <Badge variant="outline">{item.score}/10</Badge>
                         )}
-                        {val.comment && (
-                          <p className="text-xs text-muted-foreground">{val.comment}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="overflow-hidden rounded-lg bg-muted aspect-video">
+                        <video
+                          src={item.video.video_segment_url}
+                          controls
+                          preload="metadata"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      {item.comment ? (
+                        <p className="text-xs text-muted-foreground">{item.comment}</p>
+                      ) : item.score === null ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          Évaluation IA indisponible pour cette question.
+                        </p>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ))
               )}
             </TabsContent>
 
