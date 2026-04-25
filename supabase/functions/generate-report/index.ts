@@ -259,6 +259,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
                   "recommendation",
                   "strengths",
                   "areas_for_improvement",
+                  "question_evaluations",
                 ],
               },
             },
