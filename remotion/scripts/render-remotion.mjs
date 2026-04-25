@@ -37,7 +37,6 @@ await renderMedia({
   puppeteerInstance: browser,
   muted: false,
   enforceAudioTrack: true,
-  audioCodec: "aac",
   concurrency: 1,
   onProgress: ({ progress }) => {
     if (Math.round(progress * 100) % 10 === 0) {
