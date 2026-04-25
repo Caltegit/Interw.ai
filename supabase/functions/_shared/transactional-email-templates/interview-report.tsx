@@ -278,6 +278,18 @@ export const template = {
     overallGrade: 'B',
     recommendation: 'yes',
     executiveSummary: 'Candidate solide avec une excellente communication et une bonne maîtrise technique.',
+    executiveSummaryShort: 'Profil solide à rencontrer en priorité : communication excellente, vraie motivation, à valider sur le test technique.',
+    personalityProfile: {
+      openness: { score: 78, interpretation: 'Curiosité marquée, apprécie les sujets nouveaux.' },
+      conscientiousness: { score: 82, interpretation: 'Très structurée dans ses réponses.' },
+      extraversion: { score: 65, interpretation: 'À l\'aise à l\'oral sans être démonstrative.' },
+      agreeableness: { score: 70, interpretation: 'Coopérative, oriente ses exemples sur le collectif.' },
+      emotional_stability: { score: 75, interpretation: 'Reste posée sur les questions difficiles.' },
+    },
+    followupQuestions: [
+      { question: 'Pouvez-vous détailler votre approche des tests sur votre dernier projet React ?', rationale: 'À creuser car peu d\'exemples concrets.' },
+      { question: 'Comment gérez-vous un désaccord technique avec un lead ?', rationale: 'Valider la posture en équipe.' },
+    ],
     strengths: ['Communication claire', 'Solide expérience React', 'Bonne motivation'],
     areasForImprovement: ['Approfondir la connaissance des tests', 'Plus de détails sur la gestion d\'état'],
     criteriaScores: {
