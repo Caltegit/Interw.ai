@@ -190,10 +190,25 @@ export default function SessionDetail() {
             <TabsContent value="synthesis" className="mt-4 space-y-4">
               {report ? (
                 <>
+                  {(report.executive_summary_short ||
+                    report.personality_profile ||
+                    report.soft_skills ||
+                    report.red_flags ||
+                    report.motivation_scores ||
+                    report.followup_questions) && <AiAnalysisDisclaimer />}
+
+                  <ExecutiveSummaryCard summary={report.executive_summary_short ?? ""} />
+
                   <Card>
                     <CardHeader><CardTitle className="text-base">Résumé</CardTitle></CardHeader>
                     <CardContent><p className="text-sm leading-relaxed">{report.executive_summary}</p></CardContent>
                   </Card>
+
+                  <PersonalityRadar profile={report.personality_profile as any} />
+                  <SoftSkillsCard skills={report.soft_skills as any} />
+                  <MotivationScoresCard scores={report.motivation_scores as any} />
+                  <RedFlagsCard flags={report.red_flags as any} />
+                  <FollowupQuestionsCard questions={report.followup_questions as any} />
 
                   <div className="grid gap-4 md:grid-cols-2">
                     {report.strengths?.length > 0 && (
