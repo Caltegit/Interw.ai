@@ -360,15 +360,15 @@ export default function Landing() {
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
               {
-                name: "Pay as you go",
+                name: "Freemium",
                 price: "2 €",
                 priceSuffix: "/ entretien",
                 desc: "Idéal pour démarrer ou pour les recrutements ponctuels.",
                 features: [
-                  "Inscription gratuite, aucun abonnement",
+                  "20 entretiens gratuits offerts",
                   "Projets illimités",
                   "Rapports IA détaillés",
-                  "Facturation à l'entretien terminé",
+                  "Ensuite 2 € par entretien",
                 ],
                 cta: "Commencer gratuitement",
                 highlight: false,
@@ -379,7 +379,7 @@ export default function Landing() {
                 priceSuffix: "/ mois",
                 desc: "Pour les recruteurs qui interviewent chaque semaine.",
                 features: [
-                  "Entretiens illimités",
+                  "200 crédits par mois (environ 75 entretiens)",
                   "Bibliothèque de questions et critères partagée",
                   "Modèles d'entretien réutilisables",
                   "Support prioritaire",
