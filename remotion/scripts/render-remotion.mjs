@@ -5,7 +5,15 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-console.log("→ Bundling…");
+// Usage: node render-remotion.mjs [compositionId] [outputPath]
+const compositionId = process.argv[2] || "main";
+const out =
+  process.argv[3] ||
+  (compositionId === "demo"
+    ? "/mnt/documents/interw-demo-20s.mp4"
+    : "/mnt/documents/tutoriel-creation-session.mp4");
+
+console.log(`→ Bundling… (composition: ${compositionId})`);
 const bundled = await bundle({
   entryPoint: path.resolve(__dirname, "../src/index.ts"),
   webpackOverride: (config) => config,
@@ -23,18 +31,16 @@ const browser = await openBrowser("chrome", {
 console.log("→ Selecting composition…");
 const composition = await selectComposition({
   serveUrl: bundled,
-  id: "main",
+  id: compositionId,
   puppeteerInstance: browser,
 });
 
-console.log(`→ Rendering ${composition.durationInFrames} frames @ ${composition.fps}fps`);
-const out = process.argv[2] || "/mnt/documents/tutoriel-creation-session.mp4";
-const videoOnly = out.replace(/\.mp4$/, ".video.mp4");
+console.log(`→ Rendering ${composition.durationInFrames} frames @ ${composition.fps}fps → ${out}`);
 await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
-  outputLocation: videoOnly,
+  outputLocation: out,
   puppeteerInstance: browser,
   muted: true,
   concurrency: 1,
