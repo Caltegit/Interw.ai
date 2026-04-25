@@ -18,6 +18,7 @@ import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/com
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
+import ConsentDialog from "@/components/interview/ConsentDialog";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
@@ -80,6 +81,7 @@ export default function InterviewStart() {
   const [session, setSession] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   type ChatMessage = {
     role: string;
@@ -1381,6 +1383,15 @@ export default function InterviewStart() {
       return;
     }
 
+    // Traçabilité légale du consentement (best-effort, non bloquant)
+    if (token && !session.consent_accepted_at) {
+      supabase
+        .from("sessions")
+        .update({ consent_accepted_at: new Date().toISOString() })
+        .eq("token", token)
+        .then(() => {});
+    }
+
     // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
     if (window.speechSynthesis) {
       try {
@@ -2559,8 +2570,26 @@ export default function InterviewStart() {
                 <span>Préparation de la session…</span>
               </div>
             )}
+            <p className="text-center text-xs" style={{ color: "hsl(var(--l-fg) / 0.6)" }}>
+              En cliquant, j'accepte les{" "}
+              <button
+                type="button"
+                onClick={() => setConsentDialogOpen(true)}
+                className="underline hover:opacity-80"
+                style={{ color: "hsl(var(--l-accent))" }}
+              >
+                conditions générales
+              </button>
+              .
+            </p>
           </CardContent>
         </Card>
+        <ConsentDialog
+          open={consentDialogOpen}
+          onOpenChange={setConsentDialogOpen}
+          jobTitle={project?.job_title || project?.title || ""}
+          orgName={project?.organizations?.name || ""}
+        />
       </CandidateLayout>
     );
   }

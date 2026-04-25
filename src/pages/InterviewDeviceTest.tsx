@@ -3,10 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2, Sparkles } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
-import ConsentDialog from "@/components/interview/ConsentDialog";
 
 type Status = "idle" | "testing" | "ok" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
@@ -16,10 +14,6 @@ export default function InterviewDeviceTest() {
   const navigate = useNavigate();
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
-  const [jobTitle, setJobTitle] = useState<string>("");
-  const [orgName, setOrgName] = useState<string>("");
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
@@ -53,27 +47,18 @@ export default function InterviewDeviceTest() {
     (async () => {
       const { data } = await supabase
         .from("projects")
-        .select("pre_session_message, job_title, title, organizations(name)")
+        .select("pre_session_message")
         .eq("slug", slug)
         .maybeSingle();
-      const d = data as
-        | {
-            pre_session_message?: string | null;
-            job_title?: string | null;
-            title?: string | null;
-            organizations?: { name?: string | null } | null;
-          }
-        | null;
+      const d = data as { pre_session_message?: string | null } | null;
       if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
-      setJobTitle(d?.job_title?.trim() || d?.title?.trim() || "");
-      setOrgName(d?.organizations?.name?.trim() || "");
     })();
   }, [slug]);
 
-  // Auto-avance dès que micro + caméra sont OK ET consentement coché
+  // Auto-avance dès que micro + caméra sont OK
   useEffect(() => {
     if (autoAdvancedRef.current) return;
-    if (micStatus === "ok" && camStatus === "ok" && consentChecked) {
+    if (micStatus === "ok" && camStatus === "ok") {
       autoAdvancedRef.current = true;
       const t = setTimeout(() => {
         handleContinue();
@@ -81,7 +66,7 @@ export default function InterviewDeviceTest() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [micStatus, camStatus, consentChecked]);
+  }, [micStatus, camStatus]);
 
   const stopAll = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -206,21 +191,10 @@ export default function InterviewDeviceTest() {
 
   const handleContinue = async () => {
     stopAll();
-    // Persister la traçabilité du consentement (best-effort)
-    if (consentChecked && token) {
-      try {
-        await supabase
-          .from("sessions")
-          .update({ consent_accepted_at: new Date().toISOString() })
-          .eq("token", token);
-      } catch {
-        // non bloquant
-      }
-    }
     navigate(`/session/${slug}/start/${token}`);
   };
 
-  const canContinue = micStatus === "ok" && consentChecked;
+  const canContinue = micStatus === "ok";
 
   const networkLabel = (() => {
     if (!netQuality) return "";
@@ -398,28 +372,6 @@ export default function InterviewDeviceTest() {
           </div>
         )}
 
-        {/* Consentement RGPD */}
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <Checkbox
-              checked={consentChecked}
-              onCheckedChange={(v) => setConsentChecked(v === true)}
-              className="mt-0.5"
-              aria-label="Accepter les conditions de traitement des données"
-            />
-            <span className="text-sm text-foreground leading-relaxed">
-              J'ai lu et j'accepte les conditions de traitement de mes données personnelles.
-            </span>
-          </label>
-          <button
-            type="button"
-            onClick={() => setConsentDialogOpen(true)}
-            className="text-xs text-primary hover:underline ml-7"
-          >
-            Lire les conditions
-          </button>
-        </div>
-
         {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
@@ -428,19 +380,10 @@ export default function InterviewDeviceTest() {
 
         {!canContinue && (
           <p className="text-xs text-center text-muted-foreground">
-            {micStatus !== "ok"
-              ? "Veuillez tester au minimum votre microphone avant de continuer."
-              : "Veuillez accepter les conditions pour continuer."}
+            Veuillez tester au minimum votre microphone avant de continuer.
           </p>
         )}
       </div>
-
-      <ConsentDialog
-        open={consentDialogOpen}
-        onOpenChange={setConsentDialogOpen}
-        jobTitle={jobTitle}
-        orgName={orgName}
-      />
     </CandidateLayout>
   );
 }
