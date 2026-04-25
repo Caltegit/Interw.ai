@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import {
   useUpdateRecruiterNotes,
   useCreateReportShare,
 } from "@/hooks/queries/useSessionDetail";
+import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { OverviewHeader } from "@/components/session/OverviewHeader";
 import { SessionStatsCard } from "@/components/session/SessionStatsCard";
@@ -34,6 +35,7 @@ import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { RedFlagsCard } from "@/components/session/RedFlagsCard";
 import { MotivationScoresCard } from "@/components/session/MotivationScoresCard";
 import { FollowupQuestionsCard } from "@/components/session/FollowupQuestionsCard";
+import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
 
 export default function SessionDetail() {
   const { id } = useParams();
@@ -48,10 +50,27 @@ export default function SessionDetail() {
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const [notesInitialized, setNotesInitialized] = useState(false);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("synthesis");
   const [copied, setCopied] = useState(false);
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
+  const { data: projectAverages } = useProjectAverages(session?.project_id);
+
+  const goToMessage = useCallback(
+    (messageId: string) => {
+      const idx = messages.findIndex((m: any) => m.id === messageId);
+      if (idx === -1) return;
+      setActiveTab("transcript");
+      setActiveMessageIndex(idx);
+      // Petit délai pour laisser l'onglet se rendre avant le scroll
+      setTimeout(() => {
+        const el = document.querySelector(`[data-index="${idx}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    },
+    [messages],
+  );
 
   useEffect(() => {
     if (report?.id && !notesInitialized) {
@@ -217,7 +236,7 @@ export default function SessionDetail() {
         </div>
 
         <div>
-          <Tabs defaultValue="synthesis">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="synthesis" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Synthèse</span>
@@ -245,15 +264,27 @@ export default function SessionDetail() {
 
                   <ExecutiveSummaryCard summary={report.executive_summary_short ?? ""} />
 
+                  {projectAverages && (
+                    <ProjectComparisonCard
+                      candidateScore={Number(report.overall_score)}
+                      averages={projectAverages}
+                      candidateCriteria={criteriaScores as any}
+                    />
+                  )}
+
                   <Card>
                     <CardHeader><CardTitle className="text-base">Résumé</CardTitle></CardHeader>
                     <CardContent><p className="text-sm leading-relaxed">{report.executive_summary}</p></CardContent>
                   </Card>
 
-                  <PersonalityRadar profile={report.personality_profile as any} />
-                  <SoftSkillsCard skills={report.soft_skills as any} />
+                  <PersonalityRadar
+                    profile={report.personality_profile as any}
+                    onGoToMessage={goToMessage}
+                    projectAverages={projectAverages?.bigFive}
+                  />
+                  <SoftSkillsCard skills={report.soft_skills as any} onGoToMessage={goToMessage} />
                   <MotivationScoresCard scores={report.motivation_scores as any} />
-                  <RedFlagsCard flags={report.red_flags as any} />
+                  <RedFlagsCard flags={report.red_flags as any} onGoToMessage={goToMessage} />
                   <FollowupQuestionsCard questions={report.followup_questions as any} />
 
                   <div className="grid gap-4 md:grid-cols-2">

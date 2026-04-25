@@ -107,6 +107,12 @@ Tu analyses des transcriptions d'entretiens vidéo pour fournir au recruteur une
 Tu es factuel, nuancé, et tu cites systématiquement des extraits du candidat pour justifier tes analyses.
 Tu ne juges jamais, tu décris ce que la transcription révèle.`;
 
+    // Liste des messages candidat avec leur id, pour permettre à l'IA de citer la source exacte
+    const candidateMessagesForPrompt = messages
+      .filter((m: any) => m.role === "candidate" && m.content?.trim())
+      .map((m: any) => `[id=${m.id}] ${m.content}`)
+      .join("\n");
+
     const userPrompt = `Analyse cette transcription d'entretien.
 
 Poste : ${project.job_title}
@@ -121,15 +127,25 @@ ${criteriaDesc}
 Transcription complète :
 ${fullText}
 
+Messages du candidat avec identifiants (à utiliser dans evidence_message_id) :
+${candidateMessagesForPrompt}
+
+Règles strictes pour l'analyse :
+1. Chaque score, soft skill, trait de personnalité, signal et motivation doit s'appuyer sur une citation exacte du candidat.
+2. Quand tu donnes une citation, fournis aussi evidence_message_id avec l'id du message candidat correspondant (présent dans la liste ci-dessus). Ne jamais inventer un id.
+3. Si la transcription ne permet pas de conclure sur un trait ou un score, mets confidence à "low" (Big Five) ou ne renvoie pas le sous-score (motivations) plutôt que d'inventer.
+4. Si overall_score est ≥ 75 mais qu'un red_flag a une severity "high", justifie-le explicitement dans executive_summary.
+5. soft_skills : minimum 3 entrées, chacune avec une citation obligatoire.
+
 Produis une analyse complète en utilisant l'outil generate_report.
 - executive_summary : 3-5 phrases bilan global
-- executive_summary_short : UNE phrase de 30 secondes (max 200 caractères) qui dit l'essentiel au recruteur pressé
-- question_evaluations : OBLIGATOIRE — produis une entrée par question posée, indexée par "0", "1", "2"… correspondant à l'ordre ci-dessus. Chaque entrée doit contenir : question (texte exact), score (0-10), comment (1-2 phrases factuelles). Même si la réponse est très courte ou absente, donne un score (0 si pas de réponse) et un commentaire expliquant ce constat.
-- personality_profile : scores Big Five 0-100 + courte interprétation par axe (basée sur la transcription, pas un test psychométrique formel)
-- soft_skills : 3 à 6 soft skills observées, chacune avec une CITATION EXACTE du candidat comme preuve
-- red_flags : signaux à creuser (incohérences, évasivité, manque d'exemples concrets, etc.) — vide si rien à signaler
-- motivation_scores : connaissance entreprise, fit poste, enthousiasme, projection long terme (0-100 chacun)
-- followup_questions : 3 à 5 questions précises à poser en entretien physique pour valider/creuser`;
+- executive_summary_short : UNE phrase (max 200 caractères) pour le recruteur pressé
+- question_evaluations : OBLIGATOIRE — une entrée par question, indexée par "0", "1", "2"… avec question (texte exact), score (0-10), comment (1-2 phrases), key_quote (citation marquante de la réponse) et evidence_message_id quand possible.
+- personality_profile : scores Big Five 0-100 + interprétation + confidence (low/medium/high) + evidences (1 à 2 citations courtes avec message_id) par trait.
+- soft_skills : 3 à 6 entrées, chacune avec quote ET evidence_message_id obligatoires.
+- red_flags : signaux à creuser avec evidence (citation) et evidence_message_id — vide si rien à signaler.
+- motivation_scores : sous-scores 0-100 + une evidence courte par sous-score quand pertinent.
+- followup_questions : 3 à 5 questions précises à poser en entretien physique.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -179,6 +195,8 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         question: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
                         comment: { type: "string" },
+                        key_quote: { type: "string", description: "Citation marquante de la réponse du candidat" },
+                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
                       },
                     },
                   },
@@ -187,23 +205,93 @@ Produis une analyse complète en utilisant l'outil generate_report.
                     properties: {
                       openness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       conscientiousness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       extraversion: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       agreeableness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       emotional_stability: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                     },
                   },
@@ -215,8 +303,9 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         skill: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
                         quote: { type: "string", description: "Citation exacte du candidat" },
+                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
                       },
-                      required: ["skill"],
+                      required: ["skill", "quote"],
                     },
                   },
                   red_flags: {
@@ -228,6 +317,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         severity: { type: "string", enum: ["low", "medium", "high"] },
                         description: { type: "string" },
                         evidence: { type: "string" },
+                        evidence_message_id: { type: "string" },
                       },
                       required: ["description"],
                     },
@@ -236,9 +326,13 @@ Produis une analyse complète en utilisant l'outil generate_report.
                     type: "object",
                     properties: {
                       company_knowledge: { type: "number", minimum: 0, maximum: 100 },
+                      company_knowledge_evidence: { type: "string" },
                       role_fit: { type: "number", minimum: 0, maximum: 100 },
+                      role_fit_evidence: { type: "string" },
                       enthusiasm: { type: "number", minimum: 0, maximum: 100 },
+                      enthusiasm_evidence: { type: "string" },
                       long_term_intent: { type: "number", minimum: 0, maximum: 100 },
+                      long_term_intent_evidence: { type: "string" },
                       comment: { type: "string" },
                     },
                   },
