@@ -424,3 +424,100 @@ export default function SessionDetail() {
     </div>
   );
 }
+
+interface FullVideoItem {
+  index: number;
+  video: { id: string; video_segment_url?: string | null };
+  questionText: string;
+}
+
+function FullVideoPlayer({
+  items,
+  fallbackUrl,
+}: {
+  items: FullVideoItem[];
+  fallbackUrl?: string | null;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const validItems = items.filter((it) => !!it.video.video_segment_url);
+
+  if (validItems.length === 0) {
+    if (fallbackUrl) {
+      return (
+        <video
+          src={fallbackUrl}
+          controls
+          preload="metadata"
+          className="w-full rounded-lg bg-black aspect-video object-contain"
+        />
+      );
+    }
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        Vidéo complète indisponible pour cette session.
+      </p>
+    );
+  }
+
+  const safeIndex = Math.min(currentIndex, validItems.length - 1);
+  const current = validItems[safeIndex];
+
+  const playSegment = (i: number) => {
+    setCurrentIndex(i);
+    requestAnimationFrame(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      v.load();
+      v.play().catch(() => {});
+    });
+  };
+
+  const handleEnded = () => {
+    if (safeIndex + 1 < validItems.length) {
+      playSegment(safeIndex + 1);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <video
+        ref={videoRef}
+        key={current.video.id}
+        src={current.video.video_segment_url ?? undefined}
+        controls
+        autoPlay={safeIndex > 0}
+        preload="metadata"
+        onEnded={handleEnded}
+        className="w-full rounded-lg bg-black aspect-video object-contain"
+      />
+      <div>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Accès rapide par question
+        </p>
+        <ul className="space-y-1">
+          {validItems.map((it, i) => {
+            const isActive = i === safeIndex;
+            return (
+              <li key={it.video.id}>
+                <button
+                  type="button"
+                  onClick={() => playSegment(i)}
+                  className={`w-full rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors ${
+                    isActive
+                      ? "border-primary bg-muted font-medium"
+                      : "border-transparent hover:bg-muted/60"
+                  }`}
+                >
+                  <span className="text-muted-foreground">Q{it.index + 1}</span>{" "}
+                  · {it.questionText}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+}
