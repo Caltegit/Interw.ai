@@ -191,21 +191,10 @@ export default function InterviewDeviceTest() {
 
   const handleContinue = async () => {
     stopAll();
-    // Persister la traçabilité du consentement (best-effort)
-    if (consentChecked && token) {
-      try {
-        await supabase
-          .from("sessions")
-          .update({ consent_accepted_at: new Date().toISOString() })
-          .eq("token", token);
-      } catch {
-        // non bloquant
-      }
-    }
     navigate(`/session/${slug}/start/${token}`);
   };
 
-  const canContinue = micStatus === "ok" && consentChecked;
+  const canContinue = micStatus === "ok";
 
   const networkLabel = (() => {
     if (!netQuality) return "";
