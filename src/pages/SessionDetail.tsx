@@ -95,8 +95,54 @@ export default function SessionDetail() {
 
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const highlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
+  const rawHighlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
   const stats = (report?.stats as Record<string, any>) ?? {};
+
+  const project = session?.projects;
+  const projectQuestions = (project?.questions as any[]) ?? [];
+
+  // Construit la vue "Questions" à partir des vidéos candidat (réponses principales,
+  // hors follow-ups). Joint l'évaluation IA via question_id quand disponible,
+  // sinon retombe sur l'index. Les vidéos sont toujours affichées, même sans IA.
+  const questionItems = useMemo(() => {
+    const mainAnswers = candidateVideos.filter((m: any) => !m.is_follow_up);
+    const evalByQuestionId = new Map<string, any>();
+    const evalByIndex = new Map<number, any>();
+    Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
+      const idx = parseInt(key);
+      if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
+      if (val?.question_id) evalByQuestionId.set(val.question_id, val);
+    });
+
+    return mainAnswers.map((video: any, idx: number) => {
+      const evalEntry =
+        (video.question_id && evalByQuestionId.get(video.question_id)) ||
+        evalByIndex.get(idx);
+      const projectQ = video.question_id
+        ? projectQuestions.find((q: any) => q.id === video.question_id)
+        : projectQuestions[idx];
+      return {
+        index: idx,
+        video,
+        questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
+        score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
+        comment: evalEntry?.comment ?? "",
+      };
+    });
+  }, [candidateVideos, questionEvaluations, projectQuestions]);
+
+  // Best-of : si l'IA n'a rien produit, fallback sur les vidéos chronologiques
+  // pour ne jamais afficher une page vide quand il y a des enregistrements.
+  const highlightClips = useMemo<HighlightClip[]>(() => {
+    if (rawHighlightClips.length > 0) return rawHighlightClips;
+    return questionItems.slice(0, 3).map((item) => ({
+      video_url: item.video.video_segment_url,
+      question: item.questionText,
+      score: item.score ?? 0,
+      question_index: item.index,
+      max_seconds: 20,
+    }));
+  }, [rawHighlightClips, questionItems]);
 
   if (isLoading)
     return (
