@@ -542,3 +542,51 @@ export default function Landing() {
     </div>
   );
 }
+
+function TutoVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [started, setStarted] = useState(false);
+
+  const handlePlay = () => {
+    setStarted(true);
+    requestAnimationFrame(() => {
+      videoRef.current?.play().catch(() => {});
+    });
+  };
+
+  return (
+    <div className="relative aspect-video w-full">
+      <video
+        ref={videoRef}
+        src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
+        poster="/tuto-poster.png"
+        controls={started}
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      {!started && (
+        <button
+          type="button"
+          onClick={handlePlay}
+          aria-label="Lire la vidéo"
+          className="absolute inset-0 flex items-center justify-center group cursor-pointer"
+          style={{ background: "hsl(0 0% 0% / 0.25)" }}
+        >
+          <span
+            className="flex h-24 w-24 items-center justify-center rounded-full shadow-2xl transition-transform duration-200 group-hover:scale-110"
+            style={{
+              background: "hsl(0 0% 100% / 0.95)",
+              boxShadow: "0 20px 60px -10px hsl(var(--l-accent) / 0.6)",
+            }}
+          >
+            <Play
+              className="h-10 w-10 translate-x-0.5"
+              style={{ color: "hsl(var(--l-accent))", fill: "hsl(var(--l-accent))" }}
+            />
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
