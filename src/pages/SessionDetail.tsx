@@ -16,6 +16,7 @@ import {
   Play,
   FileText,
   Video,
+  Trophy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -27,6 +28,7 @@ import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { OverviewHeader } from "@/components/session/OverviewHeader";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
+import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { ExecutiveSummaryCard } from "@/components/session/ExecutiveSummaryCard";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
@@ -251,7 +253,7 @@ export default function SessionDetail() {
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
               <TabsTrigger value="best-of" className="gap-1">
-                <Video className="h-4 w-4" /> <span className="hidden sm:inline">Vidéo</span>
+                <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Best-of</span>
               </TabsTrigger>
             </TabsList>
 
@@ -419,22 +421,9 @@ export default function SessionDetail() {
             </TabsContent>
 
             <TabsContent value="best-of" className="mt-4">
-              <Card>
-                <CardContent className="pt-6">
-                  {session.video_recording_url ? (
-                    <video
-                      src={session.video_recording_url}
-                      controls
-                      preload="metadata"
-                      className="w-full rounded-lg bg-black aspect-video object-contain"
-                    />
-                  ) : (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      Vidéo complète indisponible pour cette session.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <HighlightReelPlayer
+                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
+              />
             </TabsContent>
           </Tabs>
         </div>
