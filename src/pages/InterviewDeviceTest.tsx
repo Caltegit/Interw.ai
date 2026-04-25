@@ -372,28 +372,6 @@ export default function InterviewDeviceTest() {
           </div>
         )}
 
-        {/* Consentement RGPD */}
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <Checkbox
-              checked={consentChecked}
-              onCheckedChange={(v) => setConsentChecked(v === true)}
-              className="mt-0.5"
-              aria-label="Accepter les conditions de traitement des données"
-            />
-            <span className="text-sm text-foreground leading-relaxed">
-              J'ai lu et j'accepte les conditions de traitement de mes données personnelles.
-            </span>
-          </label>
-          <button
-            type="button"
-            onClick={() => setConsentDialogOpen(true)}
-            className="text-xs text-primary hover:underline ml-7"
-          >
-            Lire les conditions
-          </button>
-        </div>
-
         {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
@@ -402,19 +380,10 @@ export default function InterviewDeviceTest() {
 
         {!canContinue && (
           <p className="text-xs text-center text-muted-foreground">
-            {micStatus !== "ok"
-              ? "Veuillez tester au minimum votre microphone avant de continuer."
-              : "Veuillez accepter les conditions pour continuer."}
+            Veuillez tester au minimum votre microphone avant de continuer.
           </p>
         )}
       </div>
-
-      <ConsentDialog
-        open={consentDialogOpen}
-        onOpenChange={setConsentDialogOpen}
-        jobTitle={jobTitle}
-        orgName={orgName}
-      />
     </CandidateLayout>
   );
 }
