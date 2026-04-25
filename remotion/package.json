@@ -5,8 +5,8 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3"
+    "@types/react": "18",
+    "@types/react-dom": "18"
   },
   "peerDependencies": {
     "typescript": "^6.0.3"
@@ -18,8 +18,8 @@
     "@remotion/google-fonts": "^4.0.451",
     "@remotion/renderer": "^4.0.451",
     "@remotion/transitions": "^4.0.451",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "remotion": "^4.0.451"
   }
 }
