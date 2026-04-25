@@ -24,6 +24,89 @@ import {
   X,
 } from "lucide-react";
 
+function HeroProductMock() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [showVideo, setShowVideo] = useState(false);
+  const [hasUnmuted, setHasUnmuted] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
+          if (!startedRef.current) {
+            startedRef.current = true;
+            setShowVideo(true);
+          }
+          videoRef.current?.play().catch(() => {});
+        } else if (startedRef.current) {
+          videoRef.current?.pause();
+        }
+      },
+      { threshold: [0, 0.4, 0.6] },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const enableSound = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    v.volume = 1;
+    setHasUnmuted(true);
+    v.play().catch(() => {});
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative aspect-video overflow-hidden rounded-lg"
+      style={{ border: "1px solid hsl(var(--l-border))" }}
+    >
+      <img
+        src={candidateView}
+        alt="Aperçu de la vue candidat pendant un entretien Interw.ai"
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
+        style={{ opacity: showVideo ? 0 : 1 }}
+      />
+      <video
+        ref={videoRef}
+        src="/demo-interwai-20s.mp4"
+        poster={candidateView}
+        muted
+        playsInline
+        preload="metadata"
+        controls={ended}
+        onEnded={() => setEnded(true)}
+        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
+        style={{ opacity: showVideo ? 1 : 0 }}
+      />
+      <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
+      </div>
+      {showVideo && !hasUnmuted && !ended && (
+        <button
+          type="button"
+          onClick={enableSound}
+          className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur-md hover:bg-black/80 transition-colors"
+          aria-label="Activer le son"
+        >
+          <Volume2 className="h-3.5 w-3.5" />
+          Activer le son
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Landing() {
   const { session, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
