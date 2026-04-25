@@ -160,6 +160,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
+  const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
