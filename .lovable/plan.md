@@ -1,80 +1,36 @@
 ## Objectif
+Côté candidat, pendant l'entretien, réduire la photo du recruteur (avatar IA) et l'afficher en **16/9 façon visio** au lieu d'un grand carré.
 
-Remplacer la sélection actuelle « top 3 par score, 20 premières secondes » par une sélection pilotée par l'IA, qui choisit **3 moments significatifs et variés** avec des **bornes temporelles précises**.
+## Fichier modifié
+- `src/pages/InterviewStart.tsx` (zone d'affichage de l'avatar IA, lignes ~2660-2730)
 
-## Logique actuelle (à remplacer)
+## Changements
 
-Dans `supabase/functions/generate-report/index.ts` (l. 463-498) :
-- Tri des questions par score décroissant.
-- Récupération des 3 meilleures vidéos.
-- Coupe systématique aux 20 premières secondes (`max_seconds: 20`), ce qui peut tomber au milieu d'une phrase ou rater le moment intéressant.
-- Aucune diversité : si les 3 meilleures réponses se ressemblent, le best-of est plat.
+### 1. Conteneur de l'avatar (cas par défaut, sans vidéo de question)
+- Ratio : `aspect-square` → **`aspect-video`** (16/9)
+- Taille : ajout de **`max-w-[520px]`** desktop, **`max-w-[320px]`** mobile
+- Coins : `rounded-3xl` → **`rounded-2xl`**
+- Le halo "écoute/parole" et le ring sont conservés, juste adaptés au nouveau ratio
 
-## Nouvelle logique
+### 2. Image
+- `object-contain` → **`object-cover`** centré, pour cadrer proprement le visage dans le 16/9 (pas de bandes noires)
+- Le fond `bg-muted/30` reste comme filet de sécurité
 
-### 1. Demander à l'IA de désigner 3 moments — `generate-report/index.ts`
+### 3. Cas vidéo de question (`currentQ.video_url`)
+- `max-w-3xl` → **`max-w-[520px]`** pour rester cohérent avec la nouvelle taille de l'avatar
 
-Ajouter au prompt envoyé à l'IA un nouveau bloc qui retourne un tableau `highlights` avec **3 entrées variées** :
+### 4. Layout colonne gauche
+- La colonne reste `lg:col-span-2` mais le contenu est désormais centré dans une fenêtre 520px max au lieu de remplir toute la hauteur
+- La colonne droite (question + bouton "Passer") se recentre verticalement automatiquement
 
-```json
-"highlights": [
-  {
-    "question_index": 2,
-    "kind": "force",          // force | personnalité | vigilance
-    "label": "Exemple concret de leadership",
-    "start_seconds": 12,
-    "end_seconds": 38,
-    "why": "Le candidat illustre par un cas vécu et chiffré."
-  },
-  ...
-]
-```
+### Inchangé
+- Badge "Marie — IA" en haut à gauche
+- Animations halo + barres de niveau quand l'IA parle
+- Logique d'écoute / de relance
+- Pas d'ajout de vignette webcam candidat (à voir plus tard si besoin)
 
-Contraintes données à l'IA dans le prompt :
-- Toujours retourner **3 entrées** si possible.
-- **Diversifier** les `kind` : idéalement 1 force, 1 trait de personnalité, 1 point de vigilance (ou meilleure réponse de chaque type si pas de vigilance).
-- `start_seconds` / `end_seconds` doivent encadrer un extrait **entre 10 et 30 secondes**.
-- S'appuyer sur la transcription (déjà fournie au prompt) pour situer le moment fort dans la réponse.
-
-### 2. Côté code, mapper ces highlights aux vidéos
-
-Remplacer la boucle actuelle (l. 480-498) par :
-- Pour chaque entrée IA, retrouver la vidéo via `question_index` (puis fallback `question_id`).
-- Construire l'objet sauvegardé :
-  ```ts
-  {
-    video_url, question, score,
-    question_index,
-    kind, label, why,
-    start_seconds, end_seconds,
-  }
-  ```
-- **Fallback** si l'IA ne renvoie rien d'exploitable : conserver l'ancienne logique (top 3 par score, 0–20 s) pour ne jamais avoir un best-of vide.
-- Validation : ignorer les bornes incohérentes (`end <= start`, durée > 60 s) et tomber sur 0–20 s.
-
-### 3. Lecteur — `src/components/session/HighlightReelPlayer.tsx`
-
-- Étendre `HighlightClip` avec `start_seconds`, `end_seconds`, `kind`, `label`, `why`.
-- Au passage à un clip : `video.currentTime = start_seconds`, lecture jusqu'à `end_seconds` (au lieu de `max_seconds` fixe à 20).
-- Afficher dans le badge le `label` IA (ex. « Exemple concret de leadership ») et un petit pictogramme par `kind` (force / personnalité / vigilance).
-- Sous la vidéo, afficher la phrase `why` pour donner du contexte au recruteur.
-
-### 4. Page partagée — `src/pages/SharedReport.tsx`
-
-Aucun changement structurel : le composant `HighlightReelPlayer` reçoit déjà les nouveaux champs via `report.highlight_clips`.
-
-### 5. Compatibilité ascendante
-
-Les rapports déjà générés n'ont pas `start_seconds` / `end_seconds` / `kind` : le lecteur retombe sur l'ancien comportement (lecture de 0 à `max_seconds ?? 20`). Aucune migration de données nécessaire.
-
-## Fichiers modifiés
-
-- `supabase/functions/generate-report/index.ts` — nouveau bloc `highlights` dans le prompt + mapping vers vidéos + fallback.
-- `src/components/session/HighlightReelPlayer.tsx` — lecture entre `start_seconds` et `end_seconds`, affichage `label` + `why` + `kind`.
-
-## Vérification
-
-- Générer un rapport sur une session existante : les 3 clips doivent désormais démarrer à un moment pertinent (pas systématiquement à 0 s).
-- Vérifier la diversité : si la session contient une vraie faiblesse, elle apparaît comme `vigilance`.
-- Session sans transcription suffisante : fallback automatique → 3 meilleurs scores, 0–20 s, comme aujourd'hui.
-- Anciens rapports : le lecteur fonctionne sans régression.
+## Validation
+Après modification, vérifier sur le preview (viewport 714px et desktop) que :
+- L'avatar a bien l'allure d'une fenêtre de visio compacte
+- La photo du recruteur n'est pas déformée
+- Le bouton "Passer la question" reste bien visible à droite

@@ -2661,7 +2661,7 @@ export default function InterviewStart() {
               {/* ── Colonne gauche : Avatar IA (2/3 desktop) ── */}
               <div className="lg:col-span-2 lg:h-full lg:min-h-0 lg:flex lg:items-center lg:justify-center">
                 {questionType === "video" && currentQ?.video_url && !interviewFinished ? (
-                  <div className="relative w-full mx-auto max-w-3xl">
+                  <div className="relative w-full mx-auto max-w-[520px]">
                     <QuestionMediaPlayer
                       key={`q-video-${currentQuestionIndex}`}
                       ref={featuredPlayerRef}
@@ -2684,11 +2684,11 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative w-full max-w-[200px] sm:max-w-none aspect-square mx-auto lg:max-h-full lg:h-full lg:w-auto">
+                  <div className="relative w-full max-w-[320px] sm:max-w-[520px] aspect-video mx-auto">
                     {/* Halo respirant quand IA parle */}
                     {isSpeaking && <div className="candidate-avatar-halo" aria-hidden="true" />}
                     <div
-                      className={`relative w-full h-full rounded-3xl overflow-hidden transition-all ${
+                      className={`relative w-full h-full rounded-2xl overflow-hidden transition-all ${
                         isSpeaking
                           ? "ring-2 ring-offset-4 shadow-2xl"
                           : isListening
@@ -2707,7 +2707,7 @@ export default function InterviewStart() {
                       <img
                         src={project?.avatar_image_url || defaultAiAvatar}
                         alt={project?.ai_persona_name || "IA"}
-                        className={`w-full h-full object-contain bg-muted/30 transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
+                        className={`w-full h-full object-cover bg-muted/30 transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
                       />
                       {isSpeaking && (
                         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-4 sm:p-6 flex items-end justify-center gap-1.5">
