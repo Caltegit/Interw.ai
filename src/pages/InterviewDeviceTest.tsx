@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2 } from "lucide-react";
+import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2, Sparkles } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
 type Status = "idle" | "testing" | "ok" | "error";
