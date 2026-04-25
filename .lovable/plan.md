@@ -1,59 +1,56 @@
 
-## Plan : Analyse enrichie des sessions (6 modules psychométriques)
+## Plan : Consentement RGPD renforcé + droit d'annulation totale
 
 ### 1. Migration de base de données
-Ajouter 6 colonnes nullable à la table `reports` (rétro-compatible, anciens rapports non impactés) :
-- `executive_summary_short` (text) — résumé 30 secondes
-- `personality_profile` (jsonb) — scores Big Five + interprétations
-- `soft_skills` (jsonb) — liste {skill, score, quote}
-- `red_flags` (jsonb) — liste {type, severity, description, evidence}
-- `motivation_scores` (jsonb) — {company_knowledge, role_fit, enthusiasm, long_term_intent}
-- `followup_questions` (jsonb) — liste {question, rationale}
+Ajouter à la table `sessions` :
+- `consent_accepted_at` (timestamp, nullable) — traçabilité légale du consentement
+- `cancelled_at` (timestamp, nullable) — horodatage de l'annulation totale
 
-### 2. Edge function `generate-report`
-- Basculer le modèle d'analyse psychométrique sur `google/gemini-2.5-pro`
-- Enrichir le prompt système pour générer les 6 nouveaux modules
-- Utiliser le tool calling pour extraction structurée fiable
-- Persister les nouveaux champs dans `reports`
-- Conserver la rétro-compatibilité (champs existants inchangés)
+Ajouter la valeur `'cancelled'` à l'enum `session_status` (utilisée brièvement avant la suppression complète, pour éviter les conflits si la suppression échoue partiellement).
 
-### 3. Template email `interview-report.tsx`
-Ajouter trois sections après le résumé exécutif actuel :
-- 🎯 Résumé en 30 secondes (encadré coloré)
-- 🧠 Profil de personnalité (5 axes Big Five avec barres)
-- ❓ Questions à creuser lors de l'entretien physique
+### 2. Nouveau composant : popup conditions RGPD
+Créer `src/components/interview/ConsentDialog.tsx` :
+- Dialog scrollable, sections claires en français
+- 8 sections : données collectées, finalité, accès, durée, droits RGPD, analyse IA, **droit de retrait avec suppression totale**, contact
+- Variables dynamiques injectées : `{job_title}`, `{org_name}`
+- Bouton « J'ai compris » qui ferme le popup
 
-### 4. Nouveaux composants UI (`src/components/session/`)
-- `AiAnalysisDisclaimer.tsx` — bandeau RGPD/IA Act visible
-- `ExecutiveSummaryCard.tsx` — encadré résumé 30s en haut
-- `PersonalityRadar.tsx` — graphique radar Big Five
-- `SoftSkillsCard.tsx` — soft skills avec citations exactes
-- `RedFlagsCard.tsx` — signaux faibles avec sévérité
-- `MotivationScoresCard.tsx` — barres de motivation
-- `FollowupQuestionsCard.tsx` — questions actionnables
+### 3. Intégration consentement sur la page test technique
+Modifier `src/pages/InterviewDeviceTest.tsx` :
+- Ajouter une `Checkbox` obligatoire juste avant le bouton « Commencer la session »
+- Texte : *« J'ai lu et j'accepte les conditions de traitement de mes données personnelles. »*
+- Lien « Lire les conditions » qui ouvre le `ConsentDialog`
+- Bouton « Commencer la session » désactivé tant que la case n'est pas cochée
+- Au clic sur « Commencer », mettre à jour `consent_accepted_at` sur la session
 
-### 5. Intégration dans `SessionDetail.tsx`
-Ordre d'affichage dans la section enrichie :
-1. Disclaimer IA (en haut de la section)
-2. Résumé exécutif 30s
-3. Score global existant (inchangé)
-4. Personnalité Big Five
-5. Soft skills + citations
-6. Motivation & Fit
-7. Red flags
-8. Questions à creuser
-9. Reste du rapport existant (critères, questions, etc.)
+### 4. Nouvelle edge function : `cancel-session`
+Créer `supabase/functions/cancel-session/index.ts` (verify_jwt = false, route candidat publique) :
+- Accepte `{ sessionToken }`
+- Vérifie que la session existe et n'est pas déjà terminée
+- Liste et supprime tous les fichiers du bucket storage liés à la session (audio + vidéo segments)
+- Supprime en cascade : `transcripts`, `session_messages`, `reports` (si existant), puis `sessions`
+- Retourne confirmation
 
-### 6. Déploiement & vérification
-- Déployer l'edge function `generate-report`
-- Tester sur une session existante en regénérant un rapport
-- Vérifier l'affichage UI et l'email recruteur
-- Confirmer le rendu final avant publication
+### 5. Popup d'annulation pendant l'entretien
+Modifier la page de session active (probablement `InterviewSession.tsx` ou équivalent) :
+- Quand le candidat clique sur le bouton actuel « Mettre fin à la session », ouvrir un `AlertDialog` avec **2 choix** :
+  - ✅ **« Terminer et envoyer mes réponses »** → comportement actuel (génération du rapport)
+  - 🗑️ **« Annuler et tout supprimer »** → seconde confirmation puis appel à `cancel-session`
+- Après suppression : redirection vers une nouvelle page `/session/cancelled`
 
-### ⚠️ Hors scope (phase 2)
-- Sentiment timeline graphique
-- Analyse linguistique avancée (STAR, je/nous)
-- Marqueurs vocaux (pauses, hésitations)
-- Profil de communication DISC
-- Score d'authenticité
-- Comparaison pool de candidats
+### 6. Page de confirmation d'annulation
+Créer `src/pages/InterviewCancelled.tsx` :
+- Message rassurant : *« Votre entretien a été annulé. Toutes vos données ont été définitivement supprimées. »*
+- Pas de retour vers le projet possible (session détruite)
+
+### 7. Vérifications
+- Tester le flux complet consentement → entretien → annulation
+- Vérifier que les fichiers storage sont bien supprimés (logs edge function)
+- Vérifier qu'aucune trace ne reste côté recruteur après annulation
+- Vérifier la mention RGPD du consentement persistée pour traçabilité légale (avant suppression de la session)
+
+### ⚠️ Hors scope
+- Personnalisation par organisation (texte standard pour tous, validé)
+- Email DPO personnalisable (validé : standard)
+- Email de double opt-in (validé : non)
+- Annulation par le recruteur (déjà géré par les politiques de suppression existantes)
