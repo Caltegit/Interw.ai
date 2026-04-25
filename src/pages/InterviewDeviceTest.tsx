@@ -13,6 +13,8 @@ export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
 
+  const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
+
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
   const [micLevel, setMicLevel] = useState(0);
