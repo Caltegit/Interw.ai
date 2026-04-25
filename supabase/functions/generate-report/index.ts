@@ -145,7 +145,8 @@ Produis une analyse complète en utilisant l'outil generate_report.
 - soft_skills : 3 à 6 entrées, chacune avec quote ET evidence_message_id obligatoires.
 - red_flags : signaux à creuser avec evidence (citation) et evidence_message_id — vide si rien à signaler.
 - motivation_scores : sous-scores 0-100 + une evidence courte par sous-score quand pertinent.
-- followup_questions : 3 à 5 questions précises à poser en entretien physique.`;
+- followup_questions : 3 à 5 questions précises à poser en entretien physique.
+- highlights : sélectionne 3 moments forts à montrer au recruteur. Chaque entrée doit pointer une question (question_index = numéro 0-based de la question), un kind parmi "force" | "personnalite" | "vigilance", un label court (max 60 caractères) qui décrit le moment ("Exemple concret de leadership", "Hésitation sur la motivation"…), une phrase why qui explique pourquoi ce moment est intéressant, et des bornes start_seconds / end_seconds **dans la réponse vidéo de cette question** (commence à 0 = début de la réponse du candidat, durée entre 10 et 30 secondes). Diversifie les kind autant que possible : idéalement 1 force, 1 trait de personnalité, 1 point de vigilance. Si la session ne contient pas de point de vigilance, mets une 2e force ou personnalité.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -347,6 +348,22 @@ Produis une analyse complète en utilisant l'outil generate_report.
                       required: ["question"],
                     },
                   },
+                  highlights: {
+                    type: "array",
+                    description: "3 moments forts à mettre en avant dans le best-of",
+                    items: {
+                      type: "object",
+                      properties: {
+                        question_index: { type: "integer", description: "Index 0-based de la question" },
+                        kind: { type: "string", enum: ["force", "personnalite", "vigilance"] },
+                        label: { type: "string", description: "Titre court du moment, max 60 caractères" },
+                        why: { type: "string", description: "Pourquoi ce moment est intéressant à regarder" },
+                        start_seconds: { type: "number", description: "Début de l'extrait dans la réponse (en secondes)" },
+                        end_seconds: { type: "number", description: "Fin de l'extrait (en secondes)" },
+                      },
+                      required: ["question_index", "kind", "label", "start_seconds", "end_seconds"],
+                    },
+                  },
                 },
                 required: [
                   "executive_summary",
@@ -477,24 +494,66 @@ Produis une analyse complète en utilisant l'outil generate_report.
       }
     }
 
-    // Top 3 highlights : on essaie d'abord par question_id, fallback sur l'index
+    // Highlights : on privilégie la sélection IA (3 moments variés avec bornes
+    // précises). Si l'IA ne renvoie rien d'exploitable, fallback sur l'ancienne
+    // logique (top 3 par score, 0–20 s).
+    const findVideoForHighlight = (questionIndex: number, questionId?: string) => {
+      if (questionId && videoByQuestionId.get(questionId)) return videoByQuestionId.get(questionId);
+      return mainAnswerVideos[questionIndex] || candidateVideos[questionIndex];
+    };
+
+    const aiHighlights = Array.isArray(parsed.highlights) ? parsed.highlights : [];
+    const ALLOWED_KINDS = new Set(["force", "personnalite", "vigilance"]);
     const highlightClips: Array<Record<string, unknown>> = [];
-    for (const [key, val] of sortedEvals) {
-      const idx = parseInt(key);
-      const video =
-        (val?.question_id && videoByQuestionId.get(val.question_id)) ||
-        mainAnswerVideos[idx] ||
-        candidateVideos[idx];
-      if (video?.video_segment_url) {
-        highlightClips.push({
-          video_url: video.video_segment_url,
-          question: val?.question ?? `Question ${idx + 1}`,
-          score: Number(val?.score) || 0,
-          question_index: idx,
-          max_seconds: 20,
-        });
+
+    for (const h of aiHighlights) {
+      const idx = Number(h?.question_index);
+      if (!Number.isFinite(idx) || idx < 0) continue;
+      const evalEntry = questionEvals[String(idx)];
+      const video = findVideoForHighlight(idx, evalEntry?.question_id);
+      if (!video?.video_segment_url) continue;
+
+      let start = Number(h?.start_seconds);
+      let end = Number(h?.end_seconds);
+      if (!Number.isFinite(start) || start < 0) start = 0;
+      if (!Number.isFinite(end) || end <= start || end - start > 60) {
+        end = start + 20;
       }
+
+      const kind = ALLOWED_KINDS.has(h?.kind) ? h.kind : "force";
+
+      highlightClips.push({
+        video_url: video.video_segment_url,
+        question: evalEntry?.question ?? `Question ${idx + 1}`,
+        score: Number(evalEntry?.score) || 0,
+        question_index: idx,
+        kind,
+        label: typeof h?.label === "string" ? h.label.slice(0, 80) : null,
+        why: typeof h?.why === "string" ? h.why : null,
+        start_seconds: start,
+        end_seconds: end,
+      });
       if (highlightClips.length >= 3) break;
+    }
+
+    // Fallback : si l'IA n'a rien produit, on garde la sélection top 3 par score
+    if (highlightClips.length === 0) {
+      for (const [key, val] of sortedEvals) {
+        const idx = parseInt(key);
+        const video = findVideoForHighlight(idx, val?.question_id);
+        if (video?.video_segment_url) {
+          highlightClips.push({
+            video_url: video.video_segment_url,
+            question: val?.question ?? `Question ${idx + 1}`,
+            score: Number(val?.score) || 0,
+            question_index: idx,
+            start_seconds: 0,
+            end_seconds: 20,
+            max_seconds: 20,
+          });
+        }
+        if (highlightClips.length >= 3) break;
+      }
     }
 
     const stats = {
