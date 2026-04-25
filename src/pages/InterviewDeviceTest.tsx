@@ -47,27 +47,18 @@ export default function InterviewDeviceTest() {
     (async () => {
       const { data } = await supabase
         .from("projects")
-        .select("pre_session_message, job_title, title, organizations(name)")
+        .select("pre_session_message")
         .eq("slug", slug)
         .maybeSingle();
-      const d = data as
-        | {
-            pre_session_message?: string | null;
-            job_title?: string | null;
-            title?: string | null;
-            organizations?: { name?: string | null } | null;
-          }
-        | null;
+      const d = data as { pre_session_message?: string | null } | null;
       if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
-      setJobTitle(d?.job_title?.trim() || d?.title?.trim() || "");
-      setOrgName(d?.organizations?.name?.trim() || "");
     })();
   }, [slug]);
 
-  // Auto-avance dès que micro + caméra sont OK ET consentement coché
+  // Auto-avance dès que micro + caméra sont OK
   useEffect(() => {
     if (autoAdvancedRef.current) return;
-    if (micStatus === "ok" && camStatus === "ok" && consentChecked) {
+    if (micStatus === "ok" && camStatus === "ok") {
       autoAdvancedRef.current = true;
       const t = setTimeout(() => {
         handleContinue();
@@ -75,7 +66,7 @@ export default function InterviewDeviceTest() {
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [micStatus, camStatus, consentChecked]);
+  }, [micStatus, camStatus]);
 
   const stopAll = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
