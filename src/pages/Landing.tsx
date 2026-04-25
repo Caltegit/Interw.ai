@@ -215,21 +215,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Tutoriel — création d'une session */}
-      <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-14">
-          <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            {"\n"}
-          </p>
-          <div
-            className="mt-8 overflow-hidden rounded-lg"
-            style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
-          >
-            <TutoVideo />
-          </div>
-        </div>
-      </section>
-
       {/* Why */}
       <section id="why" className="border-t landing-divider">
         <div className="mx-auto max-w-6xl px-6 py-24">
@@ -264,6 +249,21 @@ export default function Landing() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Tutoriel — création d'une session */}
+      <section className="border-t landing-divider">
+        <div className="mx-auto max-w-5xl px-6 py-14">
+          <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
+            {"\n"}
+          </p>
+          <div
+            className="mt-8 overflow-hidden rounded-lg"
+            style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
+          >
+            <TutoVideo />
           </div>
         </div>
       </section>
