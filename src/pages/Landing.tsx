@@ -101,9 +101,9 @@ export default function Landing() {
             </Link>
           </div>
           <div className="landing-fade-up landing-delay-3 mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Sans carte bancaire</span>
+            <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> RGPD</span>
             <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Hébergement européen</span>
-            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Mise en route en 10 min</span>
+            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Setup en 10 min</span>
           </div>
 
           {/* Mock product card */}
@@ -113,7 +113,7 @@ export default function Landing() {
                 <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
                 <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-                <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>interw.ai/session</span>
+                <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>Session en cours...</span>
               </div>
               <div className="grid gap-6 p-6 md:grid-cols-[1fr_280px]">
                 <div className="relative aspect-video overflow-hidden rounded-lg" style={{ border: "1px solid hsl(var(--l-border))" }}>
