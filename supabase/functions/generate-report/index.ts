@@ -124,6 +124,7 @@ ${fullText}
 Produis une analyse complète en utilisant l'outil generate_report.
 - executive_summary : 3-5 phrases bilan global
 - executive_summary_short : UNE phrase de 30 secondes (max 200 caractères) qui dit l'essentiel au recruteur pressé
+- question_evaluations : OBLIGATOIRE — produis une entrée par question posée, indexée par "0", "1", "2"… correspondant à l'ordre ci-dessus. Chaque entrée doit contenir : question (texte exact), score (0-10), comment (1-2 phrases factuelles). Même si la réponse est très courte ou absente, donne un score (0 si pas de réponse) et un commentaire expliquant ce constat.
 - personality_profile : scores Big Five 0-100 + courte interprétation par axe (basée sur la transcription, pas un test psychométrique formel)
 - soft_skills : 3 à 6 soft skills observées, chacune avec une CITATION EXACTE du candidat comme preuve
 - red_flags : signaux à creuser (incohérences, évasivité, manque d'exemples concrets, etc.) — vide si rien à signaler
