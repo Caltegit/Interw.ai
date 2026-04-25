@@ -14,10 +14,6 @@ export default function InterviewDeviceTest() {
   const navigate = useNavigate();
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
-  const [jobTitle, setJobTitle] = useState<string>("");
-  const [orgName, setOrgName] = useState<string>("");
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
