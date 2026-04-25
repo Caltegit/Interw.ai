@@ -2269,6 +2269,45 @@ export default function InterviewStart() {
     })();
   };
 
+  // Annulation totale : appel edge function qui supprime tout, puis redirection
+  const cancelInterview = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      // Stop tout media local
+      try {
+        if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+          questionRecorderRef.current.stop();
+        }
+      } catch { /* ignore */ }
+      try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+      try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+
+      const { error } = await supabase.functions.invoke("cancel-session", {
+        body: { sessionToken: token },
+      });
+      if (error) {
+        logger.error("interview_cancel_failed", { error: error.message ?? String(error) });
+        toast({
+          title: "Erreur",
+          description: "Impossible d'annuler. Veuillez réessayer.",
+          variant: "destructive",
+        });
+        setCancelling(false);
+        return;
+      }
+      navigate("/session/cancelled", { replace: true });
+    } catch (e) {
+      logger.error("interview_cancel_failed", { error: e instanceof Error ? e.message : String(e) });
+      toast({
+        title: "Erreur",
+        description: "Impossible d'annuler. Veuillez réessayer.",
+        variant: "destructive",
+      });
+      setCancelling(false);
+    }
+  };
+
   // Keep endInterviewRef in sync
   useEffect(() => {
     endInterviewRef.current = endInterview;
