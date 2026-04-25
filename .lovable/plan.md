@@ -1,25 +1,23 @@
-## Objectif
-Supprimer la cause racine du bug pause/reprise plutôt que d'essayer de le rattraper : interdire la mise en pause pendant que l'IA parle ou qu'un média de question est en lecture.
+## Problème
+Dans `src/pages/InterviewLanding.tsx`, le bouton « Passer » (ainsi que les autres chemins de sortie de l'écran d'intro) appelle `handleProceedToInterview` qui navigue directement vers la session sans arrêter le média en cours. Résultat : l'audio recruteur, la vidéo ou la TTS ElevenLabs continue à jouer après la navigation.
 
-## Constat
-- Le bug n'apparaît que lorsque la pause est déclenchée pendant la lecture TTS / média (état `isSpeaking = true`).
-- Dans ce cas, le snapshot de reprise doit rejouer du média et relancer la STT, et un état intermédiaire (`isProcessing`, `isSpeaking`) reste parfois figé → le bouton « Ma réponse est terminée » ne réapparaît pas.
-- Pendant la phase d'écoute du candidat, en revanche, la pause/reprise fonctionne sans souci (rien à rejouer côté IA).
+## Correctif (1 fichier)
 
-## Changement (1 seul fichier)
+**`src/pages/InterviewLanding.tsx`** — fonction `handleProceedToInterview` (ligne 160) :
 
-**`src/pages/InterviewStart.tsx`** — bouton « Mettre en pause » (≈ ligne 3002) :
+Avant la navigation, arrêter proprement les trois sources possibles :
 
-1. Ajouter `disabled={isSpeaking || isProcessing}` sur le `<Button>`.
-2. Ajouter `disabled:opacity-40 disabled:cursor-not-allowed` à la classe.
-3. Ajouter un `title` discret : « Disponible pendant votre réponse ».
-4. Garder la pause automatique sur silence prolongé telle quelle — elle ne se déclenche déjà que pendant l'écoute, donc sans risque.
+1. `introAudioRef.current` → `pause()` + `currentTime = 0`.
+2. `introVideoRef.current` → `pause()` + `currentTime = 0`.
+3. `ttsAudioRef.current` → `pause()`, `src = ""`, puis libérer (la révocation de l'`objectURL` se fait déjà dans `onended`, on ajoute un `URL.revokeObjectURL` défensif si `src` était un blob).
+4. Réinitialiser `mediaPlaying` et `ttsLoading` à `false` pour éviter tout état résiduel si l'utilisateur revient.
 
-## Hors périmètre (volontairement)
-- On ne touche pas à la logique interne de `pauseInterview` / `resumeInterview` : pas de régression possible sur les cas qui marchent déjà.
-- Pas de watchdog supplémentaire ni de lien d'urgence dans l'overlay.
+Le tout encapsulé dans un `try/catch` silencieux (les refs peuvent être nulles selon le mode d'intro).
+
+## Hors périmètre
+- Pas de modification du flux de session ni des autres écrans.
+- Pas de changement visuel sur le bouton « Passer ».
 
 ## Validation
-- Pendant que l'IA pose une question (TTS ou média) → bouton « Mettre en pause » grisé.
-- Dès que le bouton « Ma réponse est terminée » apparaît → bouton de pause cliquable.
-- Reprise après pause → le bouton « Ma réponse est terminée » revient correctement (cas déjà fiable).
+- Démarrer une intro audio → cliquer « Passer » pendant la lecture → l'audio s'arrête immédiatement.
+- Idem pour vidéo et TTS ElevenLabs.
