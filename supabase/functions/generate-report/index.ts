@@ -385,6 +385,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
     const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
       executive_summary: parsed.executive_summary || "",
+      executive_summary_short: parsed.executive_summary_short || null,
       overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
       overall_grade: parsed.overall_grade || null,
       recommendation: parsed.recommendation || null,
@@ -392,6 +393,11 @@ Produis une analyse complète en utilisant l'outil generate_report.
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
       question_evaluations: parsed.question_evaluations || {},
+      personality_profile: parsed.personality_profile || null,
+      soft_skills: parsed.soft_skills || null,
+      red_flags: parsed.red_flags || null,
+      motivation_scores: parsed.motivation_scores || null,
+      followup_questions: parsed.followup_questions || null,
       highlight_clips: highlightClips,
       stats,
     }).select("id").single();
