@@ -3,8 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2, Sparkles } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
+import ConsentDialog from "@/components/interview/ConsentDialog";
 
 type Status = "idle" | "testing" | "ok" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
