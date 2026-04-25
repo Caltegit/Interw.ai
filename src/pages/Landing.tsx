@@ -217,7 +217,7 @@ export default function Landing() {
 
       {/* Why */}
       <section id="why" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 pt-5 pb-24">
+        <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
           <div className="grid gap-12 md:grid-cols-2 md:items-center">
             <div>
               <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
@@ -255,7 +255,7 @@ export default function Landing() {
 
       {/* Tutoriel — création d'une session */}
       <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-14">
+        <div className="mx-auto max-w-5xl px-6 py-20">
           <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
             {"\n"}
           </p>
@@ -295,7 +295,7 @@ export default function Landing() {
 
       {/* Features */}
       <section id="features" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
               Fonctionnalités
@@ -331,7 +331,7 @@ export default function Landing() {
 
       {/* How */}
       <section id="how" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 py-24">
+        <div className="mx-auto max-w-6xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
               Fonctionnement
@@ -362,7 +362,7 @@ export default function Landing() {
 
       {/* Comparatif */}
       <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-24">
+        <div className="mx-auto max-w-5xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
               Comparatif
@@ -406,7 +406,7 @@ export default function Landing() {
 
       {/* Pricing */}
       <section id="pricing" className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-24">
+        <div className="mx-auto max-w-5xl px-6 py-20">
           <div className="mx-auto max-w-2xl text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
               Tarifs
@@ -507,7 +507,7 @@ export default function Landing() {
 
       {/* FAQ */}
       <section id="faq" className="border-t landing-divider">
-        <div className="mx-auto max-w-3xl px-6 py-24">
+        <div className="mx-auto max-w-3xl px-6 py-20">
           <div className="text-center">
             <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
               Questions fréquentes
@@ -566,7 +566,7 @@ export default function Landing() {
 
       {/* CTA */}
       <section className="border-t landing-divider">
-        <div className="mx-auto max-w-4xl px-6 py-28 text-center">
+        <div className="mx-auto max-w-4xl px-6 py-20 text-center">
           <h2 className="text-4xl font-semibold md:text-5xl landing-gradient-text">
             Prêt à transformer vos entretiens ?
           </h2>
