@@ -1,0 +1,1 @@
+DELETE FROM reports WHERE session_id = 'f3632288-da28-46a8-be5a-54b784cf6d2e';
