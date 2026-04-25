@@ -3072,20 +3072,82 @@ export default function InterviewStart() {
         )}
       </div>
 
-      <Dialog open={showEndDialog} onOpenChange={setShowEndDialog}>
+      <Dialog open={showEndDialog} onOpenChange={(o) => !cancelling && setShowEndDialog(o)}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
           <DialogHeader>
-            <DialogTitle>Terminer la session ?</DialogTitle>
+            <DialogTitle>Arrêter la session ?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Êtes-vous sûr de vouloir mettre fin à la session ? Cette action est irréversible.
+            Choisissez ce que vous souhaitez faire de cet entretien :
+          </p>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              className="w-full min-h-[52px] justify-start"
+              onClick={() => {
+                setShowEndDialog(false);
+                endInterview();
+              }}
+            >
+              <Send className="mr-2 h-4 w-4 shrink-0" />
+              <span className="text-left">Terminer et envoyer mes réponses</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full min-h-[52px] justify-start border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => {
+                setShowEndDialog(false);
+                setShowCancelConfirm(true);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4 shrink-0" />
+              <span className="text-left">Annuler et tout supprimer</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full min-h-[44px]"
+              onClick={() => setShowEndDialog(false)}
+            >
+              Continuer la session
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCancelConfirm} onOpenChange={(o) => !cancelling && setShowCancelConfirm(o)}>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression totale</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Toutes vos données — vidéo, audio, transcription et analyse — seront définitivement supprimées de nos
+            serveurs. Cette action est irréversible.
           </p>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <Button variant="outline" className="w-full sm:w-auto min-h-[44px]" onClick={() => setShowEndDialog(false)}>
-              Continuer
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto min-h-[44px]"
+              onClick={() => setShowCancelConfirm(false)}
+              disabled={cancelling}
+            >
+              Retour
             </Button>
-            <Button variant="destructive" className="w-full sm:w-auto min-h-[44px]" onClick={endInterview}>
-              Terminer
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto min-h-[44px]"
+              onClick={cancelInterview}
+              disabled={cancelling}
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Tout supprimer
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
