@@ -1383,6 +1383,15 @@ export default function InterviewStart() {
       return;
     }
 
+    // Traçabilité légale du consentement (best-effort, non bloquant)
+    if (token && !session.consent_accepted_at) {
+      supabase
+        .from("sessions")
+        .update({ consent_accepted_at: new Date().toISOString() })
+        .eq("token", token)
+        .then(() => {});
+    }
+
     // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
     if (window.speechSynthesis) {
       try {
