@@ -145,7 +145,8 @@ Produis une analyse complète en utilisant l'outil generate_report.
 - soft_skills : 3 à 6 entrées, chacune avec quote ET evidence_message_id obligatoires.
 - red_flags : signaux à creuser avec evidence (citation) et evidence_message_id — vide si rien à signaler.
 - motivation_scores : sous-scores 0-100 + une evidence courte par sous-score quand pertinent.
-- followup_questions : 3 à 5 questions précises à poser en entretien physique.`;
+- followup_questions : 3 à 5 questions précises à poser en entretien physique.
+- highlights : sélectionne 3 moments forts à montrer au recruteur. Chaque entrée doit pointer une question (question_index = numéro 0-based de la question), un kind parmi "force" | "personnalite" | "vigilance", un label court (max 60 caractères) qui décrit le moment ("Exemple concret de leadership", "Hésitation sur la motivation"…), une phrase why qui explique pourquoi ce moment est intéressant, et des bornes start_seconds / end_seconds **dans la réponse vidéo de cette question** (commence à 0 = début de la réponse du candidat, durée entre 10 et 30 secondes). Diversifie les kind autant que possible : idéalement 1 force, 1 trait de personnalité, 1 point de vigilance. Si la session ne contient pas de point de vigilance, mets une 2e force ou personnalité.
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
