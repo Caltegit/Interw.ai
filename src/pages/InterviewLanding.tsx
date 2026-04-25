@@ -157,7 +157,37 @@ export default function InterviewLanding() {
     setMediaFinished(true);
   };
 
+  const stopAllIntroMedia = () => {
+    try {
+      const a = introAudioRef.current;
+      if (a) {
+        a.pause();
+        a.currentTime = 0;
+      }
+    } catch {}
+    try {
+      const v = introVideoRef.current;
+      if (v) {
+        v.pause();
+        v.currentTime = 0;
+      }
+    } catch {}
+    try {
+      const t = ttsAudioRef.current;
+      if (t) {
+        t.pause();
+        const src = t.src;
+        t.src = "";
+        if (src && src.startsWith("blob:")) URL.revokeObjectURL(src);
+        ttsAudioRef.current = null;
+      }
+    } catch {}
+    setMediaPlaying(false);
+    setTtsLoading(false);
+  };
+
   const handleProceedToInterview = () => {
+    stopAllIntroMedia();
     if (sessionToken) {
       navigate(`/session/${slug}/test/${sessionToken}`);
     }
