@@ -217,7 +217,7 @@ export default function Landing() {
 
       {/* Why */}
       <section id="why" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 pt-10 pb-24">
+        <div className="mx-auto max-w-6xl px-6 pt-5 pb-24">
           <div className="grid gap-12 md:grid-cols-2 md:items-center">
             <div>
               <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
