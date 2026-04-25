@@ -71,6 +71,7 @@ export interface ProjectFormState {
   autoSkipSilence: boolean;
   allowPause: boolean;
   completionMessage: string;
+  preSessionMessage: string;
 }
 
 export function mergeTemplateIntoState(
