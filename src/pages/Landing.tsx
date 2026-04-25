@@ -82,7 +82,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 pt-24 pb-28 text-center md:pt-32 md:pb-36">
           <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "hsl(var(--l-border))", color: "hsl(var(--l-fg-dim))" }}>
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--l-accent))" }} />
-            Nouveau · Sessions vidéo IA pour les équipes RH
+            L'outil d'entretien IA pour les équipes de recrutement
           </div>
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
             <span className="landing-gradient-text">Présélectionnez 10× plus vite.</span>
@@ -90,8 +90,7 @@ export default function Landing() {
             <span className="landing-accent-text">Sans perdre en qualité.</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Interw.ai mène vos entretiens de présélection à votre place : une IA conversationnelle interroge vos candidats,
-            note les réponses sur vos critères et vous remet un rapport complet.
+            Gagnez du temps en menant vos premiers entretiens grace à une IA conversationnelle qui interroge vos candidats, note les réponses sur vos critères et vous remet un rapport complet.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
