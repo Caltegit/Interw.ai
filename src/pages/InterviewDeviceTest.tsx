@@ -364,6 +364,14 @@ export default function InterviewDeviceTest() {
           </CardContent>
         </Card>
 
+        {/* Pre-session encouragement message */}
+        {preSessionMessage && (
+          <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 animate-fade-in">
+            <Sparkles className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+            <p className="text-sm text-foreground leading-relaxed">{preSessionMessage}</p>
+          </div>
+        )}
+
         {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
