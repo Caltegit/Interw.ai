@@ -101,6 +101,9 @@ const InterviewReportEmail = ({
   overallGrade,
   recommendation,
   executiveSummary = '',
+  executiveSummaryShort = null,
+  personalityProfile = null,
+  followupQuestions = null,
   strengths = [],
   areasForImprovement = [],
   criteriaScores = {},
@@ -111,6 +114,11 @@ const InterviewReportEmail = ({
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
   const questionList = Object.values(questionEvaluations)
+  const personalityEntries = personalityProfile
+    ? (Object.keys(BIG_FIVE_LABELS) as Array<keyof PersonalityProfile>)
+        .map((k) => ({ key: k, label: BIG_FIVE_LABELS[k], trait: personalityProfile[k] }))
+        .filter((e) => e.trait && typeof e.trait.score === 'number')
+    : []
 
   return (
     <Html lang="fr" dir="ltr">
