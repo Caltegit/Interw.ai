@@ -359,3 +359,17 @@ const cardTitle = { fontSize: '14px', color: '#111827', margin: '0 0 4px', fontW
 const cardText = { fontSize: '13px', color: '#4b5563', lineHeight: '1.5', margin: '4px 0 0' }
 const hr = { borderColor: '#e5e7eb', margin: '24px 0' }
 const footer = { fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '16px 0 0' }
+const shortSummaryBox = {
+  backgroundColor: '#FEF3C7',
+  borderLeft: `4px solid ${PRIMARY}`,
+  borderRadius: '6px',
+  padding: '12px 16px',
+  margin: '0 0 16px',
+}
+const shortSummaryLabel = { fontSize: '12px', fontWeight: 'bold' as const, color: PRIMARY, margin: '0 0 4px', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }
+const shortSummaryText = { fontSize: '15px', color: '#111827', margin: '0', lineHeight: '1.5', fontWeight: 500 as const }
+const traitRow = { margin: '0 0 12px', padding: '0' }
+const traitLabel = { fontSize: '13px', color: '#374151', margin: '0' }
+const traitText = { fontSize: '12px', color: '#6b7280', margin: '4px 0 0', lineHeight: '1.5' }
+const barTrack = { backgroundColor: '#E5E7EB', borderRadius: '4px', height: '6px', width: '100%', overflow: 'hidden' as const }
+const barFill = { backgroundColor: PRIMARY, height: '6px', borderRadius: '4px' }
