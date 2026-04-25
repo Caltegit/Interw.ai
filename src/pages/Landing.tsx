@@ -413,7 +413,14 @@ export default function Landing() {
                   </div>
                 )}
                 <h3 className="text-lg font-semibold">{p.name}</h3>
-                <div className="mt-3 text-3xl font-semibold landing-gradient-text">{p.price}</div>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-semibold landing-gradient-text">{p.price}</span>
+                  {p.priceSuffix && (
+                    <span className="text-sm font-normal" style={{ color: "hsl(var(--l-fg-dim))" }}>
+                      {p.priceSuffix}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{p.desc}</p>
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => (
