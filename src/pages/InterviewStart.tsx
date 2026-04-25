@@ -2570,8 +2570,26 @@ export default function InterviewStart() {
                 <span>Préparation de la session…</span>
               </div>
             )}
+            <p className="text-center text-xs" style={{ color: "hsl(var(--l-fg) / 0.6)" }}>
+              En cliquant, j'accepte les{" "}
+              <button
+                type="button"
+                onClick={() => setConsentDialogOpen(true)}
+                className="underline hover:opacity-80"
+                style={{ color: "hsl(var(--l-accent))" }}
+              >
+                conditions générales
+              </button>
+              .
+            </p>
           </CardContent>
         </Card>
+        <ConsentDialog
+          open={consentDialogOpen}
+          onOpenChange={setConsentDialogOpen}
+          jobTitle={project?.job_title || project?.title || ""}
+          orgName={project?.organizations?.name || ""}
+        />
       </CandidateLayout>
     );
   }
