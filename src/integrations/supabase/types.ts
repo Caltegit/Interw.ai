@@ -633,6 +633,7 @@ export type Database = {
           language: Database["public"]["Enums"]["project_language"]
           max_duration_minutes: number
           organization_id: string
+          pre_session_message: string | null
           presentation_video_url: string | null
           record_audio: boolean
           record_video: boolean
@@ -663,6 +664,7 @@ export type Database = {
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number
           organization_id: string
+          pre_session_message?: string | null
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
@@ -693,6 +695,7 @@ export type Database = {
           language?: Database["public"]["Enums"]["project_language"]
           max_duration_minutes?: number
           organization_id?: string
+          pre_session_message?: string | null
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
