@@ -67,7 +67,7 @@ export default function Landing() {
           </nav>
           <div className="flex items-center gap-3">
             <Link to="/login" className="text-sm hover:text-white transition-colors" style={{ color: "hsl(var(--l-fg-dim))" }}>
-              Connexion
+              Se connecter
             </Link>
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
               Demander une démo <ArrowRight className="h-3.5 w-3.5" />
