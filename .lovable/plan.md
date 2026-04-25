@@ -1,27 +1,26 @@
-## Objectif
-Sur la page d'accueil (site vitrine), afficher l'image fournie comme première vignette de la vidéo tuto et superposer un gros bouton play pour signaler clairement qu'il s'agit d'une vidéo.
+## Problème
+
+Dans l'onglet **Vidéo complète** du rapport, seul le 1er segment vidéo s'affiche. C'est normal : `sessions.video_recording_url` n'est rempli qu'avec le **premier** segment candidat (cf. `InterviewStart.tsx` ligne 1728 : `if (!sessRow.video_recording_url)`). Il n'existe pas de fichier vidéo unique fusionné — chaque réponse est stockée séparément dans `session_messages.video_segment_url`.
+
+## Solution
+
+Reconstituer la "vidéo complète" en lisant les segments candidat **en séquence**, avec un menu de chapitres cliquables (une question = un chapitre).
 
 ## Modifications
 
-### 1. Ajouter l'image dans `public/`
-- Copier `user-uploads://Capture_d_écran_2026-04-25_à_21.40.35.png` vers `public/tuto-poster.png`
-- Référencée directement par le `<video poster="/tuto-poster.png">` (pas d'import ES6 nécessaire pour l'attribut HTML natif).
+**`src/pages/SessionDetail.tsx`** — onglet `full-video` (lignes 382-399) :
 
-### 2. Mettre à jour `src/pages/Landing.tsx` (section ligne 154-173)
-- Créer un petit composant local `TutoVideo` (dans le même fichier) avec `useState` + `useRef` :
-  - État `started` (false par défaut).
-  - Tant que `!started` : affiche l'image poster + un overlay sombre léger + un gros bouton play circulaire centré (icône `Play` de lucide-react, déjà utilisée dans le projet).
-  - Au clic sur le bouton : `setStarted(true)`, puis `videoRef.current?.play()`.
-  - Une fois démarré : la vidéo native s'affiche avec ses `controls`.
-- Garder `playsInline`, `preload="metadata"`, `poster="/tuto-poster.png"` sur la balise `<video>` pour que l'image soit visible aussi dans les aperçus natifs.
-- Aspect ratio préservé via `aspect-video` pour éviter le saut de hauteur.
+1. Créer un nouveau composant local `FullVideoPlayer` qui reçoit `questionItems` (déjà calculé, contient `{ video, questionText, index }` pour chaque réponse principale).
+2. Comportement :
+   - Un seul `<video>` en haut (aspect-video, contrôles natifs).
+   - State `currentIndex` ; `src = questionItems[currentIndex].video.video_segment_url`.
+   - Sur `onEnded` → passer automatiquement au segment suivant (autoplay du suivant).
+   - Sous la vidéo : liste numérotée des questions cliquables ("Q1 · texte de la question"), avec mise en évidence de la question en cours (background `bg-muted`, bordure gauche primary).
+   - Clic sur une question → change `currentIndex` + force `play()`.
+3. Fallback : si `questionItems` est vide → message "Vidéo complète indisponible".
+4. Garder l'ancien fallback `session.video_recording_url` uniquement si aucun segment n'existe (peu probable mais sûr).
 
-### 3. Style du bouton play
-- Cercle ~80px, fond blanc semi-transparent + blur léger, icône `Play` indigo, ombre douce.
-- Hover : légère mise à l'échelle (transform inline, sans `transition-*` Tailwind interdit ? — autorisé ici, on est sur le site React classique, pas Remotion).
+## Hors scope
 
-## Fichiers touchés
-- `public/tuto-poster.png` (nouveau)
-- `src/pages/Landing.tsx` (remplacement du bloc `<video>` par `<TutoVideo />` + définition du composant)
-
-Aucune modification backend, aucune dépendance ajoutée.
+- Pas de fusion serveur des segments (coûteuse, nécessiterait ffmpeg edge function — à proposer plus tard si besoin d'un vrai fichier téléchargeable unique).
+- Pas de changement DB.

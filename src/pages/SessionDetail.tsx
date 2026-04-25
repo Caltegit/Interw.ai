@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -382,18 +382,10 @@ export default function SessionDetail() {
             <TabsContent value="full-video" className="mt-4">
               <Card>
                 <CardContent className="pt-6">
-                  {session.video_recording_url ? (
-                    <video
-                      src={session.video_recording_url}
-                      controls
-                      preload="metadata"
-                      className="w-full rounded-lg bg-black aspect-video object-contain"
-                    />
-                  ) : (
-                    <p className="py-8 text-center text-sm text-muted-foreground">
-                      Vidéo complète indisponible pour cette session.
-                    </p>
-                  )}
+                  <FullVideoPlayer
+                    items={questionItems}
+                    fallbackUrl={session.video_recording_url}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
