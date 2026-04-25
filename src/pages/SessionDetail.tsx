@@ -152,7 +152,7 @@ export default function SessionDetail() {
     );
   if (!session) return <p>Session introuvable.</p>;
 
-  const project = session.projects;
+  
 
   return (
     <div className="space-y-6">
