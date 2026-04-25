@@ -28,6 +28,24 @@ interface SessionStats {
   best_question_score?: number
 }
 
+interface PersonalityTrait {
+  score?: number
+  interpretation?: string
+}
+
+interface PersonalityProfile {
+  openness?: PersonalityTrait
+  conscientiousness?: PersonalityTrait
+  extraversion?: PersonalityTrait
+  agreeableness?: PersonalityTrait
+  emotional_stability?: PersonalityTrait
+}
+
+interface FollowupQuestion {
+  question: string
+  rationale?: string
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
@@ -37,6 +55,9 @@ interface InterviewReportProps {
   overallGrade?: string | null
   recommendation?: string | null
   executiveSummary?: string
+  executiveSummaryShort?: string | null
+  personalityProfile?: PersonalityProfile | null
+  followupQuestions?: FollowupQuestion[] | null
   strengths?: string[]
   areasForImprovement?: string[]
   criteriaScores?: Record<string, CriteriaScore>
@@ -44,6 +65,14 @@ interface InterviewReportProps {
   reportUrl?: string
   highlightsUrl?: string | null
   stats?: SessionStats
+}
+
+const BIG_FIVE_LABELS: Record<keyof PersonalityProfile, string> = {
+  openness: 'Ouverture',
+  conscientiousness: 'Rigueur',
+  extraversion: 'Extraversion',
+  agreeableness: 'Coopération',
+  emotional_stability: 'Stabilité émotionnelle',
 }
 
 const recommendationLabel = (r?: string | null) => {
