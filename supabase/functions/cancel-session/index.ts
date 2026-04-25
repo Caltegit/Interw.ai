@@ -9,7 +9,8 @@ interface Body {
   sessionToken?: string;
 }
 
-const STORAGE_BUCKETS = ["session-recordings", "interview-recordings", "recordings"];
+const STORAGE_BUCKET = "media";
+const STORAGE_PREFIX = "interviews"; // structure: interviews/{sessionId}/...
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -59,33 +60,16 @@ Deno.serve(async (req) => {
       .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
       .eq("id", sessionId);
 
-    // 3. Supprimer fichiers storage de tous les buckets potentiels
-    for (const bucket of STORAGE_BUCKETS) {
-      try {
-        const { data: files } = await admin.storage.from(bucket).list(sessionId, { limit: 1000 });
-        if (files && files.length > 0) {
-          const paths = files.map((f) => `${sessionId}/${f.name}`);
-          await admin.storage.from(bucket).remove(paths);
-        }
-        // Sous-dossiers éventuels
-        const { data: subdirs } = await admin.storage.from(bucket).list(sessionId, { limit: 100 });
-        if (subdirs) {
-          for (const sd of subdirs) {
-            if (sd.id === null) {
-              const { data: nested } = await admin.storage
-                .from(bucket)
-                .list(`${sessionId}/${sd.name}`, { limit: 1000 });
-              if (nested && nested.length > 0) {
-                await admin.storage
-                  .from(bucket)
-                  .remove(nested.map((f) => `${sessionId}/${sd.name}/${f.name}`));
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.warn(`[cancel-session] storage cleanup failed for bucket ${bucket}:`, e);
+    // 3. Supprimer fichiers storage : interviews/{sessionId}/*
+    try {
+      const prefix = `${STORAGE_PREFIX}/${sessionId}`;
+      const { data: files } = await admin.storage.from(STORAGE_BUCKET).list(prefix, { limit: 1000 });
+      if (files && files.length > 0) {
+        const paths = files.map((f) => `${prefix}/${f.name}`);
+        await admin.storage.from(STORAGE_BUCKET).remove(paths);
       }
+    } catch (e) {
+      console.warn(`[cancel-session] storage cleanup failed:`, e);
     }
 
     // 4. Supprimer données liées
