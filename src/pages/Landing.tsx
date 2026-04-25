@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Play,
   Video,
   X,
 } from "lucide-react";
@@ -161,13 +162,7 @@ export default function Landing() {
             className="mt-8 overflow-hidden rounded-lg"
             style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
           >
-            <video
-              src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
-              controls
-              playsInline
-              preload="metadata"
-              className="w-full h-auto"
-            />
+            <TutoVideo />
           </div>
         </div>
       </section>
@@ -544,6 +539,54 @@ export default function Landing() {
       </footer>
 
       <DemoRequestDialog open={demoOpen} onOpenChange={setDemoOpen} />
+    </div>
+  );
+}
+
+function TutoVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [started, setStarted] = useState(false);
+
+  const handlePlay = () => {
+    setStarted(true);
+    requestAnimationFrame(() => {
+      videoRef.current?.play().catch(() => {});
+    });
+  };
+
+  return (
+    <div className="relative aspect-video w-full">
+      <video
+        ref={videoRef}
+        src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
+        poster="/tuto-poster.png"
+        controls={started}
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      {!started && (
+        <button
+          type="button"
+          onClick={handlePlay}
+          aria-label="Lire la vidéo"
+          className="absolute inset-0 flex items-center justify-center group cursor-pointer"
+          style={{ background: "hsl(0 0% 0% / 0.25)" }}
+        >
+          <span
+            className="flex h-24 w-24 items-center justify-center rounded-full shadow-2xl transition-transform duration-200 group-hover:scale-110"
+            style={{
+              background: "hsl(0 0% 100% / 0.95)",
+              boxShadow: "0 20px 60px -10px hsl(var(--l-accent) / 0.6)",
+            }}
+          >
+            <Play
+              className="h-10 w-10 translate-x-0.5"
+              style={{ color: "hsl(var(--l-accent))", fill: "hsl(var(--l-accent))" }}
+            />
+          </span>
+        </button>
+      )}
     </div>
   );
 }
