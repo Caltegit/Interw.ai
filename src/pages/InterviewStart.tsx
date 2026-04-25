@@ -3004,7 +3004,13 @@ export default function InterviewStart() {
                     variant="ghost"
                     size="sm"
                     onClick={() => pauseInterview("manual")}
-                    className="gap-2 text-muted-foreground"
+                    disabled={isSpeaking || isProcessing}
+                    title={
+                      isSpeaking || isProcessing
+                        ? "Disponible pendant votre réponse"
+                        : undefined
+                    }
+                    className="gap-2 text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ color: "hsl(var(--l-fg) / 0.6)" }}
                   >
                     <Pause className="h-4 w-4" />
