@@ -19,6 +19,7 @@ import {
   Sparkles,
   Star,
   Play,
+  Volume2,
   Video,
   X,
 } from "lucide-react";
@@ -544,23 +545,70 @@ export default function Landing() {
 }
 
 function TutoVideo() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
-  const handlePlay = () => {
-    setStarted(true);
-    requestAnimationFrame(() => {
-      videoRef.current?.play().catch(() => {});
-    });
+  const startPlayback = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    v.play()
+      .then(() => setStarted(true))
+      .catch(() => {
+        /* autoplay refusé : le bouton Play reste affiché */
+      });
   };
 
+  const handleManualPlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setIsMuted(false);
+    v.play()
+      .then(() => setStarted(true))
+      .catch(() => {});
+  };
+
+  const handleUnmute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = false;
+    setIsMuted(false);
+  };
+
+  // Autoplay muet quand la vidéo entre dans le viewport, pause quand elle en sort.
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const v = videoRef.current;
+          if (!v) return;
+          if (entry.isIntersecting) {
+            if (v.paused) startPlayback();
+          } else if (!v.paused) {
+            v.pause();
+          }
+        });
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="relative aspect-video w-full">
+    <div ref={containerRef} className="relative aspect-video w-full">
       <video
         ref={videoRef}
         src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
         poster="/tuto-poster.png"
         controls={started}
+        muted
+        defaultMuted
         playsInline
         preload="metadata"
         className="absolute inset-0 h-full w-full object-cover"
@@ -568,7 +616,7 @@ function TutoVideo() {
       {!started && (
         <button
           type="button"
-          onClick={handlePlay}
+          onClick={handleManualPlay}
           aria-label="Lire la vidéo"
           className="absolute inset-0 flex items-center justify-center group cursor-pointer"
           style={{ background: "hsl(0 0% 0% / 0.25)" }}
@@ -585,6 +633,21 @@ function TutoVideo() {
               style={{ color: "hsl(var(--l-accent))", fill: "hsl(var(--l-accent))" }}
             />
           </span>
+        </button>
+      )}
+      {started && isMuted && (
+        <button
+          type="button"
+          onClick={handleUnmute}
+          className="absolute right-4 top-4 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-transform hover:scale-105"
+          style={{
+            background: "hsl(0 0% 100% / 0.95)",
+            color: "hsl(var(--l-accent))",
+            boxShadow: "0 10px 30px -10px hsl(var(--l-accent) / 0.6)",
+          }}
+        >
+          <Volume2 className="h-4 w-4" />
+          Activer le son
         </button>
       )}
     </div>
