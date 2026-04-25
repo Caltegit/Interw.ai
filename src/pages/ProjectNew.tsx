@@ -75,6 +75,7 @@ const initialState: ProjectFormState = {
   autoSkipSilence: true,
   allowPause: false,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
+  preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
 };
 
 export default function ProjectNew() {
