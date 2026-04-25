@@ -26,6 +26,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
 export const DEFAULT_COMPLETION_MESSAGE =
   "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
+export const DEFAULT_PRE_SESSION_MESSAGE =
+  "Soyez naturel·le et souriez, vous êtes filmé·e !";
 
 export type ProjectStatus = "draft" | "active" | "archived";
 
@@ -69,6 +71,7 @@ export interface ProjectFormState {
   autoSkipSilence: boolean;
   allowPause: boolean;
   completionMessage: string;
+  preSessionMessage: string;
 }
 
 export function mergeTemplateIntoState(
@@ -157,6 +160,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
+  const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
@@ -198,6 +202,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       autoSkipSilence,
       allowPause,
       completionMessage,
+      preSessionMessage,
     });
   };
 
@@ -466,6 +471,19 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label>Message juste avant la session</Label>
+                  <Textarea
+                    value={preSessionMessage}
+                    onChange={(e) => setPreSessionMessage(e.target.value)}
+                    placeholder={DEFAULT_PRE_SESSION_MESSAGE}
+                    rows={2}
+                    className="mt-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Court message d'encouragement affiché au candidat juste avant le démarrage de la session.
+                  </p>
                 </div>
                 <div>
                   <Label>Message de fin</Label>

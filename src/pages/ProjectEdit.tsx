@@ -10,6 +10,7 @@ import { getDefaultVoiceForGender, type VoiceGender } from "@/components/project
 import {
   ProjectForm,
   DEFAULT_COMPLETION_MESSAGE,
+  DEFAULT_PRE_SESSION_MESSAGE,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 
@@ -158,6 +159,8 @@ export default function ProjectEdit() {
         allowPause: (project as { allow_pause?: boolean }).allow_pause ?? false,
         completionMessage:
           (project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE,
+        preSessionMessage:
+          (project as { pre_session_message?: string | null }).pre_session_message ?? DEFAULT_PRE_SESSION_MESSAGE,
       });
 
       setLoading(false);
@@ -235,6 +238,7 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: s.completionMessage.trim() || null,
+          pre_session_message: s.preSessionMessage.trim() || null,
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,

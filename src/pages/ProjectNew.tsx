@@ -9,6 +9,7 @@ import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDial
 import {
   ProjectForm,
   DEFAULT_COMPLETION_MESSAGE,
+  DEFAULT_PRE_SESSION_MESSAGE,
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
@@ -74,6 +75,7 @@ const initialState: ProjectFormState = {
   autoSkipSilence: true,
   allowPause: false,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
+  preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
 };
 
 export default function ProjectNew() {
@@ -174,6 +176,7 @@ export default function ProjectNew() {
               ? s.introVideoPreviewUrl
               : null,
           completion_message: s.completionMessage.trim() || null,
+          pre_session_message: s.preSessionMessage.trim() || null,
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,

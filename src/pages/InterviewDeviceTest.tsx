@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2 } from "lucide-react";
+import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2, Sparkles } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
 type Status = "idle" | "testing" | "ok" | "error";
@@ -11,6 +12,8 @@ type SpeedQuality = "good" | "limited" | "weak";
 export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
+
+  const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
@@ -37,6 +40,20 @@ export default function InterviewDeviceTest() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Charger le message d'encouragement avant session depuis le projet
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("pre_session_message")
+        .eq("slug", slug)
+        .maybeSingle();
+      const msg = (data as { pre_session_message?: string | null } | null)?.pre_session_message;
+      if (msg && msg.trim()) setPreSessionMessage(msg.trim());
+    })();
+  }, [slug]);
 
   // Auto-avance dès que micro + caméra sont OK (le test réseau est informatif)
   useEffect(() => {
@@ -346,6 +363,14 @@ export default function InterviewDeviceTest() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pre-session encouragement message */}
+        {preSessionMessage && (
+          <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 animate-fade-in">
+            <Sparkles className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+            <p className="text-sm text-foreground leading-relaxed">{preSessionMessage}</p>
+          </div>
+        )}
 
         {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
