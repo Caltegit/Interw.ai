@@ -348,6 +348,22 @@ Produis une analyse complète en utilisant l'outil generate_report.
                       required: ["question"],
                     },
                   },
+                  highlights: {
+                    type: "array",
+                    description: "3 moments forts à mettre en avant dans le best-of",
+                    items: {
+                      type: "object",
+                      properties: {
+                        question_index: { type: "integer", description: "Index 0-based de la question" },
+                        kind: { type: "string", enum: ["force", "personnalite", "vigilance"] },
+                        label: { type: "string", description: "Titre court du moment, max 60 caractères" },
+                        why: { type: "string", description: "Pourquoi ce moment est intéressant à regarder" },
+                        start_seconds: { type: "number", description: "Début de l'extrait dans la réponse (en secondes)" },
+                        end_seconds: { type: "number", description: "Fin de l'extrait (en secondes)" },
+                      },
+                      required: ["question_index", "kind", "label", "start_seconds", "end_seconds"],
+                    },
+                  },
                 },
                 required: [
                   "executive_summary",
