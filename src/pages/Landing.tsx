@@ -85,12 +85,12 @@ export default function Landing() {
             L'outil d'entretien IA pour les équipes de recrutement
           </div>
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
-            <span className="landing-gradient-text">Présélectionnez 10× plus vite.</span>
+            <span className="landing-gradient-text">Fini les entretiens inutiles.</span>
             <br />
-            <span className="landing-accent-text">Sans perdre en qualité.</span>
+            <span className="landing-accent-text">Évaluez les candidats, pas leur CV.</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Gagnez du temps en menant vos premiers entretiens grace à une IA conversationnelle qui interroge vos candidats, note les réponses sur vos critères et vous remet un rapport complet.
+            Gagnez un temps précieux : l'IA vous épaule pour mener les premiers entretiens, évalue chaque candidat selon vos critères et vous livre un rapport clair.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
