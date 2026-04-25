@@ -151,18 +151,23 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Social proof — secteurs */}
+      {/* Tutoriel — création d'une session */}
       <section className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 py-14">
+        <div className="mx-auto max-w-5xl px-6 py-14">
           <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Pensé pour les équipes RH dans tous les secteurs
+            Créez votre session en quatre étapes
           </p>
-          <div className="mt-8 grid grid-cols-2 gap-4 text-center text-sm md:grid-cols-5" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            {["Conseil", "Tech & SaaS", "Retail", "Industrie", "Services"].map((s) => (
-              <div key={s} className="rounded-md py-3" style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}>
-                {s}
-              </div>
-            ))}
+          <div
+            className="mt-8 overflow-hidden rounded-lg"
+            style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
+          >
+            <video
+              src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-auto"
+            />
           </div>
         </div>
       </section>
