@@ -353,33 +353,51 @@ export default function Landing() {
               Une formule simple, adaptée à votre volume.
             </h2>
             <p className="mt-4 text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
-              Sans engagement. Tarification transparente sur devis selon le nombre d'entretiens.
+              Sans engagement. Payez uniquement ce que vous utilisez, ou passez en illimité.
             </p>
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {[
               {
-                name: "Découverte",
-                price: "Gratuit",
-                desc: "Pour tester la solution sur un poste.",
-                features: ["1 projet", "10 entretiens inclus", "Rapports détaillés", "Support par email"],
-                cta: "Demander un accès",
+                name: "Pay as you go",
+                price: "2 €",
+                priceSuffix: "/ entretien",
+                desc: "Idéal pour démarrer ou pour les recrutements ponctuels.",
+                features: [
+                  "Inscription gratuite, aucun abonnement",
+                  "Projets illimités",
+                  "Rapports IA détaillés",
+                  "Facturation à l'entretien terminé",
+                ],
+                cta: "Commencer gratuitement",
                 highlight: false,
               },
               {
-                name: "Croissance",
-                price: "Sur devis",
-                desc: "Pour les équipes RH actives.",
-                features: ["Projets illimités", "Entretiens en volume", "Bibliothèque partagée", "Support prioritaire"],
-                cta: "Parler à un expert",
+                name: "Pro",
+                price: "49 €",
+                priceSuffix: "/ mois",
+                desc: "Pour les recruteurs qui interviewent chaque semaine.",
+                features: [
+                  "Entretiens illimités",
+                  "Bibliothèque de questions et critères partagée",
+                  "Modèles d'entretien réutilisables",
+                  "Support prioritaire",
+                ],
+                cta: "Démarrer l'essai",
                 highlight: true,
               },
               {
                 name: "Entreprise",
                 price: "Sur mesure",
-                desc: "Pour les organisations exigeantes.",
-                features: ["SSO & rôles avancés", "Personnalisation IA", "DPA & engagement RGPD", "Accompagnement dédié"],
+                priceSuffix: "",
+                desc: "Pour les organisations à fort volume ou aux exigences spécifiques.",
+                features: [
+                  "Volume négocié et tarif dégressif",
+                  "SSO, rôles avancés, multi-équipes",
+                  "Personnalisation IA et voix sur mesure",
+                  "DPA, engagement RGPD, accompagnement dédié",
+                ],
                 cta: "Nous contacter",
                 highlight: false,
               },
@@ -395,7 +413,14 @@ export default function Landing() {
                   </div>
                 )}
                 <h3 className="text-lg font-semibold">{p.name}</h3>
-                <div className="mt-3 text-3xl font-semibold landing-gradient-text">{p.price}</div>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-3xl font-semibold landing-gradient-text">{p.price}</span>
+                  {p.priceSuffix && (
+                    <span className="text-sm font-normal" style={{ color: "hsl(var(--l-fg-dim))" }}>
+                      {p.priceSuffix}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{p.desc}</p>
                 <ul className="mt-5 space-y-2 text-sm">
                   {p.features.map((f) => (
