@@ -92,17 +92,6 @@ function HeroProductMock() {
       <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
       </div>
-      {showVideo && !hasUnmuted && !ended && (
-        <button
-          type="button"
-          onClick={enableSound}
-          className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-md bg-black/60 px-2.5 py-1.5 text-[11px] font-medium text-white backdrop-blur-md hover:bg-black/80 transition-colors"
-          aria-label="Activer le son"
-        >
-          <Volume2 className="h-3.5 w-3.5" />
-          Activer le son
-        </button>
-      )}
     </div>
   );
 }
