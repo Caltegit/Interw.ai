@@ -81,6 +81,7 @@ export default function InterviewStart() {
   const [session, setSession] = useState<any>(null);
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   type ChatMessage = {
     role: string;
