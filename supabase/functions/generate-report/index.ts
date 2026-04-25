@@ -494,24 +494,66 @@ Produis une analyse complète en utilisant l'outil generate_report.
       }
     }
 
-    // Top 3 highlights : on essaie d'abord par question_id, fallback sur l'index
+    // Highlights : on privilégie la sélection IA (3 moments variés avec bornes
+    // précises). Si l'IA ne renvoie rien d'exploitable, fallback sur l'ancienne
+    // logique (top 3 par score, 0–20 s).
+    const findVideoForHighlight = (questionIndex: number, questionId?: string) => {
+      if (questionId && videoByQuestionId.get(questionId)) return videoByQuestionId.get(questionId);
+      return mainAnswerVideos[questionIndex] || candidateVideos[questionIndex];
+    };
+
+    const aiHighlights = Array.isArray(parsed.highlights) ? parsed.highlights : [];
+    const ALLOWED_KINDS = new Set(["force", "personnalite", "vigilance"]);
     const highlightClips: Array<Record<string, unknown>> = [];
-    for (const [key, val] of sortedEvals) {
-      const idx = parseInt(key);
-      const video =
-        (val?.question_id && videoByQuestionId.get(val.question_id)) ||
-        mainAnswerVideos[idx] ||
-        candidateVideos[idx];
-      if (video?.video_segment_url) {
-        highlightClips.push({
-          video_url: video.video_segment_url,
-          question: val?.question ?? `Question ${idx + 1}`,
-          score: Number(val?.score) || 0,
-          question_index: idx,
-          max_seconds: 20,
-        });
+
+    for (const h of aiHighlights) {
+      const idx = Number(h?.question_index);
+      if (!Number.isFinite(idx) || idx < 0) continue;
+      const evalEntry = questionEvals[String(idx)];
+      const video = findVideoForHighlight(idx, evalEntry?.question_id);
+      if (!video?.video_segment_url) continue;
+
+      let start = Number(h?.start_seconds);
+      let end = Number(h?.end_seconds);
+      if (!Number.isFinite(start) || start < 0) start = 0;
+      if (!Number.isFinite(end) || end <= start || end - start > 60) {
+        end = start + 20;
       }
+
+      const kind = ALLOWED_KINDS.has(h?.kind) ? h.kind : "force";
+
+      highlightClips.push({
+        video_url: video.video_segment_url,
+        question: evalEntry?.question ?? `Question ${idx + 1}`,
+        score: Number(evalEntry?.score) || 0,
+        question_index: idx,
+        kind,
+        label: typeof h?.label === "string" ? h.label.slice(0, 80) : null,
+        why: typeof h?.why === "string" ? h.why : null,
+        start_seconds: start,
+        end_seconds: end,
+      });
       if (highlightClips.length >= 3) break;
+    }
+
+    // Fallback : si l'IA n'a rien produit, on garde la sélection top 3 par score
+    if (highlightClips.length === 0) {
+      for (const [key, val] of sortedEvals) {
+        const idx = parseInt(key);
+        const video = findVideoForHighlight(idx, val?.question_id);
+        if (video?.video_segment_url) {
+          highlightClips.push({
+            video_url: video.video_segment_url,
+            question: val?.question ?? `Question ${idx + 1}`,
+            score: Number(val?.score) || 0,
+            question_index: idx,
+            start_seconds: 0,
+            end_seconds: 20,
+            max_seconds: 20,
+          });
+        }
+        if (highlightClips.length >= 3) break;
+      }
     }
 
     const stats = {
