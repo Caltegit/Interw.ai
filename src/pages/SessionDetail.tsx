@@ -16,7 +16,6 @@ import {
   Play,
   FileText,
   Video,
-  Trophy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -199,47 +198,7 @@ export default function SessionDetail() {
         recommendation={report?.recommendation}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Video className="h-4 w-4" /> Vidéo de l'entretien
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {session.video_recording_url ? (
-                <video
-                  src={session.video_recording_url}
-                  controls
-                  preload="metadata"
-                  className="w-full rounded-lg bg-black aspect-video object-contain"
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Vidéo complète indisponible pour cette session.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {report && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Notes recruteur</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Ajoutez vos observations…"
-                  value={recruiterNotes}
-                  onChange={(e) => setRecruiterNotes(e.target.value)}
-                  rows={6}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
@@ -252,8 +211,8 @@ export default function SessionDetail() {
               <TabsTrigger value="transcript" className="gap-1">
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
-              <TabsTrigger value="best-of" className="gap-1">
-                <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Best-of</span>
+              <TabsTrigger value="full-video" className="gap-1">
+                <Video className="h-4 w-4" /> <span className="hidden sm:inline">Vidéo complète</span>
               </TabsTrigger>
             </TabsList>
 
@@ -420,12 +379,54 @@ export default function SessionDetail() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="best-of" className="mt-4">
+            <TabsContent value="full-video" className="mt-4">
+              <Card>
+                <CardContent className="pt-6">
+                  {session.video_recording_url ? (
+                    <video
+                      src={session.video_recording_url}
+                      controls
+                      preload="metadata"
+                      className="w-full rounded-lg bg-black aspect-video object-contain"
+                    />
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Vidéo complète indisponible pour cette session.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Best-of</CardTitle>
+            </CardHeader>
+            <CardContent>
               <HighlightReelPlayer
                 clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
               />
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
+
+          {report && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Notes recruteur</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder="Ajoutez vos observations…"
+                  value={recruiterNotes}
+                  onChange={(e) => setRecruiterNotes(e.target.value)}
+                  rows={8}
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
