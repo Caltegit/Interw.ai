@@ -159,6 +159,8 @@ export default function ProjectEdit() {
         allowPause: (project as { allow_pause?: boolean }).allow_pause ?? false,
         completionMessage:
           (project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE,
+        preSessionMessage:
+          (project as { pre_session_message?: string | null }).pre_session_message ?? DEFAULT_PRE_SESSION_MESSAGE,
       });
 
       setLoading(false);
