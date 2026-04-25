@@ -1,12 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle } from "lucide-react";
+import { EvidenceLink } from "./EvidenceLink";
 
 interface RedFlag {
   type?: string;
   severity?: "low" | "medium" | "high";
   description: string;
   evidence?: string;
+  evidence_message_id?: string;
 }
 
 const severityLabel: Record<string, string> = {
@@ -21,7 +23,12 @@ const severityClass: Record<string, string> = {
   high: "border-destructive text-destructive",
 };
 
-export function RedFlagsCard({ flags }: { flags?: RedFlag[] | null }) {
+interface Props {
+  flags?: RedFlag[] | null;
+  onGoToMessage?: (messageId: string) => void;
+}
+
+export function RedFlagsCard({ flags, onGoToMessage }: Props) {
   if (!flags || flags.length === 0) return null;
   return (
     <Card>
@@ -42,9 +49,12 @@ export function RedFlagsCard({ flags }: { flags?: RedFlag[] | null }) {
                 </Badge>
               </div>
               <p className="mt-1.5 text-sm text-foreground">{f.description}</p>
-              {f.evidence && (
-                <p className="mt-1 text-xs italic text-muted-foreground">Indice : « {f.evidence} »</p>
-              )}
+              <EvidenceLink
+                quote={f.evidence}
+                messageId={f.evidence_message_id}
+                onGoToMessage={onGoToMessage}
+                compact
+              />
             </div>
           );
         })}
