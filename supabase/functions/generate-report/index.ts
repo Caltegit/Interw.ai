@@ -195,6 +195,8 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         question: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
                         comment: { type: "string" },
+                        key_quote: { type: "string", description: "Citation marquante de la réponse du candidat" },
+                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
                       },
                     },
                   },
@@ -203,23 +205,93 @@ Produis une analyse complète en utilisant l'outil generate_report.
                     properties: {
                       openness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       conscientiousness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       extraversion: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       agreeableness: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                       emotional_stability: {
                         type: "object",
-                        properties: { score: { type: "number" }, interpretation: { type: "string" } },
+                        properties: {
+                          score: { type: "number" },
+                          interpretation: { type: "string" },
+                          confidence: { type: "string", enum: ["low", "medium", "high"] },
+                          evidences: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                quote: { type: "string" },
+                                message_id: { type: "string" },
+                              },
+                            },
+                          },
+                        },
                       },
                     },
                   },
@@ -231,8 +303,9 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         skill: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
                         quote: { type: "string", description: "Citation exacte du candidat" },
+                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
                       },
-                      required: ["skill"],
+                      required: ["skill", "quote"],
                     },
                   },
                   red_flags: {
@@ -244,6 +317,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
                         severity: { type: "string", enum: ["low", "medium", "high"] },
                         description: { type: "string" },
                         evidence: { type: "string" },
+                        evidence_message_id: { type: "string" },
                       },
                       required: ["description"],
                     },
@@ -252,9 +326,13 @@ Produis une analyse complète en utilisant l'outil generate_report.
                     type: "object",
                     properties: {
                       company_knowledge: { type: "number", minimum: 0, maximum: 100 },
+                      company_knowledge_evidence: { type: "string" },
                       role_fit: { type: "number", minimum: 0, maximum: 100 },
+                      role_fit_evidence: { type: "string" },
                       enthusiasm: { type: "number", minimum: 0, maximum: 100 },
+                      enthusiasm_evidence: { type: "string" },
                       long_term_intent: { type: "number", minimum: 0, maximum: 100 },
+                      long_term_intent_evidence: { type: "string" },
                       comment: { type: "string" },
                     },
                   },
