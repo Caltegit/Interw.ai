@@ -188,8 +188,17 @@ export default function InterviewLanding() {
   if (showIntroMedia) {
     return (
       <CandidateLayout minimal>
-        <div className="animate-fade-in">
-          <Card className={`${introMediaType === "video" ? "max-w-2xl" : "max-w-md"} w-full overflow-hidden`}>
+        <div className={`${introMediaType === "video" ? "max-w-2xl" : "max-w-md"} w-full animate-fade-in space-y-3`}>
+          {/* Skip link */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleProceedToInterview}
+              className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+            >
+              Passer
+            </button>
+          </div>
+          <Card className="w-full overflow-hidden">
             <CardContent className="py-8 space-y-6 text-center">
               {(introMediaType === "audio" || introMediaType === "tts" || introMediaType === "text") && project.avatar_image_url ? (
                 <img
