@@ -236,7 +236,7 @@ export default function SessionDetail() {
         </div>
 
         <div>
-          <Tabs defaultValue="synthesis">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="synthesis" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Synthèse</span>
@@ -264,15 +264,27 @@ export default function SessionDetail() {
 
                   <ExecutiveSummaryCard summary={report.executive_summary_short ?? ""} />
 
+                  {projectAverages && (
+                    <ProjectComparisonCard
+                      candidateScore={Number(report.overall_score)}
+                      averages={projectAverages}
+                      candidateCriteria={criteriaScores as any}
+                    />
+                  )}
+
                   <Card>
                     <CardHeader><CardTitle className="text-base">Résumé</CardTitle></CardHeader>
                     <CardContent><p className="text-sm leading-relaxed">{report.executive_summary}</p></CardContent>
                   </Card>
 
-                  <PersonalityRadar profile={report.personality_profile as any} />
-                  <SoftSkillsCard skills={report.soft_skills as any} />
+                  <PersonalityRadar
+                    profile={report.personality_profile as any}
+                    onGoToMessage={goToMessage}
+                    projectAverages={projectAverages?.bigFive}
+                  />
+                  <SoftSkillsCard skills={report.soft_skills as any} onGoToMessage={goToMessage} />
                   <MotivationScoresCard scores={report.motivation_scores as any} />
-                  <RedFlagsCard flags={report.red_flags as any} />
+                  <RedFlagsCard flags={report.red_flags as any} onGoToMessage={goToMessage} />
                   <FollowupQuestionsCard questions={report.followup_questions as any} />
 
                   <div className="grid gap-4 md:grid-cols-2">
