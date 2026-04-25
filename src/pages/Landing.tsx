@@ -164,7 +164,7 @@ export default function Landing() {
       <section className="relative overflow-hidden">
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
-        <div className="mx-auto max-w-6xl px-6 pt-24 pb-28 text-center md:pt-32 md:pb-36">
+        <div className="mx-auto max-w-6xl px-6 pt-12 pb-28 text-center md:pt-16 md:pb-36">
           <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "hsl(var(--l-border))", color: "hsl(var(--l-fg-dim))" }}>
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--l-accent))" }} />
             L'outil d'entretien IA pour les équipes de recrutement
