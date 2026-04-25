@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  Play,
   Video,
   X,
 } from "lucide-react";
@@ -161,13 +162,7 @@ export default function Landing() {
             className="mt-8 overflow-hidden rounded-lg"
             style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
           >
-            <video
-              src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
-              controls
-              playsInline
-              preload="metadata"
-              className="w-full h-auto"
-            />
+            <TutoVideo />
           </div>
         </div>
       </section>
