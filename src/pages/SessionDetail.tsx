@@ -324,44 +324,44 @@ export default function SessionDetail() {
             </TabsContent>
 
             <TabsContent value="questions" className="mt-4 space-y-4">
-              {Object.keys(questionEvaluations).length === 0 && candidateVideos.length === 0 ? (
+              {questionItems.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune évaluation par question disponible.
+                    Aucune réponse vidéo enregistrée pour cette session.
                   </CardContent>
                 </Card>
               ) : (
-                Object.entries(questionEvaluations).map(([key, val]: [string, any]) => {
-                  const qIndex = parseInt(key);
-                  const matchingVideo = candidateVideos[qIndex] || candidateVideos[qIndex - 1];
-                  return (
-                    <Card key={key}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="flex-1 text-sm">
-                            Q{qIndex + 1} — {val.question || `Question ${qIndex + 1}`}
-                          </CardTitle>
-                          <Badge variant="outline">{val.score}/10</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {matchingVideo?.video_segment_url && (
-                          <div className="overflow-hidden rounded-lg bg-muted aspect-video">
-                            <video
-                              src={matchingVideo.video_segment_url}
-                              controls
-                              preload="metadata"
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
+                questionItems.map((item) => (
+                  <Card key={item.video.id}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="flex-1 text-sm">
+                          Q{item.index + 1} — {item.questionText}
+                        </CardTitle>
+                        {item.score !== null && (
+                          <Badge variant="outline">{item.score}/10</Badge>
                         )}
-                        {val.comment && (
-                          <p className="text-xs text-muted-foreground">{val.comment}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="overflow-hidden rounded-lg bg-muted aspect-video">
+                        <video
+                          src={item.video.video_segment_url}
+                          controls
+                          preload="metadata"
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      {item.comment ? (
+                        <p className="text-xs text-muted-foreground">{item.comment}</p>
+                      ) : item.score === null ? (
+                        <p className="text-xs italic text-muted-foreground">
+                          Évaluation IA indisponible pour cette question.
+                        </p>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ))
               )}
             </TabsContent>
 
