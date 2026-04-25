@@ -425,7 +425,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
       strengths: parsed.strengths || [],
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
-      question_evaluations: parsed.question_evaluations || {},
+      question_evaluations: questionEvals,
       personality_profile: parsed.personality_profile || null,
       soft_skills: parsed.soft_skills || null,
       red_flags: parsed.red_flags || null,
@@ -500,7 +500,7 @@ Produis une analyse complète en utilisant l'outil generate_report.
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
           criteriaScores,
-          questionEvaluations: parsed.question_evaluations || {},
+          questionEvaluations: questionEvals,
           reportUrl,
           highlightsUrl,
           stats: {
