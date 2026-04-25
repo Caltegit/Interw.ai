@@ -103,7 +103,7 @@ export default function Landing() {
           <div className="landing-fade-up landing-delay-3 mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>
             <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> RGPD</span>
             <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> EU Cloud</span>
-            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> Setup en 10 min</span>
+            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> 10min Setup</span>
           </div>
 
           {/* Mock product card */}
