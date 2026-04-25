@@ -26,6 +26,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
 export const DEFAULT_COMPLETION_MESSAGE =
   "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
+export const DEFAULT_PRE_SESSION_MESSAGE =
+  "Soyez naturel·le et souriez, vous êtes filmé·e !";
 
 export type ProjectStatus = "draft" | "active" | "archived";
 
