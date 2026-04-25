@@ -10,7 +10,7 @@ import { SceneStep3 } from "./scenes/SceneStep3";
 import { SceneStep4 } from "./scenes/SceneStep4";
 import { SceneOutro } from "./scenes/SceneOutro";
 import { BackgroundLayer } from "./components/BackgroundLayer";
-import { SCENE_DURATIONS, TRANSITION_FRAMES } from "./Root";
+import { SCENE_DURATIONS, TRANSITION_FRAMES } from "./constants";
 
 loadFont("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin"] });
 
