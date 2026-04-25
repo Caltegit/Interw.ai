@@ -707,21 +707,6 @@ function TutoVideo() {
           </span>
         </button>
       )}
-      {started && isMuted && (
-        <button
-          type="button"
-          onClick={handleUnmute}
-          className="absolute right-4 top-4 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-transform hover:scale-105"
-          style={{
-            background: "hsl(0 0% 100% / 0.95)",
-            color: "hsl(var(--l-accent))",
-            boxShadow: "0 10px 30px -10px hsl(var(--l-accent) / 0.6)",
-          }}
-        >
-          <Volume2 className="h-4 w-4" />
-          Activer le son
-        </button>
-      )}
     </div>
   );
 }
