@@ -199,7 +199,27 @@ export default function SessionDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-4">
-          <SessionStatsCard stats={stats} questionEvaluations={questionEvaluations} />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Video className="h-4 w-4" /> Vidéo de l'entretien
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {session.video_recording_url ? (
+                <video
+                  src={session.video_recording_url}
+                  controls
+                  preload="metadata"
+                  className="w-full rounded-lg bg-black aspect-video object-contain"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Vidéo complète indisponible pour cette session.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {report && (
             <Card>
@@ -231,7 +251,7 @@ export default function SessionDetail() {
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
               <TabsTrigger value="best-of" className="gap-1">
-                <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Best-of</span>
+                <Video className="h-4 w-4" /> <span className="hidden sm:inline">Vidéo</span>
               </TabsTrigger>
             </TabsList>
 
@@ -399,7 +419,22 @@ export default function SessionDetail() {
             </TabsContent>
 
             <TabsContent value="best-of" className="mt-4">
-              <HighlightReelPlayer clips={highlightClips} />
+              <Card>
+                <CardContent className="pt-6">
+                  {session.video_recording_url ? (
+                    <video
+                      src={session.video_recording_url}
+                      controls
+                      preload="metadata"
+                      className="w-full rounded-lg bg-black aspect-video object-contain"
+                    />
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Vidéo complète indisponible pour cette session.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
