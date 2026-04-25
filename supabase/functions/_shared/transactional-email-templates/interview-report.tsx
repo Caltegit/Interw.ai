@@ -196,6 +196,38 @@ const InterviewReportEmail = ({
             </>
           )}
 
+          {personalityEntries.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🧠 Profil de personnalité (Big Five)</Heading>
+              {personalityEntries.map(({ key, label, trait }) => {
+                const score = Math.max(0, Math.min(100, trait!.score!))
+                return (
+                  <Section key={key} style={traitRow}>
+                    <Text style={traitLabel}><strong>{label}</strong> — {score}/100</Text>
+                    <div style={{ ...barTrack, marginTop: '4px' }}>
+                      <div style={{ ...barFill, width: `${score}%` }} />
+                    </div>
+                    {trait!.interpretation ? (
+                      <Text style={traitText}>{trait!.interpretation}</Text>
+                    ) : null}
+                  </Section>
+                )
+              })}
+            </>
+          )}
+
+          {followupQuestions && followupQuestions.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>❓ Questions à creuser en entretien</Heading>
+              {followupQuestions.map((q, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>{i + 1}. {q.question}</Text>
+                  {q.rationale ? <Text style={cardText}>{q.rationale}</Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
+
           {criteriaList.length > 0 && (
             <>
               <Heading as="h2" style={h2}>Évaluation par critère</Heading>
