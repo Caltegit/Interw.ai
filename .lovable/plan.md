@@ -1,56 +1,61 @@
+# Refonte des 3 tarifs de la landing
 
-## Plan : Consentement RGPD renforcé + droit d'annulation totale
+## Objectif
 
-### 1. Migration de base de données
-Ajouter à la table `sessions` :
-- `consent_accepted_at` (timestamp, nullable) — traçabilité légale du consentement
-- `cancelled_at` (timestamp, nullable) — horodatage de l'annulation totale
+Remplacer les 3 cartes tarifaires actuelles par une grille plus claire et engageante, alignée sur la stratégie « gratuit à l'usage / mensuel / sur mesure ».
 
-Ajouter la valeur `'cancelled'` à l'enum `session_status` (utilisée brièvement avant la suppression complète, pour éviter les conflits si la suppression échoue partiellement).
+## Modification
 
-### 2. Nouveau composant : popup conditions RGPD
-Créer `src/components/interview/ConsentDialog.tsx` :
-- Dialog scrollable, sections claires en français
-- 8 sections : données collectées, finalité, accès, durée, droits RGPD, analyse IA, **droit de retrait avec suppression totale**, contact
-- Variables dynamiques injectées : `{job_title}`, `{org_name}`
-- Bouton « J'ai compris » qui ferme le popup
+Section `#pricing` dans `src/pages/Landing.tsx` (lignes 345-419). Seuls le sous-titre et le contenu des 3 cartes changent. La structure visuelle (cards, highlight, CTA) reste identique pour préserver la cohérence du design.
 
-### 3. Intégration consentement sur la page test technique
-Modifier `src/pages/InterviewDeviceTest.tsx` :
-- Ajouter une `Checkbox` obligatoire juste avant le bouton « Commencer la session »
-- Texte : *« J'ai lu et j'accepte les conditions de traitement de mes données personnelles. »*
-- Lien « Lire les conditions » qui ouvre le `ConsentDialog`
-- Bouton « Commencer la session » désactivé tant que la case n'est pas cochée
-- Au clic sur « Commencer », mettre à jour `consent_accepted_at` sur la session
+### Sous-titre
+Remplacer *« Sans engagement. Tarification transparente sur devis selon le nombre d'entretiens. »* par :
+> *« Sans engagement. Payez uniquement ce que vous utilisez, ou passez en illimité. »*
 
-### 4. Nouvelle edge function : `cancel-session`
-Créer `supabase/functions/cancel-session/index.ts` (verify_jwt = false, route candidat publique) :
-- Accepte `{ sessionToken }`
-- Vérifie que la session existe et n'est pas déjà terminée
-- Liste et supprime tous les fichiers du bucket storage liés à la session (audio + vidéo segments)
-- Supprime en cascade : `transcripts`, `session_messages`, `reports` (si existant), puis `sessions`
-- Retourne confirmation
+### Carte 1 — Gratuit à l'usage
+- **Nom** : Pay as you go
+- **Prix** : 2 € / entretien
+- **Description** : Idéal pour démarrer ou pour les recrutements ponctuels.
+- **Features** :
+  - Inscription gratuite, aucun abonnement
+  - Projets illimités
+  - Rapports IA détaillés
+  - Facturation à l'entretien terminé
+- **CTA** : Commencer gratuitement
+- **Highlight** : non
 
-### 5. Popup d'annulation pendant l'entretien
-Modifier la page de session active (probablement `InterviewSession.tsx` ou équivalent) :
-- Quand le candidat clique sur le bouton actuel « Mettre fin à la session », ouvrir un `AlertDialog` avec **2 choix** :
-  - ✅ **« Terminer et envoyer mes réponses »** → comportement actuel (génération du rapport)
-  - 🗑️ **« Annuler et tout supprimer »** → seconde confirmation puis appel à `cancel-session`
-- Après suppression : redirection vers une nouvelle page `/session/cancelled`
+### Carte 2 — Mensuel (mise en avant)
+- **Nom** : Pro
+- **Prix** : 49 € / mois
+- **Description** : Pour les recruteurs qui interviewent chaque semaine.
+- **Features** :
+  - Entretiens illimités
+  - Bibliothèque de questions et critères partagée
+  - Modèles d'entretien réutilisables
+  - Support prioritaire
+- **CTA** : Démarrer l'essai
+- **Highlight** : oui (badge « Le plus choisi »)
 
-### 6. Page de confirmation d'annulation
-Créer `src/pages/InterviewCancelled.tsx` :
-- Message rassurant : *« Votre entretien a été annulé. Toutes vos données ont été définitivement supprimées. »*
-- Pas de retour vers le projet possible (session détruite)
+### Carte 3 — Sur mesure
+- **Nom** : Entreprise
+- **Prix** : Sur mesure
+- **Description** : Pour les organisations à fort volume ou aux exigences spécifiques.
+- **Features** :
+  - Volume négocié et tarif dégressif
+  - SSO, rôles avancés, multi-équipes
+  - Personnalisation IA et voix sur mesure
+  - DPA, engagement RGPD, accompagnement dédié
+- **CTA** : Nous contacter
+- **Highlight** : non
 
-### 7. Vérifications
-- Tester le flux complet consentement → entretien → annulation
-- Vérifier que les fichiers storage sont bien supprimés (logs edge function)
-- Vérifier qu'aucune trace ne reste côté recruteur après annulation
-- Vérifier la mention RGPD du consentement persistée pour traçabilité légale (avant suppression de la session)
+## Notes
 
-### ⚠️ Hors scope
-- Personnalisation par organisation (texte standard pour tous, validé)
-- Email DPO personnalisable (validé : standard)
-- Email de double opt-in (validé : non)
-- Annulation par le recruteur (déjà géré par les politiques de suppression existantes)
+- Le suffixe « / entretien » et « / mois » sera affiché en plus petit à côté du prix pour rester lisible.
+- Tous les CTA conservent le comportement actuel : ouverture du `DemoRequestDialog` via `openDemo()`.
+- Aucune logique de paiement réelle n'est branchée — c'est un affichage marketing. Si tu veux brancher Stripe pour facturer réellement, c'est un chantier séparé à planifier après.
+
+## Hors scope
+
+- Mise en place réelle de la facturation (Stripe / Paddle)
+- Limitation technique du nombre d'entretiens selon la formule
+- Page de comparaison détaillée des plans
