@@ -41,6 +41,20 @@ export default function InterviewDeviceTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Charger le message d'encouragement avant session depuis le projet
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("pre_session_message")
+        .eq("slug", slug)
+        .maybeSingle();
+      const msg = (data as { pre_session_message?: string | null } | null)?.pre_session_message;
+      if (msg && msg.trim()) setPreSessionMessage(msg.trim());
+    })();
+  }, [slug]);
+
   // Auto-avance dès que micro + caméra sont OK (le test réseau est informatif)
   useEffect(() => {
     if (autoAdvancedRef.current) return;
