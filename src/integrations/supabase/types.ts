@@ -1030,9 +1030,11 @@ export type Database = {
       sessions: {
         Row: {
           audio_recording_url: string | null
+          cancelled_at: string | null
           candidate_email: string
           candidate_name: string
           completed_at: string | null
+          consent_accepted_at: string | null
           consent_given_at: string | null
           created_at: string
           duration_seconds: number | null
@@ -1048,9 +1050,11 @@ export type Database = {
         }
         Insert: {
           audio_recording_url?: string | null
+          cancelled_at?: string | null
           candidate_email: string
           candidate_name: string
           completed_at?: string | null
+          consent_accepted_at?: string | null
           consent_given_at?: string | null
           created_at?: string
           duration_seconds?: number | null
@@ -1066,9 +1070,11 @@ export type Database = {
         }
         Update: {
           audio_recording_url?: string | null
+          cancelled_at?: string | null
           candidate_email?: string
           candidate_name?: string
           completed_at?: string | null
+          consent_accepted_at?: string | null
           consent_given_at?: string | null
           created_at?: string
           duration_seconds?: number | null
@@ -1267,6 +1273,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "expired"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1410,6 +1417,7 @@ export const Constants = {
         "in_progress",
         "completed",
         "expired",
+        "cancelled",
       ],
     },
   },
