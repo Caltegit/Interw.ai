@@ -15,7 +15,7 @@ import {
   Check,
   Play,
   FileText,
-  Trophy,
+  Video,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,8 +26,6 @@ import {
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { OverviewHeader } from "@/components/session/OverviewHeader";
-import { SessionStatsCard } from "@/components/session/SessionStatsCard";
-import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { ExecutiveSummaryCard } from "@/components/session/ExecutiveSummaryCard";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
@@ -114,8 +112,6 @@ export default function SessionDetail() {
 
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const rawHighlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
-  const stats = (report?.stats as Record<string, any>) ?? {};
 
   const project = session?.projects;
   const projectQuestions = (project?.questions as any[]) ?? [];
@@ -149,19 +145,6 @@ export default function SessionDetail() {
       };
     });
   }, [candidateVideos, questionEvaluations, projectQuestions]);
-
-  // Best-of : si l'IA n'a rien produit, fallback sur les vidéos chronologiques
-  // pour ne jamais afficher une page vide quand il y a des enregistrements.
-  const highlightClips = useMemo<HighlightClip[]>(() => {
-    if (rawHighlightClips.length > 0) return rawHighlightClips;
-    return questionItems.slice(0, 3).map((item) => ({
-      video_url: item.video.video_segment_url,
-      question: item.questionText,
-      score: item.score ?? 0,
-      question_index: item.index,
-      max_seconds: 20,
-    }));
-  }, [rawHighlightClips, questionItems]);
 
   if (isLoading)
     return (
@@ -216,7 +199,27 @@ export default function SessionDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-4">
-          <SessionStatsCard stats={stats} questionEvaluations={questionEvaluations} />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Video className="h-4 w-4" /> Vidéo de l'entretien
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {session.video_recording_url ? (
+                <video
+                  src={session.video_recording_url}
+                  controls
+                  preload="metadata"
+                  className="w-full rounded-lg bg-black aspect-video object-contain"
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Vidéo complète indisponible pour cette session.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {report && (
             <Card>
@@ -248,7 +251,7 @@ export default function SessionDetail() {
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
               <TabsTrigger value="best-of" className="gap-1">
-                <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Best-of</span>
+                <Video className="h-4 w-4" /> <span className="hidden sm:inline">Vidéo</span>
               </TabsTrigger>
             </TabsList>
 
@@ -416,7 +419,22 @@ export default function SessionDetail() {
             </TabsContent>
 
             <TabsContent value="best-of" className="mt-4">
-              <HighlightReelPlayer clips={highlightClips} />
+              <Card>
+                <CardContent className="pt-6">
+                  {session.video_recording_url ? (
+                    <video
+                      src={session.video_recording_url}
+                      controls
+                      preload="metadata"
+                      className="w-full rounded-lg bg-black aspect-video object-contain"
+                    />
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      Vidéo complète indisponible pour cette session.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
