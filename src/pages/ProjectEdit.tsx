@@ -10,6 +10,7 @@ import { getDefaultVoiceForGender, type VoiceGender } from "@/components/project
 import {
   ProjectForm,
   DEFAULT_COMPLETION_MESSAGE,
+  DEFAULT_PRE_SESSION_MESSAGE,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 
