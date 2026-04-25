@@ -145,6 +145,13 @@ const InterviewReportEmail = ({
             <Text style={recoText}>{recommendationLabel(recommendation)}</Text>
           </Section>
 
+          {executiveSummaryShort ? (
+            <Section style={shortSummaryBox}>
+              <Text style={shortSummaryLabel}>🎯 Résumé en 30 secondes</Text>
+              <Text style={shortSummaryText}>{executiveSummaryShort}</Text>
+            </Section>
+          ) : null}
+
           <Section style={statsBox}>
             <Text style={statRow}>
               <strong>⏱ Durée :</strong> {formatDuration(stats.duration_seconds)}
