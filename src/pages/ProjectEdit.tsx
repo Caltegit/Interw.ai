@@ -238,6 +238,7 @@ export default function ProjectEdit() {
           intro_audio_url: introAudioUrl,
           presentation_video_url: presentationVideoUrl,
           completion_message: s.completionMessage.trim() || null,
+          pre_session_message: s.preSessionMessage.trim() || null,
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
