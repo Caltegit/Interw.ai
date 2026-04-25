@@ -473,6 +473,19 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </Select>
                 </div>
                 <div>
+                  <Label>Message juste avant la session</Label>
+                  <Textarea
+                    value={preSessionMessage}
+                    onChange={(e) => setPreSessionMessage(e.target.value)}
+                    placeholder={DEFAULT_PRE_SESSION_MESSAGE}
+                    rows={2}
+                    className="mt-1.5"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Court message d'encouragement affiché au candidat juste avant le démarrage de la session.
+                  </p>
+                </div>
+                <div>
                   <Label>Message de fin</Label>
                   <Textarea
                     value={completionMessage}
