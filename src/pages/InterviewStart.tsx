@@ -1553,17 +1553,31 @@ export default function InterviewStart() {
 
     const introEnabled =
       (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
+    const introMode =
+      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
+    const introCustomText =
+      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
 
     // Greeting :
-    // - Si introEnabled : phrase d'accueil complète comme avant.
-    // - Sinon : on retire le « Bonjour … nous allons démarrer la session ». Pour une
-    //   Q1 média, rien n'est prononcé (le média joue directement). Pour une Q1 texte,
-    //   on prononce uniquement le contenu de la question.
-    const greeting = introEnabled
-      ? (isFirstQMedia
-          ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-          : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`)
-      : (isFirstQMedia ? "" : q0.content);
+    // - introEnabled = false → pas de greeting (Q1 média : rien ; Q1 texte : on prononce juste la question).
+    // - introMode = "custom" et texte fourni → on l'utilise tel quel avec interpolation.
+    // - sinon → texte par défaut contextuel.
+    const defaultGreeting = isFirstQMedia
+      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+
+    const interpolate = (tpl: string) =>
+      tpl
+        .replace(/\{prenom\}/g, firstName ?? "")
+        .replace(/\{poste\}/g, project?.job_title ?? "")
+        .replace(/\{question_suivante\}/g, q0.content ?? "")
+        .trim();
+
+    const greeting = !introEnabled
+      ? (isFirstQMedia ? "" : q0.content)
+      : introMode === "custom" && introCustomText
+        ? interpolate(introCustomText)
+        : defaultGreeting;
 
     // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
     if (usesEleven && greeting) {
