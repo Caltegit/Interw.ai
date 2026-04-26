@@ -1777,8 +1777,8 @@ export default function InterviewStart() {
             totalQuestions: questions.length,
             followUpsAsked,
             forceMaxFollowUps,
-            transitionsEnabled:
-              (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true,
+            questionTransitionsEnabled:
+              (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true,
           },
         },
       });
@@ -1900,7 +1900,7 @@ export default function InterviewStart() {
     if (nMediaUrl) prefetchMedia(nMediaUrl);
 
     const transitionsEnabled =
-      (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true;
+      (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true;
 
     // Use AI message if provided, otherwise fall back to local transition.
     // Si les transitions vocales sont désactivées, on annonce uniquement la question
