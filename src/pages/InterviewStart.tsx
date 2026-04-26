@@ -1939,7 +1939,7 @@ export default function InterviewStart() {
 
     const interpolateTransition = (tpl: string) =>
       tpl
-        .replace(/\{prenom\}/g, firstName ?? "")
+        .replace(/\{prenom\}/g, ((session?.candidate_name ?? "").trim().split(/\s+/)[0]) ?? "")
         .replace(/\{poste\}/g, project?.job_title ?? "")
         .replace(/\{question_suivante\}/g, nextQ?.content ?? "")
         .trim();
