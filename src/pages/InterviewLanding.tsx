@@ -363,7 +363,7 @@ export default function InterviewLanding() {
               <Input
                 id="email"
                 type="email"
-                placeholder="jean@exemple.com"
+                placeholder="prenom.nom@email.com"
                 value={candidateEmail}
                 onChange={(e) => setCandidateEmail(e.target.value)}
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
