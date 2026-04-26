@@ -22,6 +22,11 @@ import {
   type VoiceGender,
 } from "@/components/project/VoiceSelectorDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  AiTextCustomizerDialog,
+  DEFAULT_AI_INTRO_TEXT,
+  DEFAULT_AI_TRANSITION_TEXT,
+} from "@/components/project/AiTextCustomizerDialog";
 
 const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
 export const DEFAULT_COMPLETION_MESSAGE =

@@ -77,7 +77,11 @@ const initialState: ProjectFormState = {
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
   aiIntroEnabled: true,
+  aiIntroMode: "auto",
+  aiIntroCustomText: "",
   aiQuestionTransitionsEnabled: true,
+  aiQuestionTransitionsMode: "auto",
+  aiQuestionTransitionsCustomText: "",
 };
 
 export default function ProjectNew() {
