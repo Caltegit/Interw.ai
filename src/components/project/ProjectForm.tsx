@@ -524,27 +524,125 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     Ce message s'affichera sur l'écran de remerciement après l'session.
                   </p>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Intro IA</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Si désactivé, l'IA ne prononce pas de phrase d'accueil avant la première question.
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <Label>Intro IA</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Si désactivé, l'IA ne prononce pas de phrase d'accueil avant la première question.
+                      </p>
+                    </div>
+                    <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
                   </div>
-                  <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
+                  {aiIntroEnabled && (
+                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                      <RadioGroup
+                        value={aiIntroMode}
+                        onValueChange={(v) => setAiIntroMode(v as "auto" | "custom")}
+                        className="gap-1.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="auto" id={`ai-intro-auto-${idSuffix}`} />
+                          <Label htmlFor={`ai-intro-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Laisser l'IA s'adapter au contexte des réponses
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="custom" id={`ai-intro-custom-${idSuffix}`} />
+                          <Label htmlFor={`ai-intro-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Utiliser un texte fixe
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      {aiIntroMode === "custom" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIntroCustomizerOpen(true)}
+                        >
+                          Modifier le texte
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Transitions entre questions</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Si désactivé, l'IA enchaîne directement les questions sans phrase de liaison (« Merci, passons à la suite »…).
-                    </p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <Label>Transitions entre questions</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Si désactivé, l'IA enchaîne directement les questions sans phrase de liaison (« Merci, passons à la suite »…).
+                      </p>
+                    </div>
+                    <Switch
+                      checked={aiQuestionTransitionsEnabled}
+                      onCheckedChange={setAiQuestionTransitionsEnabled}
+                    />
                   </div>
-                  <Switch
-                    checked={aiQuestionTransitionsEnabled}
-                    onCheckedChange={setAiQuestionTransitionsEnabled}
-                  />
+                  {aiQuestionTransitionsEnabled && (
+                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                      <RadioGroup
+                        value={aiQuestionTransitionsMode}
+                        onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
+                        className="gap-1.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Laisser l'IA s'adapter au contexte des réponses
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Utiliser un texte fixe
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      {aiQuestionTransitionsMode === "custom" && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setTransitionsCustomizerOpen(true)}
+                        >
+                          Modifier le texte
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                <AiTextCustomizerDialog
+                  open={introCustomizerOpen}
+                  onOpenChange={setIntroCustomizerOpen}
+                  title="Texte de l'intro IA"
+                  description="Phrase prononcée par l'IA juste avant la première question."
+                  defaultText={DEFAULT_AI_INTRO_TEXT}
+                  value={aiIntroCustomText}
+                  variables={[
+                    { token: "{prenom}", description: "Prénom du candidat" },
+                    { token: "{poste}", description: "Intitulé du poste" },
+                    { token: "{question_suivante}", description: "Contenu de la première question" },
+                  ]}
+                  onSave={setAiIntroCustomText}
+                />
+
+                <AiTextCustomizerDialog
+                  open={transitionsCustomizerOpen}
+                  onOpenChange={setTransitionsCustomizerOpen}
+                  title="Texte de transition entre questions"
+                  description="Phrase prononcée par l'IA entre deux questions."
+                  defaultText={DEFAULT_AI_TRANSITION_TEXT}
+                  value={aiQuestionTransitionsCustomText}
+                  variables={[
+                    { token: "{prenom}", description: "Prénom du candidat" },
+                    { token: "{question_suivante}", description: "Contenu de la question suivante" },
+                  ]}
+                  onSave={setAiQuestionTransitionsCustomText}
+                />
+
               </div>
             </div>
           )}
