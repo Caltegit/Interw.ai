@@ -1962,9 +1962,10 @@ export default function InterviewStart() {
     // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
     let preparedTransitionBlob: Blob | null = null;
     if (nMediaUrl && nMediaType !== "written") {
-      // Préparation parallèle : média + blob TTS de la transition.
+      // Préparation parallèle : média + (optionnel) blob TTS de la transition.
       // On attend les DEUX avant de retirer l'overlay et de jouer.
       const blobPromise = (async () => {
+        if (!transition) return null;
         if (project?.tts_provider !== "elevenlabs") return null;
         const f = await fetchElevenLabsBlob(transition);
         if (!f) return null;
@@ -1996,20 +1997,22 @@ export default function InterviewStart() {
         });
       }
 
-      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition.
+      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition (si présente).
       setQuestionLoading(null);
-      setIsSpeaking(true);
-      setShouldAutoPlay(false);
-      currentPresentationRef.current = { kind: "tts", text: transition };
-      if (preparedTransitionBlob) {
-        await tryElevenLabs(transition, preparedTransitionBlob);
-        currentPresentationRef.current = null;
-      } else {
-        await speak(transition);
+      if (transition) {
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        currentPresentationRef.current = { kind: "tts", text: transition };
+        if (preparedTransitionBlob) {
+          await tryElevenLabs(transition, preparedTransitionBlob);
+          currentPresentationRef.current = null;
+        } else {
+          await speak(transition);
+        }
+        if (token.aborted) { aborted = true; return; }
+        if (nextBlock !== currentBlockIdRef.current) return;
+        if (isPausedRef.current) return;
       }
-      if (token.aborted) { aborted = true; return; }
-      if (nextBlock !== currentBlockIdRef.current) return;
-      if (isPausedRef.current) return;
     } else {
       // Pas de média : retirer l'overlay maintenant.
       setQuestionLoading(null);
