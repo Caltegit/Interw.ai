@@ -76,6 +76,7 @@ const initialState: ProjectFormState = {
   allowPause: false,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
+  aiTransitionsEnabled: true,
 };
 
 export default function ProjectNew() {
