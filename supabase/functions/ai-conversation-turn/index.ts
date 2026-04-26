@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const nextQ = !isLastQuestion ? questionsList[currentIdx + 1] : null;
     const nextMt = nextQ?.mediaType === "video" ? "VIDÉO" : nextQ?.mediaType === "audio" ? "AUDIO" : nextQ ? "TEXTE" : null;
 
-    const transitionsEnabled = projectContext.transitionsEnabled !== false;
+    const transitionsEnabled = projectContext.questionTransitionsEnabled !== false;
 
     const systemPrompt = `Tu es ${projectContext.aiPersonaName}, recruteuse IA pour le poste "${projectContext.jobTitle}".
 
