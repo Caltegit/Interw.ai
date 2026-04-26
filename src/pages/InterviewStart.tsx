@@ -1551,12 +1551,22 @@ export default function InterviewStart() {
     setBootPercent(75);
     const isFirstQMedia = firstQMediaType !== "written";
 
-    const greeting = isFirstQMedia
-      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+    const introEnabled =
+      (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
+
+    // Greeting :
+    // - Si introEnabled : phrase d'accueil complète comme avant.
+    // - Sinon : on retire le « Bonjour … nous allons démarrer la session ». Pour une
+    //   Q1 média, rien n'est prononcé (le média joue directement). Pour une Q1 texte,
+    //   on prononce uniquement le contenu de la question.
+    const greeting = introEnabled
+      ? (isFirstQMedia
+          ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+          : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`)
+      : (isFirstQMedia ? "" : q0.content);
 
     // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
-    if (usesEleven) {
+    if (usesEleven && greeting) {
       const g = await fetchElevenLabsBlob(greeting);
       if (g) {
         greetingBlob = g.blob;
@@ -1577,7 +1587,6 @@ export default function InterviewStart() {
     // À ce stade, si l'utilisateur a quitté/pause, on stoppe tout.
     if (myBlock !== currentBlockIdRef.current) return;
 
-    const aiMsg = { role: "assistant" as const, content: greeting };
     const chatMsg: ChatMessage = {
       role: "ai",
       content: greeting,
@@ -1586,9 +1595,13 @@ export default function InterviewStart() {
     };
     setMessages([chatMsg]);
     messagesRef.current = [chatMsg];
-    setAiMessages([aiMsg]);
+    if (greeting) {
+      setAiMessages([{ role: "assistant", content: greeting }]);
+    } else {
+      setAiMessages([]);
+    }
 
-    // Persist greeting to DB immediately
+    // Persist greeting to DB immediately (même vide pour cohérence du fil).
     try {
       await persistMessage(session.id, "ai", greeting);
     } catch {
@@ -1600,15 +1613,16 @@ export default function InterviewStart() {
     }
 
     // Speak the greeting — utilise le blob pré-fetché si disponible (zéro latence).
-    if (usesEleven && greetingBlob) {
-      await tryElevenLabs(greeting, greetingBlob);
-      // Cleanup state similaire à speak()
-      currentPresentationRef.current = null;
-    } else {
-      await speak(greeting);
+    if (greeting) {
+      if (usesEleven && greetingBlob) {
+        await tryElevenLabs(greeting, greetingBlob);
+        currentPresentationRef.current = null;
+      } else {
+        await speak(greeting);
+      }
+      // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
+      if (myBlock !== currentBlockIdRef.current) return;
     }
-    // Bloc obsolète (ex: pause/skip pendant la TTS) → on s'arrête là.
-    if (myBlock !== currentBlockIdRef.current) return;
     if (isFirstQMedia) {
       setIsSpeaking(true);
       setShouldAutoPlay(false);
