@@ -76,7 +76,8 @@ const initialState: ProjectFormState = {
   allowPause: false,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
-  aiTransitionsEnabled: true,
+  aiIntroEnabled: true,
+  aiQuestionTransitionsEnabled: true,
 };
 
 export default function ProjectNew() {
@@ -181,7 +182,8 @@ export default function ProjectNew() {
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
-          ai_transitions_enabled: s.aiTransitionsEnabled,
+          ai_intro_enabled: s.aiIntroEnabled,
+          ai_question_transitions_enabled: s.aiQuestionTransitionsEnabled,
         } as never)
         .select()
         .single();
