@@ -181,6 +181,7 @@ export default function ProjectNew() {
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
+          ai_transitions_enabled: s.aiTransitionsEnabled,
         } as never)
         .select()
         .single();
