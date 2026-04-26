@@ -1899,24 +1899,42 @@ export default function InterviewStart() {
     // Précharge le média pendant la TTS de transition.
     if (nMediaUrl) prefetchMedia(nMediaUrl);
 
-    // Use AI message if provided, otherwise fall back to local transition
-    const transition =
-      aiMessage ||
-      (nMediaType === "written"
-        ? `Merci. Question suivante : ${nextQ.content}`
-        : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`);
+    const transitionsEnabled =
+      (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true;
 
-    setMessages((prev) => {
-      const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
-      messagesRef.current = updated;
-      return updated;
-    });
-    setAiMessages((prev) => [...prev, { role: "assistant", content: transition }]);
+    // Use AI message if provided, otherwise fall back to local transition.
+    // Si les transitions vocales sont désactivées, on annonce uniquement la question
+    // (sans phrase de type « Merci, passons à la suite »).
+    const transition = transitionsEnabled
+      ? (aiMessage ||
+        (nMediaType === "written"
+          ? `Merci. Question suivante : ${nextQ.content}`
+          : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`))
+      : (nMediaType === "written"
+          ? nextQ.content
+          : "");
 
-    if (sessionId) {
-      trackBackground(persistMessage(sessionId, "ai", transition).catch((e) => {
-        console.error("Transition persist failed:", e);
-      }));
+    if (transition) {
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        messagesRef.current = updated;
+        return updated;
+      });
+      setAiMessages((prev) => [...prev, { role: "assistant", content: transition }]);
+
+      if (sessionId) {
+        trackBackground(persistMessage(sessionId, "ai", transition).catch((e) => {
+          console.error("Transition persist failed:", e);
+        }));
+      }
+    } else if (nMediaUrl) {
+      // Pas de phrase de transition mais on ajoute quand même un message porteur du média,
+      // pour que le player s'affiche dans le fil de conversation.
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: "", mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        messagesRef.current = updated;
+        return updated;
+      });
     }
 
     // CLOSE_PREV : on attend que l'upload du segment N-1 + l'insert du message
