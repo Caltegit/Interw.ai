@@ -1929,18 +1929,35 @@ export default function InterviewStart() {
 
     const transitionsEnabled =
       (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true;
+    const transitionsMode =
+      ((project as { ai_question_transitions_mode?: string })?.ai_question_transitions_mode as
+        | "auto"
+        | "custom") ?? "auto";
+    const transitionsCustomText =
+      ((project as { ai_question_transitions_custom_text?: string | null })
+        ?.ai_question_transitions_custom_text ?? "").trim();
 
-    // Use AI message if provided, otherwise fall back to local transition.
-    // Si les transitions vocales sont désactivées, on annonce uniquement la question
-    // (sans phrase de type « Merci, passons à la suite »).
-    const transition = transitionsEnabled
-      ? (aiMessage ||
-        (nMediaType === "written"
-          ? `Merci. Question suivante : ${nextQ.content}`
-          : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`))
-      : (nMediaType === "written"
-          ? nextQ.content
-          : "");
+    const interpolateTransition = (tpl: string) =>
+      tpl
+        .replace(/\{prenom\}/g, firstName ?? "")
+        .replace(/\{poste\}/g, project?.job_title ?? "")
+        .replace(/\{question_suivante\}/g, nextQ?.content ?? "")
+        .trim();
+
+    // Calcul du texte de transition :
+    // - transitionsEnabled=false → silencieux (sauf Q texte → on prononce la question).
+    // - mode "custom" + texte fourni → on l'utilise (priorité sur l'IA).
+    // - sinon → message IA si dispo, sinon fallback local.
+    const transition = !transitionsEnabled
+      ? (nMediaType === "written" ? nextQ.content : "")
+      : transitionsMode === "custom" && transitionsCustomText
+        ? (nMediaType === "written"
+            ? `${interpolateTransition(transitionsCustomText)} ${nextQ.content}`.trim()
+            : interpolateTransition(transitionsCustomText))
+        : (aiMessage ||
+            (nMediaType === "written"
+              ? `Merci. Question suivante : ${nextQ.content}`
+              : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`));
 
     if (transition) {
       setMessages((prev) => {
