@@ -351,7 +351,7 @@ export default function InterviewLanding() {
               <Label htmlFor="name" className="text-sm font-medium">Votre nom *</Label>
               <Input
                 id="name"
-                placeholder="Jean Dupont"
+                placeholder="Prénom Nom"
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
