@@ -163,8 +163,19 @@ export default function ProjectEdit() {
           (project as { pre_session_message?: string | null }).pre_session_message ?? DEFAULT_PRE_SESSION_MESSAGE,
         aiIntroEnabled:
           (project as { ai_intro_enabled?: boolean }).ai_intro_enabled ?? true,
+        aiIntroMode:
+          ((project as { ai_intro_mode?: string }).ai_intro_mode as "auto" | "custom") ?? "auto",
+        aiIntroCustomText:
+          (project as { ai_intro_custom_text?: string | null }).ai_intro_custom_text ?? "",
         aiQuestionTransitionsEnabled:
           (project as { ai_question_transitions_enabled?: boolean }).ai_question_transitions_enabled ?? true,
+        aiQuestionTransitionsMode:
+          ((project as { ai_question_transitions_mode?: string }).ai_question_transitions_mode as
+            | "auto"
+            | "custom") ?? "auto",
+        aiQuestionTransitionsCustomText:
+          (project as { ai_question_transitions_custom_text?: string | null })
+            .ai_question_transitions_custom_text ?? "",
       });
 
       setLoading(false);
@@ -247,7 +258,11 @@ export default function ProjectEdit() {
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
           ai_intro_enabled: s.aiIntroEnabled,
+          ai_intro_mode: s.aiIntroMode,
+          ai_intro_custom_text: s.aiIntroCustomText.trim() || null,
           ai_question_transitions_enabled: s.aiQuestionTransitionsEnabled,
+          ai_question_transitions_mode: s.aiQuestionTransitionsMode,
+          ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
         } as never)
         .eq("id", id);
 
