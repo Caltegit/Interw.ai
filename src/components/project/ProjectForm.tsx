@@ -72,6 +72,7 @@ export interface ProjectFormState {
   allowPause: boolean;
   completionMessage: string;
   preSessionMessage: string;
+  aiTransitionsEnabled: boolean;
 }
 
 export function mergeTemplateIntoState(
