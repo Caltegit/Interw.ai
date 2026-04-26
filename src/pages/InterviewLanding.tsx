@@ -14,8 +14,8 @@ export default function InterviewLanding() {
   const [project, setProject] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [candidateName, setCandidateName] = useState("Jean Dujardin");
-  const [candidateEmail, setCandidateEmail] = useState("jean@test.fr");
+  const [candidateName, setCandidateName] = useState("");
+  const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
 
   // Intermediate media screen state
@@ -351,7 +351,7 @@ export default function InterviewLanding() {
               <Label htmlFor="name" className="text-sm font-medium">Votre nom *</Label>
               <Input
                 id="name"
-                placeholder="Jean Dupont"
+                placeholder="Prénom Nom"
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
@@ -363,7 +363,7 @@ export default function InterviewLanding() {
               <Input
                 id="email"
                 type="email"
-                placeholder="jean@exemple.com"
+                placeholder="prenom.nom@email.com"
                 value={candidateEmail}
                 onChange={(e) => setCandidateEmail(e.target.value)}
                 className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
