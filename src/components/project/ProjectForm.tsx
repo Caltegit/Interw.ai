@@ -224,7 +224,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       completionMessage,
       preSessionMessage,
       aiIntroEnabled,
+      aiIntroMode,
+      aiIntroCustomText,
       aiQuestionTransitionsEnabled,
+      aiQuestionTransitionsMode,
+      aiQuestionTransitionsCustomText,
     });
   };
 
