@@ -11,9 +11,9 @@ export default function InterviewCancelled() {
             <div className="mx-auto h-14 w-14 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <ShieldCheck className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h1 className="text-xl font-bold">Entretien annulé</h1>
+            <h1 className="text-xl font-bold">Session annulée</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Votre entretien a été annulé. Toutes vos données — vidéo, audio, transcription et analyse — ont été
+              Votre session a été annulée. Toutes vos données — vidéo, audio, transcription et analyse — ont été
               définitivement supprimées de nos serveurs.
             </p>
             <p className="text-xs text-muted-foreground">
