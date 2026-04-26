@@ -73,7 +73,11 @@ export interface ProjectFormState {
   completionMessage: string;
   preSessionMessage: string;
   aiIntroEnabled: boolean;
+  aiIntroMode: "auto" | "custom";
+  aiIntroCustomText: string;
   aiQuestionTransitionsEnabled: boolean;
+  aiQuestionTransitionsMode: "auto" | "custom";
+  aiQuestionTransitionsCustomText: string;
 }
 
 export function mergeTemplateIntoState(
@@ -164,9 +168,19 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
+  const [aiIntroMode, setAiIntroMode] = useState<"auto" | "custom">(initial.aiIntroMode);
+  const [aiIntroCustomText, setAiIntroCustomText] = useState(initial.aiIntroCustomText);
   const [aiQuestionTransitionsEnabled, setAiQuestionTransitionsEnabled] = useState(
     initial.aiQuestionTransitionsEnabled,
   );
+  const [aiQuestionTransitionsMode, setAiQuestionTransitionsMode] = useState<"auto" | "custom">(
+    initial.aiQuestionTransitionsMode,
+  );
+  const [aiQuestionTransitionsCustomText, setAiQuestionTransitionsCustomText] = useState(
+    initial.aiQuestionTransitionsCustomText,
+  );
+  const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
+  const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
