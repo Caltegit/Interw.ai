@@ -1777,6 +1777,8 @@ export default function InterviewStart() {
             totalQuestions: questions.length,
             followUpsAsked,
             forceMaxFollowUps,
+            transitionsEnabled:
+              (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true,
           },
         },
       });
@@ -1897,24 +1899,42 @@ export default function InterviewStart() {
     // Précharge le média pendant la TTS de transition.
     if (nMediaUrl) prefetchMedia(nMediaUrl);
 
-    // Use AI message if provided, otherwise fall back to local transition
-    const transition =
-      aiMessage ||
-      (nMediaType === "written"
-        ? `Merci. Question suivante : ${nextQ.content}`
-        : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`);
+    const transitionsEnabled =
+      (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true;
 
-    setMessages((prev) => {
-      const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
-      messagesRef.current = updated;
-      return updated;
-    });
-    setAiMessages((prev) => [...prev, { role: "assistant", content: transition }]);
+    // Use AI message if provided, otherwise fall back to local transition.
+    // Si les transitions vocales sont désactivées, on annonce uniquement la question
+    // (sans phrase de type « Merci, passons à la suite »).
+    const transition = transitionsEnabled
+      ? (aiMessage ||
+        (nMediaType === "written"
+          ? `Merci. Question suivante : ${nextQ.content}`
+          : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`))
+      : (nMediaType === "written"
+          ? nextQ.content
+          : "");
 
-    if (sessionId) {
-      trackBackground(persistMessage(sessionId, "ai", transition).catch((e) => {
-        console.error("Transition persist failed:", e);
-      }));
+    if (transition) {
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        messagesRef.current = updated;
+        return updated;
+      });
+      setAiMessages((prev) => [...prev, { role: "assistant", content: transition }]);
+
+      if (sessionId) {
+        trackBackground(persistMessage(sessionId, "ai", transition).catch((e) => {
+          console.error("Transition persist failed:", e);
+        }));
+      }
+    } else if (nMediaUrl) {
+      // Pas de phrase de transition mais on ajoute quand même un message porteur du média,
+      // pour que le player s'affiche dans le fil de conversation.
+      setMessages((prev) => {
+        const updated = [...prev, { role: "ai", content: "", mediaType: nMediaType, mediaUrl: nMediaUrl }];
+        messagesRef.current = updated;
+        return updated;
+      });
     }
 
     // CLOSE_PREV : on attend que l'upload du segment N-1 + l'insert du message
@@ -1942,9 +1962,10 @@ export default function InterviewStart() {
     // téléchargeable. En cas d'échec, on bascule en mode texte (en mémoire).
     let preparedTransitionBlob: Blob | null = null;
     if (nMediaUrl && nMediaType !== "written") {
-      // Préparation parallèle : média + blob TTS de la transition.
+      // Préparation parallèle : média + (optionnel) blob TTS de la transition.
       // On attend les DEUX avant de retirer l'overlay et de jouer.
       const blobPromise = (async () => {
+        if (!transition) return null;
         if (project?.tts_provider !== "elevenlabs") return null;
         const f = await fetchElevenLabsBlob(transition);
         if (!f) return null;
@@ -1976,20 +1997,22 @@ export default function InterviewStart() {
         });
       }
 
-      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition.
+      // Dismiss l'overlay maintenant que tout est prêt, puis prononce la transition (si présente).
       setQuestionLoading(null);
-      setIsSpeaking(true);
-      setShouldAutoPlay(false);
-      currentPresentationRef.current = { kind: "tts", text: transition };
-      if (preparedTransitionBlob) {
-        await tryElevenLabs(transition, preparedTransitionBlob);
-        currentPresentationRef.current = null;
-      } else {
-        await speak(transition);
+      if (transition) {
+        setIsSpeaking(true);
+        setShouldAutoPlay(false);
+        currentPresentationRef.current = { kind: "tts", text: transition };
+        if (preparedTransitionBlob) {
+          await tryElevenLabs(transition, preparedTransitionBlob);
+          currentPresentationRef.current = null;
+        } else {
+          await speak(transition);
+        }
+        if (token.aborted) { aborted = true; return; }
+        if (nextBlock !== currentBlockIdRef.current) return;
+        if (isPausedRef.current) return;
       }
-      if (token.aborted) { aborted = true; return; }
-      if (nextBlock !== currentBlockIdRef.current) return;
-      if (isPausedRef.current) return;
     } else {
       // Pas de média : retirer l'overlay maintenant.
       setQuestionLoading(null);

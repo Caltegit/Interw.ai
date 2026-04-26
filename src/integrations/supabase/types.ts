@@ -615,6 +615,7 @@ export type Database = {
       projects: {
         Row: {
           ai_persona_name: string
+          ai_transitions_enabled: boolean
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause: boolean
           auto_skip_silence: boolean
@@ -646,6 +647,7 @@ export type Database = {
         }
         Insert: {
           ai_persona_name?: string
+          ai_transitions_enabled?: boolean
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           auto_skip_silence?: boolean
@@ -677,6 +679,7 @@ export type Database = {
         }
         Update: {
           ai_persona_name?: string
+          ai_transitions_enabled?: boolean
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           auto_skip_silence?: boolean

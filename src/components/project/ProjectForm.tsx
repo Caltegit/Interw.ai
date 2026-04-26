@@ -72,6 +72,7 @@ export interface ProjectFormState {
   allowPause: boolean;
   completionMessage: string;
   preSessionMessage: string;
+  aiTransitionsEnabled: boolean;
 }
 
 export function mergeTemplateIntoState(
@@ -161,6 +162,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [allowPause, setAllowPause] = useState(initial.allowPause);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
+  const [aiTransitionsEnabled, setAiTransitionsEnabled] = useState(initial.aiTransitionsEnabled);
 
   const totalWeight = criteria.reduce((sum, c) => sum + (c.weight || 0), 0);
 
@@ -203,6 +205,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       allowPause,
       completionMessage,
       preSessionMessage,
+      aiTransitionsEnabled,
     });
   };
 
@@ -497,6 +500,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <p className="text-xs text-muted-foreground mt-1">
                     Ce message s'affichera sur l'écran de remerciement après l'session.
                   </p>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Transitions vocales de l'IA</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Si désactivé, l'IA enchaîne directement les questions sans phrase de transition (« Merci, passons à la suite »…).
+                    </p>
+                  </div>
+                  <Switch checked={aiTransitionsEnabled} onCheckedChange={setAiTransitionsEnabled} />
                 </div>
               </div>
             </div>

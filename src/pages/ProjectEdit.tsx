@@ -161,6 +161,8 @@ export default function ProjectEdit() {
           (project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE,
         preSessionMessage:
           (project as { pre_session_message?: string | null }).pre_session_message ?? DEFAULT_PRE_SESSION_MESSAGE,
+        aiTransitionsEnabled:
+          (project as { ai_transitions_enabled?: boolean }).ai_transitions_enabled ?? true,
       });
 
       setLoading(false);
@@ -242,6 +244,7 @@ export default function ProjectEdit() {
           tts_provider: s.ttsProvider,
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
+          ai_transitions_enabled: s.aiTransitionsEnabled,
         } as never)
         .eq("id", id);
 

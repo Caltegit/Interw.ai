@@ -70,6 +70,8 @@ Deno.serve(async (req) => {
     const nextQ = !isLastQuestion ? questionsList[currentIdx + 1] : null;
     const nextMt = nextQ?.mediaType === "video" ? "VIDÉO" : nextQ?.mediaType === "audio" ? "AUDIO" : nextQ ? "TEXTE" : null;
 
+    const transitionsEnabled = projectContext.transitionsEnabled !== false;
+
     const systemPrompt = `Tu es ${projectContext.aiPersonaName}, recruteuse IA pour le poste "${projectContext.jobTitle}".
 
 CONTEXTE :
@@ -79,6 +81,7 @@ CONTEXTE :
 - Dernière réponse du candidat : ${wordCount} mots
 - Dernière question posée : « ${currentQ.content ?? ""} »
 ${isLastQuestion ? "- C'est la DERNIÈRE question." : `- Question suivante : [${nextMt}] « ${nextQ?.content ?? ""} »`}
+- Transitions vocales activées : ${transitionsEnabled ? "OUI" : "NON"}
 
 TA TÂCHE : décider si tu poses une RELANCE sur la question actuelle, ou si tu PASSES à la suite.
 
@@ -92,7 +95,9 @@ RÈGLES STRICTES :
 6. Si c'est la DERNIÈRE question et que tu ne relances pas → action = "end".
 7. Le "message" :
    - Pour "follow_up" : UNE seule question courte de relance (max 2 phrases) qui creuse un point précis de sa réponse. Pas de "Merci".
-   - Pour "next" : courte transition (max 2 phrases). Si la question suivante est AUDIO ou VIDÉO, dis seulement « Écoutez la question suivante » ou « Regardez la question suivante ». Si elle est en TEXTE, pose-la directement.
+   - Pour "next" :${transitionsEnabled
+     ? ` courte transition (max 2 phrases). Si la question suivante est AUDIO ou VIDÉO, dis seulement « Écoutez la question suivante » ou « Regardez la question suivante ». Si elle est en TEXTE, pose-la directement.`
+     : ` transitions désactivées : "message" doit être une chaîne vide ("").`}
    - Pour "end" : remerciement bref (1 phrase) indiquant la fin de l'session.
 8. Toujours en français, professionnel et chaleureux.
 9. N'invente JAMAIS de question hors de la liste fournie.
