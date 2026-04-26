@@ -1553,17 +1553,31 @@ export default function InterviewStart() {
 
     const introEnabled =
       (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
+    const introMode =
+      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
+    const introCustomText =
+      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
 
     // Greeting :
-    // - Si introEnabled : phrase d'accueil complète comme avant.
-    // - Sinon : on retire le « Bonjour … nous allons démarrer la session ». Pour une
-    //   Q1 média, rien n'est prononcé (le média joue directement). Pour une Q1 texte,
-    //   on prononce uniquement le contenu de la question.
-    const greeting = introEnabled
-      ? (isFirstQMedia
-          ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-          : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`)
-      : (isFirstQMedia ? "" : q0.content);
+    // - introEnabled = false → pas de greeting (Q1 média : rien ; Q1 texte : on prononce juste la question).
+    // - introMode = "custom" et texte fourni → on l'utilise tel quel avec interpolation.
+    // - sinon → texte par défaut contextuel.
+    const defaultGreeting = isFirstQMedia
+      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+
+    const interpolate = (tpl: string) =>
+      tpl
+        .replace(/\{prenom\}/g, firstName ?? "")
+        .replace(/\{poste\}/g, project?.job_title ?? "")
+        .replace(/\{question_suivante\}/g, q0.content ?? "")
+        .trim();
+
+    const greeting = !introEnabled
+      ? (isFirstQMedia ? "" : q0.content)
+      : introMode === "custom" && introCustomText
+        ? interpolate(introCustomText)
+        : defaultGreeting;
 
     // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
     if (usesEleven && greeting) {
@@ -1915,18 +1929,35 @@ export default function InterviewStart() {
 
     const transitionsEnabled =
       (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true;
+    const transitionsMode =
+      ((project as { ai_question_transitions_mode?: string })?.ai_question_transitions_mode as
+        | "auto"
+        | "custom") ?? "auto";
+    const transitionsCustomText =
+      ((project as { ai_question_transitions_custom_text?: string | null })
+        ?.ai_question_transitions_custom_text ?? "").trim();
 
-    // Use AI message if provided, otherwise fall back to local transition.
-    // Si les transitions vocales sont désactivées, on annonce uniquement la question
-    // (sans phrase de type « Merci, passons à la suite »).
-    const transition = transitionsEnabled
-      ? (aiMessage ||
-        (nMediaType === "written"
-          ? `Merci. Question suivante : ${nextQ.content}`
-          : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`))
-      : (nMediaType === "written"
-          ? nextQ.content
-          : "");
+    const interpolateTransition = (tpl: string) =>
+      tpl
+        .replace(/\{prenom\}/g, ((session?.candidate_name ?? "").trim().split(/\s+/)[0]) ?? "")
+        .replace(/\{poste\}/g, project?.job_title ?? "")
+        .replace(/\{question_suivante\}/g, nextQ?.content ?? "")
+        .trim();
+
+    // Calcul du texte de transition :
+    // - transitionsEnabled=false → silencieux (sauf Q texte → on prononce la question).
+    // - mode "custom" + texte fourni → on l'utilise (priorité sur l'IA).
+    // - sinon → message IA si dispo, sinon fallback local.
+    const transition = !transitionsEnabled
+      ? (nMediaType === "written" ? nextQ.content : "")
+      : transitionsMode === "custom" && transitionsCustomText
+        ? (nMediaType === "written"
+            ? `${interpolateTransition(transitionsCustomText)} ${nextQ.content}`.trim()
+            : interpolateTransition(transitionsCustomText))
+        : (aiMessage ||
+            (nMediaType === "written"
+              ? `Merci. Question suivante : ${nextQ.content}`
+              : `Merci. ${nMediaType === "video" ? "Regardez" : "Écoutez"} la question suivante.`));
 
     if (transition) {
       setMessages((prev) => {

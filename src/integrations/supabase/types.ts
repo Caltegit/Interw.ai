@@ -614,9 +614,13 @@ export type Database = {
       }
       projects: {
         Row: {
+          ai_intro_custom_text: string | null
           ai_intro_enabled: boolean
+          ai_intro_mode: string
           ai_persona_name: string
+          ai_question_transitions_custom_text: string | null
           ai_question_transitions_enabled: boolean
+          ai_question_transitions_mode: string
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause: boolean
           auto_skip_silence: boolean
@@ -647,9 +651,13 @@ export type Database = {
           tts_voice_id: string | null
         }
         Insert: {
+          ai_intro_custom_text?: string | null
           ai_intro_enabled?: boolean
+          ai_intro_mode?: string
           ai_persona_name?: string
+          ai_question_transitions_custom_text?: string | null
           ai_question_transitions_enabled?: boolean
+          ai_question_transitions_mode?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           auto_skip_silence?: boolean
@@ -680,9 +688,13 @@ export type Database = {
           tts_voice_id?: string | null
         }
         Update: {
+          ai_intro_custom_text?: string | null
           ai_intro_enabled?: boolean
+          ai_intro_mode?: string
           ai_persona_name?: string
+          ai_question_transitions_custom_text?: string | null
           ai_question_transitions_enabled?: boolean
+          ai_question_transitions_mode?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           auto_skip_silence?: boolean

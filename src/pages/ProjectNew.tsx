@@ -77,7 +77,11 @@ const initialState: ProjectFormState = {
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
   aiIntroEnabled: true,
+  aiIntroMode: "auto",
+  aiIntroCustomText: "",
   aiQuestionTransitionsEnabled: true,
+  aiQuestionTransitionsMode: "auto",
+  aiQuestionTransitionsCustomText: "",
 };
 
 export default function ProjectNew() {
@@ -183,7 +187,11 @@ export default function ProjectNew() {
           tts_voice_gender: s.ttsVoiceGender,
           tts_voice_id: s.ttsVoiceId,
           ai_intro_enabled: s.aiIntroEnabled,
+          ai_intro_mode: s.aiIntroMode,
+          ai_intro_custom_text: s.aiIntroCustomText.trim() || null,
           ai_question_transitions_enabled: s.aiQuestionTransitionsEnabled,
+          ai_question_transitions_mode: s.aiQuestionTransitionsMode,
+          ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
         } as never)
         .select()
         .single();
