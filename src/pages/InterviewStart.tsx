@@ -1777,6 +1777,8 @@ export default function InterviewStart() {
             totalQuestions: questions.length,
             followUpsAsked,
             forceMaxFollowUps,
+            transitionsEnabled:
+              (project as { ai_transitions_enabled?: boolean })?.ai_transitions_enabled ?? true,
           },
         },
       });
