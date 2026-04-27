@@ -1902,7 +1902,14 @@ export default function InterviewStart() {
     // ── 5. END branch ──
     if (action === "end" || isLastQuestion) {
       setInterviewFinished(true);
-      const closing = aiMessage || "Merci pour vos réponses, la session est terminé.";
+      // Garde-fou : si l'IA a généré (à tort) une transition vers une question suivante
+      // sur la dernière question, on remplace par un message de clôture propre.
+      const fallbackClosing = "Merci pour cette session, à bientôt.";
+      const rawClosing = (aiMessage || "").trim();
+      const lower = rawClosing.toLowerCase();
+      const hasTransitionMarker =
+        /question\s+suivante|écoutez|ecoutez|regardez|passons\s+à|passons\s+a/.test(lower);
+      const closing = !rawClosing || hasTransitionMarker ? fallbackClosing : rawClosing;
       setMessages((prev) => {
         const updated = [...prev, { role: "ai", content: closing }];
         messagesRef.current = updated;
