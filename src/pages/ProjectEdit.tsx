@@ -287,6 +287,7 @@ export default function ProjectEdit() {
 
       // 1) Suppressions ciblées (ou archivage si la question est référencée par des messages)
       const idsToRemove = [...existingIds].filter((qid) => !submittedIds.has(qid));
+      const failedRemovals: string[] = [];
       for (const qid of idsToRemove) {
         const { error: delErr } = await supabase.from("questions").delete().eq("id", qid);
         if (delErr) {
@@ -295,8 +296,35 @@ export default function ProjectEdit() {
             .from("questions")
             .update({ archived_at: new Date().toISOString() } as never)
             .eq("id", qid);
-          if (archErr) throw archErr;
+          if (archErr) {
+            failedRemovals.push(qid);
+            try {
+              const { logger } = await import("@/lib/logger");
+              logger.error("project_edit.question_removal_failed", {
+                project_id: id,
+                question_id: qid,
+                delete_error: delErr.message,
+                archive_error: archErr.message,
+              });
+            } catch {
+              /* logger optionnel */
+            }
+          }
         }
+        // Vérification post-suppression : la question doit avoir disparu des actives
+        const { data: stillActive } = await supabase
+          .from("questions")
+          .select("id, archived_at")
+          .eq("id", qid)
+          .maybeSingle();
+        if (stillActive && !stillActive.archived_at) {
+          failedRemovals.push(qid);
+        }
+      }
+      if (failedRemovals.length > 0) {
+        throw new Error(
+          `Impossible de supprimer ${failedRemovals.length} question(s). Réessayez ou rafraîchissez la page.`,
+        );
       }
 
       // 2) Préparer org pour la bibliothèque (récupéré une seule fois si besoin)

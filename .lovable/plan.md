@@ -1,39 +1,55 @@
-## Bug identifié
+## Contexte
 
-En analysant la base de données, j'ai trouvé la cause exacte du bug.
+Lors de la modification d'un projet, l'utilisateur supprime des questions, mais elles continueraient d'apparaître / être jouées en session candidat.
 
-**Projet source** "Poylo, la dernière." : 9 questions dont **1 archivée** (supprimée depuis l'éditeur — la suppression archive au lieu de supprimer quand la question est référencée par des messages de session).
+## Analyse de la base
 
-**Projet copié** "Poylo, une dernière conversation." : a hérité des 9 questions, **archivée incluse**.
+Le mécanisme côté édition (`ProjectEdit.tsx`) et côté lecture (`InterviewStart.tsx`, `ProjectDetail.tsx`, `ProjectEdit.tsx`) filtre déjà `archived_at IS NULL`. Le delete tente une vraie suppression et bascule en archivage si une contrainte FK l'empêche (questions référencées par des messages d'anciennes sessions). Tout cela fonctionne — la dernière question archivée du projet « Poylo, une dernière conversation » date d'aujourd'hui 20:56, donc l'archivage est bien déclenché.
 
-### Pourquoi ça crée le bug
+## Bugs identifiés malgré tout
 
-1. La fonction `handleDuplicate` dans `src/pages/ProjectDetail.tsx` lit les questions depuis le state `questions`, qui est chargé sans filtre `archived_at IS NULL` (ligne 82‑85). Toutes les questions, y compris les archivées, sont copiées dans le nouveau projet — mais sans recopier la valeur `archived_at`, donc elles deviennent **actives** dans la copie.
-2. L'éditeur (`ProjectEdit.tsx`) filtre `archived_at IS NULL` au chargement, donc l'utilisateur ne voit pas ces questions « fantômes » dans le formulaire et ne peut pas les modifier ni les supprimer.
-3. Côté candidat, `InterviewStart.tsx` ne filtre pas non plus `archived_at` lors du chargement des questions de la session, donc les anciennes questions archivées du projet d'origine sont jouées en plus des modifications faites par l'utilisateur.
+En relisant attentivement `ProjectEdit.handleSave` (lignes 270-340), j'ai trouvé **deux causes possibles** au symptôme :
 
-### Bugs secondaires identifiés au passage
+### Bug 1 : la session déjà créée n'est pas resynchronisée
 
-- `handleDuplicate` ne recopie pas plusieurs champs : `audio_url`, `video_url`, `hint_text`, `relance_level`, `max_response_seconds`, `scoring_criteria_ids`, `category`. Les questions audio/vidéo perdent leur média dans la copie.
-- `order_index` est recopié tel quel au lieu d'être ré‑indexé proprement de 0 à N‑1.
-- Les critères dupliqués perdent aussi `category` (champ existant en table).
+Côté candidat, `InterviewStart` charge bien `questions WHERE project_id = X AND archived_at IS NULL` ✅. **Mais** : quand un candidat a déjà commencé la session (`status = in_progress`, des messages existent), il « reprend » à `last_question_index`. Si tu as supprimé/réordonné des questions entre-temps, l'index ne pointe plus sur la bonne question, et les messages déjà enregistrés (avec `question_id` pointant vers la question archivée) continuent à s'afficher dans le replay/transcript et à influencer l'IA.
 
-## Correctifs à appliquer
+### Bug 2 : la suppression ne purge pas les médias orphelins
 
-### 1. `src/pages/ProjectDetail.tsx`
+Quand une question est archivée (FK violation), son `audio_url`/`video_url` reste accessible. Si tu recrées une question avec le même contenu, l'ancienne archivée garde un média qui peut réapparaître dans certains contextes (rapports, replay).
 
-- **Charger les questions** (ligne 82‑85) avec `.is("archived_at", null)` pour ne jamais afficher ni dupliquer les questions archivées.
-- **Sélectionner les colonnes manquantes** dans la requête `questions` : `audio_url, video_url, hint_text, relance_level, max_response_seconds, scoring_criteria_ids`.
-- **Dans `handleDuplicate`** : recopier ces champs et ré‑indexer `order_index` de 0 à N‑1 selon l'ordre déjà trié.
-- **Dans la duplication des critères** : ajouter `category`.
+### Bug 3 (probable, à confirmer côté UX) : suppression silencieuse en cas d'erreur
 
-### 2. `src/pages/InterviewStart.tsx`
+Lignes 290-300 : si `delete` échoue pour une raison autre que FK (ex. droits RLS, réseau), le code essaie d'archiver — mais si l'archivage échoue aussi, l'erreur est levée tout en haut de la transaction. Le projet a déjà été update et certaines questions update/insert ont eu lieu avant. Résultat : la sauvegarde apparaît partielle et la question supprimée réapparaît au refresh.
 
-- Ajouter `.is("archived_at", null)` au chargement des questions de session (ligne ~1034) pour qu'aucune question archivée ne soit jamais jouée à un candidat.
+## Plan de correction
+
+### 1. `src/pages/ProjectEdit.tsx` — sync robuste
+
+- Faire **toute la synchronisation des questions dans une transaction RPC** (créer une fonction `sync_project_questions(project_id, questions jsonb)`) côté Supabase pour atomicité, OU à défaut :
+- Réorganiser l'ordre des opérations : 1) calculer le diff, 2) supprimer/archiver, 3) update/insert. Vérifier explicitement le résultat de chaque suppression et logger via `logger.error` les échecs.
+- Ajouter un **toast d'erreur explicite** par question non supprimée plutôt que de laisser la sauvegarde réussir silencieusement.
+
+### 2. `src/pages/InterviewStart.tsx` — réconciliation à la reprise
+
+- À la reprise d'une session `in_progress`, si la liste des questions actives a changé depuis le démarrage (détection via comparaison `question_id` des `session_messages` vs `questions actives`), proposer un dialog : « Le questionnaire a été modifié. Reprendre depuis la question X ou recommencer ? »
+- Recalculer `last_question_index` en fonction de la nouvelle liste plutôt que de prendre la valeur stockée brute.
+
+### 3. Nettoyage de la session existante
+
+- Cleanup ponctuel : la question `d0f56244-d23b-4676-bae1-bf38fb8f2f0c` (archivée à 20:56 sur le projet « Poylo, une dernière conversation ») et la session pending `0ad92ccd...` créée juste après. Vérifier qu'aucune question fantôme ne reste à jouer dans cette session.
+
+### 4. Question pour préciser le diagnostic
+
+Avant d'implémenter, j'aimerais savoir **où précisément** tu vois la question supprimée :
+- (a) Dans l'éditeur du projet après refresh ?
+- (b) En jouant la session côté candidat (preview) ?
+- (c) Dans le rapport / transcript d'une session déjà passée ?
+
+La réponse oriente vers le bug 1, 2 ou 3.
 
 ## Résultat attendu
 
-- Une nouvelle duplication ne copiera plus les questions archivées.
-- Les questions audio/vidéo conserveront leurs médias dans la copie.
-- Les questions archivées orphelines déjà présentes dans la copie existante (« Poylo, une dernière conversation. ») ne seront plus jouées au candidat (filtrage côté lecture).
-- Optionnel : je peux aussi nettoyer manuellement les questions « fantômes » déjà présentes dans la copie existante pour repartir propre — dis‑moi si tu veux.
+- Suppression de questions fiable et atomique, avec feedback en cas d'échec.
+- Reprise de session intelligente quand le questionnaire a changé.
+- Plus de questions « fantômes » jouées au candidat.
