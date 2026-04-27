@@ -156,6 +156,18 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`
       parsed = { action: "next", message: parsed.message };
     }
 
+    // Sur la dernière question, forcer un message de clôture propre.
+    // L'IA génère parfois à tort une transition ("Écoutez/Regardez la question suivante"),
+    // ce qui est incohérent puisqu'il n'y a pas de question suivante.
+    if (parsed.action === "end") {
+      const msg = (parsed.message || "").toLowerCase();
+      const hasTransitionMarker =
+        /question\s+suivante|écoutez|ecoutez|regardez|passons\s+à|passons\s+a/.test(msg);
+      if (!parsed.message.trim() || hasTransitionMarker) {
+        parsed.message = "Merci pour cette session, à bientôt.";
+      }
+    }
+
     return new Response(
       JSON.stringify({
         action: parsed.action,

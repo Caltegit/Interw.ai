@@ -1,33 +1,45 @@
 ## Problème
 
-Sur la dernière question, quand le candidat clique sur « Ma réponse est terminée » :
-1. L'overlay « Analyse de votre réponse… » s'affiche brièvement.
-2. Puis il disparaît (ligne 1917 dans `src/pages/InterviewStart.tsx` : `setQuestionLoading(null)`).
-3. L'écran de la question redevient visible pendant que l'IA prononce son message de clôture (TTS de plusieurs secondes).
-4. Puis seulement, redirection vers `/session/:slug/complete/:token`.
+Sur la dernière question, après que le candidat ait terminé sa réponse, l'IA prononce parfois « Regardez la question suivante » ou « Écoutez la question suivante » au lieu d'un vrai remerciement de fin.
 
-Résultat : un "flash" de l'écran question entre le clic et l'écran de fin, qui paraît cassé.
+### Cause
+
+Dans `supabase/functions/ai-conversation-turn/index.ts` :
+- Le prompt indique à l'IA que c'est la dernière question et qu'elle doit générer un remerciement.
+- Mais le modèle se trompe parfois et génère quand même une phrase de transition (« Écoutez/Regardez la question suivante »).
+- Le code force ensuite `action = "end"` (ligne 152-156) **mais conserve le `message` original** de l'IA — donc le mauvais texte passe au front.
+
+Dans `src/pages/InterviewStart.tsx` (ligne 1903-1924) :
+- La branche END utilise directement `aiMessage` reçu, sans le valider.
+- Le fallback « Merci pour vos réponses… » n'est utilisé que si `aiMessage` est vide.
 
 ## Solution
 
-Dans la branche « END » de `handleSendResponse` (`src/pages/InterviewStart.tsx`, ~lignes 1903–1922) :
+Forcer côté serveur **et** côté client un message de clôture propre quand on est sur la dernière question, indépendamment de ce que l'IA a généré.
 
-- **Ne pas masquer l'overlay** avant la fin. Au contraire, mettre à jour son label pour refléter ce qui se passe (« Finalisation de la session… »).
-- Garder l'overlay visible pendant tout le `await speak(closing)` du message de clôture.
-- L'overlay reste affiché jusqu'à ce que `endInterview()` déclenche la navigation vers la page `InterviewComplete`, qui prend ensuite le relais avec son propre écran « Enregistrement de votre session… ».
+### 1. Edge function — `supabase/functions/ai-conversation-turn/index.ts`
 
-Concrètement :
-- Remplacer le `setQuestionLoading(null)` de la ligne 1917 par une mise à jour : `setQuestionLoading({ label: "Finalisation de la session…", percent: 95 })`.
-- Ne PAS remettre `null` après — `endInterview()` navigue away, le composant est démonté.
+Quand `action === "end"` (forcé ou non), remplacer le `message` par un texte de clôture déterministe :
+
+- Si le `message` généré par l'IA contient des marqueurs de transition (« question suivante », « écoutez », « regardez », « passons à »), le rejeter.
+- Construire un message de clôture par défaut : « Merci pour vos réponses, la session est terminée. À bientôt. »
+- Optionnel : permettre au prompt projet de fournir un texte de clôture personnalisé via `projectContext.aiClosingMessage`. Si présent, l'utiliser tel quel.
+
+### 2. Frontend — `src/pages/InterviewStart.tsx` (branche END, ligne 1903-1924)
+
+- Ajouter une garde : si `aiMessage` contient « question suivante », « écoutez », « regardez », ou est vide → utiliser le fallback « Merci pour vos réponses, la session est terminée. À bientôt. »
+- Garder l'overlay « Finalisation de la session… » pendant le TTS (déjà en place).
 
 ## Détails techniques
 
-- Fichier modifié : `src/pages/InterviewStart.tsx` uniquement.
-- L'overlay (`QuestionLoadingOverlay`) est déjà rendu plein écran avec `z-[90]`, donc il masque proprement le bloc de la question pendant le TTS final.
-- Le composant `InterviewComplete` affiche déjà un loader « Enregistrement de votre session… » tant que `sessions.status !== 'completed'`, donc la transition visuelle sera continue : overlay « Finalisation… » → écran « Enregistrement… » → écran final.
-- Aucun changement nécessaire côté `handleSkipQuestion` sur la dernière question : il appelle directement `endInterview()` sans TTS de clôture, donc la redirection est immédiate.
+**Fichiers modifiés :**
+- `supabase/functions/ai-conversation-turn/index.ts` : sanitiser `parsed.message` quand `parsed.action === "end"`.
+- `src/pages/InterviewStart.tsx` : valider `aiMessage` à la ligne 1905 avant de l'utiliser.
+
+**Texte de clôture par défaut :** « Merci pour cette session, à bientôt. » (cohérent avec le souhait utilisateur).
 
 ## Hors périmètre
 
-- Pas de modification de `InterviewComplete.tsx` ni de `QuestionLoadingOverlay.tsx`.
-- Pas de changement de la logique IA ni de la finalisation en arrière-plan.
+- Pas de modification du `completion_message` (écran final post-redirection, déjà OK).
+- Pas de changement de la logique de relance (`follow_up`) ni de la branche `next`.
+- Pas de nouveau champ en base — le message de clôture TTS reste un constant côté code (peut être rendu configurable plus tard si besoin).
