@@ -2852,10 +2852,13 @@ export default function InterviewStart() {
                   />
                 )}
 
-                {/* For video questions, also show the question content as text */}
-                {currentQ && questionType === "video" && !interviewFinished && (
-                  <div className="rounded-xl border border-border bg-card p-4">
-                    <p className="text-sm sm:text-base font-medium text-foreground leading-relaxed">
+                {/* Pour les questions vidéo, on affiche aussi le contenu texte (texte de secours) */}
+                {currentQ && questionType === "video" && currentQ.content?.trim() && !interviewFinished && (
+                  <div
+                    className="rounded-xl border-l-2 border bg-card/80 p-4"
+                    style={{ borderLeftColor: "hsl(var(--l-accent))" }}
+                  >
+                    <p className="text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
                       {currentQ.content}
                     </p>
                   </div>

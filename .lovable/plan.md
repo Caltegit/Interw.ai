@@ -1,24 +1,33 @@
-## Problème
-Le projet `poylo-la-derni-re-copy-moh630ur` a `intro_mode = 'tts'` mais `tts_provider = 'browser'`. L'edge function `tts-elevenlabs` répond donc `{ skip: true, reason: 'not_enabled' }`. Le client (`InterviewLanding.tsx`) détecte que la réponse n'est pas de l'audio et appelle directement `setMediaFinished(true)` → l'écran passe à « message écouté » sans qu'aucune voix ne soit lue.
+## Diagnostic
+Sur la capture, le texte de secours **est bien rendu** (bloc en haut à droite « Après moi… ça va être à toi de m'imiter… ») mais quasi invisible : le bloc utilise `bg-card` + `text-foreground` qui, combinés au fond sombre du layout candidat et à un overlay translucide, donnent un texte très peu contrasté.
+
+C'est donc un bug d'affichage / lisibilité, pas un texte manquant.
 
 ## Correctif
 
-Dans `src/pages/InterviewLanding.tsx`, fonction `handlePlayMedia` (branche `introMediaType === "tts"`) :
+Dans `src/pages/InterviewStart.tsx` (lignes 2855-2862), le bloc « texte de secours » des questions vidéo :
 
-1. Extraire la lecture en fallback dans une fonction interne `playWithBrowserTts()` qui utilise `window.speechSynthesis` :
-   - Crée une `SpeechSynthesisUtterance(text)` avec `lang = "fr-FR"`.
-   - `onend` / `onerror` → `setMediaPlaying(false)` + `setMediaFinished(true)`.
-   - Stocke un objet `{ pause: () => synth.cancel() }` dans `ttsAudioRef.current` pour que `stopAllIntroMedia` puisse l'arrêter (compatible avec le code existant).
-   - `synth.speak(utterance)` puis `setMediaPlaying(true)`.
+1. Ajouter une **bordure accent à gauche** (comme les blocs énoncé `featured` du `QuestionMediaPlayer`) pour signaler visuellement que c'est l'énoncé de la question.
+2. Forcer `text-foreground` pleine opacité et `whitespace-pre-wrap` pour conserver les retours à la ligne.
+3. Ne plus afficher la carte vide quand `currentQ.content` est vide (évite un encadré inutile).
+4. Légère opacité réduite sur le fond pour rester cohérent avec la maquette.
 
-2. Quand la réponse `tts-elevenlabs` n'est pas de l'audio (provider non configuré côté projet) → appeler `playWithBrowserTts()` au lieu de `setMediaFinished(true)`.
-
-3. Idem dans le `catch` réseau : tenter le fallback navigateur.
+```tsx
+{currentQ && questionType === "video" && currentQ.content?.trim() && !interviewFinished && (
+  <div
+    className="rounded-xl border-l-2 border bg-card/80 p-4"
+    style={{ borderLeftColor: "hsl(var(--l-accent))" }}
+  >
+    <p className="text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
+      {currentQ.content}
+    </p>
+  </div>
+)}
+```
 
 ## Hors-périmètre
-- Pas de changement DB : on ne force pas le projet sur ElevenLabs.
-- L'edge function `tts-elevenlabs` reste inchangée (son comportement « skip si non activé » est correct).
-- `stopAllIntroMedia` n'a pas besoin d'être modifié : le shim `{ pause }` injecté est compatible avec le code `t.pause()` existant.
+- Pas de modification du formulaire (le champ « Ajouter un texte de secours » est déjà disponible pour les questions vidéo dans `QuestionFormDialog`).
+- Pas de modification du `QuestionMediaPlayer` (le rendu vidéo featured n'affiche pas le texte, c'est `InterviewStart` qui s'en charge).
 
 ## Vérification
-Recharger `/session/poylo-la-derni-re-copy-moh630ur`, démarrer la session, cliquer « Écouter le message » → la voix du navigateur lit le texte d'intro, puis le bouton « Commencer la session » apparaît.
+Recharger une session avec une question vidéo + texte de secours : le texte apparaît clairement sous la vidéo, en blanc plein contraste, avec une barre d'accent à gauche.
