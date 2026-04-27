@@ -121,6 +121,38 @@ export default function InterviewLanding() {
         return;
       }
       setTtsLoading(true);
+
+      const playWithBrowserTts = () => {
+        try {
+          const synth = window.speechSynthesis;
+          if (!synth) {
+            setMediaFinished(true);
+            return;
+          }
+          synth.cancel();
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = "fr-FR";
+          utterance.rate = 1;
+          utterance.pitch = 1;
+          utterance.onend = () => {
+            setMediaPlaying(false);
+            setMediaFinished(true);
+          };
+          utterance.onerror = () => {
+            setMediaPlaying(false);
+            setMediaFinished(true);
+          };
+          (ttsAudioRef as any).current = {
+            pause: () => synth.cancel(),
+            src: "",
+          };
+          synth.speak(utterance);
+          setMediaPlaying(true);
+        } catch {
+          setMediaFinished(true);
+        }
+      };
+
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
         const res = await fetch(url, {
@@ -130,7 +162,8 @@ export default function InterviewLanding() {
         });
         const ct = res.headers.get("Content-Type") || "";
         if (!ct.includes("audio")) {
-          setMediaFinished(true);
+          // Pas de TTS serveur disponible : on lit avec la voix du navigateur
+          playWithBrowserTts();
           return;
         }
         const blob = await res.blob();
@@ -145,7 +178,7 @@ export default function InterviewLanding() {
         await audio.play();
         setMediaPlaying(true);
       } catch {
-        setMediaFinished(true);
+        playWithBrowserTts();
       } finally {
         setTtsLoading(false);
       }
