@@ -80,8 +80,9 @@ export default function ProjectDetail() {
         .single(),
       supabase
         .from("questions")
-        .select("id, project_id, order_index, title, content, type, follow_up_enabled, max_follow_ups")
+        .select("id, project_id, order_index, title, content, type, follow_up_enabled, max_follow_ups, audio_url, video_url, hint_text, relance_level, max_response_seconds, scoring_criteria_ids")
         .eq("project_id", id)
+        .is("archived_at", null)
         .order("order_index"),
       supabase
         .from("evaluation_criteria")
@@ -184,17 +185,23 @@ export default function ProjectDetail() {
 
       if (error) throw error;
 
-      // Duplicate questions
+      // Duplicate questions (réindexation propre + recopie complète des champs)
       if (questions.length > 0) {
         await supabase.from("questions").insert(
-          questions.map((q) => ({
+          questions.map((q, idx) => ({
             project_id: newProject.id,
-            order_index: q.order_index,
+            order_index: idx,
             title: (q as any).title || q.content.slice(0, 60),
             content: q.content,
             type: q.type,
             follow_up_enabled: q.follow_up_enabled,
             max_follow_ups: q.max_follow_ups,
+            audio_url: (q as any).audio_url ?? null,
+            video_url: (q as any).video_url ?? null,
+            hint_text: (q as any).hint_text ?? null,
+            relance_level: (q as any).relance_level ?? "medium",
+            max_response_seconds: (q as any).max_response_seconds ?? null,
+            scoring_criteria_ids: (q as any).scoring_criteria_ids ?? null,
           })),
         );
       }
