@@ -1036,16 +1036,27 @@ export default function InterviewStart() {
         .eq("project_id", sess.project_id)
         .is("archived_at", null)
         .order("order_index");
-      setQuestions(qs ?? []);
+      const activeQuestions = qs ?? [];
+      setQuestions(activeQuestions);
 
       // Détection d'une reprise possible : session déjà démarrée + au moins un message
       if (sess.status === "in_progress") {
-        const { count } = await supabase
+        const { data: msgs } = await supabase
           .from("session_messages")
-          .select("id", { count: "exact", head: true })
-          .eq("session_id", sess.id);
-        if ((count ?? 0) > 0) {
-          setResumePrompt({ resumeIndex: Math.max(0, Number(sess.last_question_index) || 0) });
+          .select("question_id")
+          .eq("session_id", sess.id)
+          .not("question_id", "is", null);
+        const answeredIds = new Set((msgs ?? []).map((m) => m.question_id).filter(Boolean));
+        if ((msgs?.length ?? 0) > 0) {
+          // Recalcule l'index sur la liste actuelle des questions actives
+          // (au cas où le RH a supprimé/réordonné des questions entre-temps).
+          const firstUnansweredIdx = activeQuestions.findIndex((q) => !answeredIds.has(q.id));
+          const storedIdx = Math.max(0, Number(sess.last_question_index) || 0);
+          const safeIdx =
+            firstUnansweredIdx >= 0
+              ? firstUnansweredIdx
+              : Math.min(storedIdx, Math.max(0, activeQuestions.length - 1));
+          setResumePrompt({ resumeIndex: safeIdx });
         }
       }
 
