@@ -29,7 +29,7 @@ export default function ConsentDialog({ open, onOpenChange, jobTitle, orgName }:
             <section>
               <h3 className="font-semibold text-foreground mb-1">1. Données collectées</h3>
               <p className="text-muted-foreground">
-                Pendant cet entretien pour <span className="text-foreground font-medium">{job}</span>, nous collectons :
+                Pendant cette session pour <span className="text-foreground font-medium">{job}</span>, nous collectons :
                 votre nom, votre adresse e-mail, l'enregistrement audio et vidéo de vos réponses, la transcription
                 écrite de vos propos, ainsi que des métadonnées techniques (durée, horodatage).
               </p>
@@ -48,7 +48,7 @@ export default function ConsentDialog({ open, onOpenChange, jobTitle, orgName }:
               <h3 className="font-semibold text-foreground mb-1">3. Qui a accès à vos données</h3>
               <p className="text-muted-foreground">
                 Seules les équipes de recrutement habilitées de <span className="text-foreground font-medium">{org}</span>
-                peuvent consulter votre entretien et le rapport généré. Nos prestataires techniques (hébergement,
+                peuvent consulter votre session et le rapport généré. Nos prestataires techniques (hébergement,
                 transcription, analyse IA) accèdent aux données uniquement pour fournir le service, sous contrat de
                 confidentialité.
               </p>
@@ -84,7 +84,7 @@ export default function ConsentDialog({ open, onOpenChange, jobTitle, orgName }:
             <section className="rounded-md border border-primary/30 bg-primary/5 p-3">
               <h3 className="font-semibold text-foreground mb-1">7. Droit de retrait — suppression totale</h3>
               <p className="text-muted-foreground">
-                Vous pouvez interrompre l'entretien à tout moment. À l'arrêt, vous avez le choix entre :
+                Vous pouvez interrompre la session à tout moment. À l'arrêt, vous avez le choix entre :
               </p>
               <ul className="list-disc pl-5 mt-2 space-y-1 text-muted-foreground">
                 <li><span className="text-foreground">Envoyer vos réponses</span> pour analyse par le recruteur.</li>

@@ -317,7 +317,7 @@ export default function InterviewStart() {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
       toast({
-        title: "Entretien mis en pause",
+        title: "Session mise en pause",
         description: "Reprenez dans les 2 minutes pour continuer.",
       });
       // IMPORTANT : on déclenche pauseInterview AVANT le TTS d'annonce, pour que
@@ -2865,7 +2865,7 @@ export default function InterviewStart() {
                 {interviewFinished && (
                   <div className="rounded-2xl border border-border bg-card p-5 text-center space-y-2">
                     <p className="text-base sm:text-lg font-semibold text-foreground">
-                      Entretien terminé
+                      Session terminée
                     </p>
                     <p className="text-sm text-muted-foreground">
                       Merci pour vos réponses. Finalisation en cours…
@@ -3181,7 +3181,7 @@ export default function InterviewStart() {
             <DialogTitle>Arrêter la session ?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Choisissez ce que vous souhaitez faire de cet entretien :
+            Choisissez ce que vous souhaitez faire de cette session :
           </p>
           <div className="flex flex-col gap-2 pt-2">
             <Button
