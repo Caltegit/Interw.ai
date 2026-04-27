@@ -1,22 +1,24 @@
-## Objectif
-Harmoniser le vocabulaire côté candidat : remplacer toutes les occurrences de « entretien » par « session » sur les écrans de réservation/accueil, pendant la session, et de confirmation.
+## Problème
+Le projet `poylo-la-derni-re-copy-moh630ur` a `intro_mode = 'tts'` mais `tts_provider = 'browser'`. L'edge function `tts-elevenlabs` répond donc `{ skip: true, reason: 'not_enabled' }`. Le client (`InterviewLanding.tsx`) détecte que la réponse n'est pas de l'audio et appelle directement `setMediaFinished(true)` → l'écran passe à « message écouté » sans qu'aucune voix ne soit lue.
 
-## Fichiers à modifier
+## Correctif
 
-### 1. `src/pages/InterviewStart.tsx`
-- L. 320 : `"Entretien mis en pause"` → `"Session mise en pause"`
-- L. 2868 : `"Entretien terminé"` → `"Session terminée"`
-- L. 3184 : `"Choisissez ce que vous souhaitez faire de cet entretien :"` → `"Choisissez ce que vous souhaitez faire de cette session :"`
+Dans `src/pages/InterviewLanding.tsx`, fonction `handlePlayMedia` (branche `introMediaType === "tts"`) :
 
-### 2. `src/components/interview/ConsentDialog.tsx`
-- L. 32 : `"Pendant cet entretien pour …"` → `"Pendant cette session pour …"`
-- L. 51 : `"peuvent consulter votre entretien et le rapport généré"` → `"peuvent consulter votre session et le rapport généré"`
-- L. 87 : `"Vous pouvez interrompre l'entretien à tout moment"` → `"Vous pouvez interrompre la session à tout moment"`
+1. Extraire la lecture en fallback dans une fonction interne `playWithBrowserTts()` qui utilise `window.speechSynthesis` :
+   - Crée une `SpeechSynthesisUtterance(text)` avec `lang = "fr-FR"`.
+   - `onend` / `onerror` → `setMediaPlaying(false)` + `setMediaFinished(true)`.
+   - Stocke un objet `{ pause: () => synth.cancel() }` dans `ttsAudioRef.current` pour que `stopAllIntroMedia` puisse l'arrêter (compatible avec le code existant).
+   - `synth.speak(utterance)` puis `setMediaPlaying(true)`.
+
+2. Quand la réponse `tts-elevenlabs` n'est pas de l'audio (provider non configuré côté projet) → appeler `playWithBrowserTts()` au lieu de `setMediaFinished(true)`.
+
+3. Idem dans le `catch` réseau : tenter le fallback navigateur.
 
 ## Hors-périmètre
-- Pages RH/admin (Dashboard, ProjectDetail, etc.) ne sont pas modifiées.
-- Les scènes Remotion (vidéo de démo) ne sont pas modifiées.
-- Les libellés `InterviewLanding.tsx` et `InterviewCancelled.tsx` utilisent déjà « session ».
+- Pas de changement DB : on ne force pas le projet sur ElevenLabs.
+- L'edge function `tts-elevenlabs` reste inchangée (son comportement « skip si non activé » est correct).
+- `stopAllIntroMedia` n'a pas besoin d'être modifié : le shim `{ pause }` injecté est compatible avec le code `t.pause()` existant.
 
 ## Vérification
-Après application : `rg -i "entretien" src/pages/Interview*.tsx src/components/interview/` ne doit plus rien retourner.
+Recharger `/session/poylo-la-derni-re-copy-moh630ur`, démarrer la session, cliquer « Écouter le message » → la voix du navigateur lit le texte d'intro, puis le bouton « Commencer la session » apparaît.
