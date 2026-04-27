@@ -1,33 +1,39 @@
-## Diagnostic
-Sur la capture, le texte de secours **est bien rendu** (bloc en haut à droite « Après moi… ça va être à toi de m'imiter… ») mais quasi invisible : le bloc utilise `bg-card` + `text-foreground` qui, combinés au fond sombre du layout candidat et à un overlay translucide, donnent un texte très peu contrasté.
+## Bug identifié
 
-C'est donc un bug d'affichage / lisibilité, pas un texte manquant.
+En analysant la base de données, j'ai trouvé la cause exacte du bug.
 
-## Correctif
+**Projet source** "Poylo, la dernière." : 9 questions dont **1 archivée** (supprimée depuis l'éditeur — la suppression archive au lieu de supprimer quand la question est référencée par des messages de session).
 
-Dans `src/pages/InterviewStart.tsx` (lignes 2855-2862), le bloc « texte de secours » des questions vidéo :
+**Projet copié** "Poylo, une dernière conversation." : a hérité des 9 questions, **archivée incluse**.
 
-1. Ajouter une **bordure accent à gauche** (comme les blocs énoncé `featured` du `QuestionMediaPlayer`) pour signaler visuellement que c'est l'énoncé de la question.
-2. Forcer `text-foreground` pleine opacité et `whitespace-pre-wrap` pour conserver les retours à la ligne.
-3. Ne plus afficher la carte vide quand `currentQ.content` est vide (évite un encadré inutile).
-4. Légère opacité réduite sur le fond pour rester cohérent avec la maquette.
+### Pourquoi ça crée le bug
 
-```tsx
-{currentQ && questionType === "video" && currentQ.content?.trim() && !interviewFinished && (
-  <div
-    className="rounded-xl border-l-2 border bg-card/80 p-4"
-    style={{ borderLeftColor: "hsl(var(--l-accent))" }}
-  >
-    <p className="text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
-      {currentQ.content}
-    </p>
-  </div>
-)}
-```
+1. La fonction `handleDuplicate` dans `src/pages/ProjectDetail.tsx` lit les questions depuis le state `questions`, qui est chargé sans filtre `archived_at IS NULL` (ligne 82‑85). Toutes les questions, y compris les archivées, sont copiées dans le nouveau projet — mais sans recopier la valeur `archived_at`, donc elles deviennent **actives** dans la copie.
+2. L'éditeur (`ProjectEdit.tsx`) filtre `archived_at IS NULL` au chargement, donc l'utilisateur ne voit pas ces questions « fantômes » dans le formulaire et ne peut pas les modifier ni les supprimer.
+3. Côté candidat, `InterviewStart.tsx` ne filtre pas non plus `archived_at` lors du chargement des questions de la session, donc les anciennes questions archivées du projet d'origine sont jouées en plus des modifications faites par l'utilisateur.
 
-## Hors-périmètre
-- Pas de modification du formulaire (le champ « Ajouter un texte de secours » est déjà disponible pour les questions vidéo dans `QuestionFormDialog`).
-- Pas de modification du `QuestionMediaPlayer` (le rendu vidéo featured n'affiche pas le texte, c'est `InterviewStart` qui s'en charge).
+### Bugs secondaires identifiés au passage
 
-## Vérification
-Recharger une session avec une question vidéo + texte de secours : le texte apparaît clairement sous la vidéo, en blanc plein contraste, avec une barre d'accent à gauche.
+- `handleDuplicate` ne recopie pas plusieurs champs : `audio_url`, `video_url`, `hint_text`, `relance_level`, `max_response_seconds`, `scoring_criteria_ids`, `category`. Les questions audio/vidéo perdent leur média dans la copie.
+- `order_index` est recopié tel quel au lieu d'être ré‑indexé proprement de 0 à N‑1.
+- Les critères dupliqués perdent aussi `category` (champ existant en table).
+
+## Correctifs à appliquer
+
+### 1. `src/pages/ProjectDetail.tsx`
+
+- **Charger les questions** (ligne 82‑85) avec `.is("archived_at", null)` pour ne jamais afficher ni dupliquer les questions archivées.
+- **Sélectionner les colonnes manquantes** dans la requête `questions` : `audio_url, video_url, hint_text, relance_level, max_response_seconds, scoring_criteria_ids`.
+- **Dans `handleDuplicate`** : recopier ces champs et ré‑indexer `order_index` de 0 à N‑1 selon l'ordre déjà trié.
+- **Dans la duplication des critères** : ajouter `category`.
+
+### 2. `src/pages/InterviewStart.tsx`
+
+- Ajouter `.is("archived_at", null)` au chargement des questions de session (ligne ~1034) pour qu'aucune question archivée ne soit jamais jouée à un candidat.
+
+## Résultat attendu
+
+- Une nouvelle duplication ne copiera plus les questions archivées.
+- Les questions audio/vidéo conserveront leurs médias dans la copie.
+- Les questions archivées orphelines déjà présentes dans la copie existante (« Poylo, une dernière conversation. ») ne seront plus jouées au candidat (filtrage côté lecture).
+- Optionnel : je peux aussi nettoyer manuellement les questions « fantômes » déjà présentes dans la copie existante pour repartir propre — dis‑moi si tu veux.
