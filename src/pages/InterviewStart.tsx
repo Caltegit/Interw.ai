@@ -1914,7 +1914,9 @@ export default function InterviewStart() {
           console.error("Closing persist failed:", e);
         }));
       }
-      setQuestionLoading(null);
+      // On garde l'overlay affiché pendant la TTS de clôture pour éviter un
+      // "flash" de l'écran question avant la redirection vers /complete.
+      setQuestionLoading({ label: "Finalisation de la session…", percent: 95 });
       await speak(closing);
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
