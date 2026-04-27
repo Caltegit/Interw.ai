@@ -1034,6 +1034,7 @@ export default function InterviewStart() {
         .from("questions")
         .select("*")
         .eq("project_id", sess.project_id)
+        .is("archived_at", null)
         .order("order_index");
       setQuestions(qs ?? []);
 
