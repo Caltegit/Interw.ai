@@ -85,6 +85,7 @@ export const createEmptyQuestion = (): Question => ({
   save_to_library: false,
   hint_text: "",
   max_response_seconds: null,
+  avatar_image_url: null,
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
