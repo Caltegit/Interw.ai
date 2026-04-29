@@ -146,6 +146,7 @@ export default function InterviewTemplateEdit() {
             relance_level: q.relance_level,
             hint_text: q.hint_text?.trim() || null,
             max_response_seconds: q.max_response_seconds ?? null,
+            avatar_image_url: q.avatar_image_url ?? null,
           })) as never,
         );
       }
@@ -262,7 +263,7 @@ export default function InterviewTemplateEdit() {
         <TabsContent value="questions">
           <Card>
             <CardContent className="pt-6">
-              <StepQuestions questions={questions} setQuestions={setQuestions} />
+              <StepQuestions questions={questions} setQuestions={setQuestions} projectAvatarUrl={null} />
             </CardContent>
           </Card>
         </TabsContent>
