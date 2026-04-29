@@ -101,7 +101,9 @@ interface SortableQuestionProps {
   index: number;
   q: Question;
   questionsLength: number;
+  projectAvatarUrl: string | null;
   onEdit: () => void;
+  onChangeAvatar: (url: string | null) => void;
   removeQuestion: (index: number) => void;
 }
 
@@ -110,10 +112,13 @@ function SortableQuestion({
   index,
   q,
   questionsLength,
+  projectAvatarUrl,
   onEdit,
+  onChangeAvatar,
   removeQuestion,
 }: SortableQuestionProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const [avatarOpen, setAvatarOpen] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -125,6 +130,9 @@ function SortableQuestion({
   const meta = TYPE_META[q.mediaType];
   const TypeIcon = meta.Icon;
   const previewText = q.title.trim() || q.content.trim();
+  const showAvatarButton = q.mediaType !== "video";
+  const effectiveAvatar = q.avatar_image_url ?? projectAvatarUrl;
+  const hasCustomAvatar = !!q.avatar_image_url;
 
   return (
     <div ref={setNodeRef} style={style} className="rounded-lg border bg-background overflow-hidden">
@@ -182,6 +190,30 @@ function SortableQuestion({
           )}
         </button>
 
+        {showAvatarButton && (
+          <button
+            type="button"
+            onClick={() => setAvatarOpen(true)}
+            className="relative h-8 w-8 shrink-0 rounded-full overflow-hidden border border-border bg-muted hover:ring-2 hover:ring-primary/40 transition-all"
+            aria-label={hasCustomAvatar ? "Modifier l'avatar de la question" : "Définir un avatar pour cette question"}
+            title={hasCustomAvatar ? "Avatar personnalisé — cliquer pour modifier" : "Modifier l'avatar de la question"}
+          >
+            {effectiveAvatar ? (
+              <img src={effectiveAvatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+            )}
+            {hasCustomAvatar && (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background"
+                aria-hidden="true"
+              />
+            )}
+          </button>
+        )}
+
         <Button
           variant="ghost"
           size="icon"
@@ -202,6 +234,16 @@ function SortableQuestion({
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </div>
+
+      {showAvatarButton && (
+        <QuestionAvatarDialog
+          open={avatarOpen}
+          onOpenChange={setAvatarOpen}
+          currentAvatarUrl={q.avatar_image_url}
+          projectAvatarUrl={projectAvatarUrl}
+          onConfirm={(url) => onChangeAvatar(url)}
+        />
+      )}
     </div>
   );
 }
@@ -209,9 +251,10 @@ function SortableQuestion({
 interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
+  projectAvatarUrl?: string | null;
 }
 
-export function StepQuestions({ questions, setQuestions }: StepQuestionsProps) {
+export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
