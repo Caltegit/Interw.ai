@@ -2794,7 +2794,7 @@ export default function InterviewStart() {
                       } as React.CSSProperties}
                     >
                       <img
-                        src={project?.avatar_image_url || defaultAiAvatar}
+                        src={(currentQ as { avatar_image_url?: string | null })?.avatar_image_url || project?.avatar_image_url || defaultAiAvatar}
                         alt={project?.ai_persona_name || "IA"}
                         className={`w-full h-full object-cover bg-muted/30 transition-transform duration-700 ${isSpeaking ? "scale-105" : "scale-100"}`}
                       />
