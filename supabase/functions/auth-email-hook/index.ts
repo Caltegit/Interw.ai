@@ -17,13 +17,16 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirmez votre inscription sur Interw.ai',
+  invite: 'Vous êtes invité à rejoindre Interw.ai',
+  magiclink: 'Votre lien de connexion Interw.ai',
+  recovery: 'Réinitialisation de votre mot de passe Interw.ai',
+  email_change: 'Confirmez votre nouvelle adresse email',
+  reauthentication: 'Votre code de vérification Interw.ai',
 }
+
+const REPLY_TO_EMAIL = 'hello@interw.ai'
+const FROM_NAME = 'Interw.ai'
 
 // Template mapping
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
@@ -256,7 +259,8 @@ async function handleWebhook(req: Request): Promise<Response> {
       run_id,
       message_id: messageId,
       to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `${FROM_NAME} <noreply@${FROM_DOMAIN}>`,
+      reply_to: REPLY_TO_EMAIL,
       sender_domain: SENDER_DOMAIN,
       subject: EMAIL_SUBJECTS[emailType] || 'Notification',
       html,

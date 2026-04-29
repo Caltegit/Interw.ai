@@ -24,35 +24,40 @@ interface SignupEmailProps {
 export const SignupEmail = ({
   siteName,
   siteUrl,
-  recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
   <Html lang="fr" dir="ltr">
     <Head />
-    <Preview>Confirmez votre adresse email pour {siteName}</Preview>
+    <Preview>Encore une étape pour activer votre compte Interw.ai</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirmez votre adresse email</Heading>
+        <Heading style={h1}>Bienvenue sur {siteName}</Heading>
+        <Text style={text}>Bonjour,</Text>
         <Text style={text}>
-          Merci pour votre inscription sur{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>{' '}!
-        </Text>
-        <Text style={text}>
-          Veuillez confirmer votre adresse email (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) en cliquant sur le bouton ci-dessous :
+          Merci d'avoir créé un compte. Pour finaliser votre inscription et commencer à utiliser
+          la plateforme, confirmez votre adresse email en cliquant sur le bouton ci-dessous.
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Vérifier mon email
+          Confirmer mon adresse email
         </Button>
+        <Text style={smallText}>
+          Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
+        </Text>
+        <Text style={linkText}>
+          <Link href={confirmationUrl} style={link}>
+            {confirmationUrl}
+          </Link>
+        </Text>
         <Text style={footer}>
-          Si vous n'avez pas créé de compte, vous pouvez ignorer cet email.
-          <br />
+          Vous n'êtes pas à l'origine de cette inscription ? Ignorez simplement cet email,
+          aucun compte ne sera créé.
+        </Text>
+        <Text style={signature}>
           L'équipe {siteName}
+          <br />
+          <Link href={siteUrl} style={footerLink}>
+            {siteUrl.replace(/^https?:\/\//, '')}
+          </Link>
         </Text>
       </Container>
     </Body>
@@ -62,26 +67,54 @@ export const SignupEmail = ({
 export default SignupEmail
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '20px 25px' }
+const container = { padding: '24px 28px', maxWidth: '560px' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#6366F1',
+  color: '#111827',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
+  fontSize: '15px',
+  color: '#374151',
+  lineHeight: '1.6',
+  margin: '0 0 16px',
+}
+const smallText = {
+  fontSize: '13px',
+  color: '#6b7280',
   lineHeight: '1.5',
-  margin: '0 0 25px',
+  margin: '24px 0 8px',
+}
+const linkText = {
+  fontSize: '13px',
+  margin: '0 0 24px',
+  wordBreak: 'break-all' as const,
 }
 const link = { color: '#6366F1', textDecoration: 'underline' }
 const button = {
   backgroundColor: '#6366F1',
   color: '#ffffff',
-  fontSize: '14px',
+  fontSize: '15px',
+  fontWeight: '600' as const,
   borderRadius: '8px',
-  padding: '12px 20px',
+  padding: '12px 24px',
   textDecoration: 'none',
+  display: 'inline-block',
+  margin: '8px 0 16px',
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0', lineHeight: '1.5' }
+const footer = {
+  fontSize: '13px',
+  color: '#6b7280',
+  lineHeight: '1.5',
+  margin: '24px 0 16px',
+}
+const signature = {
+  fontSize: '13px',
+  color: '#374151',
+  lineHeight: '1.6',
+  margin: '24px 0 0',
+  borderTop: '1px solid #e5e7eb',
+  paddingTop: '16px',
+}
+const footerLink = { color: '#6b7280', textDecoration: 'none' }
