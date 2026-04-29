@@ -1,45 +1,77 @@
-## Problème
+## Objectif
 
-Sur la dernière question, après que le candidat ait terminé sa réponse, l'IA prononce parfois « Regardez la question suivante » ou « Écoutez la question suivante » au lieu d'un vrai remerciement de fin.
+Permettre de définir un **avatar par question** (Texte et Audio uniquement) dans le wizard de création/édition de session. Si défini, il remplace l'avatar du projet pendant cette question pour le candidat. Sinon, l'avatar du projet est utilisé.
 
-### Cause
+## Comportement attendu
 
-Dans `supabase/functions/ai-conversation-turn/index.ts` :
-- Le prompt indique à l'IA que c'est la dernière question et qu'elle doit générer un remerciement.
-- Mais le modèle se trompe parfois et génère quand même une phrase de transition (« Écoutez/Regardez la question suivante »).
-- Le code force ensuite `action = "end"` (ligne 152-156) **mais conserve le `message` original** de l'IA — donc le mauvais texte passe au front.
+**Dans la liste des questions (StepQuestions)** — uniquement pour les questions Texte et Audio :
+- À gauche des boutons « Modifier » et « Supprimer », ajouter un nouvel **icône rond cliquable** affichant la photo de l'avatar de la question (ou l'avatar par défaut du projet si aucun n'est défini).
+- Au survol : tooltip « Modifier l'avatar pour cette question ».
+- Clic → ouvre une popup réutilisant l'interface de sélection d'avatar (`AvatarPicker` + `AvatarUploadDialog`).
+- Si un avatar custom est défini, un petit point indigo en bas à droite de la vignette signale qu'il diffère de celui du projet.
+- Bouton « Réinitialiser » dans la popup pour repasser à l'avatar du projet.
 
-Dans `src/pages/InterviewStart.tsx` (ligne 1903-1924) :
-- La branche END utilise directement `aiMessage` reçu, sans le valider.
-- Le fallback « Merci pour vos réponses… » n'est utilisé que si `aiMessage` est vide.
+**Pour les questions Vidéo** : l'icône n'est **pas affiché** (la vidéo se substitue à l'avatar).
 
-## Solution
+**Côté candidat (InterviewStart)** : pour chaque question Texte/Audio, si `avatar_image_url` est défini sur la question, l'utiliser ; sinon fallback sur celui du projet.
 
-Forcer côté serveur **et** côté client un message de clôture propre quand on est sur la dernière question, indépendamment de ce que l'IA a généré.
+## Modifications techniques
 
-### 1. Edge function — `supabase/functions/ai-conversation-turn/index.ts`
+### 1. Base de données (migration)
 
-Quand `action === "end"` (forcé ou non), remplacer le `message` par un texte de clôture déterministe :
+Ajout de la colonne `avatar_image_url TEXT NULL` sur :
+- `questions`
+- `interview_template_questions` (pour cohérence avec la bibliothèque de modèles de session)
+- `question_templates` (bibliothèque de questions individuelles)
 
-- Si le `message` généré par l'IA contient des marqueurs de transition (« question suivante », « écoutez », « regardez », « passons à »), le rejeter.
-- Construire un message de clôture par défaut : « Merci pour vos réponses, la session est terminée. À bientôt. »
-- Optionnel : permettre au prompt projet de fournir un texte de clôture personnalisé via `projectContext.aiClosingMessage`. Si présent, l'utiliser tel quel.
+Pas de modification de RLS nécessaire (les politiques existantes couvrent déjà tous les champs).
 
-### 2. Frontend — `src/pages/InterviewStart.tsx` (branche END, ligne 1903-1924)
+### 2. Type `Question` (StepQuestions.tsx)
 
-- Ajouter une garde : si `aiMessage` contient « question suivante », « écoutez », « regardez », ou est vide → utiliser le fallback « Merci pour vos réponses, la session est terminée. À bientôt. »
-- Garder l'overlay « Finalisation de la session… » pendant le TTS (déjà en place).
+```ts
+avatar_image_url: string | null;
+```
++ ajout dans `createEmptyQuestion()`.
 
-## Détails techniques
+### 3. Composant réutilisable : `QuestionAvatarDialog`
 
-**Fichiers modifiés :**
-- `supabase/functions/ai-conversation-turn/index.ts` : sanitiser `parsed.message` quand `parsed.action === "end"`.
-- `src/pages/InterviewStart.tsx` : valider `aiMessage` à la ligne 1905 avant de l'utiliser.
+Nouveau fichier `src/components/project/QuestionAvatarDialog.tsx` qui encapsule un Dialog contenant :
+- L'aperçu actuel + bouton « Utiliser l'avatar du projet » (reset)
+- Le composant `AvatarPicker` existant
+- Bouton « Valider »
 
-**Texte de clôture par défaut :** « Merci pour cette session, à bientôt. » (cohérent avec le souhait utilisateur).
+L'upload de fichier réutilise le bucket Storage déjà en place pour les avatars de projet (même chemin/policies que `ProjectForm`).
+
+### 4. Intégration dans `SortableQuestion` (StepQuestions.tsx)
+
+- Nouvelle prop `projectAvatarUrl: string | null` passée depuis le parent.
+- Nouveau bouton rond (32×32) avant les boutons Pencil/Trash, conditionné sur `q.mediaType !== "video"`.
+- Affiche `q.avatar_image_url ?? projectAvatarUrl ?? <fallback initiale>`.
+- État local pour ouvrir/fermer le `QuestionAvatarDialog`.
+
+### 5. Propagation `projectAvatarUrl`
+
+`StepQuestions` reçoit une nouvelle prop optionnelle `projectAvatarUrl`. Mise à jour des appelants :
+- `ProjectForm.tsx` (création/édition de session) → passe la valeur courante du champ avatar du projet.
+- `InterviewTemplateEdit.tsx` → passe `null` (pas d'avatar projet pour un modèle).
+
+### 6. Persistance
+
+- `ProjectForm` (insert/update questions) : ajouter `avatar_image_url: q.avatar_image_url ?? null` au payload.
+- `InterviewTemplateEdit` : idem sur `interview_template_questions`.
+- `QuestionLibraryManager` (bibliothèque de questions) : ajouter le champ au payload `question_templates` + dans `openEdit`.
+- `loadInterviewTemplate.ts` et `QuestionLibraryDialog` : propager `avatar_image_url` lors de l'import depuis la bibliothèque.
+
+### 7. Affichage côté candidat (`InterviewStart.tsx`)
+
+Au moment d'afficher l'avatar pour la question courante :
+```ts
+const currentAvatar = currentQuestion.avatar_image_url || project.avatar_image_url;
+```
+Uniquement pour les questions de type `written` et `audio` (la vidéo affiche déjà le lecteur vidéo).
 
 ## Hors périmètre
 
-- Pas de modification du `completion_message` (écran final post-redirection, déjà OK).
-- Pas de changement de la logique de relance (`follow_up`) ni de la branche `next`.
-- Pas de nouveau champ en base — le message de clôture TTS reste un constant côté code (peut être rendu configurable plus tard si besoin).
+- Pas de génération d'avatar IA spécifique par question (réutilise les presets existants).
+- Pas de modification de la table `projects`.
+- Pas de bucket Storage supplémentaire (réutilise celui des avatars projet).

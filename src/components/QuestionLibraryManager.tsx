@@ -30,6 +30,7 @@ interface QuestionTemplate {
   video_url: string | null;
   hint_text: string | null;
   max_response_seconds: number | null;
+  avatar_image_url: string | null;
 }
 
 interface QuestionLibraryManagerProps {

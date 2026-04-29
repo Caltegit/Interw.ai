@@ -31,6 +31,7 @@ export interface InterviewTemplatePayload {
     follow_up_enabled: boolean;
     max_follow_ups: number;
     relance_level: "light" | "medium" | "deep";
+    avatar_image_url: string | null;
   }>;
   criteria: Array<{
     label: string;

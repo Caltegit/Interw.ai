@@ -95,6 +95,7 @@ export default function ProjectEdit() {
                 save_to_library: false,
                 hint_text: ((q as { hint_text?: string | null }).hint_text) ?? "",
                 max_response_seconds: ((q as { max_response_seconds?: number | null }).max_response_seconds) ?? null,
+                avatar_image_url: ((q as { avatar_image_url?: string | null }).avatar_image_url) ?? null,
               };
             })
           : [createEmptyQuestion()];
@@ -348,6 +349,7 @@ export default function ProjectEdit() {
           relance_level: q.relance_level,
           hint_text: q.hint_text?.trim() || null,
           max_response_seconds: q.max_response_seconds ?? null,
+          avatar_image_url: q.avatar_image_url ?? null,
         };
 
         let qId: string;
@@ -431,6 +433,7 @@ export default function ProjectEdit() {
                 video_url: (mediaUpdates.video_url as string | null) || null,
                 hint_text: q.hint_text?.trim() || null,
                 max_response_seconds: q.max_response_seconds ?? null,
+                avatar_image_url: q.avatar_image_url ?? null,
               } as never);
             }
           }

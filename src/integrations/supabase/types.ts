@@ -349,6 +349,7 @@ export type Database = {
       interview_template_questions: {
         Row: {
           audio_url: string | null
+          avatar_image_url: string | null
           category: string | null
           content: string
           created_at: string
@@ -366,6 +367,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          avatar_image_url?: string | null
           category?: string | null
           content: string
           created_at?: string
@@ -383,6 +385,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          avatar_image_url?: string | null
           category?: string | null
           content?: string
           created_at?: string
@@ -737,6 +740,7 @@ export type Database = {
       question_templates: {
         Row: {
           audio_url: string | null
+          avatar_image_url: string | null
           category: string | null
           content: string
           created_at: string
@@ -754,6 +758,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          avatar_image_url?: string | null
           category?: string | null
           content: string
           created_at?: string
@@ -771,6 +776,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          avatar_image_url?: string | null
           category?: string | null
           content?: string
           created_at?: string
@@ -800,6 +806,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           audio_url: string | null
+          avatar_image_url: string | null
           content: string
           created_at: string
           follow_up_enabled: boolean
@@ -818,6 +825,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           audio_url?: string | null
+          avatar_image_url?: string | null
           content: string
           created_at?: string
           follow_up_enabled?: boolean
@@ -836,6 +844,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           audio_url?: string | null
+          avatar_image_url?: string | null
           content?: string
           created_at?: string
           follow_up_enabled?: boolean
