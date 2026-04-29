@@ -14,7 +14,9 @@ import {
   Lightbulb,
   Timer,
   RotateCcw,
+  ImageIcon,
 } from "lucide-react";
+import { QuestionAvatarDialog } from "./QuestionAvatarDialog";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
 import { cn } from "@/lib/utils";
