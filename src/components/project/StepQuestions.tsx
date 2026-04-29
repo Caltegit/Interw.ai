@@ -396,7 +396,13 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
                 index={i}
                 q={q}
                 questionsLength={questions.length}
+                projectAvatarUrl={projectAvatarUrl}
                 onEdit={() => openEdit(i)}
+                onChangeAvatar={(url) => {
+                  const updated = [...questions];
+                  updated[i] = { ...updated[i], avatar_image_url: url };
+                  setQuestions(updated);
+                }}
                 removeQuestion={removeQuestion}
               />
             ))}
