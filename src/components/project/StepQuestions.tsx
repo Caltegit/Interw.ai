@@ -64,6 +64,8 @@ export interface Question {
   hint_text: string;
   /** Durée maximale de la réponse en secondes (null = pas de limite) */
   max_response_seconds: number | null;
+  /** Avatar spécifique à cette question (remplace l'avatar du projet pour cette question). null = avatar du projet. */
+  avatar_image_url: string | null;
 }
 
 export const createEmptyQuestion = (): Question => ({
