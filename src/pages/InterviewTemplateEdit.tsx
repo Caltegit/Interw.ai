@@ -64,6 +64,7 @@ export default function InterviewTemplateEdit() {
         audio_url: string | null; video_url: string | null;
         follow_up_enabled: boolean; max_follow_ups: number; relance_level: string;
         hint_text: string | null; max_response_seconds: number | null;
+        avatar_image_url: string | null;
       }>) || [];
       setQuestions(
         qList.map((q) => ({
@@ -80,6 +81,7 @@ export default function InterviewTemplateEdit() {
           from_library: true,
           hint_text: q.hint_text ?? "",
           max_response_seconds: q.max_response_seconds ?? null,
+          avatar_image_url: q.avatar_image_url ?? null,
         })),
       );
 
