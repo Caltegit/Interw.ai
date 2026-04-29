@@ -244,6 +244,7 @@ export default function ProjectNew() {
               relance_level: q.relance_level,
               hint_text: q.hint_text?.trim() || null,
               max_response_seconds: q.max_response_seconds ?? null,
+              avatar_image_url: q.avatar_image_url ?? null,
             })),
           )
           .select();
@@ -308,6 +309,7 @@ export default function ProjectNew() {
                     video_url: updates.video_url || null,
                     hint_text: q.hint_text?.trim() || null,
                     max_response_seconds: q.max_response_seconds ?? null,
+                    avatar_image_url: q.avatar_image_url ?? null,
                   } as never);
                 }
               }
