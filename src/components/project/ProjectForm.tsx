@@ -672,7 +672,13 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             />
           )}
 
-          {step === 2 && <StepQuestions questions={questions} setQuestions={setQuestions} />}
+          {step === 2 && (
+            <StepQuestions
+              questions={questions}
+              setQuestions={setQuestions}
+              projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
+            />
+          )}
 
           {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
