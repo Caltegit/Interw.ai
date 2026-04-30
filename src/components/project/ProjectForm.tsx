@@ -391,8 +391,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
                     <p className="text-xs text-muted-foreground">
-                      Voix réaliste haute qualité (~0,40 € par session). Si désactivé, voix standard du navigateur
-                      (gratuit).
+                      Voix réaliste haute qualité (+1 crédit). Si désactivé, voix standard.
                     </p>
                   </div>
                   <Switch
