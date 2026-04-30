@@ -1,57 +1,35 @@
-## Objectifs
+## Objectif
 
-1. **Le retour vidéo mobile ne s'affiche pas** : `streamRef.current` est assigné une seule fois (au démarrage) à `videoRef.current`. Quand le `<video>` mobile se monte plus tard (changement de question, rerender conditionnel), son `srcObject` reste vide → écran noir.
-2. **Aligner la miniature vidéo mobile sur la même ligne que le bouton « Passer la question »**, vidéo à gauche, bouton à droite.
+Rendre l'affichage du lien « Passer la question » optionnel côté projet. Par défaut, l'option est **activée** (comportement actuel préservé). L'option est placée **juste sous** « Autoriser le candidat à mettre en pause » dans l'étape Info de la création/édition de projet.
 
-## Modifications dans `src/pages/InterviewStart.tsx`
+## Modifications
 
-### 1. Réassigner `srcObject` à chaque montage du `<video>`
+### 1. Base de données
+Migration : ajouter une colonne booléenne `allow_skip_question` sur `projects`, par défaut `true`. Aucune mise à jour des lignes existantes nécessaire (le défaut s'applique).
 
-Utiliser un **ref callback** sur l'élément vidéo au lieu d'un ref statique, pour réassigner `streamRef.current` dès que le `<video>` est monté ou remonté :
+### 2. `src/components/project/ProjectForm.tsx`
+- Ajouter `allowSkipQuestion: boolean` à l'interface des valeurs initiales et au state local.
+- Inclure `allowSkipQuestion` dans le payload `onSubmit`.
+- Ajouter un bloc Switch **directement après** « Autoriser le candidat à mettre en pause » (avant le Statut) :
+  - Label : « Autoriser le candidat à passer une question »
+  - Description courte : « Affiche un lien discret « Passer la question » pendant l'entretien. »
+- Ajouter une ligne dans le récapitulatif final (« Passage de question autorisé : Oui / Non »).
 
-```tsx
-const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
-  videoRef.current = el;
-  if (el && streamRef.current && el.srcObject !== streamRef.current) {
-    el.srcObject = streamRef.current;
-    el.play().catch(() => { /* ignore autoplay rejection */ });
-  }
-}, []);
-```
+### 3. `src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx`
+- Valeur par défaut `allowSkipQuestion: true` dans `ProjectNew`.
+- Lecture `allow_skip_question ?? true` dans `ProjectEdit`.
+- Ajouter `allow_skip_question: s.allowSkipQuestion` dans les payloads d'insert/update.
 
-Remplacer `ref={videoRef}` par `ref={setVideoEl}` sur les deux `<video>` (mobile et desktop).
+### 4. `src/pages/InterviewStart.tsx`
+- Conditionner l'affichage du bouton/lien « Passer la question » par `project?.allow_skip_question !== false`.
+- Conserver la miniature vidéo mobile dans la même rangée même quand le lien est masqué (le `flex justify-between` reste valide avec un seul enfant à gauche).
+- Important : si l'option est désactivée, le mécanisme automatique d'escalade (`silenceTier >= 3`) qui propose le bouton ne doit pas non plus apparaître — on respecte le choix RH.
 
-Ajouter `autoPlay` sur le `<video>` mobile (par sécurité avec `muted` + `playsInline`, autorisé par tous les navigateurs mobiles).
-
-### 2. Repositionner la miniature mobile
-
-Supprimer le bloc autonome (lignes 2821-2841) et l'intégrer **dans la même rangée que le bouton « Passer la question »** :
-
-```tsx
-<div className="flex items-center justify-between gap-3 lg:justify-end">
-  {/* Vidéo mobile à gauche */}
-  <div className="lg:hidden relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[96px] h-[68px] shrink-0">
-    <video ref={setVideoEl} muted playsInline autoPlay
-           className="w-full h-full object-cover"
-           style={{ transform: "scaleX(-1)" }}
-           data-testid="interview-self-video-mobile" />
-    <div className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold">
-      <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-    </div>
-  </div>
-  {/* Bouton "Passer la question" à droite (inchangé) */}
-  {silenceTier >= 3 ? (...) : (...)}
-</div>
-```
-
-Sur desktop : `lg:justify-end` conserve le bouton seul à droite (la vidéo mobile est `lg:hidden`).
-
-### 3. Vérifier que `startVideoStream` se déclenche bien
-
-Le flux est lancé ligne 1474. Si l'élément `<video>` n'existait pas encore au moment de l'appel, le ref callback s'occupera de réattacher `srcObject` quand il se montera. Aucun changement nécessaire dans `startVideoStream`.
+### 5. Types Supabase
+Le fichier `src/integrations/supabase/types.ts` se régénère automatiquement après migration.
 
 ## Détails techniques
 
-- Le ref callback est appelé à chaque montage/démontage du DOM, ce qui couvre les remontages dus aux changements de question ou d'état.
-- `autoPlay + muted + playsInline` est requis pour l'autoplay sur iOS Safari.
-- Les deux `<video>` (mobile dans la colonne droite, desktop dans le footer) utilisent le même ref callback — un seul est monté à la fois (responsive), donc pas de conflit.
+- Comportement de migration : `DEFAULT true` garantit que tous les projets existants conservent le lien actif sans intervention.
+- Le test e2e `interview-media-no-overlap` n'est pas impacté (il ne dépend pas du bouton skip).
+- Aucune modification visuelle du lien lui-même (style et position inchangés quand l'option est activée).
