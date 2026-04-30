@@ -157,6 +157,14 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Ref callback : réattache le srcObject à chaque montage du <video> (mobile/desktop responsive)
+  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && streamRef.current && el.srcObject !== streamRef.current) {
+      el.srcObject = streamRef.current;
+      el.play().catch(() => { /* autoplay rejection ignored */ });
+    }
+  }, []);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2818,28 +2826,6 @@ export default function InterviewStart() {
                 )}
               </div>
 
-              {/* Retour vidéo candidat — mobile uniquement, entre avatar et question, aligné à gauche, sans actions */}
-              {!interviewFinished && (
-                <div className="lg:hidden flex justify-start -mt-2">
-                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[96px] h-[68px]">
-                    <video
-                      ref={videoRef}
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                      style={{ transform: "scaleX(-1)" }}
-                      data-testid="interview-self-video-mobile"
-                    />
-                    <div
-                      className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
-                      data-testid="interview-recording-indicator-mobile"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
               <div className="lg:col-span-1 flex flex-col justify-center gap-4 sm:gap-5">
                 {!interviewFinished && (() => {
@@ -2849,7 +2835,25 @@ export default function InterviewStart() {
                   // le clic interrompt la TTS en cours et passe à la suite.
                   const disabled = false;
                   return (
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between gap-3 lg:justify-end">
+                      {/* Retour vidéo candidat — mobile uniquement, à gauche du bouton « Passer la question », sans actions */}
+                      <div className="lg:hidden relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[96px] h-[68px] shrink-0">
+                        <video
+                          ref={setVideoEl}
+                          muted
+                          playsInline
+                          autoPlay
+                          className="w-full h-full object-cover"
+                          style={{ transform: "scaleX(-1)" }}
+                          data-testid="interview-self-video-mobile"
+                        />
+                        <div
+                          className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
+                          data-testid="interview-recording-indicator-mobile"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+                        </div>
+                      </div>
                       {silenceTier >= 3 ? (
                         <Button
                           type="button"
@@ -3136,7 +3140,7 @@ export default function InterviewStart() {
               <div className="hidden lg:flex lg:justify-end items-center">
                 <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
                   <video
-                    ref={videoRef}
+                    ref={setVideoEl}
                     muted
                     playsInline
                     className="w-full h-full object-cover"
