@@ -299,6 +299,7 @@ export function QuestionFormDialog({
                     <Textarea
                       placeholder="Affiché si le média ne peut pas être lu"
                       rows={2}
+                      maxLength={MAX_CONTENT}
                       value={form.content}
                       onChange={(e) => setForm({ ...form, content: e.target.value })}
                     />
