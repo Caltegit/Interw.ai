@@ -1364,7 +1364,7 @@ export type Database = {
       ai_voice_type: "female_fr" | "male_fr" | "female_en" | "male_en"
       app_role: "admin" | "recruiter" | "viewer" | "super_admin"
       criteria_scope: "all_questions" | "specific_questions"
-      feedback_status: "open" | "resolved"
+      feedback_status: "open" | "in_progress" | "archived"
       invitation_status: "pending" | "accepted" | "expired"
       message_role: "ai" | "candidate"
       project_language: "fr" | "en"
@@ -1509,7 +1509,7 @@ export const Constants = {
       ai_voice_type: ["female_fr", "male_fr", "female_en", "male_en"],
       app_role: ["admin", "recruiter", "viewer", "super_admin"],
       criteria_scope: ["all_questions", "specific_questions"],
-      feedback_status: ["open", "resolved"],
+      feedback_status: ["open", "in_progress", "archived"],
       invitation_status: ["pending", "accepted", "expired"],
       message_role: ["ai", "candidate"],
       project_language: ["fr", "en"],
