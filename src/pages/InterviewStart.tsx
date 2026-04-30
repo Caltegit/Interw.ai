@@ -2588,6 +2588,15 @@ export default function InterviewStart() {
     };
   }, [stopListening, clearAutoSkip]);
 
+  // Rattache le flux caméra à tous les selfviews dès qu'un changement d'état
+  // peut provoquer un remount du <video> (changement de question, reprise,
+  // sortie de pause, fin du dialogue de reprise…). Crucial sur mobile où le
+  // DOM se ré-organise plus souvent.
+  useEffect(() => {
+    if (!readyToStart) return;
+    reattachAllSelfViews();
+  }, [readyToStart, currentQuestionIndex, isPaused, restoringMessages, isSpeaking, isListening, reattachAllSelfViews]);
+
   if (loading)
     return (
       <div className="flex min-h-screen items-center justify-center">
