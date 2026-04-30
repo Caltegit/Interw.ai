@@ -25,6 +25,7 @@ export const MALE_VOICES = [
   { id: "AZnzlk1XvdvUeBnXmlld", name: "Guillaume", description: "FR natif · grave, sérieuse" },
   { id: "GR1Y5x67PsoZPmKj9rA0", name: "Antoine", description: "FR natif · naturelle, articulée" },
   { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Julien", description: "FR natif · chaleureuse" },
+  { id: "hgPNbZ1myT05ziSdrji2", name: "Clément", description: "FR natif · voix personnalisée" },
   { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Multilingue · léger accent" },
 ];
 
