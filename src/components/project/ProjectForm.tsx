@@ -494,6 +494,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={allowPause} onCheckedChange={setAllowPause} />
                 </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Autoriser le candidat à passer une question</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Affiche un lien « Passer la question » pendant l'entretien.
+                    </p>
+                  </div>
+                  <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
+                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
