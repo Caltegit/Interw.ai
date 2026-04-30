@@ -258,7 +258,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
                   crop={crop}
                   zoom={zoom}
                   rotation={rotation}
-                  aspect={1}
+                  aspect={OUTPUT_ASPECT}
                   cropShape="rect"
                   showGrid={true}
                   onCropChange={setCrop}
