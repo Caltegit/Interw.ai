@@ -110,7 +110,7 @@ export default function InterviewLanding() {
     const introEnabled = project.intro_enabled !== false;
     const dbMode: string | null = project.intro_mode ?? null;
     let mode: "text" | "tts" | "audio" | "video" | null = null;
-    if (introEnabled) {
+    if (introEnabled && !preFormIntroDone) {
       if (dbMode === "text" || dbMode === "tts" || dbMode === "audio" || dbMode === "video") {
         mode = dbMode;
       } else if (project.presentation_video_url) {
