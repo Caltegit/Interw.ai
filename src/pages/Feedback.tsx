@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { NewFeedbackDialog } from "@/components/feedback/NewFeedbackDialog";
+import { FeedbackStatusBadge, FeedbackStatus } from "@/components/feedback/FeedbackStatusBadge";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { MessageCircle } from "lucide-react";
@@ -13,7 +13,7 @@ import { MessageCircle } from "lucide-react";
 interface Thread {
   id: string;
   subject: string;
-  status: "open" | "resolved";
+  status: FeedbackStatus;
   user_id: string;
   organization_id: string | null;
   last_message_at: string;
@@ -79,7 +79,7 @@ export default function Feedback() {
               : "Échangez directement avec l'équipe Interw.ai."}
           </p>
         </div>
-        {!isSuperAdmin && <NewFeedbackDialog />}
+        <NewFeedbackDialog />
       </div>
 
       {loading ? (
@@ -100,9 +100,7 @@ export default function Feedback() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium truncate">{t.subject}</h3>
-                        <Badge variant={t.status === "open" ? "default" : "secondary"}>
-                          {t.status === "open" ? "Ouvert" : "Résolu"}
-                        </Badge>
+                        <FeedbackStatusBadge status={t.status} />
                       </div>
                       {isSuperAdmin && author && (
                         <p className="text-xs text-muted-foreground mt-1">
