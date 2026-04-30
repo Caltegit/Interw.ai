@@ -626,6 +626,7 @@ export type Database = {
           ai_question_transitions_mode: string
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause: boolean
+          allow_skip_question: boolean
           auto_skip_silence: boolean
           avatar_image_url: string | null
           completion_message: string | null
@@ -663,6 +664,7 @@ export type Database = {
           ai_question_transitions_mode?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
+          allow_skip_question?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
           completion_message?: string | null
@@ -700,6 +702,7 @@ export type Database = {
           ai_question_transitions_mode?: string
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
+          allow_skip_question?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
           completion_message?: string | null

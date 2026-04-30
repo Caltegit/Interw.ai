@@ -75,6 +75,7 @@ export interface ProjectFormState {
   status: ProjectStatus;
   autoSkipSilence: boolean;
   allowPause: boolean;
+  allowSkipQuestion: boolean;
   completionMessage: string;
   preSessionMessage: string;
   aiIntroEnabled: boolean;
@@ -170,6 +171,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [status, setStatus] = useState<ProjectStatus>(initial.status);
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
+  const [allowSkipQuestion, setAllowSkipQuestion] = useState(initial.allowSkipQuestion);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
@@ -226,6 +228,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       status,
       autoSkipSilence,
       allowPause,
+      allowSkipQuestion,
       completionMessage,
       preSessionMessage,
       aiIntroEnabled,
@@ -491,6 +494,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={allowPause} onCheckedChange={setAllowPause} />
                 </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Autoriser le candidat à passer une question</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Affiche un lien « Passer la question » pendant l'entretien.
+                    </p>
+                  </div>
+                  <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
+                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
@@ -716,6 +728,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </p>
                   <p>
                     <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
+                  </p>
+                  <p>
+                    <strong>Passage de question autorisé :</strong> {allowSkipQuestion ? "Oui" : "Non"}
                   </p>
                   <p>
                     <strong>Statut :</strong>{" "}

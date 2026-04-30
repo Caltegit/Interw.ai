@@ -2834,6 +2834,10 @@ export default function InterviewStart() {
                   // Le bouton reste cliquable même pendant une relance IA :
                   // le clic interrompt la TTS en cours et passe à la suite.
                   const disabled = false;
+                  // Le passage de question est optionnel côté projet (par défaut activé).
+                  // La dernière question reste toujours « terminable » via ce bouton, sinon le candidat est bloqué.
+                  const skipAllowed = (project as { allow_skip_question?: boolean })?.allow_skip_question !== false;
+                  const showSkip = skipAllowed || isLastQ;
                   return (
                     <div className="flex items-center justify-between gap-3 lg:justify-end">
                       {/* Retour vidéo candidat — mobile uniquement, à gauche du bouton « Passer la question », sans actions */}
@@ -2854,7 +2858,7 @@ export default function InterviewStart() {
                           <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
                         </div>
                       </div>
-                      {silenceTier >= 3 ? (
+                      {showSkip && (silenceTier >= 3 ? (
                         <Button
                           type="button"
                           size="sm"
@@ -2874,7 +2878,7 @@ export default function InterviewStart() {
                         >
                           {label}
                         </button>
-                      )}
+                      ))}
                     </div>
                   );
                 })()}
