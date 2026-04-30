@@ -1,44 +1,45 @@
-# Plan : option « Mettre l'intro en premier écran »
+## Problème
 
-Ajouter une option dans l'onglet **Info** de la création / édition de session, qui permet d'afficher l'intro candidat (texte / audio / vidéo / TTS) **avant** le formulaire d'inscription au lieu d'après.
+Sur la session « Énigme - Niveau 1 » (et tout projet utilisant le TTS navigateur), certaines questions s'arrêtent en cours de lecture.
 
-## Comportement utilisateur
+## Cause
 
-**Onglet Info (création / édition d'une session) :**
-- Nouveau toggle « Mettre l'intro en premier écran », placé juste sous « Autoriser le candidat à passer une question »
-- Description : « Affiche l'intro candidat (si elle existe) avant le formulaire d'inscription. »
-- Désactivé par défaut → comportement actuel inchangé (intro après le formulaire)
+Dans `src/pages/InterviewStart.tsx` (ligne 737), le « safety timer » du fallback navigateur est plafonné à **20 secondes** :
 
-**Côté candidat (page d'arrivée `/session/:slug`) :**
-- Si l'option est activée **et** qu'une intro est configurée : la page affiche d'abord l'écran d'intro (lecture audio/vidéo/TTS ou affichage texte), puis le formulaire d'inscription
-- Si l'option est désactivée : comportement actuel (formulaire d'abord, intro entre le submit et l'écran de test média)
-- Si aucune intro n'est configurée : le toggle n'a aucun effet, le formulaire s'affiche comme aujourd'hui
-
-## Détails techniques
-
-### Migration
-
-Ajouter une colonne sur `projects` :
-```sql
-ALTER TABLE public.projects
-ADD COLUMN intro_first_screen boolean NOT NULL DEFAULT false;
+```ts
+const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
 ```
 
-### `src/components/project/ProjectForm.tsx`
-- Ajouter `introFirstScreen: boolean` dans `ProjectFormState`
-- Ajouter le state local + l'inclure dans le payload `onSubmit`
-- Ajouter le `<Switch>` dans l'onglet Info, sous l'option « passer la question »
+Le `Math.min` agit comme un plafond : peu importe la longueur du texte, la lecture est coupée au bout de 20 s. Or les énigmes font 250 à 410 caractères (≈ 25-35 s à lire) → la voix est coupée.
 
-### `src/pages/ProjectNew.tsx` & `src/pages/ProjectEdit.tsx`
-- Inclure `intro_first_screen: s.introFirstScreen` dans l'insert / update `projects`
-- Charger la valeur depuis le projet pour pré-remplir le formulaire en édition (défaut `false`)
+Le projet « Énigme » utilise `tts_provider = browser`, donc c'est ce code qui s'exécute.
 
-### `src/pages/InterviewLanding.tsx`
-- Au chargement du projet : si `intro_first_screen === true` et qu'une intro existe, basculer immédiatement sur l'écran d'intro (`showIntroMedia`) **sans** créer encore de session
-- Ajouter un nouvel état pour distinguer les deux modes (intro avant vs intro après formulaire)
-- Quand l'intro de pré-formulaire est terminée → afficher le formulaire d'inscription
-- À la soumission du formulaire dans ce mode : créer la session puis aller directement à `/session/:slug/test/:token` (l'intro a déjà été vue)
+## Correctifs
+
+### 1. `src/pages/InterviewStart.tsx` — fix du safety timer
+
+Remplacer la formule par une borne basée sur la longueur réelle, plafonnée à 90 s :
+
+```ts
+// ~12 caractères/seconde en français + 5 s de marge, plafonné à 90 s
+const safetyMs = Math.min(90000, Math.ceil(text.length / 12) * 1000 + 5000);
+```
+
+### 2. Limite de 450 caractères sur les questions
+
+Imposer cette limite côté formulaire à 3 endroits :
+
+- **`src/components/QuestionFormDialog.tsx`** (questions de projet) — `maxLength={450}` sur le `<Textarea>` du contenu + compteur « X / 450 » + message d'erreur si dépassé à la soumission.
+- **`src/components/project/StepQuestions.tsx`** (édition inline éventuelle) — même `maxLength` sur le textarea de contenu si présent.
+- **Bibliothèque de questions** : appliquer la même limite dans le dialogue d'édition de `question_templates` (si l'édition se fait via `QuestionFormDialog`, c'est déjà couvert ; sinon ajouter `maxLength` au textarea correspondant).
+
+Pas de migration ni de contrainte SQL : on garde la validation côté UI uniquement (les questions existantes plus longues restent fonctionnelles, mais avec le fix du safety timer elles seront désormais lues entièrement).
+
+### 3. Vérifier les énigmes existantes
+
+Les 10 énigmes vont de 141 à 411 caractères → toutes sous 450. Pas besoin de les retoucher.
 
 ## Hors scope
-- Pas de changement sur la page de test média ni sur l'entretien lui-même
-- Pas de modification de la logique de fallback (auto-détection du mode intro selon ce qui est configuré)
+
+- Pas de changement côté ElevenLabs (déjà OK)
+- Pas de contrainte SQL `CHECK length(content) <= 450` (resterait bloquant pour la lib existante)
