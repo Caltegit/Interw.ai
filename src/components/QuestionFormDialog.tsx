@@ -262,6 +262,7 @@ export function QuestionFormDialog({
                   id="qfd-content"
                   placeholder="Parle-moi de ton parcours..."
                   rows={3}
+                  maxLength={MAX_CONTENT}
                   value={form.content}
                   onChange={(e) => setForm({ ...form, content: e.target.value })}
                 />
