@@ -248,6 +248,7 @@ export default function ProjectEdit() {
           status: s.status as never,
           auto_skip_silence: s.autoSkipSilence,
           allow_pause: s.allowPause,
+          allow_skip_question: s.allowSkipQuestion,
           avatar_image_url: avatarUrl,
           intro_enabled: s.introEnabled,
           intro_mode: s.introEnabled ? s.introMode : null,
