@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS allow_skip_question boolean NOT NULL DEFAULT true;
