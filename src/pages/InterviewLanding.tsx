@@ -244,6 +244,17 @@ export default function InterviewLanding() {
 
   const handleProceedToInterview = () => {
     stopAllIntroMedia();
+    // Cas 1 : intro jouée AVANT le formulaire — on révèle le formulaire d'inscription
+    if (preFormIntro) {
+      setPreFormIntro(false);
+      setShowIntroMedia(false);
+      setPreFormIntroDone(true);
+      setMediaPlaying(false);
+      setMediaFinished(false);
+      setIntroMediaType(null);
+      return;
+    }
+    // Cas 2 : intro jouée APRÈS le formulaire — on poursuit vers la session
     if (sessionToken) {
       navigate(`/session/${slug}/test/${sessionToken}`);
     }
