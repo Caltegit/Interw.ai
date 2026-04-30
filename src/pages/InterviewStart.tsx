@@ -3077,9 +3077,9 @@ export default function InterviewStart() {
         {/* ── Footer : progression + actions + retour vidéo ── */}
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 lg:py-2 space-y-2 lg:space-y-1.5">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              {/* Spacer gauche */}
-              <div />
+            <div className="flex flex-col items-center gap-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+              {/* Spacer gauche (desktop uniquement) */}
+              <div className="hidden sm:block" />
               {/* Actions centrées */}
               <div className="flex items-center gap-2 justify-center">
                 <Button
@@ -3110,8 +3110,8 @@ export default function InterviewStart() {
                   </Button>
                 )}
               </div>
-              {/* Retour vidéo à droite */}
-              <div className="flex justify-end items-center">
+              {/* Retour vidéo : centré sur mobile, à droite sur desktop */}
+              <div className="flex justify-center sm:justify-end items-center">
                 {showSelfView ? (
                   <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[80px] h-[56px] sm:w-[100px] sm:h-[72px]">
                     <video
