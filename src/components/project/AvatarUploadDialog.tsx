@@ -207,7 +207,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
           <DialogTitle>{imageSrc ? "Recadrer la photo" : "Ajouter une photo"}</DialogTitle>
           <DialogDescription>
             {imageSrc
-              ? "Ajustez le cadrage et le zoom. L'image sera exportée en 512×512."
+              ? "Ajustez le cadrage et le zoom. L'image sera exportée en 1280×720 (16:9)."
               : "Glissez une image, collez-la (Ctrl/Cmd+V) ou parcourez vos fichiers."}
           </DialogDescription>
         </DialogHeader>
