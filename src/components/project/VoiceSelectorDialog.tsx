@@ -16,7 +16,8 @@ export const FEMALE_VOICES = [
   { id: "McVZb7PHIyDsbVBnY1aP", name: "Audrey", description: "FR natif · douce, naturelle" },
   { id: "kENkNtk0xyzG09WW40xE", name: "Marine", description: "FR natif · jeune, dynamique" },
   { id: "1a3lMdKLUcfcMtvN772u", name: "Adeline", description: "FR natif · posée, professionnelle" },
-  { id: "tnSpp4vdxKPjI9w0GnoV", name: "Léa", description: "FR natif · chaleureuse" },
+  { id: "ICk609TItINMseDpChFt", name: "Léa", description: "FR natif · calme, pédagogue" },
+  { id: "WeAAwKYcS06VmXw086yZ", name: "Victoria", description: "FR natif · chaleureuse, posée" },
   { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte", description: "Multilingue · léger accent" },
 ];
 
@@ -26,6 +27,8 @@ export const MALE_VOICES = [
   { id: "GR1Y5x67PsoZPmKj9rA0", name: "Antoine", description: "FR natif · naturelle, articulée" },
   { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Julien", description: "FR natif · chaleureuse" },
   { id: "hgPNbZ1myT05ziSdrji2", name: "Clément", description: "FR natif · voix personnalisée" },
+  { id: "0igQGE0lbNpTaWsexf1r", name: "Paul K", description: "FR natif · pédagogue, agréable" },
+  { id: "jsScnYkNNda9Q1NES5nn", name: "Léo", description: "FR natif · énergique, engageant" },
   { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Multilingue · léger accent" },
 ];
 
