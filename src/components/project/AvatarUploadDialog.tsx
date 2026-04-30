@@ -191,7 +191,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
         ? "Le navigateur n'a pas pu générer l'image finale."
         : "Une erreur est survenue pendant le recadrage.";
       toast({
-        title: "Échec de l'export en 512×512",
+        title: "Échec de l'export en 1280×720",
         description: `${reason} Essayez avec une autre image ou rechargez la page.`,
         variant: "destructive",
       });
