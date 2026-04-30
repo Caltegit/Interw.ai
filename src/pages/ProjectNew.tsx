@@ -74,6 +74,7 @@ const initialState: ProjectFormState = {
   status: "active",
   autoSkipSilence: true,
   allowPause: false,
+  allowSkipQuestion: true,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: DEFAULT_PRE_SESSION_MESSAGE,
   aiIntroEnabled: true,
