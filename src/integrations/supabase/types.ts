@@ -708,6 +708,7 @@ export type Database = {
           id: string
           intro_audio_url: string | null
           intro_enabled: boolean
+          intro_first_screen: boolean
           intro_mode: string | null
           intro_text: string | null
           job_title: string
@@ -746,6 +747,7 @@ export type Database = {
           id?: string
           intro_audio_url?: string | null
           intro_enabled?: boolean
+          intro_first_screen?: boolean
           intro_mode?: string | null
           intro_text?: string | null
           job_title?: string
@@ -784,6 +786,7 @@ export type Database = {
           id?: string
           intro_audio_url?: string | null
           intro_enabled?: boolean
+          intro_first_screen?: boolean
           intro_mode?: string | null
           intro_text?: string | null
           job_title?: string

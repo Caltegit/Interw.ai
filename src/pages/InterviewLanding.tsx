@@ -25,6 +25,9 @@ export default function InterviewLanding() {
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
+  // Quand l'intro est jouée AVANT le formulaire d'inscription
+  const [preFormIntro, setPreFormIntro] = useState(false);
+  const [preFormIntroDone, setPreFormIntroDone] = useState(false);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -53,6 +56,26 @@ export default function InterviewLanding() {
 
       setProject(proj);
       setLoading(false);
+
+      // Si l'option « intro en premier écran » est activée et qu'une intro est configurée,
+      // on affiche l'intro avant le formulaire d'inscription.
+      const projAny = proj as any;
+      if (projAny.intro_first_screen && projAny.intro_enabled !== false) {
+        const dbMode: string | null = projAny.intro_mode ?? null;
+        let mode: "text" | "tts" | "audio" | "video" | null = null;
+        if (dbMode === "text" || dbMode === "tts" || dbMode === "audio" || dbMode === "video") {
+          mode = dbMode;
+        } else if (projAny.presentation_video_url) {
+          mode = "video";
+        } else if (projAny.intro_audio_url) {
+          mode = "audio";
+        }
+        if (mode) {
+          setIntroMediaType(mode);
+          setPreFormIntro(true);
+          setShowIntroMedia(true);
+        }
+      }
     };
     load();
   }, [slug]);
@@ -87,7 +110,7 @@ export default function InterviewLanding() {
     const introEnabled = project.intro_enabled !== false;
     const dbMode: string | null = project.intro_mode ?? null;
     let mode: "text" | "tts" | "audio" | "video" | null = null;
-    if (introEnabled) {
+    if (introEnabled && !preFormIntroDone) {
       if (dbMode === "text" || dbMode === "tts" || dbMode === "audio" || dbMode === "video") {
         mode = dbMode;
       } else if (project.presentation_video_url) {
@@ -221,6 +244,17 @@ export default function InterviewLanding() {
 
   const handleProceedToInterview = () => {
     stopAllIntroMedia();
+    // Cas 1 : intro jouée AVANT le formulaire — on révèle le formulaire d'inscription
+    if (preFormIntro) {
+      setPreFormIntro(false);
+      setShowIntroMedia(false);
+      setPreFormIntroDone(true);
+      setMediaPlaying(false);
+      setMediaFinished(false);
+      setIntroMediaType(null);
+      return;
+    }
+    // Cas 2 : intro jouée APRÈS le formulaire — on poursuit vers la session
     if (sessionToken) {
       navigate(`/session/${slug}/test/${sessionToken}`);
     }

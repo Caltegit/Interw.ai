@@ -1,85 +1,44 @@
-# Plan : Système de feedback avec conversation
+# Plan : option « Mettre l'intro en premier écran »
 
-Ajouter un lien "Feedback" dans la barre latérale qui permet à chaque utilisateur d'ouvrir un fil de discussion avec le super admin. Chaque feedback crée automatiquement une conversation à laquelle les deux parties peuvent répondre.
+Ajouter une option dans l'onglet **Info** de la création / édition de session, qui permet d'afficher l'intro candidat (texte / audio / vidéo / TTS) **avant** le formulaire d'inscription au lieu d'après.
 
 ## Comportement utilisateur
 
-**Côté utilisateur (RH) :**
-- Nouveau lien "Feedback" dans le menu latéral (sous "Paramètres")
-- Liste de ses feedbacks envoyés (sujet, statut, date, dernier message)
-- Bouton "Nouveau feedback" → formulaire (sujet + message initial)
-- Clic sur un feedback → fil de conversation avec le super admin, possibilité de répondre
+**Onglet Info (création / édition d'une session) :**
+- Nouveau toggle « Mettre l'intro en premier écran », placé juste sous « Autoriser le candidat à passer une question »
+- Description : « Affiche l'intro candidat (si elle existe) avant le formulaire d'inscription. »
+- Désactivé par défaut → comportement actuel inchangé (intro après le formulaire)
 
-**Côté super admin :**
-- Même lien "Feedback" mais voit TOUS les feedbacks de toutes les organisations
-- Filtres par statut (ouvert / résolu) et par organisation
-- Indicateur du nombre de feedbacks non lus
-- Peut répondre, marquer comme résolu, rouvrir
+**Côté candidat (page d'arrivée `/session/:slug`) :**
+- Si l'option est activée **et** qu'une intro est configurée : la page affiche d'abord l'écran d'intro (lecture audio/vidéo/TTS ou affichage texte), puis le formulaire d'inscription
+- Si l'option est désactivée : comportement actuel (formulaire d'abord, intro entre le submit et l'écran de test média)
+- Si aucune intro n'est configurée : le toggle n'a aucun effet, le formulaire s'affiche comme aujourd'hui
 
 ## Détails techniques
 
-### Base de données (migration)
+### Migration
 
-Deux nouvelles tables :
+Ajouter une colonne sur `projects` :
+```sql
+ALTER TABLE public.projects
+ADD COLUMN intro_first_screen boolean NOT NULL DEFAULT false;
+```
 
-**`feedback_threads`**
-- `id` (uuid, pk)
-- `user_id` (uuid) — auteur du feedback
-- `organization_id` (uuid, nullable) — pour filtrage côté super admin
-- `subject` (text)
-- `status` (enum `feedback_status`: `open`, `resolved`)
-- `created_at`, `updated_at` (timestamps)
-- `last_message_at` (timestamp, pour tri)
+### `src/components/project/ProjectForm.tsx`
+- Ajouter `introFirstScreen: boolean` dans `ProjectFormState`
+- Ajouter le state local + l'inclure dans le payload `onSubmit`
+- Ajouter le `<Switch>` dans l'onglet Info, sous l'option « passer la question »
 
-**`feedback_messages`**
-- `id` (uuid, pk)
-- `thread_id` (uuid, fk → feedback_threads, on delete cascade)
-- `author_id` (uuid)
-- `author_role` (text: `user` ou `super_admin`)
-- `content` (text)
-- `read_by_recipient_at` (timestamp, nullable) — pour le badge non-lu
-- `created_at`
+### `src/pages/ProjectNew.tsx` & `src/pages/ProjectEdit.tsx`
+- Inclure `intro_first_screen: s.introFirstScreen` dans l'insert / update `projects`
+- Charger la valeur depuis le projet pour pré-remplir le formulaire en édition (défaut `false`)
 
-Trigger : à chaque insert dans `feedback_messages`, mettre à jour `last_message_at` et `updated_at` du thread parent.
-
-### RLS
-
-**`feedback_threads`** :
-- SELECT : `user_id = auth.uid()` OR `is_super_admin(auth.uid())`
-- INSERT : authenticated, `user_id = auth.uid()`
-- UPDATE (statut) : auteur OU super admin
-
-**`feedback_messages`** :
-- SELECT : si l'utilisateur peut voir le thread parent
-- INSERT : si l'utilisateur peut voir le thread parent ; `author_id = auth.uid()`
-- UPDATE (marquer comme lu) : recipient seulement
-
-### Routes & pages
-
-- `/feedback` — liste des fils (vue adaptée selon rôle)
-- `/feedback/:threadId` — détail d'un fil avec messages et zone de réponse
-
-Nouveaux fichiers :
-- `src/pages/Feedback.tsx` (liste)
-- `src/pages/FeedbackThread.tsx` (détail + conversation)
-- `src/components/feedback/NewFeedbackDialog.tsx`
-- `src/components/feedback/FeedbackMessageList.tsx`
-
-Hook : `src/hooks/useUnreadFeedback.ts` pour le badge dans la sidebar.
-
-### Sidebar (`src/components/AppSidebar.tsx`)
-
-Ajouter une entrée "Feedback" (icône `MessageCircle` de lucide-react) dans `bottomItems`, avec un petit badge numérique si messages non lus.
-
-### Realtime
-
-Activer realtime sur `feedback_messages` pour rafraîchir la conversation en direct quand l'autre partie répond (le fil ouvert s'abonne au channel postgres_changes filtré par `thread_id`).
-
-### Notifications
-
-Pour cette V1 : pas d'email automatique, juste le badge dans la sidebar. (À confirmer si vous voulez aussi un email au super admin à chaque nouveau feedback — peut être ajouté ensuite.)
+### `src/pages/InterviewLanding.tsx`
+- Au chargement du projet : si `intro_first_screen === true` et qu'une intro existe, basculer immédiatement sur l'écran d'intro (`showIntroMedia`) **sans** créer encore de session
+- Ajouter un nouvel état pour distinguer les deux modes (intro avant vs intro après formulaire)
+- Quand l'intro de pré-formulaire est terminée → afficher le formulaire d'inscription
+- À la soumission du formulaire dans ce mode : créer la session puis aller directement à `/session/:slug/test/:token` (l'intro a déjà été vue)
 
 ## Hors scope
-- Pièces jointes / fichiers (texte uniquement)
-- Notifications par email (peut être ajouté ensuite)
-- Réactions / emojis
+- Pas de changement sur la page de test média ni sur l'entretien lui-même
+- Pas de modification de la logique de fallback (auto-détection du mode intro selon ce qui est configuré)
