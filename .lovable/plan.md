@@ -1,45 +1,90 @@
-## Problème
+# Améliorations du module Feedback
 
-Sur la session « Énigme - Niveau 1 » (et tout projet utilisant le TTS navigateur), certaines questions s'arrêtent en cours de lecture.
+## 1) Photo dans le formulaire de création
 
-## Cause
+Ajout d'un champ optionnel "Image" dans `NewFeedbackDialog` (drag & drop ou clic) :
+- Aperçu avant envoi avec bouton "Retirer"
+- Upload vers un bucket public `feedback-attachments`
+- L'URL est insérée dans le premier message comme image (rendu inline dans le fil)
+- Plusieurs images possibles ? **Une seule** pour rester simple (modifiable plus tard)
+- Formats acceptés : JPG, PNG, WEBP. Limite 5 Mo
 
-Dans `src/pages/InterviewStart.tsx` (ligne 737), le « safety timer » du fallback navigateur est plafonné à **20 secondes** :
+Le rendu dans `FeedbackThread` détectera les URLs d'image et les affichera en miniature cliquable (ouverture pleine taille).
 
-```ts
-const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
+## 2) Trois statuts avec couleurs (super admin uniquement)
+
+Évolution de l'enum `feedback_status` :
+- `open` (existant) → renommé visuellement en **Nouveau** (vert)
+- `in_progress` (nouveau) → **En cours** (orange)
+- `archived` (nouveau, remplace `resolved`) → **Archivé** (rouge/gris)
+
+Migration des valeurs existantes : `resolved` → `archived`.
+
+**Côté super admin** : un `Select` (dropdown) à côté du titre pour changer le statut, avec pastille colorée.
+
+**Côté utilisateur** : seulement un badge en lecture (mêmes couleurs et libellés).
+
+Affichage des couleurs sur la liste `Feedback.tsx` aussi (badge coloré pour chaque thread).
+
+## 3) Suppression côté super admin
+
+Bouton "Supprimer" (icône poubelle) dans `FeedbackThread` visible uniquement si `isSuperAdmin`, avec `AlertDialog` de confirmation.
+- Supprime le thread (cascade implicite : on supprime d'abord les `feedback_messages` du thread, puis le `feedback_thread`)
+- Redirection vers `/feedback` après suppression
+- Ajout d'une policy RLS `DELETE` sur `feedback_messages` pour les super admins (actuellement absente, seul DELETE possible aujourd'hui est pour l'auteur du thread)
+
+## 4) Super admin peut créer un feedback pour lui-même
+
+Le bouton "Nouveau feedback" devient visible aussi pour les super admins dans `Feedback.tsx`.
+Aucun changement de logique : les RLS actuelles autorisent déjà tout utilisateur authentifié à créer un thread où `user_id = auth.uid()`.
+
+## Détails techniques
+
+### Migration SQL
+```sql
+-- Nouveaux statuts
+ALTER TYPE feedback_status ADD VALUE IF NOT EXISTS 'in_progress';
+ALTER TYPE feedback_status ADD VALUE IF NOT EXISTS 'archived';
+-- Migration des resolved existants (dans une 2e migration ou via UPDATE)
+UPDATE feedback_threads SET status = 'archived' WHERE status = 'resolved';
+
+-- Bucket storage
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('feedback-attachments', 'feedback-attachments', true);
+
+-- Policies storage : auth users peuvent uploader, lecture publique
+CREATE POLICY "Auth can upload feedback attachments"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'feedback-attachments');
+
+CREATE POLICY "Public can read feedback attachments"
+ON storage.objects FOR SELECT TO public
+USING (bucket_id = 'feedback-attachments');
+
+-- RLS DELETE pour super admins sur threads et messages
+CREATE POLICY "Super admins can delete feedback messages"
+ON feedback_messages FOR DELETE TO authenticated
+USING (is_super_admin(auth.uid()));
+-- (Threads déjà couvert par "Author or super admin delete threads")
 ```
 
-Le `Math.min` agit comme un plafond : peu importe la longueur du texte, la lecture est coupée au bout de 20 s. Or les énigmes font 250 à 410 caractères (≈ 25-35 s à lire) → la voix est coupée.
+### Mapping couleurs (design tokens)
 
-Le projet « Énigme » utilise `tts_provider = browser`, donc c'est ce code qui s'exécute.
-
-## Correctifs
-
-### 1. `src/pages/InterviewStart.tsx` — fix du safety timer
-
-Remplacer la formule par une borne basée sur la longueur réelle, plafonnée à 90 s :
-
-```ts
-// ~12 caractères/seconde en français + 5 s de marge, plafonné à 90 s
-const safetyMs = Math.min(90000, Math.ceil(text.length / 12) * 1000 + 5000);
+```text
+Nouveau     → bg-success/15 text-success     (vert)
+En cours    → bg-warning/15 text-warning     (orange)  
+Archivé     → bg-destructive/15 text-destructive (rouge)
 ```
 
-### 2. Limite de 450 caractères sur les questions
+### Fichiers modifiés / créés
+- `supabase/migrations/<new>.sql` — enum + bucket + policies
+- `src/components/feedback/NewFeedbackDialog.tsx` — upload image
+- `src/components/feedback/FeedbackStatusBadge.tsx` *(nouveau)* — badge coloré réutilisable
+- `src/components/feedback/FeedbackStatusSelect.tsx` *(nouveau)* — dropdown super admin
+- `src/pages/Feedback.tsx` — bouton accessible aux super admins, badge coloré
+- `src/pages/FeedbackThread.tsx` — dropdown statut, bouton supprimer, rendu image dans messages
 
-Imposer cette limite côté formulaire à 3 endroits :
-
-- **`src/components/QuestionFormDialog.tsx`** (questions de projet) — `maxLength={450}` sur le `<Textarea>` du contenu + compteur « X / 450 » + message d'erreur si dépassé à la soumission.
-- **`src/components/project/StepQuestions.tsx`** (édition inline éventuelle) — même `maxLength` sur le textarea de contenu si présent.
-- **Bibliothèque de questions** : appliquer la même limite dans le dialogue d'édition de `question_templates` (si l'édition se fait via `QuestionFormDialog`, c'est déjà couvert ; sinon ajouter `maxLength` au textarea correspondant).
-
-Pas de migration ni de contrainte SQL : on garde la validation côté UI uniquement (les questions existantes plus longues restent fonctionnelles, mais avec le fix du safety timer elles seront désormais lues entièrement).
-
-### 3. Vérifier les énigmes existantes
-
-Les 10 énigmes vont de 141 à 411 caractères → toutes sous 450. Pas besoin de les retoucher.
-
-## Hors scope
-
-- Pas de changement côté ElevenLabs (déjà OK)
-- Pas de contrainte SQL `CHECK length(content) <= 450` (resterait bloquant pour la lib existante)
+### Notes
+- `feedback-attachments` est public : les URLs sont devinables uniquement via UUID, acceptable pour ce cas d'usage. Si tu veux des URLs signées privées, dis-le.
+- Les anciens threads `resolved` deviennent `archived` automatiquement.
+- L'enum garde `open` et `resolved` techniquement (Postgres ne supprime pas facilement des valeurs d'enum), mais `resolved` ne sera plus utilisé.
