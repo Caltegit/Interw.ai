@@ -49,8 +49,8 @@ async function getCroppedImage(
 
   // Output canvas
   const out = document.createElement("canvas");
-  out.width = OUTPUT_SIZE;
-  out.height = OUTPUT_SIZE;
+  out.width = OUTPUT_W;
+  out.height = OUTPUT_H;
   const outCtx = out.getContext("2d")!;
   outCtx.drawImage(
     rotCanvas,
@@ -60,8 +60,8 @@ async function getCroppedImage(
     crop.height,
     0,
     0,
-    OUTPUT_SIZE,
-    OUTPUT_SIZE,
+    OUTPUT_W,
+    OUTPUT_H,
   );
 
   return new Promise<File>((resolve, reject) => {
