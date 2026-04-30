@@ -25,6 +25,9 @@ export default function InterviewLanding() {
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
+  // Quand l'intro est jouée AVANT le formulaire d'inscription
+  const [preFormIntro, setPreFormIntro] = useState(false);
+  const [preFormIntroDone, setPreFormIntroDone] = useState(false);
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
