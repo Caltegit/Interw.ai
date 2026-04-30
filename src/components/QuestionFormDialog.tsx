@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["Motivation", "Expérience", "Personnalité", "Compétences", "Culture", "Autres"];
-const MAX_CONTENT = 500;
+const MAX_CONTENT = 450;
 const MAX_HINT = 300;
 
 type MediaType = "written" | "audio" | "video";
