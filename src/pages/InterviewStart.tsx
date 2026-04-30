@@ -2773,7 +2773,7 @@ export default function InterviewStart() {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative w-full max-w-[420px] sm:max-w-[680px] aspect-video mx-auto">
+                  <div className="relative w-full max-w-[462px] sm:max-w-[748px] aspect-video mx-auto">
                     {/* Halo respirant quand IA parle */}
                     {isSpeaking && <div className="candidate-avatar-halo" aria-hidden="true" />}
                     <div
