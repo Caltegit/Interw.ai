@@ -75,6 +75,7 @@ export interface ProjectFormState {
   status: ProjectStatus;
   autoSkipSilence: boolean;
   allowPause: boolean;
+  allowSkipQuestion: boolean;
   completionMessage: string;
   preSessionMessage: string;
   aiIntroEnabled: boolean;
