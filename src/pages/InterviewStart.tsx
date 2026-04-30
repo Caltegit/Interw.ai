@@ -3140,7 +3140,7 @@ export default function InterviewStart() {
               <div className="hidden lg:flex lg:justify-end items-center">
                 <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
                   <video
-                    ref={videoRef}
+                    ref={setVideoEl}
                     muted
                     playsInline
                     className="w-full h-full object-cover"
