@@ -734,7 +734,9 @@ export default function InterviewStart() {
           voices.find((v) => v.lang.startsWith("fr"));
         if (femaleVoice) utterance.voice = femaleVoice;
 
-        const safetyMs = Math.min(20000, Math.ceil(text.length / 15) * 1000 + 4000);
+        // ~12 caractères/seconde en français + 5 s de marge, plafonné à 90 s.
+        // Évite de couper la lecture des questions longues.
+        const safetyMs = Math.min(90000, Math.ceil(text.length / 12) * 1000 + 5000);
         const safetyTimer = setTimeout(() => {
           console.warn("[interview] TTS safety timer fired after", safetyMs, "ms");
           try { window.speechSynthesis.cancel(); } catch {}
