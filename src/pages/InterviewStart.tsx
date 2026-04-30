@@ -3132,10 +3132,10 @@ export default function InterviewStart() {
                   </Button>
                 )}
               </div>
-              {/* Retour vidéo : centré sur mobile, à droite sur desktop */}
-              <div className="flex justify-center sm:justify-end items-center">
+              {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop */}
+              <div className="hidden lg:flex lg:justify-end items-center">
                 {showSelfView ? (
-                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[80px] h-[56px] sm:w-[100px] sm:h-[72px]">
+                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
                     <video
                       ref={videoRef}
                       muted
@@ -3149,7 +3149,7 @@ export default function InterviewStart() {
                       data-testid="interview-recording-indicator"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-                      <span className="hidden sm:inline">REC</span>
+                      <span>REC</span>
                     </div>
                     <button
                       type="button"
@@ -3162,19 +3162,15 @@ export default function InterviewStart() {
                     </button>
                   </div>
                 ) : (
-                  <>
-                    {/* Vidéo cachée pour garder le flux actif */}
-                    <video ref={videoRef} muted playsInline className="hidden" style={{ transform: "scaleX(-1)" }} />
-                    <button
-                      type="button"
-                      onClick={() => setShowSelfView(true)}
-                      className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
-                      aria-label="Afficher mon retour vidéo"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Afficher ma vidéo</span>
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfView(true)}
+                    className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+                    aria-label="Afficher mon retour vidéo"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Afficher ma vidéo</span>
+                  </button>
                 )}
               </div>
             </div>
