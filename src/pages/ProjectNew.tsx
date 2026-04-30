@@ -166,6 +166,7 @@ export default function ProjectNew() {
           status: s.status,
           auto_skip_silence: s.autoSkipSilence,
           allow_pause: s.allowPause,
+          allow_skip_question: s.allowSkipQuestion,
           slug,
           avatar_image_url: avatarUrl,
           intro_enabled: s.introEnabled,
