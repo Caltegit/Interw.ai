@@ -299,6 +299,77 @@ export type Database = {
           },
         ]
       }
+      feedback_messages: {
+        Row: {
+          author_id: string
+          author_role: string
+          content: string
+          created_at: string
+          id: string
+          read_by_recipient_at: string | null
+          thread_id: string
+        }
+        Insert: {
+          author_id: string
+          author_role: string
+          content: string
+          created_at?: string
+          id?: string
+          read_by_recipient_at?: string | null
+          thread_id: string
+        }
+        Update: {
+          author_id?: string
+          author_role?: string
+          content?: string
+          created_at?: string
+          id?: string
+          read_by_recipient_at?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_threads: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string
+          organization_id: string | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          organization_id?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string
+          organization_id?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       interview_template_criteria: {
         Row: {
           anchors: Json | null
@@ -1290,6 +1361,7 @@ export type Database = {
       ai_voice_type: "female_fr" | "male_fr" | "female_en" | "male_en"
       app_role: "admin" | "recruiter" | "viewer" | "super_admin"
       criteria_scope: "all_questions" | "specific_questions"
+      feedback_status: "open" | "resolved"
       invitation_status: "pending" | "accepted" | "expired"
       message_role: "ai" | "candidate"
       project_language: "fr" | "en"
@@ -1434,6 +1506,7 @@ export const Constants = {
       ai_voice_type: ["female_fr", "male_fr", "female_en", "male_en"],
       app_role: ["admin", "recruiter", "viewer", "super_admin"],
       criteria_scope: ["all_questions", "specific_questions"],
+      feedback_status: ["open", "resolved"],
       invitation_status: ["pending", "accepted", "expired"],
       message_role: ["ai", "candidate"],
       project_language: ["fr", "en"],
