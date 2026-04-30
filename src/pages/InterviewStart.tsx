@@ -1151,12 +1151,14 @@ export default function InterviewStart() {
   // Start camera stream (no global recorder — only per-question recorders)
   const startVideoStream = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      // Réutilise un flux déjà actif si présent (cas reprise de session).
+      const existing = streamRef.current;
+      const live = existing?.getTracks().some((t) => t.readyState === "live");
+      if (!existing || !live) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
       }
+      reattachAllSelfViews();
     } catch (err) {
       logger.error("interview_media_access_failed", {
         sessionId: session?.id ?? null,
@@ -1169,7 +1171,7 @@ export default function InterviewStart() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, reattachAllSelfViews, session?.id]);
 
   // Start a per-question video recorder (uses same stream)
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
