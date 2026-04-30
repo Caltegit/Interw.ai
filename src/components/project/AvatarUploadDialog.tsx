@@ -9,7 +9,9 @@ import { toast } from "@/hooks/use-toast";
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const OUTPUT_SIZE = 512;
+const OUTPUT_W = 1280;
+const OUTPUT_H = 720;
+const OUTPUT_ASPECT = OUTPUT_W / OUTPUT_H;
 
 interface Props {
   open: boolean;
@@ -47,8 +49,8 @@ async function getCroppedImage(
 
   // Output canvas
   const out = document.createElement("canvas");
-  out.width = OUTPUT_SIZE;
-  out.height = OUTPUT_SIZE;
+  out.width = OUTPUT_W;
+  out.height = OUTPUT_H;
   const outCtx = out.getContext("2d")!;
   outCtx.drawImage(
     rotCanvas,
@@ -58,8 +60,8 @@ async function getCroppedImage(
     crop.height,
     0,
     0,
-    OUTPUT_SIZE,
-    OUTPUT_SIZE,
+    OUTPUT_W,
+    OUTPUT_H,
   );
 
   return new Promise<File>((resolve, reject) => {
@@ -189,7 +191,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
         ? "Le navigateur n'a pas pu générer l'image finale."
         : "Une erreur est survenue pendant le recadrage.";
       toast({
-        title: "Échec de l'export en 512×512",
+        title: "Échec de l'export en 1280×720",
         description: `${reason} Essayez avec une autre image ou rechargez la page.`,
         variant: "destructive",
       });
@@ -205,7 +207,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
           <DialogTitle>{imageSrc ? "Recadrer la photo" : "Ajouter une photo"}</DialogTitle>
           <DialogDescription>
             {imageSrc
-              ? "Ajustez le cadrage et le zoom. L'image sera exportée en 512×512."
+              ? "Ajustez le cadrage et le zoom. L'image sera exportée en 1280×720 (16:9)."
               : "Glissez une image, collez-la (Ctrl/Cmd+V) ou parcourez vos fichiers."}
           </DialogDescription>
         </DialogHeader>
@@ -256,7 +258,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
                   crop={crop}
                   zoom={zoom}
                   rotation={rotation}
-                  aspect={1}
+                  aspect={OUTPUT_ASPECT}
                   cropShape="rect"
                   showGrid={true}
                   onCropChange={setCrop}
@@ -266,7 +268,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
               </div>
               <div className="flex flex-col gap-3 w-56">
                 <div className="space-y-2">
-                  <div className="relative aspect-square w-full rounded-3xl overflow-hidden ring-1 ring-border shadow-sm bg-muted/30">
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden ring-1 ring-border shadow-sm bg-muted/30">
                     {previewUrl ? (
                       <img src={previewUrl} alt="Aperçu candidat" className="h-full w-full object-contain" />
                     ) : (

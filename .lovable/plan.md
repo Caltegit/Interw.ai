@@ -1,77 +1,43 @@
-## Objectif
+## Problème
 
-Permettre de définir un **avatar par question** (Texte et Audio uniquement) dans le wizard de création/édition de session. Si défini, il remplace l'avatar du projet pendant cette question pour le candidat. Sinon, l'avatar du projet est utilisé.
+Aujourd'hui la popup "Recadrer la photo" (utilisée pour l'avatar du recruteur **et** l'avatar par question) recadre l'image **au format carré 1:1 (512×512)**.
 
-## Comportement attendu
+Mais pendant l'entretien, côté candidat, la photo est affichée dans une zone **16:9** (`aspect-video`) en `object-cover`. Conséquence : le haut et le bas du carré sont coupés → la photo est mal cadrée pendant la session.
 
-**Dans la liste des questions (StepQuestions)** — uniquement pour les questions Texte et Audio :
-- À gauche des boutons « Modifier » et « Supprimer », ajouter un nouvel **icône rond cliquable** affichant la photo de l'avatar de la question (ou l'avatar par défaut du projet si aucun n'est défini).
-- Au survol : tooltip « Modifier l'avatar pour cette question ».
-- Clic → ouvre une popup réutilisant l'interface de sélection d'avatar (`AvatarPicker` + `AvatarUploadDialog`).
-- Si un avatar custom est défini, un petit point indigo en bas à droite de la vignette signale qu'il diffère de celui du projet.
-- Bouton « Réinitialiser » dans la popup pour repasser à l'avatar du projet.
+## Solution
 
-**Pour les questions Vidéo** : l'icône n'est **pas affiché** (la vidéo se substitue à l'avatar).
+Aligner la zone de recadrage **et** l'export de la popup sur le format réellement affiché pendant la question : **16:9 paysage**.
 
-**Côté candidat (InterviewStart)** : pour chaque question Texte/Audio, si `avatar_image_url` est défini sur la question, l'utiliser ; sinon fallback sur celui du projet.
+### Changements dans `src/components/project/AvatarUploadDialog.tsx`
 
-## Modifications techniques
+1. **Cropper en 16:9**
+   - `aspect={1}` → `aspect={16/9}`
+   - Garder `cropShape="rect"`
 
-### 1. Base de données (migration)
+2. **Export en 16:9**
+   - Constantes : remplacer `OUTPUT_SIZE = 512` par `OUTPUT_W = 1280`, `OUTPUT_H = 720` (HD 16:9, qualité conservée).
+   - Mettre à jour `getCroppedImage` pour produire un canvas `1280×720` au lieu de `512×512`.
+   - Mettre à jour le texte de description : « L'image sera exportée en 1280×720 (16:9). »
 
-Ajout de la colonne `avatar_image_url TEXT NULL` sur :
-- `questions`
-- `interview_template_questions` (pour cohérence avec la bibliothèque de modèles de session)
-- `question_templates` (bibliothèque de questions individuelles)
+3. **Aperçu "Vue pendant l'entretien"**
+   - Remplacer `aspect-square` + `rounded-3xl` par `aspect-video` + `rounded-2xl` pour refléter exactement le rendu candidat.
+   - Garder `object-contain` (l'image exportée est déjà en 16:9, donc remplira la zone).
 
-Pas de modification de RLS nécessaire (les politiques existantes couvrent déjà tous les champs).
+4. **Aperçu "Miniature page d'accueil"** (rond, 1:1, `object-cover object-top`)
+   - Conservé tel quel : la miniature ronde de la landing page utilise `object-cover object-top`, donc une image 16:9 bien cadrée affichera correctement le visage en haut.
+   - Aucun changement nécessaire ici.
 
-### 2. Type `Question` (StepQuestions.tsx)
+### Pas de changement nécessaire ailleurs
 
-```ts
-avatar_image_url: string | null;
-```
-+ ajout dans `createEmptyQuestion()`.
+- `InterviewStart.tsx` : continue d'utiliser `aspect-video` + `object-cover` → l'image 16:9 s'affichera parfaitement, sans crop.
+- `InterviewLanding.tsx` : la mini ronde avec `object-top` fonctionne avec une image 16:9 (le visage doit être cadré dans le tiers supérieur, ce qui est naturel).
+- `AvatarPicker.tsx` : les vignettes presets restent rondes ; les images 16:9 uploadées y apparaîtront en `object-cover` (centrées) — acceptable comme vignette de sélection.
+- Pas de migration BDD : le champ `avatar_image_url` reste un simple URL, seul le format de l'image change.
 
-### 3. Composant réutilisable : `QuestionAvatarDialog`
+### Compatibilité avec les anciennes photos
 
-Nouveau fichier `src/components/project/QuestionAvatarDialog.tsx` qui encapsule un Dialog contenant :
-- L'aperçu actuel + bouton « Utiliser l'avatar du projet » (reset)
-- Le composant `AvatarPicker` existant
-- Bouton « Valider »
+Les avatars carrés déjà uploadés continuent de fonctionner (affichés en `object-cover` dans le 16:9 → crop vertical comme aujourd'hui). Pour corriger une ancienne photo, il suffit de la re-uploader via la popup mise à jour.
 
-L'upload de fichier réutilise le bucket Storage déjà en place pour les avatars de projet (même chemin/policies que `ProjectForm`).
+## Fichiers modifiés
 
-### 4. Intégration dans `SortableQuestion` (StepQuestions.tsx)
-
-- Nouvelle prop `projectAvatarUrl: string | null` passée depuis le parent.
-- Nouveau bouton rond (32×32) avant les boutons Pencil/Trash, conditionné sur `q.mediaType !== "video"`.
-- Affiche `q.avatar_image_url ?? projectAvatarUrl ?? <fallback initiale>`.
-- État local pour ouvrir/fermer le `QuestionAvatarDialog`.
-
-### 5. Propagation `projectAvatarUrl`
-
-`StepQuestions` reçoit une nouvelle prop optionnelle `projectAvatarUrl`. Mise à jour des appelants :
-- `ProjectForm.tsx` (création/édition de session) → passe la valeur courante du champ avatar du projet.
-- `InterviewTemplateEdit.tsx` → passe `null` (pas d'avatar projet pour un modèle).
-
-### 6. Persistance
-
-- `ProjectForm` (insert/update questions) : ajouter `avatar_image_url: q.avatar_image_url ?? null` au payload.
-- `InterviewTemplateEdit` : idem sur `interview_template_questions`.
-- `QuestionLibraryManager` (bibliothèque de questions) : ajouter le champ au payload `question_templates` + dans `openEdit`.
-- `loadInterviewTemplate.ts` et `QuestionLibraryDialog` : propager `avatar_image_url` lors de l'import depuis la bibliothèque.
-
-### 7. Affichage côté candidat (`InterviewStart.tsx`)
-
-Au moment d'afficher l'avatar pour la question courante :
-```ts
-const currentAvatar = currentQuestion.avatar_image_url || project.avatar_image_url;
-```
-Uniquement pour les questions de type `written` et `audio` (la vidéo affiche déjà le lecteur vidéo).
-
-## Hors périmètre
-
-- Pas de génération d'avatar IA spécifique par question (réutilise les presets existants).
-- Pas de modification de la table `projects`.
-- Pas de bucket Storage supplémentaire (réutilise celui des avatars projet).
+- `src/components/project/AvatarUploadDialog.tsx` (seul fichier à toucher)
