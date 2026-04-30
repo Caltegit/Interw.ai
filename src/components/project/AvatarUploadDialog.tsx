@@ -9,7 +9,9 @@ import { toast } from "@/hooks/use-toast";
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const OUTPUT_SIZE = 512;
+const OUTPUT_W = 1280;
+const OUTPUT_H = 720;
+const OUTPUT_ASPECT = OUTPUT_W / OUTPUT_H;
 
 interface Props {
   open: boolean;
