@@ -157,6 +157,11 @@ export function AppSidebar() {
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {item.url === "/feedback" && unreadFeedback > 0 && !collapsed && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1.5 text-xs">
+                          {unreadFeedback}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
