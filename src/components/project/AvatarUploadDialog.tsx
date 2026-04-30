@@ -268,7 +268,7 @@ export function AvatarUploadDialog({ open, onOpenChange, onUpload }: Props) {
               </div>
               <div className="flex flex-col gap-3 w-56">
                 <div className="space-y-2">
-                  <div className="relative aspect-square w-full rounded-3xl overflow-hidden ring-1 ring-border shadow-sm bg-muted/30">
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden ring-1 ring-border shadow-sm bg-muted/30">
                     {previewUrl ? (
                       <img src={previewUrl} alt="Aperçu candidat" className="h-full w-full object-contain" />
                     ) : (
