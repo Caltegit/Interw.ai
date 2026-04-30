@@ -168,6 +168,14 @@ export function QuestionFormDialog({
       toast({ title: "Énoncé requis", description: "Saisis le texte de la question.", variant: "destructive" });
       return;
     }
+    if (form.content.length > MAX_CONTENT) {
+      toast({
+        title: "Énoncé trop long",
+        description: `L'énoncé ne doit pas dépasser ${MAX_CONTENT} caractères.`,
+        variant: "destructive",
+      });
+      return;
+    }
     if ((form.mediaType === "audio" || form.mediaType === "video") && !form.mediaBlob && !form.mediaPreviewUrl) {
       toast({
         title: "Média requis",
