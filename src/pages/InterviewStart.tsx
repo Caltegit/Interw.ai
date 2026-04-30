@@ -3015,7 +3015,7 @@ export default function InterviewStart() {
                           )}
                         </Button>
                         {hasVoice && (
-                          <p className="text-xs text-center" style={{ color: "hsl(var(--l-fg) / 0.5)" }}>
+                          <p className="hidden sm:block text-xs text-center" style={{ color: "hsl(var(--l-fg) / 0.5)" }}>
                             ou appuyer sur la barre d'espace du clavier
                           </p>
                         )}

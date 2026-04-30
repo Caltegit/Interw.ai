@@ -1,27 +1,21 @@
 ## Objectif
 
-Agrandir de 10% la taille d'affichage de l'avatar IA côté candidat pendant l'entretien (questions Texte et Audio).
+Sur mobile, masquer le texte « ou appuyer sur la barre d'espace du clavier » sous le bouton micro pendant la session candidat (il n'y a pas de clavier physique sur mobile).
 
 ## Modification
 
-Fichier : `src/pages/InterviewStart.tsx` (ligne 2776)
+Fichier : `src/pages/InterviewStart.tsx` (ligne 3018)
 
-Le conteneur de l'avatar utilise actuellement :
-- `max-w-[420px]` sur mobile
-- `sm:max-w-[680px]` sur desktop
-
-Passer à :
-- `max-w-[462px]` sur mobile (+10%)
-- `sm:max-w-[748px]` sur desktop (+10%)
-
-Le ratio 16:9 (`aspect-video`) est conservé, donc la photo s'agrandit proportionnellement sans déformation. Les questions Vidéo ne sont pas concernées (autre branche du rendu).
-
-## Détails techniques
+Ajouter `hidden sm:block` au paragraphe pour qu'il soit visible uniquement à partir du breakpoint tablette/desktop.
 
 ```tsx
 // Avant
-<div className="relative w-full max-w-[420px] sm:max-w-[680px] aspect-video mx-auto">
+<p className="text-xs text-center" style={{ color: "hsl(var(--l-fg) / 0.5)" }}>
+  ou appuyer sur la barre d'espace du clavier
+</p>
 
 // Après
-<div className="relative w-full max-w-[462px] sm:max-w-[748px] aspect-video mx-auto">
+<p className="hidden sm:block text-xs text-center" style={{ color: "hsl(var(--l-fg) / 0.5)" }}>
+  ou appuyer sur la barre d'espace du clavier
+</p>
 ```
