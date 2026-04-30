@@ -171,6 +171,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [status, setStatus] = useState<ProjectStatus>(initial.status);
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
+  const [allowSkipQuestion, setAllowSkipQuestion] = useState(initial.allowSkipQuestion);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
