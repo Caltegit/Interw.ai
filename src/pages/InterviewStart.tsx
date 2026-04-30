@@ -157,14 +157,30 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  // Ref callback : réattache le srcObject à chaque montage du <video> (mobile/desktop responsive)
-  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
-    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
-    if (el && streamRef.current && el.srcObject !== streamRef.current) {
-      el.srcObject = streamRef.current;
-      el.play().catch(() => { /* autoplay rejection ignored */ });
-    }
+  // On garde TOUS les éléments <video> selfview montés (mobile + desktop) pour
+  // pouvoir leur rattacher le flux caméra simultanément. Indispensable car
+  // Tailwind monte les deux variants dans le DOM même quand l'un est masqué.
+  const selfViewElsRef = useRef<Set<HTMLVideoElement>>(new Set());
+  const attachStreamTo = useCallback((el: HTMLVideoElement) => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    const live = stream.getTracks().some((t) => t.readyState === "live");
+    if (!live) return;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.play().catch(() => { /* autoplay rejection ignored */ });
   }, []);
+  const reattachAllSelfViews = useCallback(() => {
+    selfViewElsRef.current.forEach((el) => attachStreamTo(el));
+  }, [attachStreamTo]);
+  // Ref callback : enregistre/désenregistre l'élément et lui rattache le flux
+  // dès qu'il monte (mobile + desktop, peu importe l'ordre de montage).
+  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    if (el) {
+      selfViewElsRef.current.add(el);
+      (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+      attachStreamTo(el);
+    }
+  }, [attachStreamTo]);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
