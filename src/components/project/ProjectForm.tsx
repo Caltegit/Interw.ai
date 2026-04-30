@@ -730,6 +730,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
                   </p>
                   <p>
+                    <strong>Passage de question autorisé :</strong> {allowSkipQuestion ? "Oui" : "Non"}
+                  </p>
+                  <p>
                     <strong>Statut :</strong>{" "}
                     {status === "draft" ? "Brouillon" : status === "active" ? "Actif" : "Archivé"}
                   </p>
