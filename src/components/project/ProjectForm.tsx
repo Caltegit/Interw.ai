@@ -74,6 +74,7 @@ export interface ProjectFormState {
   autoSkipSilence: boolean;
   allowPause: boolean;
   allowSkipQuestion: boolean;
+  introFirstScreen: boolean;
   completionMessage: string;
   preSessionMessage: string;
   aiIntroEnabled: boolean;
@@ -163,6 +164,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
   const [allowSkipQuestion, setAllowSkipQuestion] = useState(initial.allowSkipQuestion);
+  const [introFirstScreen, setIntroFirstScreen] = useState(initial.introFirstScreen);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
@@ -220,6 +222,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       autoSkipSilence,
       allowPause,
       allowSkipQuestion,
+      introFirstScreen,
       completionMessage,
       preSessionMessage,
       aiIntroEnabled,
@@ -489,6 +492,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </p>
                   </div>
                   <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Mettre l'intro en premier écran</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Affiche l'intro candidat (si elle existe) avant le formulaire d'inscription.
+                    </p>
+                  </div>
+                  <Switch checked={introFirstScreen} onCheckedChange={setIntroFirstScreen} />
                 </div>
                 <div>
                   <Label>Statut</Label>
