@@ -476,7 +476,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <div>
                     <Label>Autoriser le candidat à mettre en pause</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un bouton « Pause » pendant l'session. Le candidat peut figer l'interview et reprendre
+                      Affiche un bouton « Pause » pendant la session. Le candidat peut figer l'interview et reprendre
                       exactement où il s'était arrêté.
                     </p>
                   </div>
