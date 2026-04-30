@@ -29,10 +29,8 @@ import {
 } from "@/components/project/AiTextCustomizerDialog";
 
 const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
-export const DEFAULT_COMPLETION_MESSAGE =
-  "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
-export const DEFAULT_PRE_SESSION_MESSAGE =
-  "Soyez naturel·le et souriez, vous êtes filmé·e !";
+export const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
+export const DEFAULT_PRE_SESSION_MESSAGE = "Soyez naturel·le et souriez, vous êtes filmé·e !";
 
 export type ProjectStatus = "draft" | "active" | "archived";
 
@@ -75,7 +73,6 @@ export interface ProjectFormState {
   status: ProjectStatus;
   autoSkipSilence: boolean;
   allowPause: boolean;
-  allowSkipQuestion: boolean;
   completionMessage: string;
   preSessionMessage: string;
   aiIntroEnabled: boolean;
@@ -86,10 +83,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsCustomText: string;
 }
 
-export function mergeTemplateIntoState(
-  state: ProjectFormState,
-  tpl: InterviewTemplatePayload,
-): ProjectFormState {
+export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
   return {
     ...state,
     title: tpl.name || state.title,
@@ -101,10 +95,7 @@ export function mergeTemplateIntoState(
           title: q.title,
           content: q.content,
           category: q.category || "",
-          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as
-            | "written"
-            | "audio"
-            | "video",
+          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
           follow_up_enabled: q.follow_up_enabled,
           max_follow_ups: q.max_follow_ups,
           relance_level: q.relance_level,
@@ -112,8 +103,7 @@ export function mergeTemplateIntoState(
           videoPreviewUrl: q.video_url,
           from_library: true,
           hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
-          max_response_seconds:
-            (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
+          max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
         }))
       : state.questions,
     criteria: tpl.criteria.length
@@ -171,7 +161,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [status, setStatus] = useState<ProjectStatus>(initial.status);
   const [autoSkipSilence] = useState(initial.autoSkipSilence);
   const [allowPause, setAllowPause] = useState(initial.allowPause);
-  const [allowSkipQuestion, setAllowSkipQuestion] = useState(initial.allowSkipQuestion);
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
@@ -228,7 +217,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       status,
       autoSkipSilence,
       allowPause,
-      allowSkipQuestion,
       completionMessage,
       preSessionMessage,
       aiIntroEnabled,
@@ -251,10 +239,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           title: q.title,
           content: q.content,
           category: q.category || "",
-          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as
-            | "written"
-            | "audio"
-            | "video",
+          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
           follow_up_enabled: q.follow_up_enabled,
           max_follow_ups: q.max_follow_ups,
           relance_level: q.relance_level,
@@ -356,7 +341,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 />
               </div>
               <div>
-                <Label>Langue de l'session</Label>
+                <Label>Langue de la session</Label>
                 <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
                   <SelectTrigger>
                     <SelectValue />
@@ -494,15 +479,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={allowPause} onCheckedChange={setAllowPause} />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Autoriser le candidat à passer une question</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un lien « Passer la question » pendant l'entretien.
-                    </p>
-                  </div>
-                  <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
-                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
@@ -573,12 +549,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                         </div>
                       </RadioGroup>
                       {aiIntroMode === "custom" && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIntroCustomizerOpen(true)}
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
                           Modifier le texte
                         </Button>
                       )}
@@ -590,13 +561,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     <div>
                       <Label>Transitions entre questions</Label>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Si désactivé, l'IA enchaîne directement les questions sans phrase de liaison (« Merci, passons à la suite »…).
+                        Si désactivé, l'IA enchaîne directement les questions sans phrase de liaison (« Merci, passons à
+                        la suite »…).
                       </p>
                     </div>
-                    <Switch
-                      checked={aiQuestionTransitionsEnabled}
-                      onCheckedChange={setAiQuestionTransitionsEnabled}
-                    />
+                    <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
                   </div>
                   {aiQuestionTransitionsEnabled && (
                     <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
@@ -660,7 +629,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   ]}
                   onSave={setAiQuestionTransitionsCustomText}
                 />
-
               </div>
             </div>
           )}
@@ -715,8 +683,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     <strong>Questions :</strong>{" "}
                     {
                       questions.filter(
-                        (q) =>
-                          q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl || q.audioBlob || q.videoBlob,
+                        (q) => q.content.trim() || q.audioPreviewUrl || q.videoPreviewUrl || q.audioBlob || q.videoBlob,
                       ).length
                     }
                   </p>
@@ -728,9 +695,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </p>
                   <p>
                     <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
-                  </p>
-                  <p>
-                    <strong>Passage de question autorisé :</strong> {allowSkipQuestion ? "Oui" : "Non"}
                   </p>
                   <p>
                     <strong>Statut :</strong>{" "}
