@@ -2818,6 +2818,28 @@ export default function InterviewStart() {
                 )}
               </div>
 
+              {/* Retour vidéo candidat — mobile uniquement, entre avatar et question, aligné à gauche, sans actions */}
+              {!interviewFinished && (
+                <div className="lg:hidden flex justify-start -mt-2">
+                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[96px] h-[68px]">
+                    <video
+                      ref={videoRef}
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                      style={{ transform: "scaleX(-1)" }}
+                      data-testid="interview-self-video-mobile"
+                    />
+                    <div
+                      className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
+                      data-testid="interview-recording-indicator-mobile"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ── Colonne droite : Question + état + CTA (1/3 desktop) ── */}
               <div className="lg:col-span-1 flex flex-col justify-center gap-4 sm:gap-5">
                 {!interviewFinished && (() => {
@@ -3077,9 +3099,9 @@ export default function InterviewStart() {
         {/* ── Footer : progression + actions + retour vidéo ── */}
         {!interviewFinished && (
           <div className="border-t border-border/50 py-3 sm:py-4 lg:py-2 space-y-2 lg:space-y-1.5">
-            <div className="flex flex-col items-center gap-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+            <div className="flex flex-col items-center gap-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
               {/* Spacer gauche (desktop uniquement) */}
-              <div className="hidden sm:block" />
+              <div className="hidden lg:block" />
               {/* Actions centrées */}
               <div className="flex items-center gap-2 justify-center">
                 <Button
@@ -3110,10 +3132,10 @@ export default function InterviewStart() {
                   </Button>
                 )}
               </div>
-              {/* Retour vidéo : centré sur mobile, à droite sur desktop */}
-              <div className="flex justify-center sm:justify-end items-center">
+              {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop */}
+              <div className="hidden lg:flex lg:justify-end items-center">
                 {showSelfView ? (
-                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[80px] h-[56px] sm:w-[100px] sm:h-[72px]">
+                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
                     <video
                       ref={videoRef}
                       muted
@@ -3127,7 +3149,7 @@ export default function InterviewStart() {
                       data-testid="interview-recording-indicator"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-                      <span className="hidden sm:inline">REC</span>
+                      <span>REC</span>
                     </div>
                     <button
                       type="button"
@@ -3140,19 +3162,15 @@ export default function InterviewStart() {
                     </button>
                   </div>
                 ) : (
-                  <>
-                    {/* Vidéo cachée pour garder le flux actif */}
-                    <video ref={videoRef} muted playsInline className="hidden" style={{ transform: "scaleX(-1)" }} />
-                    <button
-                      type="button"
-                      onClick={() => setShowSelfView(true)}
-                      className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
-                      aria-label="Afficher mon retour vidéo"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Afficher ma vidéo</span>
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => setShowSelfView(true)}
+                    className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
+                    aria-label="Afficher mon retour vidéo"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Afficher ma vidéo</span>
+                  </button>
                 )}
               </div>
             </div>
