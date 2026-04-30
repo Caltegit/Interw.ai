@@ -1,52 +1,85 @@
-Objectif
-Corriger le retour vidéo candidat sur mobile dans l’écran d’entretien, car il n’apparaît toujours pas alors que le bouton « Passer la question » est bien visible.
+# Plan : Système de feedback avec conversation
 
-Constat confirmé
-- Le bloc mobile du retour vidéo existe bien dans `src/pages/InterviewStart.tsx` avec `muted`, `playsInline`, `autoPlay` et `ref={setVideoEl}`.
-- Le flux caméra est bien démarré dans `beginInterview()` via `startVideoStream()`.
-- En revanche, la page de reprise de session ne redémarre jamais explicitement le flux caméra.
-- Le test navigateur mobile montre qu’aucun élément vidéo n’est présent/actif au moment observé, et la capture montre surtout que le parcours mobile arrive d’abord sur l’écran de vérification technique.
-- Le comportement est donc fragile sur mobile, surtout lors des remises en place du DOM et des reprises de session.
+Ajouter un lien "Feedback" dans la barre latérale qui permet à chaque utilisateur d'ouvrir un fil de discussion avec le super admin. Chaque feedback crée automatiquement une conversation à laquelle les deux parties peuvent répondre.
 
-Plan
-1. Fiabiliser l’attachement du flux caméra au retour vidéo mobile
-- Ajouter une routine dédiée pour rattacher le `MediaStream` à tout élément vidéo monté, sans dépendre uniquement du callback `ref`.
-- Déclencher cette routine quand :
-  - le flux caméra démarre,
-  - `readyToStart` passe à `true`,
-  - la question ou la mise en page change,
-  - la page est reprise après interruption.
-- Garder l’affectation synchrone dans le geste utilisateur pour rester compatible mobile.
+## Comportement utilisateur
 
-2. Corriger explicitement le cas de reprise de session
-- Au clic sur « Reprendre », relancer `startVideoStream()` si aucun flux n’est présent ou si les pistes sont arrêtées.
-- Réattacher immédiatement le flux au retour vidéo mobile et desktop après la reprise.
-- Éviter les doubles créations de flux si un flux valide existe déjà.
+**Côté utilisateur (RH) :**
+- Nouveau lien "Feedback" dans le menu latéral (sous "Paramètres")
+- Liste de ses feedbacks envoyés (sujet, statut, date, dernier message)
+- Bouton "Nouveau feedback" → formulaire (sujet + message initial)
+- Clic sur un feedback → fil de conversation avec le super admin, possibilité de répondre
 
-3. Rendre le rendu mobile plus robuste
-- Vérifier que le bloc vidéo mobile est toujours rendu dès que l’entretien est lancé, indépendamment de l’état du lien « Passer la question ».
-- Vérifier qu’aucune condition de rendu ni remonte du DOM ne fait disparaître le `<video>` mobile au changement d’étape.
-- Conserver le positionnement actuel à gauche du lien/bouton.
+**Côté super admin :**
+- Même lien "Feedback" mais voit TOUS les feedbacks de toutes les organisations
+- Filtres par statut (ouvert / résolu) et par organisation
+- Indicateur du nombre de feedbacks non lus
+- Peut répondre, marquer comme résolu, rouvrir
 
-4. Ajouter un test mobile dédié
-- Ajouter un test E2E mobile qui :
-  - ouvre le parcours candidat sur un petit viewport,
-  - passe le formulaire puis l’écran technique,
-  - lance l’entretien,
-  - vérifie que `data-testid="interview-self-video-mobile"` est visible,
-  - vérifie que son `srcObject` est bien défini.
-- Ajouter si nécessaire un scénario de reprise mobile pour éviter les régressions.
+## Détails techniques
 
-Détails techniques
-- Fichier principal : `src/pages/InterviewStart.tsx`
-- Tests à compléter : `tests/e2e/interview-start-media.spec.ts` ou nouveau fichier E2E mobile dédié
-- Idée d’implémentation : centraliser une fonction du type `attachSelfViewStream()` qui :
-  - vérifie `streamRef.current`,
-  - vérifie l’état des pistes (`readyState !== "ended"`),
-  - assigne `srcObject`,
-  - relance `play()` en silence si nécessaire.
+### Base de données (migration)
 
-Résultat attendu
-- Sur mobile, le retour vidéo candidat reste visible pendant l’entretien.
-- Après remount ou reprise de session, le flux est réaffiché correctement.
-- Un test automatique couvre désormais ce cas précis.
+Deux nouvelles tables :
+
+**`feedback_threads`**
+- `id` (uuid, pk)
+- `user_id` (uuid) — auteur du feedback
+- `organization_id` (uuid, nullable) — pour filtrage côté super admin
+- `subject` (text)
+- `status` (enum `feedback_status`: `open`, `resolved`)
+- `created_at`, `updated_at` (timestamps)
+- `last_message_at` (timestamp, pour tri)
+
+**`feedback_messages`**
+- `id` (uuid, pk)
+- `thread_id` (uuid, fk → feedback_threads, on delete cascade)
+- `author_id` (uuid)
+- `author_role` (text: `user` ou `super_admin`)
+- `content` (text)
+- `read_by_recipient_at` (timestamp, nullable) — pour le badge non-lu
+- `created_at`
+
+Trigger : à chaque insert dans `feedback_messages`, mettre à jour `last_message_at` et `updated_at` du thread parent.
+
+### RLS
+
+**`feedback_threads`** :
+- SELECT : `user_id = auth.uid()` OR `is_super_admin(auth.uid())`
+- INSERT : authenticated, `user_id = auth.uid()`
+- UPDATE (statut) : auteur OU super admin
+
+**`feedback_messages`** :
+- SELECT : si l'utilisateur peut voir le thread parent
+- INSERT : si l'utilisateur peut voir le thread parent ; `author_id = auth.uid()`
+- UPDATE (marquer comme lu) : recipient seulement
+
+### Routes & pages
+
+- `/feedback` — liste des fils (vue adaptée selon rôle)
+- `/feedback/:threadId` — détail d'un fil avec messages et zone de réponse
+
+Nouveaux fichiers :
+- `src/pages/Feedback.tsx` (liste)
+- `src/pages/FeedbackThread.tsx` (détail + conversation)
+- `src/components/feedback/NewFeedbackDialog.tsx`
+- `src/components/feedback/FeedbackMessageList.tsx`
+
+Hook : `src/hooks/useUnreadFeedback.ts` pour le badge dans la sidebar.
+
+### Sidebar (`src/components/AppSidebar.tsx`)
+
+Ajouter une entrée "Feedback" (icône `MessageCircle` de lucide-react) dans `bottomItems`, avec un petit badge numérique si messages non lus.
+
+### Realtime
+
+Activer realtime sur `feedback_messages` pour rafraîchir la conversation en direct quand l'autre partie répond (le fil ouvert s'abonne au channel postgres_changes filtré par `thread_id`).
+
+### Notifications
+
+Pour cette V1 : pas d'email automatique, juste le badge dans la sidebar. (À confirmer si vous voulez aussi un email au super admin à chaque nouveau feedback — peut être ajouté ensuite.)
+
+## Hors scope
+- Pièces jointes / fichiers (texte uniquement)
+- Notifications par email (peut être ajouté ensuite)
+- Réactions / emojis

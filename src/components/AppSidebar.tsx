@@ -1,8 +1,10 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +38,7 @@ const librarySubItems = [
 ];
 
 const bottomItems = [
+  { title: "Feedback", url: "/feedback", icon: MessageCircle },
   { title: "Paramètres", url: "/settings", icon: Settings },
 ];
 
@@ -45,6 +48,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
+  const unreadFeedback = useUnreadFeedback();
 
   const isLibraryActive = location.pathname.startsWith("/library") || location.pathname === "/question-library";
   const [libraryOpen, setLibraryOpen] = useState(isLibraryActive);
@@ -153,6 +157,11 @@ export function AppSidebar() {
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {item.url === "/feedback" && unreadFeedback > 0 && !collapsed && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1.5 text-xs">
+                          {unreadFeedback}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
