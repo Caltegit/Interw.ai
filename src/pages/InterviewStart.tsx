@@ -3132,46 +3132,25 @@ export default function InterviewStart() {
                   </Button>
                 )}
               </div>
-              {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop */}
+              {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop, sans actions */}
               <div className="hidden lg:flex lg:justify-end items-center">
-                {showSelfView ? (
-                  <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
-                    <video
-                      ref={videoRef}
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                      style={{ transform: "scaleX(-1)" }}
-                      data-testid="interview-self-video"
-                    />
-                    <div
-                      className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
-                      data-testid="interview-recording-indicator"
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
-                      <span>REC</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowSelfView(false)}
-                      className="absolute bottom-0.5 right-0.5 h-5 w-5 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
-                      aria-label="Masquer mon retour vidéo"
-                      title="Masquer mon retour vidéo"
-                    >
-                      <EyeOff className="h-3 w-3 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowSelfView(true)}
-                    className="flex items-center gap-1.5 rounded-full bg-background border border-border px-2.5 py-1 text-[11px] font-medium hover:bg-muted transition-colors"
-                    aria-label="Afficher mon retour vidéo"
+                <div className="relative rounded-lg overflow-hidden bg-black border border-emerald-500/40 shadow-md w-[100px] h-[72px]">
+                  <video
+                    ref={videoRef}
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                    style={{ transform: "scaleX(-1)" }}
+                    data-testid="interview-self-video"
+                  />
+                  <div
+                    className="absolute top-0.5 right-0.5 flex items-center gap-1 bg-destructive/90 text-destructive-foreground px-1 py-0.5 rounded text-[9px] font-semibold"
+                    data-testid="interview-recording-indicator"
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>Afficher ma vidéo</span>
-                  </button>
-                )}
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive-foreground animate-pulse" />
+                    <span>REC</span>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3">
