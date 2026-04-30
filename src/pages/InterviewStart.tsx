@@ -157,14 +157,30 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  // Ref callback : réattache le srcObject à chaque montage du <video> (mobile/desktop responsive)
-  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
-    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
-    if (el && streamRef.current && el.srcObject !== streamRef.current) {
-      el.srcObject = streamRef.current;
-      el.play().catch(() => { /* autoplay rejection ignored */ });
-    }
+  // On garde TOUS les éléments <video> selfview montés (mobile + desktop) pour
+  // pouvoir leur rattacher le flux caméra simultanément. Indispensable car
+  // Tailwind monte les deux variants dans le DOM même quand l'un est masqué.
+  const selfViewElsRef = useRef<Set<HTMLVideoElement>>(new Set());
+  const attachStreamTo = useCallback((el: HTMLVideoElement) => {
+    const stream = streamRef.current;
+    if (!stream) return;
+    const live = stream.getTracks().some((t) => t.readyState === "live");
+    if (!live) return;
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.play().catch(() => { /* autoplay rejection ignored */ });
   }, []);
+  const reattachAllSelfViews = useCallback(() => {
+    selfViewElsRef.current.forEach((el) => attachStreamTo(el));
+  }, [attachStreamTo]);
+  // Ref callback : enregistre/désenregistre l'élément et lui rattache le flux
+  // dès qu'il monte (mobile + desktop, peu importe l'ordre de montage).
+  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    if (el) {
+      selfViewElsRef.current.add(el);
+      (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+      attachStreamTo(el);
+    }
+  }, [attachStreamTo]);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1135,12 +1151,14 @@ export default function InterviewStart() {
   // Start camera stream (no global recorder — only per-question recorders)
   const startVideoStream = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      // Réutilise un flux déjà actif si présent (cas reprise de session).
+      const existing = streamRef.current;
+      const live = existing?.getTracks().some((t) => t.readyState === "live");
+      if (!existing || !live) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
       }
+      reattachAllSelfViews();
     } catch (err) {
       logger.error("interview_media_access_failed", {
         sessionId: session?.id ?? null,
@@ -1153,7 +1171,7 @@ export default function InterviewStart() {
         variant: "destructive",
       });
     }
-  }, [toast]);
+  }, [toast, reattachAllSelfViews, session?.id]);
 
   // Start a per-question video recorder (uses same stream)
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
@@ -2569,6 +2587,15 @@ export default function InterviewStart() {
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
+
+  // Rattache le flux caméra à tous les selfviews dès qu'un changement d'état
+  // peut provoquer un remount du <video> (changement de question, reprise,
+  // sortie de pause, fin du dialogue de reprise…). Crucial sur mobile où le
+  // DOM se ré-organise plus souvent.
+  useEffect(() => {
+    if (!readyToStart) return;
+    reattachAllSelfViews();
+  }, [readyToStart, currentQuestionIndex, isPaused, restoringMessages, isSpeaking, isListening, reattachAllSelfViews]);
 
   if (loading)
     return (
