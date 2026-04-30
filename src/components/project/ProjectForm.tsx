@@ -228,6 +228,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       status,
       autoSkipSilence,
       allowPause,
+      allowSkipQuestion,
       completionMessage,
       preSessionMessage,
       aiIntroEnabled,
