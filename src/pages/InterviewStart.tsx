@@ -157,6 +157,14 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Ref callback : réattache le srcObject à chaque montage du <video> (mobile/desktop responsive)
+  const setVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+    if (el && streamRef.current && el.srcObject !== streamRef.current) {
+      el.srcObject = streamRef.current;
+      el.play().catch(() => { /* autoplay rejection ignored */ });
+    }
+  }, []);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
