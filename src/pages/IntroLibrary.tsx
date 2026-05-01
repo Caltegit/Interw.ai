@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Play, Pause, Loader2, Settings2 } from "lucide-react";
+import { Plus, Trash2, Play, Pause, Loader2, Settings2, Pencil } from "lucide-react";
 import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import {
   IntroFormatPicker,
@@ -75,6 +75,7 @@ export default function IntroLibrary() {
 
   // Dialog state
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [format, setFormat] = useState<IntroFormat>("text");
@@ -83,6 +84,8 @@ export default function IntroLibrary() {
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null);
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // TTS preview
@@ -132,6 +135,7 @@ export default function IntroLibrary() {
   );
 
   const resetForm = () => {
+    setEditingId(null);
     setName("");
     setDescription("");
     setFormat("text");
@@ -139,8 +143,24 @@ export default function IntroLibrary() {
     setTtsVoiceId(FEMALE_VOICE_DEFAULT_ID);
     setAudioBlob(null);
     setVideoFile(null);
+    setExistingAudioUrl(null);
+    setExistingVideoUrl(null);
     previewAudioRef.current?.pause();
     setPlaying(false);
+  };
+
+  const openEdit = (item: IntroTemplate) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setDescription(item.description ?? "");
+    setFormat(item.type);
+    setIntroText(item.intro_text ?? "");
+    setTtsVoiceId(item.tts_voice_id ?? FEMALE_VOICE_DEFAULT_ID);
+    setAudioBlob(null);
+    setVideoFile(null);
+    setExistingAudioUrl(item.audio_url);
+    setExistingVideoUrl(item.video_url);
+    setOpen(true);
   };
 
   const handlePreviewTts = async () => {
@@ -245,30 +265,30 @@ export default function IntroLibrary() {
       toast({ title: "Texte requis", variant: "destructive" });
       return;
     }
-    if (format === "audio" && !audioBlob) {
+    if (format === "audio" && !audioBlob && !existingAudioUrl) {
       toast({ title: "Veuillez enregistrer un audio", variant: "destructive" });
       return;
     }
-    if (format === "video" && !videoFile) {
+    if (format === "video" && !videoFile && !existingVideoUrl) {
       toast({ title: "Veuillez enregistrer ou téléverser une vidéo", variant: "destructive" });
       return;
     }
 
     setSaving(true);
     try {
-      const id = crypto.randomUUID();
-      let audioUrl: string | null = null;
-      let videoUrl: string | null = null;
+      const recordId = editingId ?? crypto.randomUUID();
+      let audioUrl: string | null = format === "audio" ? existingAudioUrl : null;
+      let videoUrl: string | null = format === "video" ? existingVideoUrl : null;
 
       if (format === "audio" && audioBlob) {
-        const path = `intro-library/${id}.webm`;
+        const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, audioBlob, { contentType: "audio/webm", upsert: true });
         if (error) throw error;
         audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       } else if (format === "video" && videoFile) {
-        const path = `intro-library/${id}.webm`;
+        const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, videoFile, { contentType: videoFile.type || "video/webm", upsert: true });
@@ -276,10 +296,7 @@ export default function IntroLibrary() {
         videoUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       }
 
-      const { error: insertErr } = await supabase.from("intro_templates" as never).insert({
-        id,
-        organization_id: orgId,
-        created_by: user.id,
+      const payload = {
         name: name.trim(),
         type: format,
         audio_url: audioUrl,
@@ -287,11 +304,28 @@ export default function IntroLibrary() {
         intro_text: format === "text" || format === "tts" ? introText.trim() : null,
         tts_voice_id: format === "tts" ? ttsVoiceId : null,
         description: description.trim() || null,
-      } as never);
+      };
 
-      if (insertErr) throw insertErr;
+      if (editingId) {
+        const { error: updateErr } = await supabase
+          .from("intro_templates" as never)
+          .update(payload as never)
+          .eq("id", editingId);
+        if (updateErr) throw updateErr;
+        toast({ title: "Intro mise à jour" });
+      } else {
+        const { error: insertErr } = await supabase
+          .from("intro_templates" as never)
+          .insert({
+            id: recordId,
+            organization_id: orgId,
+            created_by: user.id,
+            ...payload,
+          } as never);
+        if (insertErr) throw insertErr;
+        toast({ title: "Intro ajoutée à la bibliothèque" });
+      }
 
-      toast({ title: "Intro ajoutée à la bibliothèque" });
       resetForm();
       setOpen(false);
       fetchItems(orgId);
@@ -344,9 +378,11 @@ export default function IntroLibrary() {
           </DialogTrigger>
           <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
             <DialogHeader>
-              <DialogTitle>Nouvelle intro</DialogTitle>
+              <DialogTitle>{editingId ? "Modifier l'intro" : "Nouvelle intro"}</DialogTitle>
               <DialogDescription>
-                Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un projet.
+                {editingId
+                  ? "Modifiez les informations de cette intro. Les projets qui l'utilisent seront mis à jour."
+                  : "Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un projet."}
               </DialogDescription>
             </DialogHeader>
 
@@ -438,16 +474,19 @@ export default function IntroLibrary() {
                 {format === "audio" && (
                   <MediaRecorderField
                     type="audio"
-                    existingUrl={null}
+                    existingUrl={existingAudioUrl}
                     onMediaReady={(blob) => setAudioBlob(blob)}
-                    onClear={() => setAudioBlob(null)}
+                    onClear={() => {
+                      setAudioBlob(null);
+                      setExistingAudioUrl(null);
+                    }}
                   />
                 )}
 
                 {format === "video" && (
                   <MediaRecorderField
                     type="video"
-                    existingUrl={null}
+                    existingUrl={existingVideoUrl}
                     onMediaReady={(blob) => {
                       const file =
                         blob instanceof File
@@ -455,7 +494,10 @@ export default function IntroLibrary() {
                           : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
                       setVideoFile(file);
                     }}
-                    onClear={() => setVideoFile(null)}
+                    onClear={() => {
+                      setVideoFile(null);
+                      setExistingVideoUrl(null);
+                    }}
                   />
                 )}
               </div>
@@ -466,7 +508,11 @@ export default function IntroLibrary() {
                 Annuler
               </Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Sauvegarde…" : "Sauvegarder"}
+                {saving
+                  ? "Enregistrement…"
+                  : editingId
+                    ? "Enregistrer les modifications"
+                    : "Sauvegarder"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -581,9 +627,14 @@ export default function IntroLibrary() {
                     ) : (
                       <span />
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item)}>
-                      <Trash2 className="mr-1 h-4 w-4" /> Supprimer
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                        <Pencil className="mr-1 h-4 w-4" /> Modifier
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(item)}>
+                        <Trash2 className="mr-1 h-4 w-4" /> Supprimer
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
