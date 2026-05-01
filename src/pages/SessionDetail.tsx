@@ -253,6 +253,21 @@ export default function SessionDetail() {
         </Button>
         <div className="flex items-center gap-2">
           <SessionStatusBadge status={session.status} />
+          {(candidateVideos.length > 0 || session.video_recording_url) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadFullVideo}
+              disabled={downloadingVideo}
+            >
+              {downloadingVideo ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-1 h-4 w-4" />
+              )}
+              {downloadingVideo ? "Préparation…" : "Télécharger la vidéo"}
+            </Button>
+          )}
           {report &&
             (shareUrl ? (
               <Button variant="outline" size="sm" onClick={copyShareUrl}>
