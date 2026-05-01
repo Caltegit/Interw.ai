@@ -21,12 +21,37 @@ import CandidateLayout from "@/components/CandidateLayout";
 type Status = "idle" | "testing" | "ok" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
 
-// Bip court (~0,5 s, 440 Hz) audible — utilisé pour valider que la lecture
-// audio fonctionne réellement (autoplay autorisé, mode silencieux désactivé).
-const BEEP_DATA_URI =
-  "data:audio/wav;base64,UklGRsQrAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YaArAAAAAEcQYyDDLwQ+ukrFVehemmVpat9sk2y2afNjjFvsUAREoTUUJtwUlAL+74Pdsswovi6yX6n/o7+hxKJyp8WumLi2xLTSL+JX8sgCKxMHIzMyzj9ETCBXglkQT05A8C3LGPwBg+rD06i+pqx4nu+UAJBMkNqVbqAerg2/n9Hi5JX48wszHs4uaT0BSt9UAl1fY9JmH2gTZ7tjV12IVOxIWzu3LBQdYg2j/cHugODF1MfLKMU+wZS/7r+1wlzIpdAH27bnNvad9fzCRtT76FoAGRgwMNlGIVxubrZ9wIikiKaH8YHSeFRsumzKbKZsFmyAaAlhUFamSWQ6QimXFpcCsu3O2DLFfrPipQacNZUPkR2QnpJzmCKjIbHEwh7XX+0qBBobrTAKRO5UOmJSaxtw53A9bSpmolwlURpEDDb0Jl4XGAfV9pHnY9pUz8XGVMHKv9HBRcfizp3aeueK9pYGyhdnKa460EuMW1ZpdHQAfJF/aH64eVxxn2WRVuZE8jHLHQAJqfQF4VTOML+ksviqdaecqdGu37jhxXTV4uYV+TQMRR9SMs5DqVOLYWFsaHRGePZ34HMma0RfRFB6PpQrYxg/BWzz9OJg1S/L98QAw4HF9Mtq1k/lHvfUCm4f8DJTRThWLmMRbAVwCG9Rad9eClGEQNks0xafAGTqL9Wow+G2DK/orFKvK7d/wxLU3edt/aIToCi5O79KP1ZVXeRfg10oV4lLwjsDKAwSQfu140jTBcNwt4SwsK6OseS5LMdz2HzsJgIPGAMtWUDnUKBcFmI4Ya1aGE+wPmgqvBOh/CrmWtKMwlu3LLEqsAS00rzlzhblqf2EFwAxcUaAVy5jdGmcaZpkE1qaTLI8ICtcGCEFhfH33ZzKabsLsmiv47tWxL3T9efO/jcWAi3yQAJQI1qaXUhakk67PaArfBOq+hvinMlCsf6e3JN0jt6OoZTSnxiwksWf3vP5IRUjL2RECVTbXhRkUmRRX7lU7kRiMRMaOQHA52nOIbeloo2ScYf5gT2D3orxmqWxw87M73YQzy/tShJgcGjJaRliVlR3PqwjuQYK6e/Mq7N5n8KQEYg9hjGLApdlqQHC9d5j/lEcODBGQVVUYcVnB2c8XrtN2DUeGY36NN3pwwGv16C4mn+caaQyt7HOVeyMCrwo6kNmW2Vm+mhxYpdSfTrXHpoCzeYnzaW3FaYWmtWUKJaYn5iyVc6w8B0SXjGoSn5ZHl3CWMNJSjBoEf3yodjKxMW3J7Lvs9C5lcHnyYbS09pq4w/uo/oOCMwUhh9LJyEsAyzqJ5MgnBcKD4cIGwQVAmcCYAW0CsoSbB2QKnk4skXIUbhbY2Lyhc==";
-
-const STORED_BROWSER_OK_KEY = "interview-device-test-browser-ok";
+// Joue un bip court via WebAudio (oscillateur). Retourne true si le contexte
+// a réellement progressé (donc audible côté matériel) — false si l'autoplay
+// est bloqué ou si le mode silencieux iOS coupe la sortie.
+async function playBeep(): Promise<boolean> {
+  const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+  if (!Ctor) return false;
+  const ctx = new Ctor();
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    if (ctx.state !== "running") {
+      await ctx.close();
+      return false;
+    }
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 440;
+    osc.type = "sine";
+    gain.gain.value = 0.15;
+    osc.connect(gain).connect(ctx.destination);
+    const startTime = ctx.currentTime;
+    osc.start(startTime);
+    osc.stop(startTime + 0.5);
+    await new Promise((r) => setTimeout(r, 600));
+    const progressed = ctx.currentTime > startTime + 0.3;
+    await ctx.close();
+    return progressed;
+  } catch {
+    try { await ctx.close(); } catch { /* ignore */ }
+    return false;
+  }
+}
 
 interface BrowserSupport {
   supported: boolean;
