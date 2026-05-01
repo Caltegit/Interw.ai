@@ -212,16 +212,24 @@ export default function SessionDetail() {
 
         const original = result.value;
         toast({
-          title: `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`,
+          title: ffmpegReady
+            ? `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`
+            : `Ajout du segment (${i + 1}/${segmentMessages.length})…`,
           description: questionText.slice(0, 80),
         });
 
         let finalBlob: Blob = original;
         let ext = "mp4";
-        try {
-          finalBlob = await convertToMp4(original);
-        } catch (err) {
-          console.warn("[zip] conversion failed, fallback to original", err);
+        if (ffmpegReady) {
+          try {
+            finalBlob = await convertToMp4(original);
+          } catch (err) {
+            console.warn("[zip] conversion failed, fallback to original", err);
+            finalBlob = original;
+            ext = original.type.includes("mp4") ? "mp4" : "webm";
+            if (ext === "webm") notConverted.push(`${baseName}.webm`);
+          }
+        } else {
           finalBlob = original;
           ext = original.type.includes("mp4") ? "mp4" : "webm";
           if (ext === "webm") notConverted.push(`${baseName}.webm`);
