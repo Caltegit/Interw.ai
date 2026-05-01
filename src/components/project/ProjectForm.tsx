@@ -17,6 +17,10 @@ import {
   type InterviewTemplatePayload,
 } from "@/components/project/InterviewTemplatePickerDialog";
 import {
+  ImportFromJobDialog,
+  type JobImportPayload,
+} from "@/components/project/ImportFromJobDialog";
+import {
   VoiceSelectorDialog,
   getDefaultVoiceForGender,
   type VoiceGender,
