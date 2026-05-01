@@ -15,17 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import {
-  Mic,
-  Video,
-  Type,
-  BookmarkPlus,
-  ChevronDown,
-  Lightbulb,
-  Timer,
-  Sparkles,
-  Check,
-} from "lucide-react";
+import { Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -141,8 +131,7 @@ export function QuestionFormDialog({
       ...f,
       mediaType: next,
       mediaBlob: null,
-      mediaPreviewUrl:
-        next === "audio" ? f.existingAudioUrl : next === "video" ? f.existingVideoUrl : null,
+      mediaPreviewUrl: next === "audio" ? f.existingAudioUrl : next === "video" ? f.existingVideoUrl : null,
     }));
   };
 
@@ -160,8 +149,7 @@ export function QuestionFormDialog({
   };
 
   const isCustomDuration =
-    form.maxResponseSeconds !== null &&
-    !DURATION_PRESETS.some((p) => p.value === form.maxResponseSeconds);
+    form.maxResponseSeconds !== null && !DURATION_PRESETS.some((p) => p.value === form.maxResponseSeconds);
 
   const handleSubmit = async () => {
     if (form.mediaType === "written" && !form.content.trim()) {
@@ -194,17 +182,13 @@ export function QuestionFormDialog({
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{isEditing ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
-          <DialogDescription>
-            Choisis d'abord le format, puis renseigne le contenu et les options.
-          </DialogDescription>
+          <DialogDescription>Choisis d'abord le format, puis renseigne le contenu et les options.</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Étape 1 — Format */}
           <section className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Format
-            </Label>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Format</Label>
             <div className="grid grid-cols-3 gap-2">
               {FORMAT_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
@@ -228,15 +212,15 @@ export function QuestionFormDialog({
                 );
               })}
             </div>
-            <p className="text-[11px] text-muted-foreground leading-snug px-0.5">
-              {currentFormat.description}
-            </p>
+            <p className="text-[11px] text-muted-foreground leading-snug px-0.5">{currentFormat.description}</p>
           </section>
 
           {/* Étape 2 — Contenu */}
           <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
             <div className="space-y-1.5">
-              <Label htmlFor="qfd-title" className="text-xs">Titre interne</Label>
+              <Label htmlFor="qfd-title" className="text-xs">
+                Titre interne
+              </Label>
               <Input
                 id="qfd-title"
                 placeholder="Nom court visible uniquement par toi"
@@ -248,7 +232,9 @@ export function QuestionFormDialog({
             {form.mediaType === "written" && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="qfd-content" className="text-xs">Énoncé lu par l'IA</Label>
+                  <Label htmlFor="qfd-content" className="text-xs">
+                    Texte lu par l'IA
+                  </Label>
                   <span
                     className={cn(
                       "text-[10px] tabular-nums",
@@ -274,9 +260,7 @@ export function QuestionFormDialog({
                 <MediaRecorderField
                   type={form.mediaType}
                   existingUrl={form.mediaPreviewUrl}
-                  onMediaReady={(blob, url) =>
-                    setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))
-                  }
+                  onMediaReady={(blob, url) => setForm((f) => ({ ...f, mediaBlob: blob, mediaPreviewUrl: url }))}
                   onClear={() =>
                     setForm((f) => ({
                       ...f,
@@ -320,7 +304,9 @@ export function QuestionFormDialog({
                 <SelectContent>
                   <SelectItem value="_none">Aucune</SelectItem>
                   {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -438,11 +424,13 @@ export function QuestionFormDialog({
               Relance par l'IA
             </Label>
             <div className="grid grid-cols-3 gap-2">
-              {([
-                { v: "light", label: "Aucune", desc: "Passe à la suivante" },
-                { v: "medium", label: "Légère", desc: "1 relance max" },
-                { v: "deep", label: "Approfondie", desc: "2 relances max" },
-              ] as const).map((opt) => {
+              {(
+                [
+                  { v: "light", label: "Aucune", desc: "Passe à la suivante" },
+                  { v: "medium", label: "Légère", desc: "1 relance max" },
+                  { v: "deep", label: "Approfondie", desc: "2 relances max" },
+                ] as const
+              ).map((opt) => {
                 const selected = form.relanceLevel === opt.v;
                 return (
                   <button
