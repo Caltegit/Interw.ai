@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import JSZip from "jszip";
-import { convertToMp4, preloadFFmpeg } from "@/lib/videoConvert";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import {
   ArrowLeft,
@@ -111,28 +120,14 @@ export default function SessionDetail() {
     toast({ title: "Lien copié." });
   };
 
-  const handleDownloadFullVideo = async () => {
-    if (downloadingVideo) return;
+  const [confirmExportOpen, setConfirmExportOpen] = useState(false);
+  const recipientEmail = user?.email ?? "";
 
-    const projectQuestionsList = (session?.projects?.questions as any[]) ?? [];
-    const sortedProjectQuestions = [...projectQuestionsList].sort(
-      (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
+  const openExportConfirm = () => {
+    const hasSegments = (messages as any[]).some(
+      (m: any) => !!m.video_segment_url && m.role === "candidate",
     );
-    const questionOrderById = new Map<string, number>();
-    sortedProjectQuestions.forEach((q: any, i: number) => {
-      if (q?.id) questionOrderById.set(q.id, i + 1);
-    });
-
-    // Segments candidat dans l'ordre chronologique. On ignore les messages IA
-    // (ils n'ont de toute façon pas de video_segment_url).
-    const segmentMessages = (messages as any[])
-      .filter((m: any) => !!m.video_segment_url && m.role === "candidate")
-      .sort(
-        (a: any, b: any) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
-
-    if (segmentMessages.length === 0) {
+    if (!hasSegments) {
       toast({
         title: "Vidéo indisponible",
         description: "Aucun enregistrement vidéo n'a été trouvé pour cette session.",
@@ -140,194 +135,29 @@ export default function SessionDetail() {
       });
       return;
     }
+    setConfirmExportOpen(true);
+  };
 
+  const handleConfirmExport = async () => {
+    if (downloadingVideo || !id) return;
+    setConfirmExportOpen(false);
     setDownloadingVideo(true);
-    toast({
-      title: "Préparation de l'archive…",
-      description: "Chargement du convertisseur vidéo (~30 Mo, mis en cache).",
-    });
-
-    // Charge ffmpeg.wasm AVANT de lancer la conversion. Si le chargement
-    // échoue, on prévient l'utilisateur et on continue en WebM.
-    let ffmpegReady = true;
     try {
-      await preloadFFmpeg();
-    } catch (err) {
-      ffmpegReady = false;
-      console.warn("[zip] ffmpeg.wasm load failed", err);
+      const { data, error } = await supabase.functions.invoke(
+        "request-video-export",
+        { body: { sessionId: id, recipientEmail } },
+      );
+      if (error) throw error;
       toast({
-        title: "Conversion MP4 indisponible",
-        description: "Les vidéos seront livrées au format WebM.",
-        variant: "destructive",
+        title: "Demande enregistrée",
+        description:
+          data?.message ??
+          `Vous recevrez un email à ${recipientEmail} dès que l'archive sera prête.`,
       });
-    }
-
-    try {
-      // Télécharge tous les segments en parallèle, en tolérant les échecs.
-      const fetched = await Promise.allSettled(
-        segmentMessages.map(async (m: any) => {
-          const res = await fetch(m.video_segment_url as string);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.blob();
-        }),
-      );
-
-      const zip = new JSZip();
-      const followUpCounter = new Map<string, number>();
-      const fileEntries: { name: string; question: string }[] = [];
-      const missing: string[] = [];
-      const notConverted: string[] = [];
-
-      // Conversion séquentielle (ffmpeg.wasm est mono-instance).
-      for (let i = 0; i < segmentMessages.length; i++) {
-        const m: any = segmentMessages[i];
-        const seq = String(i + 1).padStart(2, "0");
-        const questionNumber =
-          (m.question_id && questionOrderById.get(m.question_id)) || null;
-        const questionLabel = questionNumber
-          ? `question-${questionNumber}`
-          : "question";
-
-        let suffix = "";
-        if (m.is_follow_up) {
-          const key = m.question_id || `idx-${i}`;
-          const k = (followUpCounter.get(key) ?? 0) + 1;
-          followUpCounter.set(key, k);
-          suffix = `-relance-${k}`;
-        }
-
-        const result = fetched[i];
-        const projectQ = m.question_id
-          ? sortedProjectQuestions.find((q: any) => q.id === m.question_id)
-          : null;
-        const questionText =
-          projectQ?.content ||
-          (questionNumber ? `Question ${questionNumber}` : "Question");
-        const baseName = `${seq}-${questionLabel}${suffix}`;
-
-        if (result.status !== "fulfilled") {
-          missing.push(baseName);
-          continue;
-        }
-
-        const original = result.value;
-        toast({
-          title: ffmpegReady
-            ? `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`
-            : `Ajout du segment (${i + 1}/${segmentMessages.length})…`,
-          description: questionText.slice(0, 80),
-        });
-
-        let finalBlob: Blob = original;
-        let ext: "mp4" | "webm" = "mp4";
-        if (ffmpegReady) {
-          try {
-            finalBlob = await convertToMp4(original);
-            ext = "mp4";
-          } catch (err) {
-            console.warn("[zip] conversion failed, fallback to original", err);
-            finalBlob = original;
-            ext = original.type.includes("mp4") ? "mp4" : "webm";
-            if (ext === "webm") notConverted.push(`${baseName}.webm`);
-          }
-        } else {
-          finalBlob = original;
-          ext = original.type.includes("mp4") ? "mp4" : "webm";
-          if (ext === "webm") notConverted.push(`${baseName}.webm`);
-        }
-
-        const name = `${baseName}.${ext}`;
-        zip.file(name, finalBlob);
-        fileEntries.push({ name, question: questionText });
-      }
-
-      if (fileEntries.length === 0) {
-        throw new Error("Aucun segment n'a pu être téléchargé.");
-      }
-
-      // README récapitulatif
-      const safeName = (session?.candidate_name || "candidat")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .toLowerCase() || "candidat";
-      const dateStr = new Date(session?.created_at ?? Date.now())
-        .toISOString()
-        .slice(0, 10);
-      const durationMin = session?.duration_seconds
-        ? Math.round((session.duration_seconds as number) / 60)
-        : null;
-
-      const readmeLines: string[] = [];
-      readmeLines.push(`Entretien — ${session?.candidate_name ?? ""}`);
-      readmeLines.push("");
-      readmeLines.push(`Candidat : ${session?.candidate_name ?? ""}`);
-      if (session?.candidate_email)
-        readmeLines.push(`Email    : ${session.candidate_email}`);
-      if (session?.projects?.title)
-        readmeLines.push(`Projet   : ${session.projects.title}`);
-      if (session?.projects?.job_title)
-        readmeLines.push(`Poste    : ${session.projects.job_title}`);
-      readmeLines.push(`Date     : ${dateStr}`);
-      if (durationMin !== null)
-        readmeLines.push(`Durée    : ${durationMin} min`);
-      readmeLines.push("");
-      readmeLines.push("Contenu de l'archive :");
-      fileEntries.forEach((f) => {
-        readmeLines.push(`  ${f.name} — ${f.question}`);
-      });
-      if (missing.length > 0) {
-        readmeLines.push("");
-        readmeLines.push("Segments indisponibles au moment du téléchargement :");
-        missing.forEach((n) => readmeLines.push(`  ${n}`));
-      }
-      if (notConverted.length > 0) {
-        readmeLines.push("");
-        readmeLines.push("Fichiers restés au format WebM (conversion MP4 échouée) :");
-        notConverted.forEach((n) => readmeLines.push(`  ${n}`));
-        readmeLines.push("Lisibles avec VLC, Chrome, Firefox ou Edge.");
-      }
-      readmeLines.push("");
-      readmeLines.push(
-        "Format : MP4 H.264 / AAC, lisible partout (QuickTime, VLC, " +
-          "PowerPoint, WhatsApp, Teams…). " +
-          "Note : seules les réponses du candidat sont enregistrées en vidéo. " +
-          "La voix de l'assistant IA n'est pas incluse.",
-      );
-      zip.file("README.txt", readmeLines.join("\n"));
-
-      // STORE : pas de compression (la vidéo est déjà compressée).
-      const zipBlob = await zip.generateAsync({
-        type: "blob",
-        compression: "STORE",
-      });
-
-      const filename = `entretien-${safeName}-${dateStr}.zip`;
-      const objectUrl = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = objectUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-
-      const warns: string[] = [];
-      if (missing.length > 0) warns.push(`${missing.length} indisponible(s)`);
-      if (notConverted.length > 0) warns.push(`${notConverted.length} en WebM`);
-      if (warns.length > 0) {
-        toast({
-          title: "Archive téléchargée",
-          description: `${warns.join(", ")} — voir README.txt.`,
-        });
-      } else {
-        toast({ title: "Archive téléchargée (MP4)." });
-      }
     } catch (e: any) {
       toast({
         title: "Erreur",
-        description: e?.message ?? "Impossible de préparer l'archive.",
+        description: e?.message ?? "Impossible de lancer la préparation.",
         variant: "destructive",
       });
     } finally {
@@ -400,7 +230,7 @@ export default function SessionDetail() {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDownloadFullVideo}
+              onClick={openExportConfirm}
               disabled={downloadingVideo}
             >
               {downloadingVideo ? (
@@ -408,7 +238,7 @@ export default function SessionDetail() {
               ) : (
                 <Download className="mr-1 h-4 w-4" />
               )}
-              {downloadingVideo ? "Préparation…" : "Télécharger la vidéo"}
+              {downloadingVideo ? "Envoi…" : "Télécharger les vidéos"}
             </Button>
           )}
           {report &&
@@ -425,6 +255,25 @@ export default function SessionDetail() {
             ))}
         </div>
       </div>
+
+      <AlertDialog open={confirmExportOpen} onOpenChange={setConfirmExportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Préparer l'archive vidéo</AlertDialogTitle>
+            <AlertDialogDescription>
+              La préparation de l'archive ZIP peut prendre plusieurs minutes.
+              Vous recevrez un email à <strong>{recipientEmail}</strong> avec un
+              lien pour télécharger le fichier dès qu'il sera prêt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmExport}>
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <OverviewHeader
         candidateName={session.candidate_name}
