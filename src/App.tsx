@@ -38,6 +38,7 @@ import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
 import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
+import SessionVideoExport from "./pages/SessionVideoExport";
 import Settings from "./pages/Settings";
 import QuestionLibrary from "./pages/QuestionLibrary";
 import LibraryHome from "./pages/LibraryHome";
@@ -98,6 +99,16 @@ const App = () => (
             <Route path="/interview/:slug/start/:token" element={<LegacyInterviewRedirect to="start" />} />
             <Route path="/interview/:slug/complete/:token" element={<LegacyInterviewRedirect to="complete" />} />
             <Route path="/interview/:slug/complete" element={<LegacyInterviewRedirect to="complete" />} />
+
+            {/* Téléchargement vidéo plein écran (protégé, sans sidebar) */}
+            <Route
+              path="/sessions/:id/export"
+              element={
+                <ProtectedRoute>
+                  <SessionVideoExport />
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="/shared-report/:token" element={<SharedReport />} />
             <Route path="/highlights/:token" element={<HighlightsPublic />} />

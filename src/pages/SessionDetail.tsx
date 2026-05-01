@@ -7,16 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import {
   ArrowLeft,
@@ -120,10 +110,7 @@ export default function SessionDetail() {
     toast({ title: "Lien copié." });
   };
 
-  const [confirmExportOpen, setConfirmExportOpen] = useState(false);
-  const recipientEmail = user?.email ?? "";
-
-  const openExportConfirm = () => {
+  const openVideoExport = () => {
     const hasSegments = (messages as any[]).some(
       (m: any) => !!m.video_segment_url && m.role === "candidate",
     );
@@ -135,34 +122,8 @@ export default function SessionDetail() {
       });
       return;
     }
-    setConfirmExportOpen(true);
-  };
-
-  const handleConfirmExport = async () => {
-    if (downloadingVideo || !id) return;
-    setConfirmExportOpen(false);
-    setDownloadingVideo(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "request-video-export",
-        { body: { sessionId: id, recipientEmail } },
-      );
-      if (error) throw error;
-      toast({
-        title: "Demande enregistrée",
-        description:
-          data?.message ??
-          `Vous recevrez un email à ${recipientEmail} dès que l'archive sera prête.`,
-      });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e?.message ?? "Impossible de lancer la préparation.",
-        variant: "destructive",
-      });
-    } finally {
-      setDownloadingVideo(false);
-    }
+    if (!id) return;
+    window.open(`/sessions/${id}/export`, "_blank", "noopener");
   };
 
   const candidateVideos = useMemo(
