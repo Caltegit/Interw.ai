@@ -292,13 +292,16 @@ export default function SessionDetail() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 
-      if (missing.length > 0) {
+      const warns: string[] = [];
+      if (missing.length > 0) warns.push(`${missing.length} indisponible(s)`);
+      if (notConverted.length > 0) warns.push(`${notConverted.length} en WebM`);
+      if (warns.length > 0) {
         toast({
           title: "Archive téléchargée",
-          description: `${missing.length} segment(s) indisponible(s) — voir README.txt.`,
+          description: `${warns.join(", ")} — voir README.txt.`,
         });
       } else {
-        toast({ title: "Archive téléchargée." });
+        toast({ title: "Archive téléchargée (MP4)." });
       }
     } catch (e: any) {
       toast({
