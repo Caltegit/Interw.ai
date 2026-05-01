@@ -1288,69 +1288,6 @@ export type Database = {
         }
         Relationships: []
       }
-      video_export_jobs: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          download_url: string | null
-          error_message: string | null
-          expires_at: string | null
-          id: string
-          organization_id: string
-          recipient_email: string
-          requested_by: string
-          session_id: string
-          started_at: string | null
-          status: string
-          zip_path: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          download_url?: string | null
-          error_message?: string | null
-          expires_at?: string | null
-          id?: string
-          organization_id: string
-          recipient_email: string
-          requested_by: string
-          session_id: string
-          started_at?: string | null
-          status?: string
-          zip_path?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          download_url?: string | null
-          error_message?: string | null
-          expires_at?: string | null
-          id?: string
-          organization_id?: string
-          recipient_email?: string
-          requested_by?: string
-          session_id?: string
-          started_at?: string | null
-          status?: string
-          zip_path?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "video_export_jobs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "video_export_jobs_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
