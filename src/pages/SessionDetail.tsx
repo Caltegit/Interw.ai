@@ -191,15 +191,10 @@ export default function SessionDetail() {
             <Button
               variant="outline"
               size="sm"
-              onClick={openExportConfirm}
-              disabled={downloadingVideo}
+              onClick={openVideoExport}
             >
-              {downloadingVideo ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-1 h-4 w-4" />
-              )}
-              {downloadingVideo ? "Envoi…" : "Télécharger les vidéos"}
+              <Download className="mr-1 h-4 w-4" />
+              Télécharger les vidéos
             </Button>
           )}
           {report &&
@@ -216,25 +211,6 @@ export default function SessionDetail() {
             ))}
         </div>
       </div>
-
-      <AlertDialog open={confirmExportOpen} onOpenChange={setConfirmExportOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Préparer l'archive vidéo</AlertDialogTitle>
-            <AlertDialogDescription>
-              La préparation de l'archive ZIP peut prendre plusieurs minutes.
-              Vous recevrez un email à <strong>{recipientEmail}</strong> avec un
-              lien pour télécharger le fichier dès qu'il sera prêt.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmExport}>
-              Confirmer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <OverviewHeader
         candidateName={session.candidate_name}
