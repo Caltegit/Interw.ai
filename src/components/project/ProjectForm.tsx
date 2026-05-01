@@ -279,6 +279,61 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
   };
 
+  const applyJobImport = (payload: JobImportPayload) => {
+    if (payload.title) setTitle(payload.title);
+
+    // Questions personnalisées générées par l'IA
+    if (payload.questions.length) {
+      setQuestions(
+        payload.questions.map((q) => ({
+          ...createEmptyQuestion(),
+          title: q.title,
+          content: q.content,
+          mediaType: "written",
+        })),
+      );
+    }
+
+    // Critères pondérés
+    if (payload.criteria.length) {
+      setCriteria(
+        payload.criteria.map((c) => ({
+          label: c.label,
+          description: c.description,
+          weight: c.weight,
+          scoring_scale: "0-5",
+          applies_to: "all_questions",
+          anchors: {},
+          from_library: false,
+        })),
+      );
+    }
+
+    // Intro depuis la bibliothèque
+    if (payload.intro) {
+      setIntroEnabled(true);
+      const t = payload.intro.type;
+      if (t === "audio" && payload.intro.audio_url) {
+        setIntroMode("audio");
+        setIntroAudioPreviewUrl(payload.intro.audio_url);
+      } else if (t === "video" && payload.intro.video_url) {
+        setIntroMode("video");
+        setIntroVideoPreviewUrl(payload.intro.video_url);
+      } else {
+        setIntroMode("text");
+        setIntroText(payload.intro.intro_text ?? "");
+      }
+    }
+
+    // Dernière voix utilisée
+    if (payload.voice) {
+      setTtsProvider(payload.voice.tts_provider);
+      setTtsVoiceGender(payload.voice.tts_voice_gender);
+      setTtsVoiceId(payload.voice.tts_voice_id);
+    }
+  };
+
+
   const isEdit = mode === "edit";
   const idSuffix = isEdit ? "edit" : "new";
 
