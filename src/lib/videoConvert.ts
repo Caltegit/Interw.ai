@@ -79,7 +79,7 @@ export function canConvertVideo(): boolean {
  * du core en parallèle du fetch des segments.
  */
 export function preloadFFmpeg(): Promise<unknown> {
-  return getFFmpeg().catch(() => null);
+  return getFFmpeg();
 }
 
 /**
