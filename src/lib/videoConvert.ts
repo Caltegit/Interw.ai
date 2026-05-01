@@ -19,29 +19,34 @@ type FFmpegInstance = {
 
 let ffmpegPromise: Promise<FFmpegInstance> | null = null;
 
-const CORE_VERSION = "0.12.6";
-const CORE_BASE = `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
+// Core ffmpeg auto-hébergé dans /public/ffmpeg/ pour éviter toute dépendance
+// CDN externe (CSP, blocages réseau, indisponibilité unpkg).
+const CORE_BASE = "/ffmpeg";
 
 async function getFFmpeg(
   onProgress?: (ratio: number) => void,
 ): Promise<FFmpegInstance> {
   if (!ffmpegPromise) {
     ffmpegPromise = (async () => {
-      const [{ FFmpeg }, { toBlobURL }] = await Promise.all([
-        import("@ffmpeg/ffmpeg"),
-        import("@ffmpeg/util"),
-      ]);
-      const ffmpeg = new FFmpeg() as unknown as FFmpegInstance;
+      try {
+        const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+        const ffmpeg = new FFmpeg() as unknown as FFmpegInstance;
 
-      // Charge le core UMD + wasm depuis le CDN, transformés en blob URLs
-      // (nécessaire pour contourner les restrictions cross-origin sur les workers).
-      const [coreURL, wasmURL] = await Promise.all([
-        toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-        toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
-      ]);
+        ffmpeg.on("log", ({ message }: { message: string }) => {
+          // Logs ffmpeg utiles au debug ; silencieux en prod si console filtrée.
+          console.debug("[ffmpeg]", message);
+        });
 
-      await ffmpeg.load({ coreURL, wasmURL });
-      return ffmpeg;
+        await ffmpeg.load({
+          coreURL: `${CORE_BASE}/ffmpeg-core.js`,
+          wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
+        });
+        return ffmpeg;
+      } catch (err) {
+        // Reset pour permettre une nouvelle tentative au prochain appel.
+        ffmpegPromise = null;
+        throw err;
+      }
     })();
   }
 
@@ -74,7 +79,7 @@ export function canConvertVideo(): boolean {
  * du core en parallèle du fetch des segments.
  */
 export function preloadFFmpeg(): Promise<unknown> {
-  return getFFmpeg().catch(() => null);
+  return getFFmpeg();
 }
 
 /**

@@ -144,11 +144,23 @@ export default function SessionDetail() {
     setDownloadingVideo(true);
     toast({
       title: "Préparation de l'archive…",
-      description: "Téléchargement et conversion des vidéos en MP4.",
+      description: "Chargement du convertisseur vidéo (~30 Mo, mis en cache).",
     });
 
-    // Démarre le chargement de ffmpeg.wasm en parallèle du fetch des segments.
-    preloadFFmpeg();
+    // Charge ffmpeg.wasm AVANT de lancer la conversion. Si le chargement
+    // échoue, on prévient l'utilisateur et on continue en WebM.
+    let ffmpegReady = true;
+    try {
+      await preloadFFmpeg();
+    } catch (err) {
+      ffmpegReady = false;
+      console.warn("[zip] ffmpeg.wasm load failed", err);
+      toast({
+        title: "Conversion MP4 indisponible",
+        description: "Les vidéos seront livrées au format WebM.",
+        variant: "destructive",
+      });
+    }
 
     try {
       // Télécharge tous les segments en parallèle, en tolérant les échecs.
@@ -200,16 +212,24 @@ export default function SessionDetail() {
 
         const original = result.value;
         toast({
-          title: `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`,
+          title: ffmpegReady
+            ? `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`
+            : `Ajout du segment (${i + 1}/${segmentMessages.length})…`,
           description: questionText.slice(0, 80),
         });
 
         let finalBlob: Blob = original;
         let ext = "mp4";
-        try {
-          finalBlob = await convertToMp4(original);
-        } catch (err) {
-          console.warn("[zip] conversion failed, fallback to original", err);
+        if (ffmpegReady) {
+          try {
+            finalBlob = await convertToMp4(original);
+          } catch (err) {
+            console.warn("[zip] conversion failed, fallback to original", err);
+            finalBlob = original;
+            ext = original.type.includes("mp4") ? "mp4" : "webm";
+            if (ext === "webm") notConverted.push(`${baseName}.webm`);
+          }
+        } else {
           finalBlob = original;
           ext = original.type.includes("mp4") ? "mp4" : "webm";
           if (ext === "webm") notConverted.push(`${baseName}.webm`);
