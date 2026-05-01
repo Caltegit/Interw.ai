@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Play, Pause, Loader2, Settings2 } from "lucide-react";
+import { Plus, Trash2, Play, Pause, Loader2, Settings2, Pencil } from "lucide-react";
 import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import {
   IntroFormatPicker,
@@ -75,6 +75,7 @@ export default function IntroLibrary() {
 
   // Dialog state
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [format, setFormat] = useState<IntroFormat>("text");
@@ -83,6 +84,8 @@ export default function IntroLibrary() {
   const [voicePickerOpen, setVoicePickerOpen] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [existingAudioUrl, setExistingAudioUrl] = useState<string | null>(null);
+  const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // TTS preview
@@ -132,6 +135,7 @@ export default function IntroLibrary() {
   );
 
   const resetForm = () => {
+    setEditingId(null);
     setName("");
     setDescription("");
     setFormat("text");
@@ -139,8 +143,24 @@ export default function IntroLibrary() {
     setTtsVoiceId(FEMALE_VOICE_DEFAULT_ID);
     setAudioBlob(null);
     setVideoFile(null);
+    setExistingAudioUrl(null);
+    setExistingVideoUrl(null);
     previewAudioRef.current?.pause();
     setPlaying(false);
+  };
+
+  const openEdit = (item: IntroTemplate) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setDescription(item.description ?? "");
+    setFormat(item.type);
+    setIntroText(item.intro_text ?? "");
+    setTtsVoiceId(item.tts_voice_id ?? FEMALE_VOICE_DEFAULT_ID);
+    setAudioBlob(null);
+    setVideoFile(null);
+    setExistingAudioUrl(item.audio_url);
+    setExistingVideoUrl(item.video_url);
+    setOpen(true);
   };
 
   const handlePreviewTts = async () => {
