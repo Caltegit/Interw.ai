@@ -144,11 +144,23 @@ export default function SessionDetail() {
     setDownloadingVideo(true);
     toast({
       title: "Préparation de l'archive…",
-      description: "Téléchargement et conversion des vidéos en MP4.",
+      description: "Chargement du convertisseur vidéo (~30 Mo, mis en cache).",
     });
 
-    // Démarre le chargement de ffmpeg.wasm en parallèle du fetch des segments.
-    preloadFFmpeg();
+    // Charge ffmpeg.wasm AVANT de lancer la conversion. Si le chargement
+    // échoue, on prévient l'utilisateur et on continue en WebM.
+    let ffmpegReady = true;
+    try {
+      await preloadFFmpeg();
+    } catch (err) {
+      ffmpegReady = false;
+      console.warn("[zip] ffmpeg.wasm load failed", err);
+      toast({
+        title: "Conversion MP4 indisponible",
+        description: "Les vidéos seront livrées au format WebM.",
+        variant: "destructive",
+      });
+    }
 
     try {
       // Télécharge tous les segments en parallèle, en tolérant les échecs.
