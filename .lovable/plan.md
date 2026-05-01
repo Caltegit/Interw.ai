@@ -1,89 +1,76 @@
 ## Objectif
 
-Ajouter un bouton **"Télécharger la vidéo"** dans le header de la page session (`/sessions/:id`). Au clic, on assemble tous les segments vidéo de la session (réponses candidat + IA si disponibles, dans l'ordre) en un seul fichier `.mp4` que le recruteur télécharge.
+Remplacer la concaténation actuelle des segments vidéo (qui produit un `.webm` cassé) par un téléchargement **ZIP** contenant un fichier vidéo par question, nommé proprement. Marche pour toutes les sessions, passées et futures, sans modification de l'enregistrement.
 
-## Comportement utilisateur
+## Comportement attendu
 
-1. Bouton visible dans le header à côté de "Partager", uniquement si la session contient au moins un segment vidéo.
-2. Clic → état "Préparation… (peut prendre jusqu'à 2 minutes)" avec spinner, bouton désactivé.
-3. Une fois prêt → téléchargement automatique du fichier `entretien-{nom-candidat}-{date}.mp4`.
-4. En cas d'erreur → toast explicite, bouton réactivé.
-5. Mise en cache : si une vidéo fusionnée a déjà été générée pour cette session, on la sert directement sans relancer ffmpeg.
+Le RH clique sur "Télécharger la vidéo" dans le header de `/sessions/:id` :
 
-## Architecture technique
+1. Bouton désactivé + libellé "Préparation…" + spinner.
+2. On récupère tous les segments vidéo de la session (réponses candidat, dans l'ordre des questions).
+3. Chaque segment est téléchargé depuis le bucket Storage, puis ajouté à un ZIP construit côté navigateur.
+4. Téléchargement automatique du fichier `entretien-{nom-candidat}-{date}.zip`.
+5. En cas d'erreur sur un segment : on continue avec les autres, on inclut un `README.txt` qui liste les segments manquants, toast d'avertissement.
+6. Si aucun segment n'existe : toast d'erreur, bouton réactivé.
 
-### 1. Stockage
+## Contenu du ZIP
 
-- Nouveau bucket privé `merged-videos` (RLS : seuls les RH de l'organisation propriétaire de la session peuvent lire ; insert réservé à la service-role via l'edge function).
-- Colonne `merged_video_url` (text, nullable) ajoutée à la table `sessions` pour mémoriser l'URL de la vidéo fusionnée déjà générée.
-
-### 2. Edge function `merge-session-video`
-
-Fichier : `supabase/functions/merge-session-video/index.ts`
-
-- Input : `{ sessionId: string }`
-- Auth : valide le JWT, vérifie que l'utilisateur a accès à la session via son `organization_id` (pattern existant `has_role` + appartenance projet).
-- Logique :
-  1. Si `sessions.merged_video_url` existe et que le fichier est toujours dans le bucket → renvoie l'URL signée directement.
-  2. Sinon : récupère tous les `session_messages` de la session avec un `video_segment_url`, triés par `timestamp`. On inclut les segments IA et candidat pour avoir l'entretien complet ; on exclut les follow-ups vides.
-  3. Télécharge chaque segment depuis le bucket existant (`session-recordings` ou équivalent) dans `/tmp`.
-  4. Lance `ffmpeg` via le binaire Deno (`ffmpeg-static` n'existe pas en Deno → on utilise `Deno.Command` avec ffmpeg disponible dans le runtime Edge Functions, qui inclut ffmpeg natif). Concat via `concat demuxer` :
-     ```
-     ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
-     ```
-     Si l'encodage des segments diffère (codecs différents) → fallback réencodage : `-c:v libx264 -c:a aac`.
-  5. Upload du `output.mp4` vers `merged-videos/{sessionId}.mp4`.
-  6. Met à jour `sessions.merged_video_url` avec une URL signée longue durée (7 jours, régénérée à chaque appel).
-  7. Renvoie `{ url: string }`.
-
-> Note : si le runtime Deno Edge Functions de Supabase n'expose pas ffmpeg en binaire système, on utilisera `https://deno.land/x/ffmpeg` ou on bascule sur `mp4box.js` côté Edge. À confirmer au moment de l'implémentation ; un fallback ZIP-des-segments restera disponible si ffmpeg n'est pas accessible.
-
-### 3. Frontend
-
-`src/pages/SessionDetail.tsx` :
-- Nouveau bouton dans le header (à côté de "Partager") :
-  ```tsx
-  <Button variant="outline" size="sm" onClick={handleDownloadVideo} disabled={downloading}>
-    <Download className="mr-1 h-4 w-4" />
-    {downloading ? "Préparation…" : "Télécharger la vidéo"}
-  </Button>
-  ```
-- Handler : appelle `supabase.functions.invoke("merge-session-video", { body: { sessionId } })`, puis déclenche le téléchargement via un `<a download>` programmatique.
-- Affiché uniquement si `candidateVideos.length > 0` ou `session.video_recording_url` existe.
-
-### 4. Migration SQL
-
-```sql
-alter table public.sessions add column if not exists merged_video_url text;
-
-insert into storage.buckets (id, name, public)
-values ('merged-videos', 'merged-videos', false)
-on conflict (id) do nothing;
-
--- RLS bucket : lecture par les membres de l'org propriétaire de la session
-create policy "RH read merged videos"
-on storage.objects for select
-to authenticated
-using (
-  bucket_id = 'merged-videos'
-  and exists (
-    select 1 from public.sessions s
-    join public.projects p on p.id = s.project_id
-    where (storage.foldername(name))[1] = s.id::text
-      and p.organization_id = public.get_user_org_id(auth.uid())
-  )
-);
 ```
+entretien-jean-dupont-2026-04-28.zip
+├── 01-question-1.webm           (réponse candidat à Q1)
+├── 02-question-2.webm
+├── 03-question-2-relance-1.webm (si relance IA)
+├── 04-question-3.webm
+├── ...
+└── README.txt                   (récap : nom candidat, date, projet, liste des fichiers, transcription si dispo)
+```
+
+Règles de nommage :
+- Index séquentiel sur 2 chiffres (ordre chronologique strict via `timestamp`).
+- `question-{N}` où N est l'index de la question (1-based) à laquelle le segment se rattache (`question_id` mappé sur `projects.questions.order_index`).
+- Suffixe `-relance-{k}` si `is_follow_up = true` (k incrémenté par question).
+- Extension dérivée du `Content-Type` réel du blob (`.webm` par défaut, `.mp4` si applicable).
+
+Le `README.txt` contient :
+- Nom + email candidat
+- Titre du projet + poste
+- Date de l'entretien + durée
+- Liste ordonnée : `01-question-1.webm — "Pouvez-vous vous présenter ?"`
+- Note expliquant que la voix de l'IA n'est pas dans les fichiers (limitation actuelle).
+
+## Changements techniques
+
+### Frontend uniquement
+
+Aucune migration SQL, aucun edge function, aucun bucket nouveau. Tout se fait côté navigateur du recruteur à partir des `video_segment_url` déjà accessibles.
+
+**Dépendance ajoutée** : `jszip` (≈ 100 Ko gzippé, lib standard pour ce besoin, pas de WebAssembly, pas de polyfill).
+
+**Fichier modifié** : `src/pages/SessionDetail.tsx`
+
+- Réécrire `handleDownloadFullVideo` :
+  - Construire la liste des segments avec leurs métadonnées : `{ url, questionOrderIndex, isFollowUp, timestamp }` à partir de `messages` + `session.projects.questions`.
+  - Trier par `timestamp` croissant.
+  - Créer un `JSZip()`, télécharger les blobs en parallèle (avec `Promise.allSettled` pour tolérer les échecs partiels), `zip.file(name, blob)` pour chacun.
+  - Générer le `README.txt` à partir de `session`, `report`, et de la liste des questions.
+  - `zip.generateAsync({ type: "blob", compression: "STORE" })` (compression désactivée — la vidéo est déjà compressée, STORE évite de griller du CPU pour rien).
+  - Déclencher le download via `<a>` programmatique (déjà en place).
+- Renommer le libellé bouton inchangé : "Télécharger la vidéo" reste correct (le ZIP est un détail technique).
+- Toast en cas d'échec partiel : "Téléchargé avec X segment(s) manquant(s)".
+
+### Pas touché
+
+- `sessions.video_recording_url`, le bucket de segments, l'edge function `ai-conversation-turn`, `tts-elevenlabs`, le flux d'enregistrement candidat dans `InterviewStart.tsx`.
+- Aucun changement de schéma, aucune RLS, aucune nouvelle politique Storage.
+
+## Limites assumées (à communiquer plus tard si besoin)
+
+- La voix de l'IA n'est dans aucun fichier (le `MediaRecorder` candidat ne capture que webcam + micro). C'est documenté dans le README du ZIP.
+- Pour les très longs entretiens (> 1 Go de vidéo cumulée), le ZIP est construit en mémoire navigateur. Si ça devient un problème, on basculera sur `StreamSaver.js` dans une itération ultérieure.
+- Pas de fusion en une vidéo unique : c'est un choix court terme assumé, pour la qualité et la fiabilité.
 
 ## Fichiers touchés
 
-- **Créés** :
-  - `supabase/functions/merge-session-video/index.ts`
-  - `supabase/migrations/{timestamp}_merged_video.sql`
 - **Modifiés** :
-  - `src/pages/SessionDetail.tsx` (bouton + handler)
-
-## Limites assumées
-
-- Génération synchrone (jusqu'à ~2 min pour des entretiens longs). Si le timeout edge function (150s) est dépassé pour de très longs entretiens, on basculera vers un job asynchrone dans une itération ultérieure.
-- La vidéo fusionnée est mise en cache → les appels suivants sont instantanés.
+  - `src/pages/SessionDetail.tsx` (handler `handleDownloadFullVideo` réécrit)
+  - `package.json` (ajout `jszip`)
