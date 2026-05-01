@@ -260,26 +260,8 @@ export default function InterviewDeviceTest() {
   const testSound = async () => {
     setSoundStatus("testing");
     try {
-      const audio = new Audio(BEEP_DATA_URI);
-      audio.volume = 0.6;
-      beepAudioRef.current = audio;
-
-      const playPromise = audio.play();
-      if (playPromise) await playPromise;
-
-      // Vérifier que la lecture progresse réellement (sinon iOS silencieux).
-      const progressed = await new Promise<boolean>((resolve) => {
-        const start = audio.currentTime;
-        const timer = setTimeout(() => {
-          resolve(audio.currentTime > start + 0.05);
-        }, 1500);
-        audio.onended = () => {
-          clearTimeout(timer);
-          resolve(true);
-        };
-      });
-
-      setSoundStatus(progressed ? "ok" : "error");
+      const ok = await playBeep();
+      setSoundStatus(ok ? "ok" : "error");
     } catch {
       setSoundStatus("error");
     }
