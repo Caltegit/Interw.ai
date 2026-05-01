@@ -265,30 +265,30 @@ export default function IntroLibrary() {
       toast({ title: "Texte requis", variant: "destructive" });
       return;
     }
-    if (format === "audio" && !audioBlob) {
+    if (format === "audio" && !audioBlob && !existingAudioUrl) {
       toast({ title: "Veuillez enregistrer un audio", variant: "destructive" });
       return;
     }
-    if (format === "video" && !videoFile) {
+    if (format === "video" && !videoFile && !existingVideoUrl) {
       toast({ title: "Veuillez enregistrer ou téléverser une vidéo", variant: "destructive" });
       return;
     }
 
     setSaving(true);
     try {
-      const id = crypto.randomUUID();
-      let audioUrl: string | null = null;
-      let videoUrl: string | null = null;
+      const recordId = editingId ?? crypto.randomUUID();
+      let audioUrl: string | null = format === "audio" ? existingAudioUrl : null;
+      let videoUrl: string | null = format === "video" ? existingVideoUrl : null;
 
       if (format === "audio" && audioBlob) {
-        const path = `intro-library/${id}.webm`;
+        const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, audioBlob, { contentType: "audio/webm", upsert: true });
         if (error) throw error;
         audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       } else if (format === "video" && videoFile) {
-        const path = `intro-library/${id}.webm`;
+        const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, videoFile, { contentType: videoFile.type || "video/webm", upsert: true });
@@ -296,10 +296,7 @@ export default function IntroLibrary() {
         videoUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
       }
 
-      const { error: insertErr } = await supabase.from("intro_templates" as never).insert({
-        id,
-        organization_id: orgId,
-        created_by: user.id,
+      const payload = {
         name: name.trim(),
         type: format,
         audio_url: audioUrl,
@@ -307,11 +304,28 @@ export default function IntroLibrary() {
         intro_text: format === "text" || format === "tts" ? introText.trim() : null,
         tts_voice_id: format === "tts" ? ttsVoiceId : null,
         description: description.trim() || null,
-      } as never);
+      };
 
-      if (insertErr) throw insertErr;
+      if (editingId) {
+        const { error: updateErr } = await supabase
+          .from("intro_templates" as never)
+          .update(payload as never)
+          .eq("id", editingId);
+        if (updateErr) throw updateErr;
+        toast({ title: "Intro mise à jour" });
+      } else {
+        const { error: insertErr } = await supabase
+          .from("intro_templates" as never)
+          .insert({
+            id: recordId,
+            organization_id: orgId,
+            created_by: user.id,
+            ...payload,
+          } as never);
+        if (insertErr) throw insertErr;
+        toast({ title: "Intro ajoutée à la bibliothèque" });
+      }
 
-      toast({ title: "Intro ajoutée à la bibliothèque" });
       resetForm();
       setOpen(false);
       fetchItems(orgId);
