@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import JSZip from "jszip";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Download, Loader2, AlertCircle } from "lucide-react";
 
-type Phase = "loading" | "downloading" | "zipping" | "ready" | "error";
+type Phase = "loading" | "downloading" | "converting" | "zipping" | "ready" | "error";
 
 interface SegmentInfo {
   url: string;
@@ -127,14 +129,18 @@ export default function SessionVideoExport() {
           throw new Error("Aucun enregistrement vidéo trouvé pour cette session.");
         }
 
-        // 4. Téléchargement segment par segment avec progression
+        // 4. Téléchargement segment par segment (0 → 60 %)
         setPhase("downloading");
-        const zip = new JSZip();
         const followUpCounter = new Map<string, number>();
-        const fileEntries: { name: string; question: string }[] = [];
+        type DownloadedSegment = {
+          baseName: string;
+          ext: string;
+          data: Uint8Array;
+          question: string;
+        };
+        const downloaded: DownloadedSegment[] = [];
         const missing: string[] = [];
 
-        // Chaque segment compte pour une part égale (0 → 80 %)
         for (let i = 0; i < segments.length; i++) {
           if (cancelled) return;
           const seg = segments[i];
@@ -166,9 +172,9 @@ export default function SessionVideoExport() {
             );
 
             const reader = res.body?.getReader();
+            let data: Uint8Array;
             if (!reader) {
-              const buf = new Uint8Array(await res.arrayBuffer());
-              zip.file(`${baseName}.${ext}`, buf);
+              data = new Uint8Array(await res.arrayBuffer());
             } else {
               const chunks: Uint8Array[] = [];
               let received = 0;
@@ -178,37 +184,99 @@ export default function SessionVideoExport() {
                 if (value) {
                   chunks.push(value);
                   received += value.length;
-                  // Progression cumulée pour ce segment
-                  const segShare = 80 / segments.length;
+                  const segShare = 60 / segments.length;
                   const segProgress = total > 0 ? received / total : 0;
                   const overall =
-                    (i * segShare) + Math.min(segProgress, 1) * segShare;
+                    i * segShare + Math.min(segProgress, 1) * segShare;
                   setProgress(overall);
                 }
               }
-              // Concatène les chunks
-              const merged = new Uint8Array(received);
+              data = new Uint8Array(received);
               let offset = 0;
               for (const c of chunks) {
-                merged.set(c, offset);
+                data.set(c, offset);
                 offset += c.length;
               }
-              zip.file(`${baseName}.${ext}`, merged);
             }
 
-            fileEntries.push({ name: `${baseName}.${ext}`, question: seg.questionText });
-            setProgress(((i + 1) / segments.length) * 80);
+            downloaded.push({ baseName, ext, data, question: seg.questionText });
+            setProgress(((i + 1) / segments.length) * 60);
           } catch (err: any) {
             console.warn(`[export] segment ${baseName} failed`, err);
             missing.push(baseName);
           }
         }
 
-        if (fileEntries.length === 0) {
+        if (downloaded.length === 0) {
           throw new Error("Aucun segment n'a pu être téléchargé.");
         }
 
-        // 5. README
+        // 5. Conversion en MP4 (60 → 85 %)
+        const zip = new JSZip();
+        const fileEntries: { name: string; question: string }[] = [];
+
+        const needsConvert = downloaded.some((d) => d.ext !== "mp4");
+        let ffmpeg: FFmpeg | null = null;
+
+        if (needsConvert) {
+          setPhase("converting");
+          setStatusLabel("Préparation du convertisseur vidéo…");
+          ffmpeg = new FFmpeg();
+          const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+          await ffmpeg.load({
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+          });
+        }
+
+        for (let i = 0; i < downloaded.length; i++) {
+          if (cancelled) return;
+          const d = downloaded[i];
+          const finalName = `${d.baseName}.mp4`;
+
+          if (d.ext === "mp4" || !ffmpeg) {
+            // Déjà en MP4 ou pas de conversion possible : on garde tel quel
+            const name = d.ext === "mp4" ? `${d.baseName}.mp4` : `${d.baseName}.${d.ext}`;
+            zip.file(name, d.data);
+            fileEntries.push({ name, question: d.question });
+          } else {
+            setStatusLabel(
+              `Conversion en MP4 ${i + 1} sur ${downloaded.length}…`,
+            );
+            try {
+              const inputName = `in-${i}.${d.ext}`;
+              const outputName = `out-${i}.mp4`;
+              await ffmpeg.writeFile(inputName, d.data);
+              // Remux/transcodage rapide vers MP4 (H.264 + AAC)
+              await ffmpeg.exec([
+                "-i", inputName,
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-crf", "23",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-movflags", "+faststart",
+                outputName,
+              ]);
+              const out = await ffmpeg.readFile(outputName);
+              const outData = out instanceof Uint8Array ? out : new Uint8Array();
+              zip.file(finalName, outData);
+              fileEntries.push({ name: finalName, question: d.question });
+              await ffmpeg.deleteFile(inputName).catch(() => {});
+              await ffmpeg.deleteFile(outputName).catch(() => {});
+            } catch (err: any) {
+              console.warn(`[export] conversion ${d.baseName} failed`, err);
+              // Fallback : on garde le fichier original
+              const name = `${d.baseName}.${d.ext}`;
+              zip.file(name, d.data);
+              fileEntries.push({ name, question: d.question });
+            }
+          }
+
+          setProgress(60 + ((i + 1) / downloaded.length) * 25);
+        }
+
+        // 6. README
         const safeName = sanitizeName(session.candidate_name, "candidat");
         const dateStr = new Date(session.created_at ?? Date.now())
           .toISOString()
@@ -239,11 +307,11 @@ export default function SessionVideoExport() {
         }
         readme.push("");
         readme.push(
-          "Format : vidéo au format natif enregistré par le navigateur du candidat (MP4 ou WebM). Lisible avec VLC, Chrome, Firefox, Edge ou QuickTime. Seules les réponses du candidat sont enregistrées en vidéo.",
+          "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
         );
         zip.file("README.txt", readme.join("\n"));
 
-        // 6. Création du ZIP (80 → 100 %)
+        // 7. Création du ZIP (85 → 100 %)
         if (cancelled) return;
         setPhase("zipping");
         setStatusLabel("Création de l'archive ZIP…");
@@ -251,7 +319,7 @@ export default function SessionVideoExport() {
         const zipBlob = await zip.generateAsync(
           { type: "blob", compression: "STORE" },
           (meta) => {
-            setProgress(80 + meta.percent * 0.2);
+            setProgress(85 + meta.percent * 0.15);
           },
         );
 
