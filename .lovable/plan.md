@@ -1,45 +1,70 @@
-## Objectif
+# Renforcer le test technique pour bloquer en amont
 
-La détection actuelle dans `src/hooks/useNetworkQuality.ts` bascule trop vite en `poor` (relances désactivées) à cause des appels TTS ElevenLabs : le premier appel subit un cold-start, et chaque mesure pèse 40 % dans la moyenne. Résultat : même sur une bonne connexion, le candidat voit régulièrement le message d'arrêt des relances.
+## Constat
 
-On rend la détection plus tolérante, sans toucher au reste du système.
+Aujourd'hui `InterviewDeviceTest` vérifie **micro, caméra et débit**, puis laisse passer même en cas de débit faible. Or les candidats qui restent coincés à la Q1 ont presque toujours un de ces problèmes :
 
-## Comportement attendu
+1. **Lecture audio bloquée** (autoplay refusé sur iOS Safari, mode silencieux activé) → la salutation IA ne se joue jamais.
+2. **MediaRecorder indisponible** (navigateur trop ancien, in-app browser TikTok / Instagram / LinkedIn / Facebook) → impossible d'enregistrer la réponse.
+3. **Débit trop faible** (< 300 kb/s) → on les laisse continuer aujourd'hui alors que la session échouera.
+4. **Navigateur non supporté** (Firefox iOS, WebView Android ancien) → APIs manquantes.
 
-- Une connexion fibre/4G correcte ne doit jamais tomber en `poor`.
-- Seule une connexion réellement lente (≈ < 150 kbps soutenus, ou `2g` / `slow-2g` annoncé par le navigateur) déclenche le mode dégradé.
-- Le premier appel TTS de la session n'influence plus la décision (cold-start ignoré).
-- Une mesure isolée ne peut plus faire chuter le tier : il faut au moins 3 échantillons.
+L'idée : tout détecter dans le test technique et **bloquer** clairement quand ce n'est pas récupérable, ou **avertir explicitement** quand c'est dégradé.
 
-## Changements techniques
+## Ce que je vais ajouter à `InterviewDeviceTest`
 
-Fichier modifié : `src/hooks/useNetworkQuality.ts` uniquement.
+### 1. Test de lecture audio (nouveau, le plus important)
 
-1. **Ignorer la première mesure TTS**
-   - Ajouter un compteur `samplesCountRef`. Le premier appel à `recordTtsTiming` n'alimente pas l'EWMA (juste incrément du compteur).
+Ajouter une carte « Son » qui demande au candidat d'appuyer sur **« Tester le son »**. Au clic :
 
-2. **Lisser davantage l'EWMA**
-   - Passer `EWMA_ALPHA` de `0.4` à `0.15`. Les nouvelles mesures pèsent moins, les pics ponctuels disparaissent.
+- Lecture d'un court bip (≈ 1 s, fichier déjà inclus comme data-URI silencieuse pour iOS, mais on utilisera un vrai bip audible).
+- Si la lecture aboutit → coche verte « Son OK ».
+- Si `play()` est rejeté ou si rien ne sort (détecté via `ontimeupdate` qui ne progresse pas en 2 s) → message bloquant : *« Votre navigateur a bloqué le son. Vérifiez que le mode silencieux est désactivé et autorisez le son pour ce site. »* + bouton **Réessayer**.
+- Sur iOS, on en profite pour « débloquer » l'instance audio dans le geste utilisateur (utile pour la suite).
 
-3. **Exiger 3 échantillons avant de dégrader**
-   - Tant que `samplesCountRef.current < 3`, `tierFromKbps` ignore la valeur mesurée et retourne `good` (sauf si `effectiveType` vaut `2g` / `slow-2g`, qui reste prioritaire).
+Ce test ne peut pas être contourné : sans son, pas de session.
 
-4. **Abaisser les seuils**
-   - `poor` : < 150 kbps (au lieu de 500)
-   - `degraded` : 150 – 600 kbps (au lieu de 500 – 1500)
-   - `good` : > 600 kbps
-   - Ces seuils correspondent au débit réel nécessaire pour streamer un MP3 ElevenLabs (~ 32 kbps audio + overhead HTTP), avec marge confortable.
+### 2. Détection du navigateur
 
-5. **Hystérésis simple sur le passage en `poor`**
-   - Pour basculer en `poor`, exiger 2 mesures consécutives < 150 kbps. Une seule mesure basse rétrograde au maximum en `degraded`.
+Au montage de la page, on détecte les cas non supportés et on affiche un **écran bloquant** avant même les tests :
 
-Aucune modification côté edge function (`ai-conversation-turn`), côté UI ou côté `InterviewStart`. Le contrat (`tier`, `getForceMaxFollowUps`, `recordTtsTiming`) reste identique.
+- In-app browsers : TikTok, Instagram, Facebook, LinkedIn, Snapchat (regex sur `userAgent`).
+- Firefox iOS (n'expose pas `MediaRecorder`).
+- Absence de `MediaRecorder`, `getUserMedia`, ou `AudioContext`.
 
-## Limites assumées
+Message clair : *« Votre navigateur ne permet pas de réaliser l'entretien. Ouvrez ce lien dans Safari (iPhone) ou Chrome (Android / ordinateur). »* + bouton **Copier le lien**.
 
-- Sur une vraie connexion pourrie (EDGE, hôtel saturé), le candidat verra les premières relances avant que le système ne dégrade — c'est le prix d'un faux positif rare au lieu de fréquent.
-- Pas de test bandwidth dédié au démarrage : on garde la mesure passive via TTS, c'est suffisant pour ce besoin.
+### 3. Vérification `MediaRecorder` réelle
 
-## Fichiers touchés
+Aujourd'hui on teste juste `getUserMedia`. On va aussi instancier un `MediaRecorder` sur le flux audio + récupérer 1 chunk via `start(250)` puis `stop()`. Si aucun chunk n'arrive en 2 s → erreur explicite.
 
-- `src/hooks/useNetworkQuality.ts` (≈ 30 lignes modifiées, aucun ajout de dépendance)
+### 4. Débit minimum bloquant
+
+Le débit est mesuré mais permissif. On passe à :
+
+- **≥ 600 kb/s** → vert, continuer.
+- **300 – 600 kb/s** → orange, continuer avec avertissement *« Connexion limitée, certaines questions peuvent mettre du temps à charger. »*
+- **< 300 kb/s** → **bloquant**. Bouton **Refaire le test** + suggestion *« Rapprochez-vous du Wi-Fi ou passez en 4G. »*
+
+### 5. Suppression de l'auto-avance prématurée
+
+Aujourd'hui, dès que micro + caméra sont OK, on lance un timer de 1,2 s qui passe à l'écran suivant — **sans attendre le test son ni le test débit**. On retire cet auto-skip et on attend que **les 4 tests soient verts** (ou orange acceptés) pour activer le bouton **Commencer**.
+
+### 6. Lien « Passer » conservé mais discret
+
+Pour ne pas bloquer les sessions de démo internes, le lien « Passer » reste, mais déplacé tout en bas avec un libellé court.
+
+## Détails techniques
+
+- **Fichier modifié principal :** `src/pages/InterviewDeviceTest.tsx`.
+- Nouveau bip audio : data-URI inline ou petit fichier dans `public/` (~5 kB).
+- Détection in-app browser : helper local `detectUnsupportedBrowser()` retournant `{ supported: boolean, reason?: string, suggestion?: string }`.
+- Test `MediaRecorder` : helper async qui fait `getUserMedia` → `new MediaRecorder` → `start(250)` → attendre 1 chunk → `stop()` + cleanup tracks.
+- Pas de changement côté `InterviewStart.tsx`, ni côté backend.
+
+## Hors périmètre (pour plus tard si besoin)
+
+- Watchdog de récupération en cours d'entretien (option B précédente).
+- Logs analytiques pour mesurer combien de candidats sont bloqués par chaque test.
+
+Si tu valides je l'implémente.
