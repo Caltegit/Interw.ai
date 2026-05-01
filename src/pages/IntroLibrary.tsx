@@ -378,9 +378,11 @@ export default function IntroLibrary() {
           </DialogTrigger>
           <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
             <DialogHeader>
-              <DialogTitle>Nouvelle intro</DialogTitle>
+              <DialogTitle>{editingId ? "Modifier l'intro" : "Nouvelle intro"}</DialogTitle>
               <DialogDescription>
-                Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un projet.
+                {editingId
+                  ? "Modifiez les informations de cette intro. Les projets qui l'utilisent seront mis à jour."
+                  : "Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un projet."}
               </DialogDescription>
             </DialogHeader>
 
@@ -472,16 +474,19 @@ export default function IntroLibrary() {
                 {format === "audio" && (
                   <MediaRecorderField
                     type="audio"
-                    existingUrl={null}
+                    existingUrl={existingAudioUrl}
                     onMediaReady={(blob) => setAudioBlob(blob)}
-                    onClear={() => setAudioBlob(null)}
+                    onClear={() => {
+                      setAudioBlob(null);
+                      setExistingAudioUrl(null);
+                    }}
                   />
                 )}
 
                 {format === "video" && (
                   <MediaRecorderField
                     type="video"
-                    existingUrl={null}
+                    existingUrl={existingVideoUrl}
                     onMediaReady={(blob) => {
                       const file =
                         blob instanceof File
@@ -489,7 +494,10 @@ export default function IntroLibrary() {
                           : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
                       setVideoFile(file);
                     }}
-                    onClear={() => setVideoFile(null)}
+                    onClear={() => {
+                      setVideoFile(null);
+                      setExistingVideoUrl(null);
+                    }}
                   />
                 )}
               </div>
@@ -500,7 +508,11 @@ export default function IntroLibrary() {
                 Annuler
               </Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Sauvegarde…" : "Sauvegarder"}
+                {saving
+                  ? "Enregistrement…"
+                  : editingId
+                    ? "Enregistrer les modifications"
+                    : "Sauvegarder"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -615,9 +627,14 @@ export default function IntroLibrary() {
                     ) : (
                       <span />
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item)}>
-                      <Trash2 className="mr-1 h-4 w-4" /> Supprimer
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                        <Pencil className="mr-1 h-4 w-4" /> Modifier
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(item)}>
+                        <Trash2 className="mr-1 h-4 w-4" /> Supprimer
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
