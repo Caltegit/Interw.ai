@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Download, Loader2, AlertCircle } from "lucide-react";
 
-type Phase = "loading" | "downloading" | "zipping" | "ready" | "error";
+type Phase = "loading" | "downloading" | "converting" | "zipping" | "ready" | "error";
 
 interface SegmentInfo {
   url: string;
