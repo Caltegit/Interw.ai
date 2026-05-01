@@ -18,7 +18,6 @@ import {
   FileText,
   Video,
   Download,
-  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -54,7 +53,7 @@ export default function SessionDetail() {
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("synthesis");
   const [copied, setCopied] = useState(false);
-  const [downloadingVideo, setDownloadingVideo] = useState(false);
+  
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
