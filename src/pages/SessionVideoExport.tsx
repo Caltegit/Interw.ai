@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import JSZip from "jszip";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
