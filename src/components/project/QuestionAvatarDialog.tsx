@@ -78,9 +78,7 @@ export function QuestionAvatarDialog({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modifier la photo de la question</DialogTitle>
-          <DialogDescription>
-            Choisissez un avatar spécifique à cette question. Sans choix, l'avatar du projet est utilisé.
-          </DialogDescription>
+          <DialogDescription>La photo modifiée sera juste visible sur cette question.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
