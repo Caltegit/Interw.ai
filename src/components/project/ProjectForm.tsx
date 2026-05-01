@@ -359,14 +359,22 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {header}
         {!isEdit && step === 0 && (
-          <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Link2 className="mr-2 h-4 w-4" /> Démarrer depuis une offre existante
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
+            </Button>
+          </div>
         )}
       </div>
 
       {!isEdit && (
-        <InterviewTemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onApply={applyTemplate} />
+        <>
+          <InterviewTemplatePickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onApply={applyTemplate} />
+          <ImportFromJobDialog open={importOpen} onOpenChange={setImportOpen} onApply={applyJobImport} />
+        </>
       )}
 
       <div className="flex items-center gap-2">
