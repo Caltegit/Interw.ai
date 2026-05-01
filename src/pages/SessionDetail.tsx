@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import JSZip from "jszip";
+import { convertToMp4, preloadFFmpeg } from "@/lib/videoConvert";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,8 +144,11 @@ export default function SessionDetail() {
     setDownloadingVideo(true);
     toast({
       title: "Préparation de l'archive…",
-      description: "Le téléchargement démarrera dans quelques secondes.",
+      description: "Téléchargement et conversion des vidéos en MP4.",
     });
+
+    // Démarre le chargement de ffmpeg.wasm en parallèle du fetch des segments.
+    preloadFFmpeg();
 
     try {
       // Télécharge tous les segments en parallèle, en tolérant les échecs.
@@ -160,8 +164,11 @@ export default function SessionDetail() {
       const followUpCounter = new Map<string, number>();
       const fileEntries: { name: string; question: string }[] = [];
       const missing: string[] = [];
+      const notConverted: string[] = [];
 
-      segmentMessages.forEach((m: any, i: number) => {
+      // Conversion séquentielle (ffmpeg.wasm est mono-instance).
+      for (let i = 0; i < segmentMessages.length; i++) {
+        const m: any = segmentMessages[i];
         const seq = String(i + 1).padStart(2, "0");
         const questionNumber =
           (m.question_id && questionOrderById.get(m.question_id)) || null;
@@ -184,18 +191,34 @@ export default function SessionDetail() {
         const questionText =
           projectQ?.content ||
           (questionNumber ? `Question ${questionNumber}` : "Question");
+        const baseName = `${seq}-${questionLabel}${suffix}`;
 
-        if (result.status === "fulfilled") {
-          const blob = result.value;
-          const ext = blob.type.includes("mp4") ? "mp4" : "webm";
-          const name = `${seq}-${questionLabel}${suffix}.${ext}`;
-          zip.file(name, blob);
-          fileEntries.push({ name, question: questionText });
-        } else {
-          const name = `${seq}-${questionLabel}${suffix}`;
-          missing.push(name);
+        if (result.status !== "fulfilled") {
+          missing.push(baseName);
+          continue;
         }
-      });
+
+        const original = result.value;
+        toast({
+          title: `Conversion en MP4 (${i + 1}/${segmentMessages.length})…`,
+          description: questionText.slice(0, 80),
+        });
+
+        let finalBlob: Blob = original;
+        let ext = "mp4";
+        try {
+          finalBlob = await convertToMp4(original);
+        } catch (err) {
+          console.warn("[zip] conversion failed, fallback to original", err);
+          finalBlob = original;
+          ext = original.type.includes("mp4") ? "mp4" : "webm";
+          if (ext === "webm") notConverted.push(`${baseName}.webm`);
+        }
+
+        const name = `${baseName}.${ext}`;
+        zip.file(name, finalBlob);
+        fileEntries.push({ name, question: questionText });
+      }
 
       if (fileEntries.length === 0) {
         throw new Error("Aucun segment n'a pu être téléchargé.");
@@ -238,10 +261,18 @@ export default function SessionDetail() {
         readmeLines.push("Segments indisponibles au moment du téléchargement :");
         missing.forEach((n) => readmeLines.push(`  ${n}`));
       }
+      if (notConverted.length > 0) {
+        readmeLines.push("");
+        readmeLines.push("Fichiers restés au format WebM (conversion MP4 échouée) :");
+        notConverted.forEach((n) => readmeLines.push(`  ${n}`));
+        readmeLines.push("Lisibles avec VLC, Chrome, Firefox ou Edge.");
+      }
       readmeLines.push("");
       readmeLines.push(
-        "Note : seules les réponses du candidat sont enregistrées en vidéo. " +
-          "La voix de l'assistant IA n'est pas incluse dans les fichiers.",
+        "Format : MP4 H.264 / AAC, lisible partout (QuickTime, VLC, " +
+          "PowerPoint, WhatsApp, Teams…). " +
+          "Note : seules les réponses du candidat sont enregistrées en vidéo. " +
+          "La voix de l'assistant IA n'est pas incluse.",
       );
       zip.file("README.txt", readmeLines.join("\n"));
 
@@ -261,13 +292,16 @@ export default function SessionDetail() {
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 
-      if (missing.length > 0) {
+      const warns: string[] = [];
+      if (missing.length > 0) warns.push(`${missing.length} indisponible(s)`);
+      if (notConverted.length > 0) warns.push(`${notConverted.length} en WebM`);
+      if (warns.length > 0) {
         toast({
           title: "Archive téléchargée",
-          description: `${missing.length} segment(s) indisponible(s) — voir README.txt.`,
+          description: `${warns.join(", ")} — voir README.txt.`,
         });
       } else {
-        toast({ title: "Archive téléchargée." });
+        toast({ title: "Archive téléchargée (MP4)." });
       }
     } catch (e: any) {
       toast({
