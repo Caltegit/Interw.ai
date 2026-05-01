@@ -44,12 +44,11 @@ serve(async (req) => {
       return json({ error: "Connecteur Firecrawl non configuré." }, 500);
     }
 
-    // 1. Scrape via Firecrawl
-    const scrapeRes = await fetch(`${FIRECRAWL_GATEWAY}/scrape`, {
+    // 1. Scrape via Firecrawl (API directe)
+    const scrapeRes = await fetch(`${FIRECRAWL_API}/scrape`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": FIRECRAWL_API_KEY,
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
