@@ -219,10 +219,11 @@ export default function SessionDetail() {
         });
 
         let finalBlob: Blob = original;
-        let ext = "mp4";
+        let ext: "mp4" | "webm" = "mp4";
         if (ffmpegReady) {
           try {
             finalBlob = await convertToMp4(original);
+            ext = "mp4";
           } catch (err) {
             console.warn("[zip] conversion failed, fallback to original", err);
             finalBlob = original;
