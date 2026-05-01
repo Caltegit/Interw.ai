@@ -109,6 +109,89 @@ export default function SessionDetail() {
     toast({ title: "Lien copié." });
   };
 
+  const handleDownloadFullVideo = async () => {
+    if (downloadingVideo) return;
+
+    // Récupère tous les segments vidéo dans l'ordre chronologique
+    const segmentUrls = messages
+      .filter((m: any) => !!m.video_segment_url)
+      .sort((a: any, b: any) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((m: any) => m.video_segment_url as string);
+
+    const fallback = session?.video_recording_url as string | undefined;
+
+    if (segmentUrls.length === 0 && !fallback) {
+      toast({
+        title: "Vidéo indisponible",
+        description: "Aucun enregistrement vidéo n'a été trouvé pour cette session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDownloadingVideo(true);
+    toast({
+      title: "Préparation de la vidéo…",
+      description: "Le téléchargement démarrera dans quelques secondes.",
+    });
+
+    try {
+      let finalBlob: Blob;
+      let extension = "webm";
+
+      if (segmentUrls.length === 0 && fallback) {
+        const res = await fetch(fallback);
+        if (!res.ok) throw new Error("Téléchargement impossible.");
+        finalBlob = await res.blob();
+        extension = fallback.toLowerCase().endsWith(".mp4") ? "mp4" : "webm";
+      } else {
+        // Télécharge tous les segments en parallèle puis les concatène
+        const blobs = await Promise.all(
+          segmentUrls.map(async (url) => {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`Segment indisponible: ${url}`);
+            return res.blob();
+          }),
+        );
+        const mime = blobs[0]?.type || "video/webm";
+        finalBlob = new Blob(blobs, { type: mime });
+        extension = mime.includes("mp4") ? "mp4" : "webm";
+      }
+
+      const safeName = (session?.candidate_name || "candidat")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase() || "candidat";
+      const date = new Date(session?.created_at ?? Date.now())
+        .toISOString()
+        .slice(0, 10);
+      const filename = `entretien-${safeName}-${date}.${extension}`;
+
+      const objectUrl = URL.createObjectURL(finalBlob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+
+      toast({ title: "Vidéo téléchargée." });
+    } catch (e: any) {
+      toast({
+        title: "Erreur",
+        description: e?.message ?? "Impossible de préparer la vidéo.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingVideo(false);
+    }
+  };
+
   const candidateVideos = useMemo(
     () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
     [messages],
