@@ -261,10 +261,18 @@ export default function SessionDetail() {
         readmeLines.push("Segments indisponibles au moment du téléchargement :");
         missing.forEach((n) => readmeLines.push(`  ${n}`));
       }
+      if (notConverted.length > 0) {
+        readmeLines.push("");
+        readmeLines.push("Fichiers restés au format WebM (conversion MP4 échouée) :");
+        notConverted.forEach((n) => readmeLines.push(`  ${n}`));
+        readmeLines.push("Lisibles avec VLC, Chrome, Firefox ou Edge.");
+      }
       readmeLines.push("");
       readmeLines.push(
-        "Note : seules les réponses du candidat sont enregistrées en vidéo. " +
-          "La voix de l'assistant IA n'est pas incluse dans les fichiers.",
+        "Format : MP4 H.264 / AAC, lisible partout (QuickTime, VLC, " +
+          "PowerPoint, WhatsApp, Teams…). " +
+          "Note : seules les réponses du candidat sont enregistrées en vidéo. " +
+          "La voix de l'assistant IA n'est pas incluse.",
       );
       zip.file("README.txt", readmeLines.join("\n"));
 
