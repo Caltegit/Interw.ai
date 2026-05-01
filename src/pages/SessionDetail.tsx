@@ -16,6 +16,8 @@ import {
   Play,
   FileText,
   Video,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
