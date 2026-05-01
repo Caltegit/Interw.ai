@@ -3,11 +3,80 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Video, CheckCircle, AlertCircle, ArrowRight, Wifi, Loader2, Sparkles } from "lucide-react";
+import {
+  Mic,
+  Video,
+  CheckCircle,
+  AlertCircle,
+  ArrowRight,
+  Wifi,
+  Loader2,
+  Sparkles,
+  Volume2,
+  Copy,
+  Check,
+} from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
 type Status = "idle" | "testing" | "ok" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
+
+// Bip court (~0,5 s, 440 Hz) audible — utilisé pour valider que la lecture
+// audio fonctionne réellement (autoplay autorisé, mode silencieux désactivé).
+const BEEP_DATA_URI =
+  "data:audio/wav;base64,UklGRsQrAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YaArAAAAAEcQYyDDLwQ+ukrFVehemmVpat9sk2y2afNjjFvsUAREoTUUJtwUlAL+74Pdsswovi6yX6n/o7+hxKJyp8WumLi2xLTSL+JX8sgCKxMHIzMyzj9ETCBXglkQT05A8C3LGPwBg+rD06i+pqx4nu+UAJBMkNqVbqAerg2/n9Hi5JX48wszHs4uaT0BSt9UAl1fY9JmH2gTZ7tjV12IVOxIWzu3LBQdYg2j/cHugODF1MfLKMU+wZS/7r+1wlzIpdAH27bnNvad9fzCRtT76FoAGRgwMNlGIVxubrZ9wIikiKaH8YHSeFRsumzKbKZsFmyAaAlhUFamSWQ6QimXFpcCsu3O2DLFfrPipQacNZUPkR2QnpJzmCKjIbHEwh7XX+0qBBobrTAKRO5UOmJSaxtw53A9bSpmolwlURpEDDb0Jl4XGAfV9pHnY9pUz8XGVMHKv9HBRcfizp3aeueK9pYGyhdnKa460EuMW1ZpdHQAfJF/aH64eVxxn2WRVuZE8jHLHQAJqfQF4VTOML+ksviqdaecqdGu37jhxXTV4uYV+TQMRR9SMs5DqVOLYWFsaHRGePZ34HMma0RfRFB6PpQrYxg/BWzz9OJg1S/L98QAw4HF9Mtq1k/lHvfUCm4f8DJTRThWLmMRbAVwCG9Rad9eClGEQNks0xafAGTqL9Wow+G2DK/orFKvK7d/wxLU3edt/aIToCi5O79KP1ZVXeRfg10oV4lLwjsDKAwSQfu140jTBcNwt4SwsK6OseS5LMdz2HzsJgIPGAMtWUDnUKBcFmI4Ya1aGE+wPmgqvBOh/CrmWtKMwlu3LLEqsAS00rzlzhblqf2EFwAxcUaAVy5jdGmcaZpkE1qaTLI8ICtcGCEFhfH33ZzKabsLsmiv47tWxL3T9efO/jcWAi3yQAJQI1qaXUhakk67PaArfBOq+hvinMlCsf6e3JN0jt6OoZTSnxiwksWf3vP5IRUjL2RECVTbXhRkUmRRX7lU7kRiMRMaOQHA52nOIbeloo2ScYf5gT2D3orxmqWxw87M73YQzy/tShJgcGjJaRliVlR3PqwjuQYK6e/Mq7N5n8KQEYg9hjGLApdlqQHC9d5j/lEcODBGQVVUYcVnB2c8XrtN2DUeGY36NN3pwwGv16C4mn+caaQyt7HOVeyMCrwo6kNmW2Vm+mhxYpdSfTrXHpoCzeYnzaW3FaYWmtWUKJaYn5iyVc6w8B0SXjGoSn5ZHl3CWMNJSjBoEf3yodjKxMW3J7Lvs9C5lcHnyYbS09pq4w/uo/oOCMwUhh9LJyEsAyzqJ5MgnBcKD4cIGwQVAmcCYAW0CsoSbB2QKnk4skXIUbhbY2Lyhc==";
+
+const STORED_BROWSER_OK_KEY = "interview-device-test-browser-ok";
+
+interface BrowserSupport {
+  supported: boolean;
+  reason?: string;
+}
+
+function detectUnsupportedBrowser(): BrowserSupport {
+  if (typeof navigator === "undefined") return { supported: true };
+  const ua = navigator.userAgent || "";
+
+  // In-app browsers connus (impossibles à utiliser pour getUserMedia).
+  const inApp: Array<[RegExp, string]> = [
+    [/Instagram/i, "Instagram"],
+    [/FBAN|FBAV|FB_IAB/i, "Facebook"],
+    [/Snapchat/i, "Snapchat"],
+    [/musical_ly|TikTok|Bytedance/i, "TikTok"],
+    [/LinkedInApp/i, "LinkedIn"],
+    [/Line\//i, "Line"],
+  ];
+  for (const [re, name] of inApp) {
+    if (re.test(ua)) {
+      return {
+        supported: false,
+        reason: `Vous utilisez le navigateur intégré à ${name}. Il ne permet pas l'accès au micro et à la caméra.`,
+      };
+    }
+  }
+
+  // Firefox iOS n'expose pas MediaRecorder.
+  if (/FxiOS/i.test(ua)) {
+    return {
+      supported: false,
+      reason: "Firefox sur iPhone ne permet pas l'enregistrement audio. Utilisez Safari.",
+    };
+  }
+
+  if (typeof window !== "undefined") {
+    if (!("MediaRecorder" in window)) {
+      return { supported: false, reason: "Votre navigateur ne prend pas en charge l'enregistrement audio." };
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return { supported: false, reason: "Votre navigateur ne permet pas l'accès au micro et à la caméra." };
+    }
+    if (!("AudioContext" in window) && !("webkitAudioContext" in window)) {
+      return { supported: false, reason: "Votre navigateur ne prend pas en charge l'audio Web." };
+    }
+  }
+
+  return { supported: true };
+}
 
 export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
@@ -15,8 +84,13 @@ export default function InterviewDeviceTest() {
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
 
+  const browserSupport = useRef<BrowserSupport>(detectUnsupportedBrowser());
+  const [browserBlocked, setBrowserBlocked] = useState(!browserSupport.current.supported);
+  const [linkCopied, setLinkCopied] = useState(false);
+
   const [micStatus, setMicStatus] = useState<Status>("idle");
   const [camStatus, setCamStatus] = useState<Status>("idle");
+  const [soundStatus, setSoundStatus] = useState<Status>("idle");
   const [micLevel, setMicLevel] = useState(0);
 
   const [netStatus, setNetStatus] = useState<Status>("idle");
@@ -27,19 +101,21 @@ export default function InterviewDeviceTest() {
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const autoAdvancedRef = useRef(false);
-
-  // Auto-start tests on mount + cleanup on unmount
+  // Auto-start tests on mount + cleanup on unmount.
+  // Le test du son nécessite un geste utilisateur, il n'est pas auto-déclenché.
   useEffect(() => {
+    if (browserBlocked) return;
     testCam();
     testMic();
     testNetwork();
+    testRecorder();
     return () => {
       stopAll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [browserBlocked]);
 
   // Charger infos projet (message + nom poste + org) pour le consentement
   useEffect(() => {
@@ -55,19 +131,6 @@ export default function InterviewDeviceTest() {
     })();
   }, [slug]);
 
-  // Auto-avance dès que micro + caméra sont OK
-  useEffect(() => {
-    if (autoAdvancedRef.current) return;
-    if (micStatus === "ok" && camStatus === "ok") {
-      autoAdvancedRef.current = true;
-      const t = setTimeout(() => {
-        handleContinue();
-      }, 1200);
-      return () => clearTimeout(t);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [micStatus, camStatus]);
-
   const stopAll = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     if (streamRef.current) {
@@ -75,13 +138,19 @@ export default function InterviewDeviceTest() {
       streamRef.current = null;
     }
     if (videoRef.current) videoRef.current.srcObject = null;
+    if (beepAudioRef.current) {
+      beepAudioRef.current.pause();
+      beepAudioRef.current.src = "";
+      beepAudioRef.current = null;
+    }
   };
 
   const testMic = async () => {
     setMicStatus("testing");
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioCtx = new AudioContext();
+      const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+      const audioCtx = new Ctor();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
@@ -126,17 +195,78 @@ export default function InterviewDeviceTest() {
     }
   };
 
+  // Vérifie que MediaRecorder peut réellement produire un chunk.
+  const [recorderStatus, setRecorderStatus] = useState<Status>("idle");
+  const testRecorder = async () => {
+    setRecorderStatus("testing");
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const gotChunk = await new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), 2500);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            clearTimeout(timer);
+            resolve(true);
+          }
+        };
+        try {
+          recorder.start(250);
+        } catch {
+          clearTimeout(timer);
+          resolve(false);
+        }
+      });
+      try {
+        if (recorder.state !== "inactive") recorder.stop();
+      } catch {
+        /* ignore */
+      }
+      setRecorderStatus(gotChunk ? "ok" : "error");
+    } catch {
+      setRecorderStatus("error");
+    } finally {
+      stream?.getTracks().forEach((t) => t.stop());
+    }
+  };
+
+  // Test de lecture audio — déclenché par un clic utilisateur.
+  const testSound = async () => {
+    setSoundStatus("testing");
+    try {
+      const audio = new Audio(BEEP_DATA_URI);
+      audio.volume = 0.6;
+      beepAudioRef.current = audio;
+
+      const playPromise = audio.play();
+      if (playPromise) await playPromise;
+
+      // Vérifier que la lecture progresse réellement (sinon iOS silencieux).
+      const progressed = await new Promise<boolean>((resolve) => {
+        const start = audio.currentTime;
+        const timer = setTimeout(() => {
+          resolve(audio.currentTime > start + 0.05);
+        }, 1500);
+        audio.onended = () => {
+          clearTimeout(timer);
+          resolve(true);
+        };
+      });
+
+      setSoundStatus(progressed ? "ok" : "error");
+    } catch {
+      setSoundStatus("error");
+    }
+  };
+
   // Test de débit : on télécharge un asset connu et on chronomètre
   const testNetwork = async () => {
     setNetStatus("testing");
     setNetKbps(null);
     setNetQuality(null);
     try {
-      // Asset léger (~200 KB) : favicon n'est pas assez gros, on prend un placeholder
-      // ou un asset Supabase storage public. On utilise un cache-buster pour éviter
-      // de tomber sur le cache.
       const url = `/placeholder.svg?cb=${Date.now()}`;
-      // Si l'asset est trop petit (placeholder), on télécharge plusieurs fois
       const start = performance.now();
       const ITER = 3;
       let totalBytes = 0;
@@ -146,28 +276,23 @@ export default function InterviewDeviceTest() {
         totalBytes += blob.size;
       }
       const elapsedMs = performance.now() - start;
-      // Pour avoir une estimation réaliste, on télécharge un échantillon plus gros
-      // depuis le storage Supabase public.
       const bigUrl = `https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/avatars/.placeholder?cb=${Date.now()}`;
-      let bigStart = performance.now();
-      let bigBytes = 0;
+      const bigStart = performance.now();
       try {
         const r = await fetch(bigUrl, { cache: "no-store" });
         const blob = await r.blob();
-        bigBytes = blob.size;
+        const bigBytes = blob.size;
         const bigElapsed = performance.now() - bigStart;
         if (bigBytes > 5000) {
-          // Calcul kbps : bits / ms = kbps
           const kbps = Math.round((bigBytes * 8) / bigElapsed);
           finishNetwork(kbps);
           return;
         }
       } catch {
-        // On retombe sur l'estimation locale
+        /* fallback */
       }
 
       if (totalBytes < 1000 || elapsedMs < 5) {
-        // Échantillon trop petit pour être fiable → on déclare bon par défaut
         finishNetwork(2000);
         return;
       }
@@ -182,7 +307,7 @@ export default function InterviewDeviceTest() {
   const finishNetwork = (kbps: number) => {
     setNetKbps(kbps);
     let q: SpeedQuality;
-    if (kbps >= 1000) q = "good";
+    if (kbps >= 600) q = "good";
     else if (kbps >= 300) q = "limited";
     else q = "weak";
     setNetQuality(q);
@@ -194,13 +319,30 @@ export default function InterviewDeviceTest() {
     navigate(`/session/${slug}/start/${token}`);
   };
 
-  const canContinue = micStatus === "ok";
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  // Conditions de blocage
+  const networkBlocking = netStatus === "ok" && netQuality === "weak";
+  const canContinue =
+    micStatus === "ok" &&
+    camStatus === "ok" &&
+    soundStatus === "ok" &&
+    recorderStatus === "ok" &&
+    !networkBlocking;
 
   const networkLabel = (() => {
     if (!netQuality) return "";
     if (netQuality === "good") return "Connexion bonne";
-    if (netQuality === "limited") return "Connexion limitée — les médias peuvent être lents à charger";
-    return "Connexion très faible — risque de problèmes pendant la session";
+    if (netQuality === "limited") return "Connexion limitée — la session reste possible";
+    return "Connexion trop faible pour réaliser l'entretien";
   })();
 
   const networkColorClass = (() => {
@@ -210,22 +352,60 @@ export default function InterviewDeviceTest() {
     return "text-muted-foreground";
   })();
 
+  // Écran bloquant — navigateur non supporté
+  if (browserBlocked) {
+    return (
+      <CandidateLayout>
+        <div className="w-full max-w-lg space-y-6">
+          <Card>
+            <CardContent className="pt-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-6 w-6 text-destructive shrink-0" />
+                <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
+              </div>
+              <p className="text-sm text-foreground">
+                {browserSupport.current.reason}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
+                <strong>Chrome</strong> (Android et ordinateur).
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={copyLink} variant="outline" className="w-full">
+                  {linkCopied ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Lien copié
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copier le lien de l'entretien
+                    </>
+                  )}
+                </Button>
+                <button
+                  onClick={() => setBrowserBlocked(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground underline mt-2"
+                >
+                  Continuer quand même
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </CandidateLayout>
+    );
+  }
+
   return (
     <CandidateLayout>
       <div className="w-full max-w-lg space-y-6">
-        {/* Skip link */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleContinue}
-            className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
-          >
-            Passer
-          </button>
-        </div>
-
         <div className="text-center space-y-2">
           <h1 className="text-xl font-bold">Vérification technique</h1>
-          <p className="text-sm text-muted-foreground">Vérifions que votre micro, caméra et connexion fonctionnent.</p>
+          <p className="text-sm text-muted-foreground">
+            Vérifions que votre matériel et votre connexion permettent de réaliser l'entretien.
+          </p>
         </div>
 
         {/* Camera test */}
@@ -268,8 +448,10 @@ export default function InterviewDeviceTest() {
               </div>
             )}
 
-            {camStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">✓ Caméra détectée</p>
+            {camStatus === "error" && (
+              <p className="text-xs text-destructive text-center">
+                Impossible d'accéder à la caméra. Autorisez l'accès dans les réglages du navigateur.
+              </p>
             )}
           </CardContent>
         </Card>
@@ -307,13 +489,85 @@ export default function InterviewDeviceTest() {
               </div>
             )}
 
-            {micStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">✓ Microphone détecté</p>
-            )}
-
             {micStatus === "error" && (
               <p className="text-xs text-destructive text-center">
-                Impossible d'accéder au micro. Vérifiez les permissions de votre navigateur.
+                Impossible d'accéder au micro. Vérifiez les permissions du navigateur.
+              </p>
+            )}
+
+            {/* Sous-test : enregistrement réel */}
+            {micStatus === "ok" && (
+              <div className="flex items-center gap-2 text-xs">
+                {recorderStatus === "ok" ? (
+                  <>
+                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                    <span className="text-emerald-600 dark:text-emerald-400">Enregistrement opérationnel</span>
+                  </>
+                ) : recorderStatus === "error" ? (
+                  <>
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-destructive">
+                      L'enregistrement audio n'est pas pris en charge.
+                    </span>
+                    <Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" onClick={testRecorder}>
+                      Réessayer
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="text-muted-foreground">Vérification de l'enregistrement…</span>
+                  </>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sound playback test */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {soundStatus === "ok" ? (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : soundStatus === "error" ? (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : (
+                  <Volume2 className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">Son</span>
+              </div>
+              {soundStatus !== "ok" && (
+                <Button
+                  variant={soundStatus === "error" ? "outline" : "default"}
+                  size="sm"
+                  className="min-h-[44px] px-4"
+                  onClick={testSound}
+                  disabled={soundStatus === "testing"}
+                >
+                  {soundStatus === "testing" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : soundStatus === "error" ? (
+                    "Réessayer"
+                  ) : (
+                    "Tester le son"
+                  )}
+                </Button>
+              )}
+            </div>
+
+            {soundStatus === "idle" && (
+              <p className="text-xs text-muted-foreground">
+                Touchez « Tester le son » et vérifiez que vous entendez bien un bip.
+              </p>
+            )}
+            {soundStatus === "ok" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">✓ Son audible</p>
+            )}
+            {soundStatus === "error" && (
+              <p className="text-xs text-destructive">
+                Aucun son détecté. Désactivez le mode silencieux, montez le volume et autorisez le son pour ce site.
               </p>
             )}
           </CardContent>
@@ -356,9 +610,15 @@ export default function InterviewDeviceTest() {
               </p>
             )}
 
+            {networkBlocking && (
+              <p className="text-xs text-destructive text-center">
+                Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.
+              </p>
+            )}
+
             {netStatus === "error" && (
               <p className="text-xs text-destructive text-center">
-                Impossible de mesurer la connexion. La session reste possible.
+                Impossible de mesurer la connexion.
               </p>
             )}
           </CardContent>
@@ -380,9 +640,19 @@ export default function InterviewDeviceTest() {
 
         {!canContinue && (
           <p className="text-xs text-center text-muted-foreground">
-            Veuillez tester au minimum votre microphone avant de continuer.
+            Tous les tests doivent être validés pour commencer.
           </p>
         )}
+
+        {/* Lien « Passer » discret en bas */}
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={handleContinue}
+            className="text-xs text-muted-foreground/70 hover:text-foreground underline"
+          >
+            Passer les tests
+          </button>
+        </div>
       </div>
     </CandidateLayout>
   );
