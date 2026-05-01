@@ -1,58 +1,65 @@
-## Téléchargement vidéo dans un nouvel onglet avec barre de progression
+# Créer une session depuis un lien d'offre d'emploi
 
-### Comportement
+## Emplacement
+Dans `ProjectForm.tsx` (étape 0, mode création), à **gauche** du bouton existant "Démarrer depuis un session type" :
 
-Clic sur "Télécharger les vidéos" → ouverture d'un nouvel onglet `/sessions/:id/export` qui :
-1. Récupère les segments vidéo candidat de la session.
-2. Les télécharge un par un en affichant une barre de progression (% basé sur les octets reçus).
-3. Construit le ZIP côté navigateur avec JSZip.
-4. Déclenche le téléchargement automatique de l'archive.
-5. Affiche un bouton "Fermer l'onglet" à la fin.
+> **"Démarrer depuis une offre existante"**
 
-### Phases affichées
+## Pop-up "Importer une offre"
 
-```
-[1/3] Préparation                 (métadonnées)
-[2/3] Téléchargement des segments (0 → 80 %)
-[3/3] Création de l'archive ZIP   (80 → 100 %)
-Terminé → "Télécharger l'archive"
-```
+| Champ | Défaut |
+|---|---|
+| Lien de l'offre (obligatoire) | vide |
+| Intro | première intro de la bibliothèque de l'organisation, activée par défaut |
+| Nombre de questions | **10** |
+| Nombre de critères | **3** |
+| Voix IA | **dernière voix utilisée** par le recruteur |
 
-### Format des fichiers
+Bouton **"Générer la session"** avec loader (étapes : "Lecture de l'offre…" → "Génération des questions…").
 
-On garde le format natif du segment (`.webm` ou `.mp4`) détecté via le `Content-Type` de la réponse, fallback sur l'URL. Pas de transcodage côté client (ffmpeg.wasm trop lourd). README inclus expliquant le format et listant chaque fichier avec sa question.
+Au succès, le formulaire en cours est pré-rempli (titre, intro, questions personnalisées, critères pondérés, voix). Le recruteur ajuste puis sauvegarde normalement.
 
-### Nettoyage de l'ancien système (email + edge function)
+## Logique technique
 
-- Supprimer la edge function `request-video-export`.
-- Supprimer le template `video-export-ready` + son entrée dans `registry.ts`.
-- Supprimer la table `video_export_jobs` et le bucket `video-exports` via migration.
-- Retirer l'`AlertDialog` de confirmation et la logique d'invocation dans `SessionDetail.tsx`.
+### 1. Connecteur Firecrawl
+Activation du connecteur Firecrawl pour scraper la page de l'offre (gère JS et anti-bot, rend du markdown propre).
 
-### Fichiers
+### 2. Edge function `import-job-offer`
+- Input : `{ url, questionsCount, criteriaCount }`
+- Auth : valide le JWT utilisateur
+- Étape 1 : Firecrawl `/scrape` (markdown, onlyMainContent) via le gateway
+- Étape 2 : Lovable AI (`google/gemini-2.5-flash`) avec **tool calling** pour produire un JSON strict :
+  - `title` (poste + entreprise)
+  - `questions[]` : exactement N questions ouvertes **personnalisées** (ancrées sur les missions, compétences et secteur de l'offre)
+  - `criteria[]` : exactement M critères (`label`, `description`, `weight` somme = 100), calibrés sur les compétences clés
+- Output : `{ title, questions, criteria }`
+- Gestion d'erreurs 429 / 402 remontée au client
 
-**Créés**
-- `src/pages/SessionVideoExport.tsx` — page plein écran avec barre de progression, route protégée RH, sans sidebar.
+### 3. Dernière voix utilisée
+Requête sur `projects` filtrée par `created_by = user.id`, triée `created_at desc limit 1`, lecture de `tts_provider`, `tts_voice_gender`, `tts_voice_id`. Fallback : voix par défaut actuelle.
 
-**Modifiés**
-- `src/App.tsx` — ajout de la route `/sessions/:id/export` (protégée).
-- `src/pages/SessionDetail.tsx` — bouton ouvre l'onglet, suppression dialog/logique export.
-- `supabase/functions/_shared/transactional-email-templates/registry.ts` — retrait `video-export-ready`.
+### 4. Bibliothèque d'intros
+Lecture de `intro_templates` filtrée par `organization_id`. Le sélecteur affiche les intros disponibles ; pré-sélection de la plus récente. L'intro choisie alimente `introEnabled = true` + `introMode` + `introText` / `introAudioPreviewUrl` / `introVideoPreviewUrl` selon son type.
 
-**Supprimés**
-- `supabase/functions/request-video-export/index.ts`
-- `supabase/functions/_shared/transactional-email-templates/video-export-ready.tsx`
+### 5. Composant `ImportFromJobDialog`
+`src/components/project/ImportFromJobDialog.tsx` :
+- Dialog shadcn avec les 5 champs
+- Validation URL (regex http/https)
+- Appel à l'edge function via `supabase.functions.invoke`
+- En succès : `onApply(payload)` qui pousse les valeurs dans le formulaire (pas de rechargement)
 
-**Migration**
-- `DROP TABLE public.video_export_jobs;`
-- Suppression du bucket `video-exports` et de ses policies.
+### 6. Intégration `ProjectForm.tsx`
+- `const [importOpen, setImportOpen] = useState(false)`
+- Bouton ajouté à gauche de l'existant
+- Handler `applyJobImport(payload)` qui met à jour : `setTitle`, `setQuestions`, `setCriteria`, voix, intro
 
-### Avantages
+## Fichiers touchés
+- Créé : `supabase/functions/import-job-offer/index.ts`
+- Créé : `src/components/project/ImportFromJobDialog.tsx`
+- Modifié : `src/components/project/ProjectForm.tsx`
+- Activation : connecteur Firecrawl
 
-- Feedback visuel immédiat, pas d'attente email.
-- Pas de stockage serveur d'archives (mieux côté RGPD).
-- L'onglet principal reste utilisable.
-
-### Limite assumée
-
-Le ZIP est construit en mémoire dans l'onglet : confortable jusqu'à ~500 Mo (cas typique). Au-delà, Chrome peut limiter — mais pour un entretien standard c'est largement suffisant.
+## Hors périmètre (V2)
+- Sauvegarde de l'URL source sur le projet
+- Détection auto de la langue
+- Extraction du logo entreprise
