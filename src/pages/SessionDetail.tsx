@@ -7,16 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import {
   ArrowLeft,
@@ -28,7 +18,6 @@ import {
   FileText,
   Video,
   Download,
-  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -64,7 +53,7 @@ export default function SessionDetail() {
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("synthesis");
   const [copied, setCopied] = useState(false);
-  const [downloadingVideo, setDownloadingVideo] = useState(false);
+  
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
@@ -120,10 +109,7 @@ export default function SessionDetail() {
     toast({ title: "Lien copié." });
   };
 
-  const [confirmExportOpen, setConfirmExportOpen] = useState(false);
-  const recipientEmail = user?.email ?? "";
-
-  const openExportConfirm = () => {
+  const openVideoExport = () => {
     const hasSegments = (messages as any[]).some(
       (m: any) => !!m.video_segment_url && m.role === "candidate",
     );
@@ -135,34 +121,8 @@ export default function SessionDetail() {
       });
       return;
     }
-    setConfirmExportOpen(true);
-  };
-
-  const handleConfirmExport = async () => {
-    if (downloadingVideo || !id) return;
-    setConfirmExportOpen(false);
-    setDownloadingVideo(true);
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "request-video-export",
-        { body: { sessionId: id, recipientEmail } },
-      );
-      if (error) throw error;
-      toast({
-        title: "Demande enregistrée",
-        description:
-          data?.message ??
-          `Vous recevrez un email à ${recipientEmail} dès que l'archive sera prête.`,
-      });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e?.message ?? "Impossible de lancer la préparation.",
-        variant: "destructive",
-      });
-    } finally {
-      setDownloadingVideo(false);
-    }
+    if (!id) return;
+    window.open(`/sessions/${id}/export`, "_blank", "noopener");
   };
 
   const candidateVideos = useMemo(
@@ -230,15 +190,10 @@ export default function SessionDetail() {
             <Button
               variant="outline"
               size="sm"
-              onClick={openExportConfirm}
-              disabled={downloadingVideo}
+              onClick={openVideoExport}
             >
-              {downloadingVideo ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-1 h-4 w-4" />
-              )}
-              {downloadingVideo ? "Envoi…" : "Télécharger les vidéos"}
+              <Download className="mr-1 h-4 w-4" />
+              Télécharger les vidéos
             </Button>
           )}
           {report &&
@@ -255,25 +210,6 @@ export default function SessionDetail() {
             ))}
         </div>
       </div>
-
-      <AlertDialog open={confirmExportOpen} onOpenChange={setConfirmExportOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Préparer l'archive vidéo</AlertDialogTitle>
-            <AlertDialogDescription>
-              La préparation de l'archive ZIP peut prendre plusieurs minutes.
-              Vous recevrez un email à <strong>{recipientEmail}</strong> avec un
-              lien pour télécharger le fichier dès qu'il sera prêt.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmExport}>
-              Confirmer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <OverviewHeader
         candidateName={session.candidate_name}
