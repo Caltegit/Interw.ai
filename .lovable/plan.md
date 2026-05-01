@@ -1,70 +1,46 @@
-# Renforcer le test technique pour bloquer en amont
+## Diagnostic
 
-## Constat
+Le code de conversion est bien en place dans `handleDownloadFullVideo` (SessionDetail.tsx) et appelle `convertToMp4()` pour chaque segment. Mais la conversion échoue silencieusement et tombe dans le fallback `catch` → écrit le WebM original. C'est pourquoi tu reçois toujours des `.webm`.
 
-Aujourd'hui `InterviewDeviceTest` vérifie **micro, caméra et débit**, puis laisse passer même en cas de débit faible. Or les candidats qui restent coincés à la Q1 ont presque toujours un de ces problèmes :
+**Cause racine** : `videoConvert.ts` charge le core ffmpeg.wasm depuis le CDN `unpkg.com` via `toBlobURL`. Deux problèmes courants empêchent ce chargement :
 
-1. **Lecture audio bloquée** (autoplay refusé sur iOS Safari, mode silencieux activé) → la salutation IA ne se joue jamais.
-2. **MediaRecorder indisponible** (navigateur trop ancien, in-app browser TikTok / Instagram / LinkedIn / Facebook) → impossible d'enregistrer la réponse.
-3. **Débit trop faible** (< 300 kb/s) → on les laisse continuer aujourd'hui alors que la session échouera.
-4. **Navigateur non supporté** (Firefox iOS, WebView Android ancien) → APIs manquantes.
+1. **`toBlobURL` fait un `fetch()` cross-origin** vers unpkg. En production sur `interw.ai`, la CSP ou un blocage réseau peut faire échouer ce fetch.
+2. **Le worker ffmpeg lui-même** (`814.ffmpeg.js`) est aussi chargé depuis le bundle et peut échouer si non bundlé correctement par Vite.
+3. **Aucun log visible** côté utilisateur : l'erreur tombe dans `console.warn` puis silencieusement en fallback `.webm`. L'utilisateur ne sait pas pourquoi.
 
-L'idée : tout détecter dans le test technique et **bloquer** clairement quand ce n'est pas récupérable, ou **avertir explicitement** quand c'est dégradé.
+## Correctifs
 
-## Ce que je vais ajouter à `InterviewDeviceTest`
+### 1. Auto-héberger le core ffmpeg (fiable)
+Au lieu de pointer vers unpkg, copier `ffmpeg-core.js` + `ffmpeg-core.wasm` depuis `node_modules/@ffmpeg/core/dist/umd/` vers `public/ffmpeg/` et y pointer en URL relative. Plus de cross-origin, plus de dépendance CDN.
 
-### 1. Test de lecture audio (nouveau, le plus important)
+```ts
+// videoConvert.ts
+const CORE_BASE = "/ffmpeg";
+await ffmpeg.load({
+  coreURL: `${CORE_BASE}/ffmpeg-core.js`,
+  wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
+});
+```
 
-Ajouter une carte « Son » qui demande au candidat d'appuyer sur **« Tester le son »**. Au clic :
+Ajouter `@ffmpeg/core` aux dépendances (il n'est probablement pas installé, ce qui est aussi une cause possible — le `toBlobURL` actuel évitait l'install mais introduisait la fragilité CDN).
 
-- Lecture d'un court bip (≈ 1 s, fichier déjà inclus comme data-URI silencieuse pour iOS, mais on utilisera un vrai bip audible).
-- Si la lecture aboutit → coche verte « Son OK ».
-- Si `play()` est rejeté ou si rien ne sort (détecté via `ontimeupdate` qui ne progresse pas en 2 s) → message bloquant : *« Votre navigateur a bloqué le son. Vérifiez que le mode silencieux est désactivé et autorisez le son pour ce site. »* + bouton **Réessayer**.
-- Sur iOS, on en profite pour « débloquer » l'instance audio dans le geste utilisateur (utile pour la suite).
+### 2. Remonter l'erreur à l'utilisateur
+Dans `SessionDetail.tsx`, en cas d'échec de conversion, afficher un toast d'avertissement explicite (pas seulement console.warn) pour que l'utilisateur comprenne que des `.webm` sont inclus. Déjà partiellement fait via le README mais invisible pendant le téléchargement.
 
-Ce test ne peut pas être contourné : sans son, pas de session.
+### 3. Pré-vérifier que ffmpeg charge avant de lancer le ZIP
+Appeler `await preloadFFmpeg()` (au lieu de fire-and-forget) au tout début de `handleDownloadFullVideo`. Si le chargement plante, afficher une erreur claire et proposer le téléchargement WebM en fallback explicite plutôt que de lancer la conversion segment par segment qui échouera 9 fois.
 
-### 2. Détection du navigateur
+### 4. Vérifier la console au prochain run
+Une fois corrigé, si ça échoue encore, les logs pointeront la vraie cause (ex. SharedArrayBuffer manquant — auquel cas il faudrait ajouter les en-têtes COOP/COEP, mais le build mono-thread `@ffmpeg/core` ne devrait pas en avoir besoin).
 
-Au montage de la page, on détecte les cas non supportés et on affiche un **écran bloquant** avant même les tests :
+## Fichiers modifiés
 
-- In-app browsers : TikTok, Instagram, Facebook, LinkedIn, Snapchat (regex sur `userAgent`).
-- Firefox iOS (n'expose pas `MediaRecorder`).
-- Absence de `MediaRecorder`, `getUserMedia`, ou `AudioContext`.
+- `package.json` — ajouter `@ffmpeg/core@0.12.6`
+- `public/ffmpeg/ffmpeg-core.js` (copié depuis node_modules)
+- `public/ffmpeg/ffmpeg-core.wasm` (copié depuis node_modules)
+- `src/lib/videoConvert.ts` — pointer vers `/ffmpeg/` au lieu d'unpkg, supprimer `toBlobURL`
+- `src/pages/SessionDetail.tsx` — `await preloadFFmpeg()` avec gestion d'erreur, toast explicite si fallback WebM
 
-Message clair : *« Votre navigateur ne permet pas de réaliser l'entretien. Ouvrez ce lien dans Safari (iPhone) ou Chrome (Android / ordinateur). »* + bouton **Copier le lien**.
+## Résultat attendu
 
-### 3. Vérification `MediaRecorder` réelle
-
-Aujourd'hui on teste juste `getUserMedia`. On va aussi instancier un `MediaRecorder` sur le flux audio + récupérer 1 chunk via `start(250)` puis `stop()`. Si aucun chunk n'arrive en 2 s → erreur explicite.
-
-### 4. Débit minimum bloquant
-
-Le débit est mesuré mais permissif. On passe à :
-
-- **≥ 600 kb/s** → vert, continuer.
-- **300 – 600 kb/s** → orange, continuer avec avertissement *« Connexion limitée, certaines questions peuvent mettre du temps à charger. »*
-- **< 300 kb/s** → **bloquant**. Bouton **Refaire le test** + suggestion *« Rapprochez-vous du Wi-Fi ou passez en 4G. »*
-
-### 5. Suppression de l'auto-avance prématurée
-
-Aujourd'hui, dès que micro + caméra sont OK, on lance un timer de 1,2 s qui passe à l'écran suivant — **sans attendre le test son ni le test débit**. On retire cet auto-skip et on attend que **les 4 tests soient verts** (ou orange acceptés) pour activer le bouton **Commencer**.
-
-### 6. Lien « Passer » conservé mais discret
-
-Pour ne pas bloquer les sessions de démo internes, le lien « Passer » reste, mais déplacé tout en bas avec un libellé court.
-
-## Détails techniques
-
-- **Fichier modifié principal :** `src/pages/InterviewDeviceTest.tsx`.
-- Nouveau bip audio : data-URI inline ou petit fichier dans `public/` (~5 kB).
-- Détection in-app browser : helper local `detectUnsupportedBrowser()` retournant `{ supported: boolean, reason?: string, suggestion?: string }`.
-- Test `MediaRecorder` : helper async qui fait `getUserMedia` → `new MediaRecorder` → `start(250)` → attendre 1 chunk → `stop()` + cleanup tracks.
-- Pas de changement côté `InterviewStart.tsx`, ni côté backend.
-
-## Hors périmètre (pour plus tard si besoin)
-
-- Watchdog de récupération en cours d'entretien (option B précédente).
-- Logs analytiques pour mesurer combien de candidats sont bloqués par chaque test.
-
-Si tu valides je l'implémente.
+Après correction, l'archive ZIP contient bien des fichiers `.mp4` lisibles directement dans QuickTime, VLC, PowerPoint, etc. Si jamais ffmpeg ne charge pas (cas extrême), un toast d'avertissement s'affiche et le ZIP contient des `.webm` avec une note explicite dans le README.
