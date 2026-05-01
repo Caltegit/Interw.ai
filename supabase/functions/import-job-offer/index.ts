@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
+const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
