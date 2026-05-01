@@ -8,12 +8,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *  2. Mesures runtime des appels TTS (octets reçus / durée) — EWMA pour lisser.
  *
  * Renvoie un `tier`:
- *  - "good"     : > 1.5 Mbps               → relances normales
- *  - "degraded" : 0.5 – 1.5 Mbps           → 1 relance max
- *  - "poor"     : < 0.5 Mbps ou 2g/slow-2g → aucune relance
+ *  - "good"     : > 600 kbps                → relances normales
+ *  - "degraded" : 150 – 600 kbps            → 1 relance max
+ *  - "poor"     : < 150 kbps soutenus, ou 2g/slow-2g → aucune relance
  *
- * Le helper `recordTtsTiming(bytes, ms)` permet de nourrir l'EWMA après chaque
- * appel TTS réussi.
+ * Stratégie anti-faux-positifs :
+ *  - Le premier appel TTS est ignoré (cold-start ElevenLabs).
+ *  - Il faut au moins 3 échantillons avant de pouvoir dégrader le tier.
+ *  - Le passage en "poor" exige 2 mesures consécutives sous le seuil.
+ *  - EWMA très lissée (alpha = 0.15) pour absorber les pics ponctuels.
  */
 export type NetworkTier = "good" | "degraded" | "poor";
 
@@ -23,22 +26,26 @@ interface NetworkQualityState {
   effectiveType: string | null;
 }
 
-const EWMA_ALPHA = 0.4; // Poids des nouvelles mesures (réactif).
+const EWMA_ALPHA = 0.15;
+const MIN_SAMPLES_BEFORE_DOWNGRADE = 3;
+const POOR_THRESHOLD_KBPS = 150;
+const DEGRADED_THRESHOLD_KBPS = 600;
 
-function tierFromKbps(kbps: number | null, effectiveType: string | null): NetworkTier {
+function rawTierFromKbps(kbps: number | null, effectiveType: string | null): NetworkTier {
   if (effectiveType === "2g" || effectiveType === "slow-2g") return "poor";
   if (kbps == null) {
-    // Pas de mesure : on se fie à effectiveType.
     if (effectiveType === "3g") return "degraded";
     return "good";
   }
-  if (kbps < 500) return "poor";
-  if (kbps < 1500) return "degraded";
+  if (kbps < POOR_THRESHOLD_KBPS) return "poor";
+  if (kbps < DEGRADED_THRESHOLD_KBPS) return "degraded";
   return "good";
 }
 
 export function useNetworkQuality() {
   const ewmaRef = useRef<number | null>(null);
+  const samplesCountRef = useRef<number>(0);
+  const consecutiveLowRef = useRef<number>(0);
   const [state, setState] = useState<NetworkQualityState>({
     tier: "good",
     measuredKbps: null,
@@ -53,18 +60,12 @@ export function useNetworkQuality() {
 
     const refresh = () => {
       const effectiveType: string | null = conn.effectiveType ?? null;
-      const downlinkMbps: number | null =
-        typeof conn.downlink === "number" ? conn.downlink : null;
-      const downlinkKbps = downlinkMbps != null ? downlinkMbps * 1000 : null;
-
-      // Initialise l'EWMA avec la valeur de l'API si on n'a encore aucune mesure.
-      if (ewmaRef.current == null && downlinkKbps != null) {
-        ewmaRef.current = downlinkKbps;
-      }
-
+      // On ne dérive plus de tier mesuré depuis navigator.connection (downlink
+      // est une estimation très optimiste). On garde uniquement effectiveType
+      // comme garde-fou pour 2g/slow-2g.
       setState((prev) => ({
-        tier: tierFromKbps(ewmaRef.current ?? downlinkKbps, effectiveType),
-        measuredKbps: ewmaRef.current ?? downlinkKbps,
+        tier: resolveTier(ewmaRef.current, effectiveType, samplesCountRef.current, consecutiveLowRef.current),
+        measuredKbps: ewmaRef.current,
         effectiveType,
       }));
     };
@@ -84,24 +85,34 @@ export function useNetworkQuality() {
     if (!Number.isFinite(bytes) || !Number.isFinite(ms) || bytes <= 0 || ms <= 0) {
       return;
     }
-    // kbps = (bytes * 8 / 1000) / (ms / 1000) = bytes * 8 / ms
+    samplesCountRef.current += 1;
+
+    // Cold-start ElevenLabs : le premier appel n'alimente pas la moyenne.
+    if (samplesCountRef.current === 1) {
+      return;
+    }
+
     const kbps = (bytes * 8) / ms;
     const prev = ewmaRef.current;
     const next = prev == null ? kbps : prev * (1 - EWMA_ALPHA) + kbps * EWMA_ALPHA;
     ewmaRef.current = next;
 
+    if (kbps < POOR_THRESHOLD_KBPS) {
+      consecutiveLowRef.current += 1;
+    } else {
+      consecutiveLowRef.current = 0;
+    }
+
     const conn: any =
       typeof navigator !== "undefined" ? (navigator as any).connection : null;
     const effectiveType: string | null = conn?.effectiveType ?? null;
     setState({
-      tier: tierFromKbps(next, effectiveType),
+      tier: resolveTier(next, effectiveType, samplesCountRef.current, consecutiveLowRef.current),
       measuredKbps: next,
       effectiveType,
     });
   }, []);
 
-  // Helper pour obtenir le plafond de relances selon le tier.
-  // 0 = aucune relance, 1 = max 1, undefined = pas d'override.
   const getForceMaxFollowUps = useCallback((): number | undefined => {
     switch (state.tier) {
       case "poor":
@@ -120,4 +131,29 @@ export function useNetworkQuality() {
     recordTtsTiming,
     getForceMaxFollowUps,
   };
+}
+
+/**
+ * Résout le tier final en appliquant les règles anti-faux-positifs :
+ *  - 2g/slow-2g => "poor" sans condition (priorité au signal navigateur).
+ *  - Moins de 3 échantillons mesurés => on reste "good" (sauf 2g).
+ *  - "poor" requiert 2 mesures consécutives sous le seuil (sinon "degraded" max).
+ */
+function resolveTier(
+  kbps: number | null,
+  effectiveType: string | null,
+  samplesCount: number,
+  consecutiveLow: number,
+): NetworkTier {
+  if (effectiveType === "2g" || effectiveType === "slow-2g") return "poor";
+
+  if (samplesCount < MIN_SAMPLES_BEFORE_DOWNGRADE) {
+    return "good";
+  }
+
+  const raw = rawTierFromKbps(kbps, effectiveType);
+  if (raw === "poor" && consecutiveLow < 2) {
+    return "degraded";
+  }
+  return raw;
 }
