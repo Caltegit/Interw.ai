@@ -1,15 +1,23 @@
 /**
  * Conversion WebM → MP4 (H.264 + AAC) via ffmpeg.wasm, dans le navigateur.
  *
- * - Singleton : ffmpeg.wasm n'est chargé qu'une fois (~30 Mo cachés ensuite).
- * - Lazy import dynamique pour ne pas alourdir le bundle initial.
+ * - Variante ESM du cœur (recommandée avec Vite). Auto-hébergée dans
+ *   /public/ffmpeg/ pour éviter toute dépendance CDN externe.
+ * - Le cœur ESM est chargé via `import()` dynamique côté worker, ce qui
+ *   exige de passer un `coreURL` en blob:// (sinon Vite tente de le résoudre
+ *   à la compilation et le worker plante en production).
+ * - Singleton : ffmpeg.wasm n'est chargé qu'une fois.
  * - Si le blob d'entrée est déjà un MP4 (iOS), on le retourne tel quel.
- * - En cas d'échec, le caller décide du fallback (typiquement : garder le WebM).
  */
 
 type FFmpegInstance = {
   loaded: boolean;
-  load: (opts?: { coreURL?: string; wasmURL?: string }) => Promise<void>;
+  load: (opts?: {
+    coreURL?: string;
+    wasmURL?: string;
+    workerURL?: string;
+    classWorkerURL?: string;
+  }) => Promise<void>;
   writeFile: (path: string, data: Uint8Array) => Promise<void>;
   readFile: (path: string) => Promise<Uint8Array>;
   deleteFile: (path: string) => Promise<void>;
@@ -18,10 +26,17 @@ type FFmpegInstance = {
 };
 
 let ffmpegPromise: Promise<FFmpegInstance> | null = null;
+let lastLoadError: unknown = null;
 
-// Core ffmpeg auto-hébergé dans /public/ffmpeg/ pour éviter toute dépendance
-// CDN externe (CSP, blocages réseau, indisponibilité unpkg).
 const CORE_BASE = "/ffmpeg";
+
+/** Convertit une URL distante (même origine) en blob URL avec un MIME explicite. */
+async function toBlobURL(url: string, mimeType: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Échec téléchargement ${url} (HTTP ${res.status})`);
+  const buf = await res.arrayBuffer();
+  return URL.createObjectURL(new Blob([buf], { type: mimeType }));
+}
 
 async function getFFmpeg(
   onProgress?: (ratio: number) => void,
@@ -33,17 +48,22 @@ async function getFFmpeg(
         const ffmpeg = new FFmpeg() as unknown as FFmpegInstance;
 
         ffmpeg.on("log", ({ message }: { message: string }) => {
-          // Logs ffmpeg utiles au debug ; silencieux en prod si console filtrée.
           console.debug("[ffmpeg]", message);
         });
 
-        await ffmpeg.load({
-          coreURL: `${CORE_BASE}/ffmpeg-core.js`,
-          wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
-        });
+        // Le worker importe le cœur via import() dynamique : il faut donc
+        // un coreURL transformable en module ES. On passe par toBlobURL
+        // pour garantir le bon Content-Type et bypasser tout souci CORS.
+        const [coreURL, wasmURL] = await Promise.all([
+          toBlobURL(`${CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+          toBlobURL(`${CORE_BASE}/ffmpeg-core.wasm`, "application/wasm"),
+        ]);
+
+        await ffmpeg.load({ coreURL, wasmURL });
+        lastLoadError = null;
         return ffmpeg;
       } catch (err) {
-        // Reset pour permettre une nouvelle tentative au prochain appel.
+        lastLoadError = err;
         ffmpegPromise = null;
         throw err;
       }
@@ -63,30 +83,24 @@ async function getFFmpeg(
   return ffmpeg;
 }
 
-/**
- * Indique si le navigateur peut probablement faire tourner ffmpeg.wasm
- * (présence de SharedArrayBuffer, requise par les builds threadés ; en
- * mode mono-thread on n'en a pas besoin, donc on retourne true par défaut).
- */
 export function canConvertVideo(): boolean {
   if (typeof window === "undefined") return false;
-  // Le build mono-thread n'exige pas COOP/COEP.
   return typeof WebAssembly !== "undefined";
 }
 
-/**
- * Précharge ffmpeg.wasm sans rien convertir — utile pour démarrer le download
- * du core en parallèle du fetch des segments.
- */
+/** Précharge ffmpeg.wasm (téléchargement du cœur ~30 Mo, mis en cache ensuite). */
 export function preloadFFmpeg(): Promise<unknown> {
   return getFFmpeg();
 }
 
+export function getLastFFmpegError(): unknown {
+  return lastLoadError;
+}
+
 /**
  * Convertit un blob vidéo en MP4 H.264/AAC.
- * Si le blob est déjà un MP4, retourne le blob tel quel (sans appeler ffmpeg).
- *
- * @throws en cas d'échec ffmpeg — le caller doit gérer le fallback.
+ * Si le blob est déjà un MP4, le retourne tel quel.
+ * @throws en cas d'échec ffmpeg — le caller gère le fallback.
  */
 export async function convertToMp4(
   blob: Blob,
@@ -99,7 +113,6 @@ export async function convertToMp4(
 
   const ffmpeg = await getFFmpeg(opts?.onProgress);
 
-  // Nom unique pour éviter toute collision si plusieurs conversions séquentielles.
   const id = Math.random().toString(36).slice(2, 10);
   const inputName = `in-${id}.webm`;
   const outputName = `out-${id}.mp4`;
@@ -107,9 +120,6 @@ export async function convertToMp4(
   const buf = new Uint8Array(await blob.arrayBuffer());
   await ffmpeg.writeFile(inputName, buf);
 
-  // -preset ultrafast : ~1× temps réel sur laptop standard.
-  // -crf 23 : qualité visuelle proche de l'original.
-  // -movflags +faststart : permet la lecture progressive sans buffering complet.
   const code = await ffmpeg.exec([
     "-i",
     inputName,
@@ -135,7 +145,6 @@ export async function convertToMp4(
   }
 
   const data = await ffmpeg.readFile(outputName);
-  // Nettoyage du système de fichiers virtuel pour éviter d'accumuler la RAM.
   try { await ffmpeg.deleteFile(inputName); } catch { /* ignore */ }
   try { await ffmpeg.deleteFile(outputName); } catch { /* ignore */ }
 
