@@ -139,6 +139,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
   // State (initialised from props.initial — copied so parent stays decoupled)
