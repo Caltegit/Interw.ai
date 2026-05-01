@@ -605,10 +605,10 @@ export default function ProjectDetail() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>Supprimer cet session ?</AlertDialogTitle>
+                                    <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Cette action supprimera l'session de {s.candidate_name}, y compris la transcription,
-                                      le rapport et les vidéos associées. Cette action est irréversible.
+                                      Cette action supprimera la session de {s.candidate_name}, y compris la transcription,
+                                      les messages et le rapport. Irréversible.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -616,22 +616,21 @@ export default function ProjectDetail() {
                                     <AlertDialogAction
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       onClick={async () => {
-                                        const { data: reports } = await supabase
-                                          .from("reports")
-                                          .select("id")
-                                          .eq("session_id", s.id);
-                                        if (reports && reports.length > 0) {
-                                          await supabase
-                                            .from("report_shares")
-                                            .delete()
-                                            .in("report_id", reports.map((r) => r.id));
+                                        const { data, error } = await supabase.functions.invoke(
+                                          "delete-session",
+                                          { body: { session_id: s.id } },
+                                        );
+                                        if (error || (data as any)?.error) {
+                                          toast({
+                                            title: "Suppression impossible",
+                                            description:
+                                              (data as any)?.error || error?.message || "Erreur inconnue",
+                                            variant: "destructive",
+                                          });
+                                          return;
                                         }
-                                        await supabase.from("session_messages").delete().eq("session_id", s.id);
-                                        await supabase.from("reports").delete().eq("session_id", s.id);
-                                        await supabase.from("transcripts").delete().eq("session_id", s.id);
-                                        await supabase.from("sessions").delete().eq("id", s.id);
                                         setSessions((prev) => prev.filter((ss) => ss.id !== s.id));
-                                        toast({ title: "Session supprimé" });
+                                        toast({ title: "Session supprimée" });
                                       }}
                                     >
                                       Supprimer

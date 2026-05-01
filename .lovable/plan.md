@@ -1,46 +1,73 @@
 ## Diagnostic
 
-Le code de conversion est bien en place dans `handleDownloadFullVideo` (SessionDetail.tsx) et appelle `convertToMp4()` pour chaque segment. Mais la conversion échoue silencieusement et tombe dans le fallback `catch` → écrit le WebM original. C'est pourquoi tu reçois toujours des `.webm`.
+La suppression d'une session est appelée à 2 endroits : `src/pages/Dashboard.tsx` et `src/pages/ProjectDetail.tsx`. Les deux exécutent la même cascade côté client : `report_shares` → `session_messages` → `reports` → `transcripts` → `sessions`.
 
-**Cause racine** : `videoConvert.ts` charge le core ffmpeg.wasm depuis le CDN `unpkg.com` via `toBlobURL`. Deux problèmes courants empêchent ce chargement :
+### Bugs identifiés
 
-1. **`toBlobURL` fait un `fetch()` cross-origin** vers unpkg. En production sur `interw.ai`, la CSP ou un blocage réseau peut faire échouer ce fetch.
-2. **Le worker ffmpeg lui-même** (`814.ffmpeg.js`) est aussi chargé depuis le bundle et peut échouer si non bundlé correctement par Vite.
-3. **Aucun log visible** côté utilisateur : l'erreur tombe dans `console.warn` puis silencieusement en fallback `.webm`. L'utilisateur ne sait pas pourquoi.
+**1. Les politiques RLS DELETE ne couvrent QUE le créateur du projet.**
+Les 4 politiques DELETE actuelles (`sessions`, `session_messages`, `reports`, `transcripts`) utilisent uniquement la condition `projects.created_by = auth.uid()`. Elles n'incluent ni `is_super_admin(auth.uid())`, ni l'appartenance à l'organisation (`organization_id = get_user_organization_id(auth.uid())`).
 
-## Correctifs
+Conséquences :
+- Un super-admin **non impersonné** voit les sessions de toutes les orgs (politique SELECT le permet) mais **ne peut pas les supprimer** : le DELETE est silencieusement ignoré par RLS.
+- Un utilisateur RH d'une org qui essaie de supprimer la session d'un projet créé par un **collègue de la même org** est aussi bloqué. Seul le créateur exact peut supprimer.
+- Lors d'une **impersonation**, ça marche uniquement si le user impersonné est lui-même le `created_by` du projet de la session.
 
-### 1. Auto-héberger le core ffmpeg (fiable)
-Au lieu de pointer vers unpkg, copier `ffmpeg-core.js` + `ffmpeg-core.wasm` depuis `node_modules/@ffmpeg/core/dist/umd/` vers `public/ffmpeg/` et y pointer en URL relative. Plus de cross-origin, plus de dépendance CDN.
+**2. Aucune remontée d'erreur côté UI.**
+Les deux pages ignorent les erreurs Supabase et affichent toujours « Session supprimé ». Sur Dashboard, le hook React Query rafraîchit, donc la ligne réapparaît → l'utilisateur a l'impression que ça plante. Sur ProjectDetail, `setSessions(prev => prev.filter(...))` retire la ligne localement même si la BDD n'a rien fait — la session « réapparaît » au prochain rechargement.
 
-```ts
-// videoConvert.ts
-const CORE_BASE = "/ffmpeg";
-await ffmpeg.load({
-  coreURL: `${CORE_BASE}/ffmpeg-core.js`,
-  wasmURL: `${CORE_BASE}/ffmpeg-core.wasm`,
-});
+**3. Suppressions partielles non transactionnelles.**
+Les 5 deletes sont 5 requêtes séquentielles côté client. Si la 3e échoue (RLS, réseau), on garde des orphelins (`session_messages` supprimés, `sessions` toujours là).
+
+## Plan de correction
+
+### A. Élargir les politiques RLS DELETE (migration)
+
+Étendre les 4 politiques DELETE pour couvrir : créateur du projet **OU** membre de la même org **OU** super-admin. Cohérent avec les politiques UPDATE/SELECT existantes sur `projects`.
+
+```sql
+-- sessions
+DROP POLICY "Users can delete own project sessions" ON public.sessions;
+CREATE POLICY "Org members can delete sessions" ON public.sessions
+FOR DELETE TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM projects p
+    WHERE p.id = sessions.project_id AND (
+      p.created_by = auth.uid()
+      OR p.organization_id = get_user_organization_id(auth.uid())
+      OR is_super_admin(auth.uid())
+    )
+  )
+);
 ```
 
-Ajouter `@ffmpeg/core` aux dépendances (il n'est probablement pas installé, ce qui est aussi une cause possible — le `toBlobURL` actuel évitait l'install mais introduisait la fragilité CDN).
+Même schéma pour `session_messages`, `reports`, `transcripts`.
 
-### 2. Remonter l'erreur à l'utilisateur
-Dans `SessionDetail.tsx`, en cas d'échec de conversion, afficher un toast d'avertissement explicite (pas seulement console.warn) pour que l'utilisateur comprenne que des `.webm` sont inclus. Déjà partiellement fait via le README mais invisible pendant le téléchargement.
+### B. Centraliser la suppression dans une edge function (recommandé)
 
-### 3. Pré-vérifier que ffmpeg charge avant de lancer le ZIP
-Appeler `await preloadFFmpeg()` (au lieu de fire-and-forget) au tout début de `handleDownloadFullVideo`. Si le chargement plante, afficher une erreur claire et proposer le téléchargement WebM en fallback explicite plutôt que de lancer la conversion segment par segment qui échouera 9 fois.
+Créer `supabase/functions/delete-session/index.ts` qui :
+- Vérifie le JWT du caller.
+- Vérifie via la fonction RPC que le caller a le droit (créateur, membre org, ou super-admin).
+- Exécute la cascade côté serveur avec le service role (atomique, fiable, indépendant de RLS).
+- Retourne `{ success: true }` ou une erreur explicite.
 
-### 4. Vérifier la console au prochain run
-Une fois corrigé, si ça échoue encore, les logs pointeront la vraie cause (ex. SharedArrayBuffer manquant — auquel cas il faudrait ajouter les en-têtes COOP/COEP, mais le build mono-thread `@ffmpeg/core` ne devrait pas en avoir besoin).
+Avantage : un seul endroit à maintenir, pas de désync entre Dashboard et ProjectDetail, et marche même si on oublie d'étendre une RLS plus tard sur une table jointe.
+
+### C. Mettre à jour les 2 pages d'appel
+
+Dans `Dashboard.tsx` et `ProjectDetail.tsx` : remplacer la cascade en 5 deletes par un seul `supabase.functions.invoke("delete-session", { body: { session_id } })`. Afficher un toast d'erreur explicite si échec, ne pas retirer la ligne localement avant la confirmation.
 
 ## Fichiers modifiés
 
-- `package.json` — ajouter `@ffmpeg/core@0.12.6`
-- `public/ffmpeg/ffmpeg-core.js` (copié depuis node_modules)
-- `public/ffmpeg/ffmpeg-core.wasm` (copié depuis node_modules)
-- `src/lib/videoConvert.ts` — pointer vers `/ffmpeg/` au lieu d'unpkg, supprimer `toBlobURL`
-- `src/pages/SessionDetail.tsx` — `await preloadFFmpeg()` avec gestion d'erreur, toast explicite si fallback WebM
+- **Migration SQL** : étendre les 4 policies DELETE (`sessions`, `session_messages`, `reports`, `transcripts`) — filet de sécurité même si on garde la logique côté edge.
+- `supabase/functions/delete-session/index.ts` (nouveau) — cascade serveur centralisée avec contrôle d'accès.
+- `src/pages/Dashboard.tsx` — appel de la nouvelle fonction + gestion d'erreur visible.
+- `src/pages/ProjectDetail.tsx` — idem.
 
 ## Résultat attendu
 
-Après correction, l'archive ZIP contient bien des fichiers `.mp4` lisibles directement dans QuickTime, VLC, PowerPoint, etc. Si jamais ffmpeg ne charge pas (cas extrême), un toast d'avertissement s'affiche et le ZIP contient des `.webm` avec une note explicite dans le README.
+Suppression fonctionnelle dans tous les scénarios :
+1. RH créateur du projet ✅
+2. RH collègue de la même org ✅ (nouveau)
+3. Super-admin sur son propre compte, n'importe quelle org ✅ (nouveau)
+4. Super-admin impersonant n'importe quel user ✅
+5. Erreurs (réseau, droit refusé) remontées dans un toast au lieu d'un faux succès silencieux ✅

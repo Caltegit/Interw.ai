@@ -440,9 +440,9 @@ export default function Dashboard() {
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Supprimer cet session ?</AlertDialogTitle>
+                                <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Cette action supprimera l'session de {session.candidate_name} et
+                                  Cette action supprimera la session de {session.candidate_name} et
                                   toutes les données associées. Irréversible.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
@@ -451,30 +451,23 @@ export default function Dashboard() {
                                 <AlertDialogAction
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   onClick={async () => {
-                                    const { data: reports } = await supabase
-                                      .from("reports")
-                                      .select("id")
-                                      .eq("session_id", session.id);
-                                    if (reports && reports.length > 0) {
-                                      await supabase
-                                        .from("report_shares")
-                                        .delete()
-                                        .in("report_id", reports.map((r) => r.id));
+                                    const { data, error } = await supabase.functions.invoke(
+                                      "delete-session",
+                                      { body: { session_id: session.id } },
+                                    );
+                                    if (error || (data as any)?.error) {
+                                      toast({
+                                        title: "Suppression impossible",
+                                        description:
+                                          (data as any)?.error || error?.message || "Erreur inconnue",
+                                        variant: "destructive",
+                                      });
+                                      return;
                                     }
-                                    await supabase
-                                      .from("session_messages")
-                                      .delete()
-                                      .eq("session_id", session.id);
-                                    await supabase.from("reports").delete().eq("session_id", session.id);
-                                    await supabase
-                                      .from("transcripts")
-                                      .delete()
-                                      .eq("session_id", session.id);
-                                    await supabase.from("sessions").delete().eq("id", session.id);
                                     if (user?.id) {
                                       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
                                     }
-                                    toast({ title: "Session supprimé" });
+                                    toast({ title: "Session supprimée" });
                                   }}
                                 >
                                   Supprimer
