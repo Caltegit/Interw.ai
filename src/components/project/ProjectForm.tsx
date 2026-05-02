@@ -409,8 +409,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 </Select>
               </div>
               <div>
-                <Label>Nom de l'interviewer IA</Label>
-                <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
+                <Label>Nom du recruteur IA</Label>
+                <Input placeholder="Marie" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
@@ -440,7 +440,23 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </RadioGroup>
                 </div>
 
-                <div className="pt-2 border-t border-border">
+                <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Voix réaliste haute qualité (+1 crédit/session). Si désactivé, voix standard.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={ttsProvider === "elevenlabs"}
+                    onCheckedChange={(v) => {
+                      if (v) setVoiceDialogOpen(true);
+                      else setTtsProvider("browser");
+                    }}
+                  />
+                </div>
+
+                {ttsProvider === "elevenlabs" && (
                   <button
                     type="button"
                     onClick={() => setVoiceDialogOpen(true)}
@@ -448,7 +464,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   >
                     Modifier la voix
                   </button>
-                </div>
+                )}
               </div>
 
               <VoiceSelectorDialog
@@ -461,7 +477,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   setTtsVoiceId(id);
                   setTtsProvider("elevenlabs");
                 }}
-                onCancel={() => {}}
+                onCancel={() => {
+                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
+                }}
               />
 
               <div>
