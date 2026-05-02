@@ -89,3 +89,53 @@ export function useCreateReportShare(sessionId: string | undefined) {
     },
   });
 }
+
+export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_opinion";
+
+export function useUpdateRecruiterDecision(sessionId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      decision,
+      userId,
+    }: {
+      decision: RecruiterDecision;
+      userId: string;
+    }) => {
+      const { error } = await supabase
+        .from("sessions")
+        .update({
+          recruiter_decision: decision,
+          recruiter_decision_at: decision === "none" ? null : new Date().toISOString(),
+          recruiter_decision_by: decision === "none" ? null : userId,
+        } as never)
+        .eq("id", sessionId as string);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
+    },
+  });
+}
+
+export function useRegenerateReport(sessionId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!sessionId) throw new Error("Session manquante");
+      // Supprime l'ancien rapport pour permettre la régénération
+      const { error: delErr } = await supabase
+        .from("reports")
+        .delete()
+        .eq("session_id", sessionId);
+      if (delErr) throw delErr;
+      const { error } = await supabase.functions.invoke("generate-report", {
+        body: { session_id: sessionId },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
+    },
+  });
+}
