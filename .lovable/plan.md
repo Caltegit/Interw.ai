@@ -1,65 +1,83 @@
-# Créer une session depuis un lien d'offre d'emploi
+## Objectif
 
-## Emplacement
-Dans `ProjectForm.tsx` (étape 0, mode création), à **gauche** du bouton existant "Démarrer depuis un session type" :
+Ajouter 10 questions de type "énigme" dans la bibliothèque de questions, présentes dans **toutes les organisations** (existantes + futures).
 
-> **"Démarrer depuis une offre existante"**
+## Spécifications par énigme
+- **Titre** : `Énigmes - {Nom de l'énigme}`
+- **Catégorie** : `Énigmes` (nouvelle catégorie)
+- **Contenu** : énoncé clair de l'énigme + invite à expliquer son raisonnement à voix haute
+- **Timer (max_response_seconds)** : 180 (3 minutes)
+- **Relance** : désactivée (`follow_up_enabled = false`, `max_follow_ups = 0`)
+- **Type** : `written`
 
-## Pop-up "Importer une offre"
+## Liste des 10 énigmes proposées
 
-| Champ | Défaut |
-|---|---|
-| Lien de l'offre (obligatoire) | vide |
-| Intro | première intro de la bibliothèque de l'organisation, activée par défaut |
-| Nombre de questions | **10** |
-| Nombre de critères | **3** |
-| Voix IA | **dernière voix utilisée** par le recruteur |
+Mix logique / latéral / quantitatif (classiques d'entretien type cabinet conseil, FAANG) :
 
-Bouton **"Générer la session"** avec loader (étapes : "Lecture de l'offre…" → "Génération des questions…").
+1. **Énigmes - Les 3 ampoules** — 3 interrupteurs au rez-de-chaussée, 3 ampoules à l'étage. Identifier en une seule montée.
+2. **Énigmes - Les 9 billes** — Trouver la bille plus lourde parmi 9 en 2 pesées max.
+3. **Énigmes - Les 2 cordes** — Mesurer 45 minutes avec 2 cordes brûlant en 1h chacune (combustion non uniforme).
+4. **Énigmes - Le pont et la lampe** — 4 personnes, 1 lampe, traversée d'un pont en 17 min max.
+5. **Énigmes - Les 100 prisonniers et le chapeau** — Stratégie collective pour maximiser les survivants.
+6. **Énigmes - Pourquoi les plaques d'égout sont rondes ?** — Question de raisonnement ouvert.
+7. **Énigmes - Combien de balles de tennis dans un bus ?** — Estimation Fermi.
+8. **Énigmes - Les 2 seaux** — Mesurer exactement 4 L avec un seau de 3 L et un de 5 L.
+9. **Énigmes - Le chameau et les bananes** — Transport optimal de 3000 bananes sur 1000 km.
+10. **Énigmes - L'horloge cassée** — À quel moment précis aiguilles superposées entre midi et 13h ?
 
-Au succès, le formulaire en cours est pré-rempli (titre, intro, questions personnalisées, critères pondérés, voix). Le recruteur ajuste puis sauvegarde normalement.
+Chaque contenu se termine par : *"Prenez le temps de réfléchir à voix haute et expliquez-nous votre raisonnement, même si vous ne trouvez pas la réponse exacte. À vous."*
 
-## Logique technique
+## Implémentation technique
 
-### 1. Connecteur Firecrawl
-Activation du connecteur Firecrawl pour scraper la page de l'offre (gère JS et anti-bot, rend du markdown propre).
+### 1. Migration SQL
+Mettre à jour la fonction `seed_default_question_templates(_org_id, _created_by)` (définie dans `supabase/migrations/20260419211115_…sql`) :
+- Ajouter les 10 lignes énigmes au `VALUES`, en étendant le tuple pour inclure aussi `max_response_seconds`.
+- Modifier l'`INSERT` pour mapper `max_response_seconds` (180 pour les énigmes, NULL pour les autres) tout en gardant `follow_up_enabled = false` et `max_follow_ups = 0`.
 
-### 2. Edge function `import-job-offer`
-- Input : `{ url, questionsCount, criteriaCount }`
-- Auth : valide le JWT utilisateur
-- Étape 1 : Firecrawl `/scrape` (markdown, onlyMainContent) via le gateway
-- Étape 2 : Lovable AI (`google/gemini-2.5-flash`) avec **tool calling** pour produire un JSON strict :
-  - `title` (poste + entreprise)
-  - `questions[]` : exactement N questions ouvertes **personnalisées** (ancrées sur les missions, compétences et secteur de l'offre)
-  - `criteria[]` : exactement M critères (`label`, `description`, `weight` somme = 100), calibrés sur les compétences clés
-- Output : `{ title, questions, criteria }`
-- Gestion d'erreurs 429 / 402 remontée au client
+```text
+VALUES
+  (titre, contenu, catégorie, max_response_seconds)
+  ('Introduction parcours', '...', 'Expérience', NULL),
+  ...
+  ('Énigmes - Les 3 ampoules', '...', 'Énigmes', 180),
+  ...
+```
 
-### 3. Dernière voix utilisée
-Requête sur `projects` filtrée par `created_by = user.id`, triée `created_at desc limit 1`, lecture de `tts_provider`, `tts_voice_gender`, `tts_voice_id`. Fallback : voix par défaut actuelle.
+Le `WHERE NOT EXISTS` existant (déduplication par `title + organization_id`) garantit qu'aucun doublon n'est créé si la fonction est rejouée.
 
-### 4. Bibliothèque d'intros
-Lecture de `intro_templates` filtrée par `organization_id`. Le sélecteur affiche les intros disponibles ; pré-sélection de la plus récente. L'intro choisie alimente `introEnabled = true` + `introMode` + `introText` / `introAudioPreviewUrl` / `introVideoPreviewUrl` selon son type.
+### 2. Backfill toutes les organisations existantes
+Dans la même migration, après la redéfinition de la fonction :
 
-### 5. Composant `ImportFromJobDialog`
-`src/components/project/ImportFromJobDialog.tsx` :
-- Dialog shadcn avec les 5 champs
-- Validation URL (regex http/https)
-- Appel à l'edge function via `supabase.functions.invoke`
-- En succès : `onApply(payload)` qui pousse les valeurs dans le formulaire (pas de rechargement)
+```sql
+DO $$
+DECLARE _org RECORD; _creator uuid;
+BEGIN
+  FOR _org IN SELECT id, owner_id FROM public.organizations LOOP
+    _creator := _org.owner_id;
+    IF _creator IS NULL THEN
+      SELECT user_id INTO _creator FROM public.user_roles
+      WHERE organization_id = _org.id AND role = 'admin'::app_role
+      ORDER BY id LIMIT 1;
+    END IF;
+    IF _creator IS NULL THEN
+      SELECT user_id INTO _creator FROM public.user_roles
+      WHERE role = 'super_admin'::app_role ORDER BY id LIMIT 1;
+    END IF;
+    IF _creator IS NOT NULL THEN
+      PERFORM public.seed_default_question_templates(_org.id, _creator);
+    END IF;
+  END LOOP;
+END $$;
+```
 
-### 6. Intégration `ProjectForm.tsx`
-- `const [importOpen, setImportOpen] = useState(false)`
-- Bouton ajouté à gauche de l'existant
-- Handler `applyJobImport(payload)` qui met à jour : `setTitle`, `setQuestions`, `setCriteria`, voix, intro
+Le `NOT EXISTS` dans la fonction empêche de toucher aux questions existantes — seules les 10 énigmes seront ajoutées aux orgs déjà créées.
+
+### 3. Futures organisations
+Aucun changement nécessaire : le trigger `trg_seed_org_question_templates` appelle déjà `seed_default_question_templates` à chaque création d'organisation, qui inclura désormais les énigmes.
 
 ## Fichiers touchés
-- Créé : `supabase/functions/import-job-offer/index.ts`
-- Créé : `src/components/project/ImportFromJobDialog.tsx`
-- Modifié : `src/components/project/ProjectForm.tsx`
-- Activation : connecteur Firecrawl
+- **Créé** : nouvelle migration `supabase/migrations/<timestamp>_add_enigma_question_templates.sql`
 
-## Hors périmètre (V2)
-- Sauvegarde de l'URL source sur le projet
-- Détection auto de la langue
-- Extraction du logo entreprise
+## Hors périmètre
+- Pas de changement UI (les énigmes apparaîtront automatiquement dans `QuestionLibraryDialog` et dans la page "Bibliothèque > Questions").
+- Pas de catégorie figée côté code : la catégorie est un simple `text` libre, donc "Énigmes" sera proposée dynamiquement via le filtre de catégorie existant.
