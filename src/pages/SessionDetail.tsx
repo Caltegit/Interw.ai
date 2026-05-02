@@ -1,42 +1,39 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SessionStatusBadge } from "@/components/SessionStatusBadge";
-import {
-  ArrowLeft,
-  MessageSquare,
-  Share2,
-  Copy,
-  Check,
-  Play,
-  FileText,
-  Video,
-  Download,
-} from "lucide-react";
+import { ArrowLeft, MessageSquare, Play, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   useSessionDetail,
   useUpdateRecruiterNotes,
   useCreateReportShare,
+  useUpdateRecruiterDecision,
+  useRegenerateReport,
+  type RecruiterDecision,
 } from "@/hooks/queries/useSessionDetail";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
-import { OverviewHeader } from "@/components/session/OverviewHeader";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
-import { ExecutiveSummaryCard } from "@/components/session/ExecutiveSummaryCard";
-import { PersonalityRadar } from "@/components/session/PersonalityRadar";
-import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
-import { RedFlagsCard } from "@/components/session/RedFlagsCard";
-import { MotivationScoresCard } from "@/components/session/MotivationScoresCard";
-import { FollowupQuestionsCard } from "@/components/session/FollowupQuestionsCard";
+import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
+import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
+import { SignalsCard } from "@/components/session/SignalsCard";
+import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
+import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
+import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
+
+const formatDuration = (seconds?: number | null) => {
+  if (!seconds || seconds <= 0) return undefined;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m} min ${s.toString().padStart(2, "0")}`;
+};
 
 export default function SessionDetail() {
   const { id } = useParams();
@@ -51,12 +48,13 @@ export default function SessionDetail() {
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const [notesInitialized, setNotesInitialized] = useState(false);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("synthesis");
+  const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
-  
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
+  const updateDecision = useUpdateRecruiterDecision(id);
+  const regenerate = useRegenerateReport(id);
   const { data: projectAverages } = useProjectAverages(session?.project_id);
 
   const goToMessage = useCallback(
@@ -65,7 +63,6 @@ export default function SessionDetail() {
       if (idx === -1) return;
       setActiveTab("transcript");
       setActiveMessageIndex(idx);
-      // Petit délai pour laisser l'onglet se rendre avant le scroll
       setTimeout(() => {
         const el = document.querySelector(`[data-index="${idx}"]`);
         el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -84,10 +81,10 @@ export default function SessionDetail() {
   useEffect(() => {
     if (!report?.id || !notesInitialized) return;
     if ((report.recruiter_notes ?? "") === recruiterNotes) return;
-    const timeout = setTimeout(() => {
+    const t = setTimeout(() => {
       updateNotes.mutate({ reportId: report.id, notes: recruiterNotes });
     }, 1000);
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(t);
   }, [recruiterNotes, report?.id, report?.recruiter_notes, notesInitialized]);
 
   const handleShare = async () => {
@@ -106,41 +103,28 @@ export default function SessionDetail() {
     await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Lien copié." });
-  };
-
-  const openVideoExport = () => {
-    const hasSegments = (messages as any[]).some(
-      (m: any) => !!m.video_segment_url && m.role === "candidate",
-    );
-    if (!hasSegments) {
-      toast({
-        title: "Vidéo indisponible",
-        description: "Aucun enregistrement vidéo n'a été trouvé pour cette session.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!id) return;
-    window.open(`/sessions/${id}/export`, "_blank", "noopener");
   };
 
   const candidateVideos = useMemo(
     () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
     [messages],
   );
+  const candidateMainVideos = useMemo(
+    () => candidateVideos.filter((m: any) => !m.is_follow_up),
+    [candidateVideos],
+  );
 
+  const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-
   const project = session?.projects;
-  const projectQuestions = (project?.questions as any[]) ?? [];
 
-  // Construit la vue "Questions" à partir des vidéos candidat (réponses principales,
-  // hors follow-ups). Joint l'évaluation IA via question_id quand disponible,
-  // sinon retombe sur l'index. Les vidéos sont toujours affichées, même sans IA.
+  const verdictHeadline =
+    stats.verdict_headline || report?.executive_summary_short || null;
+  const fitScore = typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
+
+  // Construit la vue Réponses (fusion vidéos + évaluations)
   const questionItems = useMemo(() => {
-    const mainAnswers = candidateVideos.filter((m: any) => !m.is_follow_up);
     const evalByQuestionId = new Map<string, any>();
     const evalByIndex = new Map<number, any>();
     Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
@@ -148,192 +132,178 @@ export default function SessionDetail() {
       if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
       if (val?.question_id) evalByQuestionId.set(val.question_id, val);
     });
+    const projectQuestions = (project?.questions as any[]) ?? [];
 
-    return mainAnswers.map((video: any, idx: number) => {
+    return candidateMainVideos.map((video: any, idx: number) => {
       const evalEntry =
         (video.question_id && evalByQuestionId.get(video.question_id)) ||
         evalByIndex.get(idx);
       const projectQ = video.question_id
         ? projectQuestions.find((q: any) => q.id === video.question_id)
         : projectQuestions[idx];
+
+      // Trouve la réponse texte du candidat liée à cette question (premier message non-follow-up)
+      const candidateMsg = messages.find(
+        (m: any) =>
+          m.role === "candidate" &&
+          !m.is_follow_up &&
+          (video.question_id ? m.question_id === video.question_id : true),
+      );
+
       return {
         index: idx,
-        video,
         questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
+        videoUrl: video.video_segment_url,
         score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
-        comment: evalEntry?.comment ?? "",
+        summary: evalEntry?.summary ?? null,
+        comment: evalEntry?.comment ?? null,
+        keyQuote: evalEntry?.key_quote ?? null,
+        depthLevel: evalEntry?.depth_level ?? null,
+        hadFollowup: !!evalEntry?.had_followup,
+        followupHelped: !!evalEntry?.followup_helped,
+        candidateAnswerText: candidateMsg?.content ?? null,
       };
     });
-  }, [candidateVideos, questionEvaluations, projectQuestions]);
+  }, [candidateMainVideos, questionEvaluations, project, messages]);
 
-  if (isLoading)
+  const handleDecision = (d: RecruiterDecision) => {
+    if (!user) return;
+    updateDecision.mutate({ decision: d, userId: user.id }, {
+      onSuccess: () => {
+        if (d === "none") toast({ title: "Décision annulée." });
+        else if (d === "shortlisted") toast({ title: "Candidat présélectionné." });
+        else if (d === "rejected") toast({ title: "Candidat rejeté." });
+        else if (d === "second_opinion") toast({ title: "2e avis demandé." });
+      },
+      onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+    });
+  };
+
+  const handleRegenerate = () => {
+    regenerate.mutate(undefined, {
+      onSuccess: () => toast({ title: "Régénération lancée — patientez quelques instants." }),
+      onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
+  }
   if (!session) return <p>Session introuvable.</p>;
 
-  
+  const decision = (session.recruiter_decision ?? "none") as RecruiterDecision;
+  const rankLabel =
+    projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
+      ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
+      : null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link to={`/projects/${session.project_id}`}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
-          </Link>
-        </Button>
-        <div className="flex items-center gap-2">
-          <SessionStatusBadge status={session.status} />
-          {(candidateVideos.length > 0 || session.video_recording_url) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openVideoExport}
-            >
-              <Download className="mr-1 h-4 w-4" />
-              Télécharger les vidéos
-            </Button>
-          )}
-          {report &&
-            (shareUrl ? (
-              <Button variant="outline" size="sm" onClick={copyShareUrl}>
-                {copied ? <Check className="mr-1 h-4 w-4" /> : <Copy className="mr-1 h-4 w-4" />}
-                {copied ? "Copié" : "Copier le lien de partage"}
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={handleShare} disabled={createShare.isPending}>
-                <Share2 className="mr-1 h-4 w-4" />
-                {createShare.isPending ? "Génération…" : "Partager"}
-              </Button>
-            ))}
-        </div>
-      </div>
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" asChild className="-ml-2">
+        <Link to={`/projects/${session.project_id}`}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+        </Link>
+      </Button>
 
-      <OverviewHeader
+      <DecisionBanner
         candidateName={session.candidate_name}
-        candidateEmail={session.candidate_email}
         jobTitle={project?.job_title}
-        projectTitle={project?.title}
-        createdAt={session.created_at}
-        durationSeconds={session.duration_seconds}
-        messagesCount={messages.length}
+        durationLabel={formatDuration(session.duration_seconds)}
         videoAnswersCount={candidateVideos.length}
-        criteriaCount={Object.keys(criteriaScores).length}
-        questionsEvaluatedCount={Object.keys(questionEvaluations).length}
-        overallScore={report ? Number(report.overall_score) : null}
-        overallGrade={report?.overall_grade}
-        recommendation={report?.recommendation}
+        fitScore={fitScore}
+        recommendation={report?.recommendation ?? null}
+        headline={verdictHeadline}
+        rankLabel={rankLabel}
+        decision={decision}
+        onDecisionChange={handleDecision}
+        isDecisionPending={updateDecision.isPending}
+        shareUrl={shareUrl}
+        onShare={handleShare}
+        onCopyShare={copyShareUrl}
+        copied={copied}
+        isShareLoading={createShare.isPending}
+        canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+        onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+        onRegenerate={report ? handleRegenerate : undefined}
+        isRegenerating={regenerate.isPending}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="synthesis" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Synthèse</span>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="decision" className="gap-1">
+                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Décision</span>
               </TabsTrigger>
-              <TabsTrigger value="questions" className="gap-1">
-                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Questions</span>
+              <TabsTrigger value="answers" className="gap-1">
+                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
               <TabsTrigger value="transcript" className="gap-1">
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
-              <TabsTrigger value="full-video" className="gap-1">
-                <Video className="h-4 w-4" /> <span className="hidden sm:inline">Vidéo complète</span>
-              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="synthesis" className="mt-4 space-y-4">
+            <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
                 <>
-                  {(report.executive_summary_short ||
-                    report.personality_profile ||
-                    report.soft_skills ||
-                    report.red_flags ||
-                    report.motivation_scores ||
-                    report.followup_questions) && <AiAnalysisDisclaimer />}
+                  <AiAnalysisDisclaimer />
 
-                  <ExecutiveSummaryCard summary={report.executive_summary_short ?? ""} />
+                  <DecisionDriversCard
+                    drivers={stats.decision_drivers}
+                    strengths={report.strengths as string[] | null}
+                    weaknesses={report.areas_for_improvement as string[] | null}
+                    onGoToMessage={goToMessage}
+                  />
 
-                  {projectAverages && (
+                  <FitBreakdownCard
+                    items={stats.fit_breakdown}
+                    legacyCriteriaScores={criteriaScores as any}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  <SignalsCard
+                    signals={stats.signals}
+                    legacyRedFlags={report.red_flags as any}
+                    legacyFollowups={report.followup_questions as any}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  <CommunicationProfileCard
+                    profile={stats.communication_profile}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  {projectAverages && projectAverages.count >= 3 && (
                     <ProjectComparisonCard
-                      candidateScore={Number(report.overall_score)}
+                      candidateScore={fitScore}
                       averages={projectAverages}
                       candidateCriteria={criteriaScores as any}
                     />
                   )}
 
-                  <Card>
-                    <CardHeader><CardTitle className="text-base">Résumé</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm leading-relaxed">{report.executive_summary}</p></CardContent>
-                  </Card>
-
-                  <PersonalityRadar
-                    profile={report.personality_profile as any}
-                    onGoToMessage={goToMessage}
-                    projectAverages={projectAverages?.bigFive}
-                  />
-                  <SoftSkillsCard skills={report.soft_skills as any} onGoToMessage={goToMessage} />
-                  <MotivationScoresCard scores={report.motivation_scores as any} />
-                  <RedFlagsCard flags={report.red_flags as any} onGoToMessage={goToMessage} />
-                  <FollowupQuestionsCard questions={report.followup_questions as any} />
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {report.strengths?.length > 0 && (
-                      <Card>
-                        <CardHeader><CardTitle className="text-base">Points forts</CardTitle></CardHeader>
-                        <CardContent>
-                          <ul className="space-y-1.5">
-                            {(report.strengths as string[]).map((s, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="mt-0.5 text-success">✓</span> {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {report.areas_for_improvement?.length > 0 && (
-                      <Card>
-                        <CardHeader><CardTitle className="text-base">Axes d'amélioration</CardTitle></CardHeader>
-                        <CardContent>
-                          <ul className="space-y-1.5">
-                            {(report.areas_for_improvement as string[]).map((s, i) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="mt-0.5 text-warning">⚠</span> {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-
-                  {Object.keys(criteriaScores).length > 0 && (
+                  {report.executive_summary && (
                     <Card>
-                      <CardHeader><CardTitle className="text-base">Scores par critère</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {Object.entries(criteriaScores).map(([key, val]: [string, any]) => (
-                          <div key={key}>
-                            <div className="flex justify-between text-sm">
-                              <span>{val.label || key}</span>
-                              <span className="font-medium">{val.score}/{val.max}</span>
-                            </div>
-                            <div className="mt-1 h-2 rounded-full bg-muted">
-                              <div
-                                className="h-2 rounded-full bg-primary transition-all"
-                                style={{ width: `${(val.score / val.max) * 100}%` }}
-                              />
-                            </div>
-                            {val.comment && <p className="mt-1 text-xs text-muted-foreground">{val.comment}</p>}
-                          </div>
-                        ))}
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Bilan global</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {report.executive_summary}
+                        </p>
                       </CardContent>
                     </Card>
                   )}
+
+                  <DeepAnalysisAccordion
+                    personalityProfile={report.personality_profile}
+                    softSkills={report.soft_skills as any}
+                    projectAverages={projectAverages?.bigFive}
+                    onGoToMessage={goToMessage}
+                  />
                 </>
               ) : (
                 <Card>
@@ -347,44 +317,16 @@ export default function SessionDetail() {
               )}
             </TabsContent>
 
-            <TabsContent value="questions" className="mt-4 space-y-4">
+            <TabsContent value="answers" className="mt-4 space-y-3">
               {questionItems.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune réponse vidéo enregistrée pour cette session.
+                    Aucune réponse vidéo enregistrée.
                   </CardContent>
                 </Card>
               ) : (
-                questionItems.map((item) => (
-                  <Card key={item.video.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="flex-1 text-sm">
-                          Q{item.index + 1} — {item.questionText}
-                        </CardTitle>
-                        {item.score !== null && (
-                          <Badge variant="outline">{item.score}/10</Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="overflow-hidden rounded-lg bg-muted aspect-video">
-                        <video
-                          src={item.video.video_segment_url}
-                          controls
-                          preload="metadata"
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
-                      {item.comment ? (
-                        <p className="text-xs text-muted-foreground">{item.comment}</p>
-                      ) : item.score === null ? (
-                        <p className="text-xs italic text-muted-foreground">
-                          Évaluation IA indisponible pour cette question.
-                        </p>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                questionItems.map((item, i) => (
+                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
                 ))
               )}
             </TabsContent>
@@ -394,7 +336,7 @@ export default function SessionDetail() {
                 <CardContent className="p-0">
                   {messages.length === 0 ? (
                     <div className="p-8 text-center text-sm text-muted-foreground">
-                      Aucun message enregistré pour cette session.
+                      Aucun message enregistré.
                     </div>
                   ) : (
                     <VirtualizedMessageList
@@ -404,17 +346,6 @@ export default function SessionDetail() {
                       onSelect={setActiveMessageIndex}
                     />
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="full-video" className="mt-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <FullVideoPlayer
-                    items={questionItems}
-                    fallbackUrl={session.video_recording_url}
-                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -449,103 +380,6 @@ export default function SessionDetail() {
             </Card>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-interface FullVideoItem {
-  index: number;
-  video: { id: string; video_segment_url?: string | null };
-  questionText: string;
-}
-
-function FullVideoPlayer({
-  items,
-  fallbackUrl,
-}: {
-  items: FullVideoItem[];
-  fallbackUrl?: string | null;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const validItems = items.filter((it) => !!it.video.video_segment_url);
-
-  if (validItems.length === 0) {
-    if (fallbackUrl) {
-      return (
-        <video
-          src={fallbackUrl}
-          controls
-          preload="metadata"
-          className="w-full rounded-lg bg-black aspect-video object-contain"
-        />
-      );
-    }
-    return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Vidéo complète indisponible pour cette session.
-      </p>
-    );
-  }
-
-  const safeIndex = Math.min(currentIndex, validItems.length - 1);
-  const current = validItems[safeIndex];
-
-  const playSegment = (i: number) => {
-    setCurrentIndex(i);
-    requestAnimationFrame(() => {
-      const v = videoRef.current;
-      if (!v) return;
-      v.load();
-      v.play().catch(() => {});
-    });
-  };
-
-  const handleEnded = () => {
-    if (safeIndex + 1 < validItems.length) {
-      playSegment(safeIndex + 1);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <video
-        ref={videoRef}
-        key={current.video.id}
-        src={current.video.video_segment_url ?? undefined}
-        controls
-        autoPlay={safeIndex > 0}
-        preload="metadata"
-        onEnded={handleEnded}
-        className="w-full rounded-lg bg-black aspect-video object-contain"
-      />
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Accès rapide par question
-        </p>
-        <ul className="space-y-1">
-          {validItems.map((it, i) => {
-            const isActive = i === safeIndex;
-            return (
-              <li key={it.video.id}>
-                <button
-                  type="button"
-                  onClick={() => playSegment(i)}
-                  className={`w-full rounded-md border-l-2 px-3 py-2 text-left text-sm transition-colors ${
-                    isActive
-                      ? "border-primary bg-muted font-medium"
-                      : "border-transparent hover:bg-muted/60"
-                  }`}
-                >
-                  <span className="text-muted-foreground">Q{it.index + 1}</span>{" "}
-                  · {it.questionText}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </div>
   );
