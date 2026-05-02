@@ -108,13 +108,10 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const intro = intros.find((i) => i.id === introId) ?? null;
-
       onApply({
         title: data.title,
         questions: data.questions,
         criteria: data.criteria,
-        intro,
         voice: lastVoice,
       });
 
