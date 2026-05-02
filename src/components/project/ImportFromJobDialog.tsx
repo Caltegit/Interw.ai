@@ -73,12 +73,6 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
       cancelled = true;
     };
   }, [open, user]);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, user]);
 
   const handleSubmit = async () => {
     if (!/^https?:\/\/.+/i.test(url.trim())) {
