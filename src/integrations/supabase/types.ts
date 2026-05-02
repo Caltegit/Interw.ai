@@ -1146,6 +1146,9 @@ export type Database = {
           last_activity_at: string | null
           last_question_index: number
           project_id: string
+          recruiter_decision: Database["public"]["Enums"]["recruiter_decision_type"]
+          recruiter_decision_at: string | null
+          recruiter_decision_by: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           token: string
@@ -1166,6 +1169,9 @@ export type Database = {
           last_activity_at?: string | null
           last_question_index?: number
           project_id: string
+          recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
+          recruiter_decision_at?: string | null
+          recruiter_decision_by?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           token?: string
@@ -1186,6 +1192,9 @@ export type Database = {
           last_activity_at?: string | null
           last_question_index?: number
           project_id?: string
+          recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
+          recruiter_decision_at?: string | null
+          recruiter_decision_by?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           token?: string
@@ -1371,6 +1380,11 @@ export type Database = {
       project_status: "draft" | "active" | "archived"
       question_type: "open" | "situational" | "motivation" | "technical"
       recommendation_type: "strong_yes" | "yes" | "maybe" | "no"
+      recruiter_decision_type:
+        | "none"
+        | "shortlisted"
+        | "rejected"
+        | "second_opinion"
       scoring_scale_type: "0-5" | "0-10" | "ABC"
       session_status:
         | "pending"
@@ -1516,6 +1530,12 @@ export const Constants = {
       project_status: ["draft", "active", "archived"],
       question_type: ["open", "situational", "motivation", "technical"],
       recommendation_type: ["strong_yes", "yes", "maybe", "no"],
+      recruiter_decision_type: [
+        "none",
+        "shortlisted",
+        "rejected",
+        "second_opinion",
+      ],
       scoring_scale_type: ["0-5", "0-10", "ABC"],
       session_status: [
         "pending",
