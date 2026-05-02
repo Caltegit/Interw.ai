@@ -27,7 +27,7 @@ const CANDIDATES: VoiceCandidate[] = [
     id: "el-charlotte",
     provider: "elevenlabs",
     label: "ElevenLabs — Charlotte FR",
-    description: "Voix de référence actuelle (féminine, naturelle)",
+    description: "Voix féminine de référence (naturelle, expressive)",
     pricePer1kChars: 0.165,
     voiceParam: "XB0fDUnXU5powFXDhCwa",
   },
@@ -39,40 +39,6 @@ const CANDIDATES: VoiceCandidate[] = [
     pricePer1kChars: 0.0055,
     voiceParam: "nova",
     model: "gpt-4o-mini-tts",
-  },
-  {
-    id: "oa-shimmer",
-    provider: "openai",
-    label: "OpenAI gpt-4o-mini-tts — Shimmer",
-    description: "Féminine, douce et chaleureuse",
-    pricePer1kChars: 0.0055,
-    voiceParam: "shimmer",
-    model: "gpt-4o-mini-tts",
-  },
-  {
-    id: "oa-onyx",
-    provider: "openai",
-    label: "OpenAI gpt-4o-mini-tts — Onyx",
-    description: "Masculine, posée, autoritaire",
-    pricePer1kChars: 0.0055,
-    voiceParam: "onyx",
-    model: "gpt-4o-mini-tts",
-  },
-  {
-    id: "gem-kore",
-    provider: "gemini",
-    label: "Gemini TTS — Kore",
-    description: "Féminine, posée, professionnelle",
-    pricePer1kChars: 0.014,
-    voiceParam: "Kore",
-  },
-  {
-    id: "gem-charon",
-    provider: "gemini",
-    label: "Gemini TTS — Charon",
-    description: "Masculine, calme, informative",
-    pricePer1kChars: 0.014,
-    voiceParam: "Charon",
   },
   {
     id: "gem-aoede",
@@ -203,7 +169,7 @@ export default function AdminTtsCompare() {
 
     const failures = settled.filter((r) => r.error);
     if (failures.length === 0) {
-      toast({ title: "Génération terminée", description: "Écoutez les 4 voix et votez votre préférée." });
+      toast({ title: "Génération terminée", description: "Écoutez les 3 voix et votez votre préférée." });
     } else if (failures.length < settled.length) {
       toast({
         title: "Génération partielle",
@@ -265,7 +231,7 @@ export default function AdminTtsCompare() {
                 </>
               ) : (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4" /> Générer les 4 voix
+                  <RefreshCw className="mr-2 h-4 w-4" /> Générer les 3 voix
                 </>
               )}
             </Button>
