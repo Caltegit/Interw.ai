@@ -309,21 +309,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       );
     }
 
-    // Intro depuis la bibliothèque
-    if (payload.intro) {
-      setIntroEnabled(true);
-      const t = payload.intro.type;
-      if (t === "audio" && payload.intro.audio_url) {
-        setIntroMode("audio");
-        setIntroAudioPreviewUrl(payload.intro.audio_url);
-      } else if (t === "video" && payload.intro.video_url) {
-        setIntroMode("video");
-        setIntroVideoPreviewUrl(payload.intro.video_url);
-      } else {
-        setIntroMode("text");
-        setIntroText(payload.intro.intro_text ?? "");
-      }
-    }
+    // L'intro est volontairement laissée à choisir manuellement par l'utilisateur ensuite.
 
     // Dernière voix utilisée
     if (payload.voice) {
