@@ -385,13 +385,14 @@ export default function SessionVideoExport() {
           missing.forEach((n) => readme.push(`  ${n}`));
         }
         readme.push("");
-        if (ffmpegUnavailable) {
+        const allMp4 = fileEntries.every((f) => f.name.toLowerCase().endsWith(".mp4"));
+        if (allMp4) {
           readme.push(
-            "Format : WebM (VP8/VP9). Lisible avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez en MP4 (ex. HandBrake). Seules les réponses du candidat sont enregistrées.",
+            "Format : MP4 (MPEG-4 Part 2 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
           );
         } else {
           readme.push(
-            "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
+            `Format : ${convertedCount} fichier(s) en MP4, ${conversionFailures} fichier(s) restés en WebM (conversion impossible). Les .webm sont lisibles avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez-les en MP4 (ex. HandBrake).`,
           );
         }
         zip.file("README.txt", readme.join("\n"));
