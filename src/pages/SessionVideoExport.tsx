@@ -268,39 +268,52 @@ export default function SessionVideoExport() {
         const needsConvert = downloaded.some((d) => d.ext !== "mp4");
         let ffmpeg: FFmpeg | null = null;
         let ffmpegUnavailable = false;
+        let ffmpegLoadError: string | null = null;
+        const ffmpegLogs: string[] = [];
 
-        // @ffmpeg/core@0.12.6 est en mode single-thread : il ne nécessite PAS
-        // SharedArrayBuffer (donc pas de COOP/COEP). On essaie toujours de
-        // charger ; en cas d'échec réseau/wasm on retombe sur le format source.
+        // @ffmpeg/ffmpeg 0.12 a besoin du worker.js du moteur en plus du core/wasm,
+        // sinon le chargement échoue silencieusement et on retombe sur du .webm.
         if (needsConvert) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
           try {
             ffmpeg = new FFmpeg();
             ffmpeg.on("log", ({ message }) => {
+              ffmpegLogs.push(message);
+              if (ffmpegLogs.length > 200) ffmpegLogs.shift();
               console.debug("[ffmpeg]", message);
             });
             const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-            await ffmpeg.load({
-              coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-              wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-            });
+            const [coreURL, wasmURL, workerURL] = await Promise.all([
+              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+              toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
+            ]);
+            await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: workerURL });
             console.info("[export] ffmpeg loaded (single-thread)");
-          } catch (err) {
-            console.warn("[export] ffmpeg load failed, fallback to original format", err);
+          } catch (err: any) {
+            console.warn("[export] ffmpeg load failed", err);
+            ffmpegLoadError = err?.message || String(err);
             ffmpeg = null;
             ffmpegUnavailable = true;
           }
         }
+
+        let convertedCount = 0;
+        let conversionFailures = 0;
+        const conversionErrors: string[] = [];
 
         for (let i = 0; i < downloaded.length; i++) {
           if (cancelled) return;
           const d = downloaded[i];
           const finalName = `${d.baseName}.mp4`;
 
-          if (d.ext === "mp4" || !ffmpeg) {
-            // Déjà en MP4 ou pas de conversion possible : on garde tel quel
-            const name = d.ext === "mp4" ? `${d.baseName}.mp4` : `${d.baseName}.${d.ext}`;
+          if (d.ext === "mp4") {
+            zip.file(finalName, d.data);
+            fileEntries.push({ name: finalName, question: d.question });
+            convertedCount++;
+          } else if (!ffmpeg) {
+            const name = `${d.baseName}.${d.ext}`;
             zip.file(name, d.data);
             fileEntries.push({ name, question: d.question });
           } else {
@@ -311,14 +324,17 @@ export default function SessionVideoExport() {
               const inputName = `in-${i}.${d.ext}`;
               const outputName = `out-${i}.mp4`;
               await ffmpeg.writeFile(inputName, d.data);
-              const outData = await convertToMp4(ffmpeg, inputName, outputName);
+              const outData = await convertToMp4(ffmpeg, inputName, outputName, ffmpegLogs);
               zip.file(finalName, outData);
               fileEntries.push({ name: finalName, question: d.question });
+              convertedCount++;
               await ffmpeg.deleteFile(inputName).catch(() => {});
-              await ffmpeg.deleteFile(outputName).catch(() => {});
             } catch (err: any) {
               console.warn(`[export] conversion ${d.baseName} failed`, err);
-              // Fallback : on garde le fichier original
+              conversionFailures++;
+              if (conversionErrors.length < 3) {
+                conversionErrors.push(`${d.baseName}: ${err?.message || err}`);
+              }
               const name = `${d.baseName}.${d.ext}`;
               zip.file(name, d.data);
               fileEntries.push({ name, question: d.question });
@@ -326,6 +342,17 @@ export default function SessionVideoExport() {
           }
 
           setProgress(60 + ((i + 1) / downloaded.length) * 25);
+        }
+
+        // Si rien n'a pu être converti alors qu'on en avait besoin, on stoppe net
+        // avec une vraie erreur explicite plutôt que de livrer un ZIP de .webm.
+        if (needsConvert && convertedCount === 0) {
+          const detail = ffmpegLoadError
+            ? `Le convertisseur vidéo n'a pas pu être chargé : ${ffmpegLoadError}`
+            : conversionErrors.length > 0
+              ? `La conversion a échoué : ${conversionErrors.join(" ; ")}`
+              : "La conversion vidéo a échoué.";
+          throw new Error(detail);
         }
 
         // 6. README
