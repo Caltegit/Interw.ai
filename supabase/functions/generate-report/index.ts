@@ -388,25 +388,71 @@ Champs secondaires (toujours produits, format inchangé) :
       });
     }
 
-    // Build criteria_scores using actual criteria IDs if available
-    let criteriaScores = parsed.criteria_scores || {};
-    if (criteria.length > 0 && Object.keys(criteriaScores).length > 0) {
-      // Map AI output to actual criteria IDs
-      const mappedScores: Record<string, any> = {};
-      const criteriaList = [...criteria];
-      const scoreEntries = Object.values(criteriaScores) as any[];
-      for (let i = 0; i < Math.min(criteriaList.length, scoreEntries.length); i++) {
-        const c = criteriaList[i];
-        const s = scoreEntries[i];
-        const maxScale = c.scoring_scale === "0-10" ? 10 : c.scoring_scale === "0-5" ? 5 : 5;
-        mappedScores[c.id] = {
+    // ============================================================
+    // NOUVEAU : fit_breakdown — mappé sur les critères réels du projet
+    // ============================================================
+    const fitBreakdown: Array<Record<string, unknown>> = [];
+    const aiFit = Array.isArray(parsed.fit_breakdown) ? parsed.fit_breakdown : [];
+
+    if (criteria.length > 0) {
+      // On essaie d'aligner sur les critères réels par label puis par index
+      const byLabel = new Map<string, any>();
+      aiFit.forEach((f: any) => {
+        if (f?.criterion) byLabel.set(String(f.criterion).toLowerCase().trim(), f);
+      });
+      criteria.forEach((c: any, idx: number) => {
+        const aiEntry =
+          byLabel.get(String(c.label).toLowerCase().trim()) ?? aiFit[idx] ?? null;
+        const score = Math.max(0, Math.min(100, Number(aiEntry?.score) || 0));
+        fitBreakdown.push({
+          criterion_id: c.id,
+          criterion: c.label,
+          score,
+          level: aiEntry?.level || null,
+          statement: aiEntry?.statement || aiEntry?.comment || "",
+          quote: aiEntry?.quote || null,
+          message_id: aiEntry?.message_id || null,
+        });
+      });
+    } else {
+      // Pas de critères définis sur le projet : on garde tel quel
+      aiFit.forEach((f: any) => {
+        fitBreakdown.push({
+          criterion: f?.criterion || "Critère",
+          score: Math.max(0, Math.min(100, Number(f?.score) || 0)),
+          level: f?.level || null,
+          statement: f?.statement || "",
+          quote: f?.quote || null,
+          message_id: f?.message_id || null,
+        });
+      });
+    }
+
+    // Calcul du fit_score global pondéré (poids critères)
+    let fitScore: number | null = null;
+    if (fitBreakdown.length > 0) {
+      const weights = criteria.length > 0 ? criteria.map((c: any) => Math.max(1, Number(c.weight) || 1)) : fitBreakdown.map(() => 1);
+      const totalWeight = weights.reduce((a: number, b: number) => a + b, 0);
+      const weighted = fitBreakdown.reduce((acc, f, i) => acc + (Number(f.score) || 0) * (weights[i] || 1), 0);
+      fitScore = Math.round(weighted / Math.max(1, totalWeight));
+    }
+
+    // On reconstruit aussi l'ancien criteria_scores pour rester compatible avec
+    // les rapports existants et les emails déjà branchés
+    let criteriaScores: Record<string, any> = {};
+    if (criteria.length > 0) {
+      criteria.forEach((c: any, idx: number) => {
+        const entry = fitBreakdown[idx];
+        if (!entry) return;
+        const maxScale = c.scoring_scale === "0-10" ? 10 : 5;
+        const score = Math.round(((Number(entry.score) || 0) / 100) * maxScale);
+        criteriaScores[c.id] = {
           label: c.label,
-          score: Math.min(s.score ?? 0, maxScale),
+          score,
           max: maxScale,
-          comment: s.comment || "",
+          comment: entry.statement || "",
         };
-      }
-      criteriaScores = mappedScores;
+      });
     }
 
     // ============================================================
