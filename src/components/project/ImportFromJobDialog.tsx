@@ -20,10 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, Library } from "lucide-react";
-import { INTRO_FORMAT_META, type IntroFormat } from "@/components/library/IntroFormatPicker";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Loader2, Sparkles } from "lucide-react";
 
 export interface JobImportPayload {
   title: string;
