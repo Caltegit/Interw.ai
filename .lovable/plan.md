@@ -1,41 +1,56 @@
-## Objectif
-Faire en sorte que le ZIP contienne réellement des fichiers `.mp4`, de façon fiable en aperçu et en production.
+## Plan
 
-## Problème identifié
-L’export actuel tente une conversion dans le navigateur avec FFmpeg.wasm, mais l’intégration n’est pas complète pour `@ffmpeg/ffmpeg` v0.12 :
-- le worker FFmpeg n’est pas configuré explicitement ;
-- la conversion échoue sans remonter un message utile ;
-- le code retombe alors sur les fichiers source `.webm`, ce qui explique exactement ce que vous voyez.
+Je vais solidifier l’export vidéo en deux couches : correction immédiate du convertisseur navigateur, puis repli robuste côté backend pour ne plus dépendre d’un chargement fragile dans l’onglet.
 
-## Refonte proposée
-### 1. Fiabiliser le chargement de FFmpeg
-- Charger explicitement les 3 ressources requises :
-  - `ffmpeg-core.js`
-  - `ffmpeg-core.wasm`
-  - `ffmpeg-core.worker.js`
-- renseigner `workerURL` et `classWorkerURL` au chargement.
-- journaliser clairement les échecs de chargement et d’exécution.
+### 1. Corriger la cause racine du « Failed to fetch »
+- Revoir `src/pages/SessionVideoExport.tsx`.
+- Remplacer le chargement actuel du convertisseur par une configuration compatible avec Vite.
+- Supprimer le chargement invalide du fichier `ffmpeg-core.worker.js` depuis le mauvais paquet.
+- Héberger les fichiers du convertisseur de façon stable dans le projet, au lieu de dépendre d’un chargement externe fragile.
+- Ajouter une vérification explicite du chargement du moteur avant de lancer la conversion.
 
-### 2. Corriger la conversion MP4
-- garder un chemin de conversion compatible navigateur ;
-- tester une commande simple et stable pour produire du MP4 lisible ;
-- supprimer le message README trompeur qui annonce du MP4 si aucune conversion n’a réellement abouti.
+### 2. Garantir un vrai résultat MP4
+- Conserver directement les segments déjà en MP4.
+- Convertir les segments WebM vers MP4 quand le moteur navigateur est disponible.
+- Si la conversion navigateur échoue, ne plus renvoyer un ZIP partiellement en WebM.
+- Basculer automatiquement vers un traitement backend en arrière-plan pour produire un ZIP uniquement en MP4.
 
-### 3. Garantir le bon comportement du ZIP
-- ne marquer `Format : MP4` que si tous les fichiers attendus sont bien en `.mp4` ;
-- si une conversion échoue, indiquer précisément quels fichiers sont restés en `.webm` ;
-- afficher un message d’erreur utile dans l’interface au lieu d’un simple repli silencieux.
+### 3. Utiliser le backend déjà préparé pour les exports
+- S’appuyer sur la table `video_export_jobs` déjà présente.
+- Ajouter une fonction backend qui :
+  - valide l’accès à la session,
+  - crée un job d’export,
+  - télécharge les segments source,
+  - les convertit en MP4,
+  - génère l’archive ZIP,
+  - stocke le fichier dans l’espace privé prévu,
+  - renvoie un lien signé quand c’est prêt.
+- Lancer ce travail en arrière-plan pour éviter les limites et les plantages du navigateur.
 
-### 4. Vérification dans le navigateur
-- lancer l’export dans l’aperçu ;
-- vérifier que les requêtes FFmpeg se chargent bien ;
-- confirmer que les noms de fichiers du ZIP finissent en `.mp4`.
+### 4. Rendre l’interface solide et claire
+- Mettre à jour `src/pages/SessionVideoExport.tsx` pour piloter les deux modes :
+  - conversion locale si possible,
+  - sinon job backend avec attente et rafraîchissement d’état.
+- Afficher des états simples et fiables : préparation, traitement, archive prête, erreur.
+- Ajouter un vrai bouton de relance en cas d’échec.
+- Afficher une erreur utile et précise, au lieu du simple « Failed to fetch ».
 
-## Détails techniques
-- Fichier principal : `src/pages/SessionVideoExport.tsx`
-- Changement attendu au chargement : ajout de `workerURL` et `classWorkerURL`.
-- Changement attendu au résultat : le ZIP ne doit plus contenir de `.webm` quand la conversion a réussi.
-- Si FFmpeg reste trop instable côté navigateur, je préparerai un repli propre : conversion côté backend avant zippage, pour rendre le résultat totalement fiable.
+### 5. Sécuriser le flux
+- Vérifier que seul un membre autorisé de l’organisation peut demander et récupérer un export.
+- Utiliser des liens temporaires pour le téléchargement final.
+- Garder les fichiers d’archive en privé.
 
 ## Résultat attendu
-Quand vous téléchargez l’archive, vous obtenez de vrais fichiers `.mp4`, pas des `.webm` renommés ni des fichiers source non convertis.
+- Le clic sur « Télécharger les vidéos » aboutit à une archive ZIP contenant uniquement des MP4.
+- Si le convertisseur navigateur ne peut pas se charger, l’utilisateur n’est plus bloqué.
+- L’export devient fiable même quand le navigateur, le réseau ou le volume de données posent problème.
+
+## Détail technique
+- Cause racine trouvée : le code charge `@ffmpeg/core` en mode `umd` alors que la documentation recommande `esm` avec Vite, et il tente en plus de charger `ffmpeg-core.worker.js` depuis un emplacement non valable pour cette version. C’est cohérent avec l’erreur affichée : « Le convertisseur vidéo n'a pas pu être chargé : Failed to fetch ».
+- Fichiers principaux concernés :
+  - `src/pages/SessionVideoExport.tsx`
+  - `src/pages/SessionDetail.tsx`
+  - nouvelle fonction backend d’export vidéo
+  - éventuelle migration complémentaire si un champ d’état supplémentaire est utile
+
+Si tu approuves, je passe à l’implémentation complète.

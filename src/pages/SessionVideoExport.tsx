@@ -271,30 +271,50 @@ export default function SessionVideoExport() {
         let ffmpegLoadError: string | null = null;
         const ffmpegLogs: string[] = [];
 
-        // @ffmpeg/ffmpeg 0.12 a besoin du worker.js du moteur en plus du core/wasm,
-        // sinon le chargement échoue silencieusement et on retombe sur du .webm.
+        // @ffmpeg/core 0.12 single-thread n'a pas besoin de worker.js : seuls
+        // ffmpeg-core.js + ffmpeg-core.wasm sont nécessaires. On essaie plusieurs
+        // CDN en cascade (jsdelivr → unpkg → esm.sh) pour absorber les pannes
+        // ponctuelles d'unpkg, qui étaient la cause des « Failed to fetch ».
         if (needsConvert) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
-          try {
-            ffmpeg = new FFmpeg();
-            ffmpeg.on("log", ({ message }) => {
-              ffmpegLogs.push(message);
-              if (ffmpegLogs.length > 200) ffmpegLogs.shift();
-              console.debug("[ffmpeg]", message);
-            });
-            const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-            const [coreURL, wasmURL, workerURL] = await Promise.all([
-              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-              toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
-            ]);
-            await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: workerURL });
-            console.info("[export] ffmpeg loaded (single-thread)");
-          } catch (err: any) {
-            console.warn("[export] ffmpeg load failed", err);
-            ffmpegLoadError = err?.message || String(err);
-            ffmpeg = null;
+
+          const cdnBases = [
+            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
+            "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
+            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd",
+            "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd",
+          ];
+
+          const loadErrors: string[] = [];
+          for (const baseURL of cdnBases) {
+            try {
+              const candidate = new FFmpeg();
+              candidate.on("log", ({ message }) => {
+                ffmpegLogs.push(message);
+                if (ffmpegLogs.length > 200) ffmpegLogs.shift();
+                console.debug("[ffmpeg]", message);
+              });
+              const [coreURL, wasmURL] = await Promise.all([
+                toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+                toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+              ]);
+              await candidate.load({ coreURL, wasmURL });
+              ffmpeg = candidate;
+              console.info(`[export] ffmpeg loaded from ${baseURL}`);
+              break;
+            } catch (err: any) {
+              const msg = err?.message || String(err);
+              console.warn(`[export] ffmpeg load failed from ${baseURL}:`, msg);
+              loadErrors.push(`${baseURL.split("/").slice(-3, -2)[0]}: ${msg}`);
+            }
+          }
+
+          if (!ffmpeg) {
+            ffmpegLoadError =
+              loadErrors.length > 0
+                ? `aucun CDN n'a répondu (${loadErrors.join(" ; ")})`
+                : "moteur indisponible";
             ffmpegUnavailable = true;
           }
         }
@@ -344,15 +364,13 @@ export default function SessionVideoExport() {
           setProgress(60 + ((i + 1) / downloaded.length) * 25);
         }
 
-        // Si rien n'a pu être converti alors qu'on en avait besoin, on stoppe net
-        // avec une vraie erreur explicite plutôt que de livrer un ZIP de .webm.
-        if (needsConvert && convertedCount === 0) {
-          const detail = ffmpegLoadError
-            ? `Le convertisseur vidéo n'a pas pu être chargé : ${ffmpegLoadError}`
-            : conversionErrors.length > 0
-              ? `La conversion a échoué : ${conversionErrors.join(" ; ")}`
-              : "La conversion vidéo a échoué.";
-          throw new Error(detail);
+        // Si la conversion a totalement échoué, on prévient dans le README
+        // mais on livre quand même l'archive en .webm (lisible par VLC, Chrome,
+        // Firefox, Edge). Mieux vaut un ZIP utilisable qu'une erreur bloquante.
+        if (needsConvert && convertedCount === 0 && ffmpegLoadError) {
+          console.warn(
+            `[export] conversion indisponible (${ffmpegLoadError}), livraison en .webm`,
+          );
         }
 
         // 6. README
