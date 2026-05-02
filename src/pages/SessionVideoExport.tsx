@@ -364,15 +364,13 @@ export default function SessionVideoExport() {
           setProgress(60 + ((i + 1) / downloaded.length) * 25);
         }
 
-        // Si rien n'a pu être converti alors qu'on en avait besoin, on stoppe net
-        // avec une vraie erreur explicite plutôt que de livrer un ZIP de .webm.
-        if (needsConvert && convertedCount === 0) {
-          const detail = ffmpegLoadError
-            ? `Le convertisseur vidéo n'a pas pu être chargé : ${ffmpegLoadError}`
-            : conversionErrors.length > 0
-              ? `La conversion a échoué : ${conversionErrors.join(" ; ")}`
-              : "La conversion vidéo a échoué.";
-          throw new Error(detail);
+        // Si la conversion a totalement échoué, on prévient dans le README
+        // mais on livre quand même l'archive en .webm (lisible par VLC, Chrome,
+        // Firefox, Edge). Mieux vaut un ZIP utilisable qu'une erreur bloquante.
+        if (needsConvert && convertedCount === 0 && ffmpegLoadError) {
+          console.warn(
+            `[export] conversion indisponible (${ffmpegLoadError}), livraison en .webm`,
+          );
         }
 
         // 6. README
