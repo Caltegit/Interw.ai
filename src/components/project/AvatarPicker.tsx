@@ -198,6 +198,8 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
           {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
