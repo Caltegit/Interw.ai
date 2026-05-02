@@ -84,10 +84,14 @@ serve(async (req) => {
     const systemPrompt = `Tu es un expert en recrutement et en conduite d'entretiens en français.
 À partir d'une offre d'emploi réelle, tu génères un entretien de pré-sélection sur-mesure.
 
+Structure obligatoire de la liste de questions (dans cet ordre) :
+1. Une question d'introduction chaleureuse pour mettre le candidat à l'aise (ex : "Bonjour, comment allez-vous aujourd'hui ? Prenez un instant pour vous présenter brièvement.").
+2. Les questions du cœur de l'entretien : ouvertes, comportementales ou de mise en situation, SPÉCIFIQUES à l'offre (missions, compétences, secteur, environnement).
+3. Une question de conclusion qui ouvre la parole au candidat (ex : "Avez-vous un dernier mot à ajouter, ou une question à nous poser ?").
+
 Règles strictes :
-- TOUTES les questions sont des questions ouvertes, comportementales ou de mise en situation.
-- Les questions sont SPÉCIFIQUES à l'offre fournie : missions citées, compétences demandées, secteur, environnement de travail.
-- Pas de questions génériques type "parlez-moi de vous" ou "quelles sont vos qualités".
+- Le nombre total de questions doit être exactement celui demandé (intro + cœur + conclusion compris).
+- Pas de questions génériques type "parlez-moi de vous" ou "quelles sont vos qualités" dans le cœur de l'entretien.
 - Les critères d'évaluation sont calibrés sur les compétences clés de l'offre.
 - Somme des poids des critères = exactement 100.
 - Tout en français.`;
@@ -100,7 +104,7 @@ ${offerContent}
 
 Génère :
 - un titre court pour le projet d'entretien (intitulé de poste + entreprise si trouvée)
-- exactement ${questionsCount} questions personnalisées
+- exactement ${questionsCount} questions au total : la 1re est une question d'introduction (brise-glace), la dernière est une question de conclusion, les ${Math.max(0, questionsCount - 2)} du milieu sont personnalisées à l'offre
 - exactement ${criteriaCount} critères d'évaluation pondérés (somme = 100)`;
 
     const aiRes = await fetch(
