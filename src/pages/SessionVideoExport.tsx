@@ -320,9 +320,15 @@ export default function SessionVideoExport() {
           missing.forEach((n) => readme.push(`  ${n}`));
         }
         readme.push("");
-        readme.push(
-          "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
-        );
+        if (ffmpegUnavailable) {
+          readme.push(
+            "Format : WebM (VP8/VP9). Lisible avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez en MP4 (ex. HandBrake). Seules les réponses du candidat sont enregistrées.",
+          );
+        } else {
+          readme.push(
+            "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
+          );
+        }
         zip.file("README.txt", readme.join("\n"));
 
         // 7. Création du ZIP (85 → 100 %)
