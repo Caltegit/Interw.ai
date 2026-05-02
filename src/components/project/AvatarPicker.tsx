@@ -94,6 +94,8 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
 
       <AvatarUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
 
+      {!uploadOnly && (
+      <>
       {/* Photo avatars */}
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos réelles</p>
