@@ -1840,6 +1840,7 @@ export default function InterviewStart() {
               mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
               relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
               maxFollowUps: typeof (q as any).max_follow_ups === "number" ? (q as any).max_follow_ups : 1,
+              followUpEnabled: (q as { follow_up_enabled?: boolean }).follow_up_enabled !== false,
             })),
             currentQuestionNumber: questionIdx + 1,
             totalQuestions: questions.length,
