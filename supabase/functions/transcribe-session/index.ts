@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
         const orgId = (sessRow as any)?.projects?.organization_id;
         if (orgId) {
           const { data: member } = await admin
-            .from("organization_members" as any)
+            .from("profiles")
             .select("user_id")
             .eq("organization_id", orgId)
             .eq("user_id", userId)
