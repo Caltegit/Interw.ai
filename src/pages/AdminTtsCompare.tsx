@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Play, Pause, RefreshCw, Eye, Trophy } from "lucide-react";
 
-type Provider = "elevenlabs" | "openai";
+type Provider = "elevenlabs" | "openai" | "gemini";
 
 interface VoiceCandidate {
   id: string;
@@ -58,6 +58,30 @@ const CANDIDATES: VoiceCandidate[] = [
     voiceParam: "onyx",
     model: "gpt-4o-mini-tts",
   },
+  {
+    id: "gem-kore",
+    provider: "gemini",
+    label: "Gemini TTS — Kore",
+    description: "Féminine, posée, professionnelle",
+    pricePer1kChars: 0.014,
+    voiceParam: "Kore",
+  },
+  {
+    id: "gem-charon",
+    provider: "gemini",
+    label: "Gemini TTS — Charon",
+    description: "Masculine, calme, informative",
+    pricePer1kChars: 0.014,
+    voiceParam: "Charon",
+  },
+  {
+    id: "gem-aoede",
+    provider: "gemini",
+    label: "Gemini TTS — Aoede",
+    description: "Féminine, fluide, légère",
+    pricePer1kChars: 0.014,
+    voiceParam: "Aoede",
+  },
 ];
 
 interface AudioResult {
@@ -103,13 +127,21 @@ export default function AdminTtsCompare() {
       const accessToken = session?.access_token;
       if (!accessToken) throw new Error("Vous devez être connecté.");
 
-      const fnName = cand.provider === "elevenlabs" ? "tts-elevenlabs" : "tts-openai";
+      const fnName =
+        cand.provider === "elevenlabs"
+          ? "tts-elevenlabs"
+          : cand.provider === "openai"
+            ? "tts-openai"
+            : "tts-gemini-direct";
       const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const url = `https://${projectRef}.supabase.co/functions/v1/${fnName}`;
 
-      const body = cand.provider === "elevenlabs"
-        ? { text, preview: true, voiceId: cand.voiceParam }
-        : { text, voiceName: cand.voiceParam, model: cand.model };
+      const body =
+        cand.provider === "elevenlabs"
+          ? { text, preview: true, voiceId: cand.voiceParam }
+          : cand.provider === "openai"
+            ? { text, voiceName: cand.voiceParam, model: cand.model }
+            : { text, voiceName: cand.voiceParam };
 
       const res = await fetch(url, {
         method: "POST",
@@ -278,7 +310,11 @@ export default function AdminTtsCompare() {
                       </CardTitle>
                       {revealed && (
                         <Badge variant={cand.provider === "elevenlabs" ? "default" : "secondary"}>
-                          {cand.provider === "elevenlabs" ? "ElevenLabs" : "OpenAI TTS"}
+                          {cand.provider === "elevenlabs"
+                            ? "ElevenLabs"
+                            : cand.provider === "openai"
+                              ? "OpenAI TTS"
+                              : "Gemini TTS"}
                         </Badge>
                       )}
                     </div>
@@ -357,9 +393,9 @@ export default function AdminTtsCompare() {
                 <h3 className="font-semibold mb-2">Verdict</h3>
                 <p className="text-sm text-muted-foreground">
                   Vous avez préféré <strong>{candidatesById[vote].label}</strong>.{" "}
-                  {candidatesById[vote].provider === "openai" ? (
+                  {candidatesById[vote].provider !== "elevenlabs" ? (
                     <>
-                      Bonne nouvelle : OpenAI TTS coûte environ{" "}
+                      Bonne nouvelle : cette voix coûte environ{" "}
                       <strong>
                         {(candidatesById["el-charlotte"].pricePer1kChars / candidatesById[vote].pricePer1kChars).toFixed(0)}× moins cher
                       </strong>{" "}

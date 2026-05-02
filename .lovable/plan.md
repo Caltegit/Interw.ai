@@ -1,54 +1,54 @@
 ## Objectif
 
-Créer une page super-admin permettant d'écouter le **même texte** lu par plusieurs voix (ElevenLabs + Gemini TTS) **à l'aveugle**, voter sa préférée, puis révéler les voix. Objectif : décider de manière objective si on peut diviser le coût TTS par 12 sans perte perçue.
+Ajouter **Gemini TTS** à la page de comparaison `/admin/tts-compare` qui contient déjà ElevenLabs (Charlotte) et OpenAI (Nova, Shimmer, Onyx).
+
+## Pré-requis utilisateur
+
+Tu dois ajouter manuellement la clé API Google AI Studio dans les secrets Lovable Cloud :
+1. Settings projet → Cloud → Secrets
+2. Ajouter `GEMINI_API_KEY` avec ta clé `AIza...`
+
+(Le tool `add_secret` n'est pas disponible dans la session actuelle, donc ajout manuel.)
 
 ## Ce qui sera construit
 
-### 1. Nouvelle edge function `tts-gemini`
-Fichier : `supabase/functions/tts-gemini/index.ts`
-- Utilise le Lovable AI Gateway (modèle `gemini-2.5-flash-preview-tts`)
-- Aucune clé API à fournir (LOVABLE_API_KEY déjà configuré)
-- Paramètres : `text`, `voiceName` (Kore, Charon, Aoede, Orus…)
-- Renvoie un audio MP3, même format que `tts-elevenlabs`
-- Réservée aux utilisateurs authentifiés (mode preview, comme l'existant)
+### 1. Nouvelle edge function `tts-gemini-direct`
+Fichier : `supabase/functions/tts-gemini-direct/index.ts`
+- Appelle directement l'API Google AI Studio (`generativelanguage.googleapis.com`) avec le modèle `gemini-2.5-flash-preview-tts`
+- Renvoie un fichier WAV (le PCM 24 kHz 16-bit retourné par Gemini est enveloppé dans un en-tête WAV côté serveur pour pouvoir être joué dans le navigateur)
+- Sécurité identique à `tts-openai` : auth JWT + vérification rôle `super_admin`
+- Voix supportées : Kore, Charon, Aoede, Puck, Leda, Orus + une trentaine d'autres voix prédéfinies Gemini
 
-### 2. Nouvelle page `/admin/tts-compare`
-Fichier : `src/pages/AdminTtsCompare.tsx`, ajoutée à `App.tsx` derrière `SuperAdminRoute`.
+### 2. Mise à jour de la page `/admin/tts-compare`
+Ajout de 3 candidats Gemini :
+- **Gemini TTS — Kore** (féminine, posée)
+- **Gemini TTS — Charon** (masculine, calme)
+- **Gemini TTS — Aoede** (féminine, légère)
 
-Contenu de la page :
-- Un champ **texte** pré-rempli avec une vraie question d'entretien type (modifiable)
-- Un bouton **« Générer toutes les versions »** qui appelle en parallèle :
-  - ElevenLabs (Charlotte FR) — référence actuelle
-  - Gemini TTS voix **Kore** (féminine, posée)
-  - Gemini TTS voix **Charon** (masculine, calme)
-  - Gemini TTS voix **Aoede** (féminine, fluide)
-- 4 lecteurs audio affichés dans un **ordre randomisé**, étiquetés simplement « Voix A / B / C / D » (sans dévoiler le provider)
-- Sous chaque lecteur : un bouton **« Je préfère celle-ci »**
-- Affichage du **coût estimé** et de la **latence de génération** par voix (caché tant qu'on n'a pas voté, pour éviter le biais)
-- Un bouton **« Révéler »** qui dévoile quelle voix correspondait à quel provider, avec le coût réel
+La page passera de 4 à **7 voix** comparées à l'aveugle, avec :
+- Étiquettes A/B/C/D/E/F/G dans un ordre randomisé
+- Coût estimé révélé après vote (Gemini ~0,01 €/1k car., gratuit dans le tier free)
+- Provider révélé après vote (3 logos : ElevenLabs / OpenAI / Gemini)
 
-### 3. Lien d'accès
-Ajout d'un bouton « Comparer les voix TTS » dans le menu super-admin existant (page `/admin`).
+### 3. Mise à jour de `supabase/config.toml`
+Ajout du bloc `[functions.tts-gemini-direct] verify_jwt = false` (validation faite dans le code).
 
 ## Détail technique
 
-- **Lovable AI Gateway** : POST sur `https://ai.gateway.lovable.dev/v1/audio/speech` avec le modèle `gemini-2.5-flash-preview-tts`, voix passée dans le body. Si l'endpoint dédié TTS n'est pas disponible côté gateway, repli sur `chat/completions` avec `modalities: ["audio"]` et extraction du contenu audio base64 de la réponse.
-- **Audio renvoyé** : converti en MP3 (ou WAV selon format de sortie Gemini) et streamé tel quel au client.
-- **Pas de stockage** : les audios générés ne sont pas persistés, juste joués dans le navigateur.
-- **Sécurité** : la fonction `tts-gemini` exige un JWT valide ET vérifie que l'utilisateur a le rôle `super_admin` via `has_role()`.
-- **Aucune migration de base de données** nécessaire.
+- **Format Gemini** : `responseModalities: ["AUDIO"]` + `speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName`
+- **Sample rate dynamique** : extrait du `mimeType` retourné (`audio/L16;rate=24000`)
+- **Pas de cache, pas de stockage** : audio joué une fois et libéré
+- **Tier gratuit Google AI Studio** : 15 req/min, 1M tokens/jour → largement suffisant pour les tests
 
 ## Fichiers touchés
 
-- ✅ Créé : `supabase/functions/tts-gemini/index.ts`
-- ✅ Créé : `src/pages/AdminTtsCompare.tsx`
-- ✏️ Modifié : `src/App.tsx` (nouvelle route `/admin/tts-compare`)
-- ✏️ Modifié : `src/pages/SuperAdmin.tsx` (lien d'accès)
+- ✅ Créé : `supabase/functions/tts-gemini-direct/index.ts`
+- ✏️ Modifié : `src/pages/AdminTtsCompare.tsx` (ajout des 3 voix Gemini + types Provider étendus)
+- ✏️ Modifié : `supabase/config.toml` (déclaration de la nouvelle fonction)
 
-## Hors scope (à voir après le test)
+## Hors scope
 
-- Cartesia, OpenAI TTS, Hume → ajoutés plus tard si tu veux pousser la comparaison
-- Bascule du TTS de production vers Gemini → seulement après validation à l'aveugle
-- Cache TTS sur les questions de bibliothèque (autre levier d'économie déjà identifié)
+- Cartesia, Hume → si tu veux pousser plus loin après ce test
+- Bascule du TTS de production → décision après vote à l'aveugle
 
-Si tu valides, je passe à l'implémentation.
+Une fois validé, je crée la fonction, je l'ajoute à la page, je déploie. Tu pourras tester dès que tu auras ajouté la clé `GEMINI_API_KEY` dans les secrets.
