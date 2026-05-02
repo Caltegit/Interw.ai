@@ -46,38 +46,49 @@ function extFromContentType(ct: string | null, url: string): string {
   return "webm";
 }
 
-async function convertToMp4(ffmpeg: FFmpeg, inputName: string, outputName: string) {
+// Vérifie qu'un buffer ressemble bien à un MP4 (boîte "ftyp" aux octets 4-8)
+function looksLikeMp4(data: Uint8Array): boolean {
+  if (!data || data.length < 12) return false;
+  return (
+    data[4] === 0x66 && // f
+    data[5] === 0x74 && // t
+    data[6] === 0x79 && // y
+    data[7] === 0x70    // p
+  );
+}
+
+async function convertToMp4(
+  ffmpeg: FFmpeg,
+  inputName: string,
+  outputName: string,
+  ffmpegLogs: string[],
+) {
+  // mpeg4 (Part 2) est inclus dans le build single-thread de @ffmpeg/core 0.12,
+  // contrairement à libx264 qui dépend de builds multi-thread.
   const attempts: string[][] = [
-    [
-      "-i", inputName,
-      "-c:v", "mpeg4",
-      "-q:v", "5",
-      "-pix_fmt", "yuv420p",
-      "-c:a", "aac",
-      "-b:a", "128k",
-      "-movflags", "+faststart",
-      outputName,
-    ],
-    [
-      "-i", inputName,
-      "-c:v", "mpeg4",
-      "-q:v", "5",
-      "-pix_fmt", "yuv420p",
-      "-an",
-      "-movflags", "+faststart",
-      outputName,
-    ],
+    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
+     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", outputName],
+    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
+     "-an", "-movflags", "+faststart", outputName],
   ];
 
   let lastError: unknown = null;
 
   for (const args of attempts) {
     try {
+      ffmpegLogs.length = 0;
       await ffmpeg.exec(args);
       const out = await ffmpeg.readFile(outputName);
-      return out instanceof Uint8Array ? out : new Uint8Array();
+      const bytes = out instanceof Uint8Array ? out : new Uint8Array();
+      if (bytes.length > 0 && looksLikeMp4(bytes)) {
+        return bytes;
+      }
+      lastError = new Error(
+        `Sortie MP4 invalide (${bytes.length} octets). Logs FFmpeg : ${ffmpegLogs.slice(-5).join(" | ")}`,
+      );
     } catch (error) {
       lastError = error;
+    } finally {
       await ffmpeg.deleteFile(outputName).catch(() => {});
     }
   }
@@ -257,39 +268,52 @@ export default function SessionVideoExport() {
         const needsConvert = downloaded.some((d) => d.ext !== "mp4");
         let ffmpeg: FFmpeg | null = null;
         let ffmpegUnavailable = false;
+        let ffmpegLoadError: string | null = null;
+        const ffmpegLogs: string[] = [];
 
-        // @ffmpeg/core@0.12.6 est en mode single-thread : il ne nécessite PAS
-        // SharedArrayBuffer (donc pas de COOP/COEP). On essaie toujours de
-        // charger ; en cas d'échec réseau/wasm on retombe sur le format source.
+        // @ffmpeg/ffmpeg 0.12 a besoin du worker.js du moteur en plus du core/wasm,
+        // sinon le chargement échoue silencieusement et on retombe sur du .webm.
         if (needsConvert) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
           try {
             ffmpeg = new FFmpeg();
             ffmpeg.on("log", ({ message }) => {
+              ffmpegLogs.push(message);
+              if (ffmpegLogs.length > 200) ffmpegLogs.shift();
               console.debug("[ffmpeg]", message);
             });
             const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-            await ffmpeg.load({
-              coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-              wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-            });
+            const [coreURL, wasmURL, workerURL] = await Promise.all([
+              toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+              toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, "text/javascript"),
+            ]);
+            await ffmpeg.load({ coreURL, wasmURL, workerURL, classWorkerURL: workerURL });
             console.info("[export] ffmpeg loaded (single-thread)");
-          } catch (err) {
-            console.warn("[export] ffmpeg load failed, fallback to original format", err);
+          } catch (err: any) {
+            console.warn("[export] ffmpeg load failed", err);
+            ffmpegLoadError = err?.message || String(err);
             ffmpeg = null;
             ffmpegUnavailable = true;
           }
         }
+
+        let convertedCount = 0;
+        let conversionFailures = 0;
+        const conversionErrors: string[] = [];
 
         for (let i = 0; i < downloaded.length; i++) {
           if (cancelled) return;
           const d = downloaded[i];
           const finalName = `${d.baseName}.mp4`;
 
-          if (d.ext === "mp4" || !ffmpeg) {
-            // Déjà en MP4 ou pas de conversion possible : on garde tel quel
-            const name = d.ext === "mp4" ? `${d.baseName}.mp4` : `${d.baseName}.${d.ext}`;
+          if (d.ext === "mp4") {
+            zip.file(finalName, d.data);
+            fileEntries.push({ name: finalName, question: d.question });
+            convertedCount++;
+          } else if (!ffmpeg) {
+            const name = `${d.baseName}.${d.ext}`;
             zip.file(name, d.data);
             fileEntries.push({ name, question: d.question });
           } else {
@@ -300,14 +324,17 @@ export default function SessionVideoExport() {
               const inputName = `in-${i}.${d.ext}`;
               const outputName = `out-${i}.mp4`;
               await ffmpeg.writeFile(inputName, d.data);
-              const outData = await convertToMp4(ffmpeg, inputName, outputName);
+              const outData = await convertToMp4(ffmpeg, inputName, outputName, ffmpegLogs);
               zip.file(finalName, outData);
               fileEntries.push({ name: finalName, question: d.question });
+              convertedCount++;
               await ffmpeg.deleteFile(inputName).catch(() => {});
-              await ffmpeg.deleteFile(outputName).catch(() => {});
             } catch (err: any) {
               console.warn(`[export] conversion ${d.baseName} failed`, err);
-              // Fallback : on garde le fichier original
+              conversionFailures++;
+              if (conversionErrors.length < 3) {
+                conversionErrors.push(`${d.baseName}: ${err?.message || err}`);
+              }
               const name = `${d.baseName}.${d.ext}`;
               zip.file(name, d.data);
               fileEntries.push({ name, question: d.question });
@@ -315,6 +342,17 @@ export default function SessionVideoExport() {
           }
 
           setProgress(60 + ((i + 1) / downloaded.length) * 25);
+        }
+
+        // Si rien n'a pu être converti alors qu'on en avait besoin, on stoppe net
+        // avec une vraie erreur explicite plutôt que de livrer un ZIP de .webm.
+        if (needsConvert && convertedCount === 0) {
+          const detail = ffmpegLoadError
+            ? `Le convertisseur vidéo n'a pas pu être chargé : ${ffmpegLoadError}`
+            : conversionErrors.length > 0
+              ? `La conversion a échoué : ${conversionErrors.join(" ; ")}`
+              : "La conversion vidéo a échoué.";
+          throw new Error(detail);
         }
 
         // 6. README
@@ -347,13 +385,14 @@ export default function SessionVideoExport() {
           missing.forEach((n) => readme.push(`  ${n}`));
         }
         readme.push("");
-        if (ffmpegUnavailable) {
+        const allMp4 = fileEntries.every((f) => f.name.toLowerCase().endsWith(".mp4"));
+        if (allMp4) {
           readme.push(
-            "Format : WebM (VP8/VP9). Lisible avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez en MP4 (ex. HandBrake). Seules les réponses du candidat sont enregistrées.",
+            "Format : MP4 (MPEG-4 Part 2 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
           );
         } else {
           readme.push(
-            "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
+            `Format : ${convertedCount} fichier(s) en MP4, ${conversionFailures} fichier(s) restés en WebM (conversion impossible). Les .webm sont lisibles avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez-les en MP4 (ex. HandBrake).`,
           );
         }
         zip.file("README.txt", readme.join("\n"));
