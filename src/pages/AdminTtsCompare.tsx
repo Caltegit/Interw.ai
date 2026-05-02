@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Play, Pause, RefreshCw, Eye, Trophy } from "lucide-react";
 
-type Provider = "elevenlabs" | "openai";
+type Provider = "elevenlabs" | "openai" | "gemini";
 
 interface VoiceCandidate {
   id: string;
@@ -57,6 +57,30 @@ const CANDIDATES: VoiceCandidate[] = [
     pricePer1kChars: 0.0055,
     voiceParam: "onyx",
     model: "gpt-4o-mini-tts",
+  },
+  {
+    id: "gem-kore",
+    provider: "gemini",
+    label: "Gemini TTS — Kore",
+    description: "Féminine, posée, professionnelle",
+    pricePer1kChars: 0.014,
+    voiceParam: "Kore",
+  },
+  {
+    id: "gem-charon",
+    provider: "gemini",
+    label: "Gemini TTS — Charon",
+    description: "Masculine, calme, informative",
+    pricePer1kChars: 0.014,
+    voiceParam: "Charon",
+  },
+  {
+    id: "gem-aoede",
+    provider: "gemini",
+    label: "Gemini TTS — Aoede",
+    description: "Féminine, fluide, légère",
+    pricePer1kChars: 0.014,
+    voiceParam: "Aoede",
   },
 ];
 
