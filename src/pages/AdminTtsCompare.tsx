@@ -169,7 +169,7 @@ export default function AdminTtsCompare() {
 
     const failures = settled.filter((r) => r.error);
     if (failures.length === 0) {
-      toast({ title: "Génération terminée", description: "Écoutez les 4 voix et votez votre préférée." });
+      toast({ title: "Génération terminée", description: "Écoutez les 3 voix et votez votre préférée." });
     } else if (failures.length < settled.length) {
       toast({
         title: "Génération partielle",
