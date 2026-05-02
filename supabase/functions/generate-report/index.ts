@@ -591,13 +591,20 @@ Champs secondaires (toujours produits, format inchangé) :
       avg_criteria_score: Number(avgCriteriaScore.toFixed(2)),
       best_question_idx: bestQuestionIdx,
       worst_question_idx: worstQuestionIdx,
+      // ===== NOUVEAU : champs orientés décision (stockés ici pour éviter une migration) =====
+      verdict_headline: parsed.verdict_headline || null,
+      decision_drivers: Array.isArray(parsed.decision_drivers) ? parsed.decision_drivers : [],
+      fit_breakdown: fitBreakdown,
+      fit_score: fitScore,
+      signals: Array.isArray(parsed.signals) ? parsed.signals : [],
+      communication_profile: parsed.communication_profile || null,
     };
 
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
       executive_summary: parsed.executive_summary || "",
-      executive_summary_short: parsed.executive_summary_short || null,
+      executive_summary_short: parsed.verdict_headline || parsed.executive_summary_short || null,
       overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
       overall_grade: parsed.overall_grade || null,
       recommendation: parsed.recommendation || null,
