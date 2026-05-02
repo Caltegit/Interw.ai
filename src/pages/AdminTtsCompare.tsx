@@ -7,17 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Play, Pause, RefreshCw, Eye, Trophy } from "lucide-react";
 
-type Provider = "elevenlabs" | "gemini";
+type Provider = "elevenlabs" | "openai";
 
 interface VoiceCandidate {
   id: string;
   provider: Provider;
-  label: string; // Nom interne (révélé après)
+  label: string;
   description: string;
   // Coût pour 1000 caractères en euros
   pricePer1kChars: number;
   // Paramètre passé à l'API
   voiceParam: string;
+  // Modèle (uniquement OpenAI)
+  model?: string;
 }
 
 const CANDIDATES: VoiceCandidate[] = [
@@ -30,28 +32,31 @@ const CANDIDATES: VoiceCandidate[] = [
     voiceParam: "XB0fDUnXU5powFXDhCwa",
   },
   {
-    id: "gem-kore",
-    provider: "gemini",
-    label: "Gemini TTS — Kore",
-    description: "Féminine, posée, professionnelle",
-    pricePer1kChars: 0.014,
-    voiceParam: "Kore",
+    id: "oa-nova",
+    provider: "openai",
+    label: "OpenAI gpt-4o-mini-tts — Nova",
+    description: "Féminine, claire, professionnelle",
+    pricePer1kChars: 0.0055,
+    voiceParam: "nova",
+    model: "gpt-4o-mini-tts",
   },
   {
-    id: "gem-charon",
-    provider: "gemini",
-    label: "Gemini TTS — Charon",
-    description: "Masculine, calme, informative",
-    pricePer1kChars: 0.014,
-    voiceParam: "Charon",
+    id: "oa-shimmer",
+    provider: "openai",
+    label: "OpenAI gpt-4o-mini-tts — Shimmer",
+    description: "Féminine, douce et chaleureuse",
+    pricePer1kChars: 0.0055,
+    voiceParam: "shimmer",
+    model: "gpt-4o-mini-tts",
   },
   {
-    id: "gem-aoede",
-    provider: "gemini",
-    label: "Gemini TTS — Aoede",
-    description: "Féminine, fluide, légère",
-    pricePer1kChars: 0.014,
-    voiceParam: "Aoede",
+    id: "oa-onyx",
+    provider: "openai",
+    label: "OpenAI gpt-4o-mini-tts — Onyx",
+    description: "Masculine, posée, autoritaire",
+    pricePer1kChars: 0.0055,
+    voiceParam: "onyx",
+    model: "gpt-4o-mini-tts",
   },
 ];
 
@@ -98,13 +103,13 @@ export default function AdminTtsCompare() {
       const accessToken = session?.access_token;
       if (!accessToken) throw new Error("Vous devez être connecté.");
 
-      const fnName = cand.provider === "elevenlabs" ? "tts-elevenlabs" : "tts-gemini";
+      const fnName = cand.provider === "elevenlabs" ? "tts-elevenlabs" : "tts-openai";
       const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const url = `https://${projectRef}.supabase.co/functions/v1/${fnName}`;
 
       const body = cand.provider === "elevenlabs"
         ? { text, preview: true, voiceId: cand.voiceParam }
-        : { text, voiceName: cand.voiceParam };
+        : { text, voiceName: cand.voiceParam, model: cand.model };
 
       const res = await fetch(url, {
         method: "POST",
@@ -273,7 +278,7 @@ export default function AdminTtsCompare() {
                       </CardTitle>
                       {revealed && (
                         <Badge variant={cand.provider === "elevenlabs" ? "default" : "secondary"}>
-                          {cand.provider === "elevenlabs" ? "ElevenLabs" : "Gemini TTS"}
+                          {cand.provider === "elevenlabs" ? "ElevenLabs" : "OpenAI TTS"}
                         </Badge>
                       )}
                     </div>
@@ -352,9 +357,9 @@ export default function AdminTtsCompare() {
                 <h3 className="font-semibold mb-2">Verdict</h3>
                 <p className="text-sm text-muted-foreground">
                   Vous avez préféré <strong>{candidatesById[vote].label}</strong>.{" "}
-                  {candidatesById[vote].provider === "gemini" ? (
+                  {candidatesById[vote].provider === "openai" ? (
                     <>
-                      Bonne nouvelle : Gemini TTS coûte environ{" "}
+                      Bonne nouvelle : OpenAI TTS coûte environ{" "}
                       <strong>
                         {(candidatesById["el-charlotte"].pricePer1kChars / candidatesById[vote].pricePer1kChars).toFixed(0)}× moins cher
                       </strong>{" "}

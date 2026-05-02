@@ -37,5 +37,5 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.transcribe-session]
     verify_jwt = false
 
-  [functions.tts-gemini]
+  [functions.tts-openai]
     verify_jwt = false
