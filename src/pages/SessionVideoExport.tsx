@@ -217,16 +217,30 @@ export default function SessionVideoExport() {
 
         const needsConvert = downloaded.some((d) => d.ext !== "mp4");
         let ffmpeg: FFmpeg | null = null;
+        let ffmpegUnavailable = false;
 
-        if (needsConvert) {
+        // ffmpeg.wasm exige SharedArrayBuffer (COOP/COEP). Si indisponible, on
+        // saute la conversion et on conserve les fichiers d'origine (.webm).
+        const canUseFfmpeg = typeof (globalThis as any).SharedArrayBuffer !== "undefined";
+
+        if (needsConvert && canUseFfmpeg) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
-          ffmpeg = new FFmpeg();
-          const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-          await ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-          });
+          try {
+            ffmpeg = new FFmpeg();
+            const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+            await ffmpeg.load({
+              coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+            });
+          } catch (err) {
+            console.warn("[export] ffmpeg load failed, fallback to original format", err);
+            ffmpeg = null;
+            ffmpegUnavailable = true;
+          }
+        } else if (needsConvert && !canUseFfmpeg) {
+          ffmpegUnavailable = true;
+          console.warn("[export] SharedArrayBuffer unavailable — skipping MP4 conversion");
         }
 
         for (let i = 0; i < downloaded.length; i++) {
