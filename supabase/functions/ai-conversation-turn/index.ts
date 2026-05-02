@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
     const rawLevel = currentQ.relanceLevel;
     const relanceLevel: "light" | "medium" | "deep" =
       rawLevel === "light" || rawLevel === "deep" ? rawLevel : "medium";
+    const followUpEnabled: boolean = currentQ.followUpEnabled !== false;
 
     const followUpsAsked: number = Number(projectContext.followUpsAsked ?? 0);
     const baseMaxFollowUps: number = Math.max(
@@ -59,8 +60,12 @@ Deno.serve(async (req) => {
     const isLastQuestion = currentIdx >= questionsList.length - 1;
     const canFollowUp =
       relanceLevel !== "light" &&
+      followUpEnabled &&
       !networkDisablesFollowUps &&
       followUpsAsked < maxFollowUps;
+    // Règle déterministe : tant qu'il reste des relances configurées sur la
+    // question, on FORCE une relance. L'IA ne sert qu'à formuler la relance.
+    const mustFollowUp = canFollowUp;
 
     // Last candidate message (for word-count heuristic, used in prompt context)
     const lastCandidate = [...messages].reverse().find((m: any) => m.role === "user");

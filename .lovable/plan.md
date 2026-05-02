@@ -1,83 +1,42 @@
-## Objectif
+## Bug identifié
 
-Ajouter 10 questions de type "énigme" dans la bibliothèque de questions, présentes dans **toutes les organisations** (existantes + futures).
+Aujourd'hui, la décision « relance » vs « question suivante » est prise par l'IA dans l'edge function `ai-conversation-turn`. Le serveur empêche bien les **excès** de relance, mais ne force **jamais** une relance même quand le paramétrage de la question l'exige (`follow_up_enabled = true` et `relances_posées < max_follow_ups`).
 
-## Spécifications par énigme
-- **Titre** : `Énigmes - {Nom de l'énigme}`
-- **Catégorie** : `Énigmes` (nouvelle catégorie)
-- **Contenu** : énoncé clair de l'énigme + invite à expliquer son raisonnement à voix haute
-- **Timer (max_response_seconds)** : 180 (3 minutes)
-- **Relance** : désactivée (`follow_up_enabled = false`, `max_follow_ups = 0`)
-- **Type** : `written`
+Conséquence : sur une question configurée pour 2 relances, l'IA peut décider « la réponse est claire » et passer directement à la question suivante — ce qui contredit l'intention du recruteur.
 
-## Liste des 10 énigmes proposées
+## Correctif
 
-Mix logique / latéral / quantitatif (classiques d'entretien type cabinet conseil, FAANG) :
+### 1. Edge function `supabase/functions/ai-conversation-turn/index.ts`
 
-1. **Énigmes - Les 3 ampoules** — 3 interrupteurs au rez-de-chaussée, 3 ampoules à l'étage. Identifier en une seule montée.
-2. **Énigmes - Les 9 billes** — Trouver la bille plus lourde parmi 9 en 2 pesées max.
-3. **Énigmes - Les 2 cordes** — Mesurer 45 minutes avec 2 cordes brûlant en 1h chacune (combustion non uniforme).
-4. **Énigmes - Le pont et la lampe** — 4 personnes, 1 lampe, traversée d'un pont en 17 min max.
-5. **Énigmes - Les 100 prisonniers et le chapeau** — Stratégie collective pour maximiser les survivants.
-6. **Énigmes - Pourquoi les plaques d'égout sont rondes ?** — Question de raisonnement ouvert.
-7. **Énigmes - Combien de balles de tennis dans un bus ?** — Estimation Fermi.
-8. **Énigmes - Les 2 seaux** — Mesurer exactement 4 L avec un seau de 3 L et un de 5 L.
-9. **Énigmes - Le chameau et les bananes** — Transport optimal de 3000 bananes sur 1000 km.
-10. **Énigmes - L'horloge cassée** — À quel moment précis aiguilles superposées entre midi et 13h ?
+Ajouter une règle déterministe **avant** l'appel IA :
 
-Chaque contenu se termine par : *"Prenez le temps de réfléchir à voix haute et expliquez-nous votre raisonnement, même si vous ne trouvez pas la réponse exacte. À vous."*
+- Si `relanceLevel !== "light"` ET `follow_up_enabled !== false` ET `followUpsAsked < maxFollowUps` ET pas d'override réseau désactivant les relances → on **force** `action = "follow_up"`. L'IA n'est appelée que pour générer le **texte** de la relance (question courte qui creuse la réponse), pas pour décider de l'action.
+- Si toutes les relances configurées sont consommées → `action = "next"` (ou `"end"` si dernière question), comme aujourd'hui.
+- Conserver le garde-fou actuel : si l'IA renvoyait quand même `next` alors que `canFollowUp` est vrai et qu'on est en mode forcé, on remplace par `follow_up`.
 
-## Implémentation technique
+Renforcer aussi le prompt système pour refléter cette règle (la relance est obligatoire tant qu'on n'a pas atteint `max_follow_ups`).
 
-### 1. Migration SQL
-Mettre à jour la fonction `seed_default_question_templates(_org_id, _created_by)` (définie dans `supabase/migrations/20260419211115_…sql`) :
-- Ajouter les 10 lignes énigmes au `VALUES`, en étendant le tuple pour inclure aussi `max_response_seconds`.
-- Modifier l'`INSERT` pour mapper `max_response_seconds` (180 pour les énigmes, NULL pour les autres) tout en gardant `follow_up_enabled = false` et `max_follow_ups = 0`.
+### 2. Client `src/pages/InterviewStart.tsx`
 
-```text
-VALUES
-  (titre, contenu, catégorie, max_response_seconds)
-  ('Introduction parcours', '...', 'Expérience', NULL),
-  ...
-  ('Énigmes - Les 3 ampoules', '...', 'Énigmes', 180),
-  ...
-```
+- Envoyer explicitement `followUpEnabled` (champ `follow_up_enabled` de la question) dans `projectContext.questions[]` (actuellement non transmis ; le serveur suppose `true`).
+- Garde-fou client miroir : à la réception de la réponse IA, si `action === "next"` alors que la question courante a encore des relances disponibles et `follow_up_enabled = true`, on ne bascule pas et on rappelle la fonction edge avec un flag `forceFollowUp = true` pour récupérer un texte de relance — évite tout risque de désynchronisation si l'edge function tombe en erreur.
+- Vérifier que pendant la branche `follow_up` (lignes ~1868-1928) on **n'écrit jamais** `setCurrentQuestionIndex` ni de message portant `mediaType`/`mediaUrl` de la question suivante. C'est déjà le cas, on ajoute juste un commentaire défensif.
 
-Le `WHERE NOT EXISTS` existant (déduplication par `title + organization_id`) garantit qu'aucun doublon n'est créé si la fonction est rejouée.
+### 3. Cas particuliers respectés
 
-### 2. Backfill toutes les organisations existantes
-Dans la même migration, après la redéfinition de la fonction :
+- `relanceLevel === "light"` → aucune relance (inchangé).
+- Question Énigmes (catégorie ajoutée précédemment) avec `follow_up_enabled = false` et `max_follow_ups = 0` → pas de relance forcée (inchangé).
+- Override réseau (`forceMaxFollowUps = 0`) → désactive les relances même si configurées (inchangé, message déjà affiché au candidat).
+- Dernière question : si encore des relances dispo → on relance ; sinon → `end`.
 
-```sql
-DO $$
-DECLARE _org RECORD; _creator uuid;
-BEGIN
-  FOR _org IN SELECT id, owner_id FROM public.organizations LOOP
-    _creator := _org.owner_id;
-    IF _creator IS NULL THEN
-      SELECT user_id INTO _creator FROM public.user_roles
-      WHERE organization_id = _org.id AND role = 'admin'::app_role
-      ORDER BY id LIMIT 1;
-    END IF;
-    IF _creator IS NULL THEN
-      SELECT user_id INTO _creator FROM public.user_roles
-      WHERE role = 'super_admin'::app_role ORDER BY id LIMIT 1;
-    END IF;
-    IF _creator IS NOT NULL THEN
-      PERFORM public.seed_default_question_templates(_org.id, _creator);
-    END IF;
-  END LOOP;
-END $$;
-```
+## Fichiers modifiés
 
-Le `NOT EXISTS` dans la fonction empêche de toucher aux questions existantes — seules les 10 énigmes seront ajoutées aux orgs déjà créées.
+- `supabase/functions/ai-conversation-turn/index.ts` — règle déterministe + prompt durci.
+- `src/pages/InterviewStart.tsx` — transmission de `follow_up_enabled` + garde-fou client.
 
-### 3. Futures organisations
-Aucun changement nécessaire : le trigger `trg_seed_org_question_templates` appelle déjà `seed_default_question_templates` à chaque création d'organisation, qui inclura désormais les énigmes.
+## Validation
 
-## Fichiers touchés
-- **Créé** : nouvelle migration `supabase/migrations/<timestamp>_add_enigma_question_templates.sql`
-
-## Hors périmètre
-- Pas de changement UI (les énigmes apparaîtront automatiquement dans `QuestionLibraryDialog` et dans la page "Bibliothèque > Questions").
-- Pas de catégorie figée côté code : la catégorie est un simple `text` libre, donc "Énigmes" sera proposée dynamiquement via le filtre de catégorie existant.
+- Cas A : question avec `max_follow_ups = 2`, réponse longue et claire → 2 relances posées avant passage à la suivante.
+- Cas B : question avec `max_follow_ups = 0` ou `follow_up_enabled = false` → pas de relance, transition directe.
+- Cas C : `relanceLevel = "light"` → pas de relance.
+- Cas D : réseau dégradé (`forceMaxFollowUps = 0`) → pas de relance, message « Session simplifiée » affiché.
