@@ -13,34 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Loader2, Sparkles, Library } from "lucide-react";
-import { INTRO_FORMAT_META, type IntroFormat } from "@/components/library/IntroFormatPicker";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "react-router-dom";
+import { Loader2, Sparkles } from "lucide-react";
 
 export interface JobImportPayload {
   title: string;
   questions: Array<{ title: string; content: string }>;
   criteria: Array<{ label: string; description: string; weight: number }>;
-  intro: IntroTemplate | null;
   voice: LastVoice | null;
-}
-
-export interface IntroTemplate {
-  id: string;
-  name: string;
-  type: string;
-  intro_text: string | null;
-  audio_url: string | null;
-  video_url: string | null;
-  tts_voice_id: string | null;
 }
 
 export interface LastVoice {
@@ -62,41 +41,16 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
   const [url, setUrl] = useState("");
   const [questionsCount, setQuestionsCount] = useState(10);
   const [criteriaCount, setCriteriaCount] = useState(3);
-  const [introId, setIntroId] = useState<string>("none");
-  const [intros, setIntros] = useState<IntroTemplate[]>([]);
   const [lastVoice, setLastVoice] = useState<LastVoice | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusLabel, setStatusLabel] = useState("");
 
-  // Charge intros + dernière voix à l'ouverture
+  // Charge la dernière voix utilisée à l'ouverture
   useEffect(() => {
     if (!open || !user) return;
     let cancelled = false;
 
     (async () => {
-      // Org de l'utilisateur
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const orgId = profile?.organization_id;
-
-      if (orgId) {
-        const { data: introsData } = await supabase
-          .from("intro_templates" as never)
-          .select("id, name, type, intro_text, audio_url, video_url, tts_voice_id")
-          .eq("organization_id", orgId)
-          .order("created_at", { ascending: false });
-        if (!cancelled && introsData) {
-          const list = introsData as unknown as IntroTemplate[];
-          setIntros(list);
-          if (list.length > 0) setIntroId(list[0].id);
-        }
-      }
-
-      // Dernière voix utilisée par ce recruteur
       const { data: lastProject } = await supabase
         .from("projects")
         .select("tts_provider, tts_voice_gender, tts_voice_id")
@@ -154,13 +108,10 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const intro = intros.find((i) => i.id === introId) ?? null;
-
       onApply({
         title: data.title,
         questions: data.questions,
         criteria: data.criteria,
-        intro,
         voice: lastVoice,
       });
 
@@ -205,80 +156,6 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
               onChange={(e) => setUrl(e.target.value)}
               disabled={loading}
             />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Intro candidat (depuis votre bibliothèque)</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                asChild
-                className="h-auto px-2 py-1 text-xs"
-              >
-                <Link to="/library/intros" target="_blank">
-                  <Library className="mr-1 h-3 w-3" /> Gérer
-                </Link>
-              </Button>
-            </div>
-            <Select value={introId} onValueChange={setIntroId} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={
-                    intros.length === 0 ? "Aucune intro en bibliothèque" : "Choisir une intro"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Pas d'intro</SelectItem>
-                {intros.map((i) => {
-                  const meta = INTRO_FORMAT_META[(i.type as IntroFormat) ?? "text"];
-                  const Icon = meta?.icon;
-                  return (
-                    <SelectItem key={i.id} value={i.id}>
-                      <span className="flex items-center gap-2">
-                        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
-                        <span>{i.name}</span>
-                        <span className="text-xs text-muted-foreground">— {meta?.label}</span>
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            {intros.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Aucune intro enregistrée.{" "}
-                <Link to="/library/intros" target="_blank" className="text-primary underline">
-                  Créez-en une dans la bibliothèque
-                </Link>
-                .
-              </p>
-            )}
-            {introId !== "none" && (() => {
-              const sel = intros.find((i) => i.id === introId);
-              if (!sel) return null;
-              const meta = INTRO_FORMAT_META[(sel.type as IntroFormat) ?? "text"];
-              return (
-                <div className="rounded-md border bg-muted/30 p-2 space-y-1">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {meta?.label}
-                  </Badge>
-                  {(sel.type === "text" || sel.type === "tts") && sel.intro_text && (
-                    <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
-                      {sel.intro_text}
-                    </p>
-                  )}
-                  {sel.type === "audio" && sel.audio_url && (
-                    <audio controls src={sel.audio_url} className="w-full h-8" />
-                  )}
-                  {sel.type === "video" && sel.video_url && (
-                    <video controls src={sel.video_url} className="w-full max-h-32 rounded" />
-                  )}
-                </div>
-              );
-            })()}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
