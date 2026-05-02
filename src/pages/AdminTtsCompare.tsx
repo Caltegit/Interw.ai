@@ -231,7 +231,7 @@ export default function AdminTtsCompare() {
                 </>
               ) : (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4" /> Générer les 4 voix
+                  <RefreshCw className="mr-2 h-4 w-4" /> Générer les 3 voix
                 </>
               )}
             </Button>
