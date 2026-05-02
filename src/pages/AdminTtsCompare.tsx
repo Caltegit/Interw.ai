@@ -278,7 +278,7 @@ export default function AdminTtsCompare() {
                       </CardTitle>
                       {revealed && (
                         <Badge variant={cand.provider === "elevenlabs" ? "default" : "secondary"}>
-                          {cand.provider === "elevenlabs" ? "ElevenLabs" : "Gemini TTS"}
+                          {cand.provider === "elevenlabs" ? "ElevenLabs" : "OpenAI TTS"}
                         </Badge>
                       )}
                     </div>
