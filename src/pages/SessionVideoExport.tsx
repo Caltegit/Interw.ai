@@ -366,7 +366,9 @@ export default function SessionVideoExport() {
       } catch (err: any) {
         console.error("[export]", err);
         if (!cancelled) {
-          setErrorMsg(err?.message ?? "Une erreur est survenue.");
+          const detail =
+            err?.message || (typeof err === "string" ? err : null) || "Erreur inconnue";
+          setErrorMsg(`Une erreur est survenue : ${detail}`);
           setPhase("error");
         }
       }
