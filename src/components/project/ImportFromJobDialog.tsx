@@ -208,12 +208,21 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>Intro candidat</Label>
-            <Select
-              value={introId}
-              onValueChange={setIntroId}
-              disabled={loading || intros.length === 0}
-            >
+            <div className="flex items-center justify-between">
+              <Label>Intro candidat (depuis votre bibliothèque)</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                asChild
+                className="h-auto px-2 py-1 text-xs"
+              >
+                <Link to="/library/intros" target="_blank">
+                  <Library className="mr-1 h-3 w-3" /> Gérer
+                </Link>
+              </Button>
+            </div>
+            <Select value={introId} onValueChange={setIntroId} disabled={loading}>
               <SelectTrigger>
                 <SelectValue
                   placeholder={
@@ -223,13 +232,53 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Pas d'intro</SelectItem>
-                {intros.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.name}
-                  </SelectItem>
-                ))}
+                {intros.map((i) => {
+                  const meta = INTRO_FORMAT_META[(i.type as IntroFormat) ?? "text"];
+                  const Icon = meta?.icon;
+                  return (
+                    <SelectItem key={i.id} value={i.id}>
+                      <span className="flex items-center gap-2">
+                        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+                        <span>{i.name}</span>
+                        <span className="text-xs text-muted-foreground">— {meta?.label}</span>
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
+            {intros.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Aucune intro enregistrée.{" "}
+                <Link to="/library/intros" target="_blank" className="text-primary underline">
+                  Créez-en une dans la bibliothèque
+                </Link>
+                .
+              </p>
+            )}
+            {introId !== "none" && (() => {
+              const sel = intros.find((i) => i.id === introId);
+              if (!sel) return null;
+              const meta = INTRO_FORMAT_META[(sel.type as IntroFormat) ?? "text"];
+              return (
+                <div className="rounded-md border bg-muted/30 p-2 space-y-1">
+                  <Badge variant="secondary" className="text-[10px]">
+                    {meta?.label}
+                  </Badge>
+                  {(sel.type === "text" || sel.type === "tts") && sel.intro_text && (
+                    <p className="text-xs text-muted-foreground line-clamp-3 whitespace-pre-wrap">
+                      {sel.intro_text}
+                    </p>
+                  )}
+                  {sel.type === "audio" && sel.audio_url && (
+                    <audio controls src={sel.audio_url} className="w-full h-8" />
+                  )}
+                  {sel.type === "video" && sel.video_url && (
+                    <video controls src={sel.video_url} className="w-full max-h-32 rounded" />
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
