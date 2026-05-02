@@ -1,56 +1,53 @@
+## Bien meilleure approche, validée
+
+Tu as raison : plutôt que de bricoler la transcription navigateur (qui sera toujours fragile), on s'appuie sur la **source de vérité** déjà disponible — chaque réponse candidat a son segment vidéo enregistré (`video_segment_url`). Gemini sait lire directement l'audio d'une vidéo et produire une transcription propre, sans doublons, ponctuée correctement.
+
+C'est la bonne architecture : la Web Speech API du navigateur sert seulement à l'**affichage en direct** pendant l'entretien (UX), et la **transcription officielle** est générée à la fin par Gemini en lisant les vidéos.
+
 ## Plan
 
-Je vais solidifier l’export vidéo en deux couches : correction immédiate du convertisseur navigateur, puis repli robuste côté backend pour ne plus dépendre d’un chargement fragile dans l’onglet.
+### 1. Nouvelle fonction backend `transcribe-session`
+- Déclenchée automatiquement à la fin d'une session, et aussi manuellement depuis la page de détail (bouton « Re-transcrire »).
+- Pour chaque message candidat ayant un segment vidéo :
+  - Télécharge la vidéo depuis le stockage privé.
+  - L'envoie à Gemini avec une consigne stricte : « transcris exactement ce que dit la personne, en français, sans reformulation, avec ponctuation correcte ».
+  - Remplace le `content` du message par la transcription propre.
+- Conserve l'ancien texte (Web Speech) dans une nouvelle colonne `content_raw` pour pouvoir comparer ou revenir en arrière.
+- Gère les segments longs en découpant si nécessaire et en concaténant.
 
-### 1. Corriger la cause racine du « Failed to fetch »
-- Revoir `src/pages/SessionVideoExport.tsx`.
-- Remplacer le chargement actuel du convertisseur par une configuration compatible avec Vite.
-- Supprimer le chargement invalide du fichier `ffmpeg-core.worker.js` depuis le mauvais paquet.
-- Héberger les fichiers du convertisseur de façon stable dans le projet, au lieu de dépendre d’un chargement externe fragile.
-- Ajouter une vérification explicite du chargement du moteur avant de lancer la conversion.
+### 2. Déclenchement automatique
+- À la fin de l'entretien, juste avant de générer le rapport, on lance la transcription Gemini.
+- Le rapport est ensuite généré sur la base de la **transcription propre**, donc beaucoup plus fiable (les répétitions actuelles polluent l'analyse IA).
 
-### 2. Garantir un vrai résultat MP4
-- Conserver directement les segments déjà en MP4.
-- Convertir les segments WebM vers MP4 quand le moteur navigateur est disponible.
-- Si la conversion navigateur échoue, ne plus renvoyer un ZIP partiellement en WebM.
-- Basculer automatiquement vers un traitement backend en arrière-plan pour produire un ZIP uniquement en MP4.
+### 3. Bouton manuel pour les sessions existantes
+- Sur la page détail de session (RH), un bouton « Re-transcrire les vidéos » qui rejoue la transcription Gemini sur toute la session.
+- Affichage d'un état clair : en cours, terminé, échec par segment.
+- Permet de réparer rétroactivement la session que tu m'as montrée et toutes les autres.
 
-### 3. Utiliser le backend déjà préparé pour les exports
-- S’appuyer sur la table `video_export_jobs` déjà présente.
-- Ajouter une fonction backend qui :
-  - valide l’accès à la session,
-  - crée un job d’export,
-  - télécharge les segments source,
-  - les convertit en MP4,
-  - génère l’archive ZIP,
-  - stocke le fichier dans l’espace privé prévu,
-  - renvoie un lien signé quand c’est prêt.
-- Lancer ce travail en arrière-plan pour éviter les limites et les plantages du navigateur.
+### 4. UX pendant l'entretien
+- On garde la transcription en direct du navigateur **uniquement pour l'affichage temps réel** (le candidat voit ce qu'il dit).
+- On **arrête de l'envoyer telle quelle** en base comme version finale : elle sert de placeholder, remplacée à la fin par la version Gemini.
+- Affichage clair côté RH : « Transcription en cours d'amélioration… » tant que Gemini n'a pas fini, puis bascule automatique sur la version propre.
 
-### 4. Rendre l’interface solide et claire
-- Mettre à jour `src/pages/SessionVideoExport.tsx` pour piloter les deux modes :
-  - conversion locale si possible,
-  - sinon job backend avec attente et rafraîchissement d’état.
-- Afficher des états simples et fiables : préparation, traitement, archive prête, erreur.
-- Ajouter un vrai bouton de relance en cas d’échec.
-- Afficher une erreur utile et précise, au lieu du simple « Failed to fetch ».
-
-### 5. Sécuriser le flux
-- Vérifier que seul un membre autorisé de l’organisation peut demander et récupérer un export.
-- Utiliser des liens temporaires pour le téléchargement final.
-- Garder les fichiers d’archive en privé.
+### 5. Sécurité et coûts
+- La fonction vérifie que l'appelant est membre de l'organisation propriétaire de la session.
+- Téléchargement des vidéos via URL signée temporaire, jamais publique.
+- Repli silencieux si Gemini est indisponible : on garde la transcription navigateur (dédoublonnée a minima côté serveur) plutôt que de bloquer.
+- Modèle : `google/gemini-2.5-flash` (lit l'audio/vidéo, rapide, coût raisonnable). Repli sur `google/gemini-2.5-pro` si la qualité audio est mauvaise.
 
 ## Résultat attendu
-- Le clic sur « Télécharger les vidéos » aboutit à une archive ZIP contenant uniquement des MP4.
-- Si le convertisseur navigateur ne peut pas se charger, l’utilisateur n’est plus bloqué.
-- L’export devient fiable même quand le navigateur, le réseau ou le volume de données posent problème.
+- Transcriptions propres, sans répétitions, avec vraie ponctuation.
+- Rapports d'entretien beaucoup plus fiables, basés sur ce que le candidat a **réellement dit**.
+- Possibilité de réparer toutes les sessions passées en un clic.
+- L'expérience candidat reste identique : transcription live à l'écran, rien ne change pour lui.
 
 ## Détail technique
-- Cause racine trouvée : le code charge `@ffmpeg/core` en mode `umd` alors que la documentation recommande `esm` avec Vite, et il tente en plus de charger `ffmpeg-core.worker.js` depuis un emplacement non valable pour cette version. C’est cohérent avec l’erreur affichée : « Le convertisseur vidéo n'a pas pu être chargé : Failed to fetch ».
-- Fichiers principaux concernés :
-  - `src/pages/SessionVideoExport.tsx`
-  - `src/pages/SessionDetail.tsx`
-  - nouvelle fonction backend d’export vidéo
-  - éventuelle migration complémentaire si un champ d’état supplémentaire est utile
+- Nouvelle fonction : `supabase/functions/transcribe-session/index.ts`
+- Migration : ajout de `content_raw` (text, nullable) et `transcription_status` (enum: pending/processing/done/failed) sur `session_messages`.
+- Modifications client :
+  - `src/pages/InterviewStart.tsx` — déclenche `transcribe-session` à la fin, avant `generate-report`.
+  - `src/pages/SessionDetail.tsx` et `src/pages/SharedReport.tsx` — bouton de re-transcription + indicateur d'état.
+- `generate-report` : attend que la transcription soit terminée avant de générer le rapport (ou utilise le texte déjà nettoyé si déjà fait).
+- API Gemini multimodal : envoi de la vidéo en base64 ou via `fileData` selon la taille, avec prompt strict de transcription verbatim.
 
-Si tu approuves, je passe à l’implémentation complète.
+Si tu approuves, je passe à l'implémentation.

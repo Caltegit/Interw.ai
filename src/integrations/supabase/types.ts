@@ -1081,36 +1081,45 @@ export type Database = {
         Row: {
           audio_segment_url: string | null
           content: string
+          content_raw: string | null
           id: string
           is_follow_up: boolean
           question_id: string | null
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
           timestamp: string
+          transcribed_at: string | null
+          transcription_status: string
           video_chunks_manifest_url: string | null
           video_segment_url: string | null
         }
         Insert: {
           audio_segment_url?: string | null
           content: string
+          content_raw?: string | null
           id?: string
           is_follow_up?: boolean
           question_id?: string | null
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
           timestamp?: string
+          transcribed_at?: string | null
+          transcription_status?: string
           video_chunks_manifest_url?: string | null
           video_segment_url?: string | null
         }
         Update: {
           audio_segment_url?: string | null
           content?: string
+          content_raw?: string | null
           id?: string
           is_follow_up?: boolean
           question_id?: string | null
           role?: Database["public"]["Enums"]["message_role"]
           session_id?: string
           timestamp?: string
+          transcribed_at?: string | null
+          transcription_status?: string
           video_chunks_manifest_url?: string | null
           video_segment_url?: string | null
         }
