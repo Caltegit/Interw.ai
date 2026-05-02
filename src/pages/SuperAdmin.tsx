@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { StatsOverview } from "@/components/superadmin/StatsOverview";
 import { OrgsTable } from "@/components/superadmin/OrgsTable";
 import { UsersTable } from "@/components/superadmin/UsersTable";
 import { CreateOrgDialog } from "@/components/superadmin/CreateOrgDialog";
+import { AudioLines } from "lucide-react";
 
 export default function SuperAdmin() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -11,9 +14,17 @@ export default function SuperAdmin() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Console Super Admin</h1>
-        <p className="text-muted-foreground">Gérez la plateforme : organisations, utilisateurs et statistiques.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Console Super Admin</h1>
+          <p className="text-muted-foreground">Gérez la plateforme : organisations, utilisateurs et statistiques.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link to="/admin/tts-compare">
+            <AudioLines className="mr-2 h-4 w-4" />
+            Comparer les voix TTS
+          </Link>
+        </Button>
       </div>
 
       <StatsOverview />
