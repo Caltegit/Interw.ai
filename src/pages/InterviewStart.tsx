@@ -1840,6 +1840,7 @@ export default function InterviewStart() {
               mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
               relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
               maxFollowUps: typeof (q as any).max_follow_ups === "number" ? (q as any).max_follow_ups : 1,
+              followUpEnabled: (q as { follow_up_enabled?: boolean }).follow_up_enabled !== false,
             })),
             currentQuestionNumber: questionIdx + 1,
             totalQuestions: questions.length,
@@ -1863,6 +1864,29 @@ export default function InterviewStart() {
     setAiThinking(false);
     setQuestionLoading((prev) => (prev ? { ...prev, percent: 60, label: "Préparation de la suite…" } : prev));
     if (token.aborted) { aborted = true; return; }
+
+    // Garde-fou client : si la question courante a encore des relances dues
+    // (follow_up_enabled + relances_posées < max_follow_ups + niveau != light + pas
+    // d'override réseau), on FORCE action = "follow_up" même si l'edge a renvoyé
+    // "next" (ex. en cas d'erreur réseau côté edge).
+    {
+      const currQ = questions[questionIdx] as any;
+      const lvl = (currQ?.relance_level as "light" | "medium" | "deep") ?? "medium";
+      const enabled = currQ?.follow_up_enabled !== false;
+      const baseMax = typeof currQ?.max_follow_ups === "number" ? currQ.max_follow_ups : 1;
+      const effectiveMax =
+        forceMaxFollowUps != null ? Math.min(baseMax, forceMaxFollowUps) : baseMax;
+      const networkOff = forceMaxFollowUps === 0;
+      const followUpsDue =
+        lvl !== "light" && enabled && !networkOff && followUpsAsked < effectiveMax;
+      if (followUpsDue && action !== "follow_up" && !isLastQuestion) {
+        action = "follow_up";
+        if (!aiMessage || !aiMessage.trim()) {
+          aiMessage =
+            "Pouvez-vous développer un peu plus ? Donnez-moi un exemple concret si possible.";
+        }
+      }
+    }
 
     // ── 4. FOLLOW-UP branch ──
     if (action === "follow_up" && aiMessage && !isLastQuestion) {

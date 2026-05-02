@@ -40,6 +40,7 @@ Deno.serve(async (req) => {
     const rawLevel = currentQ.relanceLevel;
     const relanceLevel: "light" | "medium" | "deep" =
       rawLevel === "light" || rawLevel === "deep" ? rawLevel : "medium";
+    const followUpEnabled: boolean = currentQ.followUpEnabled !== false;
 
     const followUpsAsked: number = Number(projectContext.followUpsAsked ?? 0);
     const baseMaxFollowUps: number = Math.max(
@@ -59,8 +60,12 @@ Deno.serve(async (req) => {
     const isLastQuestion = currentIdx >= questionsList.length - 1;
     const canFollowUp =
       relanceLevel !== "light" &&
+      followUpEnabled &&
       !networkDisablesFollowUps &&
       followUpsAsked < maxFollowUps;
+    // Règle déterministe : tant qu'il reste des relances configurées sur la
+    // question, on FORCE une relance. L'IA ne sert qu'à formuler la relance.
+    const mustFollowUp = canFollowUp;
 
     // Last candidate message (for word-count heuristic, used in prompt context)
     const lastCandidate = [...messages].reverse().find((m: any) => m.role === "user");
@@ -83,24 +88,29 @@ CONTEXTE :
 ${isLastQuestion ? "- C'est la DERNIÈRE question." : `- Question suivante : [${nextMt}] « ${nextQ?.content ?? ""} »`}
 - Transitions vocales activées : ${transitionsEnabled ? "OUI" : "NON"}
 
-TA TÂCHE : décider si tu poses une RELANCE sur la question actuelle, ou si tu PASSES à la suite.
+TA TÂCHE : ${
+      mustFollowUp
+        ? `RELANCER OBLIGATOIREMENT le candidat sur la question actuelle. Tu n'as PAS le choix de l'action — elle DOIT être "follow_up". Tu dois uniquement formuler une question courte de relance qui creuse un point précis de sa réponse.`
+        : `Décider si tu poses une RELANCE sur la question actuelle, ou si tu PASSES à la suite.`
+    }
 
 RÈGLES STRICTES :
 1. Tu dois répondre UNIQUEMENT en JSON valide, format exact :
    {"action":"follow_up"|"next"|"end","message":"texte court à dire au candidat"}
-2. Si niveau = "light" → action = "next" obligatoirement.
+${mustFollowUp
+      ? `2. action = "follow_up" OBLIGATOIRE (relances configurées non encore consommées : ${followUpsAsked}/${maxFollowUps}). Aucune autre valeur n'est acceptée.`
+      : `2. Si niveau = "light" → action = "next" obligatoirement.
 3. Si relances déjà posées >= max (${maxFollowUps}) → action = "next" obligatoirement.
-4. Si la réponse fait moins de 15 mots OU contient des hésitations vagues (« je sais pas trop », « euh », « peut-être ») ET que tu peux encore relancer → action = "follow_up" recommandé.
-5. Si la réponse est claire, complète et pertinente → action = "next".
-6. Si c'est la DERNIÈRE question et que tu ne relances pas → action = "end".
-7. Le "message" :
+4. Si relances désactivées sur cette question → action = "next" obligatoirement.
+5. Si c'est la DERNIÈRE question et que tu ne relances pas → action = "end".`}
+6. Le "message" :
    - Pour "follow_up" : UNE seule question courte de relance (max 2 phrases) qui creuse un point précis de sa réponse. Pas de "Merci".
    - Pour "next" :${transitionsEnabled
      ? ` courte transition (max 2 phrases). Si la question suivante est AUDIO ou VIDÉO, dis seulement « Écoutez la question suivante » ou « Regardez la question suivante ». Si elle est en TEXTE, pose-la directement.`
      : ` transitions désactivées : "message" doit être une chaîne vide ("").`}
-   - Pour "end" : remerciement bref (1 phrase) indiquant la fin de l'session.
-8. Toujours en français, professionnel et chaleureux.
-9. N'invente JAMAIS de question hors de la liste fournie.
+   - Pour "end" : remerciement bref (1 phrase) indiquant la fin de la session.
+7. Toujours en français, professionnel et chaleureux.
+8. N'invente JAMAIS de question hors de la liste fournie.
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`;
 
@@ -148,6 +158,13 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`
     // Enforce server-side rules
     if (parsed.action === "follow_up" && !canFollowUp) {
       parsed = { action: isLastQuestion ? "end" : "next", message: parsed.message };
+    }
+    // Si une relance reste due, on force "follow_up" même si l'IA a renvoyé autre chose.
+    if (mustFollowUp && parsed.action !== "follow_up") {
+      const fallbackFollowUp =
+        "Pouvez-vous développer un peu plus ? Donnez-moi un exemple concret si possible.";
+      const msg = (parsed.message || "").trim();
+      parsed = { action: "follow_up", message: msg || fallbackFollowUp };
     }
     if (parsed.action === "next" && isLastQuestion) {
       parsed = { action: "end", message: parsed.message };
