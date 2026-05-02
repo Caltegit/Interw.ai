@@ -41,41 +41,16 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
   const [url, setUrl] = useState("");
   const [questionsCount, setQuestionsCount] = useState(10);
   const [criteriaCount, setCriteriaCount] = useState(3);
-  const [introId, setIntroId] = useState<string>("none");
-  const [intros, setIntros] = useState<IntroTemplate[]>([]);
   const [lastVoice, setLastVoice] = useState<LastVoice | null>(null);
   const [loading, setLoading] = useState(false);
   const [statusLabel, setStatusLabel] = useState("");
 
-  // Charge intros + dernière voix à l'ouverture
+  // Charge la dernière voix utilisée à l'ouverture
   useEffect(() => {
     if (!open || !user) return;
     let cancelled = false;
 
     (async () => {
-      // Org de l'utilisateur
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const orgId = profile?.organization_id;
-
-      if (orgId) {
-        const { data: introsData } = await supabase
-          .from("intro_templates" as never)
-          .select("id, name, type, intro_text, audio_url, video_url, tts_voice_id")
-          .eq("organization_id", orgId)
-          .order("created_at", { ascending: false });
-        if (!cancelled && introsData) {
-          const list = introsData as unknown as IntroTemplate[];
-          setIntros(list);
-          if (list.length > 0) setIntroId(list[0].id);
-        }
-      }
-
-      // Dernière voix utilisée par ce recruteur
       const { data: lastProject } = await supabase
         .from("projects")
         .select("tts_provider, tts_voice_gender, tts_voice_id")
@@ -92,6 +67,12 @@ export function ImportFromJobDialog({ open, onOpenChange, onApply }: Props) {
           tts_voice_id: lastProject.tts_voice_id,
         });
       }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, user]);
     })();
 
     return () => {
