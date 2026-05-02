@@ -102,10 +102,10 @@ serve(async (req) => {
       : "Aucun critère spécifique défini. Évalue sur: communication, pertinence des réponses, motivation, compétences techniques.";
 
     // Call AI to generate report — using tool calling for structured extraction
-    const systemPrompt = `Tu es un expert en recrutement, psychologie du travail et analyse comportementale.
-Tu analyses des transcriptions d'entretiens vidéo pour fournir au recruteur une vue à 360° du candidat.
-Tu es factuel, nuancé, et tu cites systématiquement des extraits du candidat pour justifier tes analyses.
-Tu ne juges jamais, tu décris ce que la transcription révèle.`;
+    const systemPrompt = `Tu es un expert en recrutement qui produit des RAPPORTS DE DÉCISION pour des recruteurs pressés.
+Ton objectif n'est pas de produire une analyse exhaustive : c'est d'aider à prendre une décision claire (shortlister, creuser, ou rejeter) en moins de 2 minutes de lecture.
+Tu es factuel, direct, et tu cites systématiquement le candidat pour appuyer chaque affirmation.
+Tu n'utilises JAMAIS de jargon RH ou psy : tu parles le langage d'un manager qui recrute.`;
 
     // Liste des messages candidat avec leur id, pour permettre à l'IA de citer la source exacte
     const candidateMessagesForPrompt = messages
@@ -113,40 +113,46 @@ Tu ne juges jamais, tu décris ce que la transcription révèle.`;
       .map((m: any) => `[id=${m.id}] ${m.content}`)
       .join("\n");
 
-    const userPrompt = `Analyse cette transcription d'entretien.
+    const userPrompt = `Analyse cette transcription d'entretien pour le poste de ${project.job_title}.
 
-Poste : ${project.job_title}
 Candidat : ${session.candidate_name}
 
 Questions posées :
 ${questions.map((q: any, i: number) => `${i + 1}. ${q.content} (type: ${q.type})`).join("\n")}
 
-Critères d'évaluation :
+Critères du poste (à utiliser pour fit_breakdown) :
 ${criteriaDesc}
 
 Transcription complète :
 ${fullText}
 
-Messages du candidat avec identifiants (à utiliser dans evidence_message_id) :
+Messages du candidat avec identifiants (à utiliser dans message_id / evidence_message_id) :
 ${candidateMessagesForPrompt}
 
-Règles strictes pour l'analyse :
-1. Chaque score, soft skill, trait de personnalité, signal et motivation doit s'appuyer sur une citation exacte du candidat.
-2. Quand tu donnes une citation, fournis aussi evidence_message_id avec l'id du message candidat correspondant (présent dans la liste ci-dessus). Ne jamais inventer un id.
-3. Si la transcription ne permet pas de conclure sur un trait ou un score, mets confidence à "low" (Big Five) ou ne renvoie pas le sous-score (motivations) plutôt que d'inventer.
-4. Si overall_score est ≥ 75 mais qu'un red_flag a une severity "high", justifie-le explicitement dans executive_summary.
-5. soft_skills : minimum 3 entrées, chacune avec une citation obligatoire.
+Règles ABSOLUES :
+1. Chaque affirmation (driver, fit, signal, dimension de communication) doit s'appuyer sur une citation EXACTE du candidat avec son message_id.
+2. N'invente jamais un message_id : si tu ne peux pas citer, omets le champ.
+3. Si la transcription est trop courte ou vague pour conclure, dis-le explicitement plutôt que d'inventer.
+4. Pas de jargon RH/psy dans verdict_headline, decision_drivers, fit_breakdown.statement, signals : du français concret de manager.
 
-Produis une analyse complète en utilisant l'outil generate_report.
+Produis un rapport orienté DÉCISION en utilisant l'outil generate_report.
+
+Champs prioritaires :
+- verdict_headline : UNE phrase max 100 caractères qu'un recruteur dirait à son manager. Pas une description, un verdict ("Profil senior solide, à valider sur la dimension management").
+- recommendation : strong_yes / yes / maybe / no
+- decision_drivers : 2 à 4 raisons CLÉS de cette reco. Chacune = label court (max 80 car), sentiment (positive/neutral/negative), citation + message_id.
+- fit_breakdown : UNE entrée par critère du poste (utilise le label exact). score 0-100, level (excellent/solid/partial/gap), statement (1 phrase concrète "Maîtrise X mais aucune expérience démontrée sur Y"), citation + message_id.
+- signals : signaux à creuser ou questions à reposer en entretien physique. Chacun = label, severity, description, citation, ET suggested_question (la question précise à poser pour lever le doute).
+- communication_profile : scores 0-10 sur clarity, structure, concision, posture, energy. Chaque dim a un commentaire 1 ligne et idéalement une citation.
+- question_evaluations : indexé par "0","1","2"… Pour chaque question : question (texte), score 0-10, summary (1 phrase qui résume la réponse du candidat), comment (1-2 phrases d'analyse), key_quote, evidence_message_id, depth_level (surface/concret/expert), had_followup (true si une relance a été déclenchée), followup_helped (true si la relance a fait progresser la réponse).
+
+Champs secondaires (toujours produits, format inchangé) :
 - executive_summary : 3-5 phrases bilan global
-- executive_summary_short : UNE phrase (max 200 caractères) pour le recruteur pressé
-- question_evaluations : OBLIGATOIRE — une entrée par question, indexée par "0", "1", "2"… avec question (texte exact), score (0-10), comment (1-2 phrases), key_quote (citation marquante de la réponse) et evidence_message_id quand possible.
-- personality_profile : scores Big Five 0-100 + interprétation + confidence (low/medium/high) + evidences (1 à 2 citations courtes avec message_id) par trait.
-- soft_skills : 3 à 6 entrées, chacune avec quote ET evidence_message_id obligatoires.
-- red_flags : signaux à creuser avec evidence (citation) et evidence_message_id — vide si rien à signaler.
-- motivation_scores : sous-scores 0-100 + une evidence courte par sous-score quand pertinent.
-- followup_questions : 3 à 5 questions précises à poser en entretien physique.
-- highlights : sélectionne 3 moments forts à montrer au recruteur. Chaque entrée doit pointer une question (question_index = numéro 0-based de la question), un kind parmi "force" | "personnalite" | "vigilance", un label court (max 60 caractères) qui décrit le moment ("Exemple concret de leadership", "Hésitation sur la motivation"…), une phrase why qui explique pourquoi ce moment est intéressant, et des bornes start_seconds / end_seconds **dans la réponse vidéo de cette question** (commence à 0 = début de la réponse du candidat, durée entre 10 et 30 secondes). Diversifie les kind autant que possible : idéalement 1 force, 1 trait de personnalité, 1 point de vigilance. Si la session ne contient pas de point de vigilance, mets une 2e force ou personnalité.`;
+- overall_score : 0-100 (cohérent avec recommendation)
+- overall_grade : A/B/C/D/E
+- personality_profile (Big Five) : conservé pour l'analyse approfondie. Si la transcription ne permet pas de conclure, mets confidence à "low".
+- soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
+- highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -165,29 +171,79 @@ Produis une analyse complète en utilisant l'outil generate_report.
             type: "function",
             function: {
               name: "generate_report",
-              description: "Produit le rapport structuré complet d'analyse de la session",
+              description: "Produit le rapport de décision structuré",
               parameters: {
                 type: "object",
                 properties: {
-                  executive_summary: { type: "string" },
-                  executive_summary_short: { type: "string", description: "Une phrase, max 200 caractères" },
-                  overall_score: { type: "number", minimum: 0, maximum: 100 },
-                  overall_grade: { type: "string", enum: ["A", "B", "C", "D", "E"] },
-                  recommendation: { type: "string", enum: ["strong_yes", "yes", "maybe", "no"] },
-                  strengths: { type: "array", items: { type: "string" } },
-                  areas_for_improvement: { type: "array", items: { type: "string" } },
-                  criteria_scores: {
-                    type: "object",
-                    additionalProperties: {
+                  // ===== Nouveaux champs orientés décision =====
+                  verdict_headline: {
+                    type: "string",
+                    description: "Une phrase de manager, max 100 caractères",
+                  },
+                  decision_drivers: {
+                    type: "array",
+                    description: "2 à 4 raisons clés derrière la recommandation",
+                    items: {
+                      type: "object",
+                      properties: {
+                        label: { type: "string", description: "Max 80 caractères" },
+                        sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+                        quote: { type: "string" },
+                        message_id: { type: "string" },
+                      },
+                      required: ["label", "sentiment"],
+                    },
+                  },
+                  fit_breakdown: {
+                    type: "array",
+                    description: "Une entrée par critère du poste",
+                    items: {
+                      type: "object",
+                      properties: {
+                        criterion: { type: "string", description: "Label exact du critère" },
+                        score: { type: "number", minimum: 0, maximum: 100 },
+                        level: { type: "string", enum: ["excellent", "solid", "partial", "gap"] },
+                        statement: { type: "string", description: "1 phrase concrète" },
+                        quote: { type: "string" },
+                        message_id: { type: "string" },
+                      },
+                      required: ["criterion", "score", "statement"],
+                    },
+                  },
+                  signals: {
+                    type: "array",
+                    description: "Signaux à creuser, fusion red_flags + followup_questions",
+                    items: {
                       type: "object",
                       properties: {
                         label: { type: "string" },
-                        score: { type: "number" },
-                        max: { type: "number" },
-                        comment: { type: "string" },
+                        description: { type: "string" },
+                        severity: { type: "string", enum: ["low", "medium", "high"] },
+                        quote: { type: "string" },
+                        message_id: { type: "string" },
+                        suggested_question: {
+                          type: "string",
+                          description: "Question précise à poser en entretien physique",
+                        },
                       },
+                      required: ["label", "severity"],
                     },
                   },
+                  communication_profile: {
+                    type: "object",
+                    properties: {
+                      clarity: dimensionSchema(),
+                      structure: dimensionSchema(),
+                      concision: dimensionSchema(),
+                      posture: dimensionSchema(),
+                      energy: dimensionSchema(),
+                    },
+                  },
+                  // ===== Champs conservés (legacy) =====
+                  executive_summary: { type: "string" },
+                  overall_score: { type: "number", minimum: 0, maximum: 100 },
+                  overall_grade: { type: "string", enum: ["A", "B", "C", "D", "E"] },
+                  recommendation: { type: "string", enum: ["strong_yes", "yes", "maybe", "no"] },
                   question_evaluations: {
                     type: "object",
                     additionalProperties: {
@@ -195,107 +251,17 @@ Produis une analyse complète en utilisant l'outil generate_report.
                       properties: {
                         question: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
+                        summary: { type: "string", description: "1 phrase qui résume la réponse" },
                         comment: { type: "string" },
-                        key_quote: { type: "string", description: "Citation marquante de la réponse du candidat" },
-                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
+                        key_quote: { type: "string" },
+                        evidence_message_id: { type: "string" },
+                        depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
+                        had_followup: { type: "boolean" },
+                        followup_helped: { type: "boolean" },
                       },
                     },
                   },
-                  personality_profile: {
-                    type: "object",
-                    properties: {
-                      openness: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          interpretation: { type: "string" },
-                          confidence: { type: "string", enum: ["low", "medium", "high"] },
-                          evidences: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                quote: { type: "string" },
-                                message_id: { type: "string" },
-                              },
-                            },
-                          },
-                        },
-                      },
-                      conscientiousness: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          interpretation: { type: "string" },
-                          confidence: { type: "string", enum: ["low", "medium", "high"] },
-                          evidences: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                quote: { type: "string" },
-                                message_id: { type: "string" },
-                              },
-                            },
-                          },
-                        },
-                      },
-                      extraversion: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          interpretation: { type: "string" },
-                          confidence: { type: "string", enum: ["low", "medium", "high"] },
-                          evidences: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                quote: { type: "string" },
-                                message_id: { type: "string" },
-                              },
-                            },
-                          },
-                        },
-                      },
-                      agreeableness: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          interpretation: { type: "string" },
-                          confidence: { type: "string", enum: ["low", "medium", "high"] },
-                          evidences: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                quote: { type: "string" },
-                                message_id: { type: "string" },
-                              },
-                            },
-                          },
-                        },
-                      },
-                      emotional_stability: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          interpretation: { type: "string" },
-                          confidence: { type: "string", enum: ["low", "medium", "high"] },
-                          evidences: {
-                            type: "array",
-                            items: {
-                              type: "object",
-                              properties: {
-                                quote: { type: "string" },
-                                message_id: { type: "string" },
-                              },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
+                  personality_profile: personalityProfileSchema(),
                   soft_skills: {
                     type: "array",
                     items: {
@@ -303,81 +269,37 @@ Produis une analyse complète en utilisant l'outil generate_report.
                       properties: {
                         skill: { type: "string" },
                         score: { type: "number", minimum: 0, maximum: 10 },
-                        quote: { type: "string", description: "Citation exacte du candidat" },
-                        evidence_message_id: { type: "string", description: "Id du message candidat cité" },
+                        quote: { type: "string" },
+                        evidence_message_id: { type: "string" },
                       },
                       required: ["skill", "quote"],
                     },
                   },
-                  red_flags: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        type: { type: "string" },
-                        severity: { type: "string", enum: ["low", "medium", "high"] },
-                        description: { type: "string" },
-                        evidence: { type: "string" },
-                        evidence_message_id: { type: "string" },
-                      },
-                      required: ["description"],
-                    },
-                  },
-                  motivation_scores: {
-                    type: "object",
-                    properties: {
-                      company_knowledge: { type: "number", minimum: 0, maximum: 100 },
-                      company_knowledge_evidence: { type: "string" },
-                      role_fit: { type: "number", minimum: 0, maximum: 100 },
-                      role_fit_evidence: { type: "string" },
-                      enthusiasm: { type: "number", minimum: 0, maximum: 100 },
-                      enthusiasm_evidence: { type: "string" },
-                      long_term_intent: { type: "number", minimum: 0, maximum: 100 },
-                      long_term_intent_evidence: { type: "string" },
-                      comment: { type: "string" },
-                    },
-                  },
-                  followup_questions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        question: { type: "string" },
-                        rationale: { type: "string" },
-                      },
-                      required: ["question"],
-                    },
-                  },
                   highlights: {
                     type: "array",
-                    description: "3 moments forts à mettre en avant dans le best-of",
                     items: {
                       type: "object",
                       properties: {
-                        question_index: { type: "integer", description: "Index 0-based de la question" },
+                        question_index: { type: "integer" },
                         kind: { type: "string", enum: ["force", "personnalite", "vigilance"] },
-                        label: { type: "string", description: "Titre court du moment, max 60 caractères" },
-                        why: { type: "string", description: "Pourquoi ce moment est intéressant à regarder" },
-                        start_seconds: { type: "number", description: "Début de l'extrait dans la réponse (en secondes)" },
-                        end_seconds: { type: "number", description: "Fin de l'extrait (en secondes)" },
+                        label: { type: "string" },
+                        why: { type: "string" },
+                        start_seconds: { type: "number" },
+                        end_seconds: { type: "number" },
                       },
                       required: ["question_index", "kind", "label", "start_seconds", "end_seconds"],
                     },
                   },
                 },
                 required: [
+                  "verdict_headline",
+                  "decision_drivers",
+                  "fit_breakdown",
                   "executive_summary",
-                  "executive_summary_short",
                   "overall_score",
                   "recommendation",
-                  "strengths",
-                  "areas_for_improvement",
                   "question_evaluations",
-                  "personality_profile",
-                  "soft_skills",
-                  "motivation_scores",
-                  "followup_questions",
-                  "highlights",
+                  "communication_profile",
                 ],
               },
             },
