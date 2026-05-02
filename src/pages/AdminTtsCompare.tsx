@@ -127,13 +127,21 @@ export default function AdminTtsCompare() {
       const accessToken = session?.access_token;
       if (!accessToken) throw new Error("Vous devez être connecté.");
 
-      const fnName = cand.provider === "elevenlabs" ? "tts-elevenlabs" : "tts-openai";
+      const fnName =
+        cand.provider === "elevenlabs"
+          ? "tts-elevenlabs"
+          : cand.provider === "openai"
+            ? "tts-openai"
+            : "tts-gemini-direct";
       const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const url = `https://${projectRef}.supabase.co/functions/v1/${fnName}`;
 
-      const body = cand.provider === "elevenlabs"
-        ? { text, preview: true, voiceId: cand.voiceParam }
-        : { text, voiceName: cand.voiceParam, model: cand.model };
+      const body =
+        cand.provider === "elevenlabs"
+          ? { text, preview: true, voiceId: cand.voiceParam }
+          : cand.provider === "openai"
+            ? { text, voiceName: cand.voiceParam, model: cand.model }
+            : { text, voiceName: cand.voiceParam };
 
       const res = await fetch(url, {
         method: "POST",
