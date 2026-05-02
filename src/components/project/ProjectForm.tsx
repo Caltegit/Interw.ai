@@ -16,10 +16,7 @@ import {
   InterviewTemplatePickerDialog,
   type InterviewTemplatePayload,
 } from "@/components/project/InterviewTemplatePickerDialog";
-import {
-  ImportFromJobDialog,
-  type JobImportPayload,
-} from "@/components/project/ImportFromJobDialog";
+import { ImportFromJobDialog, type JobImportPayload } from "@/components/project/ImportFromJobDialog";
 import {
   VoiceSelectorDialog,
   getDefaultVoiceForGender,
@@ -319,7 +316,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     }
   };
 
-
   const isEdit = mode === "edit";
   const idSuffix = isEdit ? "edit" : "new";
 
@@ -448,7 +444,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <div className="space-y-1">
                     <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
                     <p className="text-xs text-muted-foreground">
-                      Voix réaliste haute qualité (+1 crédit). Si désactivé, voix standard.
+                      Voix réaliste haute qualité (+1 crédit/session). Si désactivé, voix standard.
                     </p>
                   </div>
                   <Switch
