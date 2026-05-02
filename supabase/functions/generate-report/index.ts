@@ -480,10 +480,19 @@ Champs secondaires (toujours produits, format inchangé) :
     // une minimale à partir des questions du projet pour que la page Questions
     // affiche les vidéos même sans évaluation IA.
     let questionEvals: Record<string, any> = parsed.question_evaluations || {};
+    // Enrichir chaque entrée avec question_id (pour matcher la vidéo)
+    const sortedQuestions = [...questions].sort(
+      (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
+    );
+    Object.keys(questionEvals).forEach((key) => {
+      const idx = parseInt(key);
+      if (!Number.isFinite(idx)) return;
+      const q = sortedQuestions[idx];
+      if (q && !questionEvals[key].question_id) {
+        questionEvals[key].question_id = q.id;
+      }
+    });
     if (Object.keys(questionEvals).length === 0 && questions.length > 0) {
-      const sortedQuestions = [...questions].sort(
-        (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
-      );
       sortedQuestions.forEach((q: any, idx: number) => {
         questionEvals[String(idx)] = {
           question: q.content,
