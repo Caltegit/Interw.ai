@@ -2374,6 +2374,21 @@ export default function InterviewStart() {
           })
           .eq("id", sessionId);
 
+        // Re-transcribe candidate videos with Gemini (cleans STT artifacts)
+        // before generating the report so analysis uses clean text.
+        try {
+          const transcribePromise = supabase.functions.invoke("transcribe-session", {
+            body: { session_id: sessionId },
+          });
+          const timeout = new Promise((resolve) => setTimeout(resolve, 60000));
+          await Promise.race([transcribePromise, timeout]);
+        } catch (e) {
+          logger.error("interview_transcribe_failed", {
+            sessionId,
+            error: e instanceof Error ? e.message : String(e),
+          });
+        }
+
         // Trigger report generation
         try {
           const { error: reportError } = await supabase.functions.invoke("generate-report", {
