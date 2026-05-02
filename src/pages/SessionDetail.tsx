@@ -53,12 +53,45 @@ export default function SessionDetail() {
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
+  const [retranscribing, setRetranscribing] = useState(false);
+  const queryClient = useQueryClient();
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
   const updateDecision = useUpdateRecruiterDecision(id);
   const regenerate = useRegenerateReport(id);
   const { data: projectAverages } = useProjectAverages(session?.project_id);
+
+  const candidateMessagesWithMedia = useMemo(
+    () => messages.filter((m: any) => m.role === "candidate" && (m.video_segment_url || m.audio_segment_url)),
+    [messages],
+  );
+  const pendingTranscriptionCount = useMemo(
+    () => candidateMessagesWithMedia.filter((m: any) => m.transcription_status !== "done").length,
+    [candidateMessagesWithMedia],
+  );
+
+  const handleRetranscribe = async (force: boolean) => {
+    if (!id || retranscribing) return;
+    setRetranscribing(true);
+    toast({ title: "Re-transcription en cours…", description: "L'IA relit les vidéos. Cela peut prendre une minute." });
+    try {
+      const { data: result, error } = await supabase.functions.invoke("transcribe-session", {
+        body: { session_id: id, force },
+      });
+      if (error) throw error;
+      const r = result as { processed?: number; failed?: number; total?: number };
+      toast({
+        title: "Re-transcription terminée",
+        description: `${r?.processed ?? 0} segment(s) nettoyé(s)${r?.failed ? `, ${r.failed} échec(s)` : ""}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.session(id) });
+    } catch (e: any) {
+      toast({ title: "Erreur de re-transcription", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setRetranscribing(false);
+    }
+  };
 
   const goToMessage = useCallback(
     (messageId: string) => {
