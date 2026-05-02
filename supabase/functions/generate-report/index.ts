@@ -20,6 +20,49 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function dimensionSchema() {
+  return {
+    type: "object",
+    properties: {
+      score: { type: "number", minimum: 0, maximum: 10 },
+      comment: { type: "string" },
+      quote: { type: "string" },
+      message_id: { type: "string" },
+    },
+  } as const;
+}
+
+function personalityProfileSchema() {
+  const trait = {
+    type: "object",
+    properties: {
+      score: { type: "number" },
+      interpretation: { type: "string" },
+      confidence: { type: "string", enum: ["low", "medium", "high"] },
+      evidences: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            quote: { type: "string" },
+            message_id: { type: "string" },
+          },
+        },
+      },
+    },
+  } as const;
+  return {
+    type: "object",
+    properties: {
+      openness: trait,
+      conscientiousness: trait,
+      extraversion: trait,
+      agreeableness: trait,
+      emotional_stability: trait,
+    },
+  } as const;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
