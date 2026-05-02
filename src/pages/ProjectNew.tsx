@@ -20,10 +20,10 @@ const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
 const initialState: ProjectFormState = {
   title: "Candidature spontanée",
   language: "fr",
-  ttsProvider: "browser",
+  ttsProvider: "elevenlabs",
   ttsVoiceGender: "female",
   ttsVoiceId: getDefaultVoiceForGender("female"),
-  aiPersonaName: "Marie",
+  aiPersonaName: "Léa",
   aiVoice: "female_fr",
   avatarFile: null,
   avatarPreview: defaultCamilleAvatar,
