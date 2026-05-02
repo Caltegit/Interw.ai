@@ -44,9 +44,10 @@ interface Props {
   onSelectPreset: (url: string) => void;
   onUpload: (file: File) => void;
   onClear: () => void;
+  uploadOnly?: boolean;
 }
 
-export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
+export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadOnly = false }: Props) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
@@ -93,6 +94,8 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
 
       <AvatarUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
 
+      {!uploadOnly && (
+      <>
       {/* Photo avatars */}
       <div>
         <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos réelles</p>
@@ -195,6 +198,8 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props
           {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
