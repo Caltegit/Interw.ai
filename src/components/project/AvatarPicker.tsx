@@ -44,9 +44,10 @@ interface Props {
   onSelectPreset: (url: string) => void;
   onUpload: (file: File) => void;
   onClear: () => void;
+  uploadOnly?: boolean;
 }
 
-export function AvatarPicker({ value, onSelectPreset, onUpload, onClear }: Props) {
+export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadOnly = false }: Props) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
