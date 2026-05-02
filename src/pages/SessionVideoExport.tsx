@@ -217,16 +217,30 @@ export default function SessionVideoExport() {
 
         const needsConvert = downloaded.some((d) => d.ext !== "mp4");
         let ffmpeg: FFmpeg | null = null;
+        let ffmpegUnavailable = false;
 
-        if (needsConvert) {
+        // ffmpeg.wasm exige SharedArrayBuffer (COOP/COEP). Si indisponible, on
+        // saute la conversion et on conserve les fichiers d'origine (.webm).
+        const canUseFfmpeg = typeof (globalThis as any).SharedArrayBuffer !== "undefined";
+
+        if (needsConvert && canUseFfmpeg) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
-          ffmpeg = new FFmpeg();
-          const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-          await ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-          });
+          try {
+            ffmpeg = new FFmpeg();
+            const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+            await ffmpeg.load({
+              coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+              wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+            });
+          } catch (err) {
+            console.warn("[export] ffmpeg load failed, fallback to original format", err);
+            ffmpeg = null;
+            ffmpegUnavailable = true;
+          }
+        } else if (needsConvert && !canUseFfmpeg) {
+          ffmpegUnavailable = true;
+          console.warn("[export] SharedArrayBuffer unavailable — skipping MP4 conversion");
         }
 
         for (let i = 0; i < downloaded.length; i++) {
@@ -306,9 +320,15 @@ export default function SessionVideoExport() {
           missing.forEach((n) => readme.push(`  ${n}`));
         }
         readme.push("");
-        readme.push(
-          "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
-        );
+        if (ffmpegUnavailable) {
+          readme.push(
+            "Format : WebM (VP8/VP9). Lisible avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez en MP4 (ex. HandBrake). Seules les réponses du candidat sont enregistrées.",
+          );
+        } else {
+          readme.push(
+            "Format : MP4 (H.264 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
+          );
+        }
         zip.file("README.txt", readme.join("\n"));
 
         // 7. Création du ZIP (85 → 100 %)
@@ -346,7 +366,9 @@ export default function SessionVideoExport() {
       } catch (err: any) {
         console.error("[export]", err);
         if (!cancelled) {
-          setErrorMsg(err?.message ?? "Une erreur est survenue.");
+          const detail =
+            err?.message || (typeof err === "string" ? err : null) || "Erreur inconnue";
+          setErrorMsg(`Une erreur est survenue : ${detail}`);
           setPhase("error");
         }
       }
