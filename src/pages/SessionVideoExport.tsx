@@ -46,38 +46,49 @@ function extFromContentType(ct: string | null, url: string): string {
   return "webm";
 }
 
-async function convertToMp4(ffmpeg: FFmpeg, inputName: string, outputName: string) {
+// Vérifie qu'un buffer ressemble bien à un MP4 (boîte "ftyp" aux octets 4-8)
+function looksLikeMp4(data: Uint8Array): boolean {
+  if (!data || data.length < 12) return false;
+  return (
+    data[4] === 0x66 && // f
+    data[5] === 0x74 && // t
+    data[6] === 0x79 && // y
+    data[7] === 0x70    // p
+  );
+}
+
+async function convertToMp4(
+  ffmpeg: FFmpeg,
+  inputName: string,
+  outputName: string,
+  ffmpegLogs: string[],
+) {
+  // mpeg4 (Part 2) est inclus dans le build single-thread de @ffmpeg/core 0.12,
+  // contrairement à libx264 qui dépend de builds multi-thread.
   const attempts: string[][] = [
-    [
-      "-i", inputName,
-      "-c:v", "mpeg4",
-      "-q:v", "5",
-      "-pix_fmt", "yuv420p",
-      "-c:a", "aac",
-      "-b:a", "128k",
-      "-movflags", "+faststart",
-      outputName,
-    ],
-    [
-      "-i", inputName,
-      "-c:v", "mpeg4",
-      "-q:v", "5",
-      "-pix_fmt", "yuv420p",
-      "-an",
-      "-movflags", "+faststart",
-      outputName,
-    ],
+    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
+     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", outputName],
+    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
+     "-an", "-movflags", "+faststart", outputName],
   ];
 
   let lastError: unknown = null;
 
   for (const args of attempts) {
     try {
+      ffmpegLogs.length = 0;
       await ffmpeg.exec(args);
       const out = await ffmpeg.readFile(outputName);
-      return out instanceof Uint8Array ? out : new Uint8Array();
+      const bytes = out instanceof Uint8Array ? out : new Uint8Array();
+      if (bytes.length > 0 && looksLikeMp4(bytes)) {
+        return bytes;
+      }
+      lastError = new Error(
+        `Sortie MP4 invalide (${bytes.length} octets). Logs FFmpeg : ${ffmpegLogs.slice(-5).join(" | ")}`,
+      );
     } catch (error) {
       lastError = error;
+    } finally {
       await ffmpeg.deleteFile(outputName).catch(() => {});
     }
   }
