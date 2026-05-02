@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import JSZip from "jszip";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { toBlobURL } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +44,45 @@ function extFromContentType(ct: string | null, url: string): string {
   if (lower.endsWith(".mov")) return "mov";
   if (lower.endsWith(".ogv")) return "ogv";
   return "webm";
+}
+
+async function convertToMp4(ffmpeg: FFmpeg, inputName: string, outputName: string) {
+  const attempts: string[][] = [
+    [
+      "-i", inputName,
+      "-c:v", "mpeg4",
+      "-q:v", "5",
+      "-pix_fmt", "yuv420p",
+      "-c:a", "aac",
+      "-b:a", "128k",
+      "-movflags", "+faststart",
+      outputName,
+    ],
+    [
+      "-i", inputName,
+      "-c:v", "mpeg4",
+      "-q:v", "5",
+      "-pix_fmt", "yuv420p",
+      "-an",
+      "-movflags", "+faststart",
+      outputName,
+    ],
+  ];
+
+  let lastError: unknown = null;
+
+  for (const args of attempts) {
+    try {
+      await ffmpeg.exec(args);
+      const out = await ffmpeg.readFile(outputName);
+      return out instanceof Uint8Array ? out : new Uint8Array();
+    } catch (error) {
+      lastError = error;
+      await ffmpeg.deleteFile(outputName).catch(() => {});
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Conversion MP4 impossible");
 }
 
 export default function SessionVideoExport() {
@@ -261,19 +300,7 @@ export default function SessionVideoExport() {
               const inputName = `in-${i}.${d.ext}`;
               const outputName = `out-${i}.mp4`;
               await ffmpeg.writeFile(inputName, d.data);
-              // Remux/transcodage rapide vers MP4 (H.264 + AAC)
-              await ffmpeg.exec([
-                "-i", inputName,
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-crf", "23",
-                "-c:a", "aac",
-                "-b:a", "128k",
-                "-movflags", "+faststart",
-                outputName,
-              ]);
-              const out = await ffmpeg.readFile(outputName);
-              const outData = out instanceof Uint8Array ? out : new Uint8Array();
+              const outData = await convertToMp4(ffmpeg, inputName, outputName);
               zip.file(finalName, outData);
               fileEntries.push({ name: finalName, question: d.question });
               await ffmpeg.deleteFile(inputName).catch(() => {});
