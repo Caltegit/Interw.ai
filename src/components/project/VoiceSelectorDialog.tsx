@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export type VoiceGender = "female" | "male";
 
-export const FEMALE_VOICE_DEFAULT_ID = "McVZb7PHIyDsbVBnY1aP"; // Audrey - FR native
+export const FEMALE_VOICE_DEFAULT_ID = "ICk609TItINMseDpChFt"; // Léa - FR natif, calme, pédagogue
 export const MALE_VOICE_DEFAULT_ID = "IPgYtHTNLjC7Bq7IPHrm"; // Martin - FR natif
 
 export const FEMALE_VOICES = [
