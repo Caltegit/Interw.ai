@@ -20,7 +20,7 @@ const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
 const initialState: ProjectFormState = {
   title: "Candidature spontanée",
   language: "fr",
-  ttsProvider: "elevenlabs",
+  ttsProvider: "browser",
   ttsVoiceGender: "female",
   ttsVoiceId: getDefaultVoiceForGender("female"),
   aiPersonaName: "Léa",
@@ -174,15 +174,19 @@ export default function ProjectNew() {
           intro_enabled: s.introEnabled,
           intro_mode: s.introEnabled ? s.introMode : null,
           intro_text:
-            s.introEnabled && (s.introMode === "text" || s.introMode === "tts")
-              ? s.introText.trim() || null
-              : null,
+            s.introEnabled && (s.introMode === "text" || s.introMode === "tts") ? s.introText.trim() || null : null,
           intro_audio_url:
-            s.introEnabled && s.introMode === "audio" && s.introAudioPreviewUrl && !s.introAudioPreviewUrl.startsWith("blob:")
+            s.introEnabled &&
+            s.introMode === "audio" &&
+            s.introAudioPreviewUrl &&
+            !s.introAudioPreviewUrl.startsWith("blob:")
               ? s.introAudioPreviewUrl
               : null,
           presentation_video_url:
-            s.introEnabled && s.introMode === "video" && s.introVideoPreviewUrl && !s.introVideoPreviewUrl.startsWith("blob:")
+            s.introEnabled &&
+            s.introMode === "video" &&
+            s.introVideoPreviewUrl &&
+            !s.introVideoPreviewUrl.startsWith("blob:")
               ? s.introVideoPreviewUrl
               : null,
           completion_message: s.completionMessage.trim() || null,
@@ -286,7 +290,10 @@ export default function ProjectNew() {
             }
 
             if (Object.keys(updates).length > 0) {
-              await supabase.from("questions").update(updates as never).eq("id", qId);
+              await supabase
+                .from("questions")
+                .update(updates as never)
+                .eq("id", qId);
             }
 
             if (q.save_to_library && !q.from_library) {
