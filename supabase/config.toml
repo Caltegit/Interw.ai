@@ -39,3 +39,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.tts-openai]
     verify_jwt = false
+
+  [functions.tts-gemini-direct]
+    verify_jwt = false
