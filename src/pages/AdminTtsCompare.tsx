@@ -393,9 +393,9 @@ export default function AdminTtsCompare() {
                 <h3 className="font-semibold mb-2">Verdict</h3>
                 <p className="text-sm text-muted-foreground">
                   Vous avez préféré <strong>{candidatesById[vote].label}</strong>.{" "}
-                  {candidatesById[vote].provider === "openai" ? (
+                  {candidatesById[vote].provider !== "elevenlabs" ? (
                     <>
-                      Bonne nouvelle : OpenAI TTS coûte environ{" "}
+                      Bonne nouvelle : cette voix coûte environ{" "}
                       <strong>
                         {(candidatesById["el-charlotte"].pricePer1kChars / candidatesById[vote].pricePer1kChars).toFixed(0)}× moins cher
                       </strong>{" "}
