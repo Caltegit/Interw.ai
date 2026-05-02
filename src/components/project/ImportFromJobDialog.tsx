@@ -19,18 +19,7 @@ export interface JobImportPayload {
   title: string;
   questions: Array<{ title: string; content: string }>;
   criteria: Array<{ label: string; description: string; weight: number }>;
-  intro: IntroTemplate | null;
   voice: LastVoice | null;
-}
-
-export interface IntroTemplate {
-  id: string;
-  name: string;
-  type: string;
-  intro_text: string | null;
-  audio_url: string | null;
-  video_url: string | null;
-  tts_voice_id: string | null;
 }
 
 export interface LastVoice {
