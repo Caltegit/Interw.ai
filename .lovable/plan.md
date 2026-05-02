@@ -1,53 +1,54 @@
-## Bien meilleure approche, validée
+## Objectif
 
-Tu as raison : plutôt que de bricoler la transcription navigateur (qui sera toujours fragile), on s'appuie sur la **source de vérité** déjà disponible — chaque réponse candidat a son segment vidéo enregistré (`video_segment_url`). Gemini sait lire directement l'audio d'une vidéo et produire une transcription propre, sans doublons, ponctuée correctement.
+Créer une page super-admin permettant d'écouter le **même texte** lu par plusieurs voix (ElevenLabs + Gemini TTS) **à l'aveugle**, voter sa préférée, puis révéler les voix. Objectif : décider de manière objective si on peut diviser le coût TTS par 12 sans perte perçue.
 
-C'est la bonne architecture : la Web Speech API du navigateur sert seulement à l'**affichage en direct** pendant l'entretien (UX), et la **transcription officielle** est générée à la fin par Gemini en lisant les vidéos.
+## Ce qui sera construit
 
-## Plan
+### 1. Nouvelle edge function `tts-gemini`
+Fichier : `supabase/functions/tts-gemini/index.ts`
+- Utilise le Lovable AI Gateway (modèle `gemini-2.5-flash-preview-tts`)
+- Aucune clé API à fournir (LOVABLE_API_KEY déjà configuré)
+- Paramètres : `text`, `voiceName` (Kore, Charon, Aoede, Orus…)
+- Renvoie un audio MP3, même format que `tts-elevenlabs`
+- Réservée aux utilisateurs authentifiés (mode preview, comme l'existant)
 
-### 1. Nouvelle fonction backend `transcribe-session`
-- Déclenchée automatiquement à la fin d'une session, et aussi manuellement depuis la page de détail (bouton « Re-transcrire »).
-- Pour chaque message candidat ayant un segment vidéo :
-  - Télécharge la vidéo depuis le stockage privé.
-  - L'envoie à Gemini avec une consigne stricte : « transcris exactement ce que dit la personne, en français, sans reformulation, avec ponctuation correcte ».
-  - Remplace le `content` du message par la transcription propre.
-- Conserve l'ancien texte (Web Speech) dans une nouvelle colonne `content_raw` pour pouvoir comparer ou revenir en arrière.
-- Gère les segments longs en découpant si nécessaire et en concaténant.
+### 2. Nouvelle page `/admin/tts-compare`
+Fichier : `src/pages/AdminTtsCompare.tsx`, ajoutée à `App.tsx` derrière `SuperAdminRoute`.
 
-### 2. Déclenchement automatique
-- À la fin de l'entretien, juste avant de générer le rapport, on lance la transcription Gemini.
-- Le rapport est ensuite généré sur la base de la **transcription propre**, donc beaucoup plus fiable (les répétitions actuelles polluent l'analyse IA).
+Contenu de la page :
+- Un champ **texte** pré-rempli avec une vraie question d'entretien type (modifiable)
+- Un bouton **« Générer toutes les versions »** qui appelle en parallèle :
+  - ElevenLabs (Charlotte FR) — référence actuelle
+  - Gemini TTS voix **Kore** (féminine, posée)
+  - Gemini TTS voix **Charon** (masculine, calme)
+  - Gemini TTS voix **Aoede** (féminine, fluide)
+- 4 lecteurs audio affichés dans un **ordre randomisé**, étiquetés simplement « Voix A / B / C / D » (sans dévoiler le provider)
+- Sous chaque lecteur : un bouton **« Je préfère celle-ci »**
+- Affichage du **coût estimé** et de la **latence de génération** par voix (caché tant qu'on n'a pas voté, pour éviter le biais)
+- Un bouton **« Révéler »** qui dévoile quelle voix correspondait à quel provider, avec le coût réel
 
-### 3. Bouton manuel pour les sessions existantes
-- Sur la page détail de session (RH), un bouton « Re-transcrire les vidéos » qui rejoue la transcription Gemini sur toute la session.
-- Affichage d'un état clair : en cours, terminé, échec par segment.
-- Permet de réparer rétroactivement la session que tu m'as montrée et toutes les autres.
-
-### 4. UX pendant l'entretien
-- On garde la transcription en direct du navigateur **uniquement pour l'affichage temps réel** (le candidat voit ce qu'il dit).
-- On **arrête de l'envoyer telle quelle** en base comme version finale : elle sert de placeholder, remplacée à la fin par la version Gemini.
-- Affichage clair côté RH : « Transcription en cours d'amélioration… » tant que Gemini n'a pas fini, puis bascule automatique sur la version propre.
-
-### 5. Sécurité et coûts
-- La fonction vérifie que l'appelant est membre de l'organisation propriétaire de la session.
-- Téléchargement des vidéos via URL signée temporaire, jamais publique.
-- Repli silencieux si Gemini est indisponible : on garde la transcription navigateur (dédoublonnée a minima côté serveur) plutôt que de bloquer.
-- Modèle : `google/gemini-2.5-flash` (lit l'audio/vidéo, rapide, coût raisonnable). Repli sur `google/gemini-2.5-pro` si la qualité audio est mauvaise.
-
-## Résultat attendu
-- Transcriptions propres, sans répétitions, avec vraie ponctuation.
-- Rapports d'entretien beaucoup plus fiables, basés sur ce que le candidat a **réellement dit**.
-- Possibilité de réparer toutes les sessions passées en un clic.
-- L'expérience candidat reste identique : transcription live à l'écran, rien ne change pour lui.
+### 3. Lien d'accès
+Ajout d'un bouton « Comparer les voix TTS » dans le menu super-admin existant (page `/admin`).
 
 ## Détail technique
-- Nouvelle fonction : `supabase/functions/transcribe-session/index.ts`
-- Migration : ajout de `content_raw` (text, nullable) et `transcription_status` (enum: pending/processing/done/failed) sur `session_messages`.
-- Modifications client :
-  - `src/pages/InterviewStart.tsx` — déclenche `transcribe-session` à la fin, avant `generate-report`.
-  - `src/pages/SessionDetail.tsx` et `src/pages/SharedReport.tsx` — bouton de re-transcription + indicateur d'état.
-- `generate-report` : attend que la transcription soit terminée avant de générer le rapport (ou utilise le texte déjà nettoyé si déjà fait).
-- API Gemini multimodal : envoi de la vidéo en base64 ou via `fileData` selon la taille, avec prompt strict de transcription verbatim.
 
-Si tu approuves, je passe à l'implémentation.
+- **Lovable AI Gateway** : POST sur `https://ai.gateway.lovable.dev/v1/audio/speech` avec le modèle `gemini-2.5-flash-preview-tts`, voix passée dans le body. Si l'endpoint dédié TTS n'est pas disponible côté gateway, repli sur `chat/completions` avec `modalities: ["audio"]` et extraction du contenu audio base64 de la réponse.
+- **Audio renvoyé** : converti en MP3 (ou WAV selon format de sortie Gemini) et streamé tel quel au client.
+- **Pas de stockage** : les audios générés ne sont pas persistés, juste joués dans le navigateur.
+- **Sécurité** : la fonction `tts-gemini` exige un JWT valide ET vérifie que l'utilisateur a le rôle `super_admin` via `has_role()`.
+- **Aucune migration de base de données** nécessaire.
+
+## Fichiers touchés
+
+- ✅ Créé : `supabase/functions/tts-gemini/index.ts`
+- ✅ Créé : `src/pages/AdminTtsCompare.tsx`
+- ✏️ Modifié : `src/App.tsx` (nouvelle route `/admin/tts-compare`)
+- ✏️ Modifié : `src/pages/SuperAdmin.tsx` (lien d'accès)
+
+## Hors scope (à voir après le test)
+
+- Cartesia, OpenAI TTS, Hume → ajoutés plus tard si tu veux pousser la comparaison
+- Bascule du TTS de production vers Gemini → seulement après validation à l'aveugle
+- Cache TTS sur les questions de bibliothèque (autre levier d'économie déjà identifié)
+
+Si tu valides, je passe à l'implémentation.
