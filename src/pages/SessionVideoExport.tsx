@@ -219,28 +219,28 @@ export default function SessionVideoExport() {
         let ffmpeg: FFmpeg | null = null;
         let ffmpegUnavailable = false;
 
-        // ffmpeg.wasm exige SharedArrayBuffer (COOP/COEP). Si indisponible, on
-        // saute la conversion et on conserve les fichiers d'origine (.webm).
-        const canUseFfmpeg = typeof (globalThis as any).SharedArrayBuffer !== "undefined";
-
-        if (needsConvert && canUseFfmpeg) {
+        // @ffmpeg/core@0.12.6 est en mode single-thread : il ne nécessite PAS
+        // SharedArrayBuffer (donc pas de COOP/COEP). On essaie toujours de
+        // charger ; en cas d'échec réseau/wasm on retombe sur le format source.
+        if (needsConvert) {
           setPhase("converting");
           setStatusLabel("Préparation du convertisseur vidéo…");
           try {
             ffmpeg = new FFmpeg();
+            ffmpeg.on("log", ({ message }) => {
+              console.debug("[ffmpeg]", message);
+            });
             const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
             await ffmpeg.load({
               coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
               wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
             });
+            console.info("[export] ffmpeg loaded (single-thread)");
           } catch (err) {
             console.warn("[export] ffmpeg load failed, fallback to original format", err);
             ffmpeg = null;
             ffmpegUnavailable = true;
           }
-        } else if (needsConvert && !canUseFfmpeg) {
-          ffmpegUnavailable = true;
-          console.warn("[export] SharedArrayBuffer unavailable — skipping MP4 conversion");
         }
 
         for (let i = 0; i < downloaded.length; i++) {
