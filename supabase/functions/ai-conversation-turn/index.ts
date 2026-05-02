@@ -159,6 +159,13 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`
     if (parsed.action === "follow_up" && !canFollowUp) {
       parsed = { action: isLastQuestion ? "end" : "next", message: parsed.message };
     }
+    // Si une relance reste due, on force "follow_up" même si l'IA a renvoyé autre chose.
+    if (mustFollowUp && parsed.action !== "follow_up") {
+      const fallbackFollowUp =
+        "Pouvez-vous développer un peu plus ? Donnez-moi un exemple concret si possible.";
+      const msg = (parsed.message || "").trim();
+      parsed = { action: "follow_up", message: msg || fallbackFollowUp };
+    }
     if (parsed.action === "next" && isLastQuestion) {
       parsed = { action: "end", message: parsed.message };
     }
