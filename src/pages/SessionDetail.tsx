@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, MessageSquare, Play, FileText } from "lucide-react";
+import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 import {
   useSessionDetail,
   useUpdateRecruiterNotes,
@@ -50,12 +53,45 @@ export default function SessionDetail() {
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
+  const [retranscribing, setRetranscribing] = useState(false);
+  const queryClient = useQueryClient();
 
   const updateNotes = useUpdateRecruiterNotes(id);
   const createShare = useCreateReportShare(id);
   const updateDecision = useUpdateRecruiterDecision(id);
   const regenerate = useRegenerateReport(id);
   const { data: projectAverages } = useProjectAverages(session?.project_id);
+
+  const candidateMessagesWithMedia = useMemo(
+    () => messages.filter((m: any) => m.role === "candidate" && (m.video_segment_url || m.audio_segment_url)),
+    [messages],
+  );
+  const pendingTranscriptionCount = useMemo(
+    () => candidateMessagesWithMedia.filter((m: any) => m.transcription_status !== "done").length,
+    [candidateMessagesWithMedia],
+  );
+
+  const handleRetranscribe = async (force: boolean) => {
+    if (!id || retranscribing) return;
+    setRetranscribing(true);
+    toast({ title: "Re-transcription en cours…", description: "L'IA relit les vidéos. Cela peut prendre une minute." });
+    try {
+      const { data: result, error } = await supabase.functions.invoke("transcribe-session", {
+        body: { session_id: id, force },
+      });
+      if (error) throw error;
+      const r = result as { processed?: number; failed?: number; total?: number };
+      toast({
+        title: "Re-transcription terminée",
+        description: `${r?.processed ?? 0} segment(s) nettoyé(s)${r?.failed ? `, ${r.failed} échec(s)` : ""}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.session(id) });
+    } catch (e: any) {
+      toast({ title: "Erreur de re-transcription", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setRetranscribing(false);
+    }
+  };
 
   const goToMessage = useCallback(
     (messageId: string) => {
@@ -331,7 +367,31 @@ export default function SessionDetail() {
               )}
             </TabsContent>
 
-            <TabsContent value="transcript" className="mt-4">
+            <TabsContent value="transcript" className="mt-4 space-y-3">
+              {candidateMessagesWithMedia.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    {pendingTranscriptionCount > 0
+                      ? `${pendingTranscriptionCount} réponse(s) à nettoyer par l'IA.`
+                      : "Toutes les réponses ont été nettoyées par l'IA."}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={pendingTranscriptionCount > 0 ? "default" : "outline"}
+                    onClick={() => handleRetranscribe(pendingTranscriptionCount === 0)}
+                    disabled={retranscribing}
+                  >
+                    {retranscribing ? (
+                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> En cours…</>
+                    ) : pendingTranscriptionCount > 0 ? (
+                      "Nettoyer la transcription"
+                    ) : (
+                      "Tout re-transcrire"
+                    )}
+                  </Button>
+                </div>
+              )}
               <Card>
                 <CardContent className="p-0">
                   {messages.length === 0 ? (

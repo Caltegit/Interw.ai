@@ -21,7 +21,7 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     supabase.from("reports").select("*").eq("session_id", sessionId).maybeSingle(),
     supabase
       .from("session_messages")
-      .select("id, role, content, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up")
+      .select("id, role, content, content_raw, transcription_status, transcribed_at, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up")
       .eq("session_id", sessionId)
       .order("timestamp"),
   ]);
