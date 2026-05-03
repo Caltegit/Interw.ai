@@ -1,7 +1,3 @@
-## Forcer zéro relance partout
-
-### 1) Migration DB
-```sql
 UPDATE public.questions SET follow_up_enabled=false, max_follow_ups=0, relance_level='light';
 ALTER TABLE public.questions
   ALTER COLUMN follow_up_enabled SET DEFAULT false,
@@ -19,12 +15,3 @@ ALTER TABLE public.interview_template_questions
   ALTER COLUMN follow_up_enabled SET DEFAULT false,
   ALTER COLUMN max_follow_ups SET DEFAULT 0,
   ALTER COLUMN relance_level SET DEFAULT 'light';
-```
-
-### 2) Defaults UI
-- `QuestionFormDialog.tsx` — `EMPTY_QUESTION_FORM`: `followUp:false`, `relanceLevel:"light"`, `maxFollowUps:0`.
-- `StepQuestions.tsx` — `createEmptyQuestion()` : `relance_level:"light"`.
-- `loadInterviewTemplate.ts` — fallbacks `max_follow_ups ?? 0`, `relance_level || "light"`.
-- `QuestionLibraryManager.tsx` — fallbacks openEdit : `?? "light"`, `?? 0`.
-
-Le sélecteur de relance reste affiché et modifiable.
