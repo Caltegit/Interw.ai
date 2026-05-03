@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
 
   let purgedSessions = 0;
   let purgedFiles = 0;
+  let recoveredSessions = 0;
   const errors: string[] = [];
 
   for (const session of sessions ?? []) {
@@ -54,6 +55,33 @@ Deno.serve(async (req) => {
       const { data: files } = await supabase.storage
         .from("media")
         .list(folder, { limit: 1000 });
+
+      // Si la session a déjà des chunks ou vidéos, on tente une récupération
+      // (téléphone fermé en cours d'entretien) au lieu de tout supprimer.
+      const hasMedia = (files?.length ?? 0) > 0;
+      if (hasMedia) {
+        try {
+          await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-abandoned-session`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ session_id: session.id }),
+            },
+          );
+          recoveredSessions += 1;
+        } catch (e) {
+          errors.push(
+            `recover ${session.id}: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+        continue;
+      }
+
 
       const paths: string[] = [];
       if (files && files.length > 0) {
@@ -145,6 +173,7 @@ Deno.serve(async (req) => {
       ok: true,
       purgedSessions,
       purgedFiles,
+      recoveredSessions,
       finalizedRetries,
       candidates: sessions?.length ?? 0,
       errors,
