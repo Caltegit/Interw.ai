@@ -78,7 +78,7 @@ export const createEmptyQuestion = (): Question => ({
   mediaType: "written",
   follow_up_enabled: false,
   max_follow_ups: 0,
-  relance_level: "medium",
+  relance_level: "light",
   audioBlob: null,
   audioPreviewUrl: null,
   videoBlob: null,
