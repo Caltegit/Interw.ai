@@ -420,6 +420,39 @@ export default function InterviewStart() {
     };
     window.addEventListener("beforeunload", onBeforeUnload);
 
+    // Filet de sécurité mobile : si l'onglet est masqué (verrouillage écran,
+    // app en arrière-plan, fermeture), on tente de :
+    //  1) flusher le dernier chunk du MediaRecorder (requestData),
+    //  2) déclencher la finalisation côté serveur via sendBeacon
+    //     (la requête part même si la page meurt).
+    const triggerAbandonFinalize = () => {
+      const sessionId = session?.id;
+      if (!sessionId) return;
+      try {
+        const rec = questionRecorderRef.current;
+        if (rec && rec.state === "recording") {
+          // requestData() force un dernier ondataavailable -> upload du chunk en cours.
+          try { rec.requestData(); } catch { /* noop */ }
+        }
+      } catch { /* noop */ }
+      try {
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/finalize-abandoned-session`;
+        const payload = JSON.stringify({
+          session_id: sessionId,
+          last_question_index: currentQuestionIndex,
+        });
+        const blob = new Blob([payload], { type: "application/json" });
+        navigator.sendBeacon?.(url, blob);
+      } catch { /* noop */ }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") triggerAbandonFinalize();
+    };
+    const onPageHide = () => triggerAbandonFinalize();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+
     // Bloque le retour arrière en re-poussant l'état
     const onPopState = () => {
       try {
@@ -439,8 +472,10 @@ export default function InterviewStart() {
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("popstate", onPopState);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
     };
-  }, [readyToStart, interviewFinished]);
+  }, [readyToStart, interviewFinished, session?.id, currentQuestionIndex]);
 
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
