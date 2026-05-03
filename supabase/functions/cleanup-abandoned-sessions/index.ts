@@ -81,9 +81,7 @@ Deno.serve(async (req) => {
         }
         continue;
       }
-      const { data: files } = await supabase.storage
-        .from("media")
-        .list(folder, { limit: 1000 });
+
 
       const paths: string[] = [];
       if (files && files.length > 0) {
