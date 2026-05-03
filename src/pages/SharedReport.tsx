@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OverviewHeader } from "@/components/session/OverviewHeader";
 import { SessionStatsCard } from "@/components/session/SessionStatsCard";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
+import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { SimpleMessageList } from "@/components/session/SimpleMessageList";
 import { Play, MessageSquare, FileText, Trophy } from "lucide-react";
 
