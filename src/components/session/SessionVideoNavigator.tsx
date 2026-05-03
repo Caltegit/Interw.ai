@@ -18,6 +18,7 @@ interface Props {
 export function SessionVideoNavigator({ clips }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -26,18 +27,32 @@ export function SessionVideoNavigator({ clips }: Props) {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    try {
-      v.currentTime = 0;
-    } catch {
-      /* noop */
-    }
-  }, [index]);
+    const play = () => {
+      try {
+        v.currentTime = 0;
+      } catch {
+        /* noop */
+      }
+      if (shouldAutoPlay) {
+        v.play().catch(() => {});
+      }
+    };
+    if (v.readyState >= 1) play();
+    else v.addEventListener("loadedmetadata", play, { once: true });
+    return () => v.removeEventListener("loadedmetadata", play);
+  }, [index, shouldAutoPlay]);
 
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
-  const prev = () => setIndex((i) => Math.max(0, i - 1));
-  const next = () => setIndex((i) => Math.min(clips.length - 1, i + 1));
+  const prev = () => {
+    setShouldAutoPlay(true);
+    setIndex((i) => Math.max(0, i - 1));
+  };
+  const next = () => {
+    setShouldAutoPlay(true);
+    setIndex((i) => Math.min(clips.length - 1, i + 1));
+  };
 
   return (
     <Card>
