@@ -173,6 +173,7 @@ Deno.serve(async (req) => {
       ok: true,
       purgedSessions,
       purgedFiles,
+      recoveredSessions,
       finalizedRetries,
       candidates: sessions?.length ?? 0,
       errors,
