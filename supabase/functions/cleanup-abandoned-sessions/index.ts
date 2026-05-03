@@ -101,8 +101,43 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 4. Filet de sécurité : sessions terminées sans rapport généré.
+  // Cas typique : le candidat a fermé l'onglet avant que le navigateur
+  // ne déclenche generate-report. On relance finalize-session.
+  let finalizedRetries = 0;
+  const finalizeCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data: orphanCompleted } = await supabase
+    .from("sessions")
+    .select("id, completed_at, reports!left(id)")
+    .eq("status", "completed")
+    .lt("completed_at", finalizeCutoff)
+    .is("reports.id", null)
+    .limit(50);
+
+  for (const session of orphanCompleted ?? []) {
+    try {
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-session`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ session_id: session.id }),
+        },
+      );
+      finalizedRetries += 1;
+    } catch (e) {
+      errors.push(
+        `finalize ${session.id}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
   console.log(
-    `cleanup_abandoned_sessions purged=${purgedSessions} files=${purgedFiles} errors=${errors.length}`,
+    `cleanup_abandoned_sessions purged=${purgedSessions} files=${purgedFiles} finalized=${finalizedRetries} errors=${errors.length}`,
   );
 
   return new Response(
@@ -110,6 +145,7 @@ Deno.serve(async (req) => {
       ok: true,
       purgedSessions,
       purgedFiles,
+      finalizedRetries,
       candidates: sessions?.length ?? 0,
       errors,
     }),
