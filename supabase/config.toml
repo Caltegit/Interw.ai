@@ -45,3 +45,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.finalize-session]
     verify_jwt = false
+
+  [functions.finalize-abandoned-session]
+    verify_jwt = false
