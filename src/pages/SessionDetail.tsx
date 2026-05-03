@@ -22,6 +22,7 @@ import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
+import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
