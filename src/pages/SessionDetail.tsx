@@ -441,6 +441,8 @@ export default function SessionDetail() {
         </div>
 
         <div className="space-y-4">
+          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Best-of</CardTitle>
