@@ -22,6 +22,7 @@ import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
+import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
@@ -149,6 +150,33 @@ export default function SessionDetail() {
     () => candidateVideos.filter((m: any) => !m.is_follow_up),
     [candidateVideos],
   );
+
+  const sessionClips = useMemo<SessionVideoClip[]>(() => {
+    const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const orderById = new Map<string, number>();
+    projectQuestions.forEach((q: any, i: number) => {
+      if (q?.id) orderById.set(q.id, i + 1);
+    });
+    return [...candidateVideos]
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((m: any) => {
+        const num = m.question_id ? orderById.get(m.question_id) : null;
+        const projectQ = m.question_id
+          ? projectQuestions.find((q: any) => q.id === m.question_id)
+          : null;
+        return {
+          url: m.video_segment_url as string,
+          questionLabel: num ? `Question ${num}` : "Question",
+          questionText: projectQ?.content ?? "",
+          isFollowUp: !!m.is_follow_up,
+        };
+      });
+  }, [candidateVideos, session]);
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
@@ -413,6 +441,8 @@ export default function SessionDetail() {
         </div>
 
         <div className="space-y-4">
+          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Best-of</CardTitle>
