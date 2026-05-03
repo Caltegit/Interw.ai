@@ -39,8 +39,8 @@ export async function loadInterviewTemplate(id: string): Promise<InterviewTempla
       video_url: (q.video_url as string | null) || null,
       category: (q.category as string | null) || null,
       follow_up_enabled: q.follow_up_enabled as boolean,
-      max_follow_ups: (q.max_follow_ups as number) ?? 2,
-      relance_level: ((q.relance_level as string) || "medium") as "light" | "medium" | "deep",
+      max_follow_ups: (q.max_follow_ups as number) ?? 0,
+      relance_level: ((q.relance_level as string) || "light") as "light" | "medium" | "deep",
       avatar_image_url: (q.avatar_image_url as string | null) ?? null,
     })),
     criteria: ((cs as unknown as Array<Record<string, unknown>>) || []).map((c) => ({
