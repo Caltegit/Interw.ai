@@ -151,6 +151,33 @@ export default function SessionDetail() {
     [candidateVideos],
   );
 
+  const sessionClips = useMemo<SessionVideoClip[]>(() => {
+    const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const orderById = new Map<string, number>();
+    projectQuestions.forEach((q: any, i: number) => {
+      if (q?.id) orderById.set(q.id, i + 1);
+    });
+    return [...candidateVideos]
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((m: any) => {
+        const num = m.question_id ? orderById.get(m.question_id) : null;
+        const projectQ = m.question_id
+          ? projectQuestions.find((q: any) => q.id === m.question_id)
+          : null;
+        return {
+          url: m.video_segment_url as string,
+          questionLabel: num ? `Question ${num}` : "Question",
+          questionText: projectQ?.content ?? "",
+          isFollowUp: !!m.is_follow_up,
+        };
+      });
+  }, [candidateVideos, session]);
+
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
