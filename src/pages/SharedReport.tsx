@@ -108,6 +108,33 @@ export default function SharedReport() {
   const highlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
   const stats = (report?.stats as Record<string, any>) ?? {};
 
+  const sessionClips: SessionVideoClip[] = (() => {
+    const projectQuestions = ((project?.questions as any[]) ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const orderById = new Map<string, number>();
+    projectQuestions.forEach((q: any, i: number) => {
+      if (q?.id) orderById.set(q.id, i + 1);
+    });
+    return [...candidateVideos]
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      )
+      .map((m: any) => {
+        const num = m.question_id ? orderById.get(m.question_id) : null;
+        const projectQ = m.question_id
+          ? projectQuestions.find((q: any) => q.id === m.question_id)
+          : null;
+        return {
+          url: m.video_segment_url as string,
+          questionLabel: num ? `Question ${num}` : "Question",
+          questionText: projectQ?.content ?? "",
+          isFollowUp: !!m.is_follow_up,
+        };
+      });
+  })();
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
       {session && (
