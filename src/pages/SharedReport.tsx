@@ -61,7 +61,7 @@ export default function SharedReport() {
       const { data: sessionData } = await supabase
         .from("sessions")
         .select(
-          "id, candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, project_id, projects(title, job_title, ai_persona_name)",
+          "id, candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, project_id, projects(title, job_title, ai_persona_name, questions(id, content, order_index))",
         )
         .eq("id", reportData.session_id)
         .single();
