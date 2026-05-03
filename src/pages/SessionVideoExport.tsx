@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import JSZip from "jszip";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { toBlobURL } from "@ffmpeg/util";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Download, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, Download, Loader2, AlertCircle, Info } from "lucide-react";
 
 type Phase = "loading" | "downloading" | "converting" | "zipping" | "ready" | "error";
 
@@ -20,80 +17,28 @@ interface SegmentInfo {
   timestamp: string;
 }
 
-function sanitizeName(s: string | null | undefined, fallback: string) {
-  if (!s) return fallback;
-  return (
-    s
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .toLowerCase() || fallback
-  );
-}
-
-function extFromContentType(ct: string | null, url: string): string {
-  if (ct) {
-    if (ct.includes("mp4")) return "mp4";
-    if (ct.includes("webm")) return "webm";
-    if (ct.includes("quicktime") || ct.includes("mov")) return "mov";
-    if (ct.includes("ogg")) return "ogv";
+// Joue un son inaudible pour empêcher le navigateur de ralentir l'onglet
+// quand il passe en arrière-plan.
+function startSilentAudio(): () => void {
+  try {
+    const Ctx =
+      (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return () => {};
+    const ctx: AudioContext = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001; // quasi inaudible
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    return () => {
+      try {
+        osc.stop();
+      } catch {}
+      ctx.close().catch(() => {});
+    };
+  } catch {
+    return () => {};
   }
-  const lower = url.toLowerCase().split("?")[0];
-  if (lower.endsWith(".mp4")) return "mp4";
-  if (lower.endsWith(".mov")) return "mov";
-  if (lower.endsWith(".ogv")) return "ogv";
-  return "webm";
-}
-
-// Vérifie qu'un buffer ressemble bien à un MP4 (boîte "ftyp" aux octets 4-8)
-function looksLikeMp4(data: Uint8Array): boolean {
-  if (!data || data.length < 12) return false;
-  return (
-    data[4] === 0x66 && // f
-    data[5] === 0x74 && // t
-    data[6] === 0x79 && // y
-    data[7] === 0x70    // p
-  );
-}
-
-async function convertToMp4(
-  ffmpeg: FFmpeg,
-  inputName: string,
-  outputName: string,
-  ffmpegLogs: string[],
-) {
-  // mpeg4 (Part 2) est inclus dans le build single-thread de @ffmpeg/core 0.12,
-  // contrairement à libx264 qui dépend de builds multi-thread.
-  const attempts: string[][] = [
-    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
-     "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", outputName],
-    ["-i", inputName, "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p",
-     "-an", "-movflags", "+faststart", outputName],
-  ];
-
-  let lastError: unknown = null;
-
-  for (const args of attempts) {
-    try {
-      ffmpegLogs.length = 0;
-      await ffmpeg.exec(args);
-      const out = await ffmpeg.readFile(outputName);
-      const bytes = out instanceof Uint8Array ? out : new Uint8Array();
-      if (bytes.length > 0 && looksLikeMp4(bytes)) {
-        return bytes;
-      }
-      lastError = new Error(
-        `Sortie MP4 invalide (${bytes.length} octets). Logs FFmpeg : ${ffmpegLogs.slice(-5).join(" | ")}`,
-      );
-    } catch (error) {
-      lastError = error;
-    } finally {
-      await ffmpeg.deleteFile(outputName).catch(() => {});
-    }
-  }
-
-  throw lastError instanceof Error ? lastError : new Error("Conversion MP4 impossible");
 }
 
 export default function SessionVideoExport() {
@@ -114,10 +59,36 @@ export default function SessionVideoExport() {
 
     let cancelled = false;
     const objectUrls: string[] = [];
+    let worker: Worker | null = null;
+    let stopAudio: (() => void) | null = null;
+    let wakeLock: any = null;
+
+    const releaseWakeLock = () => {
+      if (wakeLock) {
+        try {
+          wakeLock.release();
+        } catch {}
+        wakeLock = null;
+      }
+    };
+
+    const requestWakeLock = async () => {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request("screen");
+        }
+      } catch {}
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && !wakeLock) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
 
     (async () => {
       try {
-        // 1. Auth
         const { data: { session: authSession } } = await supabase.auth.getSession();
         if (!authSession) {
           throw new Error("Vous devez être connecté pour télécharger les vidéos.");
@@ -125,7 +96,6 @@ export default function SessionVideoExport() {
 
         setStatusLabel("Récupération des informations de la session…");
 
-        // 2. Session + projet + questions
         const { data: session, error: sessErr } = await supabase
           .from("sessions")
           .select(
@@ -137,7 +107,6 @@ export default function SessionVideoExport() {
 
         setCandidateName(session.candidate_name ?? "");
 
-        // 3. Segments
         const { data: messages, error: msgErr } = await supabase
           .from("session_messages")
           .select("id, role, video_segment_url, question_id, is_follow_up, timestamp")
@@ -179,281 +148,98 @@ export default function SessionVideoExport() {
           throw new Error("Aucun enregistrement vidéo trouvé pour cette session.");
         }
 
-        // 4. Téléchargement segment par segment (0 → 60 %)
+        // Demande la permission de notification (sans bloquer)
+        if ("Notification" in window && Notification.permission === "default") {
+          Notification.requestPermission().catch(() => {});
+        }
+
+        // Garde l'onglet actif et empêche la mise en veille
+        stopAudio = startSilentAudio();
+        await requestWakeLock();
+
         setPhase("downloading");
-        const followUpCounter = new Map<string, number>();
-        type DownloadedSegment = {
-          baseName: string;
-          ext: string;
-          data: Uint8Array;
-          question: string;
-        };
-        const downloaded: DownloadedSegment[] = [];
-        const missing: string[] = [];
 
-        for (let i = 0; i < segments.length; i++) {
-          if (cancelled) return;
-          const seg = segments[i];
-          const seq = String(i + 1).padStart(2, "0");
-          const questionLabel = seg.questionNumber
-            ? `question-${seg.questionNumber}`
-            : "question";
-
-          let suffix = "";
-          if (seg.isFollowUp) {
-            const key = seg.questionId || `idx-${i}`;
-            const k = (followUpCounter.get(key) ?? 0) + 1;
-            followUpCounter.set(key, k);
-            suffix = `-relance-${k}`;
-          }
-          const baseName = `${seq}-${questionLabel}${suffix}`;
-
-          setStatusLabel(
-            `Téléchargement du segment ${i + 1} sur ${segments.length}…`,
-          );
-
-          try {
-            const res = await fetch(seg.url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const total = Number(res.headers.get("Content-Length") || 0);
-            const ext = extFromContentType(
-              res.headers.get("Content-Type"),
-              seg.url,
-            );
-
-            const reader = res.body?.getReader();
-            let data: Uint8Array;
-            if (!reader) {
-              data = new Uint8Array(await res.arrayBuffer());
-            } else {
-              const chunks: Uint8Array[] = [];
-              let received = 0;
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                if (value) {
-                  chunks.push(value);
-                  received += value.length;
-                  const segShare = 60 / segments.length;
-                  const segProgress = total > 0 ? received / total : 0;
-                  const overall =
-                    i * segShare + Math.min(segProgress, 1) * segShare;
-                  setProgress(overall);
-                }
-              }
-              data = new Uint8Array(received);
-              let offset = 0;
-              for (const c of chunks) {
-                data.set(c, offset);
-                offset += c.length;
-              }
-            }
-
-            downloaded.push({ baseName, ext, data, question: seg.questionText });
-            setProgress(((i + 1) / segments.length) * 60);
-          } catch (err: any) {
-            console.warn(`[export] segment ${baseName} failed`, err);
-            missing.push(baseName);
-          }
-        }
-
-        if (downloaded.length === 0) {
-          throw new Error("Aucun segment n'a pu être téléchargé.");
-        }
-
-        // 5. Conversion en MP4 (60 → 85 %)
-        const zip = new JSZip();
-        const fileEntries: { name: string; question: string }[] = [];
-
-        const needsConvert = downloaded.some((d) => d.ext !== "mp4");
-        let ffmpeg: FFmpeg | null = null;
-        let ffmpegUnavailable = false;
-        let ffmpegLoadError: string | null = null;
-        const ffmpegLogs: string[] = [];
-
-        // @ffmpeg/core 0.12 single-thread n'a pas besoin de worker.js : seuls
-        // ffmpeg-core.js + ffmpeg-core.wasm sont nécessaires. On essaie plusieurs
-        // CDN en cascade (jsdelivr → unpkg → esm.sh) pour absorber les pannes
-        // ponctuelles d'unpkg, qui étaient la cause des « Failed to fetch ».
-        if (needsConvert) {
-          setPhase("converting");
-          setStatusLabel("Préparation du convertisseur vidéo…");
-
-          const cdnBases = [
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
-            "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
-            "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd",
-            "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd",
-          ];
-
-          const loadErrors: string[] = [];
-          for (const baseURL of cdnBases) {
-            try {
-              const candidate = new FFmpeg();
-              candidate.on("log", ({ message }) => {
-                ffmpegLogs.push(message);
-                if (ffmpegLogs.length > 200) ffmpegLogs.shift();
-                console.debug("[ffmpeg]", message);
-              });
-              const [coreURL, wasmURL] = await Promise.all([
-                toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-                toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-              ]);
-              await candidate.load({ coreURL, wasmURL });
-              ffmpeg = candidate;
-              console.info(`[export] ffmpeg loaded from ${baseURL}`);
-              break;
-            } catch (err: any) {
-              const msg = err?.message || String(err);
-              console.warn(`[export] ffmpeg load failed from ${baseURL}:`, msg);
-              loadErrors.push(`${baseURL.split("/").slice(-3, -2)[0]}: ${msg}`);
-            }
-          }
-
-          if (!ffmpeg) {
-            ffmpegLoadError =
-              loadErrors.length > 0
-                ? `aucun CDN n'a répondu (${loadErrors.join(" ; ")})`
-                : "moteur indisponible";
-            ffmpegUnavailable = true;
-          }
-        }
-
-        let convertedCount = 0;
-        let conversionFailures = 0;
-        const conversionErrors: string[] = [];
-
-        for (let i = 0; i < downloaded.length; i++) {
-          if (cancelled) return;
-          const d = downloaded[i];
-          const finalName = `${d.baseName}.mp4`;
-
-          if (d.ext === "mp4") {
-            zip.file(finalName, d.data);
-            fileEntries.push({ name: finalName, question: d.question });
-            convertedCount++;
-          } else if (!ffmpeg) {
-            const name = `${d.baseName}.${d.ext}`;
-            zip.file(name, d.data);
-            fileEntries.push({ name, question: d.question });
-          } else {
-            setStatusLabel(
-              `Conversion en MP4 ${i + 1} sur ${downloaded.length}…`,
-            );
-            try {
-              const inputName = `in-${i}.${d.ext}`;
-              const outputName = `out-${i}.mp4`;
-              await ffmpeg.writeFile(inputName, d.data);
-              const outData = await convertToMp4(ffmpeg, inputName, outputName, ffmpegLogs);
-              zip.file(finalName, outData);
-              fileEntries.push({ name: finalName, question: d.question });
-              convertedCount++;
-              await ffmpeg.deleteFile(inputName).catch(() => {});
-            } catch (err: any) {
-              console.warn(`[export] conversion ${d.baseName} failed`, err);
-              conversionFailures++;
-              if (conversionErrors.length < 3) {
-                conversionErrors.push(`${d.baseName}: ${err?.message || err}`);
-              }
-              const name = `${d.baseName}.${d.ext}`;
-              zip.file(name, d.data);
-              fileEntries.push({ name, question: d.question });
-            }
-          }
-
-          setProgress(60 + ((i + 1) / downloaded.length) * 25);
-        }
-
-        // Si la conversion a totalement échoué, on prévient dans le README
-        // mais on livre quand même l'archive en .webm (lisible par VLC, Chrome,
-        // Firefox, Edge). Mieux vaut un ZIP utilisable qu'une erreur bloquante.
-        if (needsConvert && convertedCount === 0 && ffmpegLoadError) {
-          console.warn(
-            `[export] conversion indisponible (${ffmpegLoadError}), livraison en .webm`,
-          );
-        }
-
-        // 6. README
-        const safeName = sanitizeName(session.candidate_name, "candidat");
-        const dateStr = new Date(session.created_at ?? Date.now())
-          .toISOString()
-          .slice(0, 10);
-        const durationMin = session.duration_seconds
-          ? Math.round((session.duration_seconds as number) / 60)
-          : null;
-
-        const readme: string[] = [];
-        readme.push(`Entretien — ${session.candidate_name ?? ""}`);
-        readme.push("");
-        readme.push(`Candidat : ${session.candidate_name ?? ""}`);
-        if (session.candidate_email)
-          readme.push(`Courriel : ${session.candidate_email}`);
-        if ((session as any).projects?.title)
-          readme.push(`Projet   : ${(session as any).projects.title}`);
-        if ((session as any).projects?.job_title)
-          readme.push(`Poste    : ${(session as any).projects.job_title}`);
-        readme.push(`Date     : ${dateStr}`);
-        if (durationMin !== null) readme.push(`Durée    : ${durationMin} min`);
-        readme.push("");
-        readme.push("Contenu de l'archive :");
-        fileEntries.forEach((f) => readme.push(`  ${f.name} — ${f.question}`));
-        if (missing.length > 0) {
-          readme.push("");
-          readme.push("Segments indisponibles au moment de la génération :");
-          missing.forEach((n) => readme.push(`  ${n}`));
-        }
-        readme.push("");
-        const allMp4 = fileEntries.every((f) => f.name.toLowerCase().endsWith(".mp4"));
-        if (allMp4) {
-          readme.push(
-            "Format : MP4 (MPEG-4 Part 2 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge ou n'importe quel lecteur vidéo standard. Seules les réponses du candidat sont enregistrées.",
-          );
-        } else {
-          readme.push(
-            `Format : ${convertedCount} fichier(s) en MP4, ${conversionFailures} fichier(s) restés en WebM (conversion impossible). Les .webm sont lisibles avec VLC, Chrome, Firefox, Edge. Pour QuickTime/iOS, convertissez-les en MP4 (ex. HandBrake).`,
-          );
-        }
-        zip.file("README.txt", readme.join("\n"));
-
-        // 7. Création du ZIP (85 → 100 %)
-        if (cancelled) return;
-        setPhase("zipping");
-        setStatusLabel("Création de l'archive ZIP…");
-
-        const zipBlob = await zip.generateAsync(
-          { type: "blob", compression: "STORE" },
-          (meta) => {
-            setProgress(85 + meta.percent * 0.15);
-          },
+        worker = new Worker(
+          new URL("../workers/videoExport.worker.ts", import.meta.url),
+          { type: "module" },
         );
 
-        if (cancelled) return;
+        worker.onmessage = (e: MessageEvent<any>) => {
+          if (cancelled) return;
+          const data = e.data;
+          if (data.type === "progress") {
+            setProgress(data.value);
+          } else if (data.type === "status") {
+            setStatusLabel(data.label);
+            setPhase(data.phase);
+          } else if (data.type === "done") {
+            const url = URL.createObjectURL(data.blob);
+            objectUrls.push(url);
+            setDownloadUrl(url);
+            setFilename(data.filename);
+            setFileCount(data.fileCount);
+            setProgress(100);
+            setPhase("ready");
+            setStatusLabel("Archive prête.");
 
-        const finalName = `entretien-${safeName}-${dateStr}.zip`;
-        setFilename(finalName);
-        setFileCount(fileEntries.length);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = data.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
 
-        const url = URL.createObjectURL(zipBlob);
-        objectUrls.push(url);
-        setDownloadUrl(url);
-        setProgress(100);
-        setPhase("ready");
-        setStatusLabel("Archive prête.");
+            if ("Notification" in window && Notification.permission === "granted") {
+              try {
+                new Notification("Archive vidéo prête", {
+                  body: `${data.fileCount} vidéo(s) prêtes à télécharger.`,
+                });
+              } catch {}
+            }
 
-        // Déclenche automatiquement le téléchargement
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = finalName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+            stopAudio?.();
+            stopAudio = null;
+            releaseWakeLock();
+            worker?.terminate();
+            worker = null;
+          } else if (data.type === "error") {
+            setErrorMsg(`Une erreur est survenue : ${data.message}`);
+            setPhase("error");
+            stopAudio?.();
+            stopAudio = null;
+            releaseWakeLock();
+            worker?.terminate();
+            worker = null;
+          }
+        };
+
+        worker.onerror = (err) => {
+          if (cancelled) return;
+          setErrorMsg(`Erreur du worker : ${err.message}`);
+          setPhase("error");
+          stopAudio?.();
+          stopAudio = null;
+          releaseWakeLock();
+        };
+
+        worker.postMessage({
+          type: "start",
+          segments,
+          candidateName: session.candidate_name ?? null,
+          candidateEmail: session.candidate_email ?? null,
+          projectTitle: (session as any).projects?.title ?? null,
+          projectJobTitle: (session as any).projects?.job_title ?? null,
+          createdAt: session.created_at ?? null,
+          durationSeconds: session.duration_seconds ?? null,
+        });
       } catch (err: any) {
-        console.error("[export]", err);
         if (!cancelled) {
-          const detail =
-            err?.message || (typeof err === "string" ? err : null) || "Erreur inconnue";
+          const detail = err?.message || "Erreur inconnue";
           setErrorMsg(`Une erreur est survenue : ${detail}`);
           setPhase("error");
+          stopAudio?.();
+          stopAudio = null;
+          releaseWakeLock();
         }
       }
     })();
@@ -461,6 +247,10 @@ export default function SessionVideoExport() {
     return () => {
       cancelled = true;
       objectUrls.forEach((u) => URL.revokeObjectURL(u));
+      worker?.terminate();
+      stopAudio?.();
+      releaseWakeLock();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [id]);
 
@@ -513,8 +303,8 @@ export default function SessionVideoExport() {
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
                     {fileCount} vidéo{fileCount > 1 ? "s" : ""} dans l'archive.
-                    Le téléchargement a démarré automatiquement. Si rien ne se
-                    passe, utilisez le bouton ci-dessous.
+                    Le téléchargement a démarré automatiquement. Sinon, utilisez
+                    le bouton ci-dessous.
                   </p>
                   <Button asChild className="w-full">
                     <a href={downloadUrl} download={filename}>
@@ -531,9 +321,14 @@ export default function SessionVideoExport() {
                   </Button>
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  Merci de garder cet onglet ouvert pendant la préparation.
-                </p>
+                <div className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Vous pouvez changer d'onglet, la préparation continue en
+                    arrière-plan. Évitez seulement de mettre l'ordinateur en
+                    veille.
+                  </span>
+                </div>
               )}
             </>
           )}
