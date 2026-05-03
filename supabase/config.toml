@@ -42,3 +42,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.tts-gemini-direct]
     verify_jwt = false
+
+  [functions.finalize-session]
+    verify_jwt = false
