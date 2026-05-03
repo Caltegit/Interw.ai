@@ -157,6 +157,7 @@ export default function SharedReport() {
 
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-4">
+          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
           <SessionStatsCard stats={stats} questionEvaluations={questionEvaluations} />
         </div>
 
