@@ -1618,6 +1618,9 @@ export default function InterviewStart() {
         // On ne stocke pas ce blob comme greeting (texte différent), mais le
         // service est désormais chaud → l'appel suivant sera rapide.
       }
+      // Pré-cache (fire-and-forget) les phrases statiques de transition pour
+      // que la 1re vraie transition soit instantanée côté TTS.
+      void prefetchTransitionPhrases(project?.tts_voice_id ?? null, fetchElevenLabsBlob);
     }
     updateStep("voice", "done");
     updateStep("network", "done");
