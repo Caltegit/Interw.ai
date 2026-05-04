@@ -598,6 +598,11 @@ export default function InterviewStart() {
         const blob = await res.blob();
         const ms = performance.now() - start;
         if (!blob || blob.size === 0) return null;
+        // Mémorise les phrases statiques pour les transitions suivantes.
+        const staticSet = new Set<string>(Object.values(STATIC_TRANSITION_PHRASES));
+        if (staticSet.has(text.trim())) {
+          setCachedTtsBlob(text, proj.tts_voice_id ?? null, blob);
+        }
         return { blob, bytes: blob.size, ms };
       } catch (e) {
         console.warn("[interview] fetchElevenLabsBlob failed", e);
