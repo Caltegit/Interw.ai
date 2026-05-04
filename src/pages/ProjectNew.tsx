@@ -14,8 +14,7 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
-
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
+import { useOrgRole } from "@/hooks/useOrgRole";
 
 const initialState: ProjectFormState = {
   title: "Candidature spontanée",
@@ -88,6 +87,7 @@ const initialState: ProjectFormState = {
 
 export default function ProjectNew() {
   const { user } = useAuth();
+  const { organizationId } = useOrgRole();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -127,6 +127,14 @@ export default function ProjectNew() {
       toast({ title: "Erreur", description: "Vous devez être connecté.", variant: "destructive" });
       return;
     }
+    if (!organizationId) {
+      toast({
+        title: "Aucune organisation",
+        description: "Votre compte n'est rattaché à aucune organisation. Contactez un administrateur.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -153,7 +161,7 @@ export default function ProjectNew() {
       const { data: project, error } = await supabase
         .from("projects")
         .insert({
-          organization_id: DEFAULT_ORG_ID,
+          organization_id: organizationId,
           created_by: user.id,
           title: s.title,
           job_title: s.title,
@@ -302,12 +310,12 @@ export default function ProjectNew() {
                 const { data: existing } = await supabase
                   .from("question_templates")
                   .select("id")
-                  .eq("organization_id", DEFAULT_ORG_ID)
+                  .eq("organization_id", organizationId)
                   .eq("content", contentText)
                   .maybeSingle();
                 if (!existing) {
                   await supabase.from("question_templates").insert({
-                    organization_id: DEFAULT_ORG_ID,
+                    organization_id: organizationId,
                     created_by: user.id,
                     title: q.title || contentText.slice(0, 60),
                     content: contentText,
@@ -348,7 +356,7 @@ export default function ProjectNew() {
         if (toLibrary.length > 0) {
           await supabase.from("criteria_templates").insert(
             toLibrary.map((c) => ({
-              organization_id: DEFAULT_ORG_ID,
+              organization_id: organizationId,
               created_by: user.id,
               label: c.label,
               description: c.description,
