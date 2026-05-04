@@ -1992,7 +1992,16 @@ export default function InterviewStart() {
       // On garde l'overlay affiché pendant la TTS de clôture pour éviter un
       // "flash" de l'écran question avant la redirection vers /complete.
       setQuestionLoading({ label: "Finalisation de la session…", percent: 95 });
-      await speak(closing);
+      // CLOSE_PREV : il faut absolument attendre l'upload du dernier segment
+      // vidéo + l'insert du message candidat AVANT d'appeler endInterview().
+      // Sinon generate-report tourne sur une session qui n'a pas encore la
+      // dernière réponse → "la dernière question saute".
+      // On parallélise avec la TTS de clôture pour ne pas ajouter de latence
+      // perçue (speak prend déjà 2-4 s, le temps que l'upload finisse).
+      await Promise.all([
+        persistCandidatePromise ?? Promise.resolve(),
+        speak(closing),
+      ]);
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
       return;
@@ -2388,10 +2397,13 @@ export default function InterviewStart() {
         // Stop camera stream
         streamRef.current?.getTracks().forEach((t) => t.stop());
 
-        // Flush in-flight background jobs (candidate inserts + AI transitions), max 5s
+        // Flush in-flight background jobs (candidate inserts + AI transitions).
+        // Timeout généreux (15 s) car sur réseau dégradé l'upload de la dernière
+        // vidéo peut être lent. L'utilisateur est déjà sur /complete qui poll
+        // le status, donc cette attente n'est pas perçue.
         if (backgroundJobsRef.current.length > 0) {
           const flush = Promise.allSettled(backgroundJobsRef.current);
-          const timeout = new Promise((resolve) => setTimeout(resolve, 5000));
+          const timeout = new Promise((resolve) => setTimeout(resolve, 15000));
           await Promise.race([flush, timeout]);
           backgroundJobsRef.current = [];
         }
