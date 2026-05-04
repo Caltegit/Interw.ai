@@ -1,16 +1,24 @@
-# Ajouter "Cloner ma voix" dans le formulaire projet
+# Détecter une voix déjà clonée avant d'ouvrir le clonage
 
-À côté du lien "Modifier la voix" dans `src/components/project/ProjectForm.tsx` (étape Infos), ajouter un second lien "Cloner ma voix" qui ouvre la `VoiceCloneDialog` existante (`src/components/settings/VoiceCloneDialog.tsx`), déjà utilisée dans Paramètres.
+Quand on clique sur "Cloner ma voix" depuis le formulaire projet, vérifier si l'utilisateur a déjà une voix clonée (`profiles.cloned_voice_id`). Si oui, afficher un AlertDialog : "Vous avez déjà cloné une voix ([nom]). Pour en créer une nouvelle, supprimez d'abord la voix existante." avec deux actions : **Supprimer et recloner** / **Annuler**.
 
 ## Changements
 
 `src/components/project/ProjectForm.tsx` :
-- Importer `VoiceCloneDialog` depuis `@/components/settings/VoiceCloneDialog`.
-- Ajouter un état local `cloneDialogOpen` (booléen).
-- Sous le bloc voix, transformer le conteneur du lien en `flex gap-4` et ajouter un second bouton lien "Cloner ma voix" qui passe `cloneDialogOpen` à `true`.
-- Monter `<VoiceCloneDialog>` avec `defaultName={aiPersonaName || "Ma voix"}` et `onCloned={(id) => { setTtsVoiceId(id); setTtsProvider("elevenlabs"); }}` pour que la voix clonée soit immédiatement sélectionnée pour le projet.
+- Importer `useEffect`, `supabase`, `useAuth`, et les composants `AlertDialog*`.
+- Ajouter états : `existingClonedVoice: { id, name } | null`, `confirmReplaceOpen: boolean`, `deletingVoice: boolean`.
+- `useEffect` au montage : `select cloned_voice_id, cloned_voice_name from profiles where user_id = user.id` → renseigne `existingClonedVoice`.
+- Modifier le handler du bouton "Cloner ma voix" :
+  - Si `existingClonedVoice` → ouvrir `confirmReplaceOpen`.
+  - Sinon → ouvrir `cloneDialogOpen` directement.
+- Ajouter `<AlertDialog open={confirmReplaceOpen}>` avec :
+  - Titre : "Voix déjà clonée"
+  - Description : "Vous avez déjà cloné une voix (« [nom] »). Pour en créer une nouvelle, l'ancienne sera supprimée définitivement."
+  - Cancel : "Annuler"
+  - Action : "Supprimer et recloner" → appelle `supabase.functions.invoke("delete-cloned-voice")`, puis sur succès : `setExistingClonedVoice(null)`, ferme l'alerte, ouvre `cloneDialogOpen`.
+- Dans `onCloned` du `VoiceCloneDialog`, mettre à jour `existingClonedVoice` avec la nouvelle voix pour rester cohérent si l'utilisateur reclique.
 
 ## Hors scope
 
-- Aucun changement de schéma BDD, d'edge function ou de la `VoiceCloneDialog` elle-même.
-- Pas de modif de la page Paramètres.
+- Pas de changement à `VoiceCloneDialog`, `delete-cloned-voice`, ni à la page Paramètres.
+- Pas de schéma BDD modifié.
