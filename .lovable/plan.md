@@ -1,71 +1,82 @@
-## Diagnostic
+## Objectif
+Ajouter une section "Voix clonée" dans `/settings` permettant à un utilisateur de cloner sa voix via ElevenLabs (Instant Voice Cloning), puis de l'utiliser comme voix TTS dans ses projets.
 
-Oui, la stratégie multi-couches mise en place (pagehide / visibilitychange / sendBeacon + `finalize-abandoned-session`) fonctionne **aussi sur desktop** : ce sont des events DOM standards. Si un utilisateur ferme l'onglet brutalement, la récupération marche pareil.
+## Architecture
 
-Mais en relisant `handleSubmitResponse` dans `src/pages/InterviewStart.tsx`, j'ai trouvé une **race condition propre à la dernière question** qui explique pourquoi la dernière réponse "saute" parfois (même sur desktop, sans rien fermer) :
-
-### Le bug
-
-Quand le candidat envoie sa réponse :
-
-1. L'upload vidéo + l'insert du message candidat partent en arrière-plan dans `persistCandidatePromise` (ligne 1788-1845).
-2. L'IA répond `action: "end"` sur la dernière question.
-3. La branche **NEXT** (ligne 2076) **et** la branche **FOLLOW-UP** (ligne 1937) attendent toutes les deux `await persistCandidatePromise` avant d'avancer (commentaire `CLOSE_PREV`).
-4. Mais la branche **END** (lignes 1971-1998) **n'attend pas** `persistCandidatePromise` avant d'appeler `endInterviewRef.current?.()`.
-
-Conséquence : `endInterview()` navigue immédiatement vers `/complete` (ligne 2369), puis lance `generate-report` en arrière-plan. Si l'upload du dernier segment ou l'insert du dernier message n'est pas encore terminé :
-
-- Le rapport est généré **sans la dernière réponse** dans `session_messages`.
-- La vidéo de la dernière question peut être absente du bucket au moment de la transcription.
-
-C'est exactement le pattern décrit : "la dernière question saute". Sur fibre desktop ça arrive moins, mais dès que le réseau ralentit (4G correcte, wifi café), `persistCandidatePromise` met >1 s et perd la course contre `generate-report`.
-
-### Correctif
-
-Ajouter le même `await persistCandidatePromise` qu'on a dans les autres branches, juste avant `endInterviewRef.current?.()` :
-
-```ts
-// ── 5. END branch ──
-if (action === "end" || isLastQuestion) {
-  // ... (ajout de la closing message comme aujourd'hui)
-
-  // CLOSE_PREV : attendre l'upload du dernier segment + insert candidat
-  // AVANT de finaliser la session (sinon generate-report tourne sans la
-  // dernière réponse).
-  if (persistCandidatePromise) {
-    try { await persistCandidatePromise; } catch {}
-    if (token.aborted) { aborted = true; return; }
-  }
-
-  setQuestionLoading({ label: "Finalisation de la session…", percent: 95 });
-  await speak(closing);
-  if (token.aborted) { aborted = true; return; }
-  endInterviewRef.current?.();
-  return;
-}
+```text
+Settings page
+  └─ Card "Ma voix clonée"
+       ├─ Si pas de voix : bouton "Cloner ma voix"
+       │     └─ Dialog : enregistrement micro (60-90s) + consentement RGPD
+       │           └─ POST → edge fn `clone-voice` → ElevenLabs voices/add
+       │                 └─ stocke voice_id dans profiles.cloned_voice_id
+       └─ Si voix existante : preview (bouton lecture) + bouton "Supprimer"
+             └─ DELETE → edge fn `delete-cloned-voice` → ElevenLabs voices/{id}
 ```
 
-Ordre choisi : on attend l'upload **pendant** que la TTS de clôture joue (perçu = 0 latence ajoutée pour le candidat, puisque `speak(closing)` prend déjà 2-4 s). En pratique on peut même `Promise.all` les deux pour aller plus vite :
+## Étapes d'implémentation
 
-```ts
-await Promise.all([
-  persistCandidatePromise ?? Promise.resolve(),
-  speak(closing),
-]);
-```
+### 1. Base de données (migration)
+Ajouter à `profiles` :
+- `cloned_voice_id text` (ElevenLabs voice_id)
+- `cloned_voice_name text`
+- `cloned_voice_created_at timestamptz`
+- `cloned_voice_consent_at timestamptz` (preuve consentement RGPD)
 
-### Belt-and-suspenders supplémentaire
+### 2. Edge function `clone-voice`
+- Auth requise (JWT)
+- Reçoit : `FormData` avec sample audio (webm/mp3) + `name` + `consent: true`
+- Valide : taille < 10MB, durée raisonnable, consentement = true
+- POST vers `https://api.elevenlabs.io/v1/voices/add` (multipart) avec `xi-api-key`
+- Stocke `voice_id` retourné dans `profiles` (service role)
+- Retourne `{ voice_id, name }`
 
-`endInterview()` (ligne 2343) re-tente déjà `stopAndUploadQuestionVideo` si le recorder est encore actif. Mais comme `persistCandidatePromise` a déjà appelé `stopAndUploadQuestionVideo`, le recorder est `inactive` et ce filet ne se déclenche pas. On laisse comme ça (le vrai fix est l'await ci-dessus).
+### 3. Edge function `delete-cloned-voice`
+- Auth requise
+- Lit `cloned_voice_id` depuis profile
+- DELETE `https://api.elevenlabs.io/v1/voices/{voice_id}`
+- Vide les champs dans `profiles`
 
-En revanche, on peut aussi **awaiter `backgroundJobsRef`** un peu plus longtemps avant `generate-report` (actuellement timeout 5 s ligne 2394). Si l'utilisateur a du réseau dégradé, 5 s ne suffit pas toujours pour finir l'upload d'une vidéo de 30-60 s. → passer à 15 s pour la finalisation, ce qui ne ralentit rien (l'utilisateur est déjà sur l'écran `/complete` qui poll le status).
+### 4. Composant UI dans `Settings.tsx`
+Nouvelle Card "Ma voix clonée" avec :
+- Si aucune voix : bouton "Cloner ma voix" → ouvre `VoiceCloneDialog`
+- `VoiceCloneDialog` :
+  - Texte d'instruction (lire ~1 min, environnement calme)
+  - Texte type à lire (paragraphe FR de ~150 mots)
+  - Composant d'enregistrement (réutilise pattern de `MediaRecorderField`, audio uniquement)
+  - Preview du sample avant envoi
+  - Checkbox consentement RGPD obligatoire ("J'accepte que ma voix soit clonée et stockée par ElevenLabs…")
+  - Bouton "Créer ma voix"
+- Si voix existante :
+  - Affiche nom + date de création
+  - Bouton "Tester" (utilise `tts-elevenlabs` en mode preview avec le `voice_id` cloné)
+  - Bouton "Supprimer" (avec confirmation)
+
+### 5. Intégration dans le sélecteur de voix projet
+Modifier `VoiceSelectorDialog` pour afficher la voix clonée de l'utilisateur en haut de la liste (badge "Ma voix") si `profile.cloned_voice_id` existe. Le `voice_id` cloné est déjà géré par `tts-elevenlabs` (lit `tts_voice_id` du projet).
+
+## Sécurité & RGPD
+- Consentement explicite stocké en DB avec timestamp
+- Suppression possible à tout moment (droit à l'oubli)
+- Voix isolée par utilisateur (un user = une voix clonée max dans MVP)
+- Edge function service role pour update profile (RLS bloque sinon)
+
+## Coût ElevenLabs (rappel)
+- IVC inclus dans plan Creator (~22$/mois) : jusqu'à 30 voix clonées
+- Génération TTS : compte sur le quota standard de caractères
+
+## Hors scope (MVP)
+- Pas de clonage pour autres membres de l'org (chaque user clone la sienne)
+- Pas de gestion multi-voix par user
+- Pas de Professional Voice Cloning (PVC, demande heures d'audio)
 
 ## Fichiers touchés
+- `supabase/migrations/<timestamp>_add_cloned_voice_to_profiles.sql` (nouveau)
+- `supabase/functions/clone-voice/index.ts` (nouveau)
+- `supabase/functions/delete-cloned-voice/index.ts` (nouveau)
+- `src/pages/Settings.tsx` (ajout Card)
+- `src/components/settings/VoiceCloneDialog.tsx` (nouveau)
+- `src/components/project/VoiceSelectorDialog.tsx` (ajout option voix clonée)
 
-- `src/pages/InterviewStart.tsx` — ajouter `await persistCandidatePromise` dans la branche END (ligne ~1994), passer le timeout `flush` de 5 s à 15 s (ligne ~2394).
-
-## Effets de bord
-
-- Aucune régression sur le flux normal : on attend juste un upload qui était déjà en cours.
-- Latence perçue côté candidat : nulle (l'attente se fait pendant la TTS de clôture).
-- Le filet `finalize-abandoned-session` reste là pour les vrais abandons (fermeture d'onglet pendant l'enregistrement).
+## Pré-requis
+Le secret `ELEVENLABS_API_KEY` est déjà configuré (utilisé par `tts-elevenlabs`). Aucun nouveau secret nécessaire. Il faut vérifier que le plan ElevenLabs actif permet l'IVC (Creator+).

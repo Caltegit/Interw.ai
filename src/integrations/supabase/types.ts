@@ -653,6 +653,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cloned_voice_consent_at: string | null
+          cloned_voice_created_at: string | null
+          cloned_voice_id: string | null
+          cloned_voice_name: string | null
           created_at: string
           email: string
           full_name: string
@@ -661,6 +665,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cloned_voice_consent_at?: string | null
+          cloned_voice_created_at?: string | null
+          cloned_voice_id?: string | null
+          cloned_voice_name?: string | null
           created_at?: string
           email?: string
           full_name?: string
@@ -669,6 +677,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cloned_voice_consent_at?: string | null
+          cloned_voice_created_at?: string | null
+          cloned_voice_id?: string | null
+          cloned_voice_name?: string | null
           created_at?: string
           email?: string
           full_name?: string
