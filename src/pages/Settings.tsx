@@ -36,9 +36,90 @@ export default function Settings() {
   const [orgLogo, setOrgLogo] = useState<string | null>(null);
   const [orgInitialized, setOrgInitialized] = useState(false);
 
+  // Voix clonée
+  const [clonedVoice, setClonedVoice] = useState<{ id: string; name: string; created_at: string } | null>(null);
+  const [voiceLoading, setVoiceLoading] = useState(true);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const [confirmDeleteVoice, setConfirmDeleteVoice] = useState(false);
+  const [deletingVoice, setDeletingVoice] = useState(false);
+  const [previewingVoice, setPreviewingVoice] = useState(false);
+
   useEffect(() => {
     if (profile) setFullName(profile.full_name || "");
   }, [profile]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("cloned_voice_id, cloned_voice_name, cloned_voice_created_at")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.cloned_voice_id) {
+          setClonedVoice({
+            id: data.cloned_voice_id,
+            name: data.cloned_voice_name || "Ma voix",
+            created_at: data.cloned_voice_created_at || "",
+          });
+        } else {
+          setClonedVoice(null);
+        }
+        setVoiceLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const handleDeleteVoice = async () => {
+    setDeletingVoice(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-cloned-voice");
+      if (error) throw error;
+      setClonedVoice(null);
+      toast({ title: "Voix supprimée" });
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setDeletingVoice(false);
+      setConfirmDeleteVoice(false);
+    }
+  };
+
+  const handlePreviewVoice = async () => {
+    if (!clonedVoice) return;
+    setPreviewingVoice(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            preview: true,
+            voiceId: clonedVoice.id,
+            text: "Bonjour, je suis votre voix clonée. Voici un aperçu de mon timbre.",
+          }),
+        },
+      );
+      if (!res.ok) throw new Error("Échec de l'aperçu");
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      audio.onended = () => setPreviewingVoice(false);
+      await audio.play();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+      setPreviewingVoice(false);
+    }
+  };
 
   useEffect(() => {
     if (org && !orgInitialized) {
