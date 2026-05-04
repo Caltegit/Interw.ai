@@ -442,13 +442,20 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </RadioGroup>
                 </div>
 
-                <div className="pt-2 border-t border-border">
+                <div className="pt-2 border-t border-border flex items-center gap-4">
                   <button
                     type="button"
                     onClick={() => setVoiceDialogOpen(true)}
                     className="text-xs text-primary hover:underline"
                   >
                     Modifier la voix
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCloneDialogOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Cloner ma voix
                   </button>
                 </div>
               </div>
@@ -464,6 +471,16 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   setTtsProvider("elevenlabs");
                 }}
                 onCancel={() => {}}
+              />
+
+              <VoiceCloneDialog
+                open={cloneDialogOpen}
+                onOpenChange={setCloneDialogOpen}
+                defaultName={aiPersonaName || "Ma voix"}
+                onCloned={(id) => {
+                  setTtsVoiceId(id);
+                  setTtsProvider("elevenlabs");
+                }}
               />
 
               <div>
