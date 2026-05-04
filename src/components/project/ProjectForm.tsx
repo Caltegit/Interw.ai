@@ -1,4 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,6 +152,52 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [importOpen, setImportOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
+  const { user } = useAuth();
+  const [existingClonedVoice, setExistingClonedVoice] = useState<{ id: string; name: string } | null>(null);
+  const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
+  const [deletingVoice, setDeletingVoice] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase
+      .from("profiles")
+      .select("cloned_voice_id, cloned_voice_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.cloned_voice_id) {
+          setExistingClonedVoice({ id: data.cloned_voice_id, name: data.cloned_voice_name || "Ma voix" });
+        } else {
+          setExistingClonedVoice(null);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const handleCloneClick = () => {
+    if (existingClonedVoice) {
+      setConfirmReplaceOpen(true);
+    } else {
+      setCloneDialogOpen(true);
+    }
+  };
+
+  const handleDeleteAndReclone = async () => {
+    setDeletingVoice(true);
+    try {
+      const { error } = await supabase.functions.invoke("delete-cloned-voice");
+      if (error) throw error;
+      setExistingClonedVoice(null);
+      setConfirmReplaceOpen(false);
+      setCloneDialogOpen(true);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } finally {
+      setDeletingVoice(false);
+    }
+  };
 
   // State (initialised from props.initial — copied so parent stays decoupled)
   const [title, setTitle] = useState(initial.title);
@@ -452,7 +510,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCloneDialogOpen(true)}
+                    onClick={handleCloneClick}
                     className="text-xs text-primary hover:underline"
                   >
                     Cloner ma voix
@@ -477,11 +535,32 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 open={cloneDialogOpen}
                 onOpenChange={setCloneDialogOpen}
                 defaultName={aiPersonaName || "Ma voix"}
-                onCloned={(id) => {
+                onCloned={(id, name) => {
                   setTtsVoiceId(id);
                   setTtsProvider("elevenlabs");
+                  setExistingClonedVoice({ id, name: name || aiPersonaName || "Ma voix" });
                 }}
               />
+
+              <AlertDialog open={confirmReplaceOpen} onOpenChange={setConfirmReplaceOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Voix déjà clonée</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Vous avez déjà cloné une voix («&nbsp;{existingClonedVoice?.name}&nbsp;»). Pour en créer une nouvelle, l'ancienne sera supprimée définitivement.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletingVoice}>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={deletingVoice}
+                      onClick={(e) => { e.preventDefault(); handleDeleteAndReclone(); }}
+                    >
+                      {deletingVoice ? "Suppression…" : "Supprimer et recloner"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <div>
                 <Label>Photo du recruteur</Label>
