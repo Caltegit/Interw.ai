@@ -1,53 +1,41 @@
-## Cause racine
+# Plan : Créer le projet "Morning, premier entretien"
 
-`src/pages/ProjectNew.tsx` (ligne 18) contient une constante codée en dur qui force tous les nouveaux projets dans l'organisation SUPER ADMIN :
+Création directe en base (insertion de données, pas de changement de schéma) dans l'organisation **SUPER ADMIN**, rattaché à ton compte (`clement.alteresco@gmail.com`).
 
-```ts
-const DEFAULT_ORG_ID = "a0000000-0000-0000-0000-000000000001";
-```
+## Projet
 
-Utilisée 4 fois dans le fichier (création projet, lecture/insert template intro). Résultat : 34 projets dans SUPER ADMIN dont 31 ne devraient pas y être.
+- **Titre** : "Morning, premier entretien"
+- **Organisation** : SUPER ADMIN (`a0000000-0000-0000-0000-000000000001`)
+- **Créé par** : ton compte
+- **Langue** : fr
+- **Durée max** : 15 min (tu as dit ~10 min)
+- **Statut** : `active` (lien candidat utilisable)
+- **Avatar / voix IA** : valeurs par défaut (Léa, voix féminine FR, TTS browser) — tu pourras changer ensuite dans l'éditeur
+- **Intro premier écran** activée (`intro_first_screen = true`, `intro_enabled = true`, `intro_mode = "text"`) avec le texte exact que tu as fourni
+- **Slug** auto-généré : `morning-premier-entretien-<timestamp>`
 
-## 1. Correctif code
+## 12 questions (toutes type `open`, lues par l'IA, sans relance)
 
-**`src/pages/ProjectNew.tsx`**
-- Supprimer la constante `DEFAULT_ORG_ID`.
-- Lire l'organisation de l'utilisateur via `useOrgRole()` (déjà dans le projet) — champ `organizationId`.
-- Si `organizationId` est `null` au moment du submit, afficher un toast d'erreur et bloquer la création.
-- Remplacer les 4 occurrences de `DEFAULT_ORG_ID` par `organizationId`.
+1. Pour commencer en douceur, comment ça va aujourd'hui ?
+2. Comment as-tu découvert Morning ?
+3. Pour continuer sur Morning, pourrais-tu me décrire ce qu'on propose ? Si tu devais expliquer notre service à un ami… C'est à toi.
+4. Peux-tu me parler de ta dernière expérience pro ? Qu'est-ce qui t'a plu ? Qu'as-tu appris ?
+5. Une question un peu plus perso : dans quel coin as-tu grandi ? Et est-ce que tu gardes un bon souvenir de ces années d'enfance ?
+6. Si tu m'invites chez toi à dîner, tu prépares quoi ? Ça serait quoi l'ambiance ?
+7. Tu aimes faire quoi le week-end ? As-tu des passions en ce moment ?
+8. Parle-moi de tes vacances idéales. Mer ? Montagne ? Dis-moi tout.
+9. D'ailleurs quand tu pars en vacances avec des amis, tu t'occupes de quoi dans le groupe ?
+10. Décris-moi ta personnalité en 3 mots.
+11. Si je te donnais 1 million d'euros à dépenser en 24h, tu ferais quoi ?
+12. Bon j'arrête de te torturer ! Un dernier mot que tu aimerais ajouter avant qu'on se quitte ? C'est à toi.
 
-**Audit**
-- `rg "a0000000-0000-0000-0000-000000000001" src/` pour vérifier qu'aucun autre fichier ne reproduit le pattern. Corriger si trouvé.
+## Critères d'évaluation
 
-## 2. Migration de données
+Aucun critère ajouté pour l'instant (tu pourras les définir depuis l'éditeur du projet). Si tu en veux par défaut, dis-le-moi.
 
-Migration SQL en deux étapes :
+## Étapes techniques
 
-**a) Réassigner les projets dont le créateur a une vraie organisation**
+1. `INSERT` dans `projects` (organization_id SUPER ADMIN, created_by toi, intro premier écran activée avec ton texte).
+2. `INSERT` des 12 lignes dans `questions` avec `order_index` 0→11.
 
-```sql
-UPDATE projects p
-SET organization_id = pr.organization_id
-FROM profiles pr
-WHERE p.created_by = pr.user_id
-  AND p.organization_id = 'a0000000-0000-0000-0000-000000000001'
-  AND pr.organization_id IS NOT NULL
-  AND pr.organization_id <> 'a0000000-0000-0000-0000-000000000001';
-```
-
-Effet attendu :
-- 3 projets de cyriaque@withgardner.com → org "With Gardner"
-- 1 projet de mehdi@ubiq.fr → org "UBIQ"
-- 1 projet de benjamin@alboteam.com → org "ALBO"
-
-**b) Supprimer les projets créés par des comptes sans organisation**
-
-Concernés : `c@bap.fr`, `c+1@bap.fr`, `c+3@bap.fr`, `c+5@bap.fr`, `cclemalte@gmail.com` (≈ 5 projets, sans `organization_id` sur leur profil).
-
-Suppression en cascade des données liées (sessions, session_messages, transcripts, reports, report_shares, questions, evaluation_criteria) puis suppression des projets eux-mêmes, dans une seule migration transactionnelle.
-
-**Conservé en l'état :** les 23 projets de `clement.alteresco@gmail.com` restent dans l'org SUPER ADMIN.
-
-## Vérification post-migration
-
-Recompter par organisation pour confirmer que SUPER ADMIN ne contient plus que les projets de clement.alteresco (≈ 23) et que UBIQ / With Gardner / ALBO ont récupéré les leurs.
+Je te donnerai l'ID du projet créé pour ouvrir directement `/projects/<id>`.
