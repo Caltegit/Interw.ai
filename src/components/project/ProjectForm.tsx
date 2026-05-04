@@ -461,9 +461,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   setTtsVoiceId(id);
                   setTtsProvider("elevenlabs");
                 }}
-                onCancel={() => {
-                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
-                }}
+                onCancel={() => {}}
               />
 
               <div>
