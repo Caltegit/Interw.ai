@@ -22,6 +22,7 @@ import {
   getDefaultVoiceForGender,
   type VoiceGender,
 } from "@/components/project/VoiceSelectorDialog";
+import { VoiceCloneDialog } from "@/components/settings/VoiceCloneDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AiTextCustomizerDialog,
@@ -138,6 +139,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [pickerOpen, setPickerOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
+  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
 
   // State (initialised from props.initial — copied so parent stays decoupled)
   const [title, setTitle] = useState(initial.title);
@@ -440,13 +442,20 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </RadioGroup>
                 </div>
 
-                <div className="pt-2 border-t border-border">
+                <div className="pt-2 border-t border-border flex items-center gap-4">
                   <button
                     type="button"
                     onClick={() => setVoiceDialogOpen(true)}
                     className="text-xs text-primary hover:underline"
                   >
                     Modifier la voix
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCloneDialogOpen(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Cloner ma voix
                   </button>
                 </div>
               </div>
@@ -462,6 +471,16 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   setTtsProvider("elevenlabs");
                 }}
                 onCancel={() => {}}
+              />
+
+              <VoiceCloneDialog
+                open={cloneDialogOpen}
+                onOpenChange={setCloneDialogOpen}
+                defaultName={aiPersonaName || "Ma voix"}
+                onCloned={(id) => {
+                  setTtsVoiceId(id);
+                  setTtsProvider("elevenlabs");
+                }}
               />
 
               <div>
