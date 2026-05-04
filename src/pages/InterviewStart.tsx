@@ -1881,39 +1881,81 @@ export default function InterviewStart() {
     }
     let action: "follow_up" | "next" | "end" = (isLastQuestion ? "end" : "next") as "follow_up" | "next" | "end";
     let aiMessage = "";
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
-        body: {
-          messages: aiHistorySnapshot.slice(-AI_HISTORY_WINDOW),
-          projectContext: {
-            aiPersonaName: project?.ai_persona_name ?? "Marie",
-            jobTitle: project?.job_title ?? "",
-            questions: questions.map((q) => ({
-              content: q.content,
-              type: q.type,
-              mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
-              relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
-              maxFollowUps: typeof (q as any).max_follow_ups === "number" ? (q as any).max_follow_ups : 1,
-              followUpEnabled: (q as { follow_up_enabled?: boolean }).follow_up_enabled !== false,
-            })),
-            currentQuestionNumber: questionIdx + 1,
-            totalQuestions: questions.length,
-            followUpsAsked,
-            forceMaxFollowUps,
-            questionTransitionsEnabled:
-              (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true,
+
+    // ── Bypass déterministe (MIRROR of supabase/functions/ai-conversation-turn) ──
+    // Quand aucune relance n'est envisageable, on évite l'appel Gemini (1–3 s).
+    // En cas de doute (champ inattendu), on N'ACTIVE PAS le bypass.
+    const currentQ = questions[questionIdx] as
+      | (typeof questions[number] & {
+          relance_level?: string;
+          follow_up_enabled?: boolean;
+          max_follow_ups?: number;
+        })
+      | undefined;
+    const qRelance = currentQ?.relance_level;
+    const qFollowUpEnabled = currentQ?.follow_up_enabled !== false;
+    const qMaxFollowUps =
+      typeof currentQ?.max_follow_ups === "number" ? currentQ.max_follow_ups : 1;
+    const noFollowUpPossible =
+      isLastQuestion ||
+      qRelance === "light" ||
+      qFollowUpEnabled === false ||
+      followUpsAsked >= qMaxFollowUps ||
+      forceMaxFollowUps === 0;
+
+    if (noFollowUpPossible) {
+      action = isLastQuestion ? "end" : "next";
+      if (action === "end") {
+        aiMessage = "Merci pour cette session, à bientôt.";
+      } else {
+        const nextQClient = questions[questionIdx + 1] as
+          | (typeof questions[number] & { video_url?: string | null; audio_url?: string | null })
+          | undefined;
+        if (nextQClient?.video_url) {
+          aiMessage = STATIC_TRANSITION_PHRASES.nextVideo;
+        } else if (nextQClient?.audio_url) {
+          aiMessage = STATIC_TRANSITION_PHRASES.nextAudio;
+        } else {
+          // Question texte : la branche NEXT (L2055+) construit déjà le bon
+          // fallback (`Merci. Question suivante : …`) quand aiMessage est vide.
+          aiMessage = "";
+        }
+      }
+    } else {
+      try {
+        const { data, error } = await supabase.functions.invoke("ai-conversation-turn", {
+          body: {
+            messages: aiHistorySnapshot.slice(-AI_HISTORY_WINDOW),
+            projectContext: {
+              aiPersonaName: project?.ai_persona_name ?? "Marie",
+              jobTitle: project?.job_title ?? "",
+              questions: questions.map((q) => ({
+                content: q.content,
+                type: q.type,
+                mediaType: q.video_url ? "video" : q.audio_url ? "audio" : "written",
+                relanceLevel: ((q as { relance_level?: string }).relance_level as "light" | "medium" | "deep") ?? "medium",
+                maxFollowUps: typeof (q as any).max_follow_ups === "number" ? (q as any).max_follow_ups : 1,
+                followUpEnabled: (q as { follow_up_enabled?: boolean }).follow_up_enabled !== false,
+              })),
+              currentQuestionNumber: questionIdx + 1,
+              totalQuestions: questions.length,
+              followUpsAsked,
+              forceMaxFollowUps,
+              questionTransitionsEnabled:
+                (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true,
+            },
           },
-        },
-      });
-      if (error) throw error;
-      action = (data?.action as typeof action) ?? action;
-      aiMessage = (data?.message as string) ?? "";
-    } catch (e) {
-      logger.error("interview_ai_turn_failed", {
-        sessionId: sessionId ?? null,
-        questionIndex: questionIdx,
-        error: e instanceof Error ? e.message : String(e),
-      });
+        });
+        if (error) throw error;
+        action = (data?.action as typeof action) ?? action;
+        aiMessage = (data?.message as string) ?? "";
+      } catch (e) {
+        logger.error("interview_ai_turn_failed", {
+          sessionId: sessionId ?? null,
+          questionIndex: questionIdx,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
     }
     setAiThinking(false);
     setQuestionLoading((prev) => (prev ? { ...prev, percent: 60, label: "Préparation de la suite…" } : prev));
