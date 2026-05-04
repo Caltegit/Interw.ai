@@ -535,11 +535,32 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 open={cloneDialogOpen}
                 onOpenChange={setCloneDialogOpen}
                 defaultName={aiPersonaName || "Ma voix"}
-                onCloned={(id) => {
+                onCloned={(id, name) => {
                   setTtsVoiceId(id);
                   setTtsProvider("elevenlabs");
+                  setExistingClonedVoice({ id, name: name || aiPersonaName || "Ma voix" });
                 }}
               />
+
+              <AlertDialog open={confirmReplaceOpen} onOpenChange={setConfirmReplaceOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Voix déjà clonée</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Vous avez déjà cloné une voix («&nbsp;{existingClonedVoice?.name}&nbsp;»). Pour en créer une nouvelle, l'ancienne sera supprimée définitivement.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletingVoice}>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={deletingVoice}
+                      onClick={(e) => { e.preventDefault(); handleDeleteAndReclone(); }}
+                    >
+                      {deletingVoice ? "Suppression…" : "Supprimer et recloner"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               <div>
                 <Label>Photo du recruteur</Label>
