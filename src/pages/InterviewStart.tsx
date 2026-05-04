@@ -19,6 +19,12 @@ import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverla
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
+import {
+  getCachedTtsBlob,
+  setCachedTtsBlob,
+  prefetchTransitionPhrases,
+  STATIC_TRANSITION_PHRASES,
+} from "@/lib/ttsCache";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
