@@ -22,6 +22,7 @@ import {
   getDefaultVoiceForGender,
   type VoiceGender,
 } from "@/components/project/VoiceSelectorDialog";
+import { VoiceCloneDialog } from "@/components/settings/VoiceCloneDialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   AiTextCustomizerDialog,
