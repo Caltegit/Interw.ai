@@ -569,6 +569,11 @@ export default function InterviewStart() {
     async (text: string): Promise<{ blob: Blob; bytes: number; ms: number } | null> => {
       const proj = project;
       if (!proj || proj.tts_provider !== "elevenlabs" || !proj.id) return null;
+      // Cache hit : on renvoie un blob avec ms=0/bytes=blob.size pour ne pas
+      // polluer la mesure réseau (l'appelant ne nourrit l'EWMA que pour les
+      // vraies réponses ; ici on signale 0 ms = pas d'aller-retour).
+      const cached = getCachedTtsBlob(text, proj.tts_voice_id ?? null);
+      if (cached) return { blob: cached, bytes: cached.size, ms: 0 };
       try {
         const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
         const start = performance.now();
