@@ -47,20 +47,44 @@ interface Props {
 }
 
 export function VoiceSelectorDialog({ open, onOpenChange, gender, initialVoiceId, personaName, onConfirm, onCancel }: Props) {
-  const voices = gender === "female" ? FEMALE_VOICES : MALE_VOICES;
+  const baseVoices = gender === "female" ? FEMALE_VOICES : MALE_VOICES;
   const defaultId = getDefaultVoiceForGender(gender);
   const [selectedId, setSelectedId] = useState<string>(initialVoiceId || defaultId);
   const [testing, setTesting] = useState(false);
+  const [clonedVoice, setClonedVoice] = useState<{ id: string; name: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
+  const voices = clonedVoice
+    ? [{ id: clonedVoice.id, name: `${clonedVoice.name} (ma voix)`, description: "Voix clonée personnelle" }, ...baseVoices]
+    : baseVoices;
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("profiles")
+        .select("cloned_voice_id, cloned_voice_name")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.cloned_voice_id) {
+            setClonedVoice({ id: data.cloned_voice_id, name: data.cloned_voice_name || "Ma voix" });
+          } else {
+            setClonedVoice(null);
+          }
+        });
+    });
+  }, [open]);
+
   useEffect(() => {
     if (open) {
-      // Si la voix actuelle n'appartient pas à ce genre, prendre la voix par défaut du genre
-      const exists = voices.some((v) => v.id === initialVoiceId);
+      const allIds = [...baseVoices.map((v) => v.id), ...(clonedVoice ? [clonedVoice.id] : [])];
+      const exists = allIds.includes(initialVoiceId || "");
       setSelectedId(exists && initialVoiceId ? initialVoiceId : defaultId);
     }
-  }, [open, gender, initialVoiceId, defaultId, voices]);
+  }, [open, gender, initialVoiceId, defaultId, baseVoices, clonedVoice]);
 
   const stopAudio = () => {
     if (audioRef.current) {
