@@ -142,7 +142,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   // State (initialised from props.initial — copied so parent stays decoupled)
   const [title, setTitle] = useState(initial.title);
   const [language, setLanguage] = useState<"fr" | "en">(initial.language);
-  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">(initial.ttsProvider);
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("elevenlabs");
   const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>(initial.ttsVoiceGender);
   const [ttsVoiceId, setTtsVoiceId] = useState<string>(initial.ttsVoiceId);
   const [aiPersonaName, setAiPersonaName] = useState(initial.aiPersonaName);
@@ -310,7 +310,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
     // Dernière voix utilisée
     if (payload.voice) {
-      setTtsProvider(payload.voice.tts_provider);
+      setTtsProvider("elevenlabs");
       setTtsVoiceGender(payload.voice.tts_voice_gender);
       setTtsVoiceId(payload.voice.tts_voice_id);
     }
@@ -440,23 +440,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </RadioGroup>
                 </div>
 
-                <div className="flex items-start justify-between gap-4 pt-2 border-t border-border">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium">Voix premium ElevenLabs</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Voix réaliste haute qualité (+1 crédit/session). Si désactivé, voix standard.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={ttsProvider === "elevenlabs"}
-                    onCheckedChange={(v) => {
-                      if (v) setVoiceDialogOpen(true);
-                      else setTtsProvider("browser");
-                    }}
-                  />
-                </div>
-
-                {ttsProvider === "elevenlabs" && (
+                <div className="pt-2 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setVoiceDialogOpen(true)}
@@ -464,7 +448,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   >
                     Modifier la voix
                   </button>
-                )}
+                </div>
               </div>
 
               <VoiceSelectorDialog
@@ -477,9 +461,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   setTtsVoiceId(id);
                   setTtsProvider("elevenlabs");
                 }}
-                onCancel={() => {
-                  if (ttsProvider !== "elevenlabs") setTtsProvider("browser");
-                }}
+                onCancel={() => {}}
               />
 
               <div>
