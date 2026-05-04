@@ -142,7 +142,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   // State (initialised from props.initial — copied so parent stays decoupled)
   const [title, setTitle] = useState(initial.title);
   const [language, setLanguage] = useState<"fr" | "en">(initial.language);
-  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">(initial.ttsProvider);
+  const [ttsProvider, setTtsProvider] = useState<"browser" | "elevenlabs">("elevenlabs");
   const [ttsVoiceGender, setTtsVoiceGender] = useState<VoiceGender>(initial.ttsVoiceGender);
   const [ttsVoiceId, setTtsVoiceId] = useState<string>(initial.ttsVoiceId);
   const [aiPersonaName, setAiPersonaName] = useState(initial.aiPersonaName);
