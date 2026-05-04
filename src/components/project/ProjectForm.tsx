@@ -310,7 +310,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
     // Dernière voix utilisée
     if (payload.voice) {
-      setTtsProvider(payload.voice.tts_provider);
+      setTtsProvider("elevenlabs");
       setTtsVoiceGender(payload.voice.tts_voice_gender);
       setTtsVoiceId(payload.voice.tts_voice_id);
     }
