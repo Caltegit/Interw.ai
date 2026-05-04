@@ -328,7 +328,74 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Mic className="h-5 w-5" /> Ma voix clonée
+          </CardTitle>
+          <CardDescription>
+            Clonez votre voix pour l'utiliser comme voix de l'IA dans vos entretiens.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {voiceLoading ? (
+            <p className="text-sm text-muted-foreground">Chargement…</p>
+          ) : clonedVoice ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3">
+              <div>
+                <p className="font-medium">{clonedVoice.name}</p>
+                {clonedVoice.created_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Créée le {new Date(clonedVoice.created_at).toLocaleDateString("fr-FR")}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handlePreviewVoice} disabled={previewingVoice}>
+                  {previewingVoice ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+                  Tester
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setConfirmDeleteVoice(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button size="sm" onClick={() => setCloneDialogOpen(true)}>
+              <Mic className="mr-2 h-4 w-4" /> Cloner ma voix
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       {orgId && <OrgMembers orgId={orgId} />}
+
+      <VoiceCloneDialog
+        open={cloneDialogOpen}
+        onOpenChange={setCloneDialogOpen}
+        defaultName={profile?.full_name || "Ma voix"}
+        onCloned={(id, name) =>
+          setClonedVoice({ id, name, created_at: new Date().toISOString() })
+        }
+      />
+
+      <AlertDialog open={confirmDeleteVoice} onOpenChange={setConfirmDeleteVoice}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la voix clonée ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La voix sera définitivement supprimée d'ElevenLabs et ne pourra plus être utilisée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingVoice}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteVoice} disabled={deletingVoice}>
+              {deletingVoice ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
