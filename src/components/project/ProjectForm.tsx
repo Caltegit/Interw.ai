@@ -510,7 +510,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCloneDialogOpen(true)}
+                    onClick={handleCloneClick}
                     className="text-xs text-primary hover:underline"
                   >
                     Cloner ma voix
