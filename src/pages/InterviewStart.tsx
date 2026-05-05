@@ -3329,10 +3329,17 @@ export default function InterviewStart() {
                             <span className="h-1.5 w-1.5 rounded-full bg-warning animate-bounce" style={{ animationDelay: "240ms" }} />
                           </span>
                         ) : isSpeaking ? (
-                          <span className="inline-flex items-center gap-2">
-                            <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                            L'IA pose la question…
-                          </span>
+                          questionType === "video" || questionType === "audio" ? (
+                            <span className="inline-flex items-center gap-2">
+                              <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                              Lecture de la question…
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2">
+                              <Volume2 className="h-3.5 w-3.5 animate-pulse" />
+                              L'IA pose la question…
+                            </span>
+                          )
                         ) : (
                           <span>Préparation…</span>
                         )}
