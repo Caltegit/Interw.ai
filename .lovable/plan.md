@@ -1,58 +1,62 @@
 ## Objectif
 
-Rendre `InterviewDeviceTest.tsx` plus lisible, mettre la caméra en petit, et corriger la mesure réseau qui reste bloquée alors que le débit est correct.
+Sur la page candidat d'entretien (`InterviewStart.tsx`), ajouter à côté du bouton « Arrêter la session » un lien « Signaler un problème » qui :
+1. Met l'entretien en pause automatiquement.
+2. Ouvre une popup avec un champ texte (description du problème).
+3. Envoie le message par email directement au créateur du projet.
 
-## Changements
+Et rafraîchir le design des deux boutons d'action (Arrêter / Pause) pour qu'ils soient plus soignés.
 
-### 1. Caméra en vignette (au lieu du grand aperçu)
+## Modifications
 
-- Remplacer le bloc `aspect-video` pleine largeur par une miniature ronde `w-28 h-28` (effet miroir conservé).
-- Posée à gauche d'un bandeau d'en-tête contenant : prénom du candidat, statut caméra (point vert/ambre/rouge + libellé court), petit bouton « Changer » qui ouvre le `DeviceSelector` dans un Popover.
-- Si la caméra est refusée/absente : la vignette devient un bouton « Activer la caméra » (icône + fond ambré), pas d'écran noir.
+### 1. Nouveau template email transactionnel
+Fichier : `supabase/functions/_shared/transactional-email-templates/interview-issue-report.tsx`
+- React Email respectant le style des templates existants (`interview-report.tsx`).
+- Props : `candidateName`, `jobTitle`, `message`, `sessionId`, `sessionUrl`.
+- Sujet : `Problème signalé par un candidat — {jobTitle}`.
+- Footer unsubscribe géré automatiquement.
 
-### 2. Liste verticale lisible (au lieu de 5 cartes empilées)
+Mise à jour de `registry.ts` pour ajouter `'interview-issue-report'`.
 
-Sous le bandeau, une seule colonne avec 4 lignes compactes :
+### 2. Nouvelle edge function publique
+Fichier : `supabase/functions/report-interview-issue/index.ts` (verify_jwt = false, accessible sans auth car page candidat publique).
+- Reçoit `{ sessionId, message }` (validation Zod : message 5–2000 caractères).
+- Avec service role key : récupère la session → projet → `created_by` → email via `auth.users` + `profiles`.
+- Récupère `candidate_name`, `job_title`.
+- Appelle `send-transactional-email` (en interne via service role) avec template `interview-issue-report`, idempotency `issue-${sessionId}-${timestamp_court}`.
+- Renvoie `{ ok: true }`.
 
-```text
-●  Micro et enregistrement       OK
-●  Son                            À tester  [Tester]
-●  Reconnaissance vocale          Limitée
-●  Connexion                      Stable
-```
+Ajout dans `supabase/config.toml` : `[functions.report-interview-issue] verify_jwt = false`.
 
-- Chaque ligne : pastille colorée (statut), libellé, badge à droite, action inline si besoin (bouton « Tester », « Réessayer »).
-- Détails masqués par défaut (jauge micro, sélecteur d'appareil, message d'erreur). Une ligne s'ouvre automatiquement si `error` ou `warning`, sinon elle reste fermée.
-- Plus d'accordéon décoratif : juste un chevron quand il y a quelque chose à montrer.
-- Barre de progression en haut passe à 4 segments (Micro, Son, Voix, Connexion). La caméra n'est plus un segment puisqu'elle est visible en permanence dans le bandeau.
+### 3. UI candidat — `src/pages/InterviewStart.tsx` (zone lignes 3372–3400)
 
-### 3. Mesure réseau fiabilisée
+Refonte de la barre d'actions :
+- Boutons en `rounded-full`, bordure subtile, padding plus généreux, icônes alignées.
+- « Arrêter la session » → variant `outline` rouge subtil au hover.
+- « Mettre en pause » → variant `outline` neutre.
+- Nouveau « Signaler un problème » → variant `ghost` discret avec icône `Flag`, couleur muted.
 
-Problème actuel : le test télécharge une charge trop petite, le résultat est très variable et reste souvent en `testing` ou `weak` malgré une bonne connexion.
+Au clic sur « Signaler un problème » :
+1. Si l'entretien tourne, appelle `pauseInterview("manual")`.
+2. Ouvre un nouveau `Dialog` (state `showReportDialog`).
 
-Corrections dans `testNetwork` (fichier `InterviewDeviceTest.tsx`) :
+### 4. Nouveau Dialog « Signaler un problème »
+Dans `InterviewStart.tsx`, à côté du `showEndDialog` existant :
+- Titre : « Signaler un problème ».
+- Sous-titre court : « Votre entretien est mis en pause. Décrivez ce qui ne va pas, le recruteur sera prévenu. »
+- `Textarea` (min 5 caractères, placeholder : « Ex. Le micro coupe régulièrement… »).
+- Boutons : « Envoyer » (primary, loading state) + « Annuler ».
+- Au submit → `supabase.functions.invoke('report-interview-issue', { body: { sessionId, message } })` puis toast succès et fermeture. Erreur → toast destructif.
 
-- Charge plus grande et stable : télécharger 2 fois (en parallèle) un asset déjà servi par l'app (`/placeholder.svg` répété, ou un fetch `Range: bytes=0-204799` vers un asset Supabase Storage public déjà existant) pour viser ~200 Ko utiles.
-- Garder le meilleur des deux essais (évite qu'un pic ponctuel fausse tout).
-- Timeout global 4 s : au-delà, on considère le test « ok » par défaut au lieu de rester bloqué (mieux vaut un faux positif qu'un blocage injustifié).
-- Nouveaux seuils plus tolérants :
-  - `good`    : ≥ 800 kb/s
-  - `limited` : 250–800 kb/s
-  - `weak`    : < 250 kb/s
-- Affichage : quand `good`, on n'affiche que « Connexion stable » sans le chiffre exact (le chiffre apparaît au survol via tooltip). Quand `limited`/`weak`, on garde l'indication chiffrée + conseil.
-- Si `navigator.connection.effectiveType` vaut `4g` et qu'on n'a pas pu mesurer, on considère directement `good` (pas d'écran d'erreur à tort).
+## Hors périmètre
+- Pas d'historique des signalements en base (envoi email seul, comme demandé).
+- Pas de modification du flow de pause existant.
+- Pas de notification in-app côté RH.
 
-### 4. CTA
-
-- Garde le bouton « Commencer la session » sticky en bas, avec `backdrop-blur`.
-- Désactivé uniquement si erreur bloquante (caméra/micro refusés). Les warnings réseau ne bloquent plus.
-
-## Fichier touché
-
-- `src/pages/InterviewDeviceTest.tsx` uniquement (refonte du JSX + correction `testNetwork`).
-- Pas de nouveau composant, pas de modif BDD, pas de modif route, pas de modif `deviceDiagnostics.ts`.
-
-## Hors scope
-
-- Pas de Sheet d'aide, pas de confettis, pas de tour interactif (proposés au tour précédent, on simplifie).
-- Pas de changement sur `useNetworkQuality.ts` (utilisé en cours de session, pas sur la page test).
+## Fichiers touchés
+- ✏️ `src/pages/InterviewStart.tsx`
+- ➕ `supabase/functions/report-interview-issue/index.ts`
+- ➕ `supabase/functions/_shared/transactional-email-templates/interview-issue-report.tsx`
+- ✏️ `supabase/functions/_shared/transactional-email-templates/registry.ts`
+- ✏️ `supabase/config.toml` (entrée verify_jwt pour la nouvelle fonction)
+- 🚀 Déploiement : `report-interview-issue` + `send-transactional-email` (rebuild registry).
