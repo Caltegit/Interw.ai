@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2 } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2, Flag } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
@@ -101,6 +102,9 @@ export default function InterviewStart() {
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportSending, setReportSending] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -3369,19 +3373,19 @@ export default function InterviewStart() {
               {/* Spacer gauche (desktop uniquement) */}
               <div className="hidden lg:block" />
               {/* Actions centrées */}
-              <div className="flex items-center gap-2 justify-center">
+              <div className="flex flex-wrap items-center gap-2 justify-center">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowEndDialog(true)}
-                  className="gap-2 text-muted-foreground hover:text-destructive"
+                  className="gap-2 rounded-full px-4 border-border/70 text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5"
                 >
                   <PhoneOff className="h-4 w-4" />
                   Arrêter la session
                 </Button>
                 {project?.allow_pause && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => pauseInterview("manual")}
                     disabled={isSpeaking || isProcessing}
@@ -3390,13 +3394,27 @@ export default function InterviewStart() {
                         ? "Disponible pendant votre réponse"
                         : undefined
                     }
-                    className="gap-2 text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+                    className="gap-2 rounded-full px-4 border-border/70 text-muted-foreground hover:bg-muted/60 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Pause className="h-4 w-4" />
                     Mettre en pause
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (project?.allow_pause) {
+                      try { pauseInterview("manual"); } catch { /* noop */ }
+                    }
+                    setReportMessage("");
+                    setShowReportDialog(true);
+                  }}
+                  className="gap-2 rounded-full px-3 text-muted-foreground/80 hover:text-foreground"
+                >
+                  <Flag className="h-4 w-4" />
+                  Signaler un problème
+                </Button>
               </div>
               {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop, sans actions */}
               <div className="hidden lg:flex lg:justify-end items-center">
@@ -3500,6 +3518,73 @@ export default function InterviewStart() {
               Continuer la session
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReportDialog} onOpenChange={(o) => !reportSending && setShowReportDialog(o)}>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-amber-500" />
+              Signaler un problème
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Votre entretien est mis en pause. Décrivez ce qui ne va pas, le recruteur sera prévenu par email.
+          </p>
+          <Textarea
+            value={reportMessage}
+            onChange={(e) => setReportMessage(e.target.value)}
+            placeholder="Ex. Le micro coupe régulièrement, je dois répéter mes réponses…"
+            rows={5}
+            maxLength={2000}
+            disabled={reportSending}
+            className="resize-none"
+          />
+          <div className="text-[11px] text-muted-foreground text-right">
+            {reportMessage.trim().length}/2000
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowReportDialog(false)}
+              disabled={reportSending}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                const msg = reportMessage.trim();
+                if (msg.length < 5 || !session?.id) return;
+                setReportSending(true);
+                try {
+                  const { error } = await supabase.functions.invoke("report-interview-issue", {
+                    body: { sessionId: session.id, message: msg },
+                  });
+                  if (error) throw error;
+                  toast({
+                    title: "Signalement envoyé",
+                    description: "Le recruteur a été prévenu. Vous pouvez reprendre quand vous le souhaitez.",
+                  });
+                  setShowReportDialog(false);
+                  setReportMessage("");
+                } catch (e: any) {
+                  toast({
+                    variant: "destructive",
+                    title: "Envoi impossible",
+                    description: e?.message ?? "Veuillez réessayer dans un instant.",
+                  });
+                } finally {
+                  setReportSending(false);
+                }
+              }}
+              disabled={reportSending || reportMessage.trim().length < 5}
+              className="gap-2"
+            >
+              {reportSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Envoyer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
