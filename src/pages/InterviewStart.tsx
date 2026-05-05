@@ -2666,6 +2666,37 @@ export default function InterviewStart() {
     }
   }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
 
+  // Watchdog : si après une transition on reste 4 s en état "rien" (ni écoute,
+  // ni TTS, ni traitement), c'est que startListening() a échoué silencieusement.
+  // On affiche un bandeau permettant de relancer le micro ou passer la question.
+  useEffect(() => {
+    if (interviewFinished || isPaused || !readyToStart) {
+      setInterviewStuck(false);
+      return;
+    }
+    if (isListening || isSpeaking || isProcessing) {
+      setInterviewStuck(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setInterviewStuck(true);
+      logger.error("interview_stuck_after_transition", {
+        sessionId: session?.id ?? null,
+        questionIndex: currentQuestionIndex,
+      });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [
+    isListening,
+    isSpeaking,
+    isProcessing,
+    interviewFinished,
+    isPaused,
+    readyToStart,
+    currentQuestionIndex,
+    session?.id,
+  ]);
+
   // Response timer: ticks while candidate is speaking
   useEffect(() => {
     if (isListening && !isPaused) {
