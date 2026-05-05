@@ -646,6 +646,45 @@ export default function InterviewDeviceTest() {
           </CardContent>
         </Card>
 
+        {/* Speech recognition test */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {sttStatus === "ok" ? (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : sttStatus === "error" ? (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : sttStatus === "testing" ? (
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                ) : (
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">Reconnaissance vocale</span>
+              </div>
+              {sttStatus === "error" && (
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testStt}>
+                  Réessayer
+                </Button>
+              )}
+            </div>
+
+            {sttStatus === "testing" && (
+              <p className="text-xs text-muted-foreground text-center">Vérification en cours…</p>
+            )}
+            {sttStatus === "ok" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                ✓ Votre navigateur permet de transcrire votre voix.
+              </p>
+            )}
+            {sttStatus === "error" && (
+              <p className="text-xs text-destructive">
+                {sttError ?? "La reconnaissance vocale n'est pas disponible."}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Network test */}
         <Card>
           <CardContent className="pt-6 space-y-3">
