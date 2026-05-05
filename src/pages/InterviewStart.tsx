@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2 } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2, Flag } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import defaultAiAvatar from "@/assets/default-interviewer.png";
 import CandidateLayout from "@/components/CandidateLayout";
 import FullscreenPrompt from "@/components/interview/FullscreenPrompt";
@@ -101,6 +102,9 @@ export default function InterviewStart() {
   const [isRecording, setIsRecording] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reportSending, setReportSending] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -3369,19 +3373,19 @@ export default function InterviewStart() {
               {/* Spacer gauche (desktop uniquement) */}
               <div className="hidden lg:block" />
               {/* Actions centrées */}
-              <div className="flex items-center gap-2 justify-center">
+              <div className="flex flex-wrap items-center gap-2 justify-center">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
                   onClick={() => setShowEndDialog(true)}
-                  className="gap-2 text-muted-foreground hover:text-destructive"
+                  className="gap-2 rounded-full px-4 border-border/70 text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5"
                 >
                   <PhoneOff className="h-4 w-4" />
                   Arrêter la session
                 </Button>
                 {project?.allow_pause && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => pauseInterview("manual")}
                     disabled={isSpeaking || isProcessing}
@@ -3390,13 +3394,27 @@ export default function InterviewStart() {
                         ? "Disponible pendant votre réponse"
                         : undefined
                     }
-                    className="gap-2 text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                    style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+                    className="gap-2 rounded-full px-4 border-border/70 text-muted-foreground hover:bg-muted/60 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Pause className="h-4 w-4" />
                     Mettre en pause
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (project?.allow_pause) {
+                      try { pauseInterview("manual"); } catch { /* noop */ }
+                    }
+                    setReportMessage("");
+                    setShowReportDialog(true);
+                  }}
+                  className="gap-2 rounded-full px-3 text-muted-foreground/80 hover:text-foreground"
+                >
+                  <Flag className="h-4 w-4" />
+                  Signaler un problème
+                </Button>
               </div>
               {/* Retour vidéo : caché sur mobile (rendu plus haut entre avatar et question), visible desktop, sans actions */}
               <div className="hidden lg:flex lg:justify-end items-center">
