@@ -15,6 +15,7 @@ import {
   Volume2,
   Copy,
   Check,
+  MessageSquare,
 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
