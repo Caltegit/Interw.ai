@@ -123,6 +123,9 @@ export default function InterviewDeviceTest() {
   const [netKbps, setNetKbps] = useState<number | null>(null);
   const [netQuality, setNetQuality] = useState<SpeedQuality | null>(null);
 
+  const [sttStatus, setSttStatus] = useState<Status>("idle");
+  const [sttError, setSttError] = useState<string | null>(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
