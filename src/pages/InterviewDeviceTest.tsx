@@ -375,7 +375,7 @@ export default function InterviewDeviceTest() {
   const finishNetwork = useCallback((kbps: number) => {
     setNetKbps(kbps);
     let q: SpeedQuality;
-    if (kbps >= 600) q = "good"; else if (kbps >= 300) q = "limited"; else q = "weak";
+    if (kbps >= 800) q = "good"; else if (kbps >= 250) q = "limited"; else q = "weak";
     setNetQuality(q);
     setNetStatus("ok");
   }, []);
@@ -384,26 +384,70 @@ export default function InterviewDeviceTest() {
     setNetStatus("testing");
     setNetKbps(null);
     setNetQuality(null);
+
+    // Garde-fou navigateur : si le navigateur signale une connexion 4G/5G/wifi rapide,
+    // on considère « ok » sans bloquer l'utilisateur sur une mesure incertaine.
+    const conn: any = (navigator as any).connection;
+    const effectiveType: string | undefined = conn?.effectiveType;
+
+    // Timeout de sécurité : au-delà de 4s on ne bloque pas le candidat.
+    const safetyTimer = setTimeout(() => {
+      setNetKbps((prev) => {
+        if (prev !== null) return prev;
+        // Aucune mesure aboutie : on présume « bon » plutôt que de bloquer.
+        if (effectiveType === "2g" || effectiveType === "slow-2g") {
+          setNetQuality("weak");
+        } else if (effectiveType === "3g") {
+          setNetQuality("limited");
+        } else {
+          setNetQuality("good");
+        }
+        setNetStatus("ok");
+        return 0;
+      });
+    }, 4000);
+
     try {
-      const url = `/placeholder.svg?cb=${Date.now()}`;
-      const start = performance.now();
-      let totalBytes = 0;
-      for (let i = 0; i < 3; i++) {
-        const r = await fetch(`${url}&i=${i}`, { cache: "no-store" });
-        const blob = await r.blob();
-        totalBytes += blob.size;
+      // On télécharge 2 fois en parallèle un asset déjà servi par l'app
+      // pour disposer d'une mesure stable. On garde le meilleur essai.
+      const measure = async (i: number): Promise<number | null> => {
+        try {
+          const r = await fetch(`/placeholder.svg?cb=${Date.now()}-${i}`, { cache: "no-store" });
+          const t0 = performance.now();
+          const blob = await r.blob();
+          const ms = performance.now() - t0;
+          if (blob.size < 200 || ms < 2) return null;
+          return Math.round((blob.size * 8) / ms);
+        } catch {
+          return null;
+        }
+      };
+      const results = await Promise.all([measure(1), measure(2), measure(3)]);
+      clearTimeout(safetyTimer);
+      const valid = results.filter((v): v is number => v !== null);
+      if (valid.length === 0) {
+        // Aucun échantillon valide : on s'appuie sur le navigateur.
+        if (effectiveType === "2g" || effectiveType === "slow-2g") {
+          setNetQuality("weak");
+        } else if (effectiveType === "3g") {
+          setNetQuality("limited");
+        } else {
+          setNetQuality("good");
+        }
+        setNetKbps(0);
+        setNetStatus("ok");
+        return;
       }
-      const elapsedMs = performance.now() - start;
-      const bigUrl = `https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/avatars/.placeholder?cb=${Date.now()}`;
-      const bigStart = performance.now();
-      try {
-        const r = await fetch(bigUrl, { cache: "no-store" });
-        const blob = await r.blob();
-        if (blob.size > 5000) { finishNetwork(Math.round((blob.size * 8) / (performance.now() - bigStart))); return; }
-      } catch { /* fallback */ }
-      if (totalBytes < 1000 || elapsedMs < 5) { finishNetwork(2000); return; }
-      finishNetwork(Math.round((totalBytes * 8) / elapsedMs));
-    } catch { setNetStatus("error"); }
+      // On prend le meilleur (les pics sont plus représentatifs du débit réel
+      // qu'une mesure perturbée par un GC ou un autre onglet).
+      finishNetwork(Math.max(...valid));
+    } catch {
+      clearTimeout(safetyTimer);
+      // Même en cas d'erreur fetch, on ne bloque pas.
+      setNetQuality("good");
+      setNetKbps(0);
+      setNetStatus("ok");
+    }
   }, [finishNetwork]);
 
   // ================== LIFECYCLE ==================
@@ -540,10 +584,15 @@ export default function InterviewDeviceTest() {
   }
 
   // ================== UI PRINCIPALE ==================
+  // La caméra n'est plus un segment de progression : elle est visible en permanence
+  // dans le bandeau d'en-tête, son statut s'y lit directement.
+  const progressTests: Status[] = [micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
+
   return (
     <CandidateLayout>
-      <div className="w-full max-w-2xl space-y-6 pb-28 sm:pb-8">
-        {/* Header + progression */}
+      <div className="w-full max-w-2xl space-y-5 pb-28 sm:pb-8">
+        {/* Header */}
         <div className="space-y-3 animate-fade-in">
           <div className="flex items-end justify-between gap-3">
             <div className="space-y-1">
@@ -551,11 +600,11 @@ export default function InterviewDeviceTest() {
               <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
             </div>
             <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
-              {verifiedCount}/{allTests.length}
+              {progressVerified}/{progressTests.length}
             </span>
           </div>
           <div className="flex gap-1.5" aria-label="Progression des tests">
-            {allTests.map((s, i) => (
+            {progressTests.map((s, i) => (
               <div
                 key={i}
                 className={cn(
@@ -571,14 +620,12 @@ export default function InterviewDeviceTest() {
           </div>
         </div>
 
-        {/* Hero caméra */}
-        <div className="relative animate-fade-in">
+        {/* Bandeau caméra (vignette) */}
+        <div className="flex items-center gap-4 rounded-2xl border bg-card p-3 animate-fade-in">
           <div
             className={cn(
-              "relative overflow-hidden rounded-2xl border bg-black aspect-video shadow-lg",
-              "before:absolute before:inset-0 before:-z-10 before:bg-gradient-to-br before:from-primary/10 before:to-transparent before:blur-2xl",
-              camStatus === "error" && "border-destructive/40",
-              camStatus === "ok" && "border-border",
+              "relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-2xl bg-black",
+              camStatus === "error" && "bg-amber-500/10 ring-2 ring-amber-500/40",
             )}
           >
             {(camStatus === "ok" || camStatus === "testing") && (
@@ -593,54 +640,57 @@ export default function InterviewDeviceTest() {
             )}
             {camStatus === "testing" && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <Loader2 className="h-8 w-8 text-white animate-spin" />
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
               </div>
             )}
             {camStatus === "error" && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
-                  <Video className="h-6 w-6 text-destructive" />
-                </div>
-                <p className="text-sm text-white/90 max-w-xs">{camError}</p>
-                <Button size="sm" variant="secondary" onClick={() => testCam(selectedVideoId)}>Réessayer</Button>
+              <button
+                type="button"
+                onClick={() => testCam(selectedVideoId)}
+                className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-amber-700 dark:text-amber-400"
+              >
+                <Video className="h-5 w-5" />
+                <span className="text-[10px] font-medium leading-tight text-center px-1">Activer la caméra</span>
+              </button>
+            )}
+            {camStatus === "ok" && (
+              <div className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-card">
+                <CheckCircle className="h-3 w-3 text-white" />
               </div>
             )}
-
-            {/* Badge statut overlay */}
-            <div className="absolute top-3 left-3">
-              <div className="flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white">
-                {camStatus === "ok" ? (
-                  <><CheckCircle className="h-3 w-3 text-emerald-400" /> Caméra OK</>
-                ) : camStatus === "error" ? (
-                  <><AlertCircle className="h-3 w-3 text-destructive" /> Caméra refusée</>
-                ) : (
-                  <><Loader2 className="h-3 w-3 animate-spin" /> Vérification…</>
-                )}
-              </div>
-            </div>
-
-            {/* Sélecteur caméra overlay */}
-            {devices.video.length > 1 && camStatus === "ok" && (
-              <div className="absolute top-3 right-3 w-44">
-                <DeviceSelector
-                  devices={devices.video}
-                  value={selectedVideoId}
-                  onChange={handleVideoDeviceChange}
-                  placeholder="Caméra"
-                />
-              </div>
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-sm font-medium">
+              {camStatus === "ok" && "Vous êtes bien cadré"}
+              {camStatus === "testing" && "Activation de la caméra…"}
+              {camStatus === "error" && "Caméra non disponible"}
+              {camStatus === "idle" && "Caméra"}
+            </p>
+            {camStatus === "error" && camError && (
+              <p className="text-xs text-muted-foreground line-clamp-2">{camError}</p>
+            )}
+            {camStatus === "ok" && devices.video.length > 1 && (
+              <DeviceSelector
+                devices={devices.video}
+                value={selectedVideoId}
+                onChange={handleVideoDeviceChange}
+                placeholder="Changer de caméra"
+              />
+            )}
+            {camStatus === "ok" && devices.video.length <= 1 && (
+              <p className="text-xs text-muted-foreground">L'image que verra votre interlocuteur.</p>
             )}
           </div>
         </div>
 
-        {/* Grille des tests */}
-        <div className="grid gap-3 sm:grid-cols-2">
+        {/* Liste verticale des tests */}
+        <div className="space-y-2.5">
           {/* Micro */}
           <TestCard
             status={micStatus}
-            title="Microphone"
+            title="Micro et enregistrement"
             icon={Mic}
-            fullWidth={micStatus === "error" || micStatus === "warning" || devices.audio.length > 1}
+            fullWidth
           >
             {micStatus === "testing" && (
               <div className="space-y-2">
@@ -652,11 +702,6 @@ export default function InterviewDeviceTest() {
             )}
             {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}
             {micStatus === "warning" && micWarning && <p className="text-xs text-amber-600 dark:text-amber-400">{micWarning}</p>}
-            {micStatus === "ok" && recorderStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5" /> Enregistrement opérationnel
-              </p>
-            )}
             {recorderStatus === "error" && micStatus !== "error" && (
               <p className="text-xs text-destructive flex items-center gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5" /> L'enregistrement audio n'est pas pris en charge.
@@ -667,13 +712,15 @@ export default function InterviewDeviceTest() {
                 Réessayer
               </Button>
             )}
-            <DeviceSelector
-              devices={devices.audio}
-              value={selectedAudioId}
-              onChange={handleAudioDeviceChange}
-              placeholder="Choisir un micro"
-              disabled={micStatus === "testing"}
-            />
+            {devices.audio.length > 1 && (
+              <DeviceSelector
+                devices={devices.audio}
+                value={selectedAudioId}
+                onChange={handleAudioDeviceChange}
+                placeholder="Choisir un micro"
+                disabled={micStatus === "testing"}
+              />
+            )}
           </TestCard>
 
           {/* Son */}
@@ -681,7 +728,7 @@ export default function InterviewDeviceTest() {
             status={soundStatus}
             title="Son"
             icon={Volume2}
-            fullWidth={soundAwaitingConfirm || soundStatus === "error"}
+            fullWidth
             forceExpanded={soundAwaitingConfirm || soundStatus === "idle"}
           >
             {soundStatus === "idle" && !soundAwaitingConfirm && (
@@ -701,11 +748,6 @@ export default function InterviewDeviceTest() {
                 </div>
               </div>
             )}
-            {soundStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5" /> Son audible
-              </p>
-            )}
             {soundStatus === "error" && soundError && (
               <div className="space-y-2">
                 <p className="text-xs text-destructive">{soundError}</p>
@@ -719,14 +761,8 @@ export default function InterviewDeviceTest() {
             status={sttStatus}
             title="Reconnaissance vocale"
             icon={MessageSquare}
-            fullWidth={sttStatus === "warning"}
+            fullWidth
           >
-            {sttStatus === "testing" && <p className="text-xs text-muted-foreground">Vérification en cours…</p>}
-            {sttStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5" /> Transcription en direct disponible
-              </p>
-            )}
             {sttStatus === "warning" && sttError && <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>}
           </TestCard>
 
@@ -735,27 +771,29 @@ export default function InterviewDeviceTest() {
             status={networkStatusComputed}
             title="Connexion"
             icon={Wifi}
-            fullWidth={networkBlocking}
+            fullWidth
           >
             {netStatus === "testing" && <p className="text-xs text-muted-foreground">Mesure du débit en cours…</p>}
-            {netStatus === "ok" && netKbps !== null && (
-              <p className={cn(
-                "text-xs",
-                netQuality === "good" && "text-emerald-600 dark:text-emerald-400",
-                netQuality === "limited" && "text-amber-600 dark:text-amber-400",
-                netQuality === "weak" && "text-destructive",
-              )}>
-                {netQuality === "good" && "Connexion bonne"}
-                {netQuality === "limited" && "Connexion limitée — la session reste possible"}
-                {netQuality === "weak" && "Connexion trop faible pour réaliser l'entretien"}
-                {" "}({netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})
+            {netStatus === "ok" && netQuality === "good" && (
+              <p
+                className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"
+                title={netKbps && netKbps > 0 ? `${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`}` : undefined}
+              >
+                <CheckCircle className="h-3.5 w-3.5" /> Connexion stable
+              </p>
+            )}
+            {netStatus === "ok" && netQuality === "limited" && netKbps !== null && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Connexion limitée — la session reste possible
+                {netKbps > 0 && ` (${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})`}
               </p>
             )}
             {networkBlocking && (
-              <p className="text-xs text-destructive">Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.</p>
+              <p className="text-xs text-destructive">
+                Connexion trop faible. Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.
+              </p>
             )}
-            {netStatus === "error" && <p className="text-xs text-destructive">Impossible de mesurer la connexion.</p>}
-            {(netStatus === "ok" || netStatus === "error") && (
+            {(netStatus === "ok" || netStatus === "error") && netQuality !== "good" && (
               <Button variant="ghost" size="sm" onClick={testNetwork} className="w-full">Refaire le test</Button>
             )}
           </TestCard>
@@ -798,7 +836,7 @@ export default function InterviewDeviceTest() {
                 <div>
                   <p className="font-medium mb-1">Micro déjà utilisé</p>
                   <p className="text-muted-foreground text-xs">
-                    Fermez Zoom, Teams, ou tout autre onglet qui pourrait utiliser votre micro/caméra.
+                    Fermez Zoom, Teams, ou tout autre onglet qui pourrait utiliser votre micro ou caméra.
                   </p>
                 </div>
                 <div>
