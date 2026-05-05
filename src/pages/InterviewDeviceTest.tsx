@@ -272,6 +272,66 @@ export default function InterviewDeviceTest() {
     }
   };
 
+  // Vérifie que la reconnaissance vocale du navigateur fonctionne réellement.
+  // Sans ce test, des navigateurs comme Firefox sur Android ou certaines versions
+  // de Safari laissent le candidat bloqué à la première question texte.
+  const testStt = async () => {
+    setSttStatus("testing");
+    setSttError(null);
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSttError(
+        "Votre navigateur ne prend pas en charge la reconnaissance vocale. Utilisez Chrome ou Safari récent.",
+      );
+      setSttStatus("error");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = "fr-FR";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      const ok = await new Promise<boolean>((resolve) => {
+        let settled = false;
+        const finish = (value: boolean) => {
+          if (settled) return;
+          settled = true;
+          try { recognition.onstart = null; recognition.onerror = null; recognition.onend = null; } catch { /* ignore */ }
+          try { recognition.stop(); } catch { /* ignore */ }
+          resolve(value);
+        };
+        recognition.onstart = () => finish(true);
+        recognition.onerror = (e: any) => {
+          if (e?.error === "no-speech" || e?.error === "aborted") {
+            // bénin : la reconnaissance a bien démarré
+            finish(true);
+            return;
+          }
+          if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+            setSttError(
+              "Autorisez l'accès au micro pour permettre la reconnaissance vocale.",
+            );
+          } else {
+            setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
+          }
+          finish(false);
+        };
+        setTimeout(() => finish(false), 2500);
+        try {
+          recognition.start();
+        } catch {
+          setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
+          finish(false);
+        }
+      });
+      setSttStatus(ok ? "ok" : "error");
+    } catch {
+      setSttError("La reconnaissance vocale n'est pas disponible sur ce navigateur.");
+      setSttStatus("error");
+    }
+  };
+
   // Test de débit : on télécharge un asset connu et on chronomètre
   const testNetwork = async () => {
     setNetStatus("testing");
