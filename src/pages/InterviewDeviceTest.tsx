@@ -691,7 +691,16 @@ export default function InterviewDeviceTest() {
             title="Micro et enregistrement"
             icon={Mic}
             fullWidth
+            forceExpanded={micStatus === "idle" || micStatus === "testing" || micStatus === "error" || micStatus === "warning"}
           >
+            {micStatus === "idle" && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Lancez le test puis parlez quelques secondes.</p>
+                <Button size="sm" onClick={() => testMicAndRecorder(selectedAudioId)} className="w-full">
+                  <Mic className="mr-2 h-4 w-4" /> Tester le micro
+                </Button>
+              </div>
+            )}
             {micStatus === "testing" && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Parlez pour tester votre micro…</p>
