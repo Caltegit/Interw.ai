@@ -693,33 +693,51 @@ export default function InterviewDeviceTest() {
             fullWidth
             forceExpanded={micStatus === "idle" || micStatus === "testing" || micStatus === "error" || micStatus === "warning"}
           >
-            {micStatus === "idle" && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Lancez le test puis parlez quelques secondes.</p>
-                <Button size="sm" onClick={() => testMicAndRecorder(selectedAudioId)} className="w-full">
-                  <Mic className="mr-2 h-4 w-4" /> Tester le micro
-                </Button>
+          {micStatus === "idle" && (
+              <div className="space-y-3">
+                <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                  Lancez le test puis parlez quelques secondes.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => testMicAndRecorder(selectedAudioId)}
+                  className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
+                >
+                  <Mic className="h-4 w-4" /> Tester le micro
+                </button>
               </div>
             )}
             {micStatus === "testing" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Parlez pour tester votre micro…</p>
-                <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-primary transition-all duration-100" style={{ width: `${micLevel * 100}%` }} />
+                <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>Parlez pour tester votre micro…</p>
+                <div
+                  className="w-full h-2 rounded-full overflow-hidden"
+                  style={{ background: "hsl(var(--l-fg) / 0.08)" }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-100"
+                    style={{ width: `${micLevel * 100}%`, background: "hsl(var(--l-accent))" }}
+                  />
                 </div>
               </div>
             )}
             {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}
-            {micStatus === "warning" && micWarning && <p className="text-xs text-amber-600 dark:text-amber-400">{micWarning}</p>}
+            {micStatus === "warning" && micWarning && (
+              <p className="text-xs" style={{ color: "hsl(38 92% 60%)" }}>{micWarning}</p>
+            )}
             {recorderStatus === "error" && micStatus !== "error" && (
               <p className="text-xs text-destructive flex items-center gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5" /> L'enregistrement audio n'est pas pris en charge.
               </p>
             )}
             {(micStatus === "error" || micStatus === "warning") && (
-              <Button variant="outline" size="sm" onClick={() => testMicAndRecorder(selectedAudioId)} className="w-full">
-                Réessayer
-              </Button>
+              <button
+                type="button"
+                onClick={() => testMicAndRecorder(selectedAudioId)}
+                className="candidate-btn-secondary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
+              >
+                <Mic className="h-4 w-4" /> Réessayer
+              </button>
             )}
             {devices.audio.length > 1 && (
               <DeviceSelector
