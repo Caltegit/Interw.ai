@@ -1222,7 +1222,24 @@ export default function InterviewStart() {
       const existing = streamRef.current;
       const live = existing?.getTracks().some((t) => t.readyState === "live");
       if (!existing || !live) {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Récupère les périphériques préférés choisis sur l'écran de test technique
+        let preferredAudio: string | null = null;
+        let preferredVideo: string | null = null;
+        try {
+          preferredAudio = localStorage.getItem("interview.preferredAudioDeviceId");
+          preferredVideo = localStorage.getItem("interview.preferredVideoDeviceId");
+        } catch { /* ignore */ }
+        const constraints: MediaStreamConstraints = {
+          video: preferredVideo ? { deviceId: { exact: preferredVideo } } : true,
+          audio: preferredAudio ? { deviceId: { exact: preferredAudio } } : true,
+        };
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch {
+          // Fallback : si le device préféré n'est plus disponible, on retombe sur le défaut système
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        }
         streamRef.current = stream;
       }
       reattachAllSelfViews();
