@@ -1,8 +1,16 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Mic,
   Video,
@@ -17,6 +25,9 @@ import {
   Copy,
   Check,
   MessageSquare,
+  ChevronDown,
+  Settings2,
+  HelpCircle,
 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 import {
@@ -28,13 +39,11 @@ import {
   type DeviceLists,
 } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
+import { cn } from "@/lib/utils";
 
 type Status = "idle" | "testing" | "ok" | "warning" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
 
-// Joue un bip court via WebAudio (oscillateur). Retourne true si le contexte
-// a réellement progressé (donc audible côté matériel) — false si l'autoplay
-// est bloqué ou si le mode silencieux iOS coupe la sortie.
 async function playBeep(): Promise<boolean> {
   const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
   if (!Ctor) return false;
@@ -72,7 +81,6 @@ interface BrowserSupport {
 function detectUnsupportedBrowser(): BrowserSupport {
   if (typeof navigator === "undefined") return { supported: true };
   const ua = navigator.userAgent || "";
-
   const inApp: Array<[RegExp, string]> = [
     [/Instagram/i, "Instagram"],
     [/FBAN|FBAV|FB_IAB/i, "Facebook"],
@@ -82,38 +90,90 @@ function detectUnsupportedBrowser(): BrowserSupport {
     [/Line\//i, "Line"],
   ];
   for (const [re, name] of inApp) {
-    if (re.test(ua)) {
-      return {
-        supported: false,
-        reason: `Vous utilisez le navigateur intégré à ${name}. Il ne permet pas l'accès au micro et à la caméra.`,
-      };
-    }
+    if (re.test(ua)) return { supported: false, reason: `Vous utilisez le navigateur intégré à ${name}. Il ne permet pas l'accès au micro et à la caméra.` };
   }
-
-  if (/FxiOS/i.test(ua)) {
-    return {
-      supported: false,
-      reason: "Firefox sur iPhone ne permet pas l'enregistrement audio. Utilisez Safari.",
-    };
-  }
-
+  if (/FxiOS/i.test(ua)) return { supported: false, reason: "Firefox sur iPhone ne permet pas l'enregistrement audio. Utilisez Safari." };
   if (typeof window !== "undefined") {
-    if (!("MediaRecorder" in window)) {
-      return { supported: false, reason: "Votre navigateur ne prend pas en charge l'enregistrement audio." };
-    }
-    if (!navigator.mediaDevices?.getUserMedia) {
-      return { supported: false, reason: "Votre navigateur ne permet pas l'accès au micro et à la caméra." };
-    }
-    if (!("AudioContext" in window) && !("webkitAudioContext" in window)) {
-      return { supported: false, reason: "Votre navigateur ne prend pas en charge l'audio Web." };
-    }
+    if (!("MediaRecorder" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'enregistrement audio." };
+    if (!navigator.mediaDevices?.getUserMedia) return { supported: false, reason: "Votre navigateur ne permet pas l'accès au micro et à la caméra." };
+    if (!("AudioContext" in window) && !("webkitAudioContext" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'audio Web." };
   }
-
   return { supported: true };
 }
 
 const MIC_LEVEL_THRESHOLD = 0.05;
 
+// ============== STATUS BADGE ==============
+function StatusBadge({ status, label }: { status: Status; label?: string }) {
+  const map: Record<Status, { text: string; cls: string }> = {
+    idle: { text: label ?? "À tester", cls: "bg-muted text-muted-foreground" },
+    testing: { text: "Vérification…", cls: "bg-primary/10 text-primary" },
+    ok: { text: label ?? "OK", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" },
+    warning: { text: label ?? "À vérifier", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400" },
+    error: { text: label ?? "Problème", cls: "bg-destructive/15 text-destructive" },
+  };
+  const v = map[status];
+  return <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium", v.cls)}>{v.text}</span>;
+}
+
+// ============== STATUS ICON ==============
+function StatusIcon({ status, fallback: Fallback }: { status: Status; fallback: React.ComponentType<{ className?: string }> }) {
+  const baseCircle = "flex h-9 w-9 items-center justify-center rounded-full shrink-0";
+  if (status === "ok") return <div className={cn(baseCircle, "bg-emerald-500/15")}><CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /></div>;
+  if (status === "warning") return <div className={cn(baseCircle, "bg-amber-500/15")}><AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" /></div>;
+  if (status === "error") return <div className={cn(baseCircle, "bg-destructive/15")}><AlertCircle className="h-5 w-5 text-destructive" /></div>;
+  if (status === "testing") return <div className={cn(baseCircle, "bg-primary/10")}><Loader2 className="h-5 w-5 text-primary animate-spin" /></div>;
+  return <div className={cn(baseCircle, "bg-muted")}><Fallback className="h-5 w-5 text-muted-foreground" /></div>;
+}
+
+// ============== TEST CARD (compact + accordion) ==============
+interface TestCardProps {
+  status: Status;
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  forceExpanded?: boolean;
+  children?: React.ReactNode;
+  fullWidth?: boolean;
+}
+
+function TestCard({ status, title, icon, forceExpanded, children, fullWidth }: TestCardProps) {
+  const [userOpen, setUserOpen] = useState(false);
+  const shouldOpen = forceExpanded || userOpen || status === "error" || status === "warning" || status === "testing";
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-card transition-all animate-fade-in",
+        status === "error" && "border-destructive/40 shadow-sm",
+        status === "warning" && "border-amber-500/40",
+        status === "ok" && "hover:shadow-md",
+        fullWidth && "sm:col-span-2",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => setUserOpen((o) => !o)}
+        className="flex w-full items-center gap-3 p-4 text-left"
+      >
+        <StatusIcon status={status} fallback={icon} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium leading-tight">{title}</p>
+        </div>
+        <StatusBadge status={status} />
+        {children && (
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", shouldOpen && "rotate-180")} />
+        )}
+      </button>
+      {children && shouldOpen && (
+        <div className="px-4 pb-4 pt-0 space-y-3 border-t border-border/60 animate-accordion-down">
+          <div className="pt-3">{children}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============== MAIN PAGE ==============
 export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
@@ -144,12 +204,10 @@ export default function InterviewDeviceTest() {
   const [sttStatus, setSttStatus] = useState<Status>("idle");
   const [sttError, setSttError] = useState<string | null>(null);
 
-  // Périphériques disponibles + sélection
   const [devices, setDevices] = useState<DeviceLists>({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(getStoredDeviceId("audio"));
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(getStoredDeviceId("video"));
 
-  // Compteurs de retry pour afficher « Continuer quand même » au-delà de 2 échecs
   const [micRetries, setMicRetries] = useState(0);
   const [camRetries, setCamRetries] = useState(0);
   const [soundRetries, setSoundRetries] = useState(0);
@@ -157,31 +215,26 @@ export default function InterviewDeviceTest() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
+  const wasReadyRef = useRef(false);
 
   const refreshDevices = useCallback(async () => {
-    const list = await listInputDevices();
-    setDevices(list);
+    setDevices(await listInputDevices());
   }, []);
 
-  // ================== MICRO + ENREGISTREMENT (test fusionné) ==================
+  // ================== TESTS ==================
   const testMicAndRecorder = useCallback(async (deviceId?: string | null) => {
     setMicStatus("testing");
     setRecorderStatus("testing");
     setMicError(null);
     setMicWarning(null);
     setMicLevel(0);
-
     let stream: MediaStream | null = null;
     let audioCtx: AudioContext | null = null;
     let raf: number | null = null;
-
     try {
-      const constraints: MediaStreamConstraints = {
-        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
-      };
+      const constraints: MediaStreamConstraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
       stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Analyser pour la jauge + détection de niveau réel
       const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
       audioCtx = new Ctor();
       const source = audioCtx.createMediaStreamSource(stream);
@@ -190,7 +243,6 @@ export default function InterviewDeviceTest() {
       source.connect(analyser);
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       let peak = 0;
-
       const poll = () => {
         analyser.getByteFrequencyData(dataArray);
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
@@ -201,49 +253,27 @@ export default function InterviewDeviceTest() {
       };
       poll();
       animFrameRef.current = raf;
-
-      // Test simultané du MediaRecorder sur le même flux
       const recorder = new MediaRecorder(stream);
       const recorderPromise = new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), 2500);
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            clearTimeout(timer);
-            resolve(true);
-          }
-        };
-        try {
-          recorder.start(250);
-        } catch {
-          clearTimeout(timer);
-          resolve(false);
-        }
+        recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) { clearTimeout(timer); resolve(true); } };
+        try { recorder.start(250); } catch { clearTimeout(timer); resolve(false); }
       });
-
-      const [recorderOk] = await Promise.all([
-        recorderPromise,
-        new Promise((r) => setTimeout(r, 3000)),
-      ]);
-
+      const [recorderOk] = await Promise.all([recorderPromise, new Promise((r) => setTimeout(r, 3000))]);
       try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
       if (raf) cancelAnimationFrame(raf);
       animFrameRef.current = null;
-
       setMicLevel(0);
       setRecorderStatus(recorderOk ? "ok" : "error");
-
       if (peak < MIC_LEVEL_THRESHOLD) {
         setMicStatus("warning");
         setMicWarning("Aucun son détecté. Parlez plus fort, ou choisissez un autre micro ci-dessous.");
       } else {
         setMicStatus("ok");
       }
-
-      // Après autorisation, on peut enfin lire les labels des périphériques
       await refreshDevices();
     } catch (err) {
-      const cls = classifyMediaError(err, "mic");
-      setMicError(cls.message);
+      setMicError(classifyMediaError(err, "mic").message);
       setMicStatus("error");
       setRecorderStatus("error");
       setMicRetries((n) => n + 1);
@@ -253,15 +283,11 @@ export default function InterviewDeviceTest() {
     }
   }, [refreshDevices]);
 
-  // ================== CAMÉRA ==================
   const testCam = useCallback(async (deviceId?: string | null) => {
     setCamStatus("testing");
     setCamError(null);
     try {
-      const constraints: MediaStreamConstraints = {
-        video: deviceId ? { deviceId: { exact: deviceId } } : true,
-      };
-      // Stoppe l'ancien flux avant d'en ouvrir un nouveau
+      const constraints: MediaStreamConstraints = { video: deviceId ? { deviceId: { exact: deviceId } } : true };
       camStreamRef.current?.getTracks().forEach((t) => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       camStreamRef.current = stream;
@@ -272,14 +298,12 @@ export default function InterviewDeviceTest() {
       setCamStatus("ok");
       await refreshDevices();
     } catch (err) {
-      const cls = classifyMediaError(err, "cam");
-      setCamError(cls.message);
+      setCamError(classifyMediaError(err, "cam").message);
       setCamStatus("error");
       setCamRetries((n) => n + 1);
     }
   }, [refreshDevices]);
 
-  // ================== SON ==================
   const testSound = useCallback(async () => {
     setSoundStatus("testing");
     setSoundError(null);
@@ -292,7 +316,6 @@ export default function InterviewDeviceTest() {
         setSoundRetries((n) => n + 1);
         return;
       }
-      // Bip joué : on attend la confirmation utilisateur (mode silencieux iOS).
       setSoundAwaitingConfirm(true);
       setSoundStatus("testing");
     } catch {
@@ -314,65 +337,45 @@ export default function InterviewDeviceTest() {
     }
   };
 
-  // ================== RECONNAISSANCE VOCALE (non bloquant) ==================
   const testStt = useCallback(async () => {
     setSttStatus("testing");
     setSttError(null);
-    const SpeechRecognitionCtor =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionCtor) {
-      setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
-      setSttStatus("warning");
-      return;
-    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const fallbackMsg = "La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.";
+    if (!SR) { setSttError(fallbackMsg); setSttStatus("warning"); return; }
     try {
-      const recognition = new SpeechRecognitionCtor();
+      const recognition = new SR();
       recognition.lang = "fr-FR";
       recognition.interimResults = true;
       recognition.continuous = false;
       const ok = await new Promise<boolean>((resolve) => {
         let settled = false;
-        const finish = (value: boolean) => {
-          if (settled) return;
-          settled = true;
+        const finish = (v: boolean) => {
+          if (settled) return; settled = true;
           try { recognition.onstart = null; recognition.onerror = null; recognition.onend = null; } catch { /* ignore */ }
           try { recognition.stop(); } catch { /* ignore */ }
-          resolve(value);
+          resolve(v);
         };
         recognition.onstart = () => finish(true);
         recognition.onerror = (e: any) => {
-          if (e?.error === "no-speech" || e?.error === "aborted") {
-            finish(true);
-            return;
-          }
+          if (e?.error === "no-speech" || e?.error === "aborted") return finish(true);
           finish(false);
         };
         setTimeout(() => finish(false), 2500);
-        try {
-          recognition.start();
-        } catch {
-          finish(false);
-        }
+        try { recognition.start(); } catch { finish(false); }
       });
-      if (ok) {
-        setSttStatus("ok");
-      } else {
-        setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
-        setSttStatus("warning");
-      }
+      if (ok) setSttStatus("ok");
+      else { setSttError(fallbackMsg); setSttStatus("warning"); }
     } catch {
-      setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
+      setSttError(fallbackMsg);
       setSttStatus("warning");
     }
   }, []);
 
-  // ================== RÉSEAU ==================
   const finishNetwork = useCallback((kbps: number) => {
     setNetKbps(kbps);
     let q: SpeedQuality;
-    if (kbps >= 600) q = "good";
-    else if (kbps >= 300) q = "limited";
-    else q = "weak";
+    if (kbps >= 600) q = "good"; else if (kbps >= 300) q = "limited"; else q = "weak";
     setNetQuality(q);
     setNetStatus("ok");
   }, []);
@@ -384,9 +387,8 @@ export default function InterviewDeviceTest() {
     try {
       const url = `/placeholder.svg?cb=${Date.now()}`;
       const start = performance.now();
-      const ITER = 3;
       let totalBytes = 0;
-      for (let i = 0; i < ITER; i++) {
+      for (let i = 0; i < 3; i++) {
         const r = await fetch(`${url}&i=${i}`, { cache: "no-store" });
         const blob = await r.blob();
         totalBytes += blob.size;
@@ -397,38 +399,22 @@ export default function InterviewDeviceTest() {
       try {
         const r = await fetch(bigUrl, { cache: "no-store" });
         const blob = await r.blob();
-        const bigBytes = blob.size;
-        const bigElapsed = performance.now() - bigStart;
-        if (bigBytes > 5000) {
-          finishNetwork(Math.round((bigBytes * 8) / bigElapsed));
-          return;
-        }
-      } catch {
-        /* fallback */
-      }
-      if (totalBytes < 1000 || elapsedMs < 5) {
-        finishNetwork(2000);
-        return;
-      }
+        if (blob.size > 5000) { finishNetwork(Math.round((blob.size * 8) / (performance.now() - bigStart))); return; }
+      } catch { /* fallback */ }
+      if (totalBytes < 1000 || elapsedMs < 5) { finishNetwork(2000); return; }
       finishNetwork(Math.round((totalBytes * 8) / elapsedMs));
-    } catch (err) {
-      console.warn("[network test] failed", err);
-      setNetStatus("error");
-    }
+    } catch { setNetStatus("error"); }
   }, [finishNetwork]);
 
-  // ================== CYCLE DE VIE ==================
+  // ================== LIFECYCLE ==================
   useEffect(() => {
     if (browserBlocked) return;
-
     let cancelled = false;
     (async () => {
-      // Pré-détection des permissions refusées : évite un prompt qui sera silencieusement rejeté
       const perms = await queryPermissions();
       if (cancelled) return;
       if (perms.mic === "denied") {
-        setMicStatus("error");
-        setRecorderStatus("error");
+        setMicStatus("error"); setRecorderStatus("error");
         setMicError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez le micro, puis rechargez la page.");
       } else {
         await testMicAndRecorder(selectedAudioId);
@@ -444,7 +430,6 @@ export default function InterviewDeviceTest() {
       testNetwork();
       testStt();
     })();
-
     return () => {
       cancelled = true;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -455,7 +440,6 @@ export default function InterviewDeviceTest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [browserBlocked]);
 
-  // Rafraîchit la liste des devices si l'utilisateur en branche/débranche
   useEffect(() => {
     if (browserBlocked) return;
     const handler = () => { void refreshDevices(); };
@@ -463,32 +447,18 @@ export default function InterviewDeviceTest() {
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
   }, [browserBlocked, refreshDevices]);
 
-  // Charger infos projet
   useEffect(() => {
     if (!slug) return;
     (async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("pre_session_message")
-        .eq("slug", slug)
-        .maybeSingle();
+      const { data } = await supabase.from("projects").select("pre_session_message").eq("slug", slug).maybeSingle();
       const d = data as { pre_session_message?: string | null } | null;
       if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
     })();
   }, [slug]);
 
   // ================== HANDLERS ==================
-  const handleAudioDeviceChange = (id: string) => {
-    setSelectedAudioId(id);
-    setStoredDeviceId("audio", id);
-    void testMicAndRecorder(id);
-  };
-
-  const handleVideoDeviceChange = (id: string) => {
-    setSelectedVideoId(id);
-    setStoredDeviceId("video", id);
-    void testCam(id);
-  };
+  const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
+  const handleVideoDeviceChange = (id: string) => { setSelectedVideoId(id); setStoredDeviceId("video", id); void testCam(id); };
 
   const handleContinue = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -499,26 +469,22 @@ export default function InterviewDeviceTest() {
   };
 
   const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
-    } catch {
-      /* ignore */
-    }
+    try { await navigator.clipboard.writeText(window.location.href); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); } catch { /* ignore */ }
   };
 
   // ================== ÉTAT GLOBAL ==================
   const networkBlocking = netStatus === "ok" && netQuality === "weak";
+  const networkStatusComputed: Status = useMemo(() => {
+    if (netStatus === "testing") return "testing";
+    if (netStatus === "error") return "error";
+    if (netQuality === "weak") return "error";
+    if (netQuality === "limited") return "warning";
+    if (netQuality === "good") return "ok";
+    return "idle";
+  }, [netStatus, netQuality]);
 
-  // Le STT et le niveau micro faible sont des warnings non bloquants.
-  // L'enregistrement (recorder) est bloquant : sans lui, pas d'entretien possible.
-  const blockingErrors: string[] = [];
-  if (camStatus === "error") blockingErrors.push("Caméra inaccessible");
-  if (micStatus === "error") blockingErrors.push("Micro inaccessible");
-  if (recorderStatus === "error" && micStatus !== "error") blockingErrors.push("Enregistrement impossible");
-  if (soundStatus === "error" || soundStatus === "idle") blockingErrors.push("Son non testé");
-  if (networkBlocking) blockingErrors.push("Connexion trop faible");
+  const allTests: Status[] = [camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const verifiedCount = allTests.filter((s) => s === "ok" || s === "warning").length;
 
   const canContinue =
     (micStatus === "ok" || micStatus === "warning") &&
@@ -527,210 +493,180 @@ export default function InterviewDeviceTest() {
     recorderStatus === "ok" &&
     !networkBlocking;
 
-  // « Continuer quand même » visible si : warnings non bloquants seulement, ou retries >= 2
+  // Effet « célébration » + scroll quand tout est ok
+  useEffect(() => {
+    if (canContinue && !wasReadyRef.current) {
+      wasReadyRef.current = true;
+      ctaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      try { navigator.vibrate?.(15); } catch { /* ignore */ }
+    }
+  }, [canContinue]);
+
   const showSkipPrimary =
     !canContinue && (
       micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
       (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
     );
 
-  const networkLabel = (() => {
-    if (!netQuality) return "";
-    if (netQuality === "good") return "Connexion bonne";
-    if (netQuality === "limited") return "Connexion limitée — la session reste possible";
-    return "Connexion trop faible pour réaliser l'entretien";
-  })();
-
-  const networkColorClass = (() => {
-    if (netQuality === "good") return "text-emerald-600 dark:text-emerald-400";
-    if (netQuality === "limited") return "text-amber-600 dark:text-amber-400";
-    if (netQuality === "weak") return "text-destructive";
-    return "text-muted-foreground";
-  })();
-
   // ================== ÉCRAN BLOQUANT ==================
   if (browserBlocked) {
     return (
       <CandidateLayout>
-        <div className="w-full max-w-lg space-y-6">
-          <Card>
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-6 w-6 text-destructive shrink-0" />
-                <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
+        <div className="w-full max-w-lg space-y-6 animate-fade-in">
+          <div className="rounded-xl border bg-card p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
+                <AlertCircle className="h-5 w-5 text-destructive" />
               </div>
-              <p className="text-sm text-foreground">{browserSupport.current.reason}</p>
-              <p className="text-sm text-muted-foreground">
-                Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
-                <strong>Chrome</strong> (Android et ordinateur).
-              </p>
-              <div className="flex flex-col gap-2">
-                <Button onClick={copyLink} variant="outline" className="w-full">
-                  {linkCopied ? (
-                    <><Check className="mr-2 h-4 w-4" />Lien copié</>
-                  ) : (
-                    <><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>
-                  )}
-                </Button>
-                <button
-                  onClick={() => setBrowserBlocked(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground underline mt-2"
-                >
-                  Continuer quand même
-                </button>
-              </div>
-            </CardContent>
-          </Card>
+              <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
+            </div>
+            <p className="text-sm text-foreground">{browserSupport.current.reason}</p>
+            <p className="text-sm text-muted-foreground">
+              Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
+              <strong>Chrome</strong> (Android et ordinateur).
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={copyLink} variant="outline" className="w-full">
+                {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+              </Button>
+              <button onClick={() => setBrowserBlocked(false)} className="text-xs text-muted-foreground hover:text-foreground underline mt-2">
+                Continuer quand même
+              </button>
+            </div>
+          </div>
         </div>
       </CandidateLayout>
     );
   }
 
+  // ================== UI PRINCIPALE ==================
   return (
     <CandidateLayout>
-      <div className="w-full max-w-lg space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-xl font-bold">Vérification technique</h1>
-          <p className="text-sm text-muted-foreground">
-            Vérifions que votre matériel et votre connexion permettent de réaliser l'entretien.
-          </p>
+      <div className="w-full max-w-2xl space-y-6 pb-28 sm:pb-8">
+        {/* Header + progression */}
+        <div className="space-y-3 animate-fade-in">
+          <div className="flex items-end justify-between gap-3">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight">Vérification technique</h1>
+              <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
+            </div>
+            <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
+              {verifiedCount}/{allTests.length}
+            </span>
+          </div>
+          <div className="flex gap-1.5" aria-label="Progression des tests">
+            {allTests.map((s, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full transition-colors duration-500",
+                  s === "ok" && "bg-emerald-500",
+                  s === "warning" && "bg-amber-500",
+                  s === "error" && "bg-destructive",
+                  s === "testing" && "bg-primary/60 animate-pulse",
+                  s === "idle" && "bg-muted",
+                )}
+              />
+            ))}
+          </div>
         </div>
 
-        {/* Bandeau de bilan */}
-        {blockingErrors.length > 0 && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <div className="space-y-1 flex-1">
-                <p className="text-sm font-medium text-destructive">
-                  {blockingErrors.length === 1 ? "Un problème à régler :" : `${blockingErrors.length} problèmes à régler :`}
-                </p>
-                <ul className="text-xs text-foreground space-y-0.5">
-                  {blockingErrors.map((e) => <li key={e}>• {e}</li>)}
-                </ul>
-              </div>
-            </div>
-            <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
-              {linkCopied ? (
-                <><Check className="mr-2 h-4 w-4" />Lien copié</>
-              ) : (
-                <><Copy className="mr-2 h-4 w-4" />Copier le lien pour ouvrir sur un autre appareil</>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* Caméra */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {camStatus === "ok" ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : camStatus === "error" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Video className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="font-medium">Caméra</span>
-              </div>
-              {camStatus === "error" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={() => testCam(selectedVideoId)}>
-                  Réessayer
-                </Button>
-              )}
-            </div>
-
+        {/* Hero caméra */}
+        <div className="relative animate-fade-in">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-2xl border bg-black aspect-video shadow-lg",
+              "before:absolute before:inset-0 before:-z-10 before:bg-gradient-to-br before:from-primary/10 before:to-transparent before:blur-2xl",
+              camStatus === "error" && "border-destructive/40",
+              camStatus === "ok" && "border-border",
+            )}
+          >
+            {(camStatus === "ok" || camStatus === "testing") && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+                style={{ transform: "scaleX(-1)" }}
+              />
+            )}
             {camStatus === "testing" && (
-              <div className="flex items-center justify-center py-4">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Loader2 className="h-8 w-8 text-white animate-spin" />
+              </div>
+            )}
+            {camStatus === "error" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
+                  <Video className="h-6 w-6 text-destructive" />
+                </div>
+                <p className="text-sm text-white/90 max-w-xs">{camError}</p>
+                <Button size="sm" variant="secondary" onClick={() => testCam(selectedVideoId)}>Réessayer</Button>
               </div>
             )}
 
-            {(camStatus === "ok" || camStatus === "testing") && (
-              <div className="relative rounded-lg overflow-hidden border border-border bg-black aspect-video">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover mirror"
-                  style={{ transform: "scaleX(-1)" }}
+            {/* Badge statut overlay */}
+            <div className="absolute top-3 left-3">
+              <div className="flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md px-2.5 py-1 text-[11px] font-medium text-white">
+                {camStatus === "ok" ? (
+                  <><CheckCircle className="h-3 w-3 text-emerald-400" /> Caméra OK</>
+                ) : camStatus === "error" ? (
+                  <><AlertCircle className="h-3 w-3 text-destructive" /> Caméra refusée</>
+                ) : (
+                  <><Loader2 className="h-3 w-3 animate-spin" /> Vérification…</>
+                )}
+              </div>
+            </div>
+
+            {/* Sélecteur caméra overlay */}
+            {devices.video.length > 1 && camStatus === "ok" && (
+              <div className="absolute top-3 right-3 w-44">
+                <DeviceSelector
+                  devices={devices.video}
+                  value={selectedVideoId}
+                  onChange={handleVideoDeviceChange}
+                  placeholder="Caméra"
                 />
               </div>
             )}
+          </div>
+        </div>
 
-            {camStatus === "error" && camError && (
-              <p className="text-xs text-destructive text-center">{camError}</p>
-            )}
-
-            <DeviceSelector
-              devices={devices.video}
-              value={selectedVideoId}
-              onChange={handleVideoDeviceChange}
-              placeholder="Choisir une caméra"
-              disabled={camStatus === "testing"}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Micro + enregistrement (test fusionné) */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {micStatus === "ok" ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : micStatus === "warning" ? (
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                ) : micStatus === "error" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Mic className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="font-medium">Microphone</span>
-              </div>
-              {(micStatus === "error" || micStatus === "warning") && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={() => testMicAndRecorder(selectedAudioId)}>
-                  Réessayer
-                </Button>
-              )}
-            </div>
-
+        {/* Grille des tests */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {/* Micro */}
+          <TestCard
+            status={micStatus}
+            title="Microphone"
+            icon={Mic}
+            fullWidth={micStatus === "error" || micStatus === "warning" || devices.audio.length > 1}
+          >
             {micStatus === "testing" && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground text-center">Parlez pour tester votre micro…</p>
-                <div className="w-full h-3 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-100"
-                    style={{ width: `${micLevel * 100}%` }}
-                  />
+                <p className="text-xs text-muted-foreground">Parlez pour tester votre micro…</p>
+                <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all duration-100" style={{ width: `${micLevel * 100}%` }} />
                 </div>
               </div>
             )}
-
-            {micStatus === "error" && micError && (
-              <p className="text-xs text-destructive text-center">{micError}</p>
-            )}
-
-            {micStatus === "warning" && micWarning && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 text-center">{micWarning}</p>
-            )}
-
+            {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}
+            {micStatus === "warning" && micWarning && <p className="text-xs text-amber-600 dark:text-amber-400">{micWarning}</p>}
             {micStatus === "ok" && recorderStatus === "ok" && (
-              <div className="flex items-center gap-2 text-xs">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                <span className="text-emerald-600 dark:text-emerald-400">Enregistrement opérationnel</span>
-              </div>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5" /> Enregistrement opérationnel
+              </p>
             )}
-
             {recorderStatus === "error" && micStatus !== "error" && (
-              <div className="flex items-center gap-2 text-xs">
-                <AlertCircle className="h-4 w-4 text-destructive" />
-                <span className="text-destructive">L'enregistrement audio n'est pas pris en charge.</span>
-              </div>
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" /> L'enregistrement audio n'est pas pris en charge.
+              </p>
             )}
-
+            {(micStatus === "error" || micStatus === "warning") && (
+              <Button variant="outline" size="sm" onClick={() => testMicAndRecorder(selectedAudioId)} className="w-full">
+                Réessayer
+              </Button>
+            )}
             <DeviceSelector
               devices={devices.audio}
               value={selectedAudioId}
@@ -738,185 +674,173 @@ export default function InterviewDeviceTest() {
               placeholder="Choisir un micro"
               disabled={micStatus === "testing"}
             />
-          </CardContent>
-        </Card>
+          </TestCard>
 
-        {/* Son */}
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {soundStatus === "ok" ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : soundStatus === "error" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Volume2 className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="font-medium">Son</span>
-              </div>
-              {soundStatus !== "ok" && !soundAwaitingConfirm && (
-                <Button
-                  variant={soundStatus === "error" ? "outline" : "default"}
-                  size="sm"
-                  className="min-h-[44px] px-4"
-                  onClick={testSound}
-                  disabled={soundStatus === "testing"}
-                >
-                  {soundStatus === "testing" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : soundStatus === "error" ? (
-                    "Réessayer"
-                  ) : (
-                    "Tester le son"
-                  )}
-                </Button>
-              )}
-            </div>
-
+          {/* Son */}
+          <TestCard
+            status={soundStatus}
+            title="Son"
+            icon={Volume2}
+            fullWidth={soundAwaitingConfirm || soundStatus === "error"}
+            forceExpanded={soundAwaitingConfirm || soundStatus === "idle"}
+          >
             {soundStatus === "idle" && !soundAwaitingConfirm && (
-              <p className="text-xs text-muted-foreground">
-                Touchez « Tester le son » et vérifiez que vous entendez bien un bip.
-              </p>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Touchez le bouton et vérifiez que vous entendez bien un bip.</p>
+                <Button size="sm" onClick={testSound} className="w-full">
+                  <Volume2 className="mr-2 h-4 w-4" /> Tester le son
+                </Button>
+              </div>
             )}
-
             {soundAwaitingConfirm && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-center">Avez-vous entendu le bip ?</p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => confirmSoundHeard(false)}>
-                    Non, refaire
-                  </Button>
-                  <Button size="sm" className="flex-1 min-h-[44px]" onClick={() => confirmSoundHeard(true)}>
-                    Oui, j'ai entendu
-                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => confirmSoundHeard(false)}>Non</Button>
+                  <Button size="sm" className="flex-1" onClick={() => confirmSoundHeard(true)}>Oui, j'ai entendu</Button>
                 </div>
               </div>
             )}
-
             {soundStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">✓ Son audible</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5" /> Son audible
+              </p>
             )}
             {soundStatus === "error" && soundError && (
-              <p className="text-xs text-destructive">{soundError}</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Reconnaissance vocale (non bloquant) */}
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {sttStatus === "ok" ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : sttStatus === "warning" ? (
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                ) : sttStatus === "testing" ? (
-                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                ) : (
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="font-medium">Reconnaissance vocale</span>
+              <div className="space-y-2">
+                <p className="text-xs text-destructive">{soundError}</p>
+                <Button variant="outline" size="sm" onClick={testSound} className="w-full">Réessayer</Button>
               </div>
-            </div>
-
-            {sttStatus === "testing" && (
-              <p className="text-xs text-muted-foreground text-center">Vérification en cours…</p>
             )}
+          </TestCard>
+
+          {/* Reconnaissance vocale */}
+          <TestCard
+            status={sttStatus}
+            title="Reconnaissance vocale"
+            icon={MessageSquare}
+            fullWidth={sttStatus === "warning"}
+          >
+            {sttStatus === "testing" && <p className="text-xs text-muted-foreground">Vérification en cours…</p>}
             {sttStatus === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                ✓ Votre navigateur permet de transcrire votre voix en direct.
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5" /> Transcription en direct disponible
               </p>
             )}
-            {sttStatus === "warning" && sttError && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>
-            )}
-          </CardContent>
-        </Card>
+            {sttStatus === "warning" && sttError && <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>}
+          </TestCard>
 
-        {/* Connexion */}
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {netStatus === "ok" && netQuality === "good" ? (
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : netStatus === "ok" && netQuality === "limited" ? (
-                  <AlertCircle className="h-5 w-5 text-amber-500" />
-                ) : netStatus === "ok" && netQuality === "weak" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                ) : netStatus === "testing" ? (
-                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                ) : netStatus === "error" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Wifi className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="font-medium">Connexion</span>
-              </div>
-              {(netStatus === "ok" || netStatus === "error") && (
-                <Button variant="ghost" size="sm" className="min-h-[44px] px-3" onClick={testNetwork}>
-                  Refaire le test
-                </Button>
-              )}
-            </div>
-
-            {netStatus === "testing" && (
-              <p className="text-xs text-muted-foreground text-center">Mesure du débit en cours…</p>
-            )}
-
+          {/* Réseau */}
+          <TestCard
+            status={networkStatusComputed}
+            title="Connexion"
+            icon={Wifi}
+            fullWidth={networkBlocking}
+          >
+            {netStatus === "testing" && <p className="text-xs text-muted-foreground">Mesure du débit en cours…</p>}
             {netStatus === "ok" && netKbps !== null && (
-              <p className={`text-xs text-center ${networkColorClass}`}>
-                {networkLabel} ({netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})
+              <p className={cn(
+                "text-xs",
+                netQuality === "good" && "text-emerald-600 dark:text-emerald-400",
+                netQuality === "limited" && "text-amber-600 dark:text-amber-400",
+                netQuality === "weak" && "text-destructive",
+              )}>
+                {netQuality === "good" && "Connexion bonne"}
+                {netQuality === "limited" && "Connexion limitée — la session reste possible"}
+                {netQuality === "weak" && "Connexion trop faible pour réaliser l'entretien"}
+                {" "}({netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})
               </p>
             )}
-
             {networkBlocking && (
-              <p className="text-xs text-destructive text-center">
-                Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.
-              </p>
+              <p className="text-xs text-destructive">Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.</p>
             )}
-
-            {netStatus === "error" && (
-              <p className="text-xs text-destructive text-center">Impossible de mesurer la connexion.</p>
+            {netStatus === "error" && <p className="text-xs text-destructive">Impossible de mesurer la connexion.</p>}
+            {(netStatus === "ok" || netStatus === "error") && (
+              <Button variant="ghost" size="sm" onClick={testNetwork} className="w-full">Refaire le test</Button>
             )}
-          </CardContent>
-        </Card>
+          </TestCard>
+        </div>
 
+        {/* Message pré-session */}
         {preSessionMessage && (
-          <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 animate-fade-in">
+          <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 animate-fade-in">
             <Sparkles className="h-5 w-5 shrink-0 text-primary mt-0.5" />
             <p className="text-sm text-foreground leading-relaxed">{preSessionMessage}</p>
           </div>
         )}
 
-        <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
-          <ArrowRight className="mr-2 h-5 w-5" />
-          Commencer la session
-        </Button>
+        {/* Aide */}
+        <div className="flex justify-center">
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+                <HelpCircle className="h-3.5 w-3.5" /> Besoin d'aide ?
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Besoin d'aide ?</SheetTitle>
+                <SheetDescription>Quelques pistes pour résoudre les problèmes courants.</SheetDescription>
+              </SheetHeader>
+              <div className="space-y-4 mt-4 text-sm">
+                <div>
+                  <p className="font-medium mb-1">Caméra ou micro refusés</p>
+                  <p className="text-muted-foreground text-xs">
+                    Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez l'accès, puis rechargez la page.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Aucun son sur iPhone</p>
+                  <p className="text-muted-foreground text-xs">
+                    Vérifiez le bouton silencieux (côté gauche), montez le volume, débranchez les écouteurs.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Micro déjà utilisé</p>
+                  <p className="text-muted-foreground text-xs">
+                    Fermez Zoom, Teams, ou tout autre onglet qui pourrait utiliser votre micro/caméra.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Navigateurs recommandés</p>
+                  <p className="text-muted-foreground text-xs">Safari (iPhone), Chrome (Android, Mac, PC).</p>
+                </div>
+                <Button onClick={copyLink} variant="outline" className="w-full">
+                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien pour ouvrir sur un autre appareil</>)}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
 
-        {!canContinue && (
-          <p className="text-xs text-center text-muted-foreground">
-            Tous les tests doivent être validés pour commencer.
-          </p>
-        )}
-
-        {/* Bouton « Continuer quand même » contextuel */}
-        {showSkipPrimary ? (
-          <Button onClick={handleContinue} variant="outline" size="lg" className="w-full">
-            Continuer quand même
+      {/* CTA sticky en bas */}
+      <div
+        ref={ctaRef}
+        className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/85 backdrop-blur-md p-4 sm:static sm:border-0 sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:mt-6"
+      >
+        <div className="mx-auto w-full max-w-2xl space-y-2">
+          <Button
+            size="lg"
+            className={cn(
+              "w-full transition-all",
+              canContinue && "shadow-lg shadow-primary/30",
+            )}
+            disabled={!canContinue}
+            onClick={handleContinue}
+          >
+            {canContinue ? (
+              <><Sparkles className="mr-2 h-5 w-5" />C'est parti<ArrowRight className="ml-2 h-5 w-5" /></>
+            ) : (
+              <><ArrowRight className="mr-2 h-5 w-5" />Commencer la session</>
+            )}
           </Button>
-        ) : (
-          <div className="flex justify-center pt-2">
-            <button
-              onClick={handleContinue}
-              className="text-xs text-muted-foreground/70 hover:text-foreground underline"
-            >
-              Passer les tests
-            </button>
-          </div>
-        )}
+          {showSkipPrimary && (
+            <Button onClick={handleContinue} variant="outline" size="sm" className="w-full">
+              Continuer quand même
+            </Button>
+          )}
+        </div>
       </div>
     </CandidateLayout>
   );
