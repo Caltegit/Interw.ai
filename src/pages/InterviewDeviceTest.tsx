@@ -852,25 +852,21 @@ export default function InterviewDeviceTest() {
         </div>
       </div>
 
-      {/* CTA sticky en bas */}
-      <div
-        ref={ctaRef}
-        className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/85 backdrop-blur-md p-4 sm:static sm:border-0 sm:bg-transparent sm:backdrop-blur-none sm:p-0 sm:mt-6"
-      >
+      {/* CTA sous les tests */}
+      <div ref={ctaRef} className="mt-8">
         <div className="mx-auto w-full max-w-2xl space-y-2">
           <Button
-            size="lg"
             className={cn(
-              "w-full transition-all",
+              "w-full h-16 text-lg font-semibold transition-all",
               canContinue && "shadow-lg shadow-primary/30",
             )}
             disabled={!canContinue}
             onClick={handleContinue}
           >
             {canContinue ? (
-              <><Sparkles className="mr-2 h-5 w-5" />C'est parti<ArrowRight className="ml-2 h-5 w-5" /></>
+              <><Sparkles className="mr-2 h-6 w-6" />C'est parti<ArrowRight className="ml-2 h-6 w-6" /></>
             ) : (
-              <><ArrowRight className="mr-2 h-5 w-5" />Commencer la session</>
+              <><ArrowRight className="mr-2 h-6 w-6" />Commencer la session</>
             )}
           </Button>
           {showSkipPrimary && (
