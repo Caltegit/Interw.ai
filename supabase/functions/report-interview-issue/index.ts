@@ -79,38 +79,33 @@ Deno.serve(async (req) => {
 
     const idempotencyKey = `issue-${session.id}-${Date.now()}`
 
-    const invokeRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-      },
-      body: JSON.stringify({
-        templateName: 'interview-issue-report',
-        recipientEmail,
-        idempotencyKey,
-        replyTo: session.candidate_email || undefined,
-        templateData: {
-          candidateName: session.candidate_name || 'Candidat',
-          candidateEmail: session.candidate_email || undefined,
-          jobTitle: project.job_title || '',
-          projectTitle: project.title || '',
-          message,
-          sessionUrl,
-          reportedAt,
+    const { data: invokeData, error: invokeErr } = await supabase.functions.invoke(
+      'send-transactional-email',
+      {
+        body: {
+          templateName: 'interview-issue-report',
+          recipientEmail,
+          idempotencyKey,
+          replyTo: session.candidate_email || undefined,
+          templateData: {
+            candidateName: session.candidate_name || 'Candidat',
+            candidateEmail: session.candidate_email || undefined,
+            jobTitle: project.job_title || '',
+            projectTitle: project.title || '',
+            message,
+            sessionUrl,
+            reportedAt,
+          },
         },
-      }),
-    })
+      },
+    )
 
-    if (!invokeRes.ok) {
-      const txt = await invokeRes.text()
-      console.error('send-transactional-email failed', invokeRes.status, txt)
-      return new Response(JSON.stringify({ error: 'Email enqueue failed' }), {
+    if (invokeErr) {
+      console.error('send-transactional-email failed', invokeErr, invokeData)
+      return new Response(JSON.stringify({ error: 'Email enqueue failed', details: String(invokeErr?.message ?? invokeErr) }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
     return new Response(JSON.stringify({ ok: true }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
