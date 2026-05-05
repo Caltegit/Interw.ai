@@ -135,6 +135,9 @@ export default function InterviewStart() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
+  // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
+  // on affiche un bandeau permettant au candidat de la relancer ou de passer.
+  const [interviewStuck, setInterviewStuck] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
@@ -920,7 +923,18 @@ export default function InterviewStart() {
       }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("[interview] STT start() threw:", e);
+      logger.error("interview_stt_start_failed", {
+        sessionId: session?.id ?? null,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      isListeningRef.current = false;
+      setIsListening(false);
+      return;
+    }
     isListeningRef.current = true;
     setIsListening(true);
 
@@ -2652,6 +2666,37 @@ export default function InterviewStart() {
     }
   }, [isListening, isSpeaking, isProcessing, startAutoSkipTimer, clearAutoSkip]);
 
+  // Watchdog : si après une transition on reste 4 s en état "rien" (ni écoute,
+  // ni TTS, ni traitement), c'est que startListening() a échoué silencieusement.
+  // On affiche un bandeau permettant de relancer le micro ou passer la question.
+  useEffect(() => {
+    if (interviewFinished || isPaused || !readyToStart) {
+      setInterviewStuck(false);
+      return;
+    }
+    if (isListening || isSpeaking || isProcessing) {
+      setInterviewStuck(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setInterviewStuck(true);
+      logger.error("interview_stuck_after_transition", {
+        sessionId: session?.id ?? null,
+        questionIndex: currentQuestionIndex,
+      });
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [
+    isListening,
+    isSpeaking,
+    isProcessing,
+    interviewFinished,
+    isPaused,
+    readyToStart,
+    currentQuestionIndex,
+    session?.id,
+  ]);
+
   // Response timer: ticks while candidate is speaking
   useEffect(() => {
     if (isListening && !isPaused) {
@@ -3216,6 +3261,38 @@ export default function InterviewStart() {
                     );
                   }
 
+
+                  if (interviewStuck && !isProcessing && !isSpeaking) {
+                    return (
+                      <div className="space-y-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+                        <p className="text-sm text-center text-destructive font-medium">
+                          L'écoute du micro n'a pas démarré.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            className="w-full h-12 rounded-xl"
+                            onClick={() => {
+                              setInterviewStuck(false);
+                              startListening();
+                            }}
+                          >
+                            <Mic className="mr-2 h-4 w-4" />
+                            Réessayer le micro
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full h-12 rounded-xl"
+                            onClick={() => {
+                              setInterviewStuck(false);
+                              handleSkipQuestion();
+                            }}
+                          >
+                            Passer la question
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return (
                     <div className="space-y-2">

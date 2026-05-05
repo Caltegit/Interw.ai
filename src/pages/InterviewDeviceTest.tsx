@@ -15,6 +15,7 @@ import {
   Volume2,
   Copy,
   Check,
+  MessageSquare,
 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
 
@@ -122,6 +123,9 @@ export default function InterviewDeviceTest() {
   const [netKbps, setNetKbps] = useState<number | null>(null);
   const [netQuality, setNetQuality] = useState<SpeedQuality | null>(null);
 
+  const [sttStatus, setSttStatus] = useState<Status>("idle");
+  const [sttError, setSttError] = useState<string | null>(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -136,6 +140,7 @@ export default function InterviewDeviceTest() {
     testMic();
     testNetwork();
     testRecorder();
+    testStt();
     return () => {
       stopAll();
     };
@@ -267,6 +272,66 @@ export default function InterviewDeviceTest() {
     }
   };
 
+  // Vérifie que la reconnaissance vocale du navigateur fonctionne réellement.
+  // Sans ce test, des navigateurs comme Firefox sur Android ou certaines versions
+  // de Safari laissent le candidat bloqué à la première question texte.
+  const testStt = async () => {
+    setSttStatus("testing");
+    setSttError(null);
+    const SpeechRecognitionCtor =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      setSttError(
+        "Votre navigateur ne prend pas en charge la reconnaissance vocale. Utilisez Chrome ou Safari récent.",
+      );
+      setSttStatus("error");
+      return;
+    }
+    try {
+      const recognition = new SpeechRecognitionCtor();
+      recognition.lang = "fr-FR";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+      const ok = await new Promise<boolean>((resolve) => {
+        let settled = false;
+        const finish = (value: boolean) => {
+          if (settled) return;
+          settled = true;
+          try { recognition.onstart = null; recognition.onerror = null; recognition.onend = null; } catch { /* ignore */ }
+          try { recognition.stop(); } catch { /* ignore */ }
+          resolve(value);
+        };
+        recognition.onstart = () => finish(true);
+        recognition.onerror = (e: any) => {
+          if (e?.error === "no-speech" || e?.error === "aborted") {
+            // bénin : la reconnaissance a bien démarré
+            finish(true);
+            return;
+          }
+          if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+            setSttError(
+              "Autorisez l'accès au micro pour permettre la reconnaissance vocale.",
+            );
+          } else {
+            setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
+          }
+          finish(false);
+        };
+        setTimeout(() => finish(false), 2500);
+        try {
+          recognition.start();
+        } catch {
+          setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
+          finish(false);
+        }
+      });
+      setSttStatus(ok ? "ok" : "error");
+    } catch {
+      setSttError("La reconnaissance vocale n'est pas disponible sur ce navigateur.");
+      setSttStatus("error");
+    }
+  };
+
   // Test de débit : on télécharge un asset connu et on chronomètre
   const testNetwork = async () => {
     setNetStatus("testing");
@@ -343,6 +408,7 @@ export default function InterviewDeviceTest() {
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
+    sttStatus === "ok" &&
     !networkBlocking;
 
   const networkLabel = (() => {
@@ -575,6 +641,45 @@ export default function InterviewDeviceTest() {
             {soundStatus === "error" && (
               <p className="text-xs text-destructive">
                 Aucun son détecté. Désactivez le mode silencieux, montez le volume et autorisez le son pour ce site.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Speech recognition test */}
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {sttStatus === "ok" ? (
+                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : sttStatus === "error" ? (
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : sttStatus === "testing" ? (
+                  <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                ) : (
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                )}
+                <span className="font-medium">Reconnaissance vocale</span>
+              </div>
+              {sttStatus === "error" && (
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testStt}>
+                  Réessayer
+                </Button>
+              )}
+            </div>
+
+            {sttStatus === "testing" && (
+              <p className="text-xs text-muted-foreground text-center">Vérification en cours…</p>
+            )}
+            {sttStatus === "ok" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                ✓ Votre navigateur permet de transcrire votre voix.
+              </p>
+            )}
+            {sttStatus === "error" && (
+              <p className="text-xs text-destructive">
+                {sttError ?? "La reconnaissance vocale n'est pas disponible."}
               </p>
             )}
           </CardContent>
