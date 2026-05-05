@@ -361,6 +361,19 @@
   filter: brightness(1.08);
 }
 
+/* Outline buttons & Select triggers : éviter le fond blanc dans le thème sombre */
+.candidate-layout button.bg-background,
+.candidate-layout [class*="bg-background"]:not(input):not(textarea) {
+  background-color: hsl(var(--l-bg-elev-2)) !important;
+  border-color: hsl(var(--l-border)) !important;
+  color: hsl(var(--l-fg)) !important;
+}
+.candidate-layout button.bg-background:hover,
+.candidate-layout [class*="bg-background"]:not(input):not(textarea):hover {
+  background-color: hsl(var(--l-fg) / 0.06) !important;
+  border-color: hsl(var(--l-fg) / 0.25) !important;
+}
+
 .candidate-layout .bg-success\/10 {
   background-color: hsl(160 84% 50% / 0.15) !important;
 }
