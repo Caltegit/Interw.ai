@@ -852,29 +852,29 @@ export default function InterviewDeviceTest() {
         </div>
       </div>
 
-      {/* CTA sous les tests */}
-      <div ref={ctaRef} className="mt-8">
-        <div className="mx-auto w-full max-w-2xl space-y-2">
-          <Button
-            className={cn(
-              "w-full h-16 text-lg font-semibold transition-all",
-              canContinue && "shadow-lg shadow-primary/30",
-            )}
-            disabled={!canContinue}
-            onClick={handleContinue}
-          >
-            {canContinue ? (
-              <><Sparkles className="mr-2 h-6 w-6" />C'est parti<ArrowRight className="ml-2 h-6 w-6" /></>
-            ) : (
-              <><ArrowRight className="mr-2 h-6 w-6" />Commencer la session</>
-            )}
-          </Button>
-          {showSkipPrimary && (
-            <Button onClick={handleContinue} variant="outline" size="sm" className="w-full">
-              Continuer quand même
-            </Button>
+      {/* CTA sous les tests, centré */}
+      <div ref={ctaRef} className="mt-8 flex flex-col items-center gap-3">
+        <Button
+          className={cn(
+            "h-14 px-10 text-lg font-semibold rounded-2xl transition-all",
+            canContinue
+              ? "bg-gradient-to-r from-primary to-fuchsia-500 text-primary-foreground shadow-xl shadow-primary/40 hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02]"
+              : "",
           )}
-        </div>
+          disabled={!canContinue}
+          onClick={handleContinue}
+        >
+          {canContinue ? (
+            <><Sparkles className="mr-2 h-5 w-5" />C'est parti<ArrowRight className="ml-2 h-5 w-5" /></>
+          ) : (
+            <><ArrowRight className="mr-2 h-5 w-5" />Commencer la session</>
+          )}
+        </Button>
+        {showSkipPrimary && (
+          <Button onClick={handleContinue} variant="outline" size="sm">
+            Continuer quand même
+          </Button>
+        )}
       </div>
     </CandidateLayout>
   );
