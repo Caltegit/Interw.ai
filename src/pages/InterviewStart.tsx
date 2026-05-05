@@ -135,6 +135,9 @@ export default function InterviewStart() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
+  // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
+  // on affiche un bandeau permettant au candidat de la relancer ou de passer.
+  const [interviewStuck, setInterviewStuck] = useState(false);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
