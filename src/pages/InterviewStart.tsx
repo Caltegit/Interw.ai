@@ -3262,6 +3262,38 @@ export default function InterviewStart() {
                   }
 
 
+                  if (interviewStuck && !isProcessing && !isSpeaking) {
+                    return (
+                      <div className="space-y-3 rounded-xl border border-destructive/40 bg-destructive/10 p-4">
+                        <p className="text-sm text-center text-destructive font-medium">
+                          L'écoute du micro n'a pas démarré.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            className="w-full h-12 rounded-xl"
+                            onClick={() => {
+                              setInterviewStuck(false);
+                              startListening();
+                            }}
+                          >
+                            <Mic className="mr-2 h-4 w-4" />
+                            Réessayer le micro
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full h-12 rounded-xl"
+                            onClick={() => {
+                              setInterviewStuck(false);
+                              handleSkipQuestion();
+                            }}
+                          >
+                            Passer la question
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="space-y-2">
                       <div
