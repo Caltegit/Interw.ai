@@ -3521,6 +3521,73 @@ export default function InterviewStart() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showReportDialog} onOpenChange={(o) => !reportSending && setShowReportDialog(o)}>
+        <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-amber-500" />
+              Signaler un problème
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Votre entretien est mis en pause. Décrivez ce qui ne va pas, le recruteur sera prévenu par email.
+          </p>
+          <Textarea
+            value={reportMessage}
+            onChange={(e) => setReportMessage(e.target.value)}
+            placeholder="Ex. Le micro coupe régulièrement, je dois répéter mes réponses…"
+            rows={5}
+            maxLength={2000}
+            disabled={reportSending}
+            className="resize-none"
+          />
+          <div className="text-[11px] text-muted-foreground text-right">
+            {reportMessage.trim().length}/2000
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowReportDialog(false)}
+              disabled={reportSending}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={async () => {
+                const msg = reportMessage.trim();
+                if (msg.length < 5 || !session?.id) return;
+                setReportSending(true);
+                try {
+                  const { error } = await supabase.functions.invoke("report-interview-issue", {
+                    body: { sessionId: session.id, message: msg },
+                  });
+                  if (error) throw error;
+                  toast({
+                    title: "Signalement envoyé",
+                    description: "Le recruteur a été prévenu. Vous pouvez reprendre quand vous le souhaitez.",
+                  });
+                  setShowReportDialog(false);
+                  setReportMessage("");
+                } catch (e: any) {
+                  toast({
+                    variant: "destructive",
+                    title: "Envoi impossible",
+                    description: e?.message ?? "Veuillez réessayer dans un instant.",
+                  });
+                } finally {
+                  setReportSending(false);
+                }
+              }}
+              disabled={reportSending || reportMessage.trim().length < 5}
+              className="gap-2"
+            >
+              {reportSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showCancelConfirm} onOpenChange={(o) => !cancelling && setShowCancelConfirm(o)}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
           <DialogHeader>
