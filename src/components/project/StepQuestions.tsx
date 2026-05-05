@@ -288,14 +288,14 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
   };
 
   const handleLibrarySelect = (selected: Question[]) => {
-    const remaining = 15 - questions.length;
+    const remaining = 25 - questions.length;
     const toAdd = selected.slice(0, remaining).map((q) => ({ ...q, from_library: true, save_to_library: false }));
     toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
     setQuestions([...questions, ...toAdd]);
   };
 
   const openNew = () => {
-    if (questions.length >= 15) return;
+    if (questions.length >= 25) return;
     setEditingIndex(null);
     setInitialForm({ ...EMPTY_QUESTION_FORM, followUp: false, saveToLibrary: false });
     setFormOpen(true);
@@ -372,10 +372,10 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 15}>
+          <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 25}>
             <BookOpen className="mr-1 h-4 w-4" /> Bibliothèque
           </Button>
-          <Button variant="outline" size="sm" onClick={openNew} disabled={questions.length >= 15}>
+          <Button variant="outline" size="sm" onClick={openNew} disabled={questions.length >= 25}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter
           </Button>
         </div>
