@@ -408,6 +408,7 @@ export default function InterviewDeviceTest() {
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
+    sttStatus === "ok" &&
     !networkBlocking;
 
   const networkLabel = (() => {
