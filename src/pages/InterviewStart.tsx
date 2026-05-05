@@ -920,7 +920,18 @@ export default function InterviewStart() {
       }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.warn("[interview] STT start() threw:", e);
+      logger.error("interview_stt_start_failed", {
+        sessionId: session?.id ?? null,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      isListeningRef.current = false;
+      setIsListening(false);
+      return;
+    }
     isListeningRef.current = true;
     setIsListening(true);
 
