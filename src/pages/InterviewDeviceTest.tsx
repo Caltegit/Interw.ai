@@ -140,6 +140,7 @@ export default function InterviewDeviceTest() {
     testMic();
     testNetwork();
     testRecorder();
+    testStt();
     return () => {
       stopAll();
     };
