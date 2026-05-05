@@ -375,7 +375,7 @@ export default function InterviewDeviceTest() {
   const finishNetwork = useCallback((kbps: number) => {
     setNetKbps(kbps);
     let q: SpeedQuality;
-    if (kbps >= 600) q = "good"; else if (kbps >= 300) q = "limited"; else q = "weak";
+    if (kbps >= 800) q = "good"; else if (kbps >= 250) q = "limited"; else q = "weak";
     setNetQuality(q);
     setNetStatus("ok");
   }, []);
@@ -384,26 +384,70 @@ export default function InterviewDeviceTest() {
     setNetStatus("testing");
     setNetKbps(null);
     setNetQuality(null);
+
+    // Garde-fou navigateur : si le navigateur signale une connexion 4G/5G/wifi rapide,
+    // on considère « ok » sans bloquer l'utilisateur sur une mesure incertaine.
+    const conn: any = (navigator as any).connection;
+    const effectiveType: string | undefined = conn?.effectiveType;
+
+    // Timeout de sécurité : au-delà de 4s on ne bloque pas le candidat.
+    const safetyTimer = setTimeout(() => {
+      setNetKbps((prev) => {
+        if (prev !== null) return prev;
+        // Aucune mesure aboutie : on présume « bon » plutôt que de bloquer.
+        if (effectiveType === "2g" || effectiveType === "slow-2g") {
+          setNetQuality("weak");
+        } else if (effectiveType === "3g") {
+          setNetQuality("limited");
+        } else {
+          setNetQuality("good");
+        }
+        setNetStatus("ok");
+        return 0;
+      });
+    }, 4000);
+
     try {
-      const url = `/placeholder.svg?cb=${Date.now()}`;
-      const start = performance.now();
-      let totalBytes = 0;
-      for (let i = 0; i < 3; i++) {
-        const r = await fetch(`${url}&i=${i}`, { cache: "no-store" });
-        const blob = await r.blob();
-        totalBytes += blob.size;
+      // On télécharge 2 fois en parallèle un asset déjà servi par l'app
+      // pour disposer d'une mesure stable. On garde le meilleur essai.
+      const measure = async (i: number): Promise<number | null> => {
+        try {
+          const r = await fetch(`/placeholder.svg?cb=${Date.now()}-${i}`, { cache: "no-store" });
+          const t0 = performance.now();
+          const blob = await r.blob();
+          const ms = performance.now() - t0;
+          if (blob.size < 200 || ms < 2) return null;
+          return Math.round((blob.size * 8) / ms);
+        } catch {
+          return null;
+        }
+      };
+      const results = await Promise.all([measure(1), measure(2), measure(3)]);
+      clearTimeout(safetyTimer);
+      const valid = results.filter((v): v is number => v !== null);
+      if (valid.length === 0) {
+        // Aucun échantillon valide : on s'appuie sur le navigateur.
+        if (effectiveType === "2g" || effectiveType === "slow-2g") {
+          setNetQuality("weak");
+        } else if (effectiveType === "3g") {
+          setNetQuality("limited");
+        } else {
+          setNetQuality("good");
+        }
+        setNetKbps(0);
+        setNetStatus("ok");
+        return;
       }
-      const elapsedMs = performance.now() - start;
-      const bigUrl = `https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/avatars/.placeholder?cb=${Date.now()}`;
-      const bigStart = performance.now();
-      try {
-        const r = await fetch(bigUrl, { cache: "no-store" });
-        const blob = await r.blob();
-        if (blob.size > 5000) { finishNetwork(Math.round((blob.size * 8) / (performance.now() - bigStart))); return; }
-      } catch { /* fallback */ }
-      if (totalBytes < 1000 || elapsedMs < 5) { finishNetwork(2000); return; }
-      finishNetwork(Math.round((totalBytes * 8) / elapsedMs));
-    } catch { setNetStatus("error"); }
+      // On prend le meilleur (les pics sont plus représentatifs du débit réel
+      // qu'une mesure perturbée par un GC ou un autre onglet).
+      finishNetwork(Math.max(...valid));
+    } catch {
+      clearTimeout(safetyTimer);
+      // Même en cas d'erreur fetch, on ne bloque pas.
+      setNetQuality("good");
+      setNetKbps(0);
+      setNetStatus("ok");
+    }
   }, [finishNetwork]);
 
   // ================== LIFECYCLE ==================
