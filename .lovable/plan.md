@@ -1,118 +1,139 @@
 ## Objectif
 
-Fiabiliser le test technique candidat (`InterviewDeviceTest.tsx`) sur toutes les configurations : iOS Safari, Android Chrome, Firefox desktop, Brave, navigateurs in-app, mode silencieux iOS, périphériques multiples, micros/caméras occupés par une autre app.
+Refondre l'UX/UI de l'écran de test technique (`InterviewDeviceTest.tsx`) pour le rendre plus moderne, rassurant et engageant — sans changer la logique des tests (déjà fiabilisée au tour précédent).
 
-Périmètre : **Lots 1 et 2** uniquement (le réseau et la désactivation auto-start iOS sont reportés).
+## Constat actuel
 
-## Lot 1 — Fiabilité de base
+- 5 cartes empilées identiques → impression « checklist administrative ».
+- Le candidat doit scroller pour voir si tout est ok.
+- L'aperçu caméra prend autant de place qu'une simple ligne de statut, alors que c'est l'élément le plus rassurant.
+- Pas de progression visible : on ne sait pas combien de tests restent.
+- Le bouton final « Commencer la session » n'est jamais sticky, on peut l'oublier.
+- Couleurs très neutres (gris/blanc), peu d'identité.
 
-### A. Diagnostic d'erreur précis
+## Proposition de refonte
 
-Capturer le `DOMException.name` retourné par `getUserMedia` et afficher un message ciblé au lieu d'un texte générique.
+### 1. Header avec progression
 
-| Erreur navigateur | Message affiché au candidat |
-|---|---|
-| `NotAllowedError` / `PermissionDeniedError` | « Vous avez refusé l'accès. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez le micro/la caméra, puis rechargez la page. » |
-| `NotFoundError` / `DevicesNotFoundError` | « Aucun micro/caméra détecté. Branchez un appareil puis réessayez. » |
-| `NotReadableError` / `TrackStartError` | « Un autre logiciel utilise déjà votre micro/caméra (Zoom, Teams, autre onglet…). Fermez-le puis réessayez. » |
-| `OverconstrainedError` | « Votre matériel ne répond pas aux contraintes demandées. Réessayez. » |
-| Page non HTTPS / `SecurityError` | « Cette page doit être ouverte en HTTPS pour autoriser le micro et la caméra. » |
-| Autre | message générique actuel |
+En haut, remplacer le titre simple par :
+- **Titre** + **sous-titre** courts.
+- **Barre de progression** segmentée (5 segments correspondant aux tests : Caméra, Micro, Son, Voix, Connexion). Chaque segment se remplit en vert/ambre/rouge selon son statut.
+- Compteur discret à droite : « 4/5 vérifiés ».
 
-Au mount, appeler `navigator.permissions.query({ name: 'microphone' })` et `'camera'` (quand l'API existe) pour pré-détecter un refus persistant et afficher direct le bon message sans relancer un prompt qui sera refusé en silence.
+```text
+Vérification technique
+Quelques secondes pour s'assurer que tout fonctionne.
+[██████████ ██████████ ██████████ ░░░░░░░░ ██████████]   4/5
+ Caméra      Micro       Son       Voix      Réseau
+```
 
-### B. Reconnaissance vocale rendue non-bloquante
+### 2. Hero caméra en haut
 
-Aujourd'hui `sttStatus === "ok"` est requis pour activer « Commencer la session » → blocage total sur Firefox desktop, Brave, certains Android.
+Remonter l'aperçu caméra **au-dessus** de tout, en grand format avec coins arrondis et ombre douce. C'est l'élément que le candidat regarde en premier (« est-ce que je suis bien cadré ? »).
 
-Changement :
-- Retirer `sttStatus === "ok"` de `canContinue`.
-- En cas d'échec, repasser le statut en **avertissement ambre** (pas erreur rouge) avec :
-  > « La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup. »
-- Le candidat peut continuer normalement.
+- Aspect ratio 16:9, largeur pleine.
+- Petit badge en surimpression : ✓ Caméra OK / ⚠ Caméra refusée.
+- Sélecteur de caméra discret en overlay coin haut-droit (icône engrenage → menu).
+- Effet « miroir » conservé.
 
-### C. Sérialisation des tests micro
+### 3. Cartes compactes en grille 2 colonnes (desktop) / 1 colonne (mobile)
 
-`testMic` et `testRecorder` ouvrent actuellement deux `getUserMedia({audio})` en parallèle au mount → conflit de device sur Windows/Linux.
+Sous la caméra, regrouper les 4 autres tests en cartes plus petites et symétriques :
 
-Fusion en un seul flux :
-1. Un seul `getUserMedia({ audio })`.
-2. On y branche **simultanément** l'`AnalyserNode` (niveau) et le `MediaRecorder` (test chunk).
-3. À la fin (3 s), on ferme tout proprement.
+```text
+[ 🎤 Micro       OK ]   [ 🔊 Son        À tester ]
+[ 💬 Voix    Limitée ]  [ 📶 Réseau     Bonne     ]
+```
 
-### D. Vérification active du niveau micro
+Chaque carte :
+- Icône colorée (cercle plein avec teinte du statut).
+- Nom du test.
+- Badge de statut à droite (`Badge` shadcn).
+- Quand on clique dessus → s'expand en accordéon pour montrer les détails (jauge micro, bouton tester son, sélecteur device, etc.).
+- État replié par défaut quand le test est OK → désencombre la vue.
+- État déplié auto si erreur ou warning → l'attention va dessus.
 
-Aujourd'hui le test passe « ok » même si le candidat n'a rien dit (micro muet matériel, mauvais device, micro Bluetooth déconnecté).
+### 4. Carte « problème » prioritaire
 
-Nouveau comportement :
-- Pendant les 3 s, on garde un `peakLevel` (max observé).
-- Si `peakLevel < 0.05` → statut **warning** :
-  > « Nous n'avons pas détecté votre voix. Parlez plus fort, ou choisissez un autre micro ci-dessous. »
-- Bouton « Refaire le test ».
-- Reste non bloquant (warning), mais visible.
+Quand un test échoue, sa carte :
+- Passe en pleine largeur.
+- Bordure rouge/ambre.
+- Reste dépliée.
+- Affiche un CTA visible « Comment résoudre ? » qui ouvre un mini drawer/popover avec aide visuelle (capture d'écran simulée du cadenas du navigateur, par exemple).
 
-### F. Confirmation explicite du son
+### 5. Bandeau bilan plus discret
 
-`playBeep` détecte l'autoplay bloqué mais pas le mode silencieux iPhone (interrupteur physique). Le contexte WebAudio « progresse » sans son audible.
+Le bandeau actuel « X problèmes à régler » devient :
+- Petite ligne fixe en haut sous le header.
+- Animation `slide-in` quand un nouveau problème apparaît.
+- Disparaît tout seul quand tout est ok (avec un mini ✓ vert qui flash).
 
-Nouveau flow :
-1. Clic « Tester le son » → joue le bip.
-2. Affiche immédiatement : « Avez-vous entendu le bip ? » avec deux boutons **[Oui]** / **[Non, refaire]**.
-3. **Oui** → `soundStatus = "ok"`.
-4. **Non** → message :
-   > « Vérifiez le bouton silencieux (côté gauche de l'iPhone), montez le volume, et débranchez vos écouteurs si besoin. »
-   + relance `testSound`.
+### 6. CTA sticky
 
-Si `playBeep` retourne `false` (autoplay bloqué) → on affiche directement l'erreur sans la question.
+Le bouton « Commencer la session » devient **sticky en bas de l'écran** sur mobile (toujours visible), avec un fond légèrement flouté (`backdrop-blur`).
 
-## Lot 2 — Confort
+États visuels :
+- **Tous OK** → bouton plein indigo + petit éclair `Sparkles`.
+- **Warnings seulement** → bouton plein avec libellé « Continuer (avec quelques limitations) ».
+- **Erreurs bloquantes** → bouton désactivé + message court à côté.
 
-### E. Sélecteur de périphériques
+### 7. Animations & micro-interactions
 
-Sous chaque carte Caméra et Micro, ajouter un `<Select>` listant `navigator.mediaDevices.enumerateDevices()` filtré par `kind` (`audioinput` / `videoinput`).
+- Fade-in séquencé des cartes au mount (`stagger` 80 ms).
+- Quand un test passe `testing → ok`, animation : icône tourne puis se transforme en check vert (Framer Motion ou simple CSS).
+- Hover des cartes : très légère élévation (`shadow-md` → `shadow-lg`).
+- Vibration légère du badge quand un statut change (mobile : `navigator.vibrate(20)`).
 
-Comportement :
-- Liste rafraîchie à `devicechange`.
-- Changement de sélection → relance le test ciblé avec `{ deviceId: { exact: id } }`.
-- Persistance dans `localStorage` (`interview.preferredAudioDeviceId` / `interview.preferredVideoDeviceId`).
-- `InterviewStart.tsx` lira ces clés (lecture seule, fallback sur défaut système si absent).
-- Sur navigateurs qui ne donnent les labels qu'après autorisation, on relance `enumerateDevices()` après le 1ᵉʳ `getUserMedia` réussi.
+### 8. Identité visuelle plus forte
 
-### I. Bandeau de bilan en haut quand bloqué
+- Léger dégradé de fond derrière la zone caméra (`from-primary/5 to-transparent`).
+- Pictos cohérents : tous Lucide, taille uniforme, fond circulaire `bg-{color}/10`.
+- Typo : titre en `text-2xl font-bold tracking-tight`, sous-titre `text-sm text-muted-foreground`.
+- Couleurs sémantiques uniquement (tokens du design system : `primary`, `emerald`, `amber`, `destructive`, `muted`).
 
-Quand au moins un test est en erreur **bloquante**, afficher en haut de page un encart résumé condensé :
-- Liste 1-line de ce qui bloque (« Caméra refusée », « Aucun son »…).
-- Bouton « Copier le lien pour ouvrir sur un autre appareil » (réutilise `copyLink` existant).
+### 9. Aide contextuelle « Besoin d'aide ? »
 
-Évite au candidat de scroller pour comprendre le problème.
+Petit lien discret en bas (avant le CTA) : « Besoin d'aide ? » → ouvre un Sheet/Drawer avec :
+- Liste des problèmes courants par navigateur.
+- Lien copier le lien pour ouvrir sur un autre appareil.
+- Mention « L'entretien fonctionne sur Safari (iPhone) et Chrome (Android, Mac, PC). »
 
-### J. Bouton « Passer les tests » contextuel
+Évite de polluer la vue principale avec ces infos.
 
-- Reste discret (lien minuscule actuel) tant qu'aucun test n'a échoué.
-- Devient un **vrai bouton secondaire** visible quand :
-  - Seuls des warnings non-bloquants restent (STT, niveau micro faible), OU
-  - Le même test a échoué ≥ 2 fois (compteur de retries par test).
-- Texte : « Continuer quand même ».
+### 10. État final célébré
 
-## Détails techniques
+Quand `canContinue` devient `true` pour la première fois, mini animation :
+- Confettis discrets ou simple `pulse` indigo autour du CTA.
+- Texte du bouton change : « C'est parti → ».
+- Auto-scroll doux jusqu'au CTA.
+
+## Découpage technique
 
 ### Fichiers touchés
 
-- **`src/pages/InterviewDeviceTest.tsx`** : refonte des handlers de test, nouveau state (warnings, peakLevel, deviceId courant, retryCount), UI bandeau + sélecteurs + question son.
-- **`src/lib/deviceDiagnostics.ts`** *(nouveau)* :
-  - `classifyMediaError(err: unknown): { kind, message }`
-  - `queryPermissions(): Promise<{ mic: PermissionState | 'unknown', cam: ... }>`
-  - `listDevices(): Promise<{ audio: MediaDeviceInfo[], video: MediaDeviceInfo[] }>`
-- **`src/components/interview/DeviceSelector.tsx`** *(nouveau)* : petit `<Select>` réutilisable basé sur `@/components/ui/select`.
-- **`src/pages/InterviewStart.tsx`** : lecture des `deviceId` préférés depuis `localStorage`, ajout aux `constraints` de `getUserMedia` si présents (modif minimale).
+- **`src/pages/InterviewDeviceTest.tsx`** : refonte JSX complète, conserve toute la logique (handlers, state) déjà mise en place. Sépare en sous-composants internes pour garder le fichier lisible.
+- **`src/components/interview/TestProgressBar.tsx`** *(nouveau)* : barre segmentée des 5 tests.
+- **`src/components/interview/TestCheckCard.tsx`** *(nouveau)* : carte test compacte avec accordéon intégré, props `status`, `title`, `icon`, `expanded`, `children`, `onRetry`.
+- **`src/components/interview/HelpSheet.tsx`** *(nouveau)* : Sheet shadcn avec aide contextuelle.
+- **`src/components/interview/CameraHero.tsx`** *(nouveau)* : aperçu caméra grand format + badge statut + sélecteur en overlay.
 
 ### Aucun changement
 
-- Pas de migration BDD.
-- Pas d'edge function.
-- Pas de modification de `MicVolumeMeter` / `MicLevelMeter` / `MediaRecorderField`.
-- Pas de refonte visuelle (mêmes cartes, mêmes couleurs).
+- Pas de modif des handlers de test (`testMicAndRecorder`, `testCam`, `testSound`, `testStt`, `testNetwork`).
+- Pas de modif des libs (`deviceDiagnostics.ts`).
+- Pas de modif BDD ni edge functions.
+- Pas de nouvelles dépendances : on réutilise `Sheet`, `Accordion`, `Badge` shadcn déjà présents.
 
-### Reporté (pas dans cette itération)
+## Hors scope (à proposer plus tard si tu veux)
 
-- Lot 3 : test réseau enrichi (latence + upload), désactivation de l'auto-start sur iOS.
+- Tour de présentation interactif au premier passage (Driver.js ou onboarding maison).
+- Export d'un rapport de diagnostic PDF en cas de problème persistant.
+- Test vidéo de luminosité (« la pièce est-elle assez éclairée ? »).
+
+## Question pour toi
+
+Trois variantes possibles, dis-moi laquelle tu préfères :
+
+- **A. Refonte complète** comme décrit ci-dessus (gros impact visuel, ~1 message).
+- **B. Refonte progressive** : juste header avec progression + caméra hero + CTA sticky d'abord ; le reste en 2ᵉ tour.
+- **C. Refonte minimale** : juste les cartes en grille 2 colonnes + accordéon + CTA sticky, sans toucher au header ni à la caméra.
