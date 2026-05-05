@@ -1,69 +1,58 @@
-## Cause du bug
+# Tester STT et TTS dès la page de test caméra/micro
 
-Quand tu crées une organisation depuis le panneau super admin, l'edge function `superadmin-create-org` insère la ligne `organizations` **sans `owner_id`** (l'owner sera défini plus tard quand le 1er utilisateur acceptera l'invitation).
+## Contexte
 
-Or, le trigger `trg_seed_org_question_templates` qui s'exécute à l'INSERT contient un fallback :
+Sur la session de Clément, le candidat est resté figé sur "Préparation…" à la Q2 (question texte). Cause : `recognition.start()` (Web Speech API) a échoué silencieusement après la transition, et l'UI n'avait pas de garde-fou.
 
-```sql
-_creator := COALESCE(NEW.owner_id, auth.uid());
-IF _creator IS NULL THEN
-  -- prend le 1er super_admin trouvé
-  SELECT user_id INTO _creator FROM user_roles WHERE role='super_admin' ...
-END IF;
+La page `InterviewDeviceTest.tsx` teste aujourd'hui :
+- la caméra
+- le micro (volume)
+- la connexion réseau
+- le son (bip de sortie)
 
-...
-IF NEW.owner_id IS NULL OR _creator = NEW.owner_id THEN
-  PERFORM seed_demo_project(NEW.id, _creator);  -- ⚠️ created_by = TOI
-END IF;
-```
+Mais **ni la reconnaissance vocale (STT) ni la synthèse vocale (TTS)** ne sont vérifiées. Or ce sont les deux briques qui font tomber l'entretien si elles échouent en cours de route.
 
-Résultat : le **projet "Candidature spontanée - TEST -"** est créé avec `created_by = ton user_id` de super admin. Comme la RLS de `projects` autorise la vue dès que `created_by = auth.uid()`, ce projet apparaît dans **ta** liste de projets, en plus d'être dans la nouvelle org.
+## Objectif
 
-Bonus : il y a aussi **deux triggers identiques** (`seed_question_templates_on_org_create` et `trg_seed_org_after_insert`) qui appellent la même fonction → doublon historique.
+Détecter l'incompatibilité STT/TTS **avant** que le candidat lance la session, sur la page de test, avec un message clair et actionnable. Si ça échoue ici, on l'empêche de continuer (ou on lui propose un navigateur compatible).
 
-## Correctif (1 migration SQL)
+## Changements
 
-1. **Supprimer le trigger doublon** `trg_seed_org_after_insert`.
-2. **Modifier `trg_seed_org_question_templates`** :
-   - Garder le seed des bibliothèques (questions, critères, modèles, intros) avec le fallback super admin — ces tables sont scopées par `organization_id`, pas de fuite.
-   - **Ne plus créer le projet démo dans ce trigger.** Le projet démo doit uniquement être créé via `trg_seed_on_owner_set`, c'est-à-dire au moment où un véritable owner (le 1er utilisateur de l'org) est attaché. C'est déjà ce que dit le commentaire de l'edge function.
-3. **Nettoyage des données existantes** : supprimer les projets démo `"Candidature spontanée - TEST -"` dont le `created_by` est un super admin **et** dont l'organisation appartient à quelqu'un d'autre (ou n'a pas encore d'owner). Aucune session candidat ne peut exister sur ces démos fraîchement créés, donc la suppression est sûre — mais je listerai d'abord les lignes concernées avant de les supprimer pour validation.
+### 1. `src/pages/InterviewDeviceTest.tsx` — ajouter 2 tests
 
-## Détail technique
+**Test "Reconnaissance vocale"**
+- Vérifier la présence de `SpeechRecognition` ou `webkitSpeechRecognition`.
+- Si absent : statut `error` → "Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome, Edge ou Safari récent."
+- Si présent : créer une instance, lancer `start()` dans un try/catch pendant 2 s, écouter `onstart` ou `onerror`, puis `stop()`.
+  - `onstart` reçu → statut `ok`.
+  - `onerror` ou exception → statut `error` avec message lisible (`not-allowed` → "Autorisez le micro", autre → "La reconnaissance vocale n'a pas pu démarrer sur ce navigateur").
 
-```sql
--- 1. Supprimer doublon
-DROP TRIGGER IF EXISTS trg_seed_org_after_insert ON public.organizations;
+**Test "Voix de l'IA"**
+- Si le projet utilise ElevenLabs (`project.tts_provider === "elevenlabs"`) : faire un appel léger à l'edge function `tts-elevenlabs` avec un texte court ("Test") et vérifier qu'on récupère un blob audio jouable. Sinon `error` → "Le service de voix est indisponible, contactez le recruteur."
+- Sinon (TTS navigateur) : vérifier `window.speechSynthesis` + au moins une voix `fr-*` dans `getVoices()` (avec un retry après 500 ms car les voix se chargent en async). Si aucune voix française → `warning` non bloquant ("Voix française indisponible, l'IA parlera dans la voix par défaut.").
 
--- 2. Réécrire la fonction sans appel à seed_demo_project
-CREATE OR REPLACE FUNCTION public.trg_seed_org_question_templates()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path='public' AS $$
-DECLARE _creator uuid;
-BEGIN
-  _creator := COALESCE(NEW.owner_id, auth.uid());
-  IF _creator IS NULL THEN
-    SELECT user_id INTO _creator FROM public.user_roles
-    WHERE role='super_admin'::app_role ORDER BY id LIMIT 1;
-  END IF;
+### 2. UI
 
-  IF _creator IS NOT NULL THEN
-    PERFORM public.seed_default_question_templates(NEW.id, _creator);
-    PERFORM public.seed_default_criteria_templates(NEW.id, _creator);
-    PERFORM public.seed_default_interview_templates(NEW.id, _creator);
-    PERFORM public.seed_default_intro_templates(NEW.id, _creator);
-    -- Le projet de démo est désormais créé uniquement par trg_seed_on_owner_set
-  END IF;
-  RETURN NEW;
-END;
-$$;
+Ajouter ces 2 tests à la liste existante avec la même structure visuelle (icône + titre + statut). Garder la même logique : tant qu'au moins un test critique est en `error`, le bouton "Démarrer l'entretien" est désactivé avec une explication.
 
--- 3. Cleanup (après inspection)
-DELETE FROM public.projects p
-USING public.user_roles ur
-WHERE p.title = 'Candidature spontanée - TEST -'
-  AND p.created_by = ur.user_id
-  AND ur.role = 'super_admin'
-  AND NOT EXISTS (SELECT 1 FROM public.sessions s WHERE s.project_id = p.id);
-```
+Les statuts critiques bloquants : caméra, micro, réseau, **reconnaissance vocale**, **voix de l'IA** (si ElevenLabs).
+Statut non bloquant (warning seulement) : voix de l'IA en mode navigateur sans voix FR.
 
-Après ça : les nouvelles orgs créées sans owner ne pollueront plus ton compte, et le projet démo sera créé proprement, attribué au 1er utilisateur qui rejoint l'org.
+### 3. `src/pages/InterviewStart.tsx` — garde-fou de dernier recours
+
+Même si on filtre en amont, on garde un filet de sécurité au cas où la STT casse en cours de session :
+- Wrapper `recognition.start()` dans `startListening()` avec try/catch (aujourd'hui non protégé).
+- Si après une transition l'UI reste 4 s avec `!isListening && !isSpeaking && !isProcessing && !interviewFinished`, afficher un bandeau "L'écoute du micro n'a pas démarré" avec un bouton "Réessayer le micro" (relance `startListening()`) et le bouton "Passer la question" déjà existant.
+- Logger `interview_stuck_after_transition` pour le monitoring.
+
+## Hors scope
+
+- Pas de changement DB.
+- Pas de modification du flow d'entretien lui-même (questions, IA, enregistrement).
+
+## Test manuel
+
+1. Ouvrir la page de test depuis Safari iOS (STT non supporté historiquement) → le test "Reconnaissance vocale" doit échouer et bloquer le bouton.
+2. Refuser l'autorisation micro → test STT en `error` avec message clair.
+3. Sur Chrome desktop avec micro OK → tous les tests passent, bouton actif.
+4. Bonus : couper le réseau pendant le test ElevenLabs → test "Voix de l'IA" en `error`.
