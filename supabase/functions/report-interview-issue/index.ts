@@ -79,30 +79,34 @@ Deno.serve(async (req) => {
 
     const idempotencyKey = `issue-${session.id}-${Date.now()}`
 
-    const { data: invokeData, error: invokeErr } = await supabase.functions.invoke(
-      'send-transactional-email',
-      {
-        body: {
-          templateName: 'interview-issue-report',
-          recipientEmail,
-          idempotencyKey,
-          replyTo: session.candidate_email || undefined,
-          templateData: {
-            candidateName: session.candidate_name || 'Candidat',
-            candidateEmail: session.candidate_email || undefined,
-            jobTitle: project.job_title || '',
-            projectTitle: project.title || '',
-            message,
-            sessionUrl,
-            reportedAt,
-          },
-        },
+    const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
       },
-    )
+      body: JSON.stringify({
+        templateName: 'interview-issue-report',
+        recipientEmail,
+        idempotencyKey,
+        replyTo: session.candidate_email || undefined,
+        templateData: {
+          candidateName: session.candidate_name || 'Candidat',
+          candidateEmail: session.candidate_email || undefined,
+          jobTitle: project.job_title || '',
+          projectTitle: project.title || '',
+          message,
+          sessionUrl,
+          reportedAt,
+        },
+      }),
+    })
 
-    if (invokeErr) {
-      console.error('send-transactional-email failed', invokeErr, invokeData)
-      return new Response(JSON.stringify({ error: 'Email enqueue failed', details: String(invokeErr?.message ?? invokeErr) }), {
+    if (!emailResp.ok) {
+      const errText = await emailResp.text()
+      console.error('send-transactional-email failed', emailResp.status, errText)
+      return new Response(JSON.stringify({ error: 'Email enqueue failed', status: emailResp.status, details: errText }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
