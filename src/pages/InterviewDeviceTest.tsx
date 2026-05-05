@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import {
   Video,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   Wifi,
   Loader2,
@@ -18,8 +19,17 @@ import {
   MessageSquare,
 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
+import {
+  classifyMediaError,
+  queryPermissions,
+  listInputDevices,
+  getStoredDeviceId,
+  setStoredDeviceId,
+  type DeviceLists,
+} from "@/lib/deviceDiagnostics";
+import DeviceSelector from "@/components/interview/DeviceSelector";
 
-type Status = "idle" | "testing" | "ok" | "error";
+type Status = "idle" | "testing" | "ok" | "warning" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
 
 // Joue un bip court via WebAudio (oscillateur). Retourne true si le contexte
@@ -63,7 +73,6 @@ function detectUnsupportedBrowser(): BrowserSupport {
   if (typeof navigator === "undefined") return { supported: true };
   const ua = navigator.userAgent || "";
 
-  // In-app browsers connus (impossibles à utiliser pour getUserMedia).
   const inApp: Array<[RegExp, string]> = [
     [/Instagram/i, "Instagram"],
     [/FBAN|FBAV|FB_IAB/i, "Facebook"],
@@ -81,7 +90,6 @@ function detectUnsupportedBrowser(): BrowserSupport {
     }
   }
 
-  // Firefox iOS n'expose pas MediaRecorder.
   if (/FxiOS/i.test(ua)) {
     return {
       supported: false,
@@ -104,6 +112,8 @@ function detectUnsupportedBrowser(): BrowserSupport {
   return { supported: true };
 }
 
+const MIC_LEVEL_THRESHOLD = 0.05;
+
 export default function InterviewDeviceTest() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
@@ -115,9 +125,17 @@ export default function InterviewDeviceTest() {
   const [linkCopied, setLinkCopied] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
-  const [camStatus, setCamStatus] = useState<Status>("idle");
-  const [soundStatus, setSoundStatus] = useState<Status>("idle");
+  const [micError, setMicError] = useState<string | null>(null);
+  const [micWarning, setMicWarning] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
+  const [recorderStatus, setRecorderStatus] = useState<Status>("idle");
+
+  const [camStatus, setCamStatus] = useState<Status>("idle");
+  const [camError, setCamError] = useState<string | null>(null);
+
+  const [soundStatus, setSoundStatus] = useState<Status>("idle");
+  const [soundAwaitingConfirm, setSoundAwaitingConfirm] = useState(false);
+  const [soundError, setSoundError] = useState<string | null>(null);
 
   const [netStatus, setNetStatus] = useState<Status>("idle");
   const [netKbps, setNetKbps] = useState<number | null>(null);
@@ -126,114 +144,67 @@ export default function InterviewDeviceTest() {
   const [sttStatus, setSttStatus] = useState<Status>("idle");
   const [sttError, setSttError] = useState<string | null>(null);
 
+  // Périphériques disponibles + sélection
+  const [devices, setDevices] = useState<DeviceLists>({ audio: [], video: [] });
+  const [selectedAudioId, setSelectedAudioId] = useState<string | null>(getStoredDeviceId("audio"));
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(getStoredDeviceId("video"));
+
+  // Compteurs de retry pour afficher « Continuer quand même » au-delà de 2 échecs
+  const [micRetries, setMicRetries] = useState(0);
+  const [camRetries, setCamRetries] = useState(0);
+  const [soundRetries, setSoundRetries] = useState(0);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+  const camStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
-  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Auto-start tests on mount + cleanup on unmount.
-  // Le test du son nécessite un geste utilisateur, il n'est pas auto-déclenché.
-  useEffect(() => {
-    if (browserBlocked) return;
-    testCam();
-    testMic();
-    testNetwork();
-    testRecorder();
-    testStt();
-    return () => {
-      stopAll();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [browserBlocked]);
+  const refreshDevices = useCallback(async () => {
+    const list = await listInputDevices();
+    setDevices(list);
+  }, []);
 
-  // Charger infos projet (message + nom poste + org) pour le consentement
-  useEffect(() => {
-    if (!slug) return;
-    (async () => {
-      const { data } = await supabase
-        .from("projects")
-        .select("pre_session_message")
-        .eq("slug", slug)
-        .maybeSingle();
-      const d = data as { pre_session_message?: string | null } | null;
-      if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
-    })();
-  }, [slug]);
-
-  const stopAll = () => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) videoRef.current.srcObject = null;
-    if (beepAudioRef.current) {
-      beepAudioRef.current.pause();
-      beepAudioRef.current.src = "";
-      beepAudioRef.current = null;
-    }
-  };
-
-  const testMic = async () => {
+  // ================== MICRO + ENREGISTREMENT (test fusionné) ==================
+  const testMicAndRecorder = useCallback(async (deviceId?: string | null) => {
     setMicStatus("testing");
+    setRecorderStatus("testing");
+    setMicError(null);
+    setMicWarning(null);
+    setMicLevel(0);
+
+    let stream: MediaStream | null = null;
+    let audioCtx: AudioContext | null = null;
+    let raf: number | null = null;
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const constraints: MediaStreamConstraints = {
+        audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+      };
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Analyser pour la jauge + détection de niveau réel
       const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-      const audioCtx = new Ctor();
+      audioCtx = new Ctor();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
       source.connect(analyser);
-      analyserRef.current = analyser;
-
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      let peak = 0;
 
       const poll = () => {
         analyser.getByteFrequencyData(dataArray);
         const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         const normalized = Math.min(avg / 80, 1);
+        if (normalized > peak) peak = normalized;
         setMicLevel(normalized);
-        animFrameRef.current = requestAnimationFrame(poll);
+        raf = requestAnimationFrame(poll);
       };
       poll();
+      animFrameRef.current = raf;
 
-      setTimeout(() => {
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-        stream.getTracks().forEach((t) => t.stop());
-        audioCtx.close();
-        setMicStatus("ok");
-        setMicLevel(0);
-      }, 3000);
-    } catch {
-      setMicStatus("error");
-    }
-  };
-
-  const testCam = async () => {
-    setCamStatus("testing");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-      setCamStatus("ok");
-    } catch {
-      setCamStatus("error");
-    }
-  };
-
-  // Vérifie que MediaRecorder peut réellement produire un chunk.
-  const [recorderStatus, setRecorderStatus] = useState<Status>("idle");
-  const testRecorder = async () => {
-    setRecorderStatus("testing");
-    let stream: MediaStream | null = null;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Test simultané du MediaRecorder sur le même flux
       const recorder = new MediaRecorder(stream);
-      const gotChunk = await new Promise<boolean>((resolve) => {
+      const recorderPromise = new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => resolve(false), 2500);
         recorder.ondataavailable = (e) => {
           if (e.data && e.data.size > 0) {
@@ -248,43 +219,110 @@ export default function InterviewDeviceTest() {
           resolve(false);
         }
       });
-      try {
-        if (recorder.state !== "inactive") recorder.stop();
-      } catch {
-        /* ignore */
+
+      const [recorderOk] = await Promise.all([
+        recorderPromise,
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+
+      try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
+      if (raf) cancelAnimationFrame(raf);
+      animFrameRef.current = null;
+
+      setMicLevel(0);
+      setRecorderStatus(recorderOk ? "ok" : "error");
+
+      if (peak < MIC_LEVEL_THRESHOLD) {
+        setMicStatus("warning");
+        setMicWarning("Aucun son détecté. Parlez plus fort, ou choisissez un autre micro ci-dessous.");
+      } else {
+        setMicStatus("ok");
       }
-      setRecorderStatus(gotChunk ? "ok" : "error");
-    } catch {
+
+      // Après autorisation, on peut enfin lire les labels des périphériques
+      await refreshDevices();
+    } catch (err) {
+      const cls = classifyMediaError(err, "mic");
+      setMicError(cls.message);
+      setMicStatus("error");
       setRecorderStatus("error");
+      setMicRetries((n) => n + 1);
     } finally {
       stream?.getTracks().forEach((t) => t.stop());
+      try { await audioCtx?.close(); } catch { /* ignore */ }
     }
-  };
+  }, [refreshDevices]);
 
-  // Test de lecture audio — déclenché par un clic utilisateur.
-  const testSound = async () => {
+  // ================== CAMÉRA ==================
+  const testCam = useCallback(async (deviceId?: string | null) => {
+    setCamStatus("testing");
+    setCamError(null);
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: deviceId ? { deviceId: { exact: deviceId } } : true,
+      };
+      // Stoppe l'ancien flux avant d'en ouvrir un nouveau
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      camStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
+      }
+      setCamStatus("ok");
+      await refreshDevices();
+    } catch (err) {
+      const cls = classifyMediaError(err, "cam");
+      setCamError(cls.message);
+      setCamStatus("error");
+      setCamRetries((n) => n + 1);
+    }
+  }, [refreshDevices]);
+
+  // ================== SON ==================
+  const testSound = useCallback(async () => {
     setSoundStatus("testing");
+    setSoundError(null);
+    setSoundAwaitingConfirm(false);
     try {
       const ok = await playBeep();
-      setSoundStatus(ok ? "ok" : "error");
+      if (!ok) {
+        setSoundStatus("error");
+        setSoundError("Lecture bloquée par le navigateur. Touchez à nouveau pour réessayer.");
+        setSoundRetries((n) => n + 1);
+        return;
+      }
+      // Bip joué : on attend la confirmation utilisateur (mode silencieux iOS).
+      setSoundAwaitingConfirm(true);
+      setSoundStatus("testing");
     } catch {
       setSoundStatus("error");
+      setSoundError("Impossible de tester le son.");
+      setSoundRetries((n) => n + 1);
+    }
+  }, []);
+
+  const confirmSoundHeard = (heard: boolean) => {
+    setSoundAwaitingConfirm(false);
+    if (heard) {
+      setSoundStatus("ok");
+      setSoundError(null);
+    } else {
+      setSoundStatus("error");
+      setSoundError("Vérifiez le bouton silencieux (côté gauche de l'iPhone), montez le volume, et débranchez vos écouteurs si besoin.");
+      setSoundRetries((n) => n + 1);
     }
   };
 
-  // Vérifie que la reconnaissance vocale du navigateur fonctionne réellement.
-  // Sans ce test, des navigateurs comme Firefox sur Android ou certaines versions
-  // de Safari laissent le candidat bloqué à la première question texte.
-  const testStt = async () => {
+  // ================== RECONNAISSANCE VOCALE (non bloquant) ==================
+  const testStt = useCallback(async () => {
     setSttStatus("testing");
     setSttError(null);
     const SpeechRecognitionCtor =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognitionCtor) {
-      setSttError(
-        "Votre navigateur ne prend pas en charge la reconnaissance vocale. Utilisez Chrome ou Safari récent.",
-      );
-      setSttStatus("error");
+      setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
+      setSttStatus("warning");
       return;
     }
     try {
@@ -304,16 +342,8 @@ export default function InterviewDeviceTest() {
         recognition.onstart = () => finish(true);
         recognition.onerror = (e: any) => {
           if (e?.error === "no-speech" || e?.error === "aborted") {
-            // bénin : la reconnaissance a bien démarré
             finish(true);
             return;
-          }
-          if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
-            setSttError(
-              "Autorisez l'accès au micro pour permettre la reconnaissance vocale.",
-            );
-          } else {
-            setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
           }
           finish(false);
         };
@@ -321,19 +351,33 @@ export default function InterviewDeviceTest() {
         try {
           recognition.start();
         } catch {
-          setSttError("La reconnaissance vocale n'a pas pu démarrer sur ce navigateur.");
           finish(false);
         }
       });
-      setSttStatus(ok ? "ok" : "error");
+      if (ok) {
+        setSttStatus("ok");
+      } else {
+        setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
+        setSttStatus("warning");
+      }
     } catch {
-      setSttError("La reconnaissance vocale n'est pas disponible sur ce navigateur.");
-      setSttStatus("error");
+      setSttError("La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.");
+      setSttStatus("warning");
     }
-  };
+  }, []);
 
-  // Test de débit : on télécharge un asset connu et on chronomètre
-  const testNetwork = async () => {
+  // ================== RÉSEAU ==================
+  const finishNetwork = useCallback((kbps: number) => {
+    setNetKbps(kbps);
+    let q: SpeedQuality;
+    if (kbps >= 600) q = "good";
+    else if (kbps >= 300) q = "limited";
+    else q = "weak";
+    setNetQuality(q);
+    setNetStatus("ok");
+  }, []);
+
+  const testNetwork = useCallback(async () => {
     setNetStatus("testing");
     setNetKbps(null);
     setNetQuality(null);
@@ -356,38 +400,101 @@ export default function InterviewDeviceTest() {
         const bigBytes = blob.size;
         const bigElapsed = performance.now() - bigStart;
         if (bigBytes > 5000) {
-          const kbps = Math.round((bigBytes * 8) / bigElapsed);
-          finishNetwork(kbps);
+          finishNetwork(Math.round((bigBytes * 8) / bigElapsed));
           return;
         }
       } catch {
         /* fallback */
       }
-
       if (totalBytes < 1000 || elapsedMs < 5) {
         finishNetwork(2000);
         return;
       }
-      const kbps = Math.round((totalBytes * 8) / elapsedMs);
-      finishNetwork(kbps);
+      finishNetwork(Math.round((totalBytes * 8) / elapsedMs));
     } catch (err) {
       console.warn("[network test] failed", err);
       setNetStatus("error");
     }
+  }, [finishNetwork]);
+
+  // ================== CYCLE DE VIE ==================
+  useEffect(() => {
+    if (browserBlocked) return;
+
+    let cancelled = false;
+    (async () => {
+      // Pré-détection des permissions refusées : évite un prompt qui sera silencieusement rejeté
+      const perms = await queryPermissions();
+      if (cancelled) return;
+      if (perms.mic === "denied") {
+        setMicStatus("error");
+        setRecorderStatus("error");
+        setMicError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez le micro, puis rechargez la page.");
+      } else {
+        await testMicAndRecorder(selectedAudioId);
+      }
+      if (cancelled) return;
+      if (perms.cam === "denied") {
+        setCamStatus("error");
+        setCamError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez la caméra, puis rechargez la page.");
+      } else {
+        await testCam(selectedVideoId);
+      }
+      if (cancelled) return;
+      testNetwork();
+      testStt();
+    })();
+
+    return () => {
+      cancelled = true;
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      camStreamRef.current?.getTracks().forEach((t) => t.stop());
+      camStreamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [browserBlocked]);
+
+  // Rafraîchit la liste des devices si l'utilisateur en branche/débranche
+  useEffect(() => {
+    if (browserBlocked) return;
+    const handler = () => { void refreshDevices(); };
+    navigator.mediaDevices?.addEventListener?.("devicechange", handler);
+    return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
+  }, [browserBlocked, refreshDevices]);
+
+  // Charger infos projet
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      const { data } = await supabase
+        .from("projects")
+        .select("pre_session_message")
+        .eq("slug", slug)
+        .maybeSingle();
+      const d = data as { pre_session_message?: string | null } | null;
+      if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
+    })();
+  }, [slug]);
+
+  // ================== HANDLERS ==================
+  const handleAudioDeviceChange = (id: string) => {
+    setSelectedAudioId(id);
+    setStoredDeviceId("audio", id);
+    void testMicAndRecorder(id);
   };
 
-  const finishNetwork = (kbps: number) => {
-    setNetKbps(kbps);
-    let q: SpeedQuality;
-    if (kbps >= 600) q = "good";
-    else if (kbps >= 300) q = "limited";
-    else q = "weak";
-    setNetQuality(q);
-    setNetStatus("ok");
+  const handleVideoDeviceChange = (id: string) => {
+    setSelectedVideoId(id);
+    setStoredDeviceId("video", id);
+    void testCam(id);
   };
 
-  const handleContinue = async () => {
-    stopAll();
+  const handleContinue = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    camStreamRef.current?.getTracks().forEach((t) => t.stop());
+    camStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
     navigate(`/session/${slug}/start/${token}`);
   };
 
@@ -401,15 +508,31 @@ export default function InterviewDeviceTest() {
     }
   };
 
-  // Conditions de blocage
+  // ================== ÉTAT GLOBAL ==================
   const networkBlocking = netStatus === "ok" && netQuality === "weak";
+
+  // Le STT et le niveau micro faible sont des warnings non bloquants.
+  // L'enregistrement (recorder) est bloquant : sans lui, pas d'entretien possible.
+  const blockingErrors: string[] = [];
+  if (camStatus === "error") blockingErrors.push("Caméra inaccessible");
+  if (micStatus === "error") blockingErrors.push("Micro inaccessible");
+  if (recorderStatus === "error" && micStatus !== "error") blockingErrors.push("Enregistrement impossible");
+  if (soundStatus === "error" || soundStatus === "idle") blockingErrors.push("Son non testé");
+  if (networkBlocking) blockingErrors.push("Connexion trop faible");
+
   const canContinue =
-    micStatus === "ok" &&
+    (micStatus === "ok" || micStatus === "warning") &&
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
-    sttStatus === "ok" &&
     !networkBlocking;
+
+  // « Continuer quand même » visible si : warnings non bloquants seulement, ou retries >= 2
+  const showSkipPrimary =
+    !canContinue && (
+      micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
+      (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
+    );
 
   const networkLabel = (() => {
     if (!netQuality) return "";
@@ -425,7 +548,7 @@ export default function InterviewDeviceTest() {
     return "text-muted-foreground";
   })();
 
-  // Écran bloquant — navigateur non supporté
+  // ================== ÉCRAN BLOQUANT ==================
   if (browserBlocked) {
     return (
       <CandidateLayout>
@@ -436,9 +559,7 @@ export default function InterviewDeviceTest() {
                 <AlertCircle className="h-6 w-6 text-destructive shrink-0" />
                 <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
               </div>
-              <p className="text-sm text-foreground">
-                {browserSupport.current.reason}
-              </p>
+              <p className="text-sm text-foreground">{browserSupport.current.reason}</p>
               <p className="text-sm text-muted-foreground">
                 Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
                 <strong>Chrome</strong> (Android et ordinateur).
@@ -446,15 +567,9 @@ export default function InterviewDeviceTest() {
               <div className="flex flex-col gap-2">
                 <Button onClick={copyLink} variant="outline" className="w-full">
                   {linkCopied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Lien copié
-                    </>
+                    <><Check className="mr-2 h-4 w-4" />Lien copié</>
                   ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copier le lien de l'entretien
-                    </>
+                    <><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>
                   )}
                 </Button>
                 <button
@@ -481,7 +596,31 @@ export default function InterviewDeviceTest() {
           </p>
         </div>
 
-        {/* Camera test */}
+        {/* Bandeau de bilan */}
+        {blockingErrors.length > 0 && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <p className="text-sm font-medium text-destructive">
+                  {blockingErrors.length === 1 ? "Un problème à régler :" : `${blockingErrors.length} problèmes à régler :`}
+                </p>
+                <ul className="text-xs text-foreground space-y-0.5">
+                  {blockingErrors.map((e) => <li key={e}>• {e}</li>)}
+                </ul>
+              </div>
+            </div>
+            <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+              {linkCopied ? (
+                <><Check className="mr-2 h-4 w-4" />Lien copié</>
+              ) : (
+                <><Copy className="mr-2 h-4 w-4" />Copier le lien pour ouvrir sur un autre appareil</>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Caméra */}
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -496,7 +635,7 @@ export default function InterviewDeviceTest() {
                 <span className="font-medium">Caméra</span>
               </div>
               {camStatus === "error" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testCam}>
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={() => testCam(selectedVideoId)}>
                   Réessayer
                 </Button>
               )}
@@ -521,21 +660,29 @@ export default function InterviewDeviceTest() {
               </div>
             )}
 
-            {camStatus === "error" && (
-              <p className="text-xs text-destructive text-center">
-                Impossible d'accéder à la caméra. Autorisez l'accès dans les réglages du navigateur.
-              </p>
+            {camStatus === "error" && camError && (
+              <p className="text-xs text-destructive text-center">{camError}</p>
             )}
+
+            <DeviceSelector
+              devices={devices.video}
+              value={selectedVideoId}
+              onChange={handleVideoDeviceChange}
+              placeholder="Choisir une caméra"
+              disabled={camStatus === "testing"}
+            />
           </CardContent>
         </Card>
 
-        {/* Mic test */}
+        {/* Micro + enregistrement (test fusionné) */}
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {micStatus === "ok" ? (
                   <CheckCircle className="h-5 w-5 text-emerald-500" />
+                ) : micStatus === "warning" ? (
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
                 ) : micStatus === "error" ? (
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 ) : (
@@ -543,8 +690,8 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Microphone</span>
               </div>
-              {micStatus === "error" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testMic}>
+              {(micStatus === "error" || micStatus === "warning") && (
+                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={() => testMicAndRecorder(selectedAudioId)}>
                   Réessayer
                 </Button>
               )}
@@ -562,42 +709,39 @@ export default function InterviewDeviceTest() {
               </div>
             )}
 
-            {micStatus === "error" && (
-              <p className="text-xs text-destructive text-center">
-                Impossible d'accéder au micro. Vérifiez les permissions du navigateur.
-              </p>
+            {micStatus === "error" && micError && (
+              <p className="text-xs text-destructive text-center">{micError}</p>
             )}
 
-            {/* Sous-test : enregistrement réel */}
-            {micStatus === "ok" && (
+            {micStatus === "warning" && micWarning && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 text-center">{micWarning}</p>
+            )}
+
+            {micStatus === "ok" && recorderStatus === "ok" && (
               <div className="flex items-center gap-2 text-xs">
-                {recorderStatus === "ok" ? (
-                  <>
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    <span className="text-emerald-600 dark:text-emerald-400">Enregistrement opérationnel</span>
-                  </>
-                ) : recorderStatus === "error" ? (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                    <span className="text-destructive">
-                      L'enregistrement audio n'est pas pris en charge.
-                    </span>
-                    <Button variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs" onClick={testRecorder}>
-                      Réessayer
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span className="text-muted-foreground">Vérification de l'enregistrement…</span>
-                  </>
-                )}
+                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                <span className="text-emerald-600 dark:text-emerald-400">Enregistrement opérationnel</span>
               </div>
             )}
+
+            {recorderStatus === "error" && micStatus !== "error" && (
+              <div className="flex items-center gap-2 text-xs">
+                <AlertCircle className="h-4 w-4 text-destructive" />
+                <span className="text-destructive">L'enregistrement audio n'est pas pris en charge.</span>
+              </div>
+            )}
+
+            <DeviceSelector
+              devices={devices.audio}
+              value={selectedAudioId}
+              onChange={handleAudioDeviceChange}
+              placeholder="Choisir un micro"
+              disabled={micStatus === "testing"}
+            />
           </CardContent>
         </Card>
 
-        {/* Sound playback test */}
+        {/* Son */}
         <Card>
           <CardContent className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -611,7 +755,7 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Son</span>
               </div>
-              {soundStatus !== "ok" && (
+              {soundStatus !== "ok" && !soundAwaitingConfirm && (
                 <Button
                   variant={soundStatus === "error" ? "outline" : "default"}
                   size="sm"
@@ -630,31 +774,44 @@ export default function InterviewDeviceTest() {
               )}
             </div>
 
-            {soundStatus === "idle" && (
+            {soundStatus === "idle" && !soundAwaitingConfirm && (
               <p className="text-xs text-muted-foreground">
                 Touchez « Tester le son » et vérifiez que vous entendez bien un bip.
               </p>
             )}
+
+            {soundAwaitingConfirm && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-center">Avez-vous entendu le bip ?</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 min-h-[44px]" onClick={() => confirmSoundHeard(false)}>
+                    Non, refaire
+                  </Button>
+                  <Button size="sm" className="flex-1 min-h-[44px]" onClick={() => confirmSoundHeard(true)}>
+                    Oui, j'ai entendu
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {soundStatus === "ok" && (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">✓ Son audible</p>
             )}
-            {soundStatus === "error" && (
-              <p className="text-xs text-destructive">
-                Aucun son détecté. Désactivez le mode silencieux, montez le volume et autorisez le son pour ce site.
-              </p>
+            {soundStatus === "error" && soundError && (
+              <p className="text-xs text-destructive">{soundError}</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Speech recognition test */}
+        {/* Reconnaissance vocale (non bloquant) */}
         <Card>
           <CardContent className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {sttStatus === "ok" ? (
                   <CheckCircle className="h-5 w-5 text-emerald-500" />
-                ) : sttStatus === "error" ? (
-                  <AlertCircle className="h-5 w-5 text-destructive" />
+                ) : sttStatus === "warning" ? (
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
                 ) : sttStatus === "testing" ? (
                   <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
                 ) : (
@@ -662,11 +819,6 @@ export default function InterviewDeviceTest() {
                 )}
                 <span className="font-medium">Reconnaissance vocale</span>
               </div>
-              {sttStatus === "error" && (
-                <Button variant="outline" size="sm" className="min-h-[44px] px-4" onClick={testStt}>
-                  Réessayer
-                </Button>
-              )}
             </div>
 
             {sttStatus === "testing" && (
@@ -674,18 +826,16 @@ export default function InterviewDeviceTest() {
             )}
             {sttStatus === "ok" && (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                ✓ Votre navigateur permet de transcrire votre voix.
+                ✓ Votre navigateur permet de transcrire votre voix en direct.
               </p>
             )}
-            {sttStatus === "error" && (
-              <p className="text-xs text-destructive">
-                {sttError ?? "La reconnaissance vocale n'est pas disponible."}
-              </p>
+            {sttStatus === "warning" && sttError && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Network test */}
+        {/* Connexion */}
         <Card>
           <CardContent className="pt-6 space-y-3">
             <div className="flex items-center justify-between">
@@ -729,14 +879,11 @@ export default function InterviewDeviceTest() {
             )}
 
             {netStatus === "error" && (
-              <p className="text-xs text-destructive text-center">
-                Impossible de mesurer la connexion.
-              </p>
+              <p className="text-xs text-destructive text-center">Impossible de mesurer la connexion.</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Pre-session encouragement message */}
         {preSessionMessage && (
           <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4 animate-fade-in">
             <Sparkles className="h-5 w-5 shrink-0 text-primary mt-0.5" />
@@ -744,7 +891,6 @@ export default function InterviewDeviceTest() {
           </div>
         )}
 
-        {/* Continue */}
         <Button size="lg" className="w-full" disabled={!canContinue} onClick={handleContinue}>
           <ArrowRight className="mr-2 h-5 w-5" />
           Commencer la session
@@ -756,15 +902,21 @@ export default function InterviewDeviceTest() {
           </p>
         )}
 
-        {/* Lien « Passer » discret en bas */}
-        <div className="flex justify-center pt-2">
-          <button
-            onClick={handleContinue}
-            className="text-xs text-muted-foreground/70 hover:text-foreground underline"
-          >
-            Passer les tests
-          </button>
-        </div>
+        {/* Bouton « Continuer quand même » contextuel */}
+        {showSkipPrimary ? (
+          <Button onClick={handleContinue} variant="outline" size="lg" className="w-full">
+            Continuer quand même
+          </Button>
+        ) : (
+          <div className="flex justify-center pt-2">
+            <button
+              onClick={handleContinue}
+              className="text-xs text-muted-foreground/70 hover:text-foreground underline"
+            >
+              Passer les tests
+            </button>
+          </div>
+        )}
       </div>
     </CandidateLayout>
   );
