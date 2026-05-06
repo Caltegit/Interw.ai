@@ -2769,6 +2769,64 @@ export default function InterviewStart() {
     }
   }, [isListening, isPaused, isSpeaking, isProcessing, interviewFinished, clearSilenceTier, clearEndCountdown]);
 
+  // Pause automatique sur connexion vraiment dégradée.
+  // Conditions strictes pour éviter les faux positifs :
+  //  - tier === "poor" ET débit mesuré < 80 kbps (en-dessous, le TTS ne charge plus correctement)
+  //  - pendant 30s consécutives, uniquement en phase d'écoute candidat
+  // Reprise auto dès que le réseau redevient stable (tier !== "poor") pendant 8s.
+  useEffect(() => {
+    const inListeningPhase =
+      isListening && !isPaused && !isSpeaking && !isProcessing && !aiThinking && !interviewFinished;
+    const reallyPoor =
+      networkTier === "poor" && measuredKbps != null && measuredKbps < 80;
+
+    // Watcher de chute : on arme un timer de 30s pour mettre en pause.
+    if (inListeningPhase && reallyPoor && !networkPauseActive) {
+      if (networkDownTimerRef.current == null) {
+        networkDownTimerRef.current = window.setTimeout(() => {
+          networkDownTimerRef.current = null;
+          if (isPausedRef.current) return;
+          setNetworkPauseActive(true);
+          try { pauseInterviewRef.current?.("auto-network"); } catch {}
+        }, 30_000);
+      }
+    } else if (networkDownTimerRef.current != null) {
+      clearTimeout(networkDownTimerRef.current);
+      networkDownTimerRef.current = null;
+    }
+
+    // Watcher de remontée : si on est en pause réseau et que ça repart, reprise auto après 8s.
+    if (networkPauseActive && networkTier !== "poor") {
+      if (networkUpTimerRef.current == null) {
+        networkUpTimerRef.current = window.setTimeout(() => {
+          networkUpTimerRef.current = null;
+          setNetworkPauseActive(false);
+          if (isPausedRef.current) {
+            try { resumeInterview(); } catch {}
+          }
+        }, 8_000);
+      }
+    } else if (networkUpTimerRef.current != null) {
+      clearTimeout(networkUpTimerRef.current);
+      networkUpTimerRef.current = null;
+    }
+
+    return () => {
+      // pas de cleanup global ici : les timers sont gérés par les branches.
+    };
+  }, [
+    isListening, isPaused, isSpeaking, isProcessing, aiThinking, interviewFinished,
+    networkTier, measuredKbps, networkPauseActive,
+  ]);
+
+  // Si l'utilisateur reprend manuellement, on lève le flag réseau pour ne pas
+  // ré-enclencher la reprise automatique inutilement.
+  useEffect(() => {
+    if (!isPaused && networkPauseActive) {
+      setNetworkPauseActive(false);
+    }
+  }, [isPaused, networkPauseActive]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
