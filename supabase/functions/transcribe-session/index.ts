@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const MAX_INLINE_BYTES = 18 * 1024 * 1024; // safe under Gemini 20MB inline limit
 const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // hard cap via Files API (10 min HD ≈ 80–120 MB)
+const MAX_SEGMENTS_PER_RUN = 1;
 const MODEL = "google/gemini-2.5-flash";
 const GEMINI_FILES_MODEL = "gemini-2.5-flash";
 
@@ -297,7 +298,7 @@ Deno.serve(async (req) => {
       if (!hasMedia) return false;
       if (force) return true;
       return m.transcription_status !== "done";
-    });
+    }).slice(0, MAX_SEGMENTS_PER_RUN);
 
     if (targets.length === 0) {
       return new Response(
@@ -337,11 +338,21 @@ Deno.serve(async (req) => {
           .update({ transcription_status: "failed" })
           .eq("id", (m as any).id);
         failed += 1;
+
+        const message = e instanceof Error ? e.message : String(e);
+        if (message.includes(" 429") || message.includes("quota")) {
+          break;
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ ok: true, processed: done, failed, total: targets.length }),
+      JSON.stringify({ ok: true, processed: done, failed, total: targets.length, remaining: Math.max((msgs ?? []).filter((m: any) => {
+        const hasMedia = m.video_segment_url || m.audio_segment_url;
+        if (!hasMedia) return false;
+        if (force) return true;
+        return m.transcription_status !== "done";
+      }).length - targets.length, 0) }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
