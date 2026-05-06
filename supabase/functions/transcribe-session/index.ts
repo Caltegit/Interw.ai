@@ -7,7 +7,9 @@ const corsHeaders = {
 };
 
 const MAX_INLINE_BYTES = 18 * 1024 * 1024; // safe under Gemini 20MB inline limit
+const MAX_UPLOAD_BYTES = 200 * 1024 * 1024; // hard cap via Files API (10 min HD ≈ 80–120 MB)
 const MODEL = "google/gemini-2.5-flash";
+const GEMINI_FILES_MODEL = "gemini-2.5-flash";
 
 const TRANSCRIBE_PROMPT = `Tu es un transcripteur professionnel.
 Transcris EXACTEMENT ce que dit la personne dans cette vidéo, en français.
