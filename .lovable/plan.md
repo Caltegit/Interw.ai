@@ -1,59 +1,70 @@
 ## Objectif
 
-1. Supprimer le `Memory limit exceeded` de `finalize-abandoned-session` en assemblant la vidéo en streaming.
-2. Éviter de finaliser à tort un candidat qui revient sur l'onglet : ne déclencher l'abandon que sur `pagehide`, plus sur `visibilitychange`.
+Afficher une jauge discrète de qualité de connexion sur l'écran candidat, et mettre l'entretien en pause automatique uniquement si le débit devient vraiment trop faible pour que la session fonctionne (TTS qui ne charge plus, transcription bloquée).
 
-## 1. Assemblage en streaming (`supabase/functions/finalize-abandoned-session/index.ts`)
+## Comportement
 
-Aujourd'hui `assembleQuestion()` télécharge tous les chunks en RAM (`buffers: Uint8Array[]`), puis alloue un `Uint8Array` de la taille totale. Sur une question longue (10+ min), ça peut dépasser la limite mémoire de l'edge function.
+### Jauge (toujours visible pendant l'entretien)
+- 3 états : `Excellent` (vert / `text-success`), `Moyenne` (orange / `text-warning`), `Faible` (rouge / `text-destructive`)
+- Rendu : 3 petites barres verticales type "signal réseau" + libellé court
+- Tooltip au survol : débit mesuré (kbps) + type de connexion (`effectiveType`)
+- Position : à gauche, juste au‑dessus de "Question X / Y" dans le footer (cf capture jointe)
 
-Remplacement : construire une `ReadableStream<Uint8Array>` qui, pour chaque chunk dans l'ordre, télécharge le fichier et pipe son contenu via `.stream().getReader()`. On passe ce stream directement à `supabase.storage.upload(path, stream, { contentType, upsert, duplex: "half" })`. Un seul chunk est en mémoire à la fois (~100-300 Ko).
+### Source du signal
+Réutilise `useNetworkQuality` (déjà branché dans `InterviewStart`) :
+- `tier: "good" | "degraded" | "poor"` → `Excellent | Moyenne | Faible`
+- `measuredKbps`, `effectiveType` pour le tooltip
 
-Pseudo-code de remplacement de la boucle de download/merge :
+### Pause automatique sur réseau vraiment dégradé
+Seuil volontairement strict pour ne pas pénaliser une connexion juste "moyenne" :
 
-```ts
-const stream = new ReadableStream<Uint8Array>({
-  async pull(controller) {
-    // index courant tenu dans une closure
-    if (i >= chunkFiles.length) { controller.close(); return; }
-    const f = chunkFiles[i++];
-    const { data, error } = await supabase.storage
-      .from("media").download(`${folder}/${f.name}`);
-    if (error || !data) return; // skip chunk corrompu, continue
-    const reader = data.stream().getReader();
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      controller.enqueue(value);
-    }
-  },
-});
+Déclencheur : pause uniquement si **les deux** conditions sont vraies pendant **30 s consécutives** :
+1. `tier === "poor"` (déjà filtré par le hook : ≥ 2 mesures consécutives < 150 kbps, ou `effectiveType` 2g/slow-2g)
+2. `measuredKbps != null && measuredKbps < 80` *(en pratique, en dessous, le TTS ElevenLabs ne charge plus une question avant ~10 s, l'expérience devient cassée)*
 
-const { error: upErr } = await supabase.storage
-  .from("media")
-  .upload(finalPath, stream, {
-    contentType: "video/webm",
-    upsert: true,
-    duplex: "half",
-  } as any);
-```
+Actions à la pause :
+- `pauseInterview("auto-network")` (nouvelle source ajoutée à l'union `PauseSource`)
+- `setNetworkPauseActive(true)` → overlay centré : « Connexion instable détectée. L'entretien reprendra automatiquement dès que la connexion sera stable. »
+- Toast léger
+- Pas d'`armEndWarning` (≠ pause silence) : on attend le réseau, pas d'arrêt forcé.
 
-Le manifest reste écrit comme avant. La détection `q{i}.webm` déjà présent reste pour l'idempotence.
+Reprise automatique :
+- Dès que `tier !== "poor"` pendant **8 s consécutives** → `resumeInterview()` + masquer l'overlay.
+- Si l'utilisateur clique manuellement sur "Reprendre", on respecte son choix et on masque l'overlay.
 
-## 2. Ne plus finaliser sur `visibilitychange` (`src/pages/InterviewStart.tsx`, lignes 463-468 et cleanup 489)
-
-Retirer le listener `visibilitychange` et la fonction `onVisibility`. Garder uniquement `pagehide` (déclenché à la fermeture réelle de l'onglet, navigation, ou kill mobile, et non quand l'utilisateur change d'app puis revient).
-
-Effet : un candidat qui passe en arrière-plan 30 s puis revient n'est plus marqué `completed` à tort. La récupération en cas de fermeture définitive reste assurée par `pagehide` + le filet de sécurité serveur (`cleanup-abandoned-sessions` toutes les heures).
-
-## Risques
-
-- **Streaming upload** : nécessite que la version `@supabase/supabase-js` utilisée (2.49.1) accepte un `ReadableStream` côté Deno. Si l'API rejette le stream, fallback : assembler par lots de N chunks (par ex. 20) et utiliser `upload` puis `update` avec `move`/concat — mais en pratique supabase-js v2 accepte les streams avec `duplex: "half"`. À valider au déploiement via les logs de la fonction.
-- **Suppression de `visibilitychange`** : sur iOS, `pagehide` est bien déclenché à la fermeture d'onglet et au verrouillage prolongé. Pas de régression attendue sur la récupération réelle d'abandon.
+Garde‑fous :
+- Pause auto‑réseau **uniquement** pendant l'écoute candidat : `isListening && !isPaused && !isSpeaking && !isProcessing && !aiThinking`. Jamais pendant un TTS ou une lecture média (sinon on couperait le flux en plein milieu).
+- Si l'entretien est déjà en pause (manuelle ou silence), on ne touche à rien.
 
 ## Fichiers modifiés
 
-- `supabase/functions/finalize-abandoned-session/index.ts` (réécriture de `assembleQuestion`, ~30 lignes)
-- `src/pages/InterviewStart.tsx` (suppression de 4 lignes : `onVisibility`, addEventListener, removeEventListener)
+1. **`src/components/interview/NetworkQualityIndicator.tsx`** *(nouveau, ~60 lignes)*
+   - Props : `tier`, `measuredKbps`, `effectiveType`
+   - 3 barres + libellé, tokens sémantiques (`text-success` / `text-warning` / `text-destructive`)
+   - Tooltip shadcn
 
-Aucune migration DB.
+2. **`src/pages/InterviewStart.tsx`**
+   - Insérer `<NetworkQualityIndicator />` au‑dessus de "Question X / Y" (footer, ligne ~3440)
+   - Ajouter `"auto-network"` à `PauseSource`
+   - Récupérer `measuredKbps` et `effectiveType` du hook (déjà appelé ligne 296)
+   - Nouveau state : `networkPauseActive: boolean`
+   - `useEffect` "watcher" : démarre/annule un timer 30 s selon les conditions ci‑dessus → déclenche la pause
+   - `useEffect` symétrique de reprise (8 s en non‑poor)
+   - Overlay simple (pattern de `QuestionLoadingOverlay`) rendu si `networkPauseActive`
+
+3. **`src/hooks/useNetworkQuality.ts`** — aucun changement.
+
+## Détails techniques
+
+```text
+poor + kbps<80 ─30s──▶ pauseInterview("auto-network") + overlay
+non-poor      ─8s───▶ resumeInterview() + overlay masqué
+```
+
+- Timers stockés dans `useRef<number|null>`, nettoyés au démontage et à chaque changement d'état.
+- L'overlay réseau a la priorité visuelle sur le hint silence ("Prenez votre temps…" masqué pendant la pause réseau).
+- La jauge reflète toujours le tier en temps réel, même hors pause.
+
+## Hors scope
+- Pas de ping périodique dédié : on reste sur les mesures passives via TTS, déjà fiables et sans surcoût.
+- Pas de modification DB ni d'edge function.
