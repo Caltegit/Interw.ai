@@ -116,11 +116,13 @@ serve(async (req) => {
 
     // Filet de sécurité : si certains segments candidats n'ont pas encore été
     // transcrits, on relance transcribe-session (voie inline Lovable Gateway).
+    const isTerminalStatus = (s: string | null | undefined) =>
+      s === "done" || s === "skipped" || s === "too_large";
     const hasFailedSegments = messages.some(
       (m: any) =>
         m.role === "candidate" &&
         (m.video_segment_url || m.audio_segment_url) &&
-        m.transcription_status !== "done",
+        !isTerminalStatus(m.transcription_status),
     );
     if (hasFailedSegments) {
       try {
@@ -151,7 +153,7 @@ serve(async (req) => {
             (m: any) =>
               m.role === "candidate" &&
               (m.video_segment_url || m.audio_segment_url) &&
-              m.transcription_status !== "done",
+              !isTerminalStatus(m.transcription_status),
           );
           if (!stillPending || !transcribeData?.remaining) break;
           await new Promise((resolve) => setTimeout(resolve, 1500));
