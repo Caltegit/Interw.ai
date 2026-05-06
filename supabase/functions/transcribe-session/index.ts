@@ -79,13 +79,16 @@ async function callGeminiInline(apiKey: string, mediaUrl: string, buf: Uint8Arra
   return text.trim();
 }
 
-// Upload une vidéo volumineuse via l'API Files de Gemini, puis génère la
-// transcription en référençant le fichier par URI. Utilisé pour les segments
-// > MAX_INLINE_BYTES (jusqu'à 10 min, soit ~120 Mo).
-async function callGeminiFilesApi(apiKey: string, mediaUrl: string, buf: Uint8Array): Promise<string> {
-  const mime = guessMime(mediaUrl);
-  const totalBytes = buf.byteLength;
-
+// Upload une vidéo volumineuse via l'API Files de Gemini en streaming, puis
+// génère la transcription en référençant le fichier par URI. Évite de charger
+// le buffer entier en mémoire (limite 256 Mo de l'edge function).
+async function callGeminiFilesApiStream(
+  apiKey: string,
+  mediaUrl: string,
+  mime: string,
+  totalBytes: number,
+  body: ReadableStream<Uint8Array>,
+): Promise<string> {
   // 1) Initier l'upload résumable
   const initRes = await fetch(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
@@ -108,7 +111,7 @@ async function callGeminiFilesApi(apiKey: string, mediaUrl: string, buf: Uint8Ar
   const uploadUrl = initRes.headers.get("X-Goog-Upload-URL");
   if (!uploadUrl) throw new Error("files init: missing upload URL");
 
-  // 2) Upload + finalize en un appel
+  // 2) Upload + finalize en streaming (pas de buffer en mémoire)
   const uploadRes = await fetch(uploadUrl, {
     method: "POST",
     headers: {
@@ -116,7 +119,9 @@ async function callGeminiFilesApi(apiKey: string, mediaUrl: string, buf: Uint8Ar
       "X-Goog-Upload-Offset": "0",
       "X-Goog-Upload-Command": "upload, finalize",
     },
-    body: buf,
+    body,
+    // @ts-ignore — Deno fetch streaming bodies
+    duplex: "half",
   });
   if (!uploadRes.ok) {
     const t = await uploadRes.text();
@@ -131,7 +136,7 @@ async function callGeminiFilesApi(apiKey: string, mediaUrl: string, buf: Uint8Ar
   const startedAt = Date.now();
   let state = fileMeta?.file?.state ?? "PROCESSING";
   while (state !== "ACTIVE") {
-    if (Date.now() - startedAt > 120_000) throw new Error("files: ACTIVE timeout");
+    if (Date.now() - startedAt > 180_000) throw new Error("files: ACTIVE timeout");
     await new Promise((r) => setTimeout(r, 2000));
     const statusRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`,
@@ -185,23 +190,33 @@ async function callGemini(
   geminiApiKey: string | undefined,
   mediaUrl: string,
 ): Promise<string> {
-  const res = await fetch(mediaUrl);
-  if (!res.ok) throw new Error(`media fetch failed: ${res.status}`);
-  const buf = new Uint8Array(await res.arrayBuffer());
-  if (buf.byteLength > MAX_UPLOAD_BYTES) {
-    throw new Error(`media too large (${buf.byteLength} bytes, max ${MAX_UPLOAD_BYTES})`);
+  // HEAD pour récupérer la taille sans charger le contenu
+  const headRes = await fetch(mediaUrl, { method: "HEAD" });
+  if (!headRes.ok) throw new Error(`media head failed: ${headRes.status}`);
+  const contentLength = Number(headRes.headers.get("content-length") ?? "0");
+  const mime = guessMime(mediaUrl);
+
+  if (contentLength > MAX_UPLOAD_BYTES) {
+    throw new Error(`media too large (${contentLength} bytes, max ${MAX_UPLOAD_BYTES})`);
   }
 
-  // Petits fichiers : voie inline via l'AI Gateway Lovable (pas de clé Gemini requise)
-  if (buf.byteLength <= MAX_INLINE_BYTES) {
+  // Petits fichiers (< 18 Mo) : voie inline via l'AI Gateway Lovable
+  if (contentLength > 0 && contentLength <= MAX_INLINE_BYTES) {
+    const res = await fetch(mediaUrl);
+    if (!res.ok) throw new Error(`media fetch failed: ${res.status}`);
+    const buf = new Uint8Array(await res.arrayBuffer());
     return await callGeminiInline(lovableApiKey, mediaUrl, buf);
   }
 
-  // Gros fichiers (> 18 Mo) : API Files de Gemini, requiert GEMINI_API_KEY
+  // Gros fichiers (> 18 Mo) : API Files de Gemini en streaming
   if (!geminiApiKey) {
-    throw new Error(`media too large for inline (${buf.byteLength} bytes) and GEMINI_API_KEY not set`);
+    throw new Error(`media too large for inline (${contentLength} bytes) and GEMINI_API_KEY not set`);
   }
-  return await callGeminiFilesApi(geminiApiKey, mediaUrl, buf);
+  const res = await fetch(mediaUrl);
+  if (!res.ok || !res.body) throw new Error(`media fetch failed: ${res.status}`);
+  const total = contentLength || Number(res.headers.get("content-length") ?? "0");
+  if (!total) throw new Error("media: unknown content length, cannot stream upload");
+  return await callGeminiFilesApiStream(geminiApiKey, mediaUrl, mime, total, res.body);
 }
 
 Deno.serve(async (req) => {
