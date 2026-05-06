@@ -8,11 +8,16 @@
 // Public : appelée via navigator.sendBeacon (pas d'auth utilisateur).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+function buildCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? "*";
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -171,11 +176,14 @@ async function processSession(
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   try {
-    const body = await req.json();
+    // Lecture du body brut pour accepter aussi text/plain (sendBeacon sans preflight).
+    const raw = await req.text();
+    const body = raw ? JSON.parse(raw) : {};
     const sessionId = typeof body?.session_id === "string" ? body.session_id : null;
     const lastQuestionIndex =
       typeof body?.last_question_index === "number" ? body.last_question_index : null;
