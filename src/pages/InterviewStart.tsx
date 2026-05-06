@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
+import NetworkQualityIndicator from "@/components/interview/NetworkQualityIndicator";
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
@@ -293,7 +294,10 @@ export default function InterviewStart() {
   const [aiThinking, setAiThinking] = useState(false);
 
   // ── Qualité réseau (mesurée via TTS + navigator.connection) ──
-  const { tier: networkTier, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const { tier: networkTier, measuredKbps, effectiveType, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const [networkPauseActive, setNetworkPauseActive] = useState(false);
+  const networkDownTimerRef = useRef<number | null>(null);
+  const networkUpTimerRef = useRef<number | null>(null);
   const networkTierRef = useRef<typeof networkTier>("good");
   const networkWarnedRef = useRef(false);
   useEffect(() => {
@@ -314,7 +318,7 @@ export default function InterviewStart() {
   // Refs avant pour éviter les dépendances circulaires entre callbacks.
   // pauseSource permet de distinguer une pause manuelle (utilisateur), une pause
   // automatique (silence prolongé) ou une pause système (replay forcé).
-  type PauseSource = "manual" | "auto-silence";
+  type PauseSource = "manual" | "auto-silence" | "auto-network";
   const pauseInterviewRef = useRef<((source?: PauseSource) => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
 
@@ -2765,6 +2769,64 @@ export default function InterviewStart() {
     }
   }, [isListening, isPaused, isSpeaking, isProcessing, interviewFinished, clearSilenceTier, clearEndCountdown]);
 
+  // Pause automatique sur connexion vraiment dégradée.
+  // Conditions strictes pour éviter les faux positifs :
+  //  - tier === "poor" ET débit mesuré < 80 kbps (en-dessous, le TTS ne charge plus correctement)
+  //  - pendant 30s consécutives, uniquement en phase d'écoute candidat
+  // Reprise auto dès que le réseau redevient stable (tier !== "poor") pendant 8s.
+  useEffect(() => {
+    const inListeningPhase =
+      isListening && !isPaused && !isSpeaking && !isProcessing && !aiThinking && !interviewFinished;
+    const reallyPoor =
+      networkTier === "poor" && measuredKbps != null && measuredKbps < 80;
+
+    // Watcher de chute : on arme un timer de 30s pour mettre en pause.
+    if (inListeningPhase && reallyPoor && !networkPauseActive) {
+      if (networkDownTimerRef.current == null) {
+        networkDownTimerRef.current = window.setTimeout(() => {
+          networkDownTimerRef.current = null;
+          if (isPausedRef.current) return;
+          setNetworkPauseActive(true);
+          try { pauseInterviewRef.current?.("auto-network"); } catch {}
+        }, 30_000);
+      }
+    } else if (networkDownTimerRef.current != null) {
+      clearTimeout(networkDownTimerRef.current);
+      networkDownTimerRef.current = null;
+    }
+
+    // Watcher de remontée : si on est en pause réseau et que ça repart, reprise auto après 8s.
+    if (networkPauseActive && networkTier !== "poor") {
+      if (networkUpTimerRef.current == null) {
+        networkUpTimerRef.current = window.setTimeout(() => {
+          networkUpTimerRef.current = null;
+          setNetworkPauseActive(false);
+          if (isPausedRef.current) {
+            try { resumeInterview(); } catch {}
+          }
+        }, 8_000);
+      }
+    } else if (networkUpTimerRef.current != null) {
+      clearTimeout(networkUpTimerRef.current);
+      networkUpTimerRef.current = null;
+    }
+
+    return () => {
+      // pas de cleanup global ici : les timers sont gérés par les branches.
+    };
+  }, [
+    isListening, isPaused, isSpeaking, isProcessing, aiThinking, interviewFinished,
+    networkTier, measuredKbps, networkPauseActive,
+  ]);
+
+  // Si l'utilisateur reprend manuellement, on lève le flag réseau pour ne pas
+  // ré-enclencher la reprise automatique inutilement.
+  useEffect(() => {
+    if (!isPaused && networkPauseActive) {
+      setNetworkPauseActive(false);
+    }
+  }, [isPaused, networkPauseActive]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -2780,6 +2842,8 @@ export default function InterviewStart() {
       if (silenceAutoPauseTimerRef.current) clearTimeout(silenceAutoPauseTimerRef.current);
       if (silenceEndWarningTimerRef.current) clearTimeout(silenceEndWarningTimerRef.current);
       if (endCountdownIntervalRef.current) clearInterval(endCountdownIntervalRef.current);
+      if (networkDownTimerRef.current) clearTimeout(networkDownTimerRef.current);
+      if (networkUpTimerRef.current) clearTimeout(networkUpTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
@@ -3438,6 +3502,13 @@ export default function InterviewStart() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <NetworkQualityIndicator
+                tier={networkTier}
+                measuredKbps={measuredKbps}
+                effectiveType={effectiveType}
+                className="shrink-0"
+              />
+              <span className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
               <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
                 Question {currentQuestionIndex + 1} / {questions.length}
                 {(() => {
@@ -3636,23 +3707,53 @@ export default function InterviewStart() {
           <p
             className="mb-4 text-sm font-medium uppercase tracking-widest candidate-gradient-text"
           >
-            En pause
+            {networkPauseActive ? "Connexion instable" : "En pause"}
           </p>
-          <Button
-            onClick={resumeInterview}
-            className="candidate-btn-primary h-20 px-12 text-xl font-semibold rounded-2xl hover:scale-[1.03] transition-transform"
-          >
-            <Play className="!h-6 !w-6 mr-3" />
-            REPRENDRE
-          </Button>
-          <p
-            className="mt-6 text-sm text-center max-w-sm px-6"
-            style={{ color: "hsl(var(--l-fg) / 0.6)" }}
-          >
-            {pausedDuringQuestionRef.current
-              ? "La question sera rejouée depuis le début à la reprise."
-              : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
-          </p>
+          {networkPauseActive ? (
+            <>
+              <div className="flex items-center gap-3 mb-2">
+                <Loader2 className="h-6 w-6 animate-spin text-warning" />
+                <NetworkQualityIndicator
+                  tier={networkTier}
+                  measuredKbps={measuredKbps}
+                  effectiveType={effectiveType}
+                />
+              </div>
+              <p
+                className="mt-4 text-sm text-center max-w-sm px-6"
+                style={{ color: "hsl(var(--l-fg) / 0.7)" }}
+              >
+                Votre connexion est trop faible pour poursuivre l'entretien.
+                Il reprendra automatiquement dès qu'elle sera stable.
+              </p>
+              <Button
+                variant="outline"
+                onClick={resumeInterview}
+                className="mt-6 rounded-full"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Reprendre maintenant
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={resumeInterview}
+                className="candidate-btn-primary h-20 px-12 text-xl font-semibold rounded-2xl hover:scale-[1.03] transition-transform"
+              >
+                <Play className="!h-6 !w-6 mr-3" />
+                REPRENDRE
+              </Button>
+              <p
+                className="mt-6 text-sm text-center max-w-sm px-6"
+                style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+              >
+                {pausedDuringQuestionRef.current
+                  ? "La question sera rejouée depuis le début à la reprise."
+                  : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
+              </p>
+            </>
+          )}
         </div>
       )}
     </CandidateLayout>
