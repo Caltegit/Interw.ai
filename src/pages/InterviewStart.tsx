@@ -460,11 +460,10 @@ export default function InterviewStart() {
       } catch { /* noop */ }
     };
 
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") triggerAbandonFinalize();
-    };
+    // On finalise uniquement à la fermeture réelle (pagehide), pas sur
+    // visibilitychange : un candidat qui passe en arrière-plan puis revient
+    // ne doit pas être marqué abandonné.
     const onPageHide = () => triggerAbandonFinalize();
-    document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onPageHide);
 
     // Bloque le retour arrière en re-poussant l'état
