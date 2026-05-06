@@ -336,7 +336,8 @@ export default function ProjectDetail() {
     (scoreMin !== "" ? 1 : 0) +
     (scoreMax !== "" ? 1 : 0) +
     (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
+    (dateTo ? 1 : 0) +
+    (assigneeFilter !== "all" ? 1 : 0);
 
   const resetFilters = () => {
     setStatusFilter("all");
