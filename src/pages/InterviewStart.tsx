@@ -2739,18 +2739,29 @@ export default function InterviewStart() {
   // Reset response timer when question changes
   useEffect(() => {
     setResponseElapsedSec(0);
+    warnedNearLimitRef.current = false;
   }, [currentQuestionIndex]);
 
-  // Auto-end answer when per-question timer expires
+  // Auto-end answer when per-question timer expires.
+  // Plafond dur 10 min (600 s) par réponse, quelle que soit la valeur en base.
+  // Avertissement à 8 min (480 s) : toast une seule fois par question.
   useEffect(() => {
     const q = questions[currentQuestionIndex];
-    const max = q?.max_response_seconds as number | null | undefined;
-    if (!isListening || isPaused || !max || max <= 0) return;
+    const configured = q?.max_response_seconds as number | null | undefined;
+    const max = Math.min(configured && configured > 0 ? configured : 600, 600);
+    if (!isListening || isPaused) return;
+    if (!warnedNearLimitRef.current && responseElapsedSec >= max - 120) {
+      warnedNearLimitRef.current = true;
+      toast({
+        title: "Plus que 2 minutes",
+        description: "Votre réponse sera automatiquement envoyée à la fin du temps imparti.",
+      });
+    }
     if (responseElapsedSec >= max) {
       console.log("[interview] per-question timer expired — auto-sending response");
       handleSendResponseRef.current?.();
     }
-  }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions]);
+  }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
 
   // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
   // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
