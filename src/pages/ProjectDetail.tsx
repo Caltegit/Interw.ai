@@ -59,6 +59,8 @@ export default function ProjectDetail() {
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<"date" | "score" | "name">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // "all" | "me" | userId
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
