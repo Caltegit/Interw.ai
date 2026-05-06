@@ -485,7 +485,7 @@ export default function InterviewStart() {
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("popstate", onPopState);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener("visibilitychange", onVisibility);
+      
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [readyToStart, interviewFinished, session?.id, currentQuestionIndex]);
