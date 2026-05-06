@@ -30,10 +30,12 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
-
+// Auth note: verify_jwt is disabled at the gateway because Supabase's new
+// signing-keys system rejects the legacy service_role key as "Invalid JWT".
+// We validate authentication explicitly here:
+//   - either a valid user JWT (front-end calls), checked via getClaims
+//   - or an internal call from another edge function carrying the service key
+//     in the `Authorization` header or in `x-internal-secret`.
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -42,8 +44,9 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
 
-  if (!supabaseUrl || !supabaseServiceKey) {
+  if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
     console.error('Missing required environment variables')
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
@@ -52,6 +55,43 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
+  }
+
+  // ---- Auth check (in-code, since verify_jwt=false) ----
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const internalSecret = req.headers.get('x-internal-secret') ?? ''
+  const bearer = authHeader.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length).trim()
+    : ''
+
+  const isInternalCall =
+    bearer === supabaseServiceKey || internalSecret === supabaseServiceKey
+
+  if (!isInternalCall) {
+    if (!bearer) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    try {
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: `Bearer ${bearer}` } },
+      })
+      const { data, error } = await authClient.auth.getUser()
+      if (error || !data?.user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    } catch (e) {
+      console.error('Auth check failed', e)
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   // Parse request body
