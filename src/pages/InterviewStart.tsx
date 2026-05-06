@@ -3442,6 +3442,13 @@ export default function InterviewStart() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <NetworkQualityIndicator
+                tier={networkTier}
+                measuredKbps={measuredKbps}
+                effectiveType={effectiveType}
+                className="shrink-0"
+              />
+              <span className="h-3 w-px bg-border/60 shrink-0" aria-hidden="true" />
               <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0" data-testid="interview-current-question-index">
                 Question {currentQuestionIndex + 1} / {questions.length}
                 {(() => {
