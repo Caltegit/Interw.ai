@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 import { useNetworkQuality } from "@/hooks/useNetworkQuality";
 import InterviewBootProgress, { type BootStep, type BootStepStatus } from "@/components/interview/InterviewBootProgress";
 import QuestionLoadingOverlay from "@/components/interview/QuestionLoadingOverlay";
+import NetworkQualityIndicator from "@/components/interview/NetworkQualityIndicator";
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
