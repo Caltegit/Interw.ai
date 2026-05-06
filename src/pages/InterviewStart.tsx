@@ -294,7 +294,10 @@ export default function InterviewStart() {
   const [aiThinking, setAiThinking] = useState(false);
 
   // ── Qualité réseau (mesurée via TTS + navigator.connection) ──
-  const { tier: networkTier, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const { tier: networkTier, measuredKbps, effectiveType, recordTtsTiming, getForceMaxFollowUps } = useNetworkQuality();
+  const [networkPauseActive, setNetworkPauseActive] = useState(false);
+  const networkDownTimerRef = useRef<number | null>(null);
+  const networkUpTimerRef = useRef<number | null>(null);
   const networkTierRef = useRef<typeof networkTier>("good");
   const networkWarnedRef = useRef(false);
   useEffect(() => {
