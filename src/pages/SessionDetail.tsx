@@ -66,6 +66,8 @@ export default function SessionDetail() {
   const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const updateNotes = useUpdateRecruiterNotes(id);
