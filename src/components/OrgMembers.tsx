@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldCheck, ShieldAlert, ArrowUp, ArrowDown, Crown } from "lucide-react";
+import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldAlert, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
@@ -15,7 +15,6 @@ interface Member {
   user_id: string;
   full_name: string;
   email: string;
-  isAdmin: boolean;
   isOwner: boolean;
 }
 
@@ -30,11 +29,10 @@ interface Invitation {
 export function OrgMembers({ orgId }: { orgId: string }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isAdmin } = useOrgRole();
+  const { isOwner } = useOrgRole();
 
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [ownerId, setOwnerId] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,7 +44,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
 
   const loadData = async () => {
     setLoading(true);
-    const [membersRes, invitationsRes, orgRes, rolesRes] = await Promise.all([
+    const [membersRes, invitationsRes, orgRes] = await Promise.all([
       supabase.from("profiles").select("id, user_id, full_name, email").eq("organization_id", orgId),
       supabase
         .from("organization_invitations")
@@ -54,16 +52,12 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false }),
       supabase.from("organizations").select("owner_id").eq("id", orgId).single(),
-      supabase.from("user_roles").select("user_id, role").eq("organization_id", orgId).eq("role", "admin"),
     ]);
 
-    const owner = (orgRes.data as any)?.owner_id ?? null;
-    setOwnerId(owner);
-    const adminIds = new Set((rolesRes.data || []).map((r: any) => r.user_id));
+    const owner = (orgRes.data as { owner_id?: string | null } | null)?.owner_id ?? null;
 
-    const enriched: Member[] = (membersRes.data || []).map((m: any) => ({
+    const enriched: Member[] = (membersRes.data || []).map((m: { id: string; user_id: string; full_name: string; email: string }) => ({
       ...m,
-      isAdmin: adminIds.has(m.user_id),
       isOwner: m.user_id === owner,
     }));
 
@@ -110,13 +104,14 @@ export function OrgMembers({ orgId }: { orgId: string }) {
           description: "L'email n'a pas pu être envoyé. Copiez le lien et partagez-le manuellement.",
         });
       } else {
-        toast({ title: "Invitation envoyée !", description: `Email envoyé à ${inviteEmail}` });
+        toast({ title: "Invitation envoyée", description: `Email envoyé à ${inviteEmail}` });
       }
 
       setInviteEmail("");
       loadData();
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setSending(false);
     }
@@ -132,47 +127,14 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       return;
     }
     try {
-      // Remove org roles first then unlink profile
       await supabase.from("user_roles").delete().eq("user_id", member.user_id).eq("organization_id", orgId);
       const { error } = await supabase.from("profiles").update({ organization_id: null }).eq("id", member.id);
       if (error) throw error;
       toast({ title: `${member.full_name || member.email} a été retiré.` });
       loadData();
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const handlePromote = async (member: Member) => {
-    try {
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: member.user_id, role: "admin", organization_id: orgId });
-      if (error) throw error;
-      toast({ title: `${member.full_name || member.email} est maintenant admin.` });
-      loadData();
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const handleDemote = async (member: Member) => {
-    if (member.isOwner) {
-      toast({ title: "Le propriétaire ne peut pas être rétrogradé.", variant: "destructive" });
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", member.user_id)
-        .eq("organization_id", orgId)
-        .eq("role", "admin");
-      if (error) throw error;
-      toast({ title: `${member.full_name || member.email} n'est plus admin.` });
-      loadData();
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
 
@@ -182,15 +144,16 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       if (error) throw error;
       toast({ title: "Invitation annulée." });
       loadData();
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
 
   const copyInviteLink = (token: string) => {
     const link = `${window.location.origin}/invite/${token}`;
     navigator.clipboard.writeText(link);
-    toast({ title: "Lien copié !" });
+    toast({ title: "Lien copié." });
   };
 
   const pendingInvitations = invitations.filter((i) => i.status === "pending");
@@ -216,14 +179,14 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!isAdmin && (
+        {!isOwner && (
           <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
             <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Seuls les administrateurs peuvent inviter ou gérer les membres.</span>
+            <span>Seul le propriétaire peut inviter ou retirer des membres.</span>
           </div>
         )}
 
-        {isAdmin && (
+        {isOwner && (
           <form onSubmit={handleInvite} className="flex gap-2">
             <div className="flex-1">
               <Label htmlFor="inviteEmail" className="sr-only">Email</Label>
@@ -256,50 +219,21 @@ export function OrgMembers({ orgId }: { orgId: string }) {
                   <Badge variant="default" className="gap-1">
                     <Crown className="h-3 w-3" /> Propriétaire
                   </Badge>
-                ) : m.isAdmin ? (
-                  <Badge variant="default" className="gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Admin
-                  </Badge>
                 ) : (
-                  <Badge variant="secondary">Recruteur</Badge>
+                  <Badge variant="secondary">Membre</Badge>
                 )}
                 {m.user_id === user?.id && <Badge variant="outline">Vous</Badge>}
 
-                {isAdmin && !m.isOwner && (
-                  <>
-                    {m.isAdmin ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDemote(m)}
-                        className="h-8 w-8"
-                        title="Rétrograder en recruteur"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handlePromote(m)}
-                        className="h-8 w-8"
-                        title="Promouvoir admin"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {m.user_id !== user?.id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveMember(m)}
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        title="Retirer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </>
+                {isOwner && !m.isOwner && m.user_id !== user?.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveMember(m)}
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    title="Retirer"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
             </div>
@@ -331,7 +265,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
-                  {isAdmin && (
+                  {isOwner && (
                     <Button
                       variant="ghost"
                       size="icon"
