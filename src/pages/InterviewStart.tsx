@@ -454,7 +454,8 @@ export default function InterviewStart() {
           session_id: sessionId,
           last_question_index: currentQuestionIndex,
         });
-        const blob = new Blob([payload], { type: "application/json" });
+        // text/plain pour éviter le preflight CORS (sendBeacon envoie credentials).
+        const blob = new Blob([payload], { type: "text/plain;charset=UTF-8" });
         navigator.sendBeacon?.(url, blob);
       } catch { /* noop */ }
     };
