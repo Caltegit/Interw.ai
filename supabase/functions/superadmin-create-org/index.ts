@@ -45,10 +45,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const orgName: string = (body.org_name ?? "").trim();
+    const ownerEmail: string = (body.owner_email ?? "").trim().toLowerCase();
+    const ownerFirstName: string = (body.owner_first_name ?? "").trim();
+    const ownerLastName: string = (body.owner_last_name ?? "").trim();
     const pricing: string | null = body.pricing ? String(body.pricing).trim() : null;
     const clientNotes: string | null = body.client_notes ? String(body.client_notes).trim() : null;
-    const seedLibraries: boolean = body.seed_libraries !== false; // défaut true
-    const creditsUnlimited: boolean = body.session_credits_unlimited !== false; // défaut true
+    const seedLibraries: boolean = body.seed_libraries !== false;
+    const creditsUnlimited: boolean = body.session_credits_unlimited !== false;
     const creditsTotalRaw = body.session_credits_total;
     const creditsTotal: number | null =
       !creditsUnlimited && creditsTotalRaw !== undefined && creditsTotalRaw !== null && creditsTotalRaw !== ""
@@ -56,6 +59,9 @@ Deno.serve(async (req) => {
         : null;
 
     if (!orgName) return json({ error: "Nom d'organisation requis" }, 400);
+    if (!ownerEmail || !ownerFirstName || !ownerLastName) {
+      return json({ error: "Email, prénom et nom du propriétaire requis" }, 400);
+    }
 
     // Slug unique
     const baseSlug = slugify(orgName);
@@ -73,9 +79,20 @@ Deno.serve(async (req) => {
       if (counter > 50) return json({ error: "Impossible de générer un slug unique" }, 500);
     }
 
-    // Création sans owner — le trigger trg_seed_org_question_templates seed les bibliothèques
-    // (questions, critères, modèles d'entretien) via le fallback super admin.
-    // Le projet de démo sera créé plus tard, dans accept_invitation, au moment où le premier owner rejoint.
+    // Recherche d'un user existant avec cet email
+    let existingUserId: string | null = null;
+    {
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("user_id")
+        .eq("email", ownerEmail)
+        .maybeSingle();
+      existingUserId = prof?.user_id ?? null;
+    }
+
+    const fullName = `${ownerFirstName} ${ownerLastName}`.trim();
+
+    // Création de l'organisation. Si l'utilisateur existe déjà, on l'attache directement comme propriétaire.
     const { data: org, error: orgErr } = await admin
       .from("organizations")
       .insert({
@@ -83,7 +100,7 @@ Deno.serve(async (req) => {
         slug: candidate,
         pricing,
         client_notes: clientNotes,
-        owner_id: null,
+        owner_id: existingUserId,
         session_credits_unlimited: creditsUnlimited,
         session_credits_total: creditsTotal,
       })
@@ -91,7 +108,52 @@ Deno.serve(async (req) => {
       .single();
     if (orgErr) throw orgErr;
 
-    return json({ success: true, organization_id: org.id, seeded: seedLibraries });
+    let invitationToken: string | null = null;
+
+    if (existingUserId) {
+      // Rattacher le profil existant à la nouvelle orga
+      await admin
+        .from("profiles")
+        .update({ organization_id: org.id, full_name: fullName })
+        .eq("user_id", existingUserId);
+    } else {
+      // Création d'une invitation
+      const { data: inv, error: invErr } = await admin
+        .from("organization_invitations")
+        .insert({
+          organization_id: org.id,
+          email: ownerEmail,
+          invited_by: user.id,
+        })
+        .select("token")
+        .single();
+      if (invErr) throw invErr;
+      invitationToken = inv.token;
+
+      // Envoi de l'email d'invitation via auth admin
+      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || supabaseUrl;
+      const inviteLink = `${origin}/invite/${invitationToken}`;
+
+      const { error: emailErr } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
+        redirectTo: inviteLink,
+        data: {
+          full_name: fullName,
+          invitation_token: invitationToken,
+          organization_id: org.id,
+        },
+      });
+      if (emailErr && !emailErr.message?.includes("already been registered")) {
+        console.warn("Invitation email failed:", emailErr.message);
+      }
+    }
+
+    return json({
+      success: true,
+      organization_id: org.id,
+      seeded: seedLibraries,
+      owner_existing: !!existingUserId,
+      invitation_token: invitationToken,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return json({ error: msg }, 500);
