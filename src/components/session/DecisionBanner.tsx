@@ -45,6 +45,7 @@ interface DecisionBannerProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   isShareLoading?: boolean;
+  readOnly?: boolean;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
