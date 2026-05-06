@@ -629,13 +629,25 @@ Champs secondaires (toujours produits, format inchangé) :
       });
     }
 
-    // Send email to recruiter (project creator) — enqueue directly to bypass JWT gateway
+    // Send email to assigned user (fallback: project creator, then org owner)
     try {
-      const { data: recruiterProfile } = await supabase
-        .from("profiles")
-        .select("email, full_name")
-        .eq("user_id", project.created_by)
-        .maybeSingle();
+      let recipientUserId: string | null = session.assigned_to ?? project.created_by ?? null;
+      if (!recipientUserId && project.organization_id) {
+        const { data: orgRow } = await supabase
+          .from("organizations")
+          .select("owner_id")
+          .eq("id", project.organization_id)
+          .maybeSingle();
+        recipientUserId = orgRow?.owner_id ?? null;
+      }
+
+      const { data: recruiterProfile } = recipientUserId
+        ? await supabase
+            .from("profiles")
+            .select("email, full_name")
+            .eq("user_id", recipientUserId)
+            .maybeSingle()
+        : { data: null };
 
       const recruiterEmail = recruiterProfile?.email;
       if (!recruiterEmail) {

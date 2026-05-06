@@ -1154,6 +1154,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          assigned_to: string | null
           audio_recording_url: string | null
           cancelled_at: string | null
           candidate_email: string
@@ -1177,6 +1178,7 @@ export type Database = {
           video_viewed_at: string | null
         }
         Insert: {
+          assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
           candidate_email: string
@@ -1200,6 +1202,7 @@ export type Database = {
           video_viewed_at?: string | null
         }
         Update: {
+          assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
           candidate_email?: string

@@ -1,87 +1,85 @@
-# Bug : clement.g ne voit pas les rapports des projets créés par d'autres membres de son org
+# Refonte des rôles d'organisation : Propriétaire + Users
 
-## Diagnostic
+## Objectif
 
-Sur le compte ALBO (org `d51d6ce0…`), l'utilisateur `clement.g@alboteam.com` ne voit **aucun rapport** pour les sessions des projets qu'il n'a pas créés lui-même — par exemple le projet « Candidature spontanée » (créé par `benjamin@alboteam.com`).
+Simplifier le modèle de rôles : un seul **Propriétaire** par organisation (créé en même temps que l'orga), tous les autres membres sont des **Users** avec les mêmes droits. Les sessions sont visibles par tous mais assignées à un user.
 
-Vérifié en base :
-- La session `1333aea3…` est bien `completed`, le rapport `147120cb…` a bien été généré à 10:00:56, le transcript et les messages existent.
-- Donc le pipeline `finalize-session → transcribe-session → generate-report` fonctionne. **Le rapport existe, il est juste invisible côté UI.**
+## Modèle final
 
-Cause racine : les policies RLS SELECT de plusieurs tables ne regardent que `projects.created_by = auth.uid()` au lieu de l'appartenance à l'organisation. Concrètement :
+- **Propriétaire** : 1 par orga. Mêmes droits qu'un User + invitation/retrait de membres + paramètres de l'orga (nom, slug, logo, modèles d'emails).
+- **User** : N par orga. Voit toutes les données de l'orga, peut créer/modifier/supprimer projets, sessions, rapports.
+- **Super admin** : inchangé (back-office Lovable).
 
-| Table | Policy SELECT actuelle |
-|---|---|
-| `reports` | `Users can view own reports` → `p.created_by = auth.uid()` uniquement |
-| `transcripts` | `Users can view own transcripts` → idem |
-| `session_messages` | `Users can view own session messages` → idem |
+## Garde-fous pour les utilisateurs actuels
 
-Les autres tables liées (`sessions`, `projects`, `questions`, `evaluation_criteria`) acceptent déjà l'org et `is_super_admin`. Seules ces 3 tables sont restées en mode « propriétaire seul », ce qui casse le partage intra-org dès qu'un projet est créé par un collègue.
+Audit effectué : 14 organisations, toutes avec un `owner_id` déjà renseigné. 3 orgas ont des co-administrateurs (ALBO, CLEM A, Morning) — leurs droits seront préservés.
 
-## Correctif
+- **Co-admins existants conservés** : on garde les lignes `admin` actuelles dans `user_roles`. La logique devient : `isOwner = (owner_id == user.id) OR has_role('admin', org)`. Aucune perte de droit pour les co-admins en place.
+- **Nouvelles invitations** : ne créent plus aucune ligne dans `user_roles` (le statut "User" découle juste de `profiles.organization_id`).
+- **Nettoyage ciblé** : suppression uniquement des rôles `recruiter` et `viewer` (1 seule ligne réellement présente).
+- **Création d'orga** : email/prénom/nom du propriétaire obligatoires uniquement pour les **nouvelles** orgas.
 
-Migration SQL pour aligner les 3 policies sur le même modèle que `sessions` / `projects` :
+## Changements
 
+### 1. Création d'une organisation (super admin)
+
+`CreateOrgDialog` + edge `superadmin-create-org` : 3 champs obligatoires en plus (email propriétaire, prénom, nom).
+
+Comportement :
+- Si l'email existe déjà comme utilisateur : on lui assigne `organization_id` + `owner_id` direct.
+- Sinon : création d'une invitation. À l'acceptation (`accept-invitation`), si `owner_id IS NULL` sur l'orga, le nouvel utilisateur devient propriétaire.
+
+### 2. Sessions assignées à un user
+
+Nouvelle colonne `sessions.assigned_to` (uuid, FK `auth.users` ON DELETE SET NULL).
+
+Backfill :
 ```sql
--- reports
-DROP POLICY "Users can view own reports" ON public.reports;
-CREATE POLICY "Org members can view reports"
-ON public.reports FOR SELECT TO authenticated
-USING (EXISTS (
-  SELECT 1 FROM sessions s
-  JOIN projects p ON p.id = s.project_id
-  WHERE s.id = reports.session_id
-    AND (p.created_by = auth.uid()
-         OR p.organization_id = get_user_organization_id(auth.uid())
-         OR is_super_admin(auth.uid()))
-));
-
--- même chose pour UPDATE de reports (recruiter_notes, decision…)
-DROP POLICY "Users can update own reports" ON public.reports;
-CREATE POLICY "Org members can update reports"
-ON public.reports FOR UPDATE TO authenticated
-USING (EXISTS (
-  SELECT 1 FROM sessions s
-  JOIN projects p ON p.id = s.project_id
-  WHERE s.id = reports.session_id
-    AND (p.created_by = auth.uid()
-         OR p.organization_id = get_user_organization_id(auth.uid())
-         OR is_super_admin(auth.uid()))
-));
-
--- transcripts
-DROP POLICY "Users can view own transcripts" ON public.transcripts;
-CREATE POLICY "Org members can view transcripts"
-ON public.transcripts FOR SELECT TO authenticated
-USING (EXISTS (
-  SELECT 1 FROM sessions s
-  JOIN projects p ON p.id = s.project_id
-  WHERE s.id = transcripts.session_id
-    AND (p.created_by = auth.uid()
-         OR p.organization_id = get_user_organization_id(auth.uid())
-         OR is_super_admin(auth.uid()))
-));
-
--- session_messages
-DROP POLICY "Users can view own session messages" ON public.session_messages;
-CREATE POLICY "Org members can view session messages"
-ON public.session_messages FOR SELECT TO authenticated
-USING (EXISTS (
-  SELECT 1 FROM sessions s
-  JOIN projects p ON p.id = s.project_id
-  WHERE s.id = session_messages.session_id
-    AND (p.created_by = auth.uid()
-         OR p.organization_id = get_user_organization_id(auth.uid())
-         OR is_super_admin(auth.uid()))
-));
+UPDATE sessions s
+SET assigned_to = COALESCE(p.created_by, o.owner_id)
+FROM projects p
+JOIN organizations o ON o.id = p.organization_id
+WHERE p.id = s.project_id;
 ```
 
-## Effet attendu
+Visibilité : toutes les sessions de l'orga restent visibles par tous les Users (RLS inchangée). On affiche juste « Assignée à » + un filtre « Mes sessions ».
 
-- Clément voit immédiatement tous les rapports, transcripts et messages des sessions de son org ALBO, y compris ceux des projets créés par Benjamin ou Damien.
-- Aucun changement de code applicatif nécessaire.
-- Sécurité préservée : on reste sur le même modèle org-scoped que `sessions` / `projects`.
+### 3. UI
 
-## Hors scope
+- **`OrgMembers.tsx`** : suppression des boutons promouvoir/rétrograder. Badge « Propriétaire » pour l'owner, badge « Membre » pour les autres. Seul le propriétaire peut inviter/retirer.
+- **`Settings.tsx` / `EmailTemplates.tsx`** : remplacement de `isAdmin` par `isOwner` pour gérer les paramètres de l'orga.
+- **Liste des sessions** : nouvelle colonne « Assignée à », filtre « Mes sessions », sélecteur de réassignation.
+- **`useOrgRole`** : retourne `{ isOwner, isMember, organizationId, ownerId, loading }` (suppression de `role`/`isAdmin` côté API publique du hook, mais `isOwner` reste vrai aussi pour les co-admins legacy).
 
-- L'erreur `duplicate key` 23505 vue dans les logs `generate-report` (session `f6917691`) est sans impact : c'est un double-déclenchement (trigger + cleanup) bloqué par la contrainte unique. À traiter séparément en idempotence si on veut nettoyer les logs.
+### 4. Edge functions
+
+- `superadmin-create-org` : reçoit `owner_email`, `owner_first_name`, `owner_last_name`. Crée invitation ou assigne directement.
+- `accept-invitation` : si l'orga n'a pas d'`owner_id`, l'utilisateur devient propriétaire. N'insère plus de rôle dans `user_roles`.
+- `send-invitation` : inchangé sur le fond.
+- `generate-report` : envoie le mail au `sessions.assigned_to` au lieu de `projects.created_by`. Fallback sur le propriétaire si null.
+
+## Hors périmètre
+
+- Transfert de propriété (réassignation du propriétaire) — à voir plus tard.
+- Notifications quand une session est assignée.
+- Statistiques par membre.
+
+## Détails techniques
+
+**Migration SQL** :
+1. `ALTER TABLE sessions ADD COLUMN assigned_to uuid REFERENCES auth.users(id) ON DELETE SET NULL;`
+2. Backfill (cf. ci-dessus).
+3. `CREATE INDEX idx_sessions_assigned_to ON sessions(assigned_to);`
+4. `DELETE FROM user_roles WHERE role IN ('recruiter','viewer');`
+
+**Fonction SQL `is_org_admin`** : on garde son comportement actuel (vérifie `owner_id` OU rôle `admin`), ce qui assure la rétrocompatibilité pour les co-admins existants sans modifier les politiques RLS.
+
+**Fichiers modifiés** :
+- `src/components/superadmin/CreateOrgDialog.tsx`
+- `supabase/functions/superadmin-create-org/index.ts`
+- `supabase/functions/accept-invitation/index.ts`
+- `supabase/functions/generate-report/index.ts`
+- `src/components/OrgMembers.tsx`
+- `src/hooks/useOrgRole.ts`
+- `src/pages/Settings.tsx`, `src/pages/EmailTemplates.tsx`
+- Pages listant les sessions (Dashboard, ProjectDetail) : ajout colonne + filtre + réassignation.

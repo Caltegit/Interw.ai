@@ -3,10 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface OrgRoleState {
-  isAdmin: boolean;
+  // Propriétaire de l'orga (ou co-admin legacy via user_roles).
+  // Détient les droits d'invitation et de paramètres.
   isOwner: boolean;
+  // Conservé pour compatibilité ascendante (égal à isOwner désormais).
+  isAdmin: boolean;
   isMember: boolean;
-  role: "admin" | "recruiter" | "viewer" | null;
   loading: boolean;
   organizationId: string | null;
   ownerId: string | null;
@@ -15,10 +17,9 @@ interface OrgRoleState {
 export function useOrgRole(): OrgRoleState {
   const { user } = useAuth();
   const [state, setState] = useState<OrgRoleState>({
-    isAdmin: false,
     isOwner: false,
+    isAdmin: false,
     isMember: false,
-    role: null,
     loading: true,
     organizationId: null,
     ownerId: null,
@@ -26,7 +27,7 @@ export function useOrgRole(): OrgRoleState {
 
   useEffect(() => {
     if (!user) {
-      setState({ isAdmin: false, isOwner: false, isMember: false, role: null, loading: false, organizationId: null, ownerId: null });
+      setState({ isOwner: false, isAdmin: false, isMember: false, loading: false, organizationId: null, ownerId: null });
       return;
     }
 
@@ -36,7 +37,7 @@ export function useOrgRole(): OrgRoleState {
       if (cancelled) return;
 
       if (!orgId) {
-        setState({ isAdmin: false, isOwner: false, isMember: false, role: null, loading: false, organizationId: null, ownerId: null });
+        setState({ isOwner: false, isAdmin: false, isMember: false, loading: false, organizationId: null, ownerId: null });
         return;
       }
 
@@ -51,16 +52,14 @@ export function useOrgRole(): OrgRoleState {
 
       if (cancelled) return;
 
-      const roleList = (roles || []).map((r: any) => r.role);
-      const isAdmin = roleList.includes("admin");
-      const role = (isAdmin ? "admin" : roleList[0] || "recruiter") as OrgRoleState["role"];
-      const ownerId = (org as any)?.owner_id ?? null;
+      const ownerId = (org as { owner_id?: string | null } | null)?.owner_id ?? null;
+      const isLegacyAdmin = (roles || []).some((r: { role: string }) => r.role === "admin");
+      const isOwner = ownerId === user.id || isLegacyAdmin;
 
       setState({
-        isAdmin,
-        isOwner: ownerId === user.id,
+        isOwner,
+        isAdmin: isOwner,
         isMember: true,
-        role,
         loading: false,
         organizationId: orgId,
         ownerId,

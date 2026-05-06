@@ -18,6 +18,9 @@ export function CreateOrgDialog({ onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [orgName, setOrgName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerFirstName, setOwnerFirstName] = useState("");
+  const [ownerLastName, setOwnerLastName] = useState("");
   const [pricing, setPricing] = useState("");
   const [clientNotes, setClientNotes] = useState("");
   const [seedLibraries, setSeedLibraries] = useState(true);
@@ -26,6 +29,9 @@ export function CreateOrgDialog({ onCreated }: Props) {
 
   const reset = () => {
     setOrgName("");
+    setOwnerEmail("");
+    setOwnerFirstName("");
+    setOwnerLastName("");
     setPricing("");
     setClientNotes("");
     setSeedLibraries(true);
@@ -33,8 +39,14 @@ export function CreateOrgDialog({ onCreated }: Props) {
     setCreditsTotal("");
   };
 
+  const canSubmit =
+    orgName.trim() &&
+    ownerEmail.trim() &&
+    ownerFirstName.trim() &&
+    ownerLastName.trim();
+
   const handleCreate = async () => {
-    if (!orgName.trim()) return;
+    if (!canSubmit) return;
     if (!creditsUnlimited && (!creditsTotal.trim() || Number(creditsTotal) < 0)) {
       toast({ title: "Erreur", description: "Indiquez un nombre de crédits valide", variant: "destructive" });
       return;
@@ -44,6 +56,9 @@ export function CreateOrgDialog({ onCreated }: Props) {
       const { data, error } = await supabase.functions.invoke("superadmin-create-org", {
         body: {
           org_name: orgName.trim(),
+          owner_email: ownerEmail.trim().toLowerCase(),
+          owner_first_name: ownerFirstName.trim(),
+          owner_last_name: ownerLastName.trim(),
           pricing: pricing.trim() || undefined,
           client_notes: clientNotes.trim() || undefined,
           seed_libraries: seedLibraries,
@@ -54,7 +69,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 
-      toast({ title: "Organisation créée" });
+      toast({ title: "Organisation créée", description: "Une invitation a été envoyée au propriétaire." });
       reset();
       setOpen(false);
       onCreated();
@@ -74,18 +89,43 @@ export function CreateOrgDialog({ onCreated }: Props) {
           Créer une organisation
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            Vous pourrez ajouter des utilisateurs depuis la fiche de l'organisation.
+            Renseignez le propriétaire de l'organisation. Il recevra un email pour activer son compte.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="orgName">Nom *</Label>
+            <Label htmlFor="orgName">Nom de l'organisation *</Label>
             <Input id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="Acme Inc." />
           </div>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <h4 className="text-sm font-medium">Propriétaire</h4>
+            <div className="space-y-2">
+              <Label htmlFor="ownerEmail">Email *</Label>
+              <Input
+                id="ownerEmail"
+                type="email"
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
+                placeholder="proprietaire@exemple.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="ownerFirstName">Prénom *</Label>
+                <Input id="ownerFirstName" value={ownerFirstName} onChange={(e) => setOwnerFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ownerLastName">Nom *</Label>
+                <Input id="ownerLastName" value={ownerLastName} onChange={(e) => setOwnerLastName(e.target.value)} />
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="pricing">Tarif</Label>
             <Input id="pricing" value={pricing} onChange={(e) => setPricing(e.target.value)} placeholder="99 €/mois" />
@@ -130,7 +170,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Annuler</Button>
-          <Button onClick={handleCreate} disabled={loading || !orgName.trim()}>
+          <Button onClick={handleCreate} disabled={loading || !canSubmit}>
             {loading ? "Création..." : "Créer"}
           </Button>
         </DialogFooter>

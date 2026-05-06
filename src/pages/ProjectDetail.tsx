@@ -45,6 +45,7 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
+  const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
 
@@ -58,6 +59,8 @@ export default function ProjectDetail() {
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<"date" | "score" | "name">("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  // "all" | "me" | userId
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
@@ -91,7 +94,7 @@ export default function ProjectDetail() {
         .order("order_index"),
       supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to")
         .eq("project_id", id)
         .order("created_at", { ascending: false }),
     ]).then(async ([pRes, qRes, cRes, sRes]) => {
@@ -100,6 +103,15 @@ export default function ProjectDetail() {
       setCriteria(cRes.data ?? []);
       const sessionsList = sRes.data ?? [];
       setSessions(sessionsList);
+
+      // Load org members for the "assigned to" selector
+      if (pRes.data?.organization_id) {
+        const { data: members } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, email")
+          .eq("organization_id", pRes.data.organization_id);
+        setOrgMembers(members ?? []);
+      }
 
       // Fetch reports for these sessions in one batch
       const ids = sessionsList.map((s) => s.id);
@@ -120,6 +132,26 @@ export default function ProjectDetail() {
       setLoading(false);
     });
   }, [id]);
+
+  const memberById = (uid?: string | null) => orgMembers.find((m) => m.user_id === uid);
+  const memberLabel = (uid?: string | null) => {
+    const m = memberById(uid);
+    if (!m) return "—";
+    return m.full_name || m.email;
+  };
+
+  const reassignSession = async (sessionId: string, newAssignee: string | null) => {
+    const { error } = await supabase
+      .from("sessions")
+      .update({ assigned_to: newAssignee })
+      .eq("id", sessionId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, assigned_to: newAssignee } : s)));
+    toast({ title: "Session réassignée." });
+  };
 
   const saveNote = (sessionId: string, value: string) => {
     setNoteDrafts((prev) => ({ ...prev, [sessionId]: value }));
@@ -266,6 +298,8 @@ export default function ProjectDetail() {
       );
     }
     if (statusFilter !== "all") list = list.filter((s) => s.status === statusFilter);
+    if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
+    else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (recoFilter !== "all")
       list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
     if (scoreMin !== "")
@@ -302,7 +336,8 @@ export default function ProjectDetail() {
     (scoreMin !== "" ? 1 : 0) +
     (scoreMax !== "" ? 1 : 0) +
     (dateFrom ? 1 : 0) +
-    (dateTo ? 1 : 0);
+    (dateTo ? 1 : 0) +
+    (assigneeFilter !== "all" ? 1 : 0);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -311,6 +346,7 @@ export default function ProjectDetail() {
     setScoreMax("");
     setDateFrom("");
     setDateTo("");
+    setAssigneeFilter("all");
   };
 
   return (
@@ -447,6 +483,20 @@ export default function ProjectDetail() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="max-w-xs h-9"
                 />
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les sessions</SelectItem>
+                    <SelectItem value="me">Mes sessions</SelectItem>
+                    {orgMembers
+                      .filter((m) => m.user_id !== user?.id)
+                      .map((m) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.full_name || m.email}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -537,6 +587,7 @@ export default function ProjectDetail() {
                       <th className="pb-2 font-medium">Score</th>
                       <th className="pb-2 font-medium">Reco</th>
                       <th className="pb-2 font-medium">Date</th>
+                      <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
                       <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
                       <th className="pb-2 font-medium"></th>
                     </tr>
@@ -567,6 +618,24 @@ export default function ProjectDetail() {
                           </td>
                           <td className="py-3 text-muted-foreground">
                             {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                          </td>
+                          <td className="py-3 hidden md:table-cell text-xs" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={s.assigned_to ?? "none"}
+                              onValueChange={(v) => reassignSession(s.id, v === "none" ? null : v)}
+                            >
+                              <SelectTrigger className="h-8 w-full max-w-[12rem] text-xs">
+                                <SelectValue placeholder="—">{memberLabel(s.assigned_to)}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Non assignée</SelectItem>
+                                {orgMembers.map((m) => (
+                                  <SelectItem key={m.user_id} value={m.user_id}>
+                                    {m.full_name || m.email}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </td>
                           <td className="py-3 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                             {rep ? (
