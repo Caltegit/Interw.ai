@@ -483,6 +483,20 @@ export default function ProjectDetail() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="max-w-xs h-9"
                 />
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les sessions</SelectItem>
+                    <SelectItem value="me">Mes sessions</SelectItem>
+                    {orgMembers
+                      .filter((m) => m.user_id !== user?.id)
+                      .map((m) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.full_name || m.email}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm">
