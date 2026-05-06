@@ -143,74 +143,76 @@ export function DecisionBanner(props: DecisionBannerProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <DecisionButton
-            active={decision === "shortlisted"}
-            onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
-            disabled={isDecisionPending}
-            tone="success"
-            icon={Check}
-            label="Présélectionner"
-          />
-          <DecisionButton
-            active={decision === "second_opinion"}
-            onClick={() =>
-              onDecisionChange(decision === "second_opinion" ? "none" : "second_opinion")
-            }
-            disabled={isDecisionPending}
-            tone="warning"
-            icon={HelpCircle}
-            label="2e avis"
-          />
-          <DecisionButton
-            active={decision === "rejected"}
-            onClick={() => onDecisionChange(decision === "rejected" ? "none" : "rejected")}
-            disabled={isDecisionPending}
-            tone="destructive"
-            icon={X}
-            label="Rejeter"
-          />
+        {!readOnly && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <DecisionButton
+              active={decision === "shortlisted"}
+              onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
+              disabled={isDecisionPending}
+              tone="success"
+              icon={Check}
+              label="Présélectionner"
+            />
+            <DecisionButton
+              active={decision === "second_opinion"}
+              onClick={() =>
+                onDecisionChange(decision === "second_opinion" ? "none" : "second_opinion")
+              }
+              disabled={isDecisionPending}
+              tone="warning"
+              icon={HelpCircle}
+              label="2e avis"
+            />
+            <DecisionButton
+              active={decision === "rejected"}
+              onClick={() => onDecisionChange(decision === "rejected" ? "none" : "rejected")}
+              disabled={isDecisionPending}
+              tone="destructive"
+              icon={X}
+              label="Rejeter"
+            />
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {shareUrl ? (
-                <DropdownMenuItem onClick={onCopyShare}>
-                  {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                  {copied ? "Lien copié" : "Copier le lien de partage"}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  {isShareLoading ? "Génération…" : "Créer un lien de partage"}
-                </DropdownMenuItem>
-              )}
-              {canDownloadVideos && (
-                <DropdownMenuItem onClick={onDownloadVideos}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger les vidéos
-                </DropdownMenuItem>
-              )}
-              {onRegenerate && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onRegenerate} disabled={isRegenerating}>
-                    {isRegenerating ? (
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="mr-2 h-4 w-4" />
-                    )}
-                    {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {shareUrl ? (
+                  <DropdownMenuItem onClick={onCopyShare}>
+                    {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                    {copied ? "Lien copié" : "Copier le lien de partage"}
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                ) : (
+                  <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    {isShareLoading ? "Génération…" : "Créer un lien de partage"}
+                  </DropdownMenuItem>
+                )}
+                {canDownloadVideos && (
+                  <DropdownMenuItem onClick={onDownloadVideos}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Télécharger les vidéos
+                  </DropdownMenuItem>
+                )}
+                {onRegenerate && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onRegenerate} disabled={isRegenerating}>
+                      {isRegenerating ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
     </Card>
   );
