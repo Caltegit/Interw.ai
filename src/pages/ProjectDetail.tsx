@@ -346,6 +346,7 @@ export default function ProjectDetail() {
     setScoreMax("");
     setDateFrom("");
     setDateTo("");
+    setAssigneeFilter("all");
   };
 
   return (
