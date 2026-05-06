@@ -131,9 +131,11 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 {rankLabel}
               </Badge>
             )}
-            <Badge className={decisionConfig[decision].tone} variant="outline">
-              {decisionConfig[decision].label}
-            </Badge>
+            {!readOnly && (
+              <Badge className={decisionConfig[decision].tone} variant="outline">
+                {decisionConfig[decision].label}
+              </Badge>
+            )}
           </div>
           {headline && (
             <p className="text-sm font-medium leading-snug text-foreground">« {headline} »</p>
