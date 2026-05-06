@@ -1,29 +1,87 @@
-## Cause
+# Bug : clement.g ne voit pas les rapports des projets créés par d'autres membres de son org
 
-Lors de l'enregistrement d'un projet existant, l'écran "Modifier le projet" tente de ré-uploader l'avatar (et l'audio/vidéo d'intro) avec `upsert: true` sur le bucket `media`. Quand le fichier existe déjà, Supabase Storage exécute un UPDATE sur `storage.objects`. Or les politiques actuelles n'autorisent que **INSERT** et **SELECT** sur `media` — il n'y a **aucune politique UPDATE** (sauf pour `org-logos/`). Résultat : `new row violates row-level security policy (USING expression) for table "objects"`.
+## Diagnostic
 
-Confirmé par les logs Postgres : ~20 erreurs RLS sur `storage.objects` côté upsert.
+Sur le compte ALBO (org `d51d6ce0…`), l'utilisateur `clement.g@alboteam.com` ne voit **aucun rapport** pour les sessions des projets qu'il n'a pas créés lui-même — par exemple le projet « Candidature spontanée » (créé par `benjamin@alboteam.com`).
+
+Vérifié en base :
+- La session `1333aea3…` est bien `completed`, le rapport `147120cb…` a bien été généré à 10:00:56, le transcript et les messages existent.
+- Donc le pipeline `finalize-session → transcribe-session → generate-report` fonctionne. **Le rapport existe, il est juste invisible côté UI.**
+
+Cause racine : les policies RLS SELECT de plusieurs tables ne regardent que `projects.created_by = auth.uid()` au lieu de l'appartenance à l'organisation. Concrètement :
+
+| Table | Policy SELECT actuelle |
+|---|---|
+| `reports` | `Users can view own reports` → `p.created_by = auth.uid()` uniquement |
+| `transcripts` | `Users can view own transcripts` → idem |
+| `session_messages` | `Users can view own session messages` → idem |
+
+Les autres tables liées (`sessions`, `projects`, `questions`, `evaluation_criteria`) acceptent déjà l'org et `is_super_admin`. Seules ces 3 tables sont restées en mode « propriétaire seul », ce qui casse le partage intra-org dès qu'un projet est créé par un collègue.
 
 ## Correctif
 
-Migration SQL : ajouter deux politiques sur `storage.objects` pour le bucket `media`, alignées sur les politiques INSERT existantes (membres org authentifiés) :
+Migration SQL pour aligner les 3 policies sur le même modèle que `sessions` / `projects` :
 
-```text
-- UPDATE  on storage.objects  WHERE bucket_id = 'media'
-  USING       : auth.uid() IS NOT NULL
-  WITH CHECK  : bucket_id = 'media'
+```sql
+-- reports
+DROP POLICY "Users can view own reports" ON public.reports;
+CREATE POLICY "Org members can view reports"
+ON public.reports FOR SELECT TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM sessions s
+  JOIN projects p ON p.id = s.project_id
+  WHERE s.id = reports.session_id
+    AND (p.created_by = auth.uid()
+         OR p.organization_id = get_user_organization_id(auth.uid())
+         OR is_super_admin(auth.uid()))
+));
 
-- DELETE  on storage.objects  WHERE bucket_id = 'media'
-  USING       : auth.uid() IS NOT NULL
+-- même chose pour UPDATE de reports (recruiter_notes, decision…)
+DROP POLICY "Users can update own reports" ON public.reports;
+CREATE POLICY "Org members can update reports"
+ON public.reports FOR UPDATE TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM sessions s
+  JOIN projects p ON p.id = s.project_id
+  WHERE s.id = reports.session_id
+    AND (p.created_by = auth.uid()
+         OR p.organization_id = get_user_organization_id(auth.uid())
+         OR is_super_admin(auth.uid()))
+));
+
+-- transcripts
+DROP POLICY "Users can view own transcripts" ON public.transcripts;
+CREATE POLICY "Org members can view transcripts"
+ON public.transcripts FOR SELECT TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM sessions s
+  JOIN projects p ON p.id = s.project_id
+  WHERE s.id = transcripts.session_id
+    AND (p.created_by = auth.uid()
+         OR p.organization_id = get_user_organization_id(auth.uid())
+         OR is_super_admin(auth.uid()))
+));
+
+-- session_messages
+DROP POLICY "Users can view own session messages" ON public.session_messages;
+CREATE POLICY "Org members can view session messages"
+ON public.session_messages FOR SELECT TO authenticated
+USING (EXISTS (
+  SELECT 1 FROM sessions s
+  JOIN projects p ON p.id = s.project_id
+  WHERE s.id = session_messages.session_id
+    AND (p.created_by = auth.uid()
+         OR p.organization_id = get_user_organization_id(auth.uid())
+         OR is_super_admin(auth.uid()))
+));
 ```
 
-Pourquoi `auth.uid() IS NOT NULL` et pas un check d'org : la politique INSERT actuelle (`Org members can upload media`) est elle aussi sans contrainte d'org (`with_check: bucket_id = 'media'`). On reste cohérent — on ne durcit pas dans le même patch pour ne pas casser d'autres flux (questions, réponses candidats, etc.). On exige seulement d'être authentifié, donc les anonymes ne peuvent pas modifier/supprimer (sécurité réelle gagnée vs aujourd'hui où seul l'INSERT anon est ouvert via la politique "Anon can upload media").
+## Effet attendu
 
-## Fichiers
-
-- 1 migration SQL (aucun changement de code applicatif).
+- Clément voit immédiatement tous les rapports, transcripts et messages des sessions de son org ALBO, y compris ceux des projets créés par Benjamin ou Damien.
+- Aucun changement de code applicatif nécessaire.
+- Sécurité préservée : on reste sur le même modèle org-scoped que `sessions` / `projects`.
 
 ## Hors scope
 
-- Restriction fine "seul le propriétaire/org peut écraser son fichier" : à traiter dans un patch sécurité dédié, après audit de tous les chemins d'upload candidat.
-- La politique anonyme `Anon can upload media` reste en place (utilisée par les sessions candidats publics).
+- L'erreur `duplicate key` 23505 vue dans les logs `generate-report` (session `f6917691`) est sans impact : c'est un double-déclenchement (trigger + cleanup) bloqué par la contrainte unique. À traiter séparément en idempotence si on veut nettoyer les logs.
