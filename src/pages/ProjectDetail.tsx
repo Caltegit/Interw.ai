@@ -94,7 +94,7 @@ export default function ProjectDetail() {
         .order("order_index"),
       supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to")
         .eq("project_id", id)
         .order("created_at", { ascending: false }),
     ]).then(async ([pRes, qRes, cRes, sRes]) => {
@@ -103,6 +103,15 @@ export default function ProjectDetail() {
       setCriteria(cRes.data ?? []);
       const sessionsList = sRes.data ?? [];
       setSessions(sessionsList);
+
+      // Load org members for the "assigned to" selector
+      if (pRes.data?.organization_id) {
+        const { data: members } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, email")
+          .eq("organization_id", pRes.data.organization_id);
+        setOrgMembers(members ?? []);
+      }
 
       // Fetch reports for these sessions in one batch
       const ids = sessionsList.map((s) => s.id);
@@ -123,6 +132,26 @@ export default function ProjectDetail() {
       setLoading(false);
     });
   }, [id]);
+
+  const memberById = (uid?: string | null) => orgMembers.find((m) => m.user_id === uid);
+  const memberLabel = (uid?: string | null) => {
+    const m = memberById(uid);
+    if (!m) return "—";
+    return m.full_name || m.email;
+  };
+
+  const reassignSession = async (sessionId: string, newAssignee: string | null) => {
+    const { error } = await supabase
+      .from("sessions")
+      .update({ assigned_to: newAssignee })
+      .eq("id", sessionId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, assigned_to: newAssignee } : s)));
+    toast({ title: "Session réassignée." });
+  };
 
   const saveNote = (sessionId: string, value: string) => {
     setNoteDrafts((prev) => ({ ...prev, [sessionId]: value }));
