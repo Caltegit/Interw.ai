@@ -876,9 +876,14 @@ export default function InterviewStart() {
     setLiveTranscript("");
 
     recognition.onresult = (event: any) => {
+      // IMPORTANT : ne traiter que les NOUVEAUX résultats (event.resultIndex).
+      // Sinon, en mode continu avec auto-restart, on ré-ajoute à chaque
+      // événement tous les résultats finaux passés → duplication massive
+      // de la transcription (croissance quadratique).
       let interim = "";
       let final = "";
-      for (let i = 0; i < event.results.length; i++) {
+      const startIdx = typeof event.resultIndex === "number" ? event.resultIndex : 0;
+      for (let i = startIdx; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
           final += transcript + " ";
