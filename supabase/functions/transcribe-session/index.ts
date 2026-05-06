@@ -41,13 +41,7 @@ function guessMime(url: string): string {
   return "video/webm";
 }
 
-async function callGemini(apiKey: string, mediaUrl: string): Promise<string> {
-  const res = await fetch(mediaUrl);
-  if (!res.ok) throw new Error(`media fetch failed: ${res.status}`);
-  const buf = new Uint8Array(await res.arrayBuffer());
-  if (buf.byteLength > MAX_INLINE_BYTES) {
-    throw new Error(`media too large (${buf.byteLength} bytes)`);
-  }
+async function callGeminiInline(apiKey: string, mediaUrl: string, buf: Uint8Array): Promise<string> {
   const b64 = b64encode(buf);
   const mime = guessMime(mediaUrl);
 
@@ -83,6 +77,131 @@ async function callGemini(apiKey: string, mediaUrl: string): Promise<string> {
   const text = data?.choices?.[0]?.message?.content;
   if (typeof text !== "string") throw new Error("empty gemini response");
   return text.trim();
+}
+
+// Upload une vidéo volumineuse via l'API Files de Gemini, puis génère la
+// transcription en référençant le fichier par URI. Utilisé pour les segments
+// > MAX_INLINE_BYTES (jusqu'à 10 min, soit ~120 Mo).
+async function callGeminiFilesApi(apiKey: string, mediaUrl: string, buf: Uint8Array): Promise<string> {
+  const mime = guessMime(mediaUrl);
+  const totalBytes = buf.byteLength;
+
+  // 1) Initier l'upload résumable
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "X-Goog-Upload-Protocol": "resumable",
+        "X-Goog-Upload-Command": "start",
+        "X-Goog-Upload-Header-Content-Length": String(totalBytes),
+        "X-Goog-Upload-Header-Content-Type": mime,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ file: { display_name: "interview-segment" } }),
+    },
+  );
+  if (!initRes.ok) {
+    const t = await initRes.text();
+    throw new Error(`files init ${initRes.status}: ${t.slice(0, 200)}`);
+  }
+  const uploadUrl = initRes.headers.get("X-Goog-Upload-URL");
+  if (!uploadUrl) throw new Error("files init: missing upload URL");
+
+  // 2) Upload + finalize en un appel
+  const uploadRes = await fetch(uploadUrl, {
+    method: "POST",
+    headers: {
+      "Content-Length": String(totalBytes),
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize",
+    },
+    body: buf,
+  });
+  if (!uploadRes.ok) {
+    const t = await uploadRes.text();
+    throw new Error(`files upload ${uploadRes.status}: ${t.slice(0, 200)}`);
+  }
+  const fileMeta = await uploadRes.json();
+  const fileUri = fileMeta?.file?.uri;
+  const fileName = fileMeta?.file?.name;
+  if (!fileUri || !fileName) throw new Error("files upload: missing uri");
+
+  // 3) Polling : attendre que le fichier soit ACTIVE (encodage vidéo)
+  const startedAt = Date.now();
+  let state = fileMeta?.file?.state ?? "PROCESSING";
+  while (state !== "ACTIVE") {
+    if (Date.now() - startedAt > 120_000) throw new Error("files: ACTIVE timeout");
+    await new Promise((r) => setTimeout(r, 2000));
+    const statusRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`,
+    );
+    if (!statusRes.ok) {
+      const t = await statusRes.text();
+      throw new Error(`files status ${statusRes.status}: ${t.slice(0, 200)}`);
+    }
+    const meta = await statusRes.json();
+    state = meta?.state ?? "PROCESSING";
+    if (state === "FAILED") throw new Error("files: FAILED state");
+  }
+
+  // 4) Génération
+  const genRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FILES_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: TRANSCRIBE_PROMPT },
+              { fileData: { mimeType: mime, fileUri } },
+            ],
+          },
+        ],
+      }),
+    },
+  );
+  if (!genRes.ok) {
+    const t = await genRes.text();
+    throw new Error(`files generate ${genRes.status}: ${t.slice(0, 200)}`);
+  }
+  const data = await genRes.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text ?? "").join("").trim();
+  if (typeof text !== "string") throw new Error("empty gemini files response");
+
+  // 5) Cleanup best-effort
+  fetch(`https://generativelanguage.googleapis.com/v1beta/${fileName}?key=${apiKey}`, {
+    method: "DELETE",
+  }).catch(() => {});
+
+  return text;
+}
+
+async function callGemini(
+  lovableApiKey: string,
+  geminiApiKey: string | undefined,
+  mediaUrl: string,
+): Promise<string> {
+  const res = await fetch(mediaUrl);
+  if (!res.ok) throw new Error(`media fetch failed: ${res.status}`);
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength > MAX_UPLOAD_BYTES) {
+    throw new Error(`media too large (${buf.byteLength} bytes, max ${MAX_UPLOAD_BYTES})`);
+  }
+
+  // Petits fichiers : voie inline via l'AI Gateway Lovable (pas de clé Gemini requise)
+  if (buf.byteLength <= MAX_INLINE_BYTES) {
+    return await callGeminiInline(lovableApiKey, mediaUrl, buf);
+  }
+
+  // Gros fichiers (> 18 Mo) : API Files de Gemini, requiert GEMINI_API_KEY
+  if (!geminiApiKey) {
+    throw new Error(`media too large for inline (${buf.byteLength} bytes) and GEMINI_API_KEY not set`);
+  }
+  return await callGeminiFilesApi(geminiApiKey, mediaUrl, buf);
 }
 
 Deno.serve(async (req) => {
