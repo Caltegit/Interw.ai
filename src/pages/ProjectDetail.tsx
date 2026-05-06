@@ -298,6 +298,8 @@ export default function ProjectDetail() {
       );
     }
     if (statusFilter !== "all") list = list.filter((s) => s.status === statusFilter);
+    if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
+    else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (recoFilter !== "all")
       list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
     if (scoreMin !== "")
