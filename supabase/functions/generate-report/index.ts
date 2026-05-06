@@ -113,23 +113,36 @@ serve(async (req) => {
     if (hasFailedSegments) {
       try {
         console.log("generate-report: relance transcribe-session pour segments manquants");
-        const transcribeRes = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-session`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-          body: JSON.stringify({ session_id, force: false }),
-        });
-        if (transcribeRes.ok) {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const transcribeRes = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-session`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({ session_id, force: false }),
+          });
+          if (!transcribeRes.ok) {
+            console.error("transcribe-session failed", transcribeRes.status, await transcribeRes.text());
+            break;
+          }
+
+          const transcribeData = await transcribeRes.json().catch(() => ({}));
           const refreshed = await supabase
             .from("session_messages")
             .select("*")
             .eq("session_id", session_id)
             .order("timestamp");
           if (refreshed.data) messages = refreshed.data;
-        } else {
-          console.error("transcribe-session failed", transcribeRes.status, await transcribeRes.text());
+
+          const stillPending = messages.some(
+            (m: any) =>
+              m.role === "candidate" &&
+              (m.video_segment_url || m.audio_segment_url) &&
+              m.transcription_status !== "done",
+          );
+          if (!stillPending || !transcribeData?.remaining) break;
+          await new Promise((resolve) => setTimeout(resolve, 1500));
         }
       } catch (e) {
         console.error("transcribe-session pre-step error:", e);
