@@ -1,85 +1,53 @@
-# Refonte des rôles d'organisation : Propriétaire + Users
-
 ## Objectif
 
-Simplifier le modèle de rôles : un seul **Propriétaire** par organisation (créé en même temps que l'orga), tous les autres membres sont des **Users** avec les mêmes droits. Les sessions sont visibles par tous mais assignées à un user.
+Cadrer chaque réponse candidat à **10 minutes maximum**, avec un **avertissement à 8 minutes**, puis adapter la chaîne de transcription pour qu'une vidéo de 10 min reste traitable par Gemini.
 
-## Modèle final
+---
 
-- **Propriétaire** : 1 par orga. Mêmes droits qu'un User + invitation/retrait de membres + paramètres de l'orga (nom, slug, logo, modèles d'emails).
-- **User** : N par orga. Voit toutes les données de l'orga, peut créer/modifier/supprimer projets, sessions, rapports.
-- **Super admin** : inchangé (back-office Lovable).
+## 1. Limite côté candidat (InterviewStart.tsx)
 
-## Garde-fous pour les utilisateurs actuels
+Le mécanisme existe déjà via `max_response_seconds` par question + auto-envoi quand le timer expire. On le rend systématique.
 
-Audit effectué : 14 organisations, toutes avec un `owner_id` déjà renseigné. 3 orgas ont des co-administrateurs (ALBO, CLEM A, Morning) — leurs droits seront préservés.
+- **Plafond dur 600 s** : la valeur effective devient `min(max_response_seconds ?? 600, 600)`. Même si une question est configurée à 15 min en base, le runtime plafonne à 10 min.
+- **Avertissement à 8 min** (responseElapsedSec ≥ 480) :
+  - Toast `"Plus que 2 minutes pour cette réponse"` (déclenché une seule fois par question).
+  - Bandeau d'état passe en orange (warning) — déjà géré quand ratio < 0,5, on s'assure que ça se déclenche bien à 480 s.
+  - Dernière minute : passage en rouge (destructive) — déjà géré.
+- **À 10 min** : le code existant `handleSendResponseRef.current?.()` envoie automatiquement la réponse (comportement déjà en place pour `max_response_seconds`).
+- **Affichage du compte à rebours** : le label `MM:SS / 10:00` apparaît dès le début de chaque réponse (au lieu de seulement quand `max_response_seconds` est défini).
 
-- **Co-admins existants conservés** : on garde les lignes `admin` actuelles dans `user_roles`. La logique devient : `isOwner = (owner_id == user.id) OR has_role('admin', org)`. Aucune perte de droit pour les co-admins en place.
-- **Nouvelles invitations** : ne créent plus aucune ligne dans `user_roles` (le statut "User" découle juste de `profiles.organization_id`).
-- **Nettoyage ciblé** : suppression uniquement des rôles `recruiter` et `viewer` (1 seule ligne réellement présente).
-- **Création d'orga** : email/prénom/nom du propriétaire obligatoires uniquement pour les **nouvelles** orgas.
+## 2. Côté serveur — re-transcription des vidéos longues (transcribe-session)
 
-## Changements
+Une vidéo WebM de 10 min ≈ 80–120 Mo. La limite actuelle inline base64 (`MAX_INLINE_BYTES = 18 Mo`) bloque toute re-transcription au-delà de ~1,5 min.
 
-### 1. Création d'une organisation (super admin)
+- **Migrer vers l'API Files de Gemini** (upload puis référence par URI) :
+  1. `POST https://generativelanguage.googleapis.com/upload/v1beta/files` (resumable upload) avec le binaire vidéo.
+  2. Polling sur l'état du fichier (`ACTIVE` avant utilisation).
+  3. Appel chat completions avec `file_uri` au lieu de `data:base64`.
+- **Nouvelle limite haute** : 200 Mo (marge confortable pour 10 min en haute qualité). Au-delà, on log et on échoue proprement.
+- **Gestion d'erreur** : si l'upload Files API échoue (clé sans accès, etc.), fallback sur l'inline base64 actuel pour les petits fichiers (<18 Mo).
 
-`CreateOrgDialog` + edge `superadmin-create-org` : 3 champs obligatoires en plus (email propriétaire, prénom, nom).
+> Note : l'AI Gateway Lovable proxie OpenAI-style. L'API Files de Gemini ne passe pas par cette gateway → il faudra utiliser directement `generativelanguage.googleapis.com` avec une clé `GEMINI_API_KEY`. Si cette clé n'est pas dispo, on reste sur l'inline et on documente la limite.
 
-Comportement :
-- Si l'email existe déjà comme utilisateur : on lui assigne `organization_id` + `owner_id` direct.
-- Sinon : création d'une invitation. À l'acceptation (`accept-invitation`), si `owner_id IS NULL` sur l'orga, le nouvel utilisateur devient propriétaire.
+## 3. Pas de modif DB
 
-### 2. Sessions assignées à un user
+Aucune migration nécessaire. La colonne `max_response_seconds` existe déjà sur `questions` ; on garde sa souplesse pour l'auteur, mais on plafonne au runtime.
 
-Nouvelle colonne `sessions.assigned_to` (uuid, FK `auth.users` ON DELETE SET NULL).
+---
 
-Backfill :
-```sql
-UPDATE sessions s
-SET assigned_to = COALESCE(p.created_by, o.owner_id)
-FROM projects p
-JOIN organizations o ON o.id = p.organization_id
-WHERE p.id = s.project_id;
-```
+## Fichiers modifiés
 
-Visibilité : toutes les sessions de l'orga restent visibles par tous les Users (RLS inchangée). On affiche juste « Assignée à » + un filtre « Mes sessions ».
-
-### 3. UI
-
-- **`OrgMembers.tsx`** : suppression des boutons promouvoir/rétrograder. Badge « Propriétaire » pour l'owner, badge « Membre » pour les autres. Seul le propriétaire peut inviter/retirer.
-- **`Settings.tsx` / `EmailTemplates.tsx`** : remplacement de `isAdmin` par `isOwner` pour gérer les paramètres de l'orga.
-- **Liste des sessions** : nouvelle colonne « Assignée à », filtre « Mes sessions », sélecteur de réassignation.
-- **`useOrgRole`** : retourne `{ isOwner, isMember, organizationId, ownerId, loading }` (suppression de `role`/`isAdmin` côté API publique du hook, mais `isOwner` reste vrai aussi pour les co-admins legacy).
-
-### 4. Edge functions
-
-- `superadmin-create-org` : reçoit `owner_email`, `owner_first_name`, `owner_last_name`. Crée invitation ou assigne directement.
-- `accept-invitation` : si l'orga n'a pas d'`owner_id`, l'utilisateur devient propriétaire. N'insère plus de rôle dans `user_roles`.
-- `send-invitation` : inchangé sur le fond.
-- `generate-report` : envoie le mail au `sessions.assigned_to` au lieu de `projects.created_by`. Fallback sur le propriétaire si null.
+- `src/pages/InterviewStart.tsx` — plafond 600 s, toast à 480 s, affichage timer systématique.
+- `supabase/functions/transcribe-session/index.ts` — Files API + nouvelle limite 200 Mo.
 
 ## Hors périmètre
 
-- Transfert de propriété (réassignation du propriétaire) — à voir plus tard.
-- Notifications quand une session est assignée.
-- Statistiques par membre.
+- Pas de changement sur la durée totale de session (`max_duration_minutes` reste configurable par projet).
+- Pas de réparation rétroactive des sessions ALBO cassées (à traiter séparément si tu veux).
+- Pas de découpage côté navigateur (l'enregistrement reste continu, simplement coupé à 10 min).
 
-## Détails techniques
+---
 
-**Migration SQL** :
-1. `ALTER TABLE sessions ADD COLUMN assigned_to uuid REFERENCES auth.users(id) ON DELETE SET NULL;`
-2. Backfill (cf. ci-dessus).
-3. `CREATE INDEX idx_sessions_assigned_to ON sessions(assigned_to);`
-4. `DELETE FROM user_roles WHERE role IN ('recruiter','viewer');`
+## Question rapide
 
-**Fonction SQL `is_org_admin`** : on garde son comportement actuel (vérifie `owner_id` OU rôle `admin`), ce qui assure la rétrocompatibilité pour les co-admins existants sans modifier les politiques RLS.
-
-**Fichiers modifiés** :
-- `src/components/superadmin/CreateOrgDialog.tsx`
-- `supabase/functions/superadmin-create-org/index.ts`
-- `supabase/functions/accept-invitation/index.ts`
-- `supabase/functions/generate-report/index.ts`
-- `src/components/OrgMembers.tsx`
-- `src/hooks/useOrgRole.ts`
-- `src/pages/Settings.tsx`, `src/pages/EmailTemplates.tsx`
-- Pages listant les sessions (Dashboard, ProjectDetail) : ajout colonne + filtre + réassignation.
+Veux-tu que je gère aussi la **clé `GEMINI_API_KEY`** pour l'API Files (sinon, on garde inline et on documente que la re-transcription manuelle reste limitée à ~1,5 min même si l'enregistrement va jusqu'à 10 min) ? Sans cette clé, le rapport sera quand même généré normalement à partir du texte du navigateur (qui, lui, n'a plus de bug de duplication).
