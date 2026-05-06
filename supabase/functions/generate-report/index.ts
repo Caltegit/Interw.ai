@@ -101,14 +101,28 @@ serve(async (req) => {
     const project = session.projects as any;
     let messages = messagesRes.data ?? [];
 
-    // Filet de sécurité : si certains segments candidats ont échoué à la
-    // transcription (ancien flux inline > 18 Mo), on relance transcribe-session
-    // qui utilisera l'API Files Gemini (jusqu'à 200 Mo / 10 min).
+    // Garde-fou : si la session ne contient aucun enregistrement vidéo/audio
+    // côté candidat, on ne peut rien transcrire ni évaluer.
+    const hasAnyRecording = messages.some(
+      (m: any) =>
+        m.role === "candidate" && (m.video_segment_url || m.audio_segment_url),
+    );
+    if (!hasAnyRecording) {
+      return new Response(
+        JSON.stringify({ error: "no_recordings", message: "Aucun enregistrement disponible pour cette session." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Filet de sécurité : si certains segments candidats n'ont pas encore été
+    // transcrits, on relance transcribe-session (voie inline Lovable Gateway).
+    const isTerminalStatus = (s: string | null | undefined) =>
+      s === "done" || s === "skipped" || s === "too_large";
     const hasFailedSegments = messages.some(
       (m: any) =>
         m.role === "candidate" &&
         (m.video_segment_url || m.audio_segment_url) &&
-        m.transcription_status !== "done",
+        !isTerminalStatus(m.transcription_status),
     );
     if (hasFailedSegments) {
       try {
@@ -139,7 +153,7 @@ serve(async (req) => {
             (m: any) =>
               m.role === "candidate" &&
               (m.video_segment_url || m.audio_segment_url) &&
-              m.transcription_status !== "done",
+              !isTerminalStatus(m.transcription_status),
           );
           if (!stillPending || !transcribeData?.remaining) break;
           await new Promise((resolve) => setTimeout(resolve, 1500));
