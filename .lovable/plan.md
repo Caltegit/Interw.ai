@@ -1,56 +1,59 @@
-## Problème confirmé
-Le bug ne vient pas du template email ni de la file d’envoi.
+## Objectif
+Faire en sorte que le rapport accessible via lien partagé (`/r/:token`, `SharedReport.tsx`) ait exactement le même contenu et la même mise en page que le rapport vu côté recruteur (`/sessions/:id`, `SessionDetail.tsx`), à l'exception des éléments réservés au recruteur.
 
-La panne se produit avant cela : `report-interview-issue` appelle `send-transactional-email`, mais cette fonction est protégée avec `verify_jwt = true` alors que l’appel interne lui envoie une clé service qui n’est pas acceptée comme JWT valide dans la configuration actuelle.
+## Constat
+Aujourd'hui les deux pages divergent fortement :
 
-Résultat : l’appel est rejeté en 401 `UNAUTHORIZED_INVALID_JWT_FORMAT`, donc aucun email n’est mis en file et aucune ligne n’apparaît dans `email_send_log`.
+| Bloc | SessionDetail (interne) | SharedReport (lien) |
+|---|---|---|
+| En-tête « Decision banner » (verdict, fit score, headline, recommandation) | ✅ `DecisionBanner` | ❌ `OverviewHeader` basique |
+| Decision drivers (forces/faiblesses cliquables) | ✅ `DecisionDriversCard` | ❌ liste simple |
+| Fit breakdown par critère | ✅ `FitBreakdownCard` | ❌ barres `bg-primary` génériques |
+| Signaux (red flags, follow-ups) | ✅ `SignalsCard` | ❌ absent |
+| Profil de communication | ✅ `CommunicationProfileCard` | ❌ absent |
+| Comparaison projet | ✅ `ProjectComparisonCard` | ❌ absent |
+| Analyse profonde (personnalité, soft skills) | ✅ `DeepAnalysisAccordion` | ❌ absent |
+| Onglet Réponses (Q/R fusionnées) | ✅ `QuestionAnswerRow` | ❌ liste vidéo brute |
+| Onglet Transcription | ✅ `VirtualizedMessageList` | ✅ `SimpleMessageList` |
+| Best-of | ✅ panneau latéral | ✅ onglet séparé |
+| Disclaimer IA | ✅ | ❌ |
 
-## Ce que je vais corriger
-1. Revoir l’authentification de `send-transactional-email` pour qu’elle soit compatible avec :
-   - les appels depuis le front candidat/RH avec un vrai token utilisateur
-   - les appels internes depuis d’autres fonctions backend
-2. Supprimer la dépendance au contrôle `verify_jwt = true` au niveau passerelle pour cette fonction, puis faire la validation dans le code.
-3. Mettre à jour les appels internes qui envoient des emails pour utiliser un schéma cohérent et fiable.
-4. Re-tester tout le parcours “Signaler un problème” de bout en bout.
+## Approche
+Réécrire `src/pages/SharedReport.tsx` pour reprendre la même structure que `SessionDetail.tsx`, en retirant uniquement les actions recruteur :
+- pas de bouton « Retour au projet »
+- pas de boutons de décision (`DecisionBanner` en mode lecture seule)
+- pas de bouton partager / régénérer / télécharger
+- pas de zone « Notes recruteur »
+- pas de bouton « Re-transcrire »
+- pas de navigation vers un message (les `onGoToMessage` deviennent des no-ops, ou on garde le scroll local)
 
-## Fichiers concernés
-- `supabase/functions/send-transactional-email/index.ts`
-- `supabase/functions/report-interview-issue/index.ts`
-- `supabase/functions/check-email-failures/index.ts`
-- `supabase/config.toml`
+## Étapes
 
-## Plan d’implémentation
-### 1) Sécuriser correctement `send-transactional-email`
-- passer `send-transactional-email` en `verify_jwt = false`
-- ajouter une validation explicite dans la fonction :
-  - accepter un vrai token utilisateur côté front
-  - accepter un appel interne signé côté backend
-- garder le comportement actuel d’envoi en file, sans toucher au rendu des templates
+1. **Refactor `SharedReport.tsx`**
+   - Charger en plus : `report_shares` → `reports` → `sessions(*, projects(*, questions))` → `session_messages` (déjà fait) + récupérer `project_id` pour la moyenne projet.
+   - Calculer les mêmes dérivés que `SessionDetail` : `candidateMainVideos`, `sessionClips`, `questionItems`, `stats`, `criteriaScores`, `questionEvaluations`, `verdictHeadline`, `fitScore`.
+   - Réutiliser : `DecisionBanner`, `DecisionDriversCard`, `FitBreakdownCard`, `SignalsCard`, `CommunicationProfileCard`, `ProjectComparisonCard`, `DeepAnalysisAccordion`, `QuestionAnswerRow`, `VirtualizedMessageList`, `SessionVideoNavigator`, `HighlightReelPlayer`, `AiAnalysisDisclaimer`.
+   - Layout identique : 3 onglets `Décision / Réponses / Transcription` + panneau latéral `Navigation vidéo` + `Best-of`.
 
-### 2) Corriger `report-interview-issue`
-- adapter l’appel vers `send-transactional-email` au nouveau schéma d’authentification interne
-- conserver :
-  - le template `interview-issue-report`
-  - le `reply-to` candidat
-  - l’idempotency key
-  - les messages d’erreur propres
+2. **`DecisionBanner` en mode lecture seule (lien public)**
+   - Ajouter une prop `readOnly?: boolean`. Quand `true` :
+     - masquer les boutons Présélectionner / Rejeter / 2e avis / Annuler
+     - masquer Partager / Copier lien / Régénérer / Télécharger vidéos
+     - garder verdict, fit score, headline, recommandation, durée, nombre de réponses, rank label
+   - Aucune autre page n'est modifiée (props additive).
 
-### 3) Aligner les autres appels internes
-- corriger aussi `check-email-failures`, car il utilise le même modèle d’appel interne et risque la même panne
-- vérifier qu’on n’a pas d’autre appel interne au même format dans le projet
+3. **`useProjectAverages` accessible en anonyme**
+   - Vérifier que le hook fonctionne sans `auth.uid()`. Si la requête nécessite l'utilisateur connecté, l'appeler quand même (RLS `sessions`/`reports` autorisent `anon` en lecture pour les rapports partagés). Sinon, fallback : ne pas afficher `ProjectComparisonCard` côté lien (acceptable, mais à tester d'abord).
 
-### 4) Vérification complète
-Après correction et redéploiement, je vérifierai :
-- que `report-interview-issue` répond bien sans 401
-- qu’une ligne `pending` ou `sent` apparaît dans `email_send_log`
-- que le template `interview-issue-report` est bien mis en file
-- qu’il n’y a plus de log `UNAUTHORIZED_INVALID_JWT_FORMAT`
+4. **Navigation vers un message depuis les cartes**
+   - `onGoToMessage` reste fonctionnel : il bascule sur l'onglet Transcription et scrolle. Identique à l'interne.
 
-## Détails techniques
-Constat actuel :
-- log backend : `send-transactional-email failed 401 {"code":"UNAUTHORIZED_INVALID_JWT_FORMAT","message":"Invalid JWT"}`
-- `report-interview-issue` appelle aujourd’hui `/functions/v1/send-transactional-email` avec `Authorization: Bearer ${serviceKey}`
-- avec le système de clés actuel, cette valeur n’est pas acceptée comme JWT par la protection gateway
-- c’est pour cela que l’exécution s’arrête avant même l’écriture dans `email_send_log`
+5. **QA**
+   - Ouvrir un lien `/r/:token` existant et vérifier visuellement qu'il rend la même chose que `/sessions/:id` côté recruteur, sans les actions.
+   - Vérifier que le rapport reste accessible sans authentification (RLS `anon`).
 
-Si vous validez, j’applique la correction complète et je reteste tout le flux proprement.
+## Fichiers modifiés
+- `src/pages/SharedReport.tsx` — réécriture complète
+- `src/components/session/DecisionBanner.tsx` — ajout prop `readOnly`
+
+Aucune migration DB nécessaire.

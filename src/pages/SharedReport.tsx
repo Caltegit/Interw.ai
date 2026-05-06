@@ -1,24 +1,39 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OverviewHeader } from "@/components/session/OverviewHeader";
-import { SessionStatsCard } from "@/components/session/SessionStatsCard";
+import { MessageSquare, Play, FileText } from "lucide-react";
+import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
+import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
+import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
 import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
-import { SimpleMessageList } from "@/components/session/SimpleMessageList";
-import { Play, MessageSquare, FileText, Trophy } from "lucide-react";
+import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
+import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
+import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
+import { SignalsCard } from "@/components/session/SignalsCard";
+import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
+import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
+import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
+import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
+
+const formatDuration = (seconds?: number | null) => {
+  if (!seconds || seconds <= 0) return undefined;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m} min ${s.toString().padStart(2, "0")}`;
+};
 
 export default function SharedReport() {
   const { token } = useParams();
   const [report, setReport] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
-  const [project, setProject] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("decision");
+  const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -61,20 +76,19 @@ export default function SharedReport() {
       const { data: sessionData } = await supabase
         .from("sessions")
         .select(
-          "id, candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, project_id, projects(title, job_title, ai_persona_name, questions(id, content, order_index))",
+          "id, candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, project_id, projects(id, title, job_title, ai_persona_name, questions(id, content, order_index))",
         )
         .eq("id", reportData.session_id)
         .single();
 
       const { data: msgs } = await supabase
         .from("session_messages")
-        .select("id, role, content, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up")
+        .select("id, role, content, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up, transcription_status")
         .eq("session_id", reportData.session_id)
         .order("timestamp");
 
       setReport(reportData);
       setSession(sessionData);
-      setProject((sessionData as any)?.projects ?? null);
       setMessages(msgs ?? []);
       setLoading(false);
     };
@@ -82,33 +96,19 @@ export default function SharedReport() {
     loadReport();
   }, [token]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  const project = session?.projects;
+  const { data: projectAverages } = useProjectAverages(session?.project_id);
 
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <p className="text-lg font-medium text-destructive">{error}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const candidateVideos = useMemo(
+    () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
+    [messages],
+  );
+  const candidateMainVideos = useMemo(
+    () => candidateVideos.filter((m: any) => !m.is_follow_up),
+    [candidateVideos],
+  );
 
-  const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
-  const candidateVideos = messages.filter((m: any) => m.role === "candidate" && m.video_segment_url);
-  const highlightClips = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
-  const stats = (report?.stats as Record<string, any>) ?? {};
-
-  const sessionClips: SessionVideoClip[] = (() => {
+  const sessionClips = useMemo<SessionVideoClip[]>(() => {
     const projectQuestions = ((project?.questions as any[]) ?? [])
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
@@ -133,113 +133,184 @@ export default function SharedReport() {
           isFollowUp: !!m.is_follow_up,
         };
       });
-  })();
+  }, [candidateVideos, project]);
+
+  const stats = (report?.stats as Record<string, any>) ?? {};
+  const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
+  const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
+
+  const verdictHeadline = stats.verdict_headline || report?.executive_summary_short || null;
+  const fitScore =
+    typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
+
+  const goToMessage = useCallback(
+    (messageId: string) => {
+      const idx = messages.findIndex((m: any) => m.id === messageId);
+      if (idx === -1) return;
+      setActiveTab("transcript");
+      setActiveMessageIndex(idx);
+      setTimeout(() => {
+        const el = document.querySelector(`[data-index="${idx}"]`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    },
+    [messages],
+  );
+
+  const questionItems = useMemo(() => {
+    const evalByQuestionId = new Map<string, any>();
+    const evalByIndex = new Map<number, any>();
+    Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
+      const idx = parseInt(key);
+      if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
+      if (val?.question_id) evalByQuestionId.set(val.question_id, val);
+    });
+    const projectQuestions = (project?.questions as any[]) ?? [];
+
+    return candidateMainVideos.map((video: any, idx: number) => {
+      const evalEntry =
+        (video.question_id && evalByQuestionId.get(video.question_id)) ||
+        evalByIndex.get(idx);
+      const projectQ = video.question_id
+        ? projectQuestions.find((q: any) => q.id === video.question_id)
+        : projectQuestions[idx];
+      const candidateMsg = messages.find(
+        (m: any) =>
+          m.role === "candidate" &&
+          !m.is_follow_up &&
+          (video.question_id ? m.question_id === video.question_id : true),
+      );
+      return {
+        index: idx,
+        questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
+        videoUrl: video.video_segment_url,
+        score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
+        summary: evalEntry?.summary ?? null,
+        comment: evalEntry?.comment ?? null,
+        keyQuote: evalEntry?.key_quote ?? null,
+        depthLevel: evalEntry?.depth_level ?? null,
+        hadFollowup: !!evalEntry?.had_followup,
+        followupHelped: !!evalEntry?.followup_helped,
+        candidateAnswerText: candidateMsg?.content ?? null,
+      };
+    });
+  }, [candidateMainVideos, questionEvaluations, project, messages]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="py-8 text-center">
+            <p className="text-lg font-medium text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!session) return <p className="p-8">Session introuvable.</p>;
+
+  const rankLabel =
+    projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
+      ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
+      : null;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-      {session && (
-        <OverviewHeader
-          candidateName={session.candidate_name}
-          candidateEmail={session.candidate_email}
-          jobTitle={project?.job_title}
-          projectTitle={project?.title}
-          createdAt={session.created_at}
-          durationSeconds={session.duration_seconds}
-          messagesCount={messages.length}
-          videoAnswersCount={candidateVideos.length}
-          criteriaCount={Object.keys(criteriaScores).length}
-          questionsEvaluatedCount={Object.keys(questionEvaluations).length}
-          overallScore={report ? Number(report.overall_score) : null}
-          overallGrade={report?.overall_grade}
-          recommendation={report?.recommendation}
-        />
-      )}
+    <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
+      <DecisionBanner
+        readOnly
+        candidateName={session.candidate_name}
+        jobTitle={project?.job_title}
+        durationLabel={formatDuration(session.duration_seconds)}
+        videoAnswersCount={candidateVideos.length}
+        fitScore={fitScore}
+        recommendation={report?.recommendation ?? null}
+        headline={verdictHeadline}
+        rankLabel={rankLabel}
+        decision={"none" as RecruiterDecision}
+        onDecisionChange={() => {}}
+      />
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-4">
-          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
-          <SessionStatsCard stats={stats} questionEvaluations={questionEvaluations} />
-        </div>
-
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div>
-          <Tabs defaultValue="synthesis">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="synthesis" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Synthèse</span>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="decision" className="gap-1">
+                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Décision</span>
               </TabsTrigger>
-              <TabsTrigger value="questions" className="gap-1">
-                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Questions</span>
+              <TabsTrigger value="answers" className="gap-1">
+                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
               <TabsTrigger value="transcript" className="gap-1">
                 <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
               </TabsTrigger>
-              <TabsTrigger value="best-of" className="gap-1">
-                <Trophy className="h-4 w-4" /> <span className="hidden sm:inline">Best-of</span>
-              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="synthesis" className="mt-4 space-y-4">
+            <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
                 <>
-                  <Card>
-                    <CardHeader><CardTitle className="text-base">Résumé</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm leading-relaxed">{report.executive_summary}</p></CardContent>
-                  </Card>
+                  <AiAnalysisDisclaimer />
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {report.strengths?.length > 0 && (
-                      <Card>
-                        <CardHeader><CardTitle className="text-base">Points forts</CardTitle></CardHeader>
-                        <CardContent>
-                          <ul className="space-y-1.5">
-                            {(report.strengths as string[]).map((s: string, i: number) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="mt-0.5 text-success">✓</span> {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
+                  <DecisionDriversCard
+                    drivers={stats.decision_drivers}
+                    strengths={report.strengths as string[] | null}
+                    weaknesses={report.areas_for_improvement as string[] | null}
+                    onGoToMessage={goToMessage}
+                  />
 
-                    {report.areas_for_improvement?.length > 0 && (
-                      <Card>
-                        <CardHeader><CardTitle className="text-base">Axes d'amélioration</CardTitle></CardHeader>
-                        <CardContent>
-                          <ul className="space-y-1.5">
-                            {(report.areas_for_improvement as string[]).map((s: string, i: number) => (
-                              <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="mt-0.5 text-warning">⚠</span> {s}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
+                  <FitBreakdownCard
+                    items={stats.fit_breakdown}
+                    legacyCriteriaScores={criteriaScores as any}
+                    onGoToMessage={goToMessage}
+                  />
 
-                  {Object.keys(criteriaScores).length > 0 && (
+                  <SignalsCard
+                    signals={stats.signals}
+                    legacyRedFlags={report.red_flags as any}
+                    legacyFollowups={report.followup_questions as any}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  <CommunicationProfileCard
+                    profile={stats.communication_profile}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  {projectAverages && projectAverages.count >= 3 && (
+                    <ProjectComparisonCard
+                      candidateScore={fitScore}
+                      averages={projectAverages}
+                      candidateCriteria={criteriaScores as any}
+                    />
+                  )}
+
+                  {report.executive_summary && (
                     <Card>
-                      <CardHeader><CardTitle className="text-base">Scores par critère</CardTitle></CardHeader>
-                      <CardContent className="space-y-3">
-                        {Object.entries(criteriaScores).map(([key, val]: [string, any]) => (
-                          <div key={key}>
-                            <div className="flex justify-between text-sm">
-                              <span>{val.label || key}</span>
-                              <span className="font-medium">{val.score}/{val.max}</span>
-                            </div>
-                            <div className="mt-1 h-2 rounded-full bg-muted">
-                              <div
-                                className="h-2 rounded-full bg-primary transition-all"
-                                style={{ width: `${(val.score / val.max) * 100}%` }}
-                              />
-                            </div>
-                            {val.comment && <p className="mt-1 text-xs text-muted-foreground">{val.comment}</p>}
-                          </div>
-                        ))}
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Bilan global</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {report.executive_summary}
+                        </p>
                       </CardContent>
                     </Card>
                   )}
+
+                  <DeepAnalysisAccordion
+                    personalityProfile={report.personality_profile}
+                    softSkills={report.soft_skills as any}
+                    projectAverages={projectAverages?.bigFive}
+                    onGoToMessage={goToMessage}
+                  />
                 </>
               ) : (
                 <Card>
@@ -250,43 +321,17 @@ export default function SharedReport() {
               )}
             </TabsContent>
 
-            <TabsContent value="questions" className="mt-4 space-y-4">
-              {Object.keys(questionEvaluations).length === 0 ? (
+            <TabsContent value="answers" className="mt-4 space-y-3">
+              {questionItems.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune évaluation par question disponible.
+                    Aucune réponse vidéo enregistrée.
                   </CardContent>
                 </Card>
               ) : (
-                Object.entries(questionEvaluations).map(([key, val]: [string, any]) => {
-                  const qIndex = parseInt(key);
-                  const matchingVideo = candidateVideos[qIndex] || candidateVideos[qIndex - 1];
-                  return (
-                    <Card key={key}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="flex-1 text-sm">
-                            Q{qIndex + 1} — {val.question || `Question ${qIndex + 1}`}
-                          </CardTitle>
-                          <Badge variant="outline">{val.score}/10</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {matchingVideo?.video_segment_url && (
-                          <div className="overflow-hidden rounded-lg bg-muted aspect-video">
-                            <video
-                              src={matchingVideo.video_segment_url}
-                              controls
-                              preload="metadata"
-                              className="h-full w-full object-contain"
-                            />
-                          </div>
-                        )}
-                        {val.comment && <p className="text-xs text-muted-foreground">{val.comment}</p>}
-                      </CardContent>
-                    </Card>
-                  );
-                })
+                questionItems.map((item, i) => (
+                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
+                ))
               )}
             </TabsContent>
 
@@ -298,16 +343,32 @@ export default function SharedReport() {
                       Aucun message enregistré.
                     </div>
                   ) : (
-                    <SimpleMessageList messages={messages} aiPersonaName={project?.ai_persona_name} />
+                    <VirtualizedMessageList
+                      messages={messages}
+                      aiPersonaName={project?.ai_persona_name}
+                      activeIndex={activeMessageIndex}
+                      onSelect={setActiveMessageIndex}
+                    />
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="best-of" className="mt-4">
-              <HighlightReelPlayer clips={highlightClips} />
-            </TabsContent>
           </Tabs>
+        </div>
+
+        <div className="space-y-4">
+          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Best-of</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <HighlightReelPlayer
+                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
 
