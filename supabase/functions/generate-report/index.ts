@@ -99,7 +99,42 @@ serve(async (req) => {
 
     const session = sessionRes.data;
     const project = session.projects as any;
-    const messages = messagesRes.data ?? [];
+    let messages = messagesRes.data ?? [];
+
+    // Filet de sécurité : si certains segments candidats ont échoué à la
+    // transcription (ancien flux inline > 18 Mo), on relance transcribe-session
+    // qui utilisera l'API Files Gemini (jusqu'à 200 Mo / 10 min).
+    const hasFailedSegments = messages.some(
+      (m: any) =>
+        m.role === "candidate" &&
+        (m.video_segment_url || m.audio_segment_url) &&
+        m.transcription_status !== "done",
+    );
+    if (hasFailedSegments) {
+      try {
+        console.log("generate-report: relance transcribe-session pour segments manquants");
+        const transcribeRes = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-session`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ session_id, force: false }),
+        });
+        if (transcribeRes.ok) {
+          const refreshed = await supabase
+            .from("session_messages")
+            .select("*")
+            .eq("session_id", session_id)
+            .order("timestamp");
+          if (refreshed.data) messages = refreshed.data;
+        } else {
+          console.error("transcribe-session failed", transcribeRes.status, await transcribeRes.text());
+        }
+      } catch (e) {
+        console.error("transcribe-session pre-step error:", e);
+      }
+    }
     const criteria = project?.evaluation_criteria ?? [];
     const questions = project?.questions ?? [];
 
