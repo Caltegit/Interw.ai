@@ -85,6 +85,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${serviceKey}`,
         apikey: serviceKey,
+        'x-internal-secret': serviceKey,
       },
       body: JSON.stringify({
         templateName: 'interview-issue-report',

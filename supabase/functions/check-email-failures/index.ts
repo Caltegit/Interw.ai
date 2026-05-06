@@ -165,6 +165,8 @@ Deno.serve(async (req) => {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+          'x-internal-secret': serviceKey,
         },
         body: JSON.stringify({
           templateName: 'email-failure-alert',
