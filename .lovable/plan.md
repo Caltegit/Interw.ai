@@ -1,53 +1,48 @@
-## Objectif
+## Contexte
 
-Cadrer chaque réponse candidat à **10 minutes maximum**, avec un **avertissement à 8 minutes**, puis adapter la chaîne de transcription pour qu'une vidéo de 10 min reste traitable par Gemini.
+Les vidéos des sessions ALBO existantes sont **toujours stockées** (Supabase Storage) et accessibles via `video_segment_url`. Elles n'ont pas été perdues. Le problème est uniquement leur **transcription**, qui a échoué parce que les segments dépassent 18 Mo et que la voie inline Gemini ne les acceptait pas.
 
----
+Depuis hier, l'API Files Gemini est déployée (jusqu'à 200 Mo / ~10 min). Il suffit donc de **rejouer la transcription** sur les segments `failed` puis de **régénérer les rapports**.
 
-## 1. Limite côté candidat (InterviewStart.tsx)
+## Recommandation
 
-Le mécanisme existe déjà via `max_response_seconds` par question + auto-envoi quand le timer expire. On le rend systématique.
+Approche en 2 temps : un correctif manuel ciblé pour les sessions ALBO existantes, plus un filet de sécurité pour éviter que ça se reproduise.
 
-- **Plafond dur 600 s** : la valeur effective devient `min(max_response_seconds ?? 600, 600)`. Même si une question est configurée à 15 min en base, le runtime plafonne à 10 min.
-- **Avertissement à 8 min** (responseElapsedSec ≥ 480) :
-  - Toast `"Plus que 2 minutes pour cette réponse"` (déclenché une seule fois par question).
-  - Bandeau d'état passe en orange (warning) — déjà géré quand ratio < 0,5, on s'assure que ça se déclenche bien à 480 s.
-  - Dernière minute : passage en rouge (destructive) — déjà géré.
-- **À 10 min** : le code existant `handleSendResponseRef.current?.()` envoie automatiquement la réponse (comportement déjà en place pour `max_response_seconds`).
-- **Affichage du compte à rebours** : le label `MM:SS / 10:00` apparaît dès le début de chaque réponse (au lieu de seulement quand `max_response_seconds` est défini).
+### Étape 1 — Récupérer les sessions ALBO existantes (one-shot)
 
-## 2. Côté serveur — re-transcription des vidéos longues (transcribe-session)
+Plutôt que de cliquer manuellement sur "Re-transcrire" dans chaque rapport, lancer un script côté serveur qui :
 
-Une vidéo WebM de 10 min ≈ 80–120 Mo. La limite actuelle inline base64 (`MAX_INLINE_BYTES = 18 Mo`) bloque toute re-transcription au-delà de ~1,5 min.
+1. Liste les sessions ALBO `completed` ayant au moins un segment en `failed`.
+2. Pour chacune, appelle l'edge function `transcribe-session` avec `force: false` (ne touche pas aux segments déjà `done`, ne ré-essaie que les `failed` et `pending`).
+3. Une fois la transcription rejouée, appelle `generate-report` pour produire / regénérer le rapport.
 
-- **Migrer vers l'API Files de Gemini** (upload puis référence par URI) :
-  1. `POST https://generativelanguage.googleapis.com/upload/v1beta/files` (resumable upload) avec le binaire vidéo.
-  2. Polling sur l'état du fichier (`ACTIVE` avant utilisation).
-  3. Appel chat completions avec `file_uri` au lieu de `data:base64`.
-- **Nouvelle limite haute** : 200 Mo (marge confortable pour 10 min en haute qualité). Au-delà, on log et on échoue proprement.
-- **Gestion d'erreur** : si l'upload Files API échoue (clé sans accès, etc.), fallback sur l'inline base64 actuel pour les petits fichiers (<18 Mo).
+Sessions concernées identifiées :
+- Cyrille ROBERT — 14 segments à reprendre, rapport à créer
+- Coulondre — 11 segments à reprendre, rapport à créer
+- Clem Guerveno — 13 segments à reprendre, rapport à régénérer
+- Guilbert — 2 segments à reprendre, rapport à régénérer
+- JAMES SCHOUTETEN — 0 segments échoués, juste rapport à générer
 
-> Note : l'AI Gateway Lovable proxie OpenAI-style. L'API Files de Gemini ne passe pas par cette gateway → il faudra utiliser directement `generativelanguage.googleapis.com` avec une clé `GEMINI_API_KEY`. Si cette clé n'est pas dispo, on reste sur l'inline et on documente la limite.
+Exécution via `code--exec` (curl vers les edge functions, séquentiel pour respecter le rate limit Gemini, ~30 s par session).
 
-## 3. Pas de modif DB
+### Étape 2 — Auto-retry dans `generate-report` (filet de sécurité)
 
-Aucune migration nécessaire. La colonne `max_response_seconds` existe déjà sur `questions` ; on garde sa souplesse pour l'auteur, mais on plafonne au runtime.
+Avant de générer le rapport, `generate-report` vérifie s'il reste des segments `failed`. Si oui, il appelle automatiquement `transcribe-session` avec `force: false` puis recharge les messages. Comme ça, dès qu'un RH clique "Générer le rapport" sur une vieille session, la récupération se fait toute seule.
 
----
+### Hors périmètre
 
-## Fichiers modifiés
+- Pas de modification de la base ni du flux candidat (déjà corrigé hier avec la limite 10 min).
+- Pas de re-encodage / découpage des vidéos : la voie Files Gemini les accepte telles quelles.
+- Pas de bouton bulk dans l'UI pour l'instant — si le besoin se confirme, on pourra l'ajouter sur la page ALBO côté liste candidats.
 
-- `src/pages/InterviewStart.tsx` — plafond 600 s, toast à 480 s, affichage timer systématique.
-- `supabase/functions/transcribe-session/index.ts` — Files API + nouvelle limite 200 Mo.
+## Ce qui sera modifié
 
-## Hors périmètre
+- **Aucun fichier code modifié** pour l'étape 1 (script one-shot via `code--exec`).
+- **`supabase/functions/generate-report/index.ts`** pour l'étape 2 : ajout d'un appel interne à `transcribe-session` si segments `failed` détectés.
 
-- Pas de changement sur la durée totale de session (`max_duration_minutes` reste configurable par projet).
-- Pas de réparation rétroactive des sessions ALBO cassées (à traiter séparément si tu veux).
-- Pas de découpage côté navigateur (l'enregistrement reste continu, simplement coupé à 10 min).
+## Question avant exécution
 
----
-
-## Question rapide
-
-Veux-tu que je gère aussi la **clé `GEMINI_API_KEY`** pour l'API Files (sinon, on garde inline et on documente que la re-transcription manuelle reste limitée à ~1,5 min même si l'enregistrement va jusqu'à 10 min) ? Sans cette clé, le rapport sera quand même généré normalement à partir du texte du navigateur (qui, lui, n'a plus de bug de duplication).
+Veux-tu que je :
+- (a) lance maintenant **le rattrapage des 5 sessions ALBO** + ajoute le **filet de sécurité** dans `generate-report` ?
+- (b) uniquement le **rattrapage one-shot** (plus rapide, sans modifier le code) ?
+- (c) uniquement le **filet de sécurité** (tu déclencheras toi-même via le bouton "Re-transcrire" dans chaque rapport) ?
