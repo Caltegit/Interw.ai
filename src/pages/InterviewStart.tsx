@@ -2842,6 +2842,8 @@ export default function InterviewStart() {
       if (silenceAutoPauseTimerRef.current) clearTimeout(silenceAutoPauseTimerRef.current);
       if (silenceEndWarningTimerRef.current) clearTimeout(silenceEndWarningTimerRef.current);
       if (endCountdownIntervalRef.current) clearInterval(endCountdownIntervalRef.current);
+      if (networkDownTimerRef.current) clearTimeout(networkDownTimerRef.current);
+      if (networkUpTimerRef.current) clearTimeout(networkUpTimerRef.current);
       clearAutoSkip();
     };
   }, [stopListening, clearAutoSkip]);
