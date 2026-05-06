@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
         .eq("id", (m as any).id);
 
       try {
-        const cleaned = await callGemini(LOVABLE_API_KEY, mediaUrl);
+        const cleaned = await callGemini(LOVABLE_API_KEY, GEMINI_API_KEY, mediaUrl);
         const rawBackup = (m as any).content_raw ?? (m as any).content ?? null;
         await admin
           .from("session_messages")
