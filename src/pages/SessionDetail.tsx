@@ -272,6 +272,77 @@ export default function SessionDetail() {
   }
   if (!session) return <p>Session introuvable.</p>;
 
+  const handleDeleteSession = async () => {
+    if (!id || deleting) return;
+    setDeleting(true);
+    try {
+      const { data: result, error } = await supabase.functions.invoke("delete-session", {
+        body: { session_id: id },
+      });
+      if (error || (result as any)?.error) {
+        throw new Error((result as any)?.error || error?.message || "Erreur inconnue");
+      }
+      toast({ title: "Session supprimée." });
+      navigate(`/projects/${session.project_id}`);
+    } catch (e: any) {
+      toast({ title: "Suppression impossible", description: e.message ?? String(e), variant: "destructive" });
+      setDeleting(false);
+    }
+  };
+
+  // Cas particulier : aucun enregistrement candidat (entretien terminé sans réponse)
+  if (candidateMessagesWithMedia.length === 0 && session.status === "completed") {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link to={`/projects/${session.project_id}`}>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+          </Link>
+        </Button>
+
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div className="rounded-full bg-muted p-4">
+              <VideoOff className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">Aucun enregistrement disponible</h2>
+              <p className="text-sm text-muted-foreground">
+                {session.candidate_name} a terminé l'entretien sans qu'aucune réponse vidéo ou audio
+                ne soit enregistrée. Aucun rapport ne peut être généré.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={deleting}>
+                  <Trash2 className="mr-1 h-4 w-4" /> Supprimer la session
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action est irréversible. La session, ses messages et son rapport éventuel
+                    seront définitivement supprimés.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDeleteSession}
+                  >
+                    {deleting ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Suppression…</> : "Supprimer"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const decision = (session.recruiter_decision ?? "none") as RecruiterDecision;
   const rankLabel =
     projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
