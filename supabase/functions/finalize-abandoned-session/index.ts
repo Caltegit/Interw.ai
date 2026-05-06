@@ -48,32 +48,54 @@ async function assembleQuestion(
 
   if (chunkFiles.length === 0) return false;
 
-  // Téléchargement séquentiel pour limiter la mémoire et préserver l'ordre.
-  const buffers: Uint8Array[] = [];
-  for (const f of chunkFiles) {
-    const { data, error } = await supabase.storage
-      .from("media")
-      .download(`${folder}/${f.name}`);
-    if (error || !data) {
-      console.error("download failed", folder, f.name, error?.message);
-      continue;
-    }
-    buffers.push(new Uint8Array(await data.arrayBuffer()));
-  }
-  if (buffers.length === 0) return false;
+  // Assemblage en streaming : un seul chunk en mémoire à la fois.
+  let i = 0;
+  let currentReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        while (true) {
+          if (!currentReader) {
+            if (i >= chunkFiles.length) {
+              controller.close();
+              return;
+            }
+            const f = chunkFiles[i++];
+            const { data, error } = await supabase.storage
+              .from("media")
+              .download(`${folder}/${f.name}`);
+            if (error || !data) {
+              console.error("download failed", folder, f.name, error?.message);
+              continue; // skip ce chunk, passe au suivant
+            }
+            currentReader = data.stream().getReader();
+          }
+          const { value, done } = await currentReader.read();
+          if (done) {
+            currentReader = null;
+            continue;
+          }
+          if (value && value.byteLength > 0) {
+            controller.enqueue(value);
+            return;
+          }
+        }
+      } catch (e) {
+        controller.error(e);
+      }
+    },
+    async cancel() {
+      try { await currentReader?.cancel(); } catch { /* noop */ }
+    },
+  });
 
-  const totalLen = buffers.reduce((s, b) => s + b.byteLength, 0);
-  const merged = new Uint8Array(totalLen);
-  let offset = 0;
-  for (const b of buffers) {
-    merged.set(b, offset);
-    offset += b.byteLength;
-  }
-
-  const blob = new Blob([merged], { type: "video/webm" });
   const { error: upErr } = await supabase.storage
     .from("media")
-    .upload(finalPath, blob, { contentType: "video/webm", upsert: true });
+    .upload(finalPath, stream as any, {
+      contentType: "video/webm",
+      upsert: true,
+      duplex: "half",
+    } as any);
   if (upErr) {
     console.error("upload final failed", finalPath, upErr.message);
     return false;
