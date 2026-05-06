@@ -619,6 +619,24 @@ export default function ProjectDetail() {
                           <td className="py-3 text-muted-foreground">
                             {new Date(s.created_at).toLocaleDateString("fr-FR")}
                           </td>
+                          <td className="py-3 hidden md:table-cell text-xs" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={s.assigned_to ?? "none"}
+                              onValueChange={(v) => reassignSession(s.id, v === "none" ? null : v)}
+                            >
+                              <SelectTrigger className="h-8 w-full max-w-[12rem] text-xs">
+                                <SelectValue placeholder="—">{memberLabel(s.assigned_to)}</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Non assignée</SelectItem>
+                                {orgMembers.map((m) => (
+                                  <SelectItem key={m.user_id} value={m.user_id}>
+                                    {m.full_name || m.email}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
                           <td className="py-3 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
                             {rep ? (
                               <div className="flex items-center gap-1">
