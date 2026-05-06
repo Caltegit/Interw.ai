@@ -3705,23 +3705,53 @@ export default function InterviewStart() {
           <p
             className="mb-4 text-sm font-medium uppercase tracking-widest candidate-gradient-text"
           >
-            En pause
+            {networkPauseActive ? "Connexion instable" : "En pause"}
           </p>
-          <Button
-            onClick={resumeInterview}
-            className="candidate-btn-primary h-20 px-12 text-xl font-semibold rounded-2xl hover:scale-[1.03] transition-transform"
-          >
-            <Play className="!h-6 !w-6 mr-3" />
-            REPRENDRE
-          </Button>
-          <p
-            className="mt-6 text-sm text-center max-w-sm px-6"
-            style={{ color: "hsl(var(--l-fg) / 0.6)" }}
-          >
-            {pausedDuringQuestionRef.current
-              ? "La question sera rejouée depuis le début à la reprise."
-              : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
-          </p>
+          {networkPauseActive ? (
+            <>
+              <div className="flex items-center gap-3 mb-2">
+                <Loader2 className="h-6 w-6 animate-spin text-warning" />
+                <NetworkQualityIndicator
+                  tier={networkTier}
+                  measuredKbps={measuredKbps}
+                  effectiveType={effectiveType}
+                />
+              </div>
+              <p
+                className="mt-4 text-sm text-center max-w-sm px-6"
+                style={{ color: "hsl(var(--l-fg) / 0.7)" }}
+              >
+                Votre connexion est trop faible pour poursuivre l'entretien.
+                Il reprendra automatiquement dès qu'elle sera stable.
+              </p>
+              <Button
+                variant="outline"
+                onClick={resumeInterview}
+                className="mt-6 rounded-full"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Reprendre maintenant
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={resumeInterview}
+                className="candidate-btn-primary h-20 px-12 text-xl font-semibold rounded-2xl hover:scale-[1.03] transition-transform"
+              >
+                <Play className="!h-6 !w-6 mr-3" />
+                REPRENDRE
+              </Button>
+              <p
+                className="mt-6 text-sm text-center max-w-sm px-6"
+                style={{ color: "hsl(var(--l-fg) / 0.6)" }}
+              >
+                {pausedDuringQuestionRef.current
+                  ? "La question sera rejouée depuis le début à la reprise."
+                  : "Cliquez pour reprendre exactement où vous vous êtes arrêté(e)."}
+              </p>
+            </>
+          )}
         </div>
       )}
     </CandidateLayout>
