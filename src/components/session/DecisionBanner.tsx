@@ -91,6 +91,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     onRegenerate,
     isRegenerating,
     isShareLoading,
+    readOnly,
   } = props;
 
   const reco = recommendation ? recoConfig[recommendation] : null;
