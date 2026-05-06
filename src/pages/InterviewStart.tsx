@@ -3283,7 +3283,7 @@ export default function InterviewStart() {
                           <span className="text-sm sm:text-base font-semibold text-emerald-700 dark:text-emerald-300">
                             🎙️ À vous !
                           </span>
-                          <span className={`text-xs font-mono tabular-nums ${maxSec ? timerColorClass : "text-emerald-700/70 dark:text-emerald-300/70"}`}>
+                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
                             {timerLabel}
                           </span>
                         </div>
