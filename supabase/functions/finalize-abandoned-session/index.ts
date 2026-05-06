@@ -176,11 +176,14 @@ async function processSession(
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
   try {
-    const body = await req.json();
+    // Lecture du body brut pour accepter aussi text/plain (sendBeacon sans preflight).
+    const raw = await req.text();
+    const body = raw ? JSON.parse(raw) : {};
     const sessionId = typeof body?.session_id === "string" ? body.session_id : null;
     const lastQuestionIndex =
       typeof body?.last_question_index === "number" ? body.last_question_index : null;
