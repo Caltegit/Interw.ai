@@ -146,6 +146,7 @@ export default function InterviewStart() {
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
+  const warnedNearLimitRef = useRef(false);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
@@ -2738,18 +2739,29 @@ export default function InterviewStart() {
   // Reset response timer when question changes
   useEffect(() => {
     setResponseElapsedSec(0);
+    warnedNearLimitRef.current = false;
   }, [currentQuestionIndex]);
 
-  // Auto-end answer when per-question timer expires
+  // Auto-end answer when per-question timer expires.
+  // Plafond dur 10 min (600 s) par réponse, quelle que soit la valeur en base.
+  // Avertissement à 8 min (480 s) : toast une seule fois par question.
   useEffect(() => {
     const q = questions[currentQuestionIndex];
-    const max = q?.max_response_seconds as number | null | undefined;
-    if (!isListening || isPaused || !max || max <= 0) return;
+    const configured = q?.max_response_seconds as number | null | undefined;
+    const max = Math.min(configured && configured > 0 ? configured : 600, 600);
+    if (!isListening || isPaused) return;
+    if (!warnedNearLimitRef.current && responseElapsedSec >= max - 120) {
+      warnedNearLimitRef.current = true;
+      toast({
+        title: "Plus que 2 minutes",
+        description: "Votre réponse sera automatiquement envoyée à la fin du temps imparti.",
+      });
+    }
     if (responseElapsedSec >= max) {
       console.log("[interview] per-question timer expired — auto-sending response");
       handleSendResponseRef.current?.();
     }
-  }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions]);
+  }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
 
   // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
   // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
@@ -3245,20 +3257,18 @@ export default function InterviewStart() {
                   if (interviewFinished) return null;
                   const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
-                  const maxSec = (currentQ?.max_response_seconds as number | null | undefined) ?? null;
+                  const configuredMax = currentQ?.max_response_seconds as number | null | undefined;
+                  const maxSec = Math.min(configuredMax && configuredMax > 0 ? configuredMax : 600, 600);
                   const mm = String(Math.floor(responseElapsedSec / 60)).padStart(2, "0");
                   const ss = String(responseElapsedSec % 60).padStart(2, "0");
-                  let timerLabel = `${mm}:${ss}`;
+                  const rmm = String(Math.floor(maxSec / 60)).padStart(2, "0");
+                  const rss = String(maxSec % 60).padStart(2, "0");
+                  const timerLabel = `${mm}:${ss} / ${rmm}:${rss}`;
+                  const remaining = Math.max(0, maxSec - responseElapsedSec);
+                  const ratio = remaining / maxSec;
                   let timerColorClass = "text-muted-foreground";
-                  if (maxSec && maxSec > 0) {
-                    const remaining = Math.max(0, maxSec - responseElapsedSec);
-                    const rmm = String(Math.floor(maxSec / 60)).padStart(2, "0");
-                    const rss = String(maxSec % 60).padStart(2, "0");
-                    timerLabel = `${mm}:${ss} / ${rmm}:${rss}`;
-                    const ratio = remaining / maxSec;
-                    if (ratio < 0.25) timerColorClass = "text-destructive font-semibold";
-                    else if (ratio < 0.5) timerColorClass = "text-warning";
-                  }
+                  if (ratio < 0.1) timerColorClass = "text-destructive font-semibold";
+                  else if (ratio < 0.2) timerColorClass = "text-warning";
 
                   if (showBigCta) {
                     return (
@@ -3273,7 +3283,7 @@ export default function InterviewStart() {
                           <span className="text-sm sm:text-base font-semibold text-emerald-700 dark:text-emerald-300">
                             🎙️ À vous !
                           </span>
-                          <span className={`text-xs font-mono tabular-nums ${maxSec ? timerColorClass : "text-emerald-700/70 dark:text-emerald-300/70"}`}>
+                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
                             {timerLabel}
                           </span>
                         </div>
