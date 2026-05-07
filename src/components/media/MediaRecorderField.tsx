@@ -1,24 +1,18 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Video, Square, Play, Pause, Upload, RotateCcw, Trash2 } from "lucide-react";
+import { Mic, Video, Square, Play, Pause, Upload, RotateCcw, Trash2, Circle } from "lucide-react";
 import { MicLevelMeter } from "@/components/project/MicLevelMeter";
 
 interface MediaRecorderFieldProps {
   type: "audio" | "video";
-  /** URL existante (déjà uploadée) ou blob:URL en cours d'édition. */
   existingUrl: string | null;
-  /** Appelé quand un nouveau blob est prêt (enregistré ou uploadé). */
   onMediaReady: (blob: Blob, previewUrl: string) => void;
-  /** Appelé quand l'utilisateur supprime le média. */
   onClear?: () => void;
-  /** Durée max en secondes (défaut 180). */
   maxDurationSec?: number;
-  /** Libellé optionnel affiché au-dessus du champ. */
   label?: string;
-  /** Description optionnelle affichée sous le libellé. */
   description?: string;
 }
 
@@ -32,14 +26,6 @@ function formatTime(s: number) {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
-/**
- * Composant unique d'enregistrement audio/vidéo utilisé partout dans l'app.
- * - Démarrage immédiat (pas de compte à rebours)
- * - Bouton « Arrêter » toujours visible (pleine largeur sur mobile)
- * - Aperçu miroir vidéo + jauge micro pendant l'enregistrement
- * - Chronomètre + barre de progression jusqu'à maxDurationSec
- * - Re-prise, lecture inline, import de fichier, suppression
- */
 export function MediaRecorderField({
   type,
   existingUrl,
@@ -56,6 +42,7 @@ export function MediaRecorderField({
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -70,15 +57,50 @@ export function MediaRecorderField({
     setPreviewUrl(existingUrl);
   }, [existingUrl]);
 
-  // Branche le flux à l'élément vidéo en preview
+  const stopAllTracks = useCallback(() => {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    setActiveStream(null);
+    setCameraReady(false);
+    if (previewVideoRef.current) previewVideoRef.current.srcObject = null;
+  }, []);
+
+  const initCamera = useCallback(async () => {
+    if (type !== "video" || streamRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      streamRef.current = stream;
+      setActiveStream(stream);
+      setCameraReady(true);
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = stream;
+        previewVideoRef.current.play().catch(() => {});
+      }
+    } catch {
+      toast({
+        title: "Accès refusé",
+        description: "Impossible d'accéder à la caméra.",
+        variant: "destructive",
+      });
+    }
+  }, [type, toast]);
+
+  // Démarre la caméra dès l'affichage de la phase preview/vide pour la vidéo
   useEffect(() => {
-    if (recording && type === "video" && previewVideoRef.current && streamRef.current) {
+    if (type === "video" && !previewUrl && !recording && !streamRef.current) {
+      void initCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, previewUrl, recording]);
+
+  // Branche le flux à l'élément vidéo si nécessaire
+  useEffect(() => {
+    if (type === "video" && previewVideoRef.current && streamRef.current) {
       previewVideoRef.current.srcObject = streamRef.current;
       previewVideoRef.current.play().catch(() => {});
     }
-  }, [recording, type]);
+  }, [recording, type, cameraReady, previewUrl]);
 
-  // Cleanup au démontage : timer + tracks
   useEffect(() => {
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
@@ -86,20 +108,21 @@ export function MediaRecorderField({
     };
   }, []);
 
-  const stopAllTracks = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    setActiveStream(null);
-    if (previewVideoRef.current) previewVideoRef.current.srcObject = null;
-  };
-
-  const startRecording = async () => {
+  const startRecording = useCallback(async () => {
     try {
-      const constraints = type === "audio" ? { audio: true } : { audio: true, video: true };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      setActiveStream(stream);
+      if (!streamRef.current) {
+        const constraints = type === "audio" ? { audio: true } : { audio: true, video: true };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = stream;
+        setActiveStream(stream);
+        setCameraReady(true);
+        if (type === "video" && previewVideoRef.current) {
+          previewVideoRef.current.srcObject = stream;
+          previewVideoRef.current.play().catch(() => {});
+        }
+      }
 
+      const stream = streamRef.current!;
       const mimeType = type === "audio" ? "audio/webm" : "video/webm";
       const mr = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mr;
@@ -136,9 +159,10 @@ export function MediaRecorderField({
         variant: "destructive",
       });
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type, maxDurationSec, onMediaReady, stopAllTracks, toast]);
 
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     setRecording(false);
     if (timerRef.current) {
       window.clearInterval(timerRef.current);
@@ -148,13 +172,28 @@ export function MediaRecorderField({
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
       } else {
-        // Fallback : si onstop n'est jamais appelé, coupe quand même les tracks
         stopAllTracks();
       }
     } catch {
       stopAllTracks();
     }
-  };
+  }, [stopAllTracks]);
+
+  // Raccourci clavier : barre d'espace pour démarrer/arrêter (vidéo uniquement, hors champ saisie)
+  useEffect(() => {
+    if (type !== "video" || previewUrl) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || t?.isContentEditable) return;
+      e.preventDefault();
+      if (recording) stopRecording();
+      else void startRecording();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [type, previewUrl, recording, startRecording, stopRecording]);
 
   const handleFile = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -180,11 +219,11 @@ export function MediaRecorderField({
     onClear?.();
   };
 
-  // « Refaire » : on nettoie tout PUIS on relance immédiatement (même geste utilisateur).
   const retake = () => {
     clearMedia();
-    // Lance l'enregistrement immédiatement — getUserMedia gère le prompt.
-    void startRecording();
+    // Pour la vidéo, on revient en preview caméra (l'effet relance initCamera).
+    // Pour l'audio, on lance directement l'enregistrement.
+    if (type === "audio") void startRecording();
   };
 
   const togglePlay = async () => {
@@ -201,7 +240,6 @@ export function MediaRecorderField({
 
   const progress = Math.min(100, (elapsed / maxDurationSec) * 100);
 
-  // --- En-tête optionnel ---
   const Header = label ? (
     <div className="space-y-1">
       <Label>{label}</Label>
@@ -209,23 +247,108 @@ export function MediaRecorderField({
     </div>
   ) : null;
 
-  // --- Phase enregistrement ---
+  // --- Phase preview caméra + enregistrement (vidéo) ---
+  if (type === "video" && !previewUrl) {
+    const containerTone = recording ? "border-destructive/30 bg-destructive/5" : "border bg-muted/30";
+    return (
+      <div className="space-y-3">
+        {Header}
+        <div className={`space-y-3 rounded-lg p-3 ${containerTone}`}>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <video
+                ref={previewVideoRef}
+                muted
+                autoPlay
+                playsInline
+                className="w-full rounded-md border bg-black aspect-video object-cover"
+                style={{ transform: "scaleX(-1)" }}
+              />
+              {!cameraReady && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-md text-xs text-white/80">
+                  Activation de la caméra…
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col items-stretch justify-center gap-2 sm:w-44">
+              {recording ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="lg"
+                  onClick={stopRecording}
+                  className="h-14"
+                >
+                  <Square className="mr-2 h-5 w-5 fill-current" /> Arrêter
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => void startRecording()}
+                  disabled={!cameraReady}
+                  className="h-14 bg-success text-success-foreground hover:bg-success/90"
+                >
+                  <Circle className="mr-2 h-5 w-5 fill-current" /> Démarrer
+                </Button>
+              )}
+              <p className="text-center text-[11px] leading-tight text-muted-foreground">
+                Astuce : barre d'espace pour démarrer / arrêter
+              </p>
+            </div>
+          </div>
+
+          {recording && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-2 text-xs font-medium text-destructive">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+                  Enregistrement
+                </span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {formatTime(elapsed)} / {formatTime(maxDurationSec)}
+                </span>
+                <MicLevelMeter stream={activeStream} segments={6} className="ml-auto" />
+              </div>
+              <Progress value={progress} className="h-1.5" />
+            </>
+          )}
+
+          {!recording && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="mr-1 h-3 w-3" /> Importer un fichier
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={ACCEPT_VIDEO}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // --- Phase enregistrement audio ---
   if (recording) {
     return (
       <div className="space-y-3">
         {Header}
         <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          {type === "video" && (
-            <video
-              ref={previewVideoRef}
-              muted
-              autoPlay
-              playsInline
-              className="w-full max-w-md rounded-md border bg-black aspect-video object-cover"
-              style={{ transform: "scaleX(-1)" }}
-            />
-          )}
-
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-2 text-xs font-medium text-destructive">
               <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
@@ -341,21 +464,13 @@ export function MediaRecorderField({
     );
   }
 
-  // --- Phase vide ---
+  // --- Phase vide (audio uniquement) ---
   return (
     <div className="space-y-3">
       {Header}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-muted/20 p-3">
-        <Button type="button" variant="default" size="sm" onClick={startRecording}>
-          {type === "audio" ? (
-            <>
-              <Mic className="mr-1 h-3 w-3" /> Enregistrer
-            </>
-          ) : (
-            <>
-              <Video className="mr-1 h-3 w-3" /> Enregistrer
-            </>
-          )}
+        <Button type="button" variant="default" size="sm" onClick={() => void startRecording()}>
+          <Mic className="mr-1 h-3 w-3" /> Enregistrer
         </Button>
         <span className="text-xs text-muted-foreground">ou</span>
         <Button
@@ -369,7 +484,7 @@ export function MediaRecorderField({
         <input
           ref={fileInputRef}
           type="file"
-          accept={type === "audio" ? ACCEPT_AUDIO : ACCEPT_VIDEO}
+          accept={ACCEPT_AUDIO}
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
