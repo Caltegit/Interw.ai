@@ -150,22 +150,7 @@ export function SessionVideoNavigator({ clips }: Props) {
           />
         </div>
 
-        <div className="flex items-center justify-center gap-1">
-          {[1, 1.5, 2].map((r) => (
-            <Button
-              key={r}
-              type="button"
-              variant={rate === r ? "default" : "outline"}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => setRate(r)}
-            >
-              {r}×
-            </Button>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Button
             type="button"
             variant="outline"
@@ -176,6 +161,20 @@ export function SessionVideoNavigator({ clips }: Props) {
             <ChevronLeft className="mr-1 h-4 w-4" />
             Précédent
           </Button>
+          <div className="flex items-center gap-1">
+            {[1, 1.5, 2].map((r) => (
+              <Button
+                key={r}
+                type="button"
+                variant={rate === r ? "default" : "outline"}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setRate(r)}
+              >
+                {r}×
+              </Button>
+            ))}
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -191,3 +190,4 @@ export function SessionVideoNavigator({ clips }: Props) {
     </Card>
   );
 }
+
