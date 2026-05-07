@@ -374,8 +374,15 @@ export default function ProjectDetail() {
     strong_yes: "Très favorable",
     yes: "Favorable",
     maybe: "Mitigé",
-    no: "Défavorable",
   };
+
+  const decisionOptions: { value: string; label: string; dot: string; text: string }[] = [
+    { value: "none", label: "À traiter", dot: "bg-muted-foreground/40", text: "" },
+    { value: "shortlisted", label: "Présélectionner", dot: "bg-success", text: "text-success" },
+    { value: "second_opinion", label: "2e avis", dot: "bg-warning", text: "text-warning" },
+    { value: "rejected", label: "Rejeter", dot: "bg-destructive", text: "text-destructive" },
+  ];
+  const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
