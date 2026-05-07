@@ -32,7 +32,12 @@ function b64encode(bytes: Uint8Array): string {
 
 function guessMime(url: string): string {
   const u = url.toLowerCase().split("?")[0];
-  if (u.endsWith(".webm")) return "video/webm";
+  if (u.endsWith(".webm")) {
+    // Les fichiers .audio.webm/.audio.opus sont en réalité des conteneurs audio.
+    if (u.includes(".audio.")) return "audio/webm";
+    return "video/webm";
+  }
+  if (u.endsWith(".opus")) return "audio/ogg";
   if (u.endsWith(".mp4")) return "video/mp4";
   if (u.endsWith(".m4a")) return "audio/mp4";
   if (u.endsWith(".mp3")) return "audio/mpeg";
