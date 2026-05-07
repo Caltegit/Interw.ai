@@ -117,7 +117,13 @@ serve(async (req) => {
     // Filet de sécurité : si certains segments candidats n'ont pas encore été
     // transcrits, on relance transcribe-session (voie inline Lovable Gateway).
     const isTerminalStatus = (s: string | null | undefined) =>
-      s === "done" || s === "skipped" || s === "too_large";
+      s === "done" || s === "skipped" || s === "too_large" || s === "failed";
+    const candidateMediaMessages = () =>
+      messages.filter(
+        (m: any) =>
+          m.role === "candidate" &&
+          (m.video_segment_url || m.audio_segment_url),
+      );
     const hasFailedSegments = messages.some(
       (m: any) =>
         m.role === "candidate" &&
@@ -127,7 +133,7 @@ serve(async (req) => {
     if (hasFailedSegments) {
       try {
         console.log("generate-report: relance transcribe-session pour segments manquants");
-        for (let attempt = 0; attempt < 6; attempt += 1) {
+        for (let attempt = 0; attempt < 15; attempt += 1) {
           const transcribeRes = await fetch(`${SUPABASE_URL}/functions/v1/transcribe-session`, {
             method: "POST",
             headers: {
@@ -149,14 +155,25 @@ serve(async (req) => {
             .order("timestamp");
           if (refreshed.data) messages = refreshed.data;
 
-          const stillPending = messages.some(
-            (m: any) =>
-              m.role === "candidate" &&
-              (m.video_segment_url || m.audio_segment_url) &&
-              !isTerminalStatus(m.transcription_status),
+          const cands = candidateMediaMessages();
+          const stillPending = cands.some(
+            (m: any) => !isTerminalStatus(m.transcription_status),
           );
           if (!stillPending || !transcribeData?.remaining) break;
-          await new Promise((resolve) => setTimeout(resolve, 1500));
+
+          // Tolérance : si ≥70% des segments sont en statut terminal et qu'au
+          // moins 3 ont une transcription, on génère le rapport partiel plutôt
+          // que d'attendre les segments corrompus.
+          const total = cands.length;
+          const terminal = cands.filter((m: any) => isTerminalStatus(m.transcription_status)).length;
+          const doneCount = cands.filter((m: any) => m.transcription_status === "done").length;
+          if (total > 0 && terminal / total >= 0.7 && doneCount >= 3) {
+            console.log(
+              `generate-report: seuil de tolérance atteint (${terminal}/${total} terminaux, ${doneCount} done)`,
+            );
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2500));
         }
       } catch (e) {
         console.error("transcribe-session pre-step error:", e);
