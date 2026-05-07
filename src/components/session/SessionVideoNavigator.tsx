@@ -144,6 +144,7 @@ export function SessionVideoNavigator({ clips }: Props) {
             onLoadedMetadata={(e) => {
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
+              else if (d === Infinity) fixDuration();
             }}
             className="h-full w-full object-contain"
           />
