@@ -1946,8 +1946,11 @@ export default function InterviewStart() {
     if (sessionId) {
       persistCandidatePromise = (async () => {
         let videoUrl: string | null = null;
+        let audioUrl: string | null = null;
         try {
-          videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
+          const urls = await stopAndUploadQuestionVideo(sessionId, questionIdx);
+          videoUrl = urls.videoUrl;
+          audioUrl = urls.audioUrl;
         } catch (e) {
           logger.error("interview_upload_failed", {
             sessionId,
@@ -1961,6 +1964,7 @@ export default function InterviewStart() {
           persistMessage(sessionId, "candidate", transcript, {
             questionId: questionIdSnapshot,
             videoSegmentUrl: videoUrl,
+            audioSegmentUrl: audioUrl,
           });
         try {
           await insertOnce();
