@@ -101,6 +101,7 @@ export function SessionVideoNavigator({ clips }: Props) {
               {r}×
             </Button>
           ))}
+        </div>
 
         <div className="flex items-center justify-between">
           <Button
