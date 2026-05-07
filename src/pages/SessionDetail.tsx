@@ -32,7 +32,7 @@ import {
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
-import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
+
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
@@ -248,9 +248,9 @@ export default function SessionDetail() {
     updateDecision.mutate({ decision: d, userId: user.id }, {
       onSuccess: () => {
         if (d === "none") toast({ title: "Décision annulée." });
-        else if (d === "shortlisted") toast({ title: "Candidat présélectionné." });
-        else if (d === "rejected") toast({ title: "Candidat rejeté." });
-        else if (d === "second_opinion") toast({ title: "2e avis demandé." });
+        else if (d === "shortlisted") toast({ title: "Candidat retenu." });
+        else if (d === "rejected") toast({ title: "Candidat noté Non." });
+        else if (d === "second_opinion") toast({ title: "Candidat à discuter." });
       },
       onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
     });
@@ -380,7 +380,7 @@ export default function SessionDetail() {
         isRegenerating={regenerate.isPending}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
@@ -524,19 +524,8 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Best-of</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HighlightReelPlayer
-                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
-              />
-            </CardContent>
-          </Card>
 
           {report && (
             <Card>

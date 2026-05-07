@@ -412,9 +412,9 @@ export default function ProjectDetail() {
 
   const decisionOptions: { value: string; label: string; dot: string; text: string }[] = [
     { value: "none", label: "À traiter", dot: "bg-muted-foreground/40", text: "" },
-    { value: "shortlisted", label: "Présélectionner", dot: "bg-success", text: "text-success" },
-    { value: "second_opinion", label: "2e avis", dot: "bg-warning", text: "text-warning" },
-    { value: "rejected", label: "Rejeter", dot: "bg-destructive", text: "text-destructive" },
+    { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
+    { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
+    { value: "rejected", label: "Non", dot: "bg-destructive", text: "text-destructive" },
   ];
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
