@@ -650,11 +650,51 @@ export default function ProjectDetail() {
                     <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {filteredSessions.length} / {sessions.length}
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {filteredSessions.length} / {sessions.length}
+                  </span>
+                  <div className="flex rounded-md border">
+                    <Button
+                      variant={view === "table" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-9 rounded-r-none"
+                      onClick={() => setView("table")}
+                      title="Vue tableau"
+                    >
+                      <Rows3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={view === "cards" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-9 rounded-l-none"
+                      onClick={() => setView("cards")}
+                      title="Vue cartes"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </span>
               </div>
 
+              {view === "cards" ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {pagedSessions.map((s) => (
+                    <SessionCard
+                      key={s.id}
+                      session={s}
+                      report={reportsBySession[s.id]}
+                      questions={questions}
+                      onDecisionChange={updateDecision}
+                    />
+                  ))}
+                  {pagedSessions.length === 0 && (
+                    <p className="col-span-full text-sm text-muted-foreground">
+                      Aucun candidat ne correspond aux filtres.
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
