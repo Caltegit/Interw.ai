@@ -285,6 +285,19 @@ export default function ProjectDetail() {
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const pendingSessions = sessions.filter((s) => s.status === "pending");
   const completedSessions = sessions.filter((s) => s.status === "completed");
+  const inProgressSessions = sessions.filter((s) => s.status === "in_progress");
+  const toReviewSessions = sessions.filter(
+    (s) =>
+      s.status === "completed" &&
+      (!reportsBySession[s.id] || s.recruiter_decision === "none"),
+  );
+
+  // Tri par défaut adapté : si l'utilisateur n'a rien changé et qu'on filtre les "en attente", on trie par date ancienne en premier
+  const effectiveSort = (() => {
+    if (sortKey !== "date" || sortDir !== "desc") return { key: sortKey, dir: sortDir };
+    if (statusFilter === "pending") return { key: "date" as const, dir: "asc" as const };
+    return { key: sortKey, dir: sortDir };
+  })();
 
   // Apply filters + sort to sessions
   const filteredSessions = (() => {
@@ -297,7 +310,15 @@ export default function ProjectDetail() {
           (s.candidate_email || "").toLowerCase().includes(q),
       );
     }
-    if (statusFilter !== "all") list = list.filter((s) => s.status === statusFilter);
+    if (statusFilter === "to_review") {
+      list = list.filter(
+        (s) =>
+          s.status === "completed" &&
+          (!reportsBySession[s.id] || s.recruiter_decision === "none"),
+      );
+    } else if (statusFilter !== "all") {
+      list = list.filter((s) => s.status === statusFilter);
+    }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (recoFilter !== "all")
@@ -311,14 +332,23 @@ export default function ProjectDetail() {
 
     list.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      else if (sortKey === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
-      else if (sortKey === "score")
+      if (effectiveSort.key === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      else if (effectiveSort.key === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
+      else if (effectiveSort.key === "score")
         cmp = (reportsBySession[a.id]?.overall_score ?? -1) - (reportsBySession[b.id]?.overall_score ?? -1);
-      return sortDir === "asc" ? cmp : -cmp;
+      return effectiveSort.dir === "asc" ? cmp : -cmp;
     });
     return list;
   })();
+
+  // Badge d'ancienneté pour les sessions en attente
+  const getPendingAge = (createdAt: string) => {
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 1) return { label: "aujourd'hui", className: "bg-success/10 text-success border-success/30" };
+    if (days < 3) return { label: `${days}j`, className: "bg-success/10 text-success border-success/30" };
+    if (days <= 7) return { label: `${days}j`, className: "bg-warning/10 text-warning border-warning/30" };
+    return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
+  };
 
   const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
   const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
