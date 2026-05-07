@@ -479,23 +479,32 @@ export default function ProjectDetail() {
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
-          {/* Alerte fine candidats en attente */}
-          {pendingSessions.length > 0 && (
-            <div className="flex items-center justify-between gap-2 rounded-md border border-warning/50 bg-warning/5 px-3 py-2 text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                <span className="truncate">
-                  {pendingSessions.length} candidat{pendingSessions.length > 1 ? "s" : ""} en attente
-                </span>
-              </div>
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-warning"
-                onClick={() => setStatusFilter("pending")}
-              >
-                Voir uniquement les en attente
-              </Button>
+          {/* Onglets de statut visibles */}
+          {sessions.length > 0 && (
+            <div className="flex flex-wrap gap-1 border-b pb-2">
+              {[
+                { key: "all", label: "Toutes", count: sessions.length, tone: "" },
+                { key: "pending", label: "En attente", count: pendingSessions.length, tone: "text-warning" },
+                { key: "in_progress", label: "En cours", count: inProgressSessions.length, tone: "" },
+                { key: "completed", label: "Terminées", count: completedSessions.length, tone: "" },
+                { key: "to_review", label: "À traiter", count: toReviewSessions.length, tone: "text-primary" },
+              ].map((t) => {
+                const active = statusFilter === t.key;
+                return (
+                  <Button
+                    key={t.key}
+                    variant={active ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => { setStatusFilter(t.key); setPage(0); }}
+                    className="h-8"
+                  >
+                    {t.label}
+                    <span className={`ml-1.5 text-xs ${active ? "opacity-80" : t.tone || "text-muted-foreground"}`}>
+                      {t.count}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
           )}
 
