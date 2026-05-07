@@ -85,21 +85,56 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     };
   }, [session.id]);
 
+  const fixDuration = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.duration === Infinity) {
+      const onTime = () => {
+        v.removeEventListener("timeupdate", onTime);
+        try {
+          v.currentTime = 0;
+        } catch {
+          /* noop */
+        }
+        try {
+          v.playbackRate = rateRef.current;
+        } catch {
+          /* noop */
+        }
+        if (autoPlayRef.current) v.play().catch(() => {});
+      };
+      v.addEventListener("timeupdate", onTime);
+      try {
+        v.currentTime = 1e9;
+      } catch {
+        /* noop */
+      }
+    }
+  };
+
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const play = () => {
+    const apply = () => {
       try {
-        v.currentTime = 0;
         v.playbackRate = rateRef.current;
       } catch {
         /* noop */
       }
-      if (autoPlayRef.current) v.play().catch(() => {});
+      if (v.duration === Infinity) {
+        fixDuration();
+      } else {
+        try {
+          v.currentTime = 0;
+        } catch {
+          /* noop */
+        }
+        if (autoPlayRef.current) v.play().catch(() => {});
+      }
     };
-    if (v.readyState >= 1) play();
-    else v.addEventListener("loadedmetadata", play, { once: true });
-    return () => v.removeEventListener("loadedmetadata", play);
+    if (v.readyState >= 1) apply();
+    else v.addEventListener("loadedmetadata", apply, { once: true });
+    return () => v.removeEventListener("loadedmetadata", apply);
   }, [index, clips.length]);
 
   useEffect(() => {
@@ -190,6 +225,9 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                 controls
                 playsInline
                 preload="metadata"
+                onLoadedMetadata={(e) => {
+                  if (e.currentTarget.duration === Infinity) fixDuration();
+                }}
                 className="h-full w-full object-contain"
               />
             ) : (
