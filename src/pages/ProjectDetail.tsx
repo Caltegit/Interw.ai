@@ -63,6 +63,13 @@ export default function ProjectDetail() {
   // "all" | "me" | userId
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
+  const [view, setView] = useState<"table" | "cards">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem(`projectView:${id}`) as "table" | "cards") || "table";
+  });
+  useEffect(() => {
+    if (id) localStorage.setItem(`projectView:${id}`, view);
+  }, [view, id]);
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
