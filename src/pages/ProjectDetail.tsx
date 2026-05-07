@@ -154,6 +154,20 @@ export default function ProjectDetail() {
     toast({ title: "Session réassignée." });
   };
 
+  const updateDecision = async (sessionId: string, decision: string) => {
+    const patch: any = {
+      recruiter_decision: decision,
+      recruiter_decision_at: decision === "none" ? null : new Date().toISOString(),
+      recruiter_decision_by: decision === "none" ? null : user?.id ?? null,
+    };
+    const { error } = await supabase.from("sessions").update(patch).eq("id", sessionId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+  };
+
   const saveNote = (sessionId: string, value: string) => {
     setNoteDrafts((prev) => ({ ...prev, [sessionId]: value }));
     if (noteTimers.current[sessionId]) clearTimeout(noteTimers.current[sessionId]);
