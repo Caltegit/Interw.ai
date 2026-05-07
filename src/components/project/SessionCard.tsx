@@ -53,8 +53,11 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   >([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [rate, setRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const autoPlayRef = useRef(false);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +91,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     const play = () => {
       try {
         v.currentTime = 0;
+        v.playbackRate = rateRef.current;
       } catch {
         /* noop */
       }
@@ -97,6 +101,11 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     else v.addEventListener("loadedmetadata", play, { once: true });
     return () => v.removeEventListener("loadedmetadata", play);
   }, [index, clips.length]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) v.playbackRate = rate;
+  }, [rate]);
 
   const current = clips[index];
   const questionByid = new Map(questions.map((q) => [q.id, q]));
@@ -195,7 +204,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
               <div className="min-h-[2.25rem]">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="font-semibold">
-                    {qOrder ? `Q${qOrder}` : "Question"}
+                    Question {index + 1} / {clips.length}
                   </span>
                   {current?.isFollowUp && (
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
@@ -223,9 +232,20 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                   <ChevronLeft className="h-4 w-4" />
                   Précédent
                 </Button>
-                <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                  {index + 1} / {clips.length}
-                </span>
+                <div className="flex items-center gap-1">
+                  {[1, 1.5, 2].map((r) => (
+                    <Button
+                      key={r}
+                      type="button"
+                      variant={rate === r ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setRate(r)}
+                    >
+                      {r}×
+                    </Button>
+                  ))}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
