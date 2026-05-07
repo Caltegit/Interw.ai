@@ -212,6 +212,10 @@ export default function InterviewStart() {
   const chunkIndexRef = useRef(0);
   const uploadedChunkPathsRef = useRef<string[]>([]);
   const chunkMimeRef = useRef<string>("video/webm");
+  // Enregistrement audio séparé (léger, pour la transcription IA — vidéo reste pour la relecture)
+  const questionAudioRecorderRef = useRef<MediaRecorder | null>(null);
+  const questionAudioChunksRef = useRef<Blob[]>([]);
+  const audioMimeRef = useRef<string>("audio/webm;codecs=opus");
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
@@ -240,7 +244,7 @@ export default function InterviewStart() {
       sessionId: string,
       role: "ai" | "candidate",
       content: string,
-      options?: { questionId?: string | null; videoSegmentUrl?: string | null; isFollowUp?: boolean },
+      options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
@@ -249,6 +253,7 @@ export default function InterviewStart() {
         question_id: options?.questionId ?? null,
         is_follow_up: options?.isFollowUp ?? false,
         video_segment_url: options?.videoSegmentUrl ?? null,
+        audio_segment_url: options?.audioSegmentUrl ?? null,
       });
 
       if (error) {
@@ -1013,6 +1018,9 @@ export default function InterviewStart() {
     if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {
       try { questionRecorderRef.current.pause(); } catch {}
     }
+    if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state === "recording") {
+      try { questionAudioRecorderRef.current.pause(); } catch {}
+    }
     // Snapshot elapsed time for max-duration timer
     if (interviewStartTimeRef.current !== null) {
       pausedElapsedRef.current = Date.now() - interviewStartTimeRef.current;
@@ -1070,6 +1078,10 @@ export default function InterviewStart() {
         startQuestionRecording();
       } else if (rec.state === "paused") {
         try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
+        const arec = questionAudioRecorderRef.current;
+        if (arec && arec.state === "paused") {
+          try { arec.resume(); } catch (e) { console.warn("audio recorder.resume failed", e); }
+        }
       }
     };
 
@@ -1308,9 +1320,18 @@ export default function InterviewStart() {
     return undefined;
   }, []);
 
+  const getSupportedAudioMimeType = useCallback(() => {
+    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return undefined;
+  }, []);
+
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
     questionVideoChunksRef.current = [];
+    questionAudioChunksRef.current = [];
     chunkIndexRef.current = 0;
     uploadedChunkPathsRef.current = [];
     try {
@@ -1336,6 +1357,33 @@ export default function InterviewStart() {
         );
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
+
+      // Recorder audio séparé (Opus mono ~24 kbps) — utilisé par l'IA pour la transcription.
+      // Permet des réponses bien plus longues (~10 min ≈ 2 Mo) sans dépasser la limite Gateway.
+      try {
+        const audioTracks = streamRef.current.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const audioStream = new MediaStream(audioTracks);
+          const audioMime = getSupportedAudioMimeType();
+          audioMimeRef.current = audioMime ?? "audio/webm";
+          const audioOptions: MediaRecorderOptions = {
+            ...(audioMime ? { mimeType: audioMime } : {}),
+            audioBitsPerSecond: 24_000,
+          };
+          const audioRecorder = new MediaRecorder(audioStream, audioOptions);
+          questionAudioRecorderRef.current = audioRecorder;
+          audioRecorder.ondataavailable = (e) => {
+            if (e.data.size === 0) return;
+            questionAudioChunksRef.current.push(e.data);
+          };
+          audioRecorder.start(1000);
+        }
+      } catch (e) {
+        // Non-bloquant : si l'audio recorder échoue, on retombe sur la vidéo pour la transcription.
+        console.warn("[interview] audio recorder failed to start", e);
+        questionAudioRecorderRef.current = null;
+      }
+
       setIsRecordingActive(true);
     } catch (e) {
       logger.error("interview_recorder_failed", {
@@ -1344,31 +1392,55 @@ export default function InterviewStart() {
         error: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [getSupportedMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
+  }, [getSupportedMimeType, getSupportedAudioMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
 
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
-    async (sessionId: string, questionIndex: number): Promise<string | null> => {
+    async (
+      sessionId: string,
+      questionIndex: number,
+    ): Promise<{ videoUrl: string | null; audioUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
+      const audioRecorder = questionAudioRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
-        return null;
+        return { videoUrl: null, audioUrl: null };
       }
 
-      await new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve();
-        recorder.stop();
-      });
+      // Arrêt simultané vidéo + audio.
+      const stops: Promise<void>[] = [
+        new Promise<void>((resolve) => {
+          recorder.onstop = () => resolve();
+          recorder.stop();
+        }),
+      ];
+      if (audioRecorder && audioRecorder.state !== "inactive") {
+        stops.push(
+          new Promise<void>((resolve) => {
+            audioRecorder.onstop = () => resolve();
+            try { audioRecorder.stop(); } catch { resolve(); }
+          }),
+        );
+      }
+      await Promise.all(stops);
       questionRecorderRef.current = null;
+      questionAudioRecorderRef.current = null;
       setIsRecordingActive(false);
 
-      if (questionVideoChunksRef.current.length === 0) return null;
+      if (questionVideoChunksRef.current.length === 0) {
+        questionAudioChunksRef.current = [];
+        return { videoUrl: null, audioUrl: null };
+      }
 
       const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
+      const audioChunks = [...questionAudioChunksRef.current];
+      const audioMime = audioMimeRef.current;
       const chunkPaths = [...uploadedChunkPathsRef.current];
       questionVideoChunksRef.current = [];
+      questionAudioChunksRef.current = [];
       uploadedChunkPathsRef.current = [];
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {
@@ -1392,8 +1464,32 @@ export default function InterviewStart() {
         );
       }
 
+      // Upload audio en parallèle (non bloquant pour la vidéo).
+      const audioUploadPromise: Promise<string | null> = (async () => {
+        if (audioChunks.length === 0) return null;
+        const audioBlob = new Blob(audioChunks, { type: audioMime });
+        const backoffs = [500, 1500, 4000];
+        for (let attempt = 0; attempt < backoffs.length; attempt++) {
+          try {
+            const { error } = await supabase.storage
+              .from("media")
+              .upload(audioFileName, audioBlob, { contentType: audioMime, upsert: true });
+            if (!error) {
+              const { data } = supabase.storage.from("media").getPublicUrl(audioFileName);
+              return data.publicUrl;
+            }
+          } catch { /* retry */ }
+          if (attempt < backoffs.length - 1) {
+            await new Promise((r) => setTimeout(r, backoffs[attempt]));
+          }
+        }
+        logger.error("interview_upload_failed", { sessionId, questionIndex, segmentType: "audio" });
+        return null;
+      })();
+
       // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau.
       const backoffs = [1000, 3000, 8000];
+      let videoUrl: string | null = null;
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
         try {
           const { error: uploadError } = await supabase.storage
@@ -1401,7 +1497,8 @@ export default function InterviewStart() {
             .upload(fileName, blob, { contentType: "video/webm", upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-            return urlData.publicUrl;
+            videoUrl = urlData.publicUrl;
+            break;
           }
           console.warn(
             `Échec upload vidéo question ${questionIndex} (essai ${attempt + 1}/${backoffs.length}):`,
@@ -1417,12 +1514,15 @@ export default function InterviewStart() {
           await new Promise((r) => setTimeout(r, backoffs[attempt]));
         }
       }
-      logger.error("interview_upload_failed", {
-        sessionId,
-        questionIndex,
-        segmentType: "video",
-      });
-      return null;
+      if (!videoUrl) {
+        logger.error("interview_upload_failed", {
+          sessionId,
+          questionIndex,
+          segmentType: "video",
+        });
+      }
+      const audioUrl = await audioUploadPromise;
+      return { videoUrl, audioUrl };
     },
     [trackBackground],
   );
@@ -1853,8 +1953,11 @@ export default function InterviewStart() {
     if (sessionId) {
       persistCandidatePromise = (async () => {
         let videoUrl: string | null = null;
+        let audioUrl: string | null = null;
         try {
-          videoUrl = await stopAndUploadQuestionVideo(sessionId, questionIdx);
+          const urls = await stopAndUploadQuestionVideo(sessionId, questionIdx);
+          videoUrl = urls.videoUrl;
+          audioUrl = urls.audioUrl;
         } catch (e) {
           logger.error("interview_upload_failed", {
             sessionId,
@@ -1868,6 +1971,7 @@ export default function InterviewStart() {
           persistMessage(sessionId, "candidate", transcript, {
             questionId: questionIdSnapshot,
             videoSegmentUrl: videoUrl,
+            audioSegmentUrl: audioUrl,
           });
         try {
           await insertOnce();
@@ -2349,8 +2453,11 @@ export default function InterviewStart() {
       // 2. Stop & upload current question recording — AWAIT pour garantir la persistance.
       const questionIdx = currentQuestionIndex;
       let questionVideoUrl: string | null = null;
+      let questionAudioUrl: string | null = null;
       if (session?.id) {
-        questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
+        const urls = await stopAndUploadQuestionVideo(session.id, questionIdx);
+        questionVideoUrl = urls.videoUrl;
+        questionAudioUrl = urls.audioUrl;
       }
 
       // 3. Persist a marker message so the report knows the question was skipped
@@ -2365,6 +2472,7 @@ export default function InterviewStart() {
           await persistMessage(session.id, "candidate", skipMarker, {
             questionId: questions[questionIdx]?.id || null,
             videoSegmentUrl: questionVideoUrl,
+            audioSegmentUrl: questionAudioUrl,
           });
         } catch {
           // non-bloquant
@@ -2579,6 +2687,9 @@ export default function InterviewStart() {
       try {
         if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
           questionRecorderRef.current.stop();
+        }
+        if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state !== "inactive") {
+          questionAudioRecorderRef.current.stop();
         }
       } catch { /* ignore */ }
       try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
