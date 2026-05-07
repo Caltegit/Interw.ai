@@ -247,9 +247,9 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
 
         {/* Décision */}
         <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-          {decisionBtn("shortlisted", "Présélectionner", Check, "success")}
-          {decisionBtn("second_opinion", "2e avis", HelpCircle, "warning")}
-          {decisionBtn("rejected", "Rejeter", X, "destructive")}
+          {decisionBtn("shortlisted", "Retenu", Check, "success")}
+          {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
+          {decisionBtn("rejected", "Non", X, "destructive")}
         </div>
       </CardContent>
     </Card>
