@@ -225,6 +225,9 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                 controls
                 playsInline
                 preload="metadata"
+                onLoadedMetadata={(e) => {
+                  if (e.currentTarget.duration === Infinity) fixDuration();
+                }}
                 className="h-full w-full object-contain"
               />
             ) : (
