@@ -232,9 +232,20 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                   <ChevronLeft className="h-4 w-4" />
                   Précédent
                 </Button>
-                <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                  {index + 1} / {clips.length}
-                </span>
+                <div className="flex items-center gap-1">
+                  {[1, 1.5, 2].map((r) => (
+                    <Button
+                      key={r}
+                      type="button"
+                      variant={rate === r ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setRate(r)}
+                    >
+                      {r}×
+                    </Button>
+                  ))}
+                </div>
                 <Button
                   type="button"
                   variant="outline"
