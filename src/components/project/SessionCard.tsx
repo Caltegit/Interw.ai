@@ -53,8 +53,11 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   >([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [rate, setRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const autoPlayRef = useRef(false);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
 
   useEffect(() => {
     let cancelled = false;
