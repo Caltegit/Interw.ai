@@ -154,9 +154,10 @@ Deno.serve(async (req) => {
       const hasMedia = m.video_segment_url || m.audio_segment_url;
       if (!hasMedia) return false;
       if (force) return true;
-      // Cibles : tout ce qui n'est pas done. On retentera aussi too_large/failed
-      // au cas où le segment a été remplacé par une version plus légère.
-      return m.transcription_status !== "done";
+      // Par défaut on ne retente que les statuts non terminaux. failed et
+      // too_large sont considérés terminaux (ils gaspillent du quota sinon).
+      const s = m.transcription_status;
+      return s !== "done" && s !== "skipped" && s !== "too_large" && s !== "failed";
     });
 
     const targets = candidates.slice(0, MAX_SEGMENTS_PER_RUN);
