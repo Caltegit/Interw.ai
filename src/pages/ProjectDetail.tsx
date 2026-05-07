@@ -869,6 +869,7 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+              )}
 
               {filteredSessions.length > PAGE_SIZE && (
                 <div className="flex items-center justify-between text-sm pt-2">
