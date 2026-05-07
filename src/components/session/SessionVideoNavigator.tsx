@@ -15,26 +15,39 @@ interface Props {
   clips: SessionVideoClip[];
 }
 
+function formatMinutes(s: number): string {
+  const total = Math.round(s);
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${m}.${sec.toString().padStart(2, "0")}min`;
+}
+
 export function SessionVideoNavigator({ clips }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const [rate, setRate] = useState(1);
+  const rateRef = useRef(rate);
+  rateRef.current = rate;
+  const [durationSec, setDurationSec] = useState<number | null>(null);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
 
+  // Reset position + autoplay au changement de clip uniquement
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    setDurationSec(null);
     const apply = () => {
       try {
         v.currentTime = 0;
-        v.playbackRate = rate;
+        v.playbackRate = rateRef.current;
       } catch {
         /* noop */
       }
+      if (Number.isFinite(v.duration)) setDurationSec(v.duration);
       if (shouldAutoPlay) {
         v.play().catch(() => {});
       }
@@ -42,8 +55,9 @@ export function SessionVideoNavigator({ clips }: Props) {
     if (v.readyState >= 1) apply();
     else v.addEventListener("loadedmetadata", apply, { once: true });
     return () => v.removeEventListener("loadedmetadata", apply);
-  }, [index, shouldAutoPlay, rate]);
+  }, [index, shouldAutoPlay]);
 
+  // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
     const v = videoRef.current;
     if (v) v.playbackRate = rate;
@@ -66,7 +80,10 @@ export function SessionVideoNavigator({ clips }: Props) {
       <CardContent className="space-y-3 pt-6">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">{current.questionLabel}</span>
+            <span className="text-sm font-semibold">
+              {current.questionLabel}
+              {durationSec ? ` - ${formatMinutes(durationSec)}` : ""}
+            </span>
             {current.isFollowUp && (
               <Badge variant="outline" className="text-xs">
                 Relance
@@ -84,6 +101,10 @@ export function SessionVideoNavigator({ clips }: Props) {
             controls
             playsInline
             preload="metadata"
+            onLoadedMetadata={(e) => {
+              const d = e.currentTarget.duration;
+              if (Number.isFinite(d)) setDurationSec(d);
+            }}
             className="h-full w-full object-contain"
           />
         </div>
