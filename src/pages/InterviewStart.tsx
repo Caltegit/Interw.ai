@@ -212,6 +212,10 @@ export default function InterviewStart() {
   const chunkIndexRef = useRef(0);
   const uploadedChunkPathsRef = useRef<string[]>([]);
   const chunkMimeRef = useRef<string>("video/webm");
+  // Enregistrement audio séparé (léger, pour la transcription IA — vidéo reste pour la relecture)
+  const questionAudioRecorderRef = useRef<MediaRecorder | null>(null);
+  const questionAudioChunksRef = useRef<Blob[]>([]);
+  const audioMimeRef = useRef<string>("audio/webm;codecs=opus");
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
