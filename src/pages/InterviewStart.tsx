@@ -1078,6 +1078,10 @@ export default function InterviewStart() {
         startQuestionRecording();
       } else if (rec.state === "paused") {
         try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
+        const arec = questionAudioRecorderRef.current;
+        if (arec && arec.state === "paused") {
+          try { arec.resume(); } catch (e) { console.warn("audio recorder.resume failed", e); }
+        }
       }
     };
 
