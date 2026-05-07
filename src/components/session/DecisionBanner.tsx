@@ -57,9 +57,9 @@ const recoConfig: Record<string, { label: string; tone: string }> = {
 
 const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
   none: { label: "Aucune décision", tone: "bg-muted text-muted-foreground" },
-  shortlisted: { label: "Présélectionné", tone: "bg-success text-success-foreground" },
-  rejected: { label: "Rejeté", tone: "bg-destructive text-destructive-foreground" },
-  second_opinion: { label: "2e avis demandé", tone: "bg-warning text-warning-foreground" },
+  shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
+  rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
+  second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
 };
 
 function fitColor(score: number | null) {
