@@ -204,7 +204,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
               <div className="min-h-[2.25rem]">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="font-semibold">
-                    {qOrder ? `Q${qOrder}` : "Question"}
+                    Question {index + 1} / {clips.length}
                   </span>
                   {current?.isFollowUp && (
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
