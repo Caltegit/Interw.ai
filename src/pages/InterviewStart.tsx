@@ -2688,6 +2688,9 @@ export default function InterviewStart() {
         if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
           questionRecorderRef.current.stop();
         }
+        if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state !== "inactive") {
+          questionAudioRecorderRef.current.stop();
+        }
       } catch { /* ignore */ }
       try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
       try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
