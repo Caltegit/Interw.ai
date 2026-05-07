@@ -545,15 +545,15 @@ export default function ProjectDetail() {
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-80 space-y-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Statut</Label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <Label className="text-xs">Recommandation</Label>
+                      <Select value={recoFilter} onValueChange={setRecoFilter}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Tous statuts</SelectItem>
-                          <SelectItem value="pending">En attente</SelectItem>
-                          <SelectItem value="in_progress">En cours</SelectItem>
-                          <SelectItem value="completed">Terminé</SelectItem>
-                          <SelectItem value="expired">Expiré</SelectItem>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          <SelectItem value="strong_yes">Très favorable</SelectItem>
+                          <SelectItem value="yes">Favorable</SelectItem>
+                          <SelectItem value="maybe">Mitigé</SelectItem>
+                          <SelectItem value="no">Défavorable</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
