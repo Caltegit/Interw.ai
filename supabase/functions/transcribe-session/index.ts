@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Limite inline Gemini : ~20 Mo. On reste prudent à 18 Mo.
 const MAX_INLINE_BYTES = 18 * 1024 * 1024;
-const MAX_SEGMENTS_PER_RUN = 2;
+const MAX_SEGMENTS_PER_RUN = 8;
 const MODEL = "google/gemini-2.5-flash";
 
 const TRANSCRIBE_PROMPT = `Tu es un transcripteur professionnel.
@@ -154,9 +154,10 @@ Deno.serve(async (req) => {
       const hasMedia = m.video_segment_url || m.audio_segment_url;
       if (!hasMedia) return false;
       if (force) return true;
-      // Cibles : tout ce qui n'est pas done. On retentera aussi too_large/failed
-      // au cas où le segment a été remplacé par une version plus légère.
-      return m.transcription_status !== "done";
+      // Par défaut on ne retente que les statuts non terminaux. failed et
+      // too_large sont considérés terminaux (ils gaspillent du quota sinon).
+      const s = m.transcription_status;
+      return s !== "done" && s !== "skipped" && s !== "too_large" && s !== "failed";
     });
 
     const targets = candidates.slice(0, MAX_SEGMENTS_PER_RUN);
@@ -228,14 +229,19 @@ Deno.serve(async (req) => {
           .eq("id", (m as any).id);
         done += 1;
       } catch (e) {
-        console.error("transcribe segment failed", (m as any).id, e);
+        const message = e instanceof Error ? e.message : String(e);
+        const isCorrupted = message.includes("0 Frames found") || message.includes("corrupted");
+        if (isCorrupted) {
+          console.warn("transcribe segment corrupted (0 frames)", (m as any).id);
+        } else {
+          console.error("transcribe segment failed", (m as any).id, e);
+        }
         await admin
           .from("session_messages")
           .update({ transcription_status: "failed" })
           .eq("id", (m as any).id);
         failed += 1;
 
-        const message = e instanceof Error ? e.message : String(e);
         if (message.includes(" 429") || message.includes("quota")) {
           // Rate limit Gateway : on s'arrête, le caller pourra réessayer plus tard
           break;
