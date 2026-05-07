@@ -229,14 +229,19 @@ Deno.serve(async (req) => {
           .eq("id", (m as any).id);
         done += 1;
       } catch (e) {
-        console.error("transcribe segment failed", (m as any).id, e);
+        const message = e instanceof Error ? e.message : String(e);
+        const isCorrupted = message.includes("0 Frames found") || message.includes("corrupted");
+        if (isCorrupted) {
+          console.warn("transcribe segment corrupted (0 frames)", (m as any).id);
+        } else {
+          console.error("transcribe segment failed", (m as any).id, e);
+        }
         await admin
           .from("session_messages")
           .update({ transcription_status: "failed" })
           .eq("id", (m as any).id);
         failed += 1;
 
-        const message = e instanceof Error ? e.message : String(e);
         if (message.includes(" 429") || message.includes("quota")) {
           // Rate limit Gateway : on s'arrête, le caller pourra réessayer plus tard
           break;
