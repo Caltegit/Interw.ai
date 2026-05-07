@@ -21,7 +21,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3 } from "lucide-react";
+import { SessionCard } from "@/components/project/SessionCard";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
 import {
@@ -62,6 +63,13 @@ export default function ProjectDetail() {
   // "all" | "me" | userId
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
+  const [view, setView] = useState<"table" | "cards">(() => {
+    if (typeof window === "undefined") return "table";
+    return (localStorage.getItem(`projectView:${id}`) as "table" | "cards") || "table";
+  });
+  useEffect(() => {
+    if (id) localStorage.setItem(`projectView:${id}`, view);
+  }, [view, id]);
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
@@ -642,11 +650,51 @@ export default function ProjectDetail() {
                     <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {filteredSessions.length} / {sessions.length}
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {filteredSessions.length} / {sessions.length}
+                  </span>
+                  <div className="flex rounded-md border">
+                    <Button
+                      variant={view === "table" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-9 rounded-r-none"
+                      onClick={() => setView("table")}
+                      title="Vue tableau"
+                    >
+                      <Rows3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={view === "cards" ? "secondary" : "ghost"}
+                      size="sm"
+                      className="h-9 rounded-l-none"
+                      onClick={() => setView("cards")}
+                      title="Vue cartes"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </span>
               </div>
 
+              {view === "cards" ? (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {pagedSessions.map((s) => (
+                    <SessionCard
+                      key={s.id}
+                      session={s}
+                      report={reportsBySession[s.id]}
+                      questions={questions}
+                      onDecisionChange={updateDecision}
+                    />
+                  ))}
+                  {pagedSessions.length === 0 && (
+                    <p className="col-span-full text-sm text-muted-foreground">
+                      Aucun candidat ne correspond aux filtres.
+                    </p>
+                  )}
+                </div>
+              ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -821,6 +869,7 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+              )}
 
               {filteredSessions.length > PAGE_SIZE && (
                 <div className="flex items-center justify-between text-sm pt-2">
