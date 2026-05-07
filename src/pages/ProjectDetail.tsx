@@ -395,6 +395,7 @@ export default function ProjectDetail() {
     setDateFrom("");
     setDateTo("");
     setAssigneeFilter("all");
+    setDecisionFilter("all");
   };
 
   return (
