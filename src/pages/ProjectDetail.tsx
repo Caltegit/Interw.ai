@@ -61,6 +61,7 @@ export default function ProjectDetail() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   // "all" | "me" | userId
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [decisionFilter, setDecisionFilter] = useState<string>("all");
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
