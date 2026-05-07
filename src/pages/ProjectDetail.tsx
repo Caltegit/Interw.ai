@@ -94,7 +94,7 @@ export default function ProjectDetail() {
         .order("order_index"),
       supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision")
         .eq("project_id", id)
         .order("created_at", { ascending: false }),
     ]).then(async ([pRes, qRes, cRes, sRes]) => {
