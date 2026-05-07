@@ -1337,7 +1337,11 @@ export default function InterviewStart() {
     try {
       const mimeType = getSupportedMimeType();
       chunkMimeRef.current = mimeType ?? "video/webm";
-      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const options: MediaRecorderOptions = {
+        ...(mimeType ? { mimeType } : {}),
+        videoBitsPerSecond: 800_000,
+        audioBitsPerSecond: 64_000,
+      };
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       const sessionId = session?.id ?? null;
