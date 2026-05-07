@@ -248,9 +248,9 @@ export default function SessionDetail() {
     updateDecision.mutate({ decision: d, userId: user.id }, {
       onSuccess: () => {
         if (d === "none") toast({ title: "Décision annulée." });
-        else if (d === "shortlisted") toast({ title: "Candidat présélectionné." });
-        else if (d === "rejected") toast({ title: "Candidat rejeté." });
-        else if (d === "second_opinion") toast({ title: "2e avis demandé." });
+        else if (d === "shortlisted") toast({ title: "Candidat retenu." });
+        else if (d === "rejected") toast({ title: "Candidat noté Non." });
+        else if (d === "second_opinion") toast({ title: "Candidat à discuter." });
       },
       onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
     });
