@@ -5,38 +5,29 @@ import { AvatarUploadDialog } from "./AvatarUploadDialog";
 import woman1 from "@/assets/avatars/woman-1.jpg";
 import woman2 from "@/assets/avatars/woman-2.jpg";
 import woman3 from "@/assets/avatars/woman-3.jpg";
+import woman4 from "@/assets/avatars/woman-4.jpg";
+import woman5 from "@/assets/avatars/woman-5.jpg";
+import woman6 from "@/assets/avatars/woman-6.jpg";
 import man1 from "@/assets/avatars/man-1.jpg";
 import man2 from "@/assets/avatars/man-2.jpg";
 import man3 from "@/assets/avatars/man-3.jpg";
-import animalFox from "@/assets/avatars/animal-fox.jpg";
-import animalOwl from "@/assets/avatars/animal-owl.jpg";
-import animalPanda from "@/assets/avatars/animal-panda.jpg";
-import animalLion from "@/assets/avatars/animal-lion.jpg";
-
-const PRESET_AVATARS = [
-  { seed: "Marie", bg: "b6e3f4" },
-  { seed: "Sophie", bg: "ffd5dc" },
-  { seed: "Thomas", bg: "c0aede" },
-  { seed: "Lucas", bg: "ffdfbf" },
-].map((a) => ({
-  url: `https://api.dicebear.com/9.x/personas/svg?seed=${a.seed}&backgroundColor=${a.bg}`,
-  seed: a.seed,
-}));
+import man4 from "@/assets/avatars/man-4.jpg";
+import man5 from "@/assets/avatars/man-5.jpg";
+import man6 from "@/assets/avatars/man-6.jpg";
 
 const PHOTO_AVATARS = [
   { url: woman1, name: "Camille" },
   { url: woman2, name: "Isabelle" },
   { url: woman3, name: "Léa" },
+  { url: woman4, name: "Catherine" },
+  { url: woman5, name: "Mei" },
+  { url: woman6, name: "Charlotte" },
   { url: man1, name: "Antoine" },
   { url: man2, name: "Karim" },
   { url: man3, name: "Hugo" },
-];
-
-const ANIMAL_AVATARS = [
-  { url: animalFox, name: "Renard" },
-  { url: animalOwl, name: "Hibou" },
-  { url: animalPanda, name: "Panda" },
-  { url: animalLion, name: "Lion" },
+  { url: man4, name: "Philippe" },
+  { url: man5, name: "Marc" },
+  { url: man6, name: "Tom" },
 ];
 
 interface Props {
@@ -49,10 +40,8 @@ interface Props {
 
 export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadOnly = false }: Props) {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const isPreset = value && PRESET_AVATARS.some((a) => a.url === value);
   const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
-  const isAnimal = value && ANIMAL_AVATARS.some((a) => a.url === value);
-  const isCustom = value && !isPreset && !isPhoto && !isAnimal;
+  const isCustom = value && !isPhoto;
 
   return (
     <div className="space-y-3">
@@ -95,47 +84,10 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
       <AvatarUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
 
       {!uploadOnly && (
-      <>
-      {/* Photo avatars */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos réelles</p>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-          {PHOTO_AVATARS.map((avatar) => {
-            const selected = value === avatar.url;
-            return (
-              <button
-                key={avatar.name}
-                type="button"
-                onClick={() => onSelectPreset(avatar.url)}
-                className={cn(
-                  "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                  selected
-                    ? "border-primary ring-2 ring-primary ring-offset-2"
-                    : "border-border hover:border-primary/50",
-                )}
-                aria-label={`Photo ${avatar.name}`}
-                title={avatar.name}
-              >
-                <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                {selected && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
-                    <div className="rounded-full bg-primary p-1">
-                      <Check className="h-3 w-3 text-primary-foreground" />
-                    </div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Animaux + Avatars sur la même ligne */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Animaux</p>
-          <div className="grid grid-cols-4 gap-3">
-            {ANIMAL_AVATARS.map((avatar) => {
+          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos</p>
+          <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
+            {PHOTO_AVATARS.map((avatar) => {
               const selected = value === avatar.url;
               return (
                 <button
@@ -148,10 +100,15 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
                       ? "border-primary ring-2 ring-primary ring-offset-2"
                       : "border-border hover:border-primary/50",
                   )}
-                  aria-label={`Avatar ${avatar.name}`}
+                  aria-label={`Photo ${avatar.name}`}
                   title={avatar.name}
                 >
-                  <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img
+                    src={avatar.url}
+                    alt=""
+                    className="h-full w-full object-cover object-top"
+                    loading="lazy"
+                  />
                   {selected && (
                     <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
                       <div className="rounded-full bg-primary p-1">
@@ -163,42 +120,8 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
               );
             })}
           </div>
-        </div>
-
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Avatar</p>
-          <div className="grid grid-cols-4 gap-3">
-            {PRESET_AVATARS.map((avatar) => {
-              const selected = value === avatar.url;
-              return (
-                <button
-                  key={avatar.seed}
-                  type="button"
-                  onClick={() => onSelectPreset(avatar.url)}
-                  className={cn(
-                    "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                    selected
-                      ? "border-primary ring-2 ring-primary ring-offset-2"
-                      : "border-border hover:border-primary/50",
-                  )}
-                  aria-label={`Avatar ${avatar.seed}`}
-                >
-                  <img src={avatar.url} alt="" className="h-full w-full object-cover" loading="lazy" />
-                  {selected && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
-                      <div className="rounded-full bg-primary p-1">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
           {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
         </div>
-      </div>
-      </>
       )}
     </div>
   );
