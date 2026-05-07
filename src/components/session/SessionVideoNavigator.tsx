@@ -141,9 +141,6 @@ export function SessionVideoNavigator({ clips }: Props) {
             <ChevronLeft className="mr-1 h-4 w-4" />
             Précédent
           </Button>
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            {index + 1} / {clips.length}
-          </span>
           <Button
             type="button"
             variant="outline"
