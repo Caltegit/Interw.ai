@@ -524,19 +524,8 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Best-of</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HighlightReelPlayer
-                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
-              />
-            </CardContent>
-          </Card>
 
           {report && (
             <Card>
