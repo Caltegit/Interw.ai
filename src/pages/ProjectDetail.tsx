@@ -61,6 +61,7 @@ export default function ProjectDetail() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   // "all" | "me" | userId
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [decisionFilter, setDecisionFilter] = useState<string>("all");
 
   // Recruiter notes inline edit
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
@@ -151,6 +152,20 @@ export default function ProjectDetail() {
     }
     setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, assigned_to: newAssignee } : s)));
     toast({ title: "Session réassignée." });
+  };
+
+  const updateDecision = async (sessionId: string, decision: string) => {
+    const patch: any = {
+      recruiter_decision: decision,
+      recruiter_decision_at: decision === "none" ? null : new Date().toISOString(),
+      recruiter_decision_by: decision === "none" ? null : user?.id ?? null,
+    };
+    const { error } = await supabase.from("sessions").update(patch).eq("id", sessionId);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
   };
 
   const saveNote = (sessionId: string, value: string) => {
@@ -321,6 +336,8 @@ export default function ProjectDetail() {
     }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
+    if (decisionFilter !== "all")
+      list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
     if (recoFilter !== "all")
       list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
     if (scoreMin !== "")
@@ -357,8 +374,15 @@ export default function ProjectDetail() {
     strong_yes: "Très favorable",
     yes: "Favorable",
     maybe: "Mitigé",
-    no: "Défavorable",
   };
+
+  const decisionOptions: { value: string; label: string; dot: string; text: string }[] = [
+    { value: "none", label: "À traiter", dot: "bg-muted-foreground/40", text: "" },
+    { value: "shortlisted", label: "Présélectionner", dot: "bg-success", text: "text-success" },
+    { value: "second_opinion", label: "2e avis", dot: "bg-warning", text: "text-warning" },
+    { value: "rejected", label: "Rejeter", dot: "bg-destructive", text: "text-destructive" },
+  ];
+  const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
@@ -367,7 +391,8 @@ export default function ProjectDetail() {
     (scoreMax !== "" ? 1 : 0) +
     (dateFrom ? 1 : 0) +
     (dateTo ? 1 : 0) +
-    (assigneeFilter !== "all" ? 1 : 0);
+    (assigneeFilter !== "all" ? 1 : 0) +
+    (decisionFilter !== "all" ? 1 : 0);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -377,6 +402,7 @@ export default function ProjectDetail() {
     setDateFrom("");
     setDateTo("");
     setAssigneeFilter("all");
+    setDecisionFilter("all");
   };
 
   return (
@@ -545,6 +571,23 @@ export default function ProjectDetail() {
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-80 space-y-3">
                     <div className="space-y-1">
+                      <Label className="text-xs">Sélection</Label>
+                      <Select value={decisionFilter} onValueChange={setDecisionFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          {decisionOptions.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>
+                              <span className="flex items-center gap-2">
+                                <span className={`inline-block h-2 w-2 rounded-full border ${d.dot}`} />
+                                {d.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
                       <Label className="text-xs">Recommandation</Label>
                       <Select value={recoFilter} onValueChange={setRecoFilter}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -609,6 +652,7 @@ export default function ProjectDetail() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Candidat</th>
+                      <th className="pb-2 font-medium">Sélection</th>
                       <th className="pb-2 font-medium">Statut</th>
                       <th className="pb-2 font-medium">Score</th>
                       <th className="pb-2 font-medium">Reco</th>
@@ -632,6 +676,32 @@ export default function ProjectDetail() {
                           <td className="py-3">
                             <p className="font-medium">{s.candidate_name}</p>
                             <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                          </td>
+                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const current = (s.recruiter_decision ?? "none") as string;
+                              const meta = decisionByValue[current] ?? decisionByValue.none;
+                              return (
+                                <Select value={current} onValueChange={(v) => updateDecision(s.id, v)}>
+                                  <SelectTrigger className={`h-8 w-[10.5rem] text-xs ${meta.text}`}>
+                                    <span className="flex items-center gap-2">
+                                      <span className={`inline-block h-2 w-2 rounded-full border ${meta.dot}`} />
+                                      {meta.label}
+                                    </span>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {decisionOptions.map((d) => (
+                                      <SelectItem key={d.value} value={d.value}>
+                                        <span className="flex items-center gap-2">
+                                          <span className={`inline-block h-2 w-2 rounded-full border ${d.dot}`} />
+                                          {d.label}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
                           </td>
                           <td className="py-3">
                             <SessionStatusBadge status={s.status} />
