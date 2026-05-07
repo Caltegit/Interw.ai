@@ -78,7 +78,32 @@ export default function ProjectDetail() {
 
   // Pagination des sessions filtrées
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 50;
+
+  // Visibilité des sélections (chips au-dessus des sessions)
+  const DECISION_KEYS = ["none", "shortlisted", "second_opinion", "rejected"] as const;
+  const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set(["none", "shortlisted", "second_opinion"]);
+    try {
+      const raw = localStorage.getItem(`projectDecisionVisibility:${id}`);
+      if (raw) return new Set(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+    return new Set(["none", "shortlisted", "second_opinion"]);
+  });
+  useEffect(() => {
+    if (id) localStorage.setItem(`projectDecisionVisibility:${id}`, JSON.stringify([...visibleDecisions]));
+  }, [visibleDecisions, id]);
+  const toggleDecision = (key: string) => {
+    setVisibleDecisions((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setPage(0);
+  };
 
   useEffect(() => {
     if (!id) return;
