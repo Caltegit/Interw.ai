@@ -2446,8 +2446,11 @@ export default function InterviewStart() {
       // 2. Stop & upload current question recording — AWAIT pour garantir la persistance.
       const questionIdx = currentQuestionIndex;
       let questionVideoUrl: string | null = null;
+      let questionAudioUrl: string | null = null;
       if (session?.id) {
-        questionVideoUrl = await stopAndUploadQuestionVideo(session.id, questionIdx);
+        const urls = await stopAndUploadQuestionVideo(session.id, questionIdx);
+        questionVideoUrl = urls.videoUrl;
+        questionAudioUrl = urls.audioUrl;
       }
 
       // 3. Persist a marker message so the report knows the question was skipped
@@ -2462,6 +2465,7 @@ export default function InterviewStart() {
           await persistMessage(session.id, "candidate", skipMarker, {
             questionId: questions[questionIdx]?.id || null,
             videoSegmentUrl: questionVideoUrl,
+            audioSegmentUrl: questionAudioUrl,
           });
         } catch {
           // non-bloquant
