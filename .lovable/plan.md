@@ -1,77 +1,54 @@
-# Vue "Cartes" pour analyser et décider entre les candidats
-
 ## Objectif
 
-Ajouter une nouvelle vue **Cartes** sur la page projet (`/projects/:id`) à côté de la vue Tableau actuelle, optimisée pour visualiser et trier rapidement les candidats avec leur vidéo intégrée et les actions de décision à portée de clic.
+Récupérer les vraies réponses de Sarah De Oliveira (les vidéos/audios existent en storage) et régénérer son rapport IA. Puis corriger la cause racine pour éviter que ça se reproduise.
 
-## Toggle de vue
+## Étape 1 — Réinitialiser les messages candidat de la session
 
-Au-dessus de la liste des sessions, un sélecteur :
+Pour la session `8321e3fa-e806-4310-8e99-366380c35de8` uniquement :
+- Remettre `transcription_status = 'pending'` sur tous les messages candidat (y compris ceux marqués `failed`).
+- Vider `content` (mettre `''`) afin que la transcription Gemini réécrive vraiment le texte (sinon le code conserve l'ancienne valeur `"[Question passée]"` si Gemini renvoie vide).
 
-```text
-[ 📋 Tableau ]  [ 🃏 Cartes ]
-```
+Migration SQL ciblée sur ce session_id uniquement.
 
-Choix persisté en `localStorage` (`projectView:<id>`). La vue Tableau reste inchangée. Tous les filtres existants (recherche, statut, score, recommandation, sélection, période, assignation) s'appliquent aussi à la vue Cartes.
+## Étape 2 — Lancer la re-transcription
 
-## Anatomie d'une carte
+Appeler la fonction edge `transcribe-session` avec `{ session_id, force: true }`. Comme il y a 10 segments et que `MAX_SEGMENTS_PER_RUN = 8`, on appelle 2 fois.
 
-Grille responsive : 1 colonne mobile, 2 cols tablette, 3 cols desktop.
+Vérifier que `transcription_status` passe à `done` et que `content` contient bien le verbatim.
 
-```text
-┌──────────────────────────────────┐
-│ Marie Dupont          ⭐ 82/100 │
-│ marie@exemple.com    Frt. recom.│
-├──────────────────────────────────┤
-│                                  │
-│        ▶  [VIDEO PLAYER]         │
-│                                  │
-│    Q2 — « Parlez-moi de … »      │
-│                                  │
-│  [◀ Préc.]    2 / 5    [Suiv. ▶] │
-├──────────────────────────────────┤
-│ [✓ Présélectionner]              │
-│ [? 2e avis]      [✗ Rejeter]     │
-└──────────────────────────────────┘
-```
+## Étape 3 — Régénérer le rapport
 
-### 1. En-tête — Identité + Note IA
-- **Prénom / Nom** en gras, email en sous-ligne
-- **Note IA** (ex: `82/100`) sous forme de pastille colorée (vert ≥75, orange ≥55, rouge sinon) — `reports.overall_score`
-- **Badge recommandation** IA (Fortement recommandé / Recommandé / À étudier / Non retenu) — `reports.recommendation`
+Supprimer le rapport existant puis appeler `generate-report` (même logique que le hook `useRegenerateReport`).
 
-### 2. Vidéo intégrée — Navigation par question
-- Lecteur vidéo natif HTML5 affichant le segment de la question courante (`session_messages.video_segment_url` filtré sur les messages `role = 'candidate'` avec une vidéo)
-- Au-dessus du lecteur : **label de la question** (« Q2 — texte tronqué »)
-- En-dessous : boutons **`◀ Précédent`** / compteur **`2 / 5`** / **`Suivant ▶`** pour naviguer entre les questions sans quitter la carte
-- Auto-play du segment au changement de question (silencieux si non interactif)
-- Réutilise la logique du composant `SessionVideoNavigator` déjà existant — on l'extrait/embarque dans la carte
-- Si aucune vidéo (statut non terminé, audio uniquement) : placeholder « Aucune vidéo disponible »
+Vérifier en base que `overall_score`, `criteria_scores` et `executive_summary` sont cohérents.
 
-### 3. Actions de décision — 3 boutons
-Trois boutons rapides en bas de carte qui mettent à jour `recruiter_decision` immédiatement :
-- **✓ Présélectionner** (vert / `success`)
-- **? 2ᵉ avis** (orange / `warning`)
-- **✗ Rejeter** (rouge / `destructive`)
+## Étape 4 — Corriger la cause racine de l'auto-skip
 
-Le bouton actif (décision actuelle) est rempli avec la couleur, les autres en `outline`. Re-cliquer le bouton actif réinitialise à `none`. Réutilise le helper `updateDecision()` déjà câblé dans `ProjectDetail`.
+Dans `src/pages/InterviewStart.tsx`, l'auto-skip silence (`project.auto_skip_silence`) déclenche `handleSkipQuestion` qui écrit `"[Question passée]"` dans `content` ET conserve la vidéo/audio. Si la transcription échoue ou si la candidate a parlé mais que le micro n'a rien détecté, on perd définitivement la réponse.
 
-## État vide / chargement
+Deux corrections :
 
-- **Aucun candidat ne correspond aux filtres** → message « Aucun candidat ne correspond à vos filtres » avec bouton « Réinitialiser »
-- **Session non terminée** → carte affichée avec badge de statut (En attente / En cours…) et zone vidéo grisée
-- **Pagination** : même logique que la vue Tableau (`PAGE_SIZE = 20`, boutons « Charger plus »)
+**a)** Dans `handleSkipQuestion`, si un `videoSegmentUrl`/`audioSegmentUrl` a bien été uploadé, ne PAS écrire `"[Question passée]"` mais laisser `content = ''` avec `transcription_status = 'pending'`. Le pipeline de transcription se chargera ensuite de récupérer le verbatim (et si vraiment rien n'a été dit, Gemini renverra vide → statut `skipped` qui sera bien interprété comme "passée").
+
+**b)** Dans `transcribe-session/index.ts`, retirer `failed` de la liste des statuts terminaux quand on appelle avec `force: true` (déjà OK), mais aussi : quand `cleaned` est vide ET qu'il y avait déjà du contenu type `"[Question passée]"`, le réécrire vraiment au lieu de le conserver.
 
 ## Détails techniques
 
-- **Nouveau composant** : `src/components/project/SessionCard.tsx`
-  - Props : `session`, `report`, `messages` (chargés à la demande), `onDecisionChange`
-  - Charge les `session_messages` (vidéos par question) via un hook quand la carte est visible (lazy) — ou en batch au niveau parent
-- **Nouveau composant** : `src/components/project/SessionsCardGrid.tsx`
-  - Reçoit la liste filtrée de sessions, les rapports, et délègue le rendu à `SessionCard`
-- **Modif** `src/pages/ProjectDetail.tsx` :
-  - Nouveau state `view: "table" | "cards"` (persisté localStorage)
-  - Toggle ShadCN `Tabs` ou `ToggleGroup` au-dessus du tableau
-  - Pré-charge les `session_messages` (segments vidéo + question_id) en une seule requête pour toutes les sessions terminées du projet, indexés par `session_id` puis passés aux cartes
-- **Aucune migration BDD** : tous les champs existent déjà (`reports.overall_score`, `reports.recommendation`, `session_messages.video_segment_url`, `session_messages.question_id`, `sessions.recruiter_decision`)
-- **Pas de modif** des vues détail / rapport candidat
+```sql
+UPDATE session_messages
+SET transcription_status = 'pending', content = ''
+WHERE session_id = '8321e3fa-e806-4310-8e99-366380c35de8'
+  AND role = 'candidate';
+```
+
+Puis (script ou via le bouton "Régénérer le rapport" qui existe déjà dans `SessionDetail`) :
+- `supabase.functions.invoke('transcribe-session', { body: { session_id, force: true } })` × 2
+- `DELETE FROM reports WHERE session_id = …`
+- `supabase.functions.invoke('generate-report', { body: { session_id } })`
+
+## Question
+
+Souhaitez-vous que je :
+
+1. **Fasse uniquement la récupération de Sarah** (étapes 1 → 3), sans toucher au code → résultat immédiat pour ce candidat, le bug pourrait se reproduire pour d'autres.
+2. **Récupération + correction du bug** (étapes 1 → 4) → recommandé, évite de futurs cas similaires.
