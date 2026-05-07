@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Limite inline Gemini : ~20 Mo. On reste prudent à 18 Mo.
 const MAX_INLINE_BYTES = 18 * 1024 * 1024;
-const MAX_SEGMENTS_PER_RUN = 2;
+const MAX_SEGMENTS_PER_RUN = 8;
 const MODEL = "google/gemini-2.5-flash";
 
 const TRANSCRIBE_PROMPT = `Tu es un transcripteur professionnel.
