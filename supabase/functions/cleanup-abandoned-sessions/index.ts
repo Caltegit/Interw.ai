@@ -144,6 +144,27 @@ Deno.serve(async (req) => {
 
   for (const session of orphanCompleted ?? []) {
     try {
+      // Si la session n'a aucun message candidat avec média, on l'annule
+      // directement plutôt que de retenter generate-report (qui répondra
+      // no_recordings indéfiniment).
+      const { count: mediaCount } = await supabase
+        .from("session_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("session_id", session.id)
+        .eq("role", "candidate")
+        .or("video_segment_url.not.is.null,audio_segment_url.not.is.null");
+
+      if (!mediaCount || mediaCount === 0) {
+        await supabase
+          .from("sessions")
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+          } as any)
+          .eq("id", session.id);
+        continue;
+      }
+
       await fetch(
         `${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-session`,
         {
