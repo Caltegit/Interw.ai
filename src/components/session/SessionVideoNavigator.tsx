@@ -79,16 +79,22 @@ export function SessionVideoNavigator({ clips }: Props) {
     <Card>
       <CardContent className="space-y-3 pt-6">
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-semibold">
-              {current.questionLabel}
-              {durationSec ? ` - ${formatMinutes(durationSec)}` : ""}
+              Question {index + 1} / {clips.length}
             </span>
-            {current.isFollowUp && (
-              <Badge variant="outline" className="text-xs">
-                Relance
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {current.isFollowUp && (
+                <Badge variant="outline" className="text-xs">
+                  Relance
+                </Badge>
+              )}
+              {durationSec ? (
+                <span className="text-sm font-semibold tabular-nums">
+                  {formatMinutes(durationSec)}
+                </span>
+              ) : null}
+            </div>
           </div>
           <p className="text-xs text-muted-foreground line-clamp-2">{current.questionText}</p>
         </div>
@@ -135,9 +141,6 @@ export function SessionVideoNavigator({ clips }: Props) {
             <ChevronLeft className="mr-1 h-4 w-4" />
             Précédent
           </Button>
-          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-            {index + 1} / {clips.length}
-          </span>
           <Button
             type="button"
             variant="outline"
