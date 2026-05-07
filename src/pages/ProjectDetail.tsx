@@ -557,19 +557,6 @@ export default function ProjectDetail() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Recommandation</Label>
-                      <Select value={recoFilter} onValueChange={setRecoFilter}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Toutes</SelectItem>
-                          <SelectItem value="strong_yes">Très favorable</SelectItem>
-                          <SelectItem value="yes">Favorable</SelectItem>
-                          <SelectItem value="maybe">Mitigé</SelectItem>
-                          <SelectItem value="no">Défavorable</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label className="text-xs">Score min</Label>
