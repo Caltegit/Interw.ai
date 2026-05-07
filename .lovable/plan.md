@@ -1,89 +1,66 @@
-## Objectif
+## Diagnostic — 8 sessions ALBO sans rapport
 
-Rendre la liste des sessions plus lisible et actionnable, en remplaçant l'état actuel (un seul onglet « Sessions », filtres cachés dans un popover) par des **vues rapides par statut** + des indicateurs visuels d'ancienneté pour repérer immédiatement ce qui demande une action.
+J'ai inspecté les sessions ALBO marquées `completed` mais sans rapport. Elles se répartissent en **deux catégories distinctes** avec des causes différentes.
 
-## Problèmes actuels
+### Catégorie 1 — 3 sessions vides (aucun enregistrement)
 
-1. Tout est dans une seule liste mélangée (en attente, en cours, terminé) → on ne voit pas d'un coup d'œil le pipeline
-2. Le filtre statut est caché dans un popover « Filtres » → 2 clics pour isoler les en attente
-3. Aucune indication d'**ancienneté** d'une session en attente (un lien envoyé il y a 1 jour ≠ il y a 15 jours)
-4. Pas de vue dédiée aux sessions **complétées sans rapport** (cas Trichet / Christophe vu plus tôt)
-5. Le bouton « Relancer » copie juste le lien → pas de trace de la dernière relance
+| Candidat | Date |
+|---|---|
+| Trichet | 07/05 07:08 |
+| Trichet | 07/05 07:03 |
+| SUPIOT | 06/05 18:04 |
 
-## Améliorations proposées
+Aucun message candidat, aucune vidéo, aucun audio. La session a été marquée `completed` (probablement par `cleanup-abandoned-sessions`) alors que le candidat n'a jamais réellement répondu. `generate-report` répond `no_recordings` — c'est correct, **il n'y a rien à transcrire**.
 
-### 1. Sous-onglets de statut au-dessus du tableau
+**Action proposée** : passer ces sessions en `cancelled` (avec un motif `no_recordings`) pour qu'elles disparaissent de "À traiter" et n'encombrent plus la liste. Ajuster aussi `cleanup-abandoned-sessions` pour qu'il marque ces cas comme `cancelled` directement au lieu de `completed`.
 
-Remplacer l'alerte + le filtre statut caché par une barre de **5 onglets visibles** avec compteur :
+### Catégorie 2 — 5 sessions bloquées en transcription
 
-```text
-[ Toutes 21 ] [ En attente 3 ] [ En cours 1 ] [ Terminées 15 ] [ À traiter 2 ]
-```
+| Candidat | Médias | done | failed | **pending** |
+|---|---|---|---|---|
+| christophe Richy-Dureteste | 14 | 3 | 0 | **29** |
+| Coulondre | 15 | 4 | 2 | **25** |
+| Cyrille ROBERT | 15 | 6 | 2 | **23** |
+| JAMES SCHOUTETEN | 13 | 1 | 2 | **24** |
+| Christophe santoro | 2 | 1 | 1 | **3** |
 
-- **À traiter** = statut `completed` mais sans rapport généré ou sans décision recruteur (`recruiter_decision = 'none'`) → met en avant ce qui demande une action RH
-- L'onglet actif change `statusFilter` (logique déjà en place)
-- Le badge compteur utilise les couleurs sémantiques (warning pour En attente, success pour Terminées, primary pour À traiter)
+Ces sessions ont bien des enregistrements, mais **la majorité des segments restent en statut `pending`**. Causes :
 
-### 2. Colonne « Ancienneté » sur les sessions en attente
+1. **`transcribe-session` traite seulement 2 segments par appel** (`MAX_SEGMENTS_PER_RUN = 2`). La boucle de relance dans `generate-report` fait au plus 6 tours = 12 segments traités. Pour Coulondre il en faut 25 → on ne finit jamais.
+2. **Beaucoup de segments échouent avec « The video is corrupted or has wrong video metadata. 0 Frames found »** (visible dans les logs). Ce sont probablement des `.webm` capturés en début de question avec une seule frame ou métadonnées tronquées. Ils sont marqués `failed`, ce qui est terminal côté `generate-report` — donc OK — mais ça consomme des quotas Gemini sur des segments ré-essayés en boucle (`transcribe-session` retente `failed` à chaque appel).
+3. Conséquence : le `pending` ne baisse jamais assez vite, `generate-report` abandonne.
 
-Dans la colonne Date, pour les sessions `pending`, afficher en plus un petit badge :
-- **vert** : envoyée il y a < 3 jours
-- **orange** : 3-7 jours
-- **rouge** : > 7 jours (« Relance recommandée »)
+### Plan de correction
 
-Calcul basé sur `created_at`. Pas de nouvelle donnée DB.
+**Backend (edge functions)**
 
-### 3. Tri par défaut intelligent selon l'onglet
+1. **`transcribe-session`** :
+   - Augmenter `MAX_SEGMENTS_PER_RUN` de 2 → 8 (la voie inline Gemini est rapide).
+   - Ne plus retenter les segments `failed` ni `too_large` par défaut (seulement avec `force=true`). Aujourd'hui ils sont retentés à chaque appel → ça gaspille du quota et bloque les `pending`.
+   - Détecter spécifiquement l'erreur Gemini « 0 Frames found » et marquer le segment `failed` définitivement (même comportement, mais log explicite + pas de retry).
 
-- Onglet **En attente** → tri par date de création **ancienne d'abord** (les plus urgentes à relancer remontent)
-- Onglet **Terminées** / **À traiter** → tri par date récente (comportement actuel)
-- Onglet **Toutes** → comportement actuel
+2. **`generate-report`** :
+   - Augmenter la boucle de relance de 6 → 15 tours, et augmenter le délai entre tours de 1.5s → 2.5s pour respecter le rate-limit Gateway.
+   - Ajouter un seuil de tolérance : si ≥ 70 % des segments candidat sont en statut terminal (`done`/`skipped`/`too_large`/`failed`) **ET** au moins 3 segments `done`, générer le rapport sur ce qui est dispo plutôt que d'attendre 100 %. Aujourd'hui une seule frame corrompue peut bloquer un entretien complet.
 
-### 4. Action « Relancer » améliorée
+3. **`cleanup-abandoned-sessions`** : si une session candidate n'a aucun `session_messages` côté candidat avec média à la fin du timeout, la marquer `cancelled` au lieu de `completed`.
 
-Le bouton Relancer copie aujourd'hui le lien. Garder ce comportement mais :
-- Ajouter un menu déroulant : **Copier le lien** / **Renvoyer l'email d'invitation**
-- L'option email réutilise la fonction existante `send-invitation` (déjà déployée)
-- Toast de confirmation clair
+**Action immédiate sur les 8 sessions ALBO**
 
-### 5. Filtres restants simplifiés
+- Pour les 3 sessions vides → `UPDATE sessions SET status='cancelled' WHERE id IN (...)`.
+- Pour les 5 sessions avec segments `pending` → après déploiement des corrections, lancer manuellement `transcribe-session` puis `generate-report` sur chacune (script one-shot via `curl_edge_functions`).
 
-Garder le popover « Filtres » uniquement pour : Recommandation, Score min/max, Plage de dates. Le statut sort du popover (devient les onglets). L'assignation reste un select séparé.
+**Hors périmètre**
+- Pas de migration de schéma.
+- Pas de changement UI (la liste affichera naturellement les nouveaux statuts grâce au filtre déjà en place).
+- Pas de re-encodage côté candidat (les vidéos « 0 frames » sont passées, on ne peut rien y faire rétroactivement).
 
-## Hors scope
+### Détails techniques
 
-- Notifications email automatiques de relance après X jours (prochaine étape)
-- Modification du schéma DB (aucune nouvelle colonne)
-- Export CSV de la liste (déjà demandé ailleurs ?)
-- Refonte de la page entière — on reste sur la même structure de tableau
+Fichiers touchés :
+- `supabase/functions/transcribe-session/index.ts` — constantes + filtre `force` + détection erreur Gemini
+- `supabase/functions/generate-report/index.ts` — boucle de relance + seuil de tolérance
+- `supabase/functions/cleanup-abandoned-sessions/index.ts` — cancel vs complete
+- Script ponctuel exécuté via outil DB pour les 3 cancellations + 5 relances
 
-## Détails techniques
-
-**Fichier impacté :** `src/pages/ProjectDetail.tsx` uniquement (frontend pur).
-
-**Structure des onglets** : utiliser un nouveau composant local de type `ToggleGroup` shadcn ou simples `Button` avec variant `outline`/`default` selon l'onglet actif. Pas de routing — état local React (déjà via `statusFilter`).
-
-**Calcul « À traiter »** :
-```ts
-const toReview = sessions.filter(s =>
-  s.status === "completed" &&
-  (!reportsBySession[s.id] || s.recruiter_decision === "none")
-);
-```
-
-**Badge ancienneté** : helper local `getPendingAgeBadge(createdAt)` retournant `{ label, variant }`.
-
-**Renvoi d'email** : appel à `supabase.functions.invoke("send-invitation", { body: { session_id: s.id } })` — vérifier que la fonction accepte ce payload, sinon adapter.
-
-## Maquette ASCII
-
-```text
-[ Toutes 21 ] [En attente 3] [En cours 1] [Terminées 15] [À traiter 2]
-
-Rechercher…    Toutes les sessions ▼   Filtres   Tri ▼            21/21
-─────────────────────────────────────────────────────────────────────
-Candidat              Statut       Score  Reco   Date              …
-Yonas Mkharbeche      En attente   —      —      07/05  • 1j       Relancer ▼
-Paris Olivier         En attente   —      —      02/05  • 5j ⚠     Relancer ▼
-Richy-Dureteste       En attente   —      —      20/04  • 17j 🔴   Relancer ▼
-```
+Aucun changement front. Aucune nouvelle table, aucune nouvelle policy RLS.
