@@ -1389,27 +1389,51 @@ export default function InterviewStart() {
 
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
-    async (sessionId: string, questionIndex: number): Promise<string | null> => {
+    async (
+      sessionId: string,
+      questionIndex: number,
+    ): Promise<{ videoUrl: string | null; audioUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
+      const audioRecorder = questionAudioRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
-        return null;
+        return { videoUrl: null, audioUrl: null };
       }
 
-      await new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve();
-        recorder.stop();
-      });
+      // Arrêt simultané vidéo + audio.
+      const stops: Promise<void>[] = [
+        new Promise<void>((resolve) => {
+          recorder.onstop = () => resolve();
+          recorder.stop();
+        }),
+      ];
+      if (audioRecorder && audioRecorder.state !== "inactive") {
+        stops.push(
+          new Promise<void>((resolve) => {
+            audioRecorder.onstop = () => resolve();
+            try { audioRecorder.stop(); } catch { resolve(); }
+          }),
+        );
+      }
+      await Promise.all(stops);
       questionRecorderRef.current = null;
+      questionAudioRecorderRef.current = null;
       setIsRecordingActive(false);
 
-      if (questionVideoChunksRef.current.length === 0) return null;
+      if (questionVideoChunksRef.current.length === 0) {
+        questionAudioChunksRef.current = [];
+        return { videoUrl: null, audioUrl: null };
+      }
 
       const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
+      const audioChunks = [...questionAudioChunksRef.current];
+      const audioMime = audioMimeRef.current;
       const chunkPaths = [...uploadedChunkPathsRef.current];
       questionVideoChunksRef.current = [];
+      questionAudioChunksRef.current = [];
       uploadedChunkPathsRef.current = [];
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {
@@ -1433,8 +1457,32 @@ export default function InterviewStart() {
         );
       }
 
+      // Upload audio en parallèle (non bloquant pour la vidéo).
+      const audioUploadPromise: Promise<string | null> = (async () => {
+        if (audioChunks.length === 0) return null;
+        const audioBlob = new Blob(audioChunks, { type: audioMime });
+        const backoffs = [500, 1500, 4000];
+        for (let attempt = 0; attempt < backoffs.length; attempt++) {
+          try {
+            const { error } = await supabase.storage
+              .from("media")
+              .upload(audioFileName, audioBlob, { contentType: audioMime, upsert: true });
+            if (!error) {
+              const { data } = supabase.storage.from("media").getPublicUrl(audioFileName);
+              return data.publicUrl;
+            }
+          } catch { /* retry */ }
+          if (attempt < backoffs.length - 1) {
+            await new Promise((r) => setTimeout(r, backoffs[attempt]));
+          }
+        }
+        logger.error("interview_upload_failed", { sessionId, questionIndex, segmentType: "audio" });
+        return null;
+      })();
+
       // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau.
       const backoffs = [1000, 3000, 8000];
+      let videoUrl: string | null = null;
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
         try {
           const { error: uploadError } = await supabase.storage
@@ -1442,7 +1490,8 @@ export default function InterviewStart() {
             .upload(fileName, blob, { contentType: "video/webm", upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-            return urlData.publicUrl;
+            videoUrl = urlData.publicUrl;
+            break;
           }
           console.warn(
             `Échec upload vidéo question ${questionIndex} (essai ${attempt + 1}/${backoffs.length}):`,
@@ -1458,12 +1507,15 @@ export default function InterviewStart() {
           await new Promise((r) => setTimeout(r, backoffs[attempt]));
         }
       }
-      logger.error("interview_upload_failed", {
-        sessionId,
-        questionIndex,
-        segmentType: "video",
-      });
-      return null;
+      if (!videoUrl) {
+        logger.error("interview_upload_failed", {
+          sessionId,
+          questionIndex,
+          segmentType: "video",
+        });
+      }
+      const audioUrl = await audioUploadPromise;
+      return { videoUrl, audioUrl };
     },
     [trackBackground],
   );
