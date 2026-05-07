@@ -19,6 +19,7 @@ export function SessionVideoNavigator({ clips }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [index, setIndex] = useState(0);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [rate, setRate] = useState(1);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -27,9 +28,10 @@ export function SessionVideoNavigator({ clips }: Props) {
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const play = () => {
+    const apply = () => {
       try {
         v.currentTime = 0;
+        v.playbackRate = rate;
       } catch {
         /* noop */
       }
@@ -37,10 +39,15 @@ export function SessionVideoNavigator({ clips }: Props) {
         v.play().catch(() => {});
       }
     };
-    if (v.readyState >= 1) play();
-    else v.addEventListener("loadedmetadata", play, { once: true });
-    return () => v.removeEventListener("loadedmetadata", play);
-  }, [index, shouldAutoPlay]);
+    if (v.readyState >= 1) apply();
+    else v.addEventListener("loadedmetadata", apply, { once: true });
+    return () => v.removeEventListener("loadedmetadata", apply);
+  }, [index, shouldAutoPlay, rate]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) v.playbackRate = rate;
+  }, [rate]);
 
   if (!clips || clips.length === 0) return null;
 
