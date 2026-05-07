@@ -652,6 +652,7 @@ export default function ProjectDetail() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="pb-2 font-medium">Candidat</th>
+                      <th className="pb-2 font-medium">Sélection</th>
                       <th className="pb-2 font-medium">Statut</th>
                       <th className="pb-2 font-medium">Score</th>
                       <th className="pb-2 font-medium">Reco</th>
