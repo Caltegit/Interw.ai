@@ -677,6 +677,32 @@ export default function ProjectDetail() {
                             <p className="font-medium">{s.candidate_name}</p>
                             <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
                           </td>
+                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            {(() => {
+                              const current = (s.recruiter_decision ?? "none") as string;
+                              const meta = decisionByValue[current] ?? decisionByValue.none;
+                              return (
+                                <Select value={current} onValueChange={(v) => updateDecision(s.id, v)}>
+                                  <SelectTrigger className={`h-8 w-[10.5rem] text-xs ${meta.text}`}>
+                                    <span className="flex items-center gap-2">
+                                      <span className={`inline-block h-2 w-2 rounded-full border ${meta.dot}`} />
+                                      {meta.label}
+                                    </span>
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {decisionOptions.map((d) => (
+                                      <SelectItem key={d.value} value={d.value}>
+                                        <span className="flex items-center gap-2">
+                                          <span className={`inline-block h-2 w-2 rounded-full border ${d.dot}`} />
+                                          {d.label}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              );
+                            })()}
+                          </td>
                           <td className="py-3">
                             <SessionStatusBadge status={s.status} />
                           </td>
