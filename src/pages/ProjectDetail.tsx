@@ -571,6 +571,23 @@ export default function ProjectDetail() {
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-80 space-y-3">
                     <div className="space-y-1">
+                      <Label className="text-xs">Sélection</Label>
+                      <Select value={decisionFilter} onValueChange={setDecisionFilter}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Toutes</SelectItem>
+                          {decisionOptions.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>
+                              <span className="flex items-center gap-2">
+                                <span className={`inline-block h-2 w-2 rounded-full border ${d.dot}`} />
+                                {d.label}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
                       <Label className="text-xs">Recommandation</Label>
                       <Select value={recoFilter} onValueChange={setRecoFilter}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
