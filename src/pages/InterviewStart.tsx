@@ -240,7 +240,7 @@ export default function InterviewStart() {
       sessionId: string,
       role: "ai" | "candidate",
       content: string,
-      options?: { questionId?: string | null; videoSegmentUrl?: string | null; isFollowUp?: boolean },
+      options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
@@ -249,6 +249,7 @@ export default function InterviewStart() {
         question_id: options?.questionId ?? null,
         is_follow_up: options?.isFollowUp ?? false,
         video_segment_url: options?.videoSegmentUrl ?? null,
+        audio_segment_url: options?.audioSegmentUrl ?? null,
       });
 
       if (error) {
