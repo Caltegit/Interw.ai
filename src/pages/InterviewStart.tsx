@@ -1018,6 +1018,9 @@ export default function InterviewStart() {
     if (questionRecorderRef.current && questionRecorderRef.current.state === "recording") {
       try { questionRecorderRef.current.pause(); } catch {}
     }
+    if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state === "recording") {
+      try { questionAudioRecorderRef.current.pause(); } catch {}
+    }
     // Snapshot elapsed time for max-duration timer
     if (interviewStartTimeRef.current !== null) {
       pausedElapsedRef.current = Date.now() - interviewStartTimeRef.current;
