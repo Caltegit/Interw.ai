@@ -35,6 +35,33 @@ export function SessionVideoNavigator({ clips }: Props) {
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
 
+  // Répare la durée pour les WebM MediaRecorder (duration = Infinity)
+  const fixDuration = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.duration === Infinity) {
+      const onTime = () => {
+        v.removeEventListener("timeupdate", onTime);
+        const real = v.duration;
+        try {
+          v.currentTime = 0;
+        } catch {
+          /* noop */
+        }
+        if (Number.isFinite(real)) setDurationSec(real);
+        if (shouldAutoPlay) v.play().catch(() => {});
+      };
+      v.addEventListener("timeupdate", onTime);
+      try {
+        v.currentTime = 1e9;
+      } catch {
+        /* noop */
+      }
+    } else if (Number.isFinite(v.duration)) {
+      setDurationSec(v.duration);
+    }
+  };
+
   // Reset position + autoplay au changement de clip uniquement
   useEffect(() => {
     const v = videoRef.current;
@@ -42,14 +69,21 @@ export function SessionVideoNavigator({ clips }: Props) {
     setDurationSec(null);
     const apply = () => {
       try {
-        v.currentTime = 0;
         v.playbackRate = rateRef.current;
       } catch {
         /* noop */
       }
-      if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-      if (shouldAutoPlay) {
-        v.play().catch(() => {});
+      if (v.duration === Infinity) {
+        // seek réparation : autoplay déclenché après reset
+        fixDuration();
+      } else {
+        try {
+          v.currentTime = 0;
+        } catch {
+          /* noop */
+        }
+        if (Number.isFinite(v.duration)) setDurationSec(v.duration);
+        if (shouldAutoPlay) v.play().catch(() => {});
       }
     };
     if (v.readyState >= 1) apply();
