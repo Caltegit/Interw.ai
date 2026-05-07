@@ -91,6 +91,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     const play = () => {
       try {
         v.currentTime = 0;
+        v.playbackRate = rateRef.current;
       } catch {
         /* noop */
       }
@@ -100,6 +101,11 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     else v.addEventListener("loadedmetadata", play, { once: true });
     return () => v.removeEventListener("loadedmetadata", play);
   }, [index, clips.length]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v) v.playbackRate = rate;
+  }, [rate]);
 
   const current = clips[index];
   const questionByid = new Map(questions.map((q) => [q.id, q]));
