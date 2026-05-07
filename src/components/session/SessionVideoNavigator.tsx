@@ -88,6 +88,20 @@ export function SessionVideoNavigator({ clips }: Props) {
           />
         </div>
 
+        <div className="flex items-center justify-center gap-1">
+          {[1, 1.5, 2].map((r) => (
+            <Button
+              key={r}
+              type="button"
+              variant={rate === r ? "default" : "outline"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setRate(r)}
+            >
+              {r}×
+            </Button>
+          ))}
+
         <div className="flex items-center justify-between">
           <Button
             type="button"
