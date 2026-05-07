@@ -539,7 +539,7 @@ export default function ProjectDetail() {
       )}
 
       <Tabs defaultValue="sessions">
-        <TabsList>
+        <TabsList className="hidden">
           <TabsTrigger value="sessions">Sessions ({sessions.length})</TabsTrigger>
           <TabsTrigger value="questions">Questions ({questions.length})</TabsTrigger>
           <TabsTrigger value="criteria">Critères ({criteria.length})</TabsTrigger>
