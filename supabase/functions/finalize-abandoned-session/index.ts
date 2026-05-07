@@ -163,8 +163,17 @@ async function processSession(
     }
   }
 
-  if (recovered === 0 && (lastQuestionIndex == null || lastQuestionIndex < 0)) {
-    console.log("finalize-abandoned: nothing to recover", sessionId);
+  if (recovered === 0) {
+    // Aucun média reconstitué : on ne peut ni transcrire ni générer de rapport.
+    // On annule la session pour ne pas polluer la liste "À traiter".
+    await supabase
+      .from("sessions")
+      .update({
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+      } as any)
+      .eq("id", sessionId);
+    console.log("finalize-abandoned: cancelled (no media)", sessionId);
     return;
   }
 
