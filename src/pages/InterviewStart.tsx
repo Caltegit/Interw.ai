@@ -1313,9 +1313,18 @@ export default function InterviewStart() {
     return undefined;
   }, []);
 
+  const getSupportedAudioMimeType = useCallback(() => {
+    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return undefined;
+  }, []);
+
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
     questionVideoChunksRef.current = [];
+    questionAudioChunksRef.current = [];
     chunkIndexRef.current = 0;
     uploadedChunkPathsRef.current = [];
     try {
@@ -1341,6 +1350,33 @@ export default function InterviewStart() {
         );
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
+
+      // Recorder audio séparé (Opus mono ~24 kbps) — utilisé par l'IA pour la transcription.
+      // Permet des réponses bien plus longues (~10 min ≈ 2 Mo) sans dépasser la limite Gateway.
+      try {
+        const audioTracks = streamRef.current.getAudioTracks();
+        if (audioTracks.length > 0) {
+          const audioStream = new MediaStream(audioTracks);
+          const audioMime = getSupportedAudioMimeType();
+          audioMimeRef.current = audioMime ?? "audio/webm";
+          const audioOptions: MediaRecorderOptions = {
+            ...(audioMime ? { mimeType: audioMime } : {}),
+            audioBitsPerSecond: 24_000,
+          };
+          const audioRecorder = new MediaRecorder(audioStream, audioOptions);
+          questionAudioRecorderRef.current = audioRecorder;
+          audioRecorder.ondataavailable = (e) => {
+            if (e.data.size === 0) return;
+            questionAudioChunksRef.current.push(e.data);
+          };
+          audioRecorder.start(1000);
+        }
+      } catch (e) {
+        // Non-bloquant : si l'audio recorder échoue, on retombe sur la vidéo pour la transcription.
+        console.warn("[interview] audio recorder failed to start", e);
+        questionAudioRecorderRef.current = null;
+      }
+
       setIsRecordingActive(true);
     } catch (e) {
       logger.error("interview_recorder_failed", {
@@ -1349,7 +1385,7 @@ export default function InterviewStart() {
         error: e instanceof Error ? e.message : String(e),
       });
     }
-  }, [getSupportedMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
+  }, [getSupportedMimeType, getSupportedAudioMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
 
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
