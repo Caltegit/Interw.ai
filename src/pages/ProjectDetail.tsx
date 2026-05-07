@@ -94,7 +94,7 @@ export default function ProjectDetail() {
         .order("order_index"),
       supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision")
         .eq("project_id", id)
         .order("created_at", { ascending: false }),
     ]).then(async ([pRes, qRes, cRes, sRes]) => {
@@ -285,6 +285,19 @@ export default function ProjectDetail() {
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const pendingSessions = sessions.filter((s) => s.status === "pending");
   const completedSessions = sessions.filter((s) => s.status === "completed");
+  const inProgressSessions = sessions.filter((s) => s.status === "in_progress");
+  const toReviewSessions = sessions.filter(
+    (s) =>
+      s.status === "completed" &&
+      (!reportsBySession[s.id] || s.recruiter_decision === "none"),
+  );
+
+  // Tri par défaut adapté : si l'utilisateur n'a rien changé et qu'on filtre les "en attente", on trie par date ancienne en premier
+  const effectiveSort = (() => {
+    if (sortKey !== "date" || sortDir !== "desc") return { key: sortKey, dir: sortDir };
+    if (statusFilter === "pending") return { key: "date" as const, dir: "asc" as const };
+    return { key: sortKey, dir: sortDir };
+  })();
 
   // Apply filters + sort to sessions
   const filteredSessions = (() => {
@@ -297,7 +310,15 @@ export default function ProjectDetail() {
           (s.candidate_email || "").toLowerCase().includes(q),
       );
     }
-    if (statusFilter !== "all") list = list.filter((s) => s.status === statusFilter);
+    if (statusFilter === "to_review") {
+      list = list.filter(
+        (s) =>
+          s.status === "completed" &&
+          (!reportsBySession[s.id] || s.recruiter_decision === "none"),
+      );
+    } else if (statusFilter !== "all") {
+      list = list.filter((s) => s.status === statusFilter);
+    }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (recoFilter !== "all")
@@ -311,14 +332,23 @@ export default function ProjectDetail() {
 
     list.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      else if (sortKey === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
-      else if (sortKey === "score")
+      if (effectiveSort.key === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      else if (effectiveSort.key === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
+      else if (effectiveSort.key === "score")
         cmp = (reportsBySession[a.id]?.overall_score ?? -1) - (reportsBySession[b.id]?.overall_score ?? -1);
-      return sortDir === "asc" ? cmp : -cmp;
+      return effectiveSort.dir === "asc" ? cmp : -cmp;
     });
     return list;
   })();
+
+  // Badge d'ancienneté pour les sessions en attente
+  const getPendingAge = (createdAt: string) => {
+    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 1) return { label: "aujourd'hui", className: "bg-success/10 text-success border-success/30" };
+    if (days < 3) return { label: `${days}j`, className: "bg-success/10 text-success border-success/30" };
+    if (days <= 7) return { label: `${days}j`, className: "bg-warning/10 text-warning border-warning/30" };
+    return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
+  };
 
   const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
   const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -449,23 +479,32 @@ export default function ProjectDetail() {
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
-          {/* Alerte fine candidats en attente */}
-          {pendingSessions.length > 0 && (
-            <div className="flex items-center justify-between gap-2 rounded-md border border-warning/50 bg-warning/5 px-3 py-2 text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-                <span className="truncate">
-                  {pendingSessions.length} candidat{pendingSessions.length > 1 ? "s" : ""} en attente
-                </span>
-              </div>
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-warning"
-                onClick={() => setStatusFilter("pending")}
-              >
-                Voir uniquement les en attente
-              </Button>
+          {/* Onglets de statut visibles */}
+          {sessions.length > 0 && (
+            <div className="flex flex-wrap gap-1 border-b pb-2">
+              {[
+                { key: "all", label: "Toutes", count: sessions.length, tone: "" },
+                { key: "pending", label: "En attente", count: pendingSessions.length, tone: "text-warning" },
+                { key: "in_progress", label: "En cours", count: inProgressSessions.length, tone: "" },
+                { key: "completed", label: "Terminées", count: completedSessions.length, tone: "" },
+                { key: "to_review", label: "À traiter", count: toReviewSessions.length, tone: "text-primary" },
+              ].map((t) => {
+                const active = statusFilter === t.key;
+                return (
+                  <Button
+                    key={t.key}
+                    variant={active ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => { setStatusFilter(t.key); setPage(0); }}
+                    className="h-8"
+                  >
+                    {t.label}
+                    <span className={`ml-1.5 text-xs ${active ? "opacity-80" : t.tone || "text-muted-foreground"}`}>
+                      {t.count}
+                    </span>
+                  </Button>
+                );
+              })}
             </div>
           )}
 
@@ -505,19 +544,6 @@ export default function ProjectDetail() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" className="w-80 space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Statut</Label>
-                      <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Tous statuts</SelectItem>
-                          <SelectItem value="pending">En attente</SelectItem>
-                          <SelectItem value="in_progress">En cours</SelectItem>
-                          <SelectItem value="completed">Terminé</SelectItem>
-                          <SelectItem value="expired">Expiré</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Recommandation</Label>
                       <Select value={recoFilter} onValueChange={setRecoFilter}>
@@ -617,7 +643,17 @@ export default function ProjectDetail() {
                             {rep?.recommendation ? recoLabel[rep.recommendation] ?? rep.recommendation : "—"}
                           </td>
                           <td className="py-3 text-muted-foreground">
-                            {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                            <div className="flex items-center gap-1.5">
+                              <span>{new Date(s.created_at).toLocaleDateString("fr-FR")}</span>
+                              {s.status === "pending" && (() => {
+                                const age = getPendingAge(s.created_at);
+                                return (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${age.className}`}>
+                                    {age.label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                           </td>
                           <td className="py-3 hidden md:table-cell text-xs" onClick={(e) => e.stopPropagation()}>
                             <Select

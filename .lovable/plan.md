@@ -1,71 +1,89 @@
 ## Objectif
 
-Permettre des réponses candidat jusqu'à 10 min (et confortablement au-delà) sans jamais dépasser la limite de 18 Mo du Lovable AI Gateway, et sans dépendre de GCP.
+Rendre la liste des sessions plus lisible et actionnable, en remplaçant l'état actuel (un seul onglet « Sessions », filtres cachés dans un popover) par des **vues rapides par statut** + des indicateurs visuels d'ancienneté pour repérer immédiatement ce qui demande une action.
 
-## Principe
+## Problèmes actuels
 
-Aujourd'hui, on envoie la vidéo WebM complète à l'IA pour transcription. Une vidéo de 10 min pèse ~60 Mo → erreur `too_large`.
+1. Tout est dans une seule liste mélangée (en attente, en cours, terminé) → on ne voit pas d'un coup d'œil le pipeline
+2. Le filtre statut est caché dans un popover « Filtres » → 2 clics pour isoler les en attente
+3. Aucune indication d'**ancienneté** d'une session en attente (un lien envoyé il y a 1 jour ≠ il y a 15 jours)
+4. Pas de vue dédiée aux sessions **complétées sans rapport** (cas Trichet / Christophe vu plus tôt)
+5. Le bouton « Relancer » copie juste le lien → pas de trace de la dernière relance
 
-On va enregistrer **deux flux en parallèle côté candidat** :
-- **Vidéo** (inchangée) pour la relecture RH dans le rapport
-- **Audio seul** en Opus mono 24 kbps → ~180 Ko/min → **10 min ≈ 2 Mo**
+## Améliorations proposées
 
-La transcription utilisera l'audio (déjà prioritaire dans `transcribe-session` depuis le rattrapage ALBO). La vidéo sert uniquement à l'affichage.
+### 1. Sous-onglets de statut au-dessus du tableau
 
-## Étapes
+Remplacer l'alerte + le filtre statut caché par une barre de **5 onglets visibles** avec compteur :
 
-### 1. Double enregistrement côté candidat (`src/pages/InterviewStart.tsx`)
+```text
+[ Toutes 21 ] [ En attente 3 ] [ En cours 1 ] [ Terminées 15 ] [ À traiter 2 ]
+```
 
-- À l'ouverture du flux caméra/micro, créer **deux `MediaRecorder`** sur le même `MediaStream` :
-  - `videoRecorder` : configuration actuelle (vidéo + audio combinés)
-  - `audioRecorder` : nouveau, sur un `MediaStream` filtré sur les pistes audio uniquement, en `audio/webm;codecs=opus` à 24 kbps mono
-- Démarrer/arrêter/`requestData()` les deux recorders en parallèle aux mêmes moments (par question)
-- Stocker les chunks audio en parallèle des chunks vidéo
+- **À traiter** = statut `completed` mais sans rapport généré ou sans décision recruteur (`recruiter_decision = 'none'`) → met en avant ce qui demande une action RH
+- L'onglet actif change `statusFilter` (logique déjà en place)
+- Le badge compteur utilise les couleurs sémantiques (warning pour En attente, success pour Terminées, primary pour À traiter)
 
-### 2. Upload des deux fichiers par segment
+### 2. Colonne « Ancienneté » sur les sessions en attente
 
-- Chaque segment de réponse uploade :
-  - `video_segment_url` (existant)
-  - `audio_segment_url` (nouveau, déjà supporté par le schéma DB depuis le rattrapage ALBO)
-- Même bucket `interview-segments`, suffixe `.audio.webm`
+Dans la colonne Date, pour les sessions `pending`, afficher en plus un petit badge :
+- **vert** : envoyée il y a < 3 jours
+- **orange** : 3-7 jours
+- **rouge** : > 7 jours (« Relance recommandée »)
 
-### 3. Indicateur visuel léger pendant l'enregistrement
+Calcul basé sur `created_at`. Pas de nouvelle donnée DB.
 
-- Aucun changement d'UX visible pour le candidat
-- Juste un log console de debug pour vérifier la taille des deux flux
+### 3. Tri par défaut intelligent selon l'onglet
 
-### 4. Vérifications
+- Onglet **En attente** → tri par date de création **ancienne d'abord** (les plus urgentes à relancer remontent)
+- Onglet **Terminées** / **À traiter** → tri par date récente (comportement actuel)
+- Onglet **Toutes** → comportement actuel
 
-- Tester un enregistrement de 10 min en preview
-- Vérifier que `audio_segment_url` est rempli en DB
-- Vérifier que `transcribe-session` consomme bien l'audio (déjà le cas)
-- Vérifier qu'aucun segment ne passe en `too_large`
+### 4. Action « Relancer » améliorée
+
+Le bouton Relancer copie aujourd'hui le lien. Garder ce comportement mais :
+- Ajouter un menu déroulant : **Copier le lien** / **Renvoyer l'email d'invitation**
+- L'option email réutilise la fonction existante `send-invitation` (déjà déployée)
+- Toast de confirmation clair
+
+### 5. Filtres restants simplifiés
+
+Garder le popover « Filtres » uniquement pour : Recommandation, Score min/max, Plage de dates. Le statut sort du popover (devient les onglets). L'assignation reste un select séparé.
 
 ## Hors scope
 
-- Chunking serveur (`ffmpeg` côté edge) — pas nécessaire à 10 min
-- Compression audio plus agressive (16 kbps) — 24 kbps suffit largement
-- Modification de `transcribe-session` ou `generate-report` — déjà compatibles
-- Modification du lecteur vidéo RH — la vidéo est inchangée
+- Notifications email automatiques de relance après X jours (prochaine étape)
+- Modification du schéma DB (aucune nouvelle colonne)
+- Export CSV de la liste (déjà demandé ailleurs ?)
+- Refonte de la page entière — on reste sur la même structure de tableau
 
 ## Détails techniques
 
-**Filtrage audio du MediaStream :**
+**Fichier impacté :** `src/pages/ProjectDetail.tsx` uniquement (frontend pur).
+
+**Structure des onglets** : utiliser un nouveau composant local de type `ToggleGroup` shadcn ou simples `Button` avec variant `outline`/`default` selon l'onglet actif. Pas de routing — état local React (déjà via `statusFilter`).
+
+**Calcul « À traiter »** :
 ```ts
-const audioStream = new MediaStream(streamRef.current.getAudioTracks());
-const audioRecorder = new MediaRecorder(audioStream, {
-  mimeType: "audio/webm;codecs=opus",
-  audioBitsPerSecond: 24_000,
-});
+const toReview = sessions.filter(s =>
+  s.status === "completed" &&
+  (!reportsBySession[s.id] || s.recruiter_decision === "none")
+);
 ```
 
-**Tailles attendues :**
-| Durée | Vidéo (actuel) | Audio (nouveau) |
-|-------|---------------|-----------------|
-| 3 min | ~18 Mo (limite) | ~540 Ko |
-| 10 min | ~60 Mo (KO) | ~1.8 Mo (OK) |
-| 30 min | ~180 Mo (KO) | ~5.4 Mo (OK) |
+**Badge ancienneté** : helper local `getPendingAgeBadge(createdAt)` retournant `{ label, variant }`.
 
-**Compatibilité navigateurs :** `audio/webm;codecs=opus` est supporté par Chrome/Edge/Firefox. Sur Safari, fallback sur `audio/mp4` (à détecter via `MediaRecorder.isTypeSupported`).
+**Renvoi d'email** : appel à `supabase.functions.invoke("send-invitation", { body: { session_id: s.id } })` — vérifier que la fonction accepte ce payload, sinon adapter.
 
-**Aucune migration DB** : les colonnes `audio_segment_url` existent déjà (ajoutées lors du rattrapage ALBO).
+## Maquette ASCII
+
+```text
+[ Toutes 21 ] [En attente 3] [En cours 1] [Terminées 15] [À traiter 2]
+
+Rechercher…    Toutes les sessions ▼   Filtres   Tri ▼            21/21
+─────────────────────────────────────────────────────────────────────
+Candidat              Statut       Score  Reco   Date              …
+Yonas Mkharbeche      En attente   —      —      07/05  • 1j       Relancer ▼
+Paris Olivier         En attente   —      —      02/05  • 5j ⚠     Relancer ▼
+Richy-Dureteste       En attente   —      —      20/04  • 17j 🔴   Relancer ▼
+```
