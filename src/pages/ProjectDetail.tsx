@@ -78,7 +78,32 @@ export default function ProjectDetail() {
 
   // Pagination des sessions filtrées
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 50;
+
+  // Visibilité des sélections (chips au-dessus des sessions)
+  const DECISION_KEYS = ["none", "shortlisted", "second_opinion", "rejected"] as const;
+  const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set(["none", "shortlisted", "second_opinion"]);
+    try {
+      const raw = localStorage.getItem(`projectDecisionVisibility:${id}`);
+      if (raw) return new Set(JSON.parse(raw));
+    } catch {
+      /* ignore */
+    }
+    return new Set(["none", "shortlisted", "second_opinion"]);
+  });
+  useEffect(() => {
+    if (id) localStorage.setItem(`projectDecisionVisibility:${id}`, JSON.stringify([...visibleDecisions]));
+  }, [visibleDecisions, id]);
+  const toggleDecision = (key: string) => {
+    setVisibleDecisions((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    setPage(0);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -346,6 +371,7 @@ export default function ProjectDetail() {
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (decisionFilter !== "all")
       list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
+    list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
     if (recoFilter !== "all")
       list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
     if (scoreMin !== "")
@@ -485,25 +511,32 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Détails du projet (replié par défaut) */}
-      <Collapsible>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2">
-            <ChevronDown className="h-4 w-4 mr-1" />
-            Détails du projet
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <Card>
-            <CardContent className="pt-6 space-y-2 text-sm">
-              <p><strong>Description :</strong> {project.description || "—"}</p>
-              <p><strong>Langue :</strong> {project.language === "fr" ? "Français" : "English"}</p>
-              <p><strong>Persona IA :</strong> {project.ai_persona_name}</p>
-              <p><strong>Durée max :</strong> {project.max_duration_minutes} min</p>
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Filtres rapides Sélection */}
+      {sessions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {decisionOptions.map((d) => {
+            const count = sessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
+            const active = visibleDecisions.has(d.value);
+            return (
+              <button
+                key={d.value}
+                type="button"
+                onClick={() => toggleDecision(d.value)}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  active
+                    ? "bg-background border-foreground/20"
+                    : "bg-muted/40 border-transparent text-muted-foreground opacity-60 hover:opacity-100"
+                }`}
+                aria-pressed={active}
+              >
+                <span className={`inline-block h-2 w-2 rounded-full ${d.dot}`} />
+                <span className={active ? d.text : ""}>{d.label}</span>
+                <span className="text-muted-foreground">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <Tabs defaultValue="sessions">
         <TabsList>
