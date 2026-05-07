@@ -643,7 +643,17 @@ export default function ProjectDetail() {
                             {rep?.recommendation ? recoLabel[rep.recommendation] ?? rep.recommendation : "—"}
                           </td>
                           <td className="py-3 text-muted-foreground">
-                            {new Date(s.created_at).toLocaleDateString("fr-FR")}
+                            <div className="flex items-center gap-1.5">
+                              <span>{new Date(s.created_at).toLocaleDateString("fr-FR")}</span>
+                              {s.status === "pending" && (() => {
+                                const age = getPendingAge(s.created_at);
+                                return (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${age.className}`}>
+                                    {age.label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                           </td>
                           <td className="py-3 hidden md:table-cell text-xs" onClick={(e) => e.stopPropagation()}>
                             <Select
