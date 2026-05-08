@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { UserPlus } from "lucide-react";
 
@@ -21,14 +20,13 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<string>("recruiter");
 
   const reset = () => {
-    setEmail(""); setFullName(""); setPassword(""); setRole("recruiter");
+    setEmail(""); setFullName(""); setPassword("");
   };
 
   const handleCreate = async () => {
-    if (!email.trim() || !fullName.trim() || !role) return;
+    if (!email.trim() || !fullName.trim()) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("superadmin-manage-user", {
@@ -38,7 +36,7 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           full_name: fullName.trim(),
           password: password || undefined,
           organization_id: organizationId,
-          role,
+          role: "member",
         },
       });
       if (error) throw error;
@@ -87,23 +85,12 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
             <Label htmlFor="cuPwd">Mot de passe</Label>
             <Input id="cuPwd" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour envoyer une invitation" />
           </div>
-          <div className="space-y-2">
-            <Label>Rôle *</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="recruiter">Recruteur</SelectItem>
-                <SelectItem value="viewer">Observateur</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>Annuler</Button>
           <Button
             onClick={handleCreate}
-            disabled={loading || !email.trim() || !fullName.trim() || !role}
+            disabled={loading || !email.trim() || !fullName.trim()}
           >
             {loading ? "Création..." : "Créer"}
           </Button>
