@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronRight, Sparkles, Link2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
