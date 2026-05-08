@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Building2, Check, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrgRole } from "@/hooks/useOrgRole";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
