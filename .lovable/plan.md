@@ -1,30 +1,43 @@
-## Objectif
+# Signalement candidat → Feedback super admin uniquement
 
-Rendre la ligne « Bonjour PRÉNOM, » modifiable (faire partie du corps éditable) et mettre à jour les 3 modèles d'email candidats avec les nouveaux textes (incluant la signature « À bientôt, L'équipe de recrutement »).
+## Comportement actuel
+La fonction `report-interview-issue` envoie un email à la personne qui a créé la session (le recruteur).
+
+## Nouveau comportement
+La fonction crée uniquement un fil de feedback visible par les super admins. **Plus aucun email envoyé.**
 
 ## Modifications
 
-### 1. `src/components/project/BulkEmailDialog.tsx`
+### `supabase/functions/report-interview-issue/index.ts`
+- Supprimer toute la logique d'envoi d'email (récupération profil, appel à `send-transactional-email`, gestion des réponses email).
+- Récupérer la session (`candidate_name`, `candidate_email`, `project_id`) et le projet (`title`, `job_title`).
+- Récupérer le premier super admin via `SELECT user_id FROM user_roles WHERE role='super_admin' LIMIT 1`.
+- Insérer un fil dans `feedback_threads` :
+  - `user_id` = id du super admin (requis NOT NULL)
+  - `subject` = `Signalement candidat — {candidate_name} ({job_title})`
+  - `status` = `'open'`
+- Insérer un message initial dans `feedback_messages` :
+  - `thread_id` = id du fil
+  - `author_id` = id du super admin
+  - `author_role` = `'user'`
+  - `content` :
+    ```
+    Signalement reçu pendant l'entretien.
 
-- Mettre à jour `DEFAULT_TEMPLATES` avec les 3 nouveaux corps complets, chacun commençant par `Bonjour {firstName},` et terminant par `À bientôt,\n\nL'équipe de recrutement` :
-  - **Refus** : « Bonjour {firstName}, / Merci pour le temps consacré à votre entretien. / Après étude attentive de votre candidature, nous ne donnerons pas suite à ce stade. / Nous vous souhaitons une belle réussite dans la suite de vos démarches. / À bientôt, / L'équipe de recrutement »
-  - **Nouvel entretien** : « Bonjour {firstName}, / Suite à votre premier échange, nous souhaiterions vous proposer un nouvel entretien. / Pouvez-vous nous indiquer vos disponibilités sur les prochains jours ? / À bientôt, / L'équipe de recrutement »
-  - **Infos complémentaires** : « Bonjour {firstName}, / Pour finaliser l'étude de votre candidature, nous aurions besoin de quelques informations complémentaires. / Pouvez-vous nous répondre dès que possible ? / À bientôt, / L'équipe de recrutement »
-- Avant l'envoi, remplacer `{firstName}` dans le corps par le prénom du destinataire (fallback : chaîne vide proprement gérée — si pas de prénom, la ligne devient « Bonjour, »).
-- Supprimer la note « Chaque email commencera automatiquement par "Bonjour PRÉNOM," ». La remplacer par : « Utilisez `{firstName}` pour insérer le prénom du candidat. »
+    Candidat : {candidate_name} ({candidate_email})
+    Poste : {job_title} — {project_title}
+    Session : https://interw.ai/sessions/{session.id}
 
-### 2. `supabase/functions/_shared/transactional-email-templates/bulk-candidate-message.tsx`
+    Message du candidat :
+    {message}
+    ```
+- Retourner `{ ok: true }` comme avant (le côté candidat affiche déjà « Signalement envoyé »).
 
-- Retirer la ligne `greeting` ajoutée automatiquement (`Bonjour ${firstName},`). Le corps reçu contient déjà la salutation.
-- Conserver le rendu paragraphe par paragraphe avec retours à la ligne.
-- Garder `firstName` dans les props pour compatibilité (mais ne plus l'utiliser pour préfixer).
+### Côté candidat
+Aucune modification de l'UI : le toast actuel « Signalement envoyé. Le recruteur a été prévenu. » reste pertinent. Si tu veux changer le wording, dis-le-moi.
 
-### 3. Personnalisations existantes en base (`candidate_message_templates`)
-
-- Ne pas migrer automatiquement les anciens overrides : si une organisation a déjà personnalisé un modèle, son texte reste tel quel (sans « Bonjour PRÉNOM » puisque c'était auto-injecté). 
-- Note pour l'utilisateur : ces orgs devront ré-ouvrir leur modèle et ajouter eux-mêmes `Bonjour {firstName},` en début de message. (À confirmer si tu veux que je réinitialise les overrides existants.)
+### Template email
+Le template `interview-issue-report.tsx` n'est plus utilisé mais on le laisse en place (inerte) au cas où on voudrait réactiver l'envoi plus tard.
 
 ## Fichiers touchés
-
-- `src/components/project/BulkEmailDialog.tsx`
-- `supabase/functions/_shared/transactional-email-templates/bulk-candidate-message.tsx`
+- `supabase/functions/report-interview-issue/index.ts` (réécriture)
