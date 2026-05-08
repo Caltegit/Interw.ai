@@ -7,7 +7,6 @@ import { MessageSquare, Play, FileText } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
-import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
@@ -239,7 +238,7 @@ export default function SharedReport() {
         onDecisionChange={() => {}}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
@@ -356,19 +355,8 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Best-of</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HighlightReelPlayer
-                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
-              />
-            </CardContent>
-          </Card>
         </div>
       </div>
 
