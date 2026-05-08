@@ -61,10 +61,37 @@ export default function InterviewPrivacy() {
     if (!token) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.functions.invoke("candidate-self-delete", {
+      const { data, error } = await supabase.functions.invoke("candidate-self-delete", {
         body: { token },
       });
-      if (error) throw error;
+      if (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let serverMsg = (error as any)?.message ?? "";
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ctx = (error as any)?.context;
+          if (ctx?.text) {
+            const txt = await ctx.text();
+            try {
+              const parsed = JSON.parse(txt);
+              serverMsg = parsed?.error || serverMsg;
+            } catch {
+              if (txt) serverMsg = txt;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        console.error("[candidate-self-delete] failed", error, serverMsg);
+        throw new Error(serverMsg || "Erreur inconnue");
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = data as any;
+      if (!result?.success) {
+        const msg = result?.error || "La suppression a échoué.";
+        console.error("[candidate-self-delete] non-success", result);
+        throw new Error(msg);
+      }
       setDeleted(true);
       setStep(0);
     } catch (e) {
