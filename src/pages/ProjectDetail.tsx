@@ -628,13 +628,6 @@ export default function ProjectDetail() {
             </p>
           ) : (
             <>
-              {processingCount > 0 && (
-                <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  {processingCount} entretien{processingCount > 1 ? "s" : ""} en cours de traitement — il
-                  {processingCount > 1 ? "s" : ""} apparaîtr{processingCount > 1 ? "ont" : "a"} automatiquement une fois
-                  le rapport prêt.
-                </div>
-              )}
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex rounded-md border">
