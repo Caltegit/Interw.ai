@@ -1057,6 +1057,54 @@ export default function ProjectDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        recipients={sessions.filter((s) => selectedIds.has(s.id)).map((s) => ({
+          id: s.id,
+          candidate_name: s.candidate_name,
+          candidate_email: s.candidate_email,
+        }))}
+        projectTitle={project?.title ?? ""}
+        onSent={clearSelection}
+      />
+
+      <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} candidat(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Toutes les sessions, transcriptions, messages et rapports associés seront supprimés. Action irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setBulkDeleteStep(2)}>Continuer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteStep === 2} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer définitivement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dernière confirmation avant suppression de {selectedIds.size} candidat(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
