@@ -231,7 +231,36 @@ export default function ProjectDetail() {
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
       }
-    }, 1000);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    const results = await Promise.allSettled(
+      ids.map((sid) =>
+        supabase.functions.invoke("delete-session", { body: { session_id: sid } }),
+      ),
+    );
+    const okIds = ids.filter((_, i) => {
+      const r = results[i];
+      if (r.status !== "fulfilled") return false;
+      const v: any = r.value;
+      return !(v?.error || v?.data?.error);
+    });
+    setSessions((prev) => prev.filter((s) => !okIds.includes(s.id)));
+    setSelectedIds(new Set());
+    setBulkDeleteStep(0);
+    setBulkDeleting(false);
+    const failed = ids.length - okIds.length;
+    if (failed === 0) {
+      toast({ title: `${okIds.length} session(s) supprimée(s)` });
+    } else {
+      toast({
+        title: `Suppression partielle : ${okIds.length} ok, ${failed} échec(s)`,
+        variant: "destructive",
+      });
+    }
   };
 
   const copyProjectLink = () => {
