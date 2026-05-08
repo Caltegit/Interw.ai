@@ -64,8 +64,24 @@ Deno.serve(async (req) => {
     ? authHeader.slice('Bearer '.length).trim()
     : ''
 
-  const isInternalCall =
+  let isInternalCall =
     bearer === supabaseServiceKey || internalSecret === supabaseServiceKey
+
+  // Fallback : tout JWT signé avec le rôle 'service_role' est aussi un appel interne.
+  // Nécessaire car selon le contexte d'exécution, la valeur de SUPABASE_SERVICE_ROLE_KEY
+  // peut différer de celle utilisée par les fonctions appelantes (signing-keys).
+  if (!isInternalCall && (bearer || internalSecret)) {
+    const candidate = internalSecret || bearer
+    try {
+      const claimsClient = createClient(supabaseUrl, supabaseAnonKey)
+      const { data, error } = await claimsClient.auth.getClaims(candidate)
+      if (!error && (data?.claims as { role?: string } | undefined)?.role === 'service_role') {
+        isInternalCall = true
+      }
+    } catch (_) {
+      // ignore — on retombera sur la vérification user JWT ci-dessous
+    }
+  }
 
   if (!isInternalCall) {
     if (!bearer) {

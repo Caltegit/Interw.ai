@@ -19,6 +19,7 @@ async function invoke(name: string, body: Record<string, unknown>) {
     headers: {
       Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       apikey: SERVICE_ROLE_KEY,
+      "x-internal-secret": SERVICE_ROLE_KEY,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -31,26 +32,42 @@ async function invoke(name: string, body: Record<string, unknown>) {
   return text;
 }
 
-async function processSession(sessionId: string) {
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-  // Idempotence : ne rien faire si rapport existe déjà.
-  const { data: existing } = await supabase
-    .from("reports")
-    .select("id")
-    .eq("session_id", sessionId)
-    .maybeSingle();
-  if (existing) {
-    console.log("finalize-session: report already exists", sessionId);
-    return;
-  }
-
-  // Vérifie que la session est bien terminée + récupère les infos pour l'email candidat.
+async function sendCandidateThankYou(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+) {
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, status, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organizations:organizations(name))",
+      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organizations:organizations(name))",
     )
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (!session?.candidate_email) return;
+  // deno-lint-ignore no-explicit-any
+  const project = (session as any).projects;
+  const orgName = project?.organizations?.name ?? "";
+  const jobTitle = project?.job_title || project?.title || "";
+  const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
+  const slug = project?.slug ?? "session";
+  const privacyUrl = session.token
+    ? `https://interw.ai/session/${slug}/privacy/${session.token}`
+    : undefined;
+  await invoke("send-transactional-email", {
+    templateName: "candidate-thank-you",
+    recipientEmail: session.candidate_email,
+    idempotencyKey: `candidate-thanks-${sessionId}`,
+    templateData: { firstName, jobTitle, orgName, privacyUrl },
+  });
+}
+
+async function processSession(sessionId: string) {
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Vérifie que la session est bien terminée.
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("id, status")
     .eq("id", sessionId)
     .maybeSingle();
   if (!session || session.status !== "completed") {
@@ -58,34 +75,29 @@ async function processSession(sessionId: string) {
     return;
   }
 
-  try {
-    await invoke("transcribe-session", { session_id: sessionId });
-  } catch (e) {
-    console.error("finalize-session: transcribe failed (continuing)", e);
-  }
+  // Idempotence sur la génération du rapport : si un rapport existe déjà,
+  // on saute transcription + génération mais on tente quand même l'email
+  // (l'idempotency_key côté email évite le double envoi).
+  const { data: existing } = await supabase
+    .from("reports")
+    .select("id")
+    .eq("session_id", sessionId)
+    .maybeSingle();
 
-  await invoke("generate-report", { session_id: sessionId });
+  if (!existing) {
+    try {
+      await invoke("transcribe-session", { session_id: sessionId });
+    } catch (e) {
+      console.error("finalize-session: transcribe failed (continuing)", e);
+    }
+    await invoke("generate-report", { session_id: sessionId });
+  } else {
+    console.log("finalize-session: report already exists", sessionId);
+  }
 
   // Email de remerciement RGPD au candidat (best-effort, non bloquant)
   try {
-    // deno-lint-ignore no-explicit-any
-    const project = (session as any).projects;
-    const orgName = project?.organizations?.name ?? "";
-    const jobTitle = project?.job_title || project?.title || "";
-    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
-    const slug = project?.slug ?? "session";
-    const privacyUrl = session.token
-      ? `https://interw.ai/session/${slug}/privacy/${session.token}`
-      : undefined;
-
-    if (session.candidate_email) {
-      await invoke("send-transactional-email", {
-        templateName: "candidate-thank-you",
-        recipientEmail: session.candidate_email,
-        idempotencyKey: `candidate-thanks-${sessionId}`,
-        templateData: { firstName, jobTitle, orgName, privacyUrl },
-      });
-    }
+    await sendCandidateThankYou(supabase, sessionId);
   } catch (e) {
     console.error("finalize-session: thank-you email failed (continuing)", e);
   }

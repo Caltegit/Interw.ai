@@ -1,42 +1,58 @@
-## Plan : corriger « Edge Function returned a non-2xx status code » lors de la création de c@bap.fr dans UBIQ
+## Plan : faire fonctionner l'email de remerciement candidat en fin de session
 
-### Diagnostic
+### Réponse à la question
 
-État actuel en base pour `c@bap.fr` :
+**Oui, un email est prévu** : à la fin d'une session, un trigger Postgres `sessions_finalize_on_completed` appelle l'edge function `finalize-session`, qui invoque `send-transactional-email` avec le template **`candidate-thank-you`** (fichier `supabase/functions/_shared/transactional-email-templates/candidate-thank-you.tsx`).
 
-- `auth.users` : utilisateur existe (`78651389…`).
-- `organization_members` : déjà membre de **ALBO** **et** de **UBIQ**.
-- `user_roles` : **aucune ligne** (rôle manquant).
-- `profiles.organization_id` : pointe vers ALBO (org « active »).
+Contenu actuel de l'email (FR) :
+- Sujet : « Merci pour votre entretien »
+- Salutation personnalisée (prénom du candidat)
+- Confirmation que les réponses ont été enregistrées et seront analysées
+- Bloc RGPD avec un bouton « Mes données personnelles » pointant vers la page de gestion de ses données
+- Signature « L'équipe interw.ai »
 
-Quand on relance « Créer un utilisateur dans UBIQ » :
+### Problème détecté (l'email ne part pas)
 
-1. `inviteUserByEmail` échoue avec `email_exists` (correct).
-2. La fonction retrouve l'`user_id` existant.
-3. Elle teste `organization_members(user_id, organization_id=UBIQ)` → **trouve la ligne** (rattachée lors de la précédente tentative).
-4. Elle renvoie **409 « Cet utilisateur fait déjà partie de l'organisation. »**
+Aucune ligne dans `email_send_log` pour `candidate-thank-you` (0/115 sessions terminées). Les logs de `finalize-session` montrent l'erreur réelle :
 
-Côté UI, `supabase.functions.invoke` enveloppe tout statut non-2xx dans un `FunctionsHttpError` dont le `.message` est générique : « Edge Function returned a non-2xx status code ». Le vrai message JSON (`error: "..."`) est dans `error.context` et n'est jamais lu → toast inutile.
+```
+finalize-session: thank-you email failed (continuing)
+Error: send-transactional-email 401: {"error":"Unauthorized"}
+```
 
-Deux corrections complémentaires à apporter.
+`send-transactional-email` refuse l'appel interne. Sa logique d'auth accepte un appel interne uniquement si :
+- `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` correspond exactement à la valeur d'env, **ou**
+- `x-internal-secret: <SUPABASE_SERVICE_ROLE_KEY>` correspond.
 
-### Correctif 1 — Edge function `superadmin-manage-user` (action `create`)
+`finalize-session` envoie bien `Authorization: Bearer <SERVICE_ROLE_KEY>`, mais la comparaison stricte échoue (probable décalage lié au système de signing-keys de Supabase qui peut renvoyer une valeur différente selon le contexte). Le rapport, lui, est généré correctement parce que `generate-report` n'effectue pas ce contrôle strict.
 
-Comportement idempotent quand l'utilisateur existe et est déjà membre de l'organisation cible :
+### Correctif
 
-- Au lieu de renvoyer 409, **s'assurer que la ligne `user_roles` existe** pour ce couple (`user_id`, `organization_id`, `role` par défaut `member`) et **renvoyer 200** avec un flag `already_member: true` (et `attached: true`).
-- Conserver le comportement actuel pour le cas où la membership n'existe pas encore (insertion + role + `attached: true`).
-- Cela répare aussi le cas réel de `c@bap.fr` : la ligne `user_roles` manquante sera créée automatiquement.
+**1. Edge function `finalize-session/index.ts`** — dans `invoke()`, ajouter le header `x-internal-secret` en plus du `Authorization` :
 
-### Correctif 2 — UI `CreateUserInOrgDialog.tsx`
+```ts
+headers: {
+  Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+  apikey: SERVICE_ROLE_KEY,
+  "x-internal-secret": SERVICE_ROLE_KEY,
+  "Content-Type": "application/json",
+},
+```
 
-Lire le vrai message d'erreur retourné par la fonction quand `supabase.functions.invoke` renvoie un `FunctionsHttpError` :
+Le `x-internal-secret` est lu en premier par `send-transactional-email` et passe le test interne même si la valeur du Bearer subit une transformation par le runtime.
 
-- Si `error` est défini, tenter `await error.context?.json()` (ou `.text()` en fallback) pour récupérer `{ error: "..." }` et utiliser ce message dans le toast au lieu de « Edge Function returned a non-2xx status code ».
-- Adapter le toast de succès pour ajouter une variante `already_member` (ex. titre « Déjà membre », description « L'utilisateur faisait déjà partie de l'organisation, son accès a été vérifié. »).
+**2. Faire de même dans les autres callers internes** qui invoquent `send-transactional-email` côté serveur (rapide vérification des fonctions : `report-interview-issue`, `check-email-failures`, `retry-email`, etc.) et appliquer le même header si nécessaire.
+
+**3. Redéployer** `finalize-session` (et toute fonction modifiée).
+
+### Vérification après correctif
+
+1. Déclencher manuellement `finalize-session` avec `session_id` d'une session terminée récente sans email envoyé (par ex. `bd049121-5ee4-4e67-a096-f7d0aba177b6` — Oumaima Regragui).
+2. Note : la garde d'idempotence retourne tôt si un report existe déjà → pour tester, je lancerai directement `send-transactional-email` avec `templateName: "candidate-thank-you"` et `recipientEmail` (ton email ou celui de ton choix) pour valider l'envoi de bout en bout.
+3. Confirmer que `email_send_log` contient une ligne `candidate-thank-you` avec status `pending` puis `sent`.
 
 ### Hors scope
 
-- Pas de migration DB.
-- Pas de modification des autres actions (`set_role`, `delete`, etc.).
-- Pas de changement du sélecteur multi-organisations.
+- Pas de migration DB (le trigger fonctionne déjà correctement).
+- Pas de modification du template ni du contenu de l'email.
+- Pas de changement de la logique d'auth de `send-transactional-email` (on s'aligne sur l'API existante via `x-internal-secret`).
