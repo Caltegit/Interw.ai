@@ -96,7 +96,7 @@ export default function ProjectDetail() {
 
   // Filters / sort for sessions list
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // statusFilter retiré : la liste n'affiche que les sessions prêtes (rapport généré)
   const [recoFilter, setRecoFilter] = useState<string>("all");
   const [scoreMin, setScoreMin] = useState<string>("");
   const [scoreMax, setScoreMax] = useState<string>("");
