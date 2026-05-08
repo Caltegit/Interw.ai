@@ -158,6 +158,65 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [existingClonedVoice, setExistingClonedVoice] = useState<{ id: string; name: string } | null>(null);
   const [confirmReplaceOpen, setConfirmReplaceOpen] = useState(false);
   const [deletingVoice, setDeletingVoice] = useState(false);
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopPreview = () => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.src = "";
+      previewAudioRef.current = null;
+    }
+    setPreviewingVoiceId(null);
+  };
+
+  useEffect(() => () => stopPreview(), []);
+
+  const playVoicePreview = async (voiceId: string) => {
+    if (previewingVoiceId === voiceId) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    setPreviewingVoiceId(voiceId);
+    try {
+      const cleanName = (aiPersonaName || "votre interviewer").trim();
+      const text = `Bonjour, je suis ${cleanName}, ravi de faire votre connaissance.`;
+      const { data: { session } } = await supabase.auth.getSession();
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
+      const url = `https://${projectId}.functions.supabase.co/tts-elevenlabs`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ text, voiceId, preview: true }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("audio")) throw new Error("Réponse non audio");
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      const audio = new Audio(audioUrl);
+      previewAudioRef.current = audio;
+      audio.onended = () => { setPreviewingVoiceId(null); URL.revokeObjectURL(audioUrl); };
+      audio.onerror = () => { setPreviewingVoiceId(null); URL.revokeObjectURL(audioUrl); };
+      await audio.play();
+    } catch (err) {
+      console.error("[ProjectForm] preview failed", err);
+      toast({ title: "Aperçu impossible", description: "Impossible de jouer un aperçu de la voix.", variant: "destructive" });
+      setPreviewingVoiceId(null);
+    }
+  };
+
+  const getVoiceName = (voiceId: string): string => {
+    if (existingClonedVoice && existingClonedVoice.id === voiceId) {
+      return `${existingClonedVoice.name} (ma voix)`;
+    }
+    const all = [...FEMALE_VOICES, ...MALE_VOICES];
+    return all.find((v) => v.id === voiceId)?.name || "Voix par défaut";
+  };
 
   useEffect(() => {
     if (!user) return;
