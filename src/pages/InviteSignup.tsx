@@ -19,6 +19,7 @@ export default function InviteSignup() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,7 +93,20 @@ export default function InviteSignup() {
           emailRedirectTo: `${window.location.origin}/invite/${token}`,
         },
       });
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        const msg = signUpError.message?.toLowerCase() ?? "";
+        if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already")) {
+          // L'email a déjà un compte Interw.ai → bascule sur le formulaire de connexion
+          setMode("signin");
+          setPassword("");
+          toast({
+            title: "Compte existant détecté",
+            description: `Connectez-vous pour rejoindre ${orgName}.`,
+          });
+          return;
+        }
+        throw signUpError;
+      }
       toast({
         title: "Compte créé",
         description: "Vérifiez votre email pour confirmer, puis revenez sur ce lien.",
@@ -103,6 +117,36 @@ export default function InviteSignup() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSignin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+      // Le useEffect ci-dessus s'occupe ensuite d'accept_invitation et de la redirection.
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Identifiants invalides";
+      toast({ title: "Connexion impossible", description: msg, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) return;
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (resetError) {
+      toast({ title: "Erreur", description: resetError.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Email envoyé",
+      description: "Consultez votre boîte mail pour réinitialiser votre mot de passe.",
+    });
   };
 
   if (loading) {
@@ -151,50 +195,98 @@ export default function InviteSignup() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
           <CardDescription>
-            Vous avez été ajouté à <strong>{orgName}</strong>. Définissez votre mot de passe pour vous connecter.
+            {mode === "signup" ? (
+              <>
+                Vous avez été ajouté à <strong>{orgName}</strong>. Définissez votre mot de passe pour vous connecter.
+              </>
+            ) : (
+              <>
+                Cet email possède déjà un compte. Connectez-vous pour rejoindre <strong>{orgName}</strong>.
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Nom complet</Label>
-              <Input
-                id="fullName"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Votre nom"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} disabled className="bg-muted" />
-              <p className="text-xs text-muted-foreground">L'email est pré-rempli depuis l'invitation.</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 caractères"
-                required
-                minLength={6}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Création..." : "Créer mon compte"}
-            </Button>
-          </form>
+          {mode === "signup" ? (
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Nom complet</Label>
+                <Input
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Votre nom"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={email} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">L'email est pré-rempli depuis l'invitation.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Mot de passe</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min. 6 caractères"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Création..." : "Créer mon compte"}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSignin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-signin">Email</Label>
+                <Input id="email-signin" type="email" value={email} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password-signin">Mot de passe</Label>
+                <Input
+                  id="password-signin"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Votre mot de passe"
+                  required
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Connexion..." : "Se connecter et rejoindre"}
+              </Button>
+              <button
+                type="button"
+                className="block w-full text-center text-sm text-muted-foreground hover:text-primary underline"
+                onClick={handleForgotPassword}
+              >
+                Mot de passe oublié ?
+              </button>
+            </form>
+          )}
           <div className="mt-4 text-center">
-            <button
-              type="button"
-              className="text-sm text-muted-foreground hover:text-primary underline"
-              onClick={() => navigate("/login")}
-            >
-              Déjà un compte ? Se connecter
-            </button>
+            {mode === "signup" ? (
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-primary underline"
+                onClick={() => setMode("signin")}
+              >
+                Déjà un compte ? Se connecter
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-primary underline"
+                onClick={() => setMode("signup")}
+              >
+                Créer un nouveau compte
+              </button>
+            )}
           </div>
         </CardContent>
       </Card>
