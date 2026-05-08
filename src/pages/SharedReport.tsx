@@ -238,7 +238,7 @@ export default function SharedReport() {
         onDecisionChange={() => {}}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
@@ -355,19 +355,8 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Best-of</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <HighlightReelPlayer
-                clips={(report?.highlight_clips as unknown as HighlightClip[]) ?? []}
-              />
-            </CardContent>
-          </Card>
         </div>
       </div>
 
