@@ -129,6 +129,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
         const firstName = firstNameOf(r.candidate_name);
+        const personalizedBody = body.replace(/\{firstName\}/g, firstName).replace(/Bonjour ,/g, "Bonjour,");
         return supabase.functions.invoke("send-transactional-email", {
           body: {
             templateName: "bulk-candidate-message",
@@ -136,7 +137,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
             idempotencyKey: `bulk-${selectedKey}-${r.id}-${Date.now()}`,
             templateData: {
               subject,
-              body,
+              body: personalizedBody,
               firstName,
             },
           },
