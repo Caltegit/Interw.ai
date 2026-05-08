@@ -516,7 +516,6 @@ export default function ProjectDetail() {
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
   const activeFilterCount =
-    (statusFilter !== "all" ? 1 : 0) +
     (recoFilter !== "all" ? 1 : 0) +
     (scoreMin !== "" ? 1 : 0) +
     (scoreMax !== "" ? 1 : 0) +
@@ -526,7 +525,6 @@ export default function ProjectDetail() {
     (decisionFilter !== "all" ? 1 : 0);
 
   const resetFilters = () => {
-    setStatusFilter("all");
     setRecoFilter("all");
     setScoreMin("");
     setScoreMax("");
