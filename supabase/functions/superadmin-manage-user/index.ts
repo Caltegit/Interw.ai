@@ -34,34 +34,91 @@ Deno.serve(async (req) => {
       const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
       const redirectTo = origin ? `${origin}/reset-password` : undefined;
 
-      let newUserId: string;
+      let newUserId: string | null = null;
       let invited = false;
+      let attached = false;
 
-      if (password && password.trim().length > 0) {
-        // Création silencieuse avec mot de passe fourni
-        const { data: created, error: createErr } = await admin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
-          user_metadata: { full_name: full_name || email },
-        });
-        if (createErr) throw createErr;
-        newUserId = created.user!.id;
-      } else {
-        // Invitation par email
-        const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-          data: { full_name: full_name || email },
-          redirectTo,
-        });
-        if (inviteErr) throw inviteErr;
-        newUserId = invitedData.user!.id;
-        invited = true;
+      const isEmailExists = (err: any) => {
+        const code = err?.code || err?.error_code;
+        const status = err?.status;
+        const msg = String(err?.message ?? "").toLowerCase();
+        return code === "email_exists" || status === 422 || msg.includes("already been registered") || msg.includes("already exists");
+      };
+
+      const findUserIdByEmail = async (target: string): Promise<string | null> => {
+        const lower = target.toLowerCase();
+        for (let page = 1; page <= 20; page++) {
+          const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+          if (error) throw error;
+          const found = data.users.find((u) => (u.email ?? "").toLowerCase() === lower);
+          if (found) return found.id;
+          if (data.users.length < 200) break;
+        }
+        return null;
+      };
+
+      try {
+        if (password && password.trim().length > 0) {
+          const { data: created, error: createErr } = await admin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: full_name || email },
+          });
+          if (createErr) throw createErr;
+          newUserId = created.user!.id;
+        } else {
+          const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+            data: { full_name: full_name || email },
+            redirectTo,
+          });
+          if (inviteErr) throw inviteErr;
+          newUserId = invitedData.user!.id;
+          invited = true;
+        }
+      } catch (err: any) {
+        if (!isEmailExists(err)) throw err;
+        // Utilisateur existant : on tente de le rattacher à l'organisation
+        if (!organization_id) {
+          return json({ error: "Cet utilisateur existe déjà." }, 409);
+        }
+        const existingId = await findUserIdByEmail(email);
+        if (!existingId) {
+          return json({ error: "Utilisateur existant introuvable." }, 500);
+        }
+        const { data: existingMembership } = await admin
+          .from("organization_members")
+          .select("id")
+          .eq("user_id", existingId)
+          .eq("organization_id", organization_id)
+          .maybeSingle();
+        if (existingMembership) {
+          return json({ error: "Cet utilisateur fait déjà partie de l'organisation." }, 409);
+        }
+        await admin.from("organization_members").insert({ user_id: existingId, organization_id });
+        const { data: existingRole } = await admin
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", existingId)
+          .eq("organization_id", organization_id)
+          .eq("role", role || "member")
+          .maybeSingle();
+        if (!existingRole) {
+          await admin.from("user_roles").insert({
+            user_id: existingId,
+            role: role || "member",
+            organization_id,
+          });
+        }
+        return json({ success: true, user_id: existingId, attached: true });
       }
 
-      if (organization_id) {
+      if (organization_id && newUserId) {
         await admin.from("profiles").update({ organization_id, full_name: full_name || email }).eq("user_id", newUserId);
+        // Membership multi-org pour cohérence avec le sélecteur
+        await admin.from("organization_members").insert({ user_id: newUserId, organization_id });
       }
-      if (role) {
+      if (role && newUserId) {
         await admin.from("user_roles").insert({
           user_id: newUserId,
           role,
@@ -80,7 +137,7 @@ Deno.serve(async (req) => {
           }
         }
       }
-      return json({ success: true, user_id: newUserId, invited });
+      return json({ success: true, user_id: newUserId, invited, attached });
     }
 
     if (action === "delete") {

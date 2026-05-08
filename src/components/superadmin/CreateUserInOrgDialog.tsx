@@ -41,10 +41,20 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
       });
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      const wasInvited = (data as { invited?: boolean })?.invited;
+      const result = data as { invited?: boolean; attached?: boolean };
+      const wasInvited = result?.invited;
+      const wasAttached = result?.attached;
       toast({
-        title: wasInvited ? "Invitation envoyée" : "Utilisateur créé",
-        description: wasInvited ? `Un email d'invitation a été envoyé à ${email}` : email,
+        title: wasAttached
+          ? "Accès ajouté"
+          : wasInvited
+            ? "Invitation envoyée"
+            : "Utilisateur créé",
+        description: wasAttached
+          ? `${email} a été ajouté à l'organisation. L'utilisateur pourra y accéder via le sélecteur d'organisations.`
+          : wasInvited
+            ? `Un email d'invitation a été envoyé à ${email}`
+            : email,
       });
       setOpen(false);
       reset();
