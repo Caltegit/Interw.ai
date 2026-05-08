@@ -43,7 +43,7 @@ export const template = {
   previewData: {
     subject: 'Refus - Recrutement Q1 2025',
     firstName: 'Jane',
-    body: "Merci pour le temps consacré à votre entretien.\n\nAprès étude de votre candidature, nous ne donnerons pas suite.",
+    body: "Bonjour Jane,\n\nMerci pour le temps consacré à votre entretien.\n\nÀ bientôt,\n\nL'équipe de recrutement",
   },
 } satisfies TemplateEntry
 
