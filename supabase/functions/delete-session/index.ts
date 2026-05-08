@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { purgeSessionStorageFiles } from "../_shared/session-storage-cleanup.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
     // Récupère la session + projet pour le contrôle d'accès
     const { data: session, error: sessErr } = await admin
       .from("sessions")
-      .select("id, project_id, projects:projects!inner(created_by, organization_id)")
+      .select("id, project_id, candidate_email, projects:projects!inner(created_by, organization_id)")
       .eq("id", sessionId)
       .maybeSingle();
 
@@ -61,6 +62,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Session introuvable" }, 404);
     }
 
+    // deno-lint-ignore no-explicit-any
     const project = (session as any).projects;
     const isCreator = project.created_by === callerId;
 
@@ -79,6 +81,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Vous n'avez pas le droit de supprimer cette session" }, 403);
     }
 
+    // Purge des fichiers Storage avant la cascade BDD (best-effort, non bloquant)
+    const storageResult = await purgeSessionStorageFiles(admin, sessionId);
+
     // Cascade côté serveur, atomique du point de vue de l'appelant.
     // Ordre : enfants → parents.
     const { data: reports } = await admin
@@ -87,6 +92,7 @@ Deno.serve(async (req) => {
       .eq("session_id", sessionId);
 
     if (reports && reports.length > 0) {
+      // deno-lint-ignore no-explicit-any
       const reportIds = reports.map((r: any) => r.id);
       const { error } = await admin
         .from("report_shares")
@@ -97,7 +103,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const steps: Array<[string, () => Promise<{ error: any }>]> = [
+    const steps: Array<[string, () => Promise<{ error: unknown }>]> = [
       ["session_messages", () => admin.from("session_messages").delete().eq("session_id", sessionId)],
       ["transcripts", () => admin.from("transcripts").delete().eq("session_id", sessionId)],
       ["reports", () => admin.from("reports").delete().eq("session_id", sessionId)],
@@ -107,15 +113,27 @@ Deno.serve(async (req) => {
     for (const [label, fn] of steps) {
       const { error } = await fn();
       if (error) {
-        console.log(`[delete-session] ${label} failed:`, error.message);
-        return jsonResponse({ error: `${label}: ${error.message}` }, 500);
+        // deno-lint-ignore no-explicit-any
+        console.log(`[delete-session] ${label} failed:`, (error as any).message);
+        // deno-lint-ignore no-explicit-any
+        return jsonResponse({ error: `${label}: ${(error as any).message}` }, 500);
       }
     }
 
-    console.log("[delete-session] OK", { sessionId, callerId });
-    return jsonResponse({ success: true });
-  } catch (e: any) {
-    console.log("[delete-session] Exception:", e?.message);
-    return jsonResponse({ error: e?.message ?? "Erreur inconnue" }, 500);
+    // Audit RGPD (best-effort)
+    await admin.from("data_purge_log").insert({
+      session_id: sessionId,
+      candidate_email: session.candidate_email ?? null,
+      source: "recruiter_manual",
+      performed_by: callerId,
+      details: { storage_files_deleted: storageResult.deleted },
+    });
+
+    console.log("[delete-session] OK", { sessionId, callerId, storageResult });
+    return jsonResponse({ success: true, storage: storageResult });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Erreur inconnue";
+    console.log("[delete-session] Exception:", msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
