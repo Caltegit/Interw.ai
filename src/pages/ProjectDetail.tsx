@@ -74,7 +74,7 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
-  const [transcriptionPendingBySession, setTranscriptionPendingBySession] = useState<Record<string, number>>({});
+  
   const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
