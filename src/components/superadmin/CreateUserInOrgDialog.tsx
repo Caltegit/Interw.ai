@@ -39,22 +39,44 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           role: "member",
         },
       });
-      if (error) throw error;
+      if (error) {
+        let detailedMsg: string | null = null;
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.text === "function") {
+          try {
+            const txt = await ctx.text();
+            try {
+              const parsed = JSON.parse(txt);
+              detailedMsg = parsed?.error ?? parsed?.message ?? txt;
+            } catch {
+              detailedMsg = txt;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        throw new Error(detailedMsg || error.message);
+      }
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
-      const result = data as { invited?: boolean; attached?: boolean };
+      const result = data as { invited?: boolean; attached?: boolean; already_member?: boolean };
       const wasInvited = result?.invited;
       const wasAttached = result?.attached;
+      const wasAlready = result?.already_member;
       toast({
-        title: wasAttached
-          ? "Accès ajouté"
-          : wasInvited
-            ? "Invitation envoyée"
-            : "Utilisateur créé",
-        description: wasAttached
-          ? `${email} a été ajouté à l'organisation. L'utilisateur pourra y accéder via le sélecteur d'organisations.`
-          : wasInvited
-            ? `Un email d'invitation a été envoyé à ${email}`
-            : email,
+        title: wasAlready
+          ? "Déjà membre"
+          : wasAttached
+            ? "Accès ajouté"
+            : wasInvited
+              ? "Invitation envoyée"
+              : "Utilisateur créé",
+        description: wasAlready
+          ? `${email} faisait déjà partie de l'organisation. Son rôle a été vérifié.`
+          : wasAttached
+            ? `${email} a été ajouté à l'organisation.`
+            : wasInvited
+              ? `Un email d'invitation a été envoyé à ${email}.`
+              : email,
       });
       setOpen(false);
       reset();
