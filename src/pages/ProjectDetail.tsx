@@ -442,13 +442,11 @@ export default function ProjectDetail() {
   const statusLabel =
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
-    s.status === "completed" &&
-    !!reportsBySession[s.id] &&
-    (transcriptionPendingBySession[s.id] ?? 0) === 0;
+    s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
   const completedSessions = readySessions;
   const processingCount = sessions.filter(
-    (s) => s.status === "completed" && !isReady(s),
+    (s) => s.status === "completed" && !reportsBySession[s.id],
   ).length;
 
   const effectiveSort = { key: sortKey, dir: sortDir };

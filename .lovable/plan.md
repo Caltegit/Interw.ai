@@ -1,32 +1,28 @@
-## Plan : améliorer la section « Voix du recruteur »
+## Plan : ré-afficher les entretiens terminés (correction « en cours de traitement »)
 
-Refonte de la carte actuellement intitulée « Genre de la voix » dans `src/components/project/ProjectForm.tsx` (lignes ~476-519) pour la rendre plus claire, plus visuelle et plus engageante.
+### Problème constaté
 
-### Changements UI
+Sur `src/pages/ProjectDetail.tsx`, la liste des sessions n'affiche que les sessions « prêtes ». La règle actuelle (`isReady`, ligne 444-447) considère qu'une session est prête uniquement si **toutes** ses conditions sont remplies :
 
-1. **Titre de la carte** : « Voix du recruteur » (au lieu de « Genre de la voix »), avec une courte description :
-   « Choisissez la voix qui sera utilisée pendant l'entretien. »
+1. `status === 'completed'`
+2. un rapport existe dans `reports`
+3. **aucun `session_message` candidat n'a `transcription_status ≠ 'done'`**
 
-2. **Sélecteur Femme / Homme repensé** : remplacer le `RadioGroup` simple par deux cartes cliquables côte à côte (toujours basées sur `RadioGroup` pour l'accessibilité), avec :
-   - une icône (`User` / `UserRound` de lucide-react)
-   - le libellé « Femme » / « Homme »
-   - un état sélectionné avec bordure et fond `primary/10`
-   - un bouton « Écouter » (icône `Volume2`) sur chaque carte pour pré-écouter la voix par défaut du genre via le cache TTS existant (`ttsCache`)
+La 3ᵉ condition est le bug : sur les 115 sessions complétées avec rapport, **77 sont masquées** parce qu'elles contiennent encore des messages avec un statut de transcription `pending`, `raw`, `failed` ou `processing` (ancien historique, transcription non rejouée, etc.). Pourtant ces sessions ont déjà un rapport généré → elles sont bel et bien traitées.
 
-3. **Voix actuellement sélectionnée** : afficher sous les cartes une ligne discrète
-   « Voix sélectionnée : [Nom de la voix] » avec un petit bouton « Écouter » à côté pour entendre la voix exacte choisie (utile quand l'utilisateur a personnalisé via « Modifier la voix » ou cloné).
+### Correction
 
-4. **Actions secondaires** : conserver « Modifier la voix » et « Cloner ma voix » mais les transformer en boutons `variant="outline" size="sm"` avec icônes (`Settings2`, `Mic`) pour plus de visibilité, alignés à droite.
+Dans `src/pages/ProjectDetail.tsx` :
 
-### Détails techniques
+1. **Simplifier `isReady`** : une session est prête dès que `status === 'completed'` ET qu'un rapport existe (`reportsBySession[s.id]`). On retire la vérification basée sur `transcription_status`.
 
-- Aucun changement de schéma ni de logique métier : on garde `ttsVoiceGender`, `ttsVoiceId`, `getDefaultVoiceForGender`, `VoiceSelectorDialog`, `VoiceCloneDialog`.
-- Récupérer le nom de la voix sélectionnée depuis la liste des voix (déjà chargée pour `VoiceSelectorDialog`) ou via un petit helper.
-- Pré-écoute : réutiliser le pattern de `AdminTtsCompare` / `ttsCache` (génération d'un échantillon court type « Bonjour, je suis [Nom], ravi de faire votre connaissance. ») avec un état de chargement local (icône qui passe en `Loader2`).
-- Respecter les tokens du design system (pas de couleurs en dur).
+2. **Recalculer `processingCount`** : compter les sessions `status === 'completed'` **sans rapport** (au lieu de « avec messages non transcrits »). Le bandeau « X entretien(s) en cours de traitement » ne s'affiche donc plus que pour les sessions qui attendent vraiment leur rapport IA.
+
+3. **Nettoyage** : supprimer l'état `transcriptionPendingBySession` et la requête associée sur `session_messages` (lignes 178-202) puisqu'ils ne servaient qu'à cet usage. Cela allège aussi le chargement de la page.
 
 ### Hors scope
 
-- Pas de modification de `VoiceSelectorDialog` ni de `VoiceCloneDialog`.
 - Pas de migration DB.
-- Pas de changement du flux côté entretien candidat.
+- Pas de changement du flux de transcription côté entretien.
+- Pas de modification de `SessionStatusBadge`.
+- Pas de touche aux autres écrans (Dashboard, SessionDetail).
