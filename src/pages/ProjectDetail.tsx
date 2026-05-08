@@ -627,12 +627,26 @@ export default function ProjectDetail() {
             <>
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
-                <Input
-                  placeholder="Rechercher (nom ou email)…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="max-w-xs h-9"
-                />
+                <div className="flex rounded-md border">
+                  <Button
+                    variant={view === "table" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-9 rounded-r-none"
+                    onClick={() => setView("table")}
+                    title="Vue tableau"
+                  >
+                    <Rows3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={view === "cards" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-9 rounded-l-none"
+                    onClick={() => setView("cards")}
+                    title="Vue cartes"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </div>
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                   <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -727,31 +741,15 @@ export default function ProjectDetail() {
                     <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {filteredSessions.length} / {sessions.length}
-                  </span>
-                  <div className="flex rounded-md border">
-                    <Button
-                      variant={view === "table" ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-9 rounded-r-none"
-                      onClick={() => setView("table")}
-                      title="Vue tableau"
-                    >
-                      <Rows3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={view === "cards" ? "secondary" : "ghost"}
-                      size="sm"
-                      className="h-9 rounded-l-none"
-                      onClick={() => setView("cards")}
-                      title="Vue cartes"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                  </div>
+                <span className="text-xs text-muted-foreground">
+                  {filteredSessions.length} / {sessions.length}
                 </span>
+                <Input
+                  placeholder="Rechercher (nom ou email)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="ml-auto max-w-xs h-9"
+                />
               </div>
 
               {view === "cards" ? (
