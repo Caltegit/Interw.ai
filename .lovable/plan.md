@@ -1,28 +1,42 @@
-## Plan : ré-afficher les entretiens terminés (correction « en cours de traitement »)
+## Plan : corriger « Edge Function returned a non-2xx status code » lors de la création de c@bap.fr dans UBIQ
 
-### Problème constaté
+### Diagnostic
 
-Sur `src/pages/ProjectDetail.tsx`, la liste des sessions n'affiche que les sessions « prêtes ». La règle actuelle (`isReady`, ligne 444-447) considère qu'une session est prête uniquement si **toutes** ses conditions sont remplies :
+État actuel en base pour `c@bap.fr` :
 
-1. `status === 'completed'`
-2. un rapport existe dans `reports`
-3. **aucun `session_message` candidat n'a `transcription_status ≠ 'done'`**
+- `auth.users` : utilisateur existe (`78651389…`).
+- `organization_members` : déjà membre de **ALBO** **et** de **UBIQ**.
+- `user_roles` : **aucune ligne** (rôle manquant).
+- `profiles.organization_id` : pointe vers ALBO (org « active »).
 
-La 3ᵉ condition est le bug : sur les 115 sessions complétées avec rapport, **77 sont masquées** parce qu'elles contiennent encore des messages avec un statut de transcription `pending`, `raw`, `failed` ou `processing` (ancien historique, transcription non rejouée, etc.). Pourtant ces sessions ont déjà un rapport généré → elles sont bel et bien traitées.
+Quand on relance « Créer un utilisateur dans UBIQ » :
 
-### Correction
+1. `inviteUserByEmail` échoue avec `email_exists` (correct).
+2. La fonction retrouve l'`user_id` existant.
+3. Elle teste `organization_members(user_id, organization_id=UBIQ)` → **trouve la ligne** (rattachée lors de la précédente tentative).
+4. Elle renvoie **409 « Cet utilisateur fait déjà partie de l'organisation. »**
 
-Dans `src/pages/ProjectDetail.tsx` :
+Côté UI, `supabase.functions.invoke` enveloppe tout statut non-2xx dans un `FunctionsHttpError` dont le `.message` est générique : « Edge Function returned a non-2xx status code ». Le vrai message JSON (`error: "..."`) est dans `error.context` et n'est jamais lu → toast inutile.
 
-1. **Simplifier `isReady`** : une session est prête dès que `status === 'completed'` ET qu'un rapport existe (`reportsBySession[s.id]`). On retire la vérification basée sur `transcription_status`.
+Deux corrections complémentaires à apporter.
 
-2. **Recalculer `processingCount`** : compter les sessions `status === 'completed'` **sans rapport** (au lieu de « avec messages non transcrits »). Le bandeau « X entretien(s) en cours de traitement » ne s'affiche donc plus que pour les sessions qui attendent vraiment leur rapport IA.
+### Correctif 1 — Edge function `superadmin-manage-user` (action `create`)
 
-3. **Nettoyage** : supprimer l'état `transcriptionPendingBySession` et la requête associée sur `session_messages` (lignes 178-202) puisqu'ils ne servaient qu'à cet usage. Cela allège aussi le chargement de la page.
+Comportement idempotent quand l'utilisateur existe et est déjà membre de l'organisation cible :
+
+- Au lieu de renvoyer 409, **s'assurer que la ligne `user_roles` existe** pour ce couple (`user_id`, `organization_id`, `role` par défaut `member`) et **renvoyer 200** avec un flag `already_member: true` (et `attached: true`).
+- Conserver le comportement actuel pour le cas où la membership n'existe pas encore (insertion + role + `attached: true`).
+- Cela répare aussi le cas réel de `c@bap.fr` : la ligne `user_roles` manquante sera créée automatiquement.
+
+### Correctif 2 — UI `CreateUserInOrgDialog.tsx`
+
+Lire le vrai message d'erreur retourné par la fonction quand `supabase.functions.invoke` renvoie un `FunctionsHttpError` :
+
+- Si `error` est défini, tenter `await error.context?.json()` (ou `.text()` en fallback) pour récupérer `{ error: "..." }` et utiliser ce message dans le toast au lieu de « Edge Function returned a non-2xx status code ».
+- Adapter le toast de succès pour ajouter une variante `already_member` (ex. titre « Déjà membre », description « L'utilisateur faisait déjà partie de l'organisation, son accès a été vérifié. »).
 
 ### Hors scope
 
 - Pas de migration DB.
-- Pas de changement du flux de transcription côté entretien.
-- Pas de modification de `SessionStatusBadge`.
-- Pas de touche aux autres écrans (Dashboard, SessionDetail).
+- Pas de modification des autres actions (`set_role`, `delete`, etc.).
+- Pas de changement du sélecteur multi-organisations.

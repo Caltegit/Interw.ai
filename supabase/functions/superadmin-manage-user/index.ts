@@ -92,25 +92,26 @@ Deno.serve(async (req) => {
           .eq("user_id", existingId)
           .eq("organization_id", organization_id)
           .maybeSingle();
-        if (existingMembership) {
-          return json({ error: "Cet utilisateur fait déjà partie de l'organisation." }, 409);
+        const alreadyMember = !!existingMembership;
+        if (!alreadyMember) {
+          await admin.from("organization_members").insert({ user_id: existingId, organization_id });
         }
-        await admin.from("organization_members").insert({ user_id: existingId, organization_id });
+        const targetRole = role || "member";
         const { data: existingRole } = await admin
           .from("user_roles")
           .select("id")
           .eq("user_id", existingId)
           .eq("organization_id", organization_id)
-          .eq("role", role || "member")
+          .eq("role", targetRole)
           .maybeSingle();
         if (!existingRole) {
           await admin.from("user_roles").insert({
             user_id: existingId,
-            role: role || "member",
+            role: targetRole,
             organization_id,
           });
         }
-        return json({ success: true, user_id: existingId, attached: true });
+        return json({ success: true, user_id: existingId, attached: true, already_member: alreadyMember });
       }
 
       if (organization_id && newUserId) {
