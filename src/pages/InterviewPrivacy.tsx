@@ -94,6 +94,10 @@ export default function InterviewPrivacy() {
       }
       setDeleted(true);
       setStep(0);
+      toast({
+        title: "Données supprimées",
+        description: "Toutes les données liées à votre entretien ont été effacées.",
+      });
     } catch (e) {
       toast({
         title: "Suppression impossible",
