@@ -107,8 +107,8 @@ export default function ProjectDetail() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [decisionFilter, setDecisionFilter] = useState<string>("all");
   const [view, setView] = useState<"table" | "cards">(() => {
-    if (typeof window === "undefined") return "table";
-    return (localStorage.getItem(`projectView:${id}`) as "table" | "cards") || "table";
+    if (typeof window === "undefined") return "cards";
+    return (localStorage.getItem(`projectView:${id}`) as "table" | "cards") || "cards";
   });
   useEffect(() => {
     if (id) localStorage.setItem(`projectView:${id}`, view);
