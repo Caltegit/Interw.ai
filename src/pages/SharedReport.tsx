@@ -7,7 +7,6 @@ import { MessageSquare, Play, FileText } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
-import { HighlightReelPlayer, HighlightClip } from "@/components/session/HighlightReelPlayer";
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
