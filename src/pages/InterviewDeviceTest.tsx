@@ -599,9 +599,18 @@ export default function InterviewDeviceTest() {
               <h1 className="text-2xl font-bold tracking-tight">Vérification technique</h1>
               <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
             </div>
-            <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
-              {progressVerified}/{progressTests.length}
-            </span>
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate(`/session/${slug}/start/${token}`)}
+                className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Passer
+              </button>
+              <span className="text-xs font-medium text-muted-foreground tabular-nums">
+                {progressVerified}/{progressTests.length}
+              </span>
+            </div>
           </div>
           <div className="flex gap-1.5" aria-label="Progression des tests">
             {progressTests.map((s, i) => (
