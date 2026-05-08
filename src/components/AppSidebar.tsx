@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { useState } from "react";
 
 const navItems = [
