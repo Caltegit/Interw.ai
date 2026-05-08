@@ -12,18 +12,14 @@ interface BulkCandidateMessageProps {
 
 const BulkCandidateMessageEmail = ({
   body = '',
-  firstName,
 }: BulkCandidateMessageProps) => {
-  const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
-  // Render body preserving line breaks (no raw HTML — React escapes everything).
   const paragraphs = (body || '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
   return (
     <Html lang="fr" dir="ltr">
       <Head />
-      <Preview>{greeting}</Preview>
+      <Preview>{paragraphs[0]?.slice(0, 80) || 'Message'}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Text style={text}>{greeting}</Text>
           {paragraphs.map((p, i) => (
             <Text key={i} style={text}>
               {p.split('\n').map((line, j, arr) => (
