@@ -19,6 +19,7 @@ async function invoke(name: string, body: Record<string, unknown>) {
     headers: {
       Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       apikey: SERVICE_ROLE_KEY,
+      "x-internal-secret": SERVICE_ROLE_KEY,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
