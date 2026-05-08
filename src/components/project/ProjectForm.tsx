@@ -32,6 +32,8 @@ import { ImportFromJobDialog, type JobImportPayload } from "@/components/project
 import {
   VoiceSelectorDialog,
   getDefaultVoiceForGender,
+  FEMALE_VOICES,
+  MALE_VOICES,
   type VoiceGender,
 } from "@/components/project/VoiceSelectorDialog";
 import { VoiceCloneDialog } from "@/components/settings/VoiceCloneDialog";
