@@ -51,3 +51,9 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.finalize-abandoned-session]
     verify_jwt = false
+
+  [functions.candidate-self-delete]
+    verify_jwt = false
+
+  [functions.purge-old-videos]
+    verify_jwt = true

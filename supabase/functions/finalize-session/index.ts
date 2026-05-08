@@ -45,10 +45,12 @@ async function processSession(sessionId: string) {
     return;
   }
 
-  // Vérifie que la session est bien terminée.
+  // Vérifie que la session est bien terminée + récupère les infos pour l'email candidat.
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, status")
+    .select(
+      "id, status, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organizations:organizations(name))",
+    )
     .eq("id", sessionId)
     .maybeSingle();
   if (!session || session.status !== "completed") {
@@ -63,6 +65,31 @@ async function processSession(sessionId: string) {
   }
 
   await invoke("generate-report", { session_id: sessionId });
+
+  // Email de remerciement RGPD au candidat (best-effort, non bloquant)
+  try {
+    // deno-lint-ignore no-explicit-any
+    const project = (session as any).projects;
+    const orgName = project?.organizations?.name ?? "";
+    const jobTitle = project?.job_title || project?.title || "";
+    const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
+    const slug = project?.slug ?? "session";
+    const privacyUrl = session.token
+      ? `https://interw.ai/session/${slug}/privacy/${session.token}`
+      : undefined;
+
+    if (session.candidate_email) {
+      await invoke("send-transactional-email", {
+        templateName: "candidate-thank-you",
+        recipientEmail: session.candidate_email,
+        idempotencyKey: `candidate-thanks-${sessionId}`,
+        templateData: { firstName, jobTitle, orgName, privacyUrl },
+      });
+    }
+  } catch (e) {
+    console.error("finalize-session: thank-you email failed (continuing)", e);
+  }
+
   console.log("finalize-session: done", sessionId);
 }
 
