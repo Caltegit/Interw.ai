@@ -231,6 +231,7 @@ export default function ProjectDetail() {
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
       }
+    }, 1000);
   };
 
   const handleBulkDelete = async () => {
