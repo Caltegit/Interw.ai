@@ -43,25 +43,23 @@ function BulkActionsBar({
 }: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-      <span className="text-sm font-medium">{count} candidat(s) sélectionné(s)</span>
-      <div className="ml-auto flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="default">
-              Actions <ChevronDown className="ml-1 h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEmail}>
-              <Mail className="mr-2 h-4 w-4" /> Envoyer un email
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="default">
+            Actions <ChevronDown className="ml-1 h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onClick={onEmail}>
+            <Mail className="mr-2 h-4 w-4" /> Envoyer un email
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+            <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
+      <span className="ml-auto text-sm font-medium">{count} candidat(s) sélectionné(s)</span>
     </div>
   );
 }
