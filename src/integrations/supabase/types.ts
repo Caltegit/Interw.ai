@@ -102,6 +102,36 @@ export type Database = {
           },
         ]
       }
+      data_purge_log: {
+        Row: {
+          candidate_email: string | null
+          details: Json | null
+          id: string
+          performed_at: string
+          performed_by: string | null
+          session_id: string
+          source: string
+        }
+        Insert: {
+          candidate_email?: string | null
+          details?: Json | null
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          session_id: string
+          source: string
+        }
+        Update: {
+          candidate_email?: string | null
+          details?: Json | null
+          id?: string
+          performed_at?: string
+          performed_by?: string | null
+          session_id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       email_alert_config: {
         Row: {
           cooldown_hours: number

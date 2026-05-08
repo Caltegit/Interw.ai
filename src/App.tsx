@@ -53,6 +53,7 @@ import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
 import InterviewComplete from "./pages/InterviewComplete";
 import InterviewCancelled from "./pages/InterviewCancelled";
+import InterviewPrivacy from "./pages/InterviewPrivacy";
 import SharedReport from "./pages/SharedReport";
 import HighlightsPublic from "./pages/HighlightsPublic";
 import OrgPublic from "./pages/OrgPublic";
@@ -93,6 +94,8 @@ const App = () => (
             <Route path="/session/:slug/complete/:token" element={<InterviewComplete />} />
             <Route path="/session/:slug/complete" element={<InterviewComplete />} />
             <Route path="/session/cancelled" element={<InterviewCancelled />} />
+            <Route path="/session/:slug/privacy/:token" element={<InterviewPrivacy />} />
+            <Route path="/session/privacy/:token" element={<InterviewPrivacy />} />
 
             {/* Redirections des anciennes routes /interview pour ne pas casser les liens déjà envoyés */}
             <Route path="/interview/:slug" element={<LegacyInterviewLandingRedirect />} />

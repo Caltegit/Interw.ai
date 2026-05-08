@@ -21,6 +21,7 @@ import NetworkQualityIndicator from "@/components/interview/NetworkQualityIndica
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCachedTtsBlob,
   setCachedTtsBlob,
@@ -90,6 +91,7 @@ export default function InterviewStart() {
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   type ChatMessage = {
     role: string;
@@ -3067,11 +3069,50 @@ export default function InterviewStart() {
                 {project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !"}
               </p>
             </div>
+            <label
+              className="flex items-start gap-3 text-sm cursor-pointer select-none rounded-md p-3"
+              style={{
+                color: "hsl(var(--l-fg) / 0.85)",
+                backgroundColor: "hsl(var(--l-fg) / 0.04)",
+              }}
+            >
+              <Checkbox
+                checked={consentChecked}
+                onCheckedChange={(v) => {
+                  const next = v === true;
+                  setConsentChecked(next);
+                  if (next && token && !session?.consent_accepted_at) {
+                    supabase
+                      .from("sessions")
+                      .update({ consent_accepted_at: new Date().toISOString() })
+                      .eq("token", token)
+                      .then(() => {});
+                  }
+                }}
+                data-testid="interview-consent-checkbox"
+                className="mt-0.5"
+              />
+              <span>
+                J'ai lu et j'accepte les{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setConsentDialogOpen(true);
+                  }}
+                  className="underline hover:opacity-80"
+                  style={{ color: "hsl(var(--l-accent))" }}
+                >
+                  conditions de traitement de mes données personnelles
+                </button>
+                .
+              </span>
+            </label>
             <Button
               size="lg"
               className="candidate-btn-primary w-full h-16 text-xl"
               onClick={beginInterview}
-              disabled={!dataReady}
+              disabled={!dataReady || !consentChecked}
               data-testid={dataReady ? "interview-start-button" : "interview-start-button-disabled"}
             >
               <Volume2 className="mr-2 !h-6 !w-6" />
@@ -3086,18 +3127,6 @@ export default function InterviewStart() {
                 <span>Préparation de la session…</span>
               </div>
             )}
-            <p className="text-center text-xs" style={{ color: "hsl(var(--l-fg) / 0.6)" }}>
-              En cliquant, j'accepte les{" "}
-              <button
-                type="button"
-                onClick={() => setConsentDialogOpen(true)}
-                className="underline hover:opacity-80"
-                style={{ color: "hsl(var(--l-accent))" }}
-              >
-                conditions générales
-              </button>
-              .
-            </p>
           </CardContent>
         </Card>
         <ConsentDialog
