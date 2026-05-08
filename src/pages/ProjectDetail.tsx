@@ -957,6 +957,15 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+                {selectedIds.size > 0 && (
+                  <BulkActionsBar
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                  />
+                )}
+              </div>
               )}
 
               {filteredSessions.length > PAGE_SIZE && (
