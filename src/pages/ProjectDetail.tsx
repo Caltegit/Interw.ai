@@ -74,6 +74,7 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
+  const [transcriptionPendingBySession, setTranscriptionPendingBySession] = useState<Record<string, number>>({});
   const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
@@ -95,7 +96,7 @@ export default function ProjectDetail() {
 
   // Filters / sort for sessions list
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  // statusFilter retiré : la liste n'affiche que les sessions prêtes (rapport généré)
   const [recoFilter, setRecoFilter] = useState<string>("all");
   const [scoreMin, setScoreMin] = useState<string>("");
   const [scoreMax, setScoreMax] = useState<string>("");
@@ -150,6 +151,57 @@ export default function ProjectDetail() {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
+
+    const loadSessionsAndReports = async () => {
+      const { data: sList } = await supabase
+        .from("sessions")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      const sessionsList = sList ?? [];
+      setSessions(sessionsList);
+
+      const ids = sessionsList.map((s) => s.id);
+      if (ids.length === 0) {
+        setReportsBySession({});
+        setTranscriptionPendingBySession({});
+        return;
+      }
+
+      const [{ data: reps }, { data: msgs }] = await Promise.all([
+        supabase
+          .from("reports")
+          .select("session_id, overall_score, recommendation, recruiter_notes")
+          .in("session_id", ids),
+        supabase
+          .from("session_messages")
+          .select("session_id, transcription_status, video_segment_url, audio_segment_url, role")
+          .in("session_id", ids)
+          .eq("role", "candidate"),
+      ]);
+      if (cancelled) return;
+
+      const map: Record<string, any> = {};
+      const drafts: Record<string, string> = {};
+      for (const r of reps ?? []) {
+        map[r.session_id] = r;
+        drafts[r.session_id] = r.recruiter_notes ?? "";
+      }
+      setReportsBySession(map);
+      setNoteDrafts((prev) => ({ ...drafts, ...prev }));
+
+      const pending: Record<string, number> = {};
+      for (const m of msgs ?? []) {
+        if (!m.video_segment_url && !m.audio_segment_url) continue;
+        if (m.transcription_status !== "done") {
+          pending[m.session_id] = (pending[m.session_id] ?? 0) + 1;
+        }
+      }
+      setTranscriptionPendingBySession(pending);
+    };
+
     Promise.all([
       supabase
         .from("projects")
@@ -169,45 +221,30 @@ export default function ProjectDetail() {
         .select("id, project_id, order_index, label, description, weight, scoring_scale, anchors, applies_to")
         .eq("project_id", id)
         .order("order_index"),
-      supabase
-        .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision")
-        .eq("project_id", id)
-        .order("created_at", { ascending: false }),
-    ]).then(async ([pRes, qRes, cRes, sRes]) => {
+    ]).then(async ([pRes, qRes, cRes]) => {
+      if (cancelled) return;
       setProject(pRes.data);
       setQuestions(qRes.data ?? []);
       setCriteria(cRes.data ?? []);
-      const sessionsList = sRes.data ?? [];
-      setSessions(sessionsList);
 
-      // Load org members for the "assigned to" selector
       if (pRes.data?.organization_id) {
         const { data: members } = await supabase
           .from("profiles")
           .select("user_id, full_name, email")
           .eq("organization_id", pRes.data.organization_id);
-        setOrgMembers(members ?? []);
+        if (!cancelled) setOrgMembers(members ?? []);
       }
 
-      // Fetch reports for these sessions in one batch
-      const ids = sessionsList.map((s) => s.id);
-      if (ids.length > 0) {
-        const { data: reps } = await supabase
-          .from("reports")
-          .select("session_id, overall_score, recommendation, recruiter_notes")
-          .in("session_id", ids);
-        const map: Record<string, any> = {};
-        const drafts: Record<string, string> = {};
-        for (const r of reps ?? []) {
-          map[r.session_id] = r;
-          drafts[r.session_id] = r.recruiter_notes ?? "";
-        }
-        setReportsBySession(map);
-        setNoteDrafts(drafts);
-      }
-      setLoading(false);
+      await loadSessionsAndReports();
+      if (!cancelled) setLoading(false);
     });
+
+    // Rafraîchissement périodique pour faire apparaître les nouvelles sessions prêtes
+    const interval = setInterval(loadSessionsAndReports, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [id]);
 
   const memberById = (uid?: string | null) => orgMembers.find((m) => m.user_id === uid);
@@ -404,25 +441,21 @@ export default function ProjectDetail() {
 
   const statusLabel =
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
-  const pendingSessions = sessions.filter((s) => s.status === "pending");
-  const completedSessions = sessions.filter((s) => s.status === "completed");
-  const inProgressSessions = sessions.filter((s) => s.status === "in_progress");
-  const toReviewSessions = sessions.filter(
-    (s) =>
-      s.status === "completed" &&
-      (!reportsBySession[s.id] || s.recruiter_decision === "none"),
-  );
+  const isReady = (s: any) =>
+    s.status === "completed" &&
+    !!reportsBySession[s.id] &&
+    (transcriptionPendingBySession[s.id] ?? 0) === 0;
+  const readySessions = sessions.filter(isReady);
+  const completedSessions = readySessions;
+  const processingCount = sessions.filter(
+    (s) => s.status === "completed" && !isReady(s),
+  ).length;
 
-  // Tri par défaut adapté : si l'utilisateur n'a rien changé et qu'on filtre les "en attente", on trie par date ancienne en premier
-  const effectiveSort = (() => {
-    if (sortKey !== "date" || sortDir !== "desc") return { key: sortKey, dir: sortDir };
-    if (statusFilter === "pending") return { key: "date" as const, dir: "asc" as const };
-    return { key: sortKey, dir: sortDir };
-  })();
+  const effectiveSort = { key: sortKey, dir: sortDir };
 
-  // Apply filters + sort to sessions
+  // Apply filters + sort to sessions (uniquement les sessions prêtes)
   const filteredSessions = (() => {
-    let list = sessions.slice();
+    let list = readySessions.slice();
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -430,15 +463,6 @@ export default function ProjectDetail() {
           (s.candidate_name || "").toLowerCase().includes(q) ||
           (s.candidate_email || "").toLowerCase().includes(q),
       );
-    }
-    if (statusFilter === "to_review") {
-      list = list.filter(
-        (s) =>
-          s.status === "completed" &&
-          (!reportsBySession[s.id] || s.recruiter_decision === "none"),
-      );
-    } else if (statusFilter !== "all") {
-      list = list.filter((s) => s.status === statusFilter);
     }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
@@ -492,7 +516,6 @@ export default function ProjectDetail() {
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
   const activeFilterCount =
-    (statusFilter !== "all" ? 1 : 0) +
     (recoFilter !== "all" ? 1 : 0) +
     (scoreMin !== "" ? 1 : 0) +
     (scoreMax !== "" ? 1 : 0) +
@@ -502,7 +525,6 @@ export default function ProjectDetail() {
     (decisionFilter !== "all" ? 1 : 0);
 
   const resetFilters = () => {
-    setStatusFilter("all");
     setRecoFilter("all");
     setScoreMin("");
     setScoreMax("");
@@ -625,6 +647,13 @@ export default function ProjectDetail() {
             </p>
           ) : (
             <>
+              {processingCount > 0 && (
+                <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  {processingCount} entretien{processingCount > 1 ? "s" : ""} en cours de traitement — il
+                  {processingCount > 1 ? "s" : ""} apparaîtr{processingCount > 1 ? "ont" : "a"} automatiquement une fois
+                  le rapport prêt.
+                </div>
+              )}
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex rounded-md border">
