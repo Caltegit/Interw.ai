@@ -74,7 +74,7 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
-  const [transcriptionPendingBySession, setTranscriptionPendingBySession] = useState<Record<string, number>>({});
+  
   const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
@@ -166,21 +166,13 @@ export default function ProjectDetail() {
       const ids = sessionsList.map((s) => s.id);
       if (ids.length === 0) {
         setReportsBySession({});
-        setTranscriptionPendingBySession({});
         return;
       }
 
-      const [{ data: reps }, { data: msgs }] = await Promise.all([
-        supabase
-          .from("reports")
-          .select("session_id, overall_score, recommendation, recruiter_notes")
-          .in("session_id", ids),
-        supabase
-          .from("session_messages")
-          .select("session_id, transcription_status, video_segment_url, audio_segment_url, role")
-          .in("session_id", ids)
-          .eq("role", "candidate"),
-      ]);
+      const { data: reps } = await supabase
+        .from("reports")
+        .select("session_id, overall_score, recommendation, recruiter_notes")
+        .in("session_id", ids);
       if (cancelled) return;
 
       const map: Record<string, any> = {};
@@ -191,15 +183,6 @@ export default function ProjectDetail() {
       }
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
-
-      const pending: Record<string, number> = {};
-      for (const m of msgs ?? []) {
-        if (!m.video_segment_url && !m.audio_segment_url) continue;
-        if (m.transcription_status !== "done") {
-          pending[m.session_id] = (pending[m.session_id] ?? 0) + 1;
-        }
-      }
-      setTranscriptionPendingBySession(pending);
     };
 
     Promise.all([
@@ -442,13 +425,11 @@ export default function ProjectDetail() {
   const statusLabel =
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
-    s.status === "completed" &&
-    !!reportsBySession[s.id] &&
-    (transcriptionPendingBySession[s.id] ?? 0) === 0;
+    s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
   const completedSessions = readySessions;
   const processingCount = sessions.filter(
-    (s) => s.status === "completed" && !isReady(s),
+    (s) => s.status === "completed" && !reportsBySession[s.id],
   ).length;
 
   const effectiveSort = { key: sortKey, dir: sortDir };
