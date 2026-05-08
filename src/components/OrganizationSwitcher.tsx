@@ -20,7 +20,8 @@ interface Org {
 }
 
 export function OrganizationSwitcher() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { organizationId: activeId } = useOrgRole();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const [orgs, setOrgs] = useState<Org[]>([]);
