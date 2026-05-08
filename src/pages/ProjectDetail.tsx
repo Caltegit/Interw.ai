@@ -52,6 +52,21 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
 
+  // Sélection multiple (vue tableau uniquement)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (sid: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid);
+      else next.add(sid);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
   // Filters / sort for sessions list
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
