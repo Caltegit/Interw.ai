@@ -591,7 +591,7 @@ export default function ProjectDetail() {
       {sessions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {decisionOptions.map((d) => {
-            const count = sessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
+            const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
             const active = visibleDecisions.has(d.value);
             return (
               <button
