@@ -690,69 +690,6 @@ export default function ProjectDetail() {
                       ))}
                   </SelectContent>
                 </Select>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <SlidersHorizontal className="h-4 w-4 mr-1" />
-                      Filtres{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-80 space-y-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Sélection</Label>
-                      <Select value={decisionFilter} onValueChange={setDecisionFilter}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Toutes</SelectItem>
-                          {decisionOptions.map((d) => (
-                            <SelectItem key={d.value} value={d.value}>
-                              <span className="flex items-center gap-2">
-                                <span className={`inline-block h-2 w-2 rounded-full border ${d.dot}`} />
-                                {d.label}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Recommandation</Label>
-                      <Select value={recoFilter} onValueChange={setRecoFilter}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Toutes</SelectItem>
-                          <SelectItem value="strong_yes">Très favorable</SelectItem>
-                          <SelectItem value="yes">Favorable</SelectItem>
-                          <SelectItem value="maybe">Mitigé</SelectItem>
-                          <SelectItem value="no">Défavorable</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Score min</Label>
-                        <Input type="number" value={scoreMin} onChange={(e) => setScoreMin(e.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Score max</Label>
-                        <Input type="number" value={scoreMax} onChange={(e) => setScoreMax(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Du</Label>
-                        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Au</Label>
-                        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
-                      Réinitialiser
-                    </Button>
-                  </PopoverContent>
-                </Popover>
                 <Select value={`${sortKey}-${sortDir}`} onValueChange={(v) => {
                   const [k, d] = v.split("-") as [typeof sortKey, typeof sortDir];
                   setSortKey(k); setSortDir(d);
