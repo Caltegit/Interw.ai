@@ -28,7 +28,6 @@ Deno.serve(async (req) => {
     }
     const { sessionId, message } = parsed.data
 
-    // Récupérer la session
     const { data: session, error: sErr } = await supabase
       .from('sessions')
       .select('id, candidate_name, candidate_email, project_id')
@@ -40,78 +39,77 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Récupérer le projet
     const { data: project } = await supabase
       .from('projects')
-      .select('id, title, job_title, created_by')
+      .select('id, title, job_title')
       .eq('id', session.project_id)
       .maybeSingle()
-    if (!project?.created_by) {
-      return new Response(JSON.stringify({ error: 'Project owner not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
-    // Email du créateur via profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('user_id', project.created_by)
+    const { data: superAdmin } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'super_admin')
+      .limit(1)
       .maybeSingle()
 
-    let recipientEmail = profile?.email?.trim() || ''
-    if (!recipientEmail) {
-      // Fallback : auth.users via admin
-      const { data: userRes } = await supabase.auth.admin.getUserById(project.created_by)
-      recipientEmail = userRes?.user?.email ?? ''
-    }
-    if (!recipientEmail) {
-      return new Response(JSON.stringify({ error: 'Recipient email unavailable' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!superAdmin?.user_id) {
+      console.error('No super admin found for feedback thread')
+      return new Response(JSON.stringify({ error: 'No super admin available' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const reportedAt = new Date().toLocaleString('fr-FR', {
-      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    })
+    const candidateName = session.candidate_name || 'Candidat'
+    const jobTitle = project?.job_title || ''
+    const projectTitle = project?.title || ''
 
-    const sessionUrl = `https://interw.ai/sessions/${session.id}`
+    const subject = jobTitle
+      ? `Signalement candidat — ${candidateName} (${jobTitle})`
+      : `Signalement candidat — ${candidateName}`
 
-    const idempotencyKey = `issue-${session.id}-${Date.now()}`
+    const { data: thread, error: tErr } = await supabase
+      .from('feedback_threads')
+      .insert({
+        user_id: superAdmin.user_id,
+        subject,
+        status: 'open',
+      })
+      .select('id')
+      .single()
 
-    const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-        'x-internal-secret': serviceKey,
-      },
-      body: JSON.stringify({
-        templateName: 'interview-issue-report',
-        recipientEmail,
-        idempotencyKey,
-        replyTo: session.candidate_email || undefined,
-        templateData: {
-          candidateName: session.candidate_name || 'Candidat',
-          candidateEmail: session.candidate_email || undefined,
-          jobTitle: project.job_title || '',
-          projectTitle: project.title || '',
-          message,
-          sessionUrl,
-          reportedAt,
-        },
-      }),
-    })
-
-    if (!emailResp.ok) {
-      const errText = await emailResp.text()
-      console.error('send-transactional-email failed', emailResp.status, errText)
-      return new Response(JSON.stringify({ error: 'Email enqueue failed', status: emailResp.status, details: errText }), {
-        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (tErr || !thread) {
+      console.error('Failed to create feedback thread', tErr)
+      return new Response(JSON.stringify({ error: 'Failed to create feedback thread' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    return new Response(JSON.stringify({ ok: true }), {
+
+    const content = [
+      'Signalement reçu pendant l\'entretien.',
+      '',
+      `Candidat : ${candidateName}${session.candidate_email ? ` (${session.candidate_email})` : ''}`,
+      jobTitle || projectTitle ? `Poste : ${jobTitle}${projectTitle ? ` — ${projectTitle}` : ''}` : null,
+      `Session : https://interw.ai/sessions/${session.id}`,
+      '',
+      'Message du candidat :',
+      message,
+    ].filter(Boolean).join('\n')
+
+    const { error: mErr } = await supabase.from('feedback_messages').insert({
+      thread_id: thread.id,
+      author_id: superAdmin.user_id,
+      author_role: 'user',
+      content,
+    })
+
+    if (mErr) {
+      console.error('Failed to create feedback message', mErr)
+      return new Response(JSON.stringify({ error: 'Failed to create feedback message' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    return new Response(JSON.stringify({ ok: true, threadId: thread.id }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (e) {
