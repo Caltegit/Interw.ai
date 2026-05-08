@@ -597,8 +597,8 @@ export default function ProjectDetail() {
                 onClick={() => toggleDecision(d.value)}
                 className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors ${
                   active
-                    ? "bg-background border-foreground/20"
-                    : "bg-muted/40 border-transparent text-muted-foreground opacity-60 hover:opacity-100"
+                    ? "bg-muted border-foreground/20"
+                    : "bg-transparent border-transparent text-muted-foreground opacity-60 hover:opacity-100"
                 }`}
                 aria-pressed={active}
               >
