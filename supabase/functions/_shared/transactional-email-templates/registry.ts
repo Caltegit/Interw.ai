@@ -14,6 +14,7 @@ import { template as demoRequest } from './demo-request.tsx'
 import { template as emailFailureAlert } from './email-failure-alert.tsx'
 import { template as interviewIssueReport } from './interview-issue-report.tsx'
 import { template as bulkCandidateMessage } from './bulk-candidate-message.tsx'
+import { template as candidateThankYou } from './candidate-thank-you.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'interview-report': interviewReport,
@@ -21,4 +22,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'email-failure-alert': emailFailureAlert,
   'interview-issue-report': interviewIssueReport,
   'bulk-candidate-message': bulkCandidateMessage,
+  'candidate-thank-you': candidateThankYou,
 }
