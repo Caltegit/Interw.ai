@@ -21,8 +21,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3 } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
+import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
 import {
@@ -35,6 +37,34 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
+
+function BulkActionsBar({
+  count, onClear, onEmail, onDelete,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+      <span className="text-sm font-medium">{count} candidat(s) sélectionné(s)</span>
+      <div className="ml-auto flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="default">
+              Actions <ChevronDown className="ml-1 h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEmail}>
+              <Mail className="mr-2 h-4 w-4" /> Envoyer un email
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
+      </div>
+    </div>
+  );
+}
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -49,6 +79,21 @@ export default function ProjectDetail() {
   const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState(false);
+
+  // Sélection multiple (vue tableau uniquement)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const toggleSelect = (sid: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid);
+      else next.add(sid);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
 
   // Filters / sort for sessions list
   const [search, setSearch] = useState("");
@@ -215,6 +260,36 @@ export default function ProjectDetail() {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
       }
     }, 1000);
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkDeleting(true);
+    const results = await Promise.allSettled(
+      ids.map((sid) =>
+        supabase.functions.invoke("delete-session", { body: { session_id: sid } }),
+      ),
+    );
+    const okIds = ids.filter((_, i) => {
+      const r = results[i];
+      if (r.status !== "fulfilled") return false;
+      const v: any = r.value;
+      return !(v?.error || v?.data?.error);
+    });
+    setSessions((prev) => prev.filter((s) => !okIds.includes(s.id)));
+    setSelectedIds(new Set());
+    setBulkDeleteStep(0);
+    setBulkDeleting(false);
+    const failed = ids.length - okIds.length;
+    if (failed === 0) {
+      toast({ title: `${okIds.length} session(s) supprimée(s)` });
+    } else {
+      toast({
+        title: `Suppression partielle : ${okIds.length} ok, ${failed} échec(s)`,
+        variant: "destructive",
+      });
+    }
   };
 
   const copyProjectLink = () => {
@@ -699,37 +774,74 @@ export default function ProjectDetail() {
                   )}
                 </div>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 font-medium">Candidat</th>
-                      <th className="pb-2 font-medium">Sélection</th>
-                      <th className="pb-2 font-medium">Statut</th>
-                      <th className="pb-2 font-medium">Score</th>
-                      <th className="pb-2 font-medium">Reco</th>
-                      <th className="pb-2 font-medium">Date</th>
-                      <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
-                      <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
-                      <th className="pb-2 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedSessions.map((s) => {
-                      const rep = reportsBySession[s.id];
-                      const clickable = s.status === "completed";
-                      const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
-                      return (
-                        <tr
-                          key={s.id}
-                          className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
-                          onClick={onRowClick}
-                        >
-                          <td className="py-3">
-                            <p className="font-medium">{s.candidate_name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
-                          </td>
-                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+              <div className="space-y-2">
+                {selectedIds.size > 0 && (
+                  <BulkActionsBar
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                  />
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="pb-2 w-8">
+                          <Checkbox
+                            checked={
+                              pagedSessions.length > 0 &&
+                              pagedSessions.every((s) => selectedIds.has(s.id))
+                                ? true
+                                : pagedSessions.some((s) => selectedIds.has(s.id))
+                                ? "indeterminate"
+                                : false
+                            }
+                            onCheckedChange={(v) => {
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (v) pagedSessions.forEach((s) => next.add(s.id));
+                                else pagedSessions.forEach((s) => next.delete(s.id));
+                                return next;
+                              });
+                            }}
+                            aria-label="Tout sélectionner"
+                          />
+                        </th>
+                        <th className="pb-2 font-medium">Candidat</th>
+                        <th className="pb-2 font-medium">Sélection</th>
+                        <th className="pb-2 font-medium">Statut</th>
+                        <th className="pb-2 font-medium">Score</th>
+                        <th className="pb-2 font-medium">Reco</th>
+                        <th className="pb-2 font-medium">Date</th>
+                        <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
+                        <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
+                        <th className="pb-2 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedSessions.map((s) => {
+                        const rep = reportsBySession[s.id];
+                        const clickable = s.status === "completed";
+                        const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
+                        return (
+                          <tr
+                            key={s.id}
+                            className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                            onClick={onRowClick}
+                          >
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(s.id)}
+                                onCheckedChange={() => toggleSelect(s.id)}
+                                aria-label="Sélectionner"
+                              />
+                            </td>
+                            <td className="py-3">
+                              <p className="font-medium">{s.candidate_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                            </td>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
@@ -873,6 +985,15 @@ export default function ProjectDetail() {
                   </tbody>
                 </table>
               </div>
+                {selectedIds.size > 0 && (
+                  <BulkActionsBar
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                  />
+                )}
+              </div>
               )}
 
               {filteredSessions.length > PAGE_SIZE && (
@@ -936,6 +1057,54 @@ export default function ProjectDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        recipients={sessions.filter((s) => selectedIds.has(s.id)).map((s) => ({
+          id: s.id,
+          candidate_name: s.candidate_name,
+          candidate_email: s.candidate_email,
+        }))}
+        projectTitle={project?.title ?? ""}
+        onSent={clearSelection}
+      />
+
+      <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} candidat(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Toutes les sessions, transcriptions, messages et rapports associés seront supprimés. Action irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => setBulkDeleteStep(2)}>Continuer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteStep === 2} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer définitivement ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Dernière confirmation avant suppression de {selectedIds.size} candidat(s).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? "Suppression…" : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
