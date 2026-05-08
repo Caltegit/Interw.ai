@@ -166,21 +166,13 @@ export default function ProjectDetail() {
       const ids = sessionsList.map((s) => s.id);
       if (ids.length === 0) {
         setReportsBySession({});
-        setTranscriptionPendingBySession({});
         return;
       }
 
-      const [{ data: reps }, { data: msgs }] = await Promise.all([
-        supabase
-          .from("reports")
-          .select("session_id, overall_score, recommendation, recruiter_notes")
-          .in("session_id", ids),
-        supabase
-          .from("session_messages")
-          .select("session_id, transcription_status, video_segment_url, audio_segment_url, role")
-          .in("session_id", ids)
-          .eq("role", "candidate"),
-      ]);
+      const { data: reps } = await supabase
+        .from("reports")
+        .select("session_id, overall_score, recommendation, recruiter_notes")
+        .in("session_id", ids);
       if (cancelled) return;
 
       const map: Record<string, any> = {};
@@ -191,15 +183,6 @@ export default function ProjectDetail() {
       }
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
-
-      const pending: Record<string, number> = {};
-      for (const m of msgs ?? []) {
-        if (!m.video_segment_url && !m.audio_segment_url) continue;
-        if (m.transcription_status !== "done") {
-          pending[m.session_id] = (pending[m.session_id] ?? 0) + 1;
-        }
-      }
-      setTranscriptionPendingBySession(pending);
     };
 
     Promise.all([
