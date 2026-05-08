@@ -47,7 +47,6 @@ export function OrganizationSwitcher() {
     };
   }, [user]);
 
-  const activeId = profile?.organization_id ?? null;
   const active = orgs.find((o) => o.id === activeId) ?? null;
 
   const handleSwitch = async (orgId: string) => {
