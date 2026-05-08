@@ -42,21 +42,21 @@ const DEFAULT_TEMPLATES: CandidateMessageTemplate[] = [
     label: "Refus",
     subject: "Refus",
     body:
-      "Merci pour le temps consacré à votre entretien.\n\nAprès étude attentive de votre candidature, nous ne donnerons pas suite à ce stade.\n\nNous vous souhaitons une belle réussite dans la suite de vos démarches.",
+      "Bonjour {firstName},\n\nMerci pour le temps consacré à votre entretien.\n\nAprès étude attentive de votre candidature, nous ne donnerons pas suite à ce stade.\n\nNous vous souhaitons une belle réussite dans la suite de vos démarches.\n\nÀ bientôt,\n\nL'équipe de recrutement",
   },
   {
     key: "candidate-new-interview",
     label: "Nouvel entretien",
     subject: "Nouvel entretien",
     body:
-      "Suite à votre premier échange, nous souhaiterions vous proposer un nouvel entretien.\n\nPouvez-vous nous indiquer vos disponibilités sur les prochains jours ?",
+      "Bonjour {firstName},\n\nSuite à votre premier échange, nous souhaiterions vous proposer un nouvel entretien.\n\nPouvez-vous nous indiquer vos disponibilités sur les prochains jours ?\n\nÀ bientôt,\n\nL'équipe de recrutement",
   },
   {
     key: "candidate-more-info",
     label: "Infos complémentaires",
     subject: "Infos complémentaires",
     body:
-      "Pour finaliser l'étude de votre candidature, nous aurions besoin de quelques informations complémentaires.\n\nPouvez-vous nous répondre dès que possible ?",
+      "Bonjour {firstName},\n\nPour finaliser l'étude de votre candidature, nous aurions besoin de quelques informations complémentaires.\n\nPouvez-vous nous répondre dès que possible ?\n\nÀ bientôt,\n\nL'équipe de recrutement",
   },
 ];
 
@@ -129,6 +129,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
         const firstName = firstNameOf(r.candidate_name);
+        const personalizedBody = body.replace(/\{firstName\}/g, firstName).replace(/Bonjour ,/g, "Bonjour,");
         return supabase.functions.invoke("send-transactional-email", {
           body: {
             templateName: "bulk-candidate-message",
@@ -136,7 +137,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
             idempotencyKey: `bulk-${selectedKey}-${r.id}-${Date.now()}`,
             templateData: {
               subject,
-              body,
+              body: personalizedBody,
               firstName,
             },
           },
@@ -214,7 +215,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
           <div className="space-y-1">
             <Label>Message</Label>
             <p className="text-xs text-muted-foreground">
-              Chaque email commencera automatiquement par « Bonjour PRÉNOM, ».
+              Utilisez {"{firstName}"} pour insérer le prénom du candidat.
             </p>
             <Textarea
               value={body}

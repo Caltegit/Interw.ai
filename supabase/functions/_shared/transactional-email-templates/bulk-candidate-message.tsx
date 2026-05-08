@@ -12,18 +12,14 @@ interface BulkCandidateMessageProps {
 
 const BulkCandidateMessageEmail = ({
   body = '',
-  firstName,
 }: BulkCandidateMessageProps) => {
-  const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
-  // Render body preserving line breaks (no raw HTML — React escapes everything).
   const paragraphs = (body || '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
   return (
     <Html lang="fr" dir="ltr">
       <Head />
-      <Preview>{greeting}</Preview>
+      <Preview>{paragraphs[0]?.slice(0, 80) || 'Message'}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Text style={text}>{greeting}</Text>
           {paragraphs.map((p, i) => (
             <Text key={i} style={text}>
               {p.split('\n').map((line, j, arr) => (
@@ -47,7 +43,7 @@ export const template = {
   previewData: {
     subject: 'Refus - Recrutement Q1 2025',
     firstName: 'Jane',
-    body: "Merci pour le temps consacré à votre entretien.\n\nAprès étude de votre candidature, nous ne donnerons pas suite.",
+    body: "Bonjour Jane,\n\nMerci pour le temps consacré à votre entretien.\n\nÀ bientôt,\n\nL'équipe de recrutement",
   },
 } satisfies TemplateEntry
 
