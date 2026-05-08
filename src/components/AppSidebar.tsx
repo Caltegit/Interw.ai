@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { useState } from "react";
 
 const navItems = [
@@ -71,6 +72,9 @@ export function AppSidebar() {
               <span className="text-lg font-bold text-primary">Interw.ai</span>
             )}
           </SidebarGroupLabel>
+          <div className="px-2 pb-2">
+            <OrganizationSwitcher />
+          </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
