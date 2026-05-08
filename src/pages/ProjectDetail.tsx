@@ -746,37 +746,74 @@ export default function ProjectDetail() {
                   )}
                 </div>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 font-medium">Candidat</th>
-                      <th className="pb-2 font-medium">Sélection</th>
-                      <th className="pb-2 font-medium">Statut</th>
-                      <th className="pb-2 font-medium">Score</th>
-                      <th className="pb-2 font-medium">Reco</th>
-                      <th className="pb-2 font-medium">Date</th>
-                      <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
-                      <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
-                      <th className="pb-2 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedSessions.map((s) => {
-                      const rep = reportsBySession[s.id];
-                      const clickable = s.status === "completed";
-                      const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
-                      return (
-                        <tr
-                          key={s.id}
-                          className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
-                          onClick={onRowClick}
-                        >
-                          <td className="py-3">
-                            <p className="font-medium">{s.candidate_name}</p>
-                            <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
-                          </td>
-                          <td className="py-3" onClick={(e) => e.stopPropagation()}>
+              <div className="space-y-2">
+                {selectedIds.size > 0 && (
+                  <BulkActionsBar
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                  />
+                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="pb-2 w-8">
+                          <Checkbox
+                            checked={
+                              pagedSessions.length > 0 &&
+                              pagedSessions.every((s) => selectedIds.has(s.id))
+                                ? true
+                                : pagedSessions.some((s) => selectedIds.has(s.id))
+                                ? "indeterminate"
+                                : false
+                            }
+                            onCheckedChange={(v) => {
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                if (v) pagedSessions.forEach((s) => next.add(s.id));
+                                else pagedSessions.forEach((s) => next.delete(s.id));
+                                return next;
+                              });
+                            }}
+                            aria-label="Tout sélectionner"
+                          />
+                        </th>
+                        <th className="pb-2 font-medium">Candidat</th>
+                        <th className="pb-2 font-medium">Sélection</th>
+                        <th className="pb-2 font-medium">Statut</th>
+                        <th className="pb-2 font-medium">Score</th>
+                        <th className="pb-2 font-medium">Reco</th>
+                        <th className="pb-2 font-medium">Date</th>
+                        <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
+                        <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
+                        <th className="pb-2 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagedSessions.map((s) => {
+                        const rep = reportsBySession[s.id];
+                        const clickable = s.status === "completed";
+                        const onRowClick = () => clickable && navigate(`/sessions/${s.id}`);
+                        return (
+                          <tr
+                            key={s.id}
+                            className={`border-b last:border-0 ${clickable ? "cursor-pointer hover:bg-muted/40" : ""}`}
+                            onClick={onRowClick}
+                          >
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(s.id)}
+                                onCheckedChange={() => toggleSelect(s.id)}
+                                aria-label="Sélectionner"
+                              />
+                            </td>
+                            <td className="py-3">
+                              <p className="font-medium">{s.candidate_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                            </td>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
