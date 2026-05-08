@@ -441,25 +441,21 @@ export default function ProjectDetail() {
 
   const statusLabel =
     { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
-  const pendingSessions = sessions.filter((s) => s.status === "pending");
-  const completedSessions = sessions.filter((s) => s.status === "completed");
-  const inProgressSessions = sessions.filter((s) => s.status === "in_progress");
-  const toReviewSessions = sessions.filter(
-    (s) =>
-      s.status === "completed" &&
-      (!reportsBySession[s.id] || s.recruiter_decision === "none"),
-  );
+  const isReady = (s: any) =>
+    s.status === "completed" &&
+    !!reportsBySession[s.id] &&
+    (transcriptionPendingBySession[s.id] ?? 0) === 0;
+  const readySessions = sessions.filter(isReady);
+  const completedSessions = readySessions;
+  const processingCount = sessions.filter(
+    (s) => s.status === "completed" && !isReady(s),
+  ).length;
 
-  // Tri par défaut adapté : si l'utilisateur n'a rien changé et qu'on filtre les "en attente", on trie par date ancienne en premier
-  const effectiveSort = (() => {
-    if (sortKey !== "date" || sortDir !== "desc") return { key: sortKey, dir: sortDir };
-    if (statusFilter === "pending") return { key: "date" as const, dir: "asc" as const };
-    return { key: sortKey, dir: sortDir };
-  })();
+  const effectiveSort = { key: sortKey, dir: sortDir };
 
-  // Apply filters + sort to sessions
+  // Apply filters + sort to sessions (uniquement les sessions prêtes)
   const filteredSessions = (() => {
-    let list = sessions.slice();
+    let list = readySessions.slice();
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -467,15 +463,6 @@ export default function ProjectDetail() {
           (s.candidate_name || "").toLowerCase().includes(q) ||
           (s.candidate_email || "").toLowerCase().includes(q),
       );
-    }
-    if (statusFilter === "to_review") {
-      list = list.filter(
-        (s) =>
-          s.status === "completed" &&
-          (!reportsBySession[s.id] || s.recruiter_decision === "none"),
-      );
-    } else if (statusFilter !== "all") {
-      list = list.filter((s) => s.status === statusFilter);
     }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
