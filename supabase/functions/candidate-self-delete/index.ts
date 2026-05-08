@@ -19,6 +19,10 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const ua = req.headers.get("user-agent") ?? "";
+  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "";
+  console.log("[candidate-self-delete] request", { ua, ip });
+
   try {
     const body = await req.json().catch(() => ({}));
     const token: string | undefined = body?.token;
@@ -40,8 +44,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: `Lecture session impossible: ${sErr.message}` }, 500);
     }
     if (!session) {
-      return jsonResponse({ error: "Session introuvable" }, 404);
+      // Idempotent : déjà supprimée → succès
+      console.log("[candidate-self-delete] already deleted");
+      return jsonResponse({ success: true, alreadyDeleted: true });
     }
+
 
     const sessionId = session.id;
 
