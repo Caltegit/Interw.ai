@@ -215,7 +215,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
           <div className="space-y-1">
             <Label>Message</Label>
             <p className="text-xs text-muted-foreground">
-              Chaque email commencera automatiquement par « Bonjour PRÉNOM, ».
+              Utilisez {"{firstName}"} pour insérer le prénom du candidat.
             </p>
             <Textarea
               value={body}
