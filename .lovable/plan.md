@@ -1,28 +1,32 @@
-## Permettre le rattachement multi-organisations d'un utilisateur existant
+## Plan : améliorer la section « Voix du recruteur »
 
-**Fichier modifié** : `supabase/functions/superadmin-manage-user/index.ts` (action `create`) + `src/components/superadmin/CreateUserInOrgDialog.tsx`
+Refonte de la carte actuellement intitulée « Genre de la voix » dans `src/components/project/ProjectForm.tsx` (lignes ~476-519) pour la rendre plus claire, plus visuelle et plus engageante.
 
-### Logique de l'edge function
+### Changements UI
 
-1. Tenter `inviteUserByEmail` / `createUser` comme aujourd'hui.
-2. **Si erreur `email_exists`** :
-   - Récupérer l'`user_id` via `admin.auth.admin.listUsers` filtré par email.
-   - Vérifier `organization_members` pour `(user_id, organization_id)` :
-     - **Cas C — déjà membre** : retour 409 *« Cet utilisateur fait déjà partie de l'organisation. »*
-     - **Cas B — pas encore membre** :
-       - Insérer dans `organization_members (user_id, organization_id)` (idempotent).
-       - Insérer dans `user_roles (user_id, role: 'member', organization_id)` (idempotent).
-       - **Ne pas** modifier `profiles.organization_id` — l'utilisateur basculera via le sélecteur multi-org.
-       - Retour `{ success: true, attached: true }`.
-3. **Cas A — création réelle** (comportement actuel) : profil + user_roles + ajout dans `organization_members` pour cohérence.
+1. **Titre de la carte** : « Voix du recruteur » (au lieu de « Genre de la voix »), avec une courte description :
+   « Choisissez la voix qui sera utilisée pendant l'entretien. »
 
-### UI
+2. **Sélecteur Femme / Homme repensé** : remplacer le `RadioGroup` simple par deux cartes cliquables côte à côte (toujours basées sur `RadioGroup` pour l'accessibilité), avec :
+   - une icône (`User` / `UserRound` de lucide-react)
+   - le libellé « Femme » / « Homme »
+   - un état sélectionné avec bordure et fond `primary/10`
+   - un bouton « Écouter » (icône `Volume2`) sur chaque carte pour pré-écouter la voix par défaut du genre via le cache TTS existant (`ttsCache`)
 
-Dans `CreateUserInOrgDialog.tsx`, adapter le toast :
-- `attached === true` → *« Accès à l'organisation ajouté à un utilisateur existant. »*
-- sinon : comportement actuel (créé / invité).
+3. **Voix actuellement sélectionnée** : afficher sous les cartes une ligne discrète
+   « Voix sélectionnée : [Nom de la voix] » avec un petit bouton « Écouter » à côté pour entendre la voix exacte choisie (utile quand l'utilisateur a personnalisé via « Modifier la voix » ou cloné).
+
+4. **Actions secondaires** : conserver « Modifier la voix » et « Cloner ma voix » mais les transformer en boutons `variant="outline" size="sm"` avec icônes (`Settings2`, `Mic`) pour plus de visibilité, alignés à droite.
+
+### Détails techniques
+
+- Aucun changement de schéma ni de logique métier : on garde `ttsVoiceGender`, `ttsVoiceId`, `getDefaultVoiceForGender`, `VoiceSelectorDialog`, `VoiceCloneDialog`.
+- Récupérer le nom de la voix sélectionnée depuis la liste des voix (déjà chargée pour `VoiceSelectorDialog`) ou via un petit helper.
+- Pré-écoute : réutiliser le pattern de `AdminTtsCompare` / `ttsCache` (génération d'un échantillon court type « Bonjour, je suis [Nom], ravi de faire votre connaissance. ») avec un état de chargement local (icône qui passe en `Loader2`).
+- Respecter les tokens du design system (pas de couleurs en dur).
 
 ### Hors scope
+
+- Pas de modification de `VoiceSelectorDialog` ni de `VoiceCloneDialog`.
 - Pas de migration DB.
-- Pas de modification du sélecteur multi-org (déjà fonctionnel).
-- Pas de changement aux autres actions (`set_role`, `move_org`, etc.).
+- Pas de changement du flux côté entretien candidat.
