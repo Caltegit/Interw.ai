@@ -213,6 +213,29 @@ export default function InterviewLanding() {
     setMediaFinished(true);
   };
 
+  // Démarrage automatique de la vidéo d'intro dès qu'elle est affichée
+  useEffect(() => {
+    if (!showIntroMedia || introMediaType !== "video") return;
+    if (mediaPlaying || mediaFinished) return;
+    const v = introVideoRef.current;
+    if (!v) return;
+    v.play()
+      .then(() => setMediaPlaying(true))
+      .catch(() => {
+        // Lecture avec son bloquée : on tente en muet pour démarrer quand même
+        try {
+          v.muted = true;
+          v.play()
+            .then(() => setMediaPlaying(true))
+            .catch(() => {
+              // Échec total : l'utilisateur devra cliquer sur le bouton Play
+            });
+        } catch {
+          /* ignore */
+        }
+      });
+  }, [showIntroMedia, introMediaType, mediaPlaying, mediaFinished]);
+
   const stopAllIntroMedia = () => {
     try {
       const a = introAudioRef.current;
