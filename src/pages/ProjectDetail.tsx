@@ -746,8 +746,8 @@ export default function ProjectDetail() {
                           />
                         </th>
                         <th className="pb-2 font-medium max-w-[14rem]">Candidat</th>
-                        <th className="pb-2 font-medium w-[7rem]">Sélection</th>
-                        <th className="pb-2 font-medium">Score</th>
+                        <th className="pb-2 pr-6 font-medium w-[7rem]">Sélection</th>
+                        <th className="pb-2 pl-2 font-medium">Score</th>
                         <th className="pb-2 font-medium">Date</th>
                         <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
                         <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
@@ -781,7 +781,7 @@ export default function ProjectDetail() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            <td className="py-3 pr-6" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
@@ -807,7 +807,7 @@ export default function ProjectDetail() {
                               );
                             })()}
                           </td>
-                          <td className="py-3 font-medium">
+                          <td className="py-3 pl-2 font-medium">
                             {rep?.overall_score != null ? rep.overall_score.toFixed(1) : "—"}
                           </td>
                           <td className="py-3 text-muted-foreground">
@@ -835,7 +835,7 @@ export default function ProjectDetail() {
                               value={s.assigned_to ?? "none"}
                               onValueChange={(v) => reassignSession(s.id, v === "none" ? null : v)}
                             >
-                              <SelectTrigger className="h-8 w-full max-w-[12rem] text-xs">
+                              <SelectTrigger className="h-8 w-full max-w-[9rem] text-xs">
                                 <SelectValue placeholder="—">{memberLabel(s.assigned_to)}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
