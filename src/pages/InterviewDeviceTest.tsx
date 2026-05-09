@@ -534,36 +534,7 @@ export default function InterviewDeviceTest() {
       (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
     );
 
-  // ================== ÉCRAN BLOQUANT ==================
-  if (browserBlocking) {
-    return (
-      <CandidateLayout>
-        <div className="w-full max-w-lg space-y-6 animate-fade-in">
-          <div className="rounded-xl border bg-card p-6 space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
-              <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
-            </div>
-            <p className="text-sm text-foreground">{browserSupport.current.reason}</p>
-            <p className="text-sm text-muted-foreground">
-              Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
-              <strong>Chrome</strong> (Android et ordinateur).
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button onClick={copyLink} variant="outline" className="w-full">
-                {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
-              </Button>
-              <button onClick={() => setBrowserBlocked(false)} className="text-xs text-muted-foreground hover:text-foreground underline mt-2">
-                Continuer quand même
-              </button>
-            </div>
-          </div>
-        </div>
-      </CandidateLayout>
-    );
-  }
+  // (L'écran 100% bloquant a été remplacé par la carte « Navigateur » dans la liste des tests.)
 
   // ================== UI PRINCIPALE ==================
   // La caméra n'est plus un segment de progression : elle est visible en permanence
