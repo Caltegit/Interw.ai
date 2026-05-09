@@ -509,10 +509,11 @@ export default function InterviewDeviceTest() {
     return "idle";
   }, [netStatus, netQuality]);
 
-  const allTests: Status[] = [camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const allTests: Status[] = [browserStatus, camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
   const verifiedCount = allTests.filter((s) => s === "ok" || s === "warning").length;
 
   const canContinue =
+    !browserBlocking &&
     (micStatus === "ok" || micStatus === "warning") &&
     camStatus === "ok" &&
     soundStatus === "ok" &&
