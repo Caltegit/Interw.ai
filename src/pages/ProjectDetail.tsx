@@ -772,8 +772,13 @@ export default function ProjectDetail() {
                               />
                             </td>
                             <td className="py-3">
-                              <p className="font-medium">{s.candidate_name}</p>
-                              <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                              <div className="flex items-center gap-2.5">
+                                <SessionVideoThumb videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{s.candidate_name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
+                                </div>
+                              </div>
                             </td>
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>
                             {(() => {
