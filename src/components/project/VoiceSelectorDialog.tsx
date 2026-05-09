@@ -13,7 +13,6 @@ export const FEMALE_VOICE_DEFAULT_ID = "ICk609TItINMseDpChFt"; // Léa - FR nati
 export const MALE_VOICE_DEFAULT_ID = "IPgYtHTNLjC7Bq7IPHrm"; // Martin - FR natif
 
 export const FEMALE_VOICES = [
-  { id: "McVZb7PHIyDsbVBnY1aP", name: "Audrey", description: "FR natif · douce, naturelle" },
   { id: "kENkNtk0xyzG09WW40xE", name: "Marine", description: "FR natif · jeune, dynamique" },
   { id: "1a3lMdKLUcfcMtvN772u", name: "Adeline", description: "FR natif · posée, professionnelle" },
   { id: "ICk609TItINMseDpChFt", name: "Léa", description: "FR natif · calme, pédagogue" },
@@ -24,7 +23,6 @@ export const FEMALE_VOICES = [
 export const MALE_VOICES = [
   { id: "IPgYtHTNLjC7Bq7IPHrm", name: "Martin", description: "FR natif · posée, professionnelle" },
   { id: "AZnzlk1XvdvUeBnXmlld", name: "Guillaume", description: "FR natif · grave, sérieuse" },
-  { id: "GR1Y5x67PsoZPmKj9rA0", name: "Antoine", description: "FR natif · naturelle, articulée" },
   { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Julien", description: "FR natif · chaleureuse" },
   { id: "hgPNbZ1myT05ziSdrji2", name: "Clément", description: "FR natif · voix personnalisée" },
   { id: "0igQGE0lbNpTaWsexf1r", name: "Paul K", description: "FR natif · pédagogue, agréable" },
