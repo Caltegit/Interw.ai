@@ -746,9 +746,7 @@ export default function ProjectDetail() {
                         </th>
                         <th className="pb-2 font-medium">Candidat</th>
                         <th className="pb-2 font-medium">Sélection</th>
-                        <th className="pb-2 font-medium">Statut</th>
                         <th className="pb-2 font-medium">Score</th>
-                        <th className="pb-2 font-medium">Reco</th>
                         <th className="pb-2 font-medium">Date</th>
                         <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
                         <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
@@ -803,18 +801,19 @@ export default function ProjectDetail() {
                               );
                             })()}
                           </td>
-                          <td className="py-3">
-                            <SessionStatusBadge status={s.status} />
-                          </td>
                           <td className="py-3 font-medium">
                             {rep?.overall_score != null ? rep.overall_score.toFixed(1) : "—"}
                           </td>
-                          <td className="py-3 text-xs">
-                            {rep?.recommendation ? recoLabel[rep.recommendation] ?? rep.recommendation : "—"}
-                          </td>
                           <td className="py-3 text-muted-foreground">
                             <div className="flex items-center gap-1.5">
-                              <span>{new Date(s.created_at).toLocaleDateString("fr-FR")}</span>
+                              <span>
+                                {(() => {
+                                  const days = Math.floor((Date.now() - new Date(s.created_at).getTime()) / 86400000);
+                                  if (days === 0) return "Aujourd'hui";
+                                  if (days === 1) return "Hier";
+                                  return `Il y a ${days} jours`;
+                                })()}
+                              </span>
                               {s.status === "pending" && (() => {
                                 const age = getPendingAge(s.created_at);
                                 return (
