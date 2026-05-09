@@ -56,9 +56,43 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   const [loading, setLoading] = useState(true);
   const [rate, setRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
   const autoPlayRef = useRef(false);
   const rateRef = useRef(rate);
   rateRef.current = rate;
+  const [durationSec, setDurationSec] = useState<number | null>(null);
+
+  const stopCurrent = async () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      if (playPromiseRef.current) {
+        await playPromiseRef.current.catch(() => {});
+        playPromiseRef.current = null;
+      }
+      v.pause();
+      try { v.currentTime = 0; } catch { /* noop */ }
+    } catch { /* noop */ }
+  };
+
+  const safePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      const p = v.play();
+      if (p && typeof p.then === "function") {
+        playPromiseRef.current = p;
+        p.catch(() => {}).finally(() => { playPromiseRef.current = null; });
+      }
+    } catch { /* noop */ }
+  };
+
+  const goTo = async (newIndex: number, autoplay: boolean) => {
+    if (newIndex === index) return;
+    await stopCurrent();
+    autoPlayRef.current = autoplay;
+    setIndex(newIndex);
+  };
 
   useEffect(() => {
     let cancelled = false;
