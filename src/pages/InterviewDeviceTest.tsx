@@ -482,6 +482,56 @@ export default function InterviewDeviceTest() {
     })();
   }, [slug]);
 
+  // Journal de la tentative (user-agent + compatibilité navigateur)
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: sess } = await supabase
+          .from("sessions")
+          .select("id")
+          .eq("token", token)
+          .maybeSingle();
+        if (cancelled || !sess?.id) return;
+        const c = browserCompat.current;
+        const { data: inserted } = await supabase
+          .from("session_attempts")
+          .insert({
+            session_id: sess.id,
+            user_agent: c.userAgent,
+            browser: c.browser,
+            browser_version: c.browserVersion ?? null,
+            os: c.os,
+            device_type: c.deviceType,
+            is_in_app_webview: c.isInAppWebview,
+            webview_host: c.webviewHost ?? null,
+            compat_level: c.level,
+            block_reason: c.reason ?? null,
+            has_get_user_media: c.hasGetUserMedia,
+            has_media_recorder: c.hasMediaRecorder,
+            has_audio_context: c.hasAudioContext,
+            screen_w: window.screen?.width ?? null,
+            screen_h: window.screen?.height ?? null,
+            viewport_w: window.innerWidth ?? null,
+            viewport_h: window.innerHeight ?? null,
+            language: navigator.language ?? null,
+          })
+          .select("id")
+          .maybeSingle();
+        if (!cancelled && inserted?.id) attemptIdRef.current = inserted.id;
+      } catch { /* silencieux : ne doit jamais bloquer le candidat */ }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
+  const continueAnyway = useCallback(async () => {
+    setBrowserBypassed(true);
+    if (attemptIdRef.current) {
+      try { await supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current }); } catch { /* ignore */ }
+    }
+  }, []);
+
   // ================== HANDLERS ==================
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
   const handleVideoDeviceChange = (id: string) => { setSelectedVideoId(id); setStoredDeviceId("video", id); void testCam(id); };
