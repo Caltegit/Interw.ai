@@ -207,28 +207,30 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   return (
     <Card className="flex flex-col overflow-hidden transition-colors hover:bg-muted/50">
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        {/* En-tête : note + identité + recommandation, centrés */}
-        <div className="flex flex-col items-center gap-2 rounded-lg border bg-card p-3 text-center">
-          <div
-            className={cn(
-              "flex h-14 w-14 flex-col items-center justify-center rounded-xl",
-              scoreColor(scoreVal),
-            )}
-          >
-            <span className="text-xl font-bold leading-none tabular-nums">
-              {scoreVal != null ? scoreVal : "—"}
-            </span>
-            <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide opacity-90">
-              Note IA
-            </span>
-          </div>
+        {/* En-tête : nom puis note + recommandation */}
+        <div className="flex flex-col items-center gap-1">
           <Link
             to={`/sessions/${session.id}`}
             className="block max-w-full truncate text-base font-semibold hover:underline"
           >
             {session.candidate_name}
           </Link>
-          {reco && <Badge className={cn(reco.className)}>{reco.label}</Badge>}
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
+                scoreColor(scoreVal),
+              )}
+            >
+              <span className="text-sm font-bold leading-none tabular-nums">
+                {scoreVal != null ? scoreVal : "—"}
+              </span>
+              <span className="text-[9px] font-medium uppercase tracking-wide opacity-90">
+                Note IA
+              </span>
+            </span>
+            {reco && <Badge className={cn(reco.className)}>{reco.label}</Badge>}
+          </div>
         </div>
 
         {/* Vidéo */}
