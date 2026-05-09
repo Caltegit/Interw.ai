@@ -42,7 +42,7 @@ const DEFAULT_TEMPLATES: CandidateMessageTemplate[] = [
     label: "Refus",
     subject: "Refus",
     body:
-      "Bonjour {firstName},\n\nMerci pour le temps consacré à votre entretien.\n\nAprès étude attentive de votre candidature, nous ne donnerons pas suite à ce stade.\n\nNous vous souhaitons une belle réussite dans la suite de vos démarches.\n\nÀ bientôt,\n\nL'équipe de recrutement",
+      "Bonjour {firstName},\n\nMerci pour l'échange digital, nous avons apprécié découvrir votre profil.\n\nCependant, après analyse de votre candidature, nous ne donnerons pas suite pour ce poste.\n\nCela ne remet évidement pas en cause la qualité de votre profil, l'océan des opportunités est vaste et nous vous souhaitons plein de belles choses pour la suite.\n\nL'équipe de recrutement",
   },
   {
     key: "candidate-new-interview",
