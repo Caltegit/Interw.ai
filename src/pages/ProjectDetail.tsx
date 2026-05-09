@@ -37,6 +37,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
+import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsBar({
   count, onClear, onEmail, onDelete,
