@@ -308,16 +308,18 @@ export default function InterviewLanding() {
   if (showIntroMedia) {
     return (
       <CandidateLayout minimal>
-        <div className={`${introMediaType === "video" ? "max-w-2xl self-start mt-4 sm:mt-6" : "max-w-md"} w-full animate-fade-in space-y-3`}>
-          {/* Skip link */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleProceedToInterview}
-              className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
-            >
-              Passer
-            </button>
-          </div>
+        <div className={`${introMediaType === "video" ? "max-w-2xl self-start mt-0" : "max-w-md"} w-full animate-fade-in space-y-3`}>
+          {/* Skip link (hors vidéo : au-dessus de la carte) */}
+          {introMediaType !== "video" && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleProceedToInterview}
+                className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+              >
+                Passer
+              </button>
+            </div>
+          )}
           <Card className="w-full overflow-hidden">
             <CardContent className={`${introMediaType === "video" ? "py-5" : "py-8"} space-y-6 text-center`}>
               {(introMediaType === "audio" || introMediaType === "tts" || introMediaType === "text") && project.avatar_image_url ? (
@@ -411,6 +413,16 @@ export default function InterviewLanding() {
               )}
             </CardContent>
           </Card>
+          {introMediaType === "video" && (
+            <div className="flex justify-center">
+              <button
+                onClick={handleProceedToInterview}
+                className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+              >
+                Passer
+              </button>
+            </div>
+          )}
         </div>
       </CandidateLayout>
     );
