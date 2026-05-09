@@ -698,6 +698,48 @@ export default function InterviewDeviceTest() {
 
         {/* Liste verticale des tests */}
         <div className="space-y-2.5">
+          {/* Navigateur compatible */}
+          <TestCard
+            status={browserStatus}
+            title="Navigateur compatible"
+            icon={Globe}
+            fullWidth
+            forceExpanded={browserCompat.current.level !== "ok"}
+          >
+            {browserCompat.current.level === "ok" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5" />
+                {browserCompat.current.browser}
+                {browserCompat.current.browserVersion ? ` ${browserCompat.current.browserVersion.split(".")[0]}` : ""}
+                {` sur ${browserCompat.current.os}`}
+              </p>
+            )}
+            {browserCompat.current.level === "warning" && browserCompat.current.reason && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">{browserCompat.current.reason}</p>
+            )}
+            {browserCompat.current.level === "blocked" && (
+              <div className="space-y-3">
+                <p className="text-xs text-destructive">{browserCompat.current.reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
+                  <strong>Chrome</strong> (Android et ordinateur).
+                </p>
+                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                </Button>
+                {browserBlocking && (
+                  <button
+                    type="button"
+                    onClick={continueAnyway}
+                    className="block w-full text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Continuer quand même
+                  </button>
+                )}
+              </div>
+            )}
+          </TestCard>
+
           {/* Micro */}
           <TestCard
             status={micStatus}
