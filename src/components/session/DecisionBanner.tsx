@@ -120,16 +120,22 @@ export function DecisionBanner(props: DecisionBannerProps) {
               Fit poste
             </span>
           </div>
-          <div className="lg:hidden">
-            <h2 className="text-base font-semibold leading-tight">{candidateName}</h2>
+          <div className="lg:hidden min-w-0">
+            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            {candidateEmail && (
+              <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
           </div>
         </div>
 
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="hidden lg:block">
-            <h2 className="text-lg font-semibold leading-tight">{candidateName}</h2>
+          <div className="hidden lg:block min-w-0">
+            <h2 className="text-lg font-semibold leading-tight truncate">{candidateName}</h2>
+            {candidateEmail && (
+              <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
           </div>
           {!readOnly && (
