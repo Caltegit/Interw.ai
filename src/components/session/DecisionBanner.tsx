@@ -28,6 +28,7 @@ export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_op
 
 interface DecisionBannerProps {
   candidateName: string;
+  candidateEmail?: string | null;
   jobTitle?: string | null;
   durationLabel?: string;
   videoAnswersCount: number;
@@ -47,6 +48,8 @@ interface DecisionBannerProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   isShareLoading?: boolean;
+  onEmail?: () => void;
+  onDelete?: () => void;
   readOnly?: boolean;
 }
 
