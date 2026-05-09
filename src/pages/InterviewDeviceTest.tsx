@@ -434,7 +434,7 @@ export default function InterviewDeviceTest() {
 
   // ================== LIFECYCLE ==================
   useEffect(() => {
-    if (browserBlocked) return;
+    if (browserBlocking) return;
     let cancelled = false;
     (async () => {
       const perms = await queryPermissions();
@@ -464,14 +464,14 @@ export default function InterviewDeviceTest() {
       if (videoRef.current) videoRef.current.srcObject = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [browserBlocked]);
+  }, [browserBlocking]);
 
   useEffect(() => {
-    if (browserBlocked) return;
+    if (browserBlocking) return;
     const handler = () => { void refreshDevices(); };
     navigator.mediaDevices?.addEventListener?.("devicechange", handler);
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
-  }, [browserBlocked, refreshDevices]);
+  }, [browserBlocking, refreshDevices]);
 
   useEffect(() => {
     if (!slug) return;
@@ -535,7 +535,7 @@ export default function InterviewDeviceTest() {
     );
 
   // ================== ÉCRAN BLOQUANT ==================
-  if (browserBlocked) {
+  if (browserBlocking) {
     return (
       <CandidateLayout>
         <div className="w-full max-w-lg space-y-6 animate-fade-in">
