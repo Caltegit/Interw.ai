@@ -1186,6 +1186,78 @@ export type Database = {
           },
         ]
       }
+      session_attempts: {
+        Row: {
+          block_reason: string | null
+          browser: string | null
+          browser_version: string | null
+          compat_level: string
+          created_at: string
+          device_type: string | null
+          has_audio_context: boolean
+          has_get_user_media: boolean
+          has_media_recorder: boolean
+          id: string
+          is_in_app_webview: boolean
+          language: string | null
+          os: string | null
+          proceeded_anyway: boolean
+          screen_h: number | null
+          screen_w: number | null
+          session_id: string
+          user_agent: string
+          viewport_h: number | null
+          viewport_w: number | null
+          webview_host: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          browser?: string | null
+          browser_version?: string | null
+          compat_level?: string
+          created_at?: string
+          device_type?: string | null
+          has_audio_context?: boolean
+          has_get_user_media?: boolean
+          has_media_recorder?: boolean
+          id?: string
+          is_in_app_webview?: boolean
+          language?: string | null
+          os?: string | null
+          proceeded_anyway?: boolean
+          screen_h?: number | null
+          screen_w?: number | null
+          session_id: string
+          user_agent?: string
+          viewport_h?: number | null
+          viewport_w?: number | null
+          webview_host?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          browser?: string | null
+          browser_version?: string | null
+          compat_level?: string
+          created_at?: string
+          device_type?: string | null
+          has_audio_context?: boolean
+          has_get_user_media?: boolean
+          has_media_recorder?: boolean
+          id?: string
+          is_in_app_webview?: boolean
+          language?: string | null
+          os?: string | null
+          proceeded_anyway?: boolean
+          screen_h?: number | null
+          screen_w?: number | null
+          session_id?: string
+          user_agent?: string
+          viewport_h?: number | null
+          viewport_w?: number | null
+          webview_host?: string | null
+        }
+        Relationships: []
+      }
       session_messages: {
         Row: {
           audio_segment_url: string | null
@@ -1450,6 +1522,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      mark_attempt_proceeded: {
+        Args: { _attempt_id: string }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
