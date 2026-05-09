@@ -19,6 +19,8 @@ import {
   Copy,
   Download,
   Sparkles,
+  Mail,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +28,7 @@ export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_op
 
 interface DecisionBannerProps {
   candidateName: string;
+  candidateEmail?: string | null;
   jobTitle?: string | null;
   durationLabel?: string;
   videoAnswersCount: number;
@@ -45,6 +48,8 @@ interface DecisionBannerProps {
   onRegenerate?: () => void;
   isRegenerating?: boolean;
   isShareLoading?: boolean;
+  onEmail?: () => void;
+  onDelete?: () => void;
   readOnly?: boolean;
 }
 
@@ -72,6 +77,7 @@ function fitColor(score: number | null) {
 export function DecisionBanner(props: DecisionBannerProps) {
   const {
     candidateName,
+    candidateEmail,
     jobTitle,
     durationLabel,
     videoAnswersCount,
@@ -91,6 +97,8 @@ export function DecisionBanner(props: DecisionBannerProps) {
     onRegenerate,
     isRegenerating,
     isShareLoading,
+    onEmail,
+    onDelete,
     readOnly,
   } = props;
 
@@ -112,16 +120,22 @@ export function DecisionBanner(props: DecisionBannerProps) {
               Fit poste
             </span>
           </div>
-          <div className="lg:hidden">
-            <h2 className="text-base font-semibold leading-tight">{candidateName}</h2>
+          <div className="lg:hidden min-w-0">
+            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            {candidateEmail && (
+              <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
           </div>
         </div>
 
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <div className="hidden lg:block">
-            <h2 className="text-lg font-semibold leading-tight">{candidateName}</h2>
+          <div className="hidden lg:block min-w-0">
+            <h2 className="text-lg font-semibold leading-tight truncate">{candidateName}</h2>
+            {candidateEmail && (
+              <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
           </div>
           {!readOnly && (
@@ -206,6 +220,22 @@ export function DecisionBanner(props: DecisionBannerProps) {
                       {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
                     </DropdownMenuItem>
                   </>
+                )}
+                {(onEmail || onDelete) && <DropdownMenuSeparator />}
+                {onEmail && (
+                  <DropdownMenuItem onClick={onEmail}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Envoyer un e-mail
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={onDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Supprimer
+                  </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>

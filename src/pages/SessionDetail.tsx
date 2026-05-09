@@ -35,6 +35,7 @@ import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer"
 
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
@@ -67,6 +68,8 @@ export default function SessionDetail() {
   const [copied, setCopied] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -359,6 +362,7 @@ export default function SessionDetail() {
 
       <DecisionBanner
         candidateName={session.candidate_name}
+        candidateEmail={session.candidate_email}
         jobTitle={project?.job_title}
         durationLabel={formatDuration(session.duration_seconds)}
         videoAnswersCount={candidateVideos.length}
@@ -378,7 +382,41 @@ export default function SessionDetail() {
         onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
         onRegenerate={report ? handleRegenerate : undefined}
         isRegenerating={regenerate.isPending}
+        onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+        onDelete={() => setDeleteOpen(true)}
       />
+
+      <BulkEmailDialog
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        recipients={[{
+          id: session.id,
+          candidate_name: session.candidate_name,
+          candidate_email: session.candidate_email,
+        }]}
+        projectTitle={project?.title ?? ""}
+      />
+
+      <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La session, ses messages et son rapport éventuel seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); handleDeleteSession(); }}
+              disabled={deleting}
+            >
+              {deleting ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Suppression…</> : "Supprimer"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
