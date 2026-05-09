@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Check, HelpCircle, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, HelpCircle, X, RotateCcw, RotateCw } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -55,9 +56,43 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   const [loading, setLoading] = useState(true);
   const [rate, setRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
   const autoPlayRef = useRef(false);
   const rateRef = useRef(rate);
   rateRef.current = rate;
+  const [durationSec, setDurationSec] = useState<number | null>(null);
+
+  const stopCurrent = async () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      if (playPromiseRef.current) {
+        await playPromiseRef.current.catch(() => {});
+        playPromiseRef.current = null;
+      }
+      v.pause();
+      try { v.currentTime = 0; } catch { /* noop */ }
+    } catch { /* noop */ }
+  };
+
+  const safePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      const p = v.play();
+      if (p && typeof p.then === "function") {
+        playPromiseRef.current = p;
+        p.catch(() => {}).finally(() => { playPromiseRef.current = null; });
+      }
+    } catch { /* noop */ }
+  };
+
+  const goTo = async (newIndex: number, autoplay: boolean) => {
+    if (newIndex === index) return;
+    await stopCurrent();
+    autoPlayRef.current = autoplay;
+    setIndex(newIndex);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -91,50 +126,39 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     if (v.duration === Infinity) {
       const onTime = () => {
         v.removeEventListener("timeupdate", onTime);
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
-        try {
-          v.playbackRate = rateRef.current;
-        } catch {
-          /* noop */
-        }
-        if (autoPlayRef.current) v.play().catch(() => {});
+        const real = v.duration;
+        try { v.currentTime = 0; } catch { /* noop */ }
+        try { v.playbackRate = rateRef.current; } catch { /* noop */ }
+        if (Number.isFinite(real)) setDurationSec(real);
+        if (autoPlayRef.current) safePlay();
       };
       v.addEventListener("timeupdate", onTime);
-      try {
-        v.currentTime = 1e9;
-      } catch {
-        /* noop */
-      }
+      try { v.currentTime = 1e9; } catch { /* noop */ }
+    } else if (Number.isFinite(v.duration)) {
+      setDurationSec(v.duration);
     }
   };
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    setDurationSec(null);
     const apply = () => {
-      try {
-        v.playbackRate = rateRef.current;
-      } catch {
-        /* noop */
-      }
+      try { v.playbackRate = rateRef.current; } catch { /* noop */ }
       if (v.duration === Infinity) {
         fixDuration();
       } else {
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
-        if (autoPlayRef.current) v.play().catch(() => {});
+        try { v.currentTime = 0; } catch { /* noop */ }
+        if (Number.isFinite(v.duration)) setDurationSec(v.duration);
+        if (autoPlayRef.current) safePlay();
       }
     };
     if (v.readyState >= 1) apply();
     else v.addEventListener("loadedmetadata", apply, { once: true });
-    return () => v.removeEventListener("loadedmetadata", apply);
+    return () => {
+      v.removeEventListener("loadedmetadata", apply);
+      try { v.pause(); } catch { /* noop */ }
+    };
   }, [index, clips.length]);
 
   useEffect(() => {
@@ -212,24 +236,62 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
 
         {/* Vidéo */}
         <div className="space-y-2">
-          <div className="overflow-hidden rounded-md bg-black aspect-video">
+          <div className="relative overflow-hidden rounded-md bg-black aspect-video">
             {loading ? (
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 Chargement…
               </div>
             ) : current ? (
-              <video
-                key={current.url}
-                ref={videoRef}
-                src={current.url}
-                controls
-                playsInline
-                preload="metadata"
-                onLoadedMetadata={(e) => {
-                  if (e.currentTarget.duration === Infinity) fixDuration();
-                }}
-                className="h-full w-full object-contain"
-              />
+              <>
+                <video
+                  key={current.url}
+                  ref={videoRef}
+                  src={current.url}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  onLoadedMetadata={(e) => {
+                    const d = e.currentTarget.duration;
+                    if (Number.isFinite(d)) setDurationSec(d);
+                    else if (d === Infinity) fixDuration();
+                  }}
+                  onEnded={() => {
+                    if (index < clips.length - 1) goTo(index + 1, true);
+                  }}
+                  className="h-full w-full object-contain"
+                />
+                <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Reculer de 10 secondes"
+                    disabled={durationSec === null}
+                    onClick={() => {
+                      const v = videoRef.current;
+                      if (!v) return;
+                      v.currentTime = Math.max(0, v.currentTime - 10);
+                    }}
+                    className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    10s
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Avancer de 10 secondes"
+                    disabled={durationSec === null}
+                    onClick={() => {
+                      const v = videoRef.current;
+                      if (!v) return;
+                      const d = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
+                      v.currentTime = Math.min(Math.max(0, d - 0.1), v.currentTime + 10);
+                    }}
+                    className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+                  >
+                    10s
+                    <RotateCw className="h-3 w-3" />
+                  </button>
+                </div>
+              </>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-white/70">
                 Aucune vidéo disponible
@@ -241,9 +303,34 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
             <>
               <div className="min-h-[2.25rem]">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="font-semibold">
-                    Question {index + 1} / {clips.length}
-                  </span>
+                  <Select
+                    value={String(index)}
+                    onValueChange={(v) => goTo(Number(v), true)}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1 border-none px-1 text-xs font-semibold shadow-none focus:ring-0">
+                      <SelectValue>
+                        Question {index + 1} / {clips.length}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="max-w-[20rem]">
+                      {clips.map((c, i) => {
+                        const q = c.questionId ? questionByid.get(c.questionId) : null;
+                        return (
+                          <SelectItem key={i} value={String(i)}>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium">Q{i + 1}</span>
+                              {q && (
+                                <span className="truncate text-muted-foreground">— {q.content}</span>
+                              )}
+                              {c.isFollowUp && (
+                                <Badge variant="outline" className="ml-1 text-[10px]">Relance</Badge>
+                              )}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                   {current?.isFollowUp && (
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
                       Relance
@@ -261,10 +348,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => {
-                    autoPlayRef.current = true;
-                    setIndex((i) => Math.max(0, i - 1));
-                  }}
+                  onClick={() => goTo(Math.max(0, index - 1), true)}
                   disabled={index === 0}
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -289,10 +373,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
                   variant="outline"
                   size="sm"
                   className="h-8"
-                  onClick={() => {
-                    autoPlayRef.current = true;
-                    setIndex((i) => Math.min(clips.length - 1, i + 1));
-                  }}
+                  onClick={() => goTo(Math.min(clips.length - 1, index + 1), true)}
                   disabled={index >= clips.length - 1}
                 >
                   Suivant

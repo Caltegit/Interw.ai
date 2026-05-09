@@ -1,27 +1,27 @@
-# Boutons -10s / +10s sur le lecteur vidéo
+# Aligner le lecteur de la vue cartes sur celui du rapport
 
-Ajout de deux boutons de navigation rapide sur le lecteur de session (`src/components/session/SessionVideoNavigator.tsx`).
+Le lecteur compact `src/components/project/SessionCard.tsx` (vignette vidéo de la liste des sessions) reçoit les 4 mêmes améliorations que `SessionVideoNavigator` :
 
-## Emplacement et apparence
+## 1. Enchaînement automatique
+Handler `onEnded` sur `<video>` : si pas le dernier clip → passer au suivant avec autoplay.
 
-- Positionnés en overlay sur la vidéo, **en haut au centre**, côte à côte avec un petit espace.
-- Style : bouton rond semi-transparent (fond `bg-black/50`, texte blanc), discret au repos, opacité légèrement renforcée au hover.
-- Icônes Lucide : `Rewind` (ou `RotateCcw`) à gauche avec libellé « 10s », `FastForward` (ou `RotateCw`) à droite avec « 10s ».
-- N'interfère pas avec les contrôles natifs `<video controls>` qui restent en bas.
+## 2. Coupure propre de la vidéo précédente
+- Ajouter une fonction `stopCurrent()` (await de la promesse `play()` en attente, puis `pause()` + reset `currentTime`).
+- L'appeler avant tout changement d'index (Précédent / Suivant / sélecteur / fin de vidéo).
+- Dans le cleanup du `useEffect`, faire un `pause()` sur l'élément démonté.
 
-## Comportement
+## 3. Sélecteur de question
+Remplacer le texte « Question X / Y » par un `Select` shadcn compact :
+- Trigger discret reprenant le format actuel.
+- Liste : « Q{n} — {contenu tronqué} » + badge « Relance » si `isFollowUp`.
+- Largeur limitée pour rester dans la carte étroite.
 
-- Clic sur « -10s » : `videoRef.current.currentTime = max(0, currentTime - 10)`.
-- Clic sur « +10s » : `videoRef.current.currentTime = min(duration - 0.1, currentTime + 10)`.
-- Pas de changement d'état de lecture (si la vidéo joue, elle continue ; si en pause, elle reste en pause).
-- Désactivés tant que la durée n'est pas connue (`durationSec === null`).
+## 4. Boutons -10s / +10s
+Overlay en haut au centre de la vidéo, mêmes styles ronds semi-transparents que dans le rapport (`bg-black/50`, icônes `RotateCcw` / `RotateCw`, libellé « 10s »).
 
 ## Hors scope
-
-- Pas de raccourcis clavier (à demander si souhaité).
-- Pas de modification du composant `HighlightReelPlayer`.
-- Pas de changement sur les boutons Précédent / Suivant / vitesse / sélecteur de question.
+- Pas de changement sur les boutons décision / score / identité.
+- Pas de raccourcis clavier.
 
 ## Fichiers modifiés
-
-- `src/components/session/SessionVideoNavigator.tsx` (seul fichier touché)
+- `src/components/project/SessionCard.tsx` (seul fichier touché)
