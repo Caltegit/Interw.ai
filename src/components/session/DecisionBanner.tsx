@@ -77,6 +77,7 @@ function fitColor(score: number | null) {
 export function DecisionBanner(props: DecisionBannerProps) {
   const {
     candidateName,
+    candidateEmail,
     jobTitle,
     durationLabel,
     videoAnswersCount,
@@ -96,6 +97,8 @@ export function DecisionBanner(props: DecisionBannerProps) {
     onRegenerate,
     isRegenerating,
     isShareLoading,
+    onEmail,
+    onDelete,
     readOnly,
   } = props;
 
