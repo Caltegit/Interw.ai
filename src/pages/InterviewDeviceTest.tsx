@@ -570,12 +570,14 @@ export default function InterviewDeviceTest() {
     recorderStatus === "ok" &&
     !networkBlocking;
 
-  // Effet « célébration » + scroll quand tout est ok
+  // Quand toutes les vérifications sont vertes : transition automatique vers l'écran suivant
   useEffect(() => {
     if (canContinue && !wasReadyRef.current) {
       wasReadyRef.current = true;
       ctaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       try { navigator.vibrate?.(15); } catch { /* ignore */ }
+      const t = setTimeout(() => { handleContinue(); }, 1200);
+      return () => clearTimeout(t);
     }
   }, [canContinue]);
 
