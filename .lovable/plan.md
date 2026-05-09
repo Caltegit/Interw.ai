@@ -1,27 +1,32 @@
-# Aligner le lecteur de la vue cartes sur celui du rapport
+## Retravailler le haut de la vignette (format tableau)
 
-Le lecteur compact `src/components/project/SessionCard.tsx` (vignette vidéo de la liste des sessions) reçoit les 4 mêmes améliorations que `SessionVideoNavigator` :
+Fichier : `src/components/project/SessionCard.tsx`
 
-## 1. Enchaînement automatique
-Handler `onEnded` sur `<video>` : si pas le dernier clip → passer au suivant avec autoplay.
+### Changements
 
-## 2. Coupure propre de la vidéo précédente
-- Ajouter une fonction `stopCurrent()` (await de la promesse `play()` en attente, puis `pause()` + reset `currentTime`).
-- L'appeler avant tout changement d'index (Précédent / Suivant / sélecteur / fin de vidéo).
-- Dans le cleanup du `useEffect`, faire un `pause()` sur l'élément démonté.
+1. **En-tête restructuré** (lignes 211–235)
+   - Bandeau plein largeur en haut de la carte avec bordure inférieure légère.
+   - Prénom + nom centrés horizontalement, en gras.
+   - Suppression de l'e-mail (`session.candidate_email`).
+   - Badge de recommandation (Mitigé, Favorable, etc.) centré sous le nom.
+   - Note IA déplacée : conserver le pavé coloré carré, mais le centrer (au-dessus ou en dessous du nom — proposition : pavé note centré en haut, puis nom centré, puis badge centré, le tout dans un bloc centré). À valider visuellement après essai ; sinon on inverse.
 
-## 3. Sélecteur de question
-Remplacer le texte « Question X / Y » par un `Select` shadcn compact :
-- Trigger discret reprenant le format actuel.
-- Liste : « Q{n} — {contenu tronqué} » + badge « Relance » si `isFollowUp`.
-- Largeur limitée pour rester dans la carte étroite.
+2. **Effet survol sur toute la vignette** (ligne 208)
+   - Ajouter à `<Card>` : `transition-colors hover:bg-muted/50 cursor-pointer` pour griser au survol.
 
-## 4. Boutons -10s / +10s
-Overlay en haut au centre de la vidéo, mêmes styles ronds semi-transparents que dans le rapport (`bg-black/50`, icônes `RotateCcw` / `RotateCw`, libellé « 10s »).
+### Disposition cible (ASCII)
 
-## Hors scope
-- Pas de changement sur les boutons décision / score / identité.
-- Pas de raccourcis clavier.
+```text
++--------------------------------+
+|             [ 62 ]             |
+|         Mahaut Tourriol        |
+|            [Mitigé]            |
++--------------------------------+
+| (vidéo + contrôles inchangés)  |
+| (boutons décision inchangés)   |
++--------------------------------+
+```
 
-## Fichiers modifiés
-- `src/components/project/SessionCard.tsx` (seul fichier touché)
+### Hors scope
+- Aucune modification de la vidéo, du sélecteur de question, des boutons -10s/+10s, ni des boutons de décision.
+- Aucune modification de logique métier.
