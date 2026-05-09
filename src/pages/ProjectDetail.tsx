@@ -807,7 +807,7 @@ export default function ProjectDetail() {
                               );
                             })()}
                           </td>
-                          <td className="py-3 font-medium">
+                          <td className="py-3 pl-2 font-medium">
                             {rep?.overall_score != null ? rep.overall_score.toFixed(1) : "—"}
                           </td>
                           <td className="py-3 text-muted-foreground">
