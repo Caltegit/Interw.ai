@@ -540,7 +540,7 @@ export default function InterviewDeviceTest() {
   // ================== UI PRINCIPALE ==================
   // La caméra n'est plus un segment de progression : elle est visible en permanence
   // dans le bandeau d'en-tête, son statut s'y lit directement.
-  const progressTests: Status[] = [micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const progressTests: Status[] = [browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
   const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
 
   return (
