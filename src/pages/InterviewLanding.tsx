@@ -413,6 +413,16 @@ export default function InterviewLanding() {
               )}
             </CardContent>
           </Card>
+          {introMediaType === "video" && (
+            <div className="flex justify-center">
+              <button
+                onClick={handleProceedToInterview}
+                className="min-h-[44px] px-3 py-2 text-sm text-muted-foreground hover:text-foreground underline transition-colors"
+              >
+                Passer
+              </button>
+            </div>
+          )}
         </div>
       </CandidateLayout>
     );
