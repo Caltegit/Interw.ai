@@ -35,6 +35,7 @@ import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer"
 
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
