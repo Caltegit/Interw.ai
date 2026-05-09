@@ -1554,6 +1554,23 @@ export default function InterviewStart() {
         return null;
       })();
 
+      let thumbnailUrl: string | null = null;
+      const thumbnailBlob = await extractVideoThumbnail(blob);
+      if (thumbnailBlob) {
+        const thumbnailPath = `interviews/${sessionId}/thumbnail.jpg`;
+        try {
+          const { error: thumbError } = await supabase.storage
+            .from("media")
+            .upload(thumbnailPath, thumbnailBlob, { contentType: "image/jpeg", upsert: true });
+          if (!thumbError) {
+            const { data: thumbUrlData } = supabase.storage.from("media").getPublicUrl(thumbnailPath);
+            thumbnailUrl = thumbUrlData.publicUrl;
+          }
+        } catch (error) {
+          console.warn("[thumbnail] upload impossible", error);
+        }
+      }
+
       // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau.
       const backoffs = [1000, 3000, 8000];
       let videoUrl: string | null = null;
@@ -1589,7 +1606,7 @@ export default function InterviewStart() {
         });
       }
       const audioUrl = await audioUploadPromise;
-      return { videoUrl, audioUrl };
+      return { videoUrl, audioUrl, thumbnailUrl };
     },
     [trackBackground],
   );
