@@ -28,7 +28,9 @@ import {
   ChevronDown,
   Settings2,
   HelpCircle,
+  Globe,
 } from "lucide-react";
+import { detectBrowserCompat, type BrowserCompatResult } from "@/lib/browserCompat";
 import CandidateLayout from "@/components/CandidateLayout";
 import {
   classifyMediaError,
@@ -71,34 +73,6 @@ async function playBeep(): Promise<boolean> {
     try { await ctx.close(); } catch { /* ignore */ }
     return false;
   }
-}
-
-interface BrowserSupport {
-  supported: boolean;
-  reason?: string;
-}
-
-function detectUnsupportedBrowser(): BrowserSupport {
-  if (typeof navigator === "undefined") return { supported: true };
-  const ua = navigator.userAgent || "";
-  const inApp: Array<[RegExp, string]> = [
-    [/Instagram/i, "Instagram"],
-    [/FBAN|FBAV|FB_IAB/i, "Facebook"],
-    [/Snapchat/i, "Snapchat"],
-    [/musical_ly|TikTok|Bytedance/i, "TikTok"],
-    [/LinkedInApp/i, "LinkedIn"],
-    [/Line\//i, "Line"],
-  ];
-  for (const [re, name] of inApp) {
-    if (re.test(ua)) return { supported: false, reason: `Vous utilisez le navigateur intégré à ${name}. Il ne permet pas l'accès au micro et à la caméra.` };
-  }
-  if (/FxiOS/i.test(ua)) return { supported: false, reason: "Firefox sur iPhone ne permet pas l'enregistrement audio. Utilisez Safari." };
-  if (typeof window !== "undefined") {
-    if (!("MediaRecorder" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'enregistrement audio." };
-    if (!navigator.mediaDevices?.getUserMedia) return { supported: false, reason: "Votre navigateur ne permet pas l'accès au micro et à la caméra." };
-    if (!("AudioContext" in window) && !("webkitAudioContext" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'audio Web." };
-  }
-  return { supported: true };
 }
 
 const MIC_LEVEL_THRESHOLD = 0.05;
@@ -180,8 +154,16 @@ export default function InterviewDeviceTest() {
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
 
-  const browserSupport = useRef<BrowserSupport>(detectUnsupportedBrowser());
-  const [browserBlocked, setBrowserBlocked] = useState(!browserSupport.current.supported);
+  const browserCompat = useRef<BrowserCompatResult>(detectBrowserCompat());
+  const browserStatus: Status =
+    browserCompat.current.level === "ok"
+      ? "ok"
+      : browserCompat.current.level === "warning"
+      ? "warning"
+      : "error";
+  const [browserBypassed, setBrowserBypassed] = useState(false);
+  const browserBlocking = browserCompat.current.level === "blocked" && !browserBypassed;
+  const attemptIdRef = useRef<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
