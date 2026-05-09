@@ -599,14 +599,14 @@ export default function ProjectDetail() {
                 key={d.value}
                 type="button"
                 onClick={() => toggleDecision(d.value)}
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                className={`flex items-center gap-3 rounded-full border px-5 py-2.5 text-base transition-colors ${
                   active
                     ? "bg-muted border-foreground/20"
                     : "bg-transparent border-transparent text-muted-foreground opacity-60 hover:opacity-100"
                 }`}
                 aria-pressed={active}
               >
-                <span className={`inline-block h-2 w-2 rounded-full ${d.dot}`} />
+                <span className={`inline-block h-3 w-3 rounded-full ${d.dot}`} />
                 <span className={active ? d.text : ""}>{d.label}</span>
                 <span className="text-muted-foreground">{count}</span>
               </button>
