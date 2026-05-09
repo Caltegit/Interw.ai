@@ -651,6 +651,15 @@ export default function ProjectDetail() {
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
                 </div>
+                <span className="text-xs text-muted-foreground">
+                  {filteredSessions.length} / {sessions.length}
+                </span>
+                <Input
+                  placeholder="Rechercher (nom ou email)…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="ml-auto max-w-xs h-9"
+                />
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                   <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -682,15 +691,6 @@ export default function ProjectDetail() {
                     <SelectItem value="name-desc">Nom (Z-A)</SelectItem>
                   </SelectContent>
                 </Select>
-                <span className="text-xs text-muted-foreground">
-                  {filteredSessions.length} / {sessions.length}
-                </span>
-                <Input
-                  placeholder="Rechercher (nom ou email)…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="ml-auto max-w-xs h-9"
-                />
               </div>
 
               {view === "cards" ? (
