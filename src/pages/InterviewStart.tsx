@@ -1466,12 +1466,12 @@ export default function InterviewStart() {
     async (
       sessionId: string,
       questionIndex: number,
-    ): Promise<{ videoUrl: string | null; audioUrl: string | null }> => {
+    ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
       const audioRecorder = questionAudioRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
-        return { videoUrl: null, audioUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
       // Arrêt simultané vidéo + audio.
@@ -1496,7 +1496,7 @@ export default function InterviewStart() {
 
       if (questionVideoChunksRef.current.length === 0) {
         questionAudioChunksRef.current = [];
-        return { videoUrl: null, audioUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
       const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
