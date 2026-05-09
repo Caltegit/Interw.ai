@@ -1,31 +1,39 @@
-## Objectif
-Basculer la synthèse vocale de l'IA recruteur de **ElevenLabs Multilingual v2** vers **Flash v2.5** pour réduire le coût TTS d'environ 45% (~$0.40 → $0.22 par entretien).
+# Améliorations du lecteur vidéo des sessions
 
-## Changement
+Modifications dans `src/components/session/SessionVideoNavigator.tsx` (utilisé en mode tableau et dans le rapport).
 
-**Fichier** : `supabase/functions/tts-elevenlabs/index.ts` (ligne 110)
+## 1. Enchaînement automatique à la fin d'une question
 
-Remplacer :
-```ts
-model_id: "eleven_multilingual_v2",
-```
-par :
-```ts
-model_id: "eleven_flash_v2_5",
-```
+Ajouter un handler `onEnded` sur la balise `<video>` :
+- Si ce n'est pas le dernier clip → passer au clip suivant avec autoplay activé (même logique que le bouton « Suivant »).
+- Si c'est le dernier clip → ne rien faire (la vidéo s'arrête naturellement).
 
-Le reste de la fonction (voix, voice_settings, output_format, streaming) reste identique — Flash v2.5 est compatible avec les mêmes paramètres.
+Comportement utilisateur : on lance la première vidéo, et toutes les questions s'enchaînent jusqu'à la fin sans intervention.
 
-## Déploiement
+## 2. Correction du bug « deux vidéos en même temps »
 
-La fonction `tts-elevenlabs` sera redéployée automatiquement. Effet immédiat sur les prochains entretiens.
+Cause : quand on clique rapidement sur « Suivant », le `<video key={current.url}>` est remonté par React, mais l'ancien élément peut continuer brièvement à émettre du son si le démontage est asynchrone. De plus, le `useEffect` de reset peut déclencher un `play()` sur l'ancien handle.
 
-## Hors scope (à confirmer plus tard si besoin)
+Correctifs :
+- Avant tout changement d'index (boutons Précédent / Suivant / sélecteur / fin de vidéo), appeler `videoRef.current?.pause()` et remettre `currentTime = 0` de manière synchrone.
+- Annuler tout `play()` en attente : stocker la promesse renvoyée par `v.play()` et l'attraper proprement avant le suivant.
+- Dans le cleanup du `useEffect` de changement de clip, faire un `pause()` sur l'élément démonté pour couper tout audio résiduel.
 
-- Pas de mode hybride (v2 pour les questions / Flash pour les relances) — on bascule tout en Flash.
-- Pas de réglage des `voice_settings` — on garde la config actuelle.
-- Pas de changement de voix.
+## 3. Sélecteur de question dans l'en-tête
 
-## Rollback
+Remplacer le texte statique « Question 1 / 15 » par un petit menu déroulant compact (composant `Select` de shadcn déjà utilisé dans le projet) :
+- Trigger discret affichant « Question {index+1} / {clips.length} » avec chevron.
+- Liste : pour chaque clip, une ligne « Q{n} — {questionText tronqué} » + badge « Relance » si `isFollowUp`.
+- Sélection → change l'index + déclenche autoplay + applique la coupure de la vidéo en cours (point 2).
 
-Réversion en 1 ligne si la qualité ne convient pas en production.
+Largeur du trigger limitée pour rester aligné avec la durée à droite ; pas de changement sur le reste de la barre.
+
+## Hors scope
+
+- Pas de modification de la logique de chargement des clips ni du composant `HighlightReelPlayer`.
+- Pas de changement visuel des boutons Précédent / Suivant / vitesse.
+- Pas de raccourcis clavier (peut être ajouté plus tard si demandé).
+
+## Fichiers modifiés
+
+- `src/components/session/SessionVideoNavigator.tsx` (seul fichier touché)

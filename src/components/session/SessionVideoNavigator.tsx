@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface SessionVideoClip {
@@ -24,6 +25,7 @@ function formatMinutes(s: number): string {
 
 export function SessionVideoNavigator({ clips }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const [rate, setRate] = useState(1);
@@ -34,6 +36,42 @@ export function SessionVideoNavigator({ clips }: Props) {
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
+
+  // Coupe proprement la vidéo en cours (annule un play() en attente puis pause)
+  const stopCurrent = async () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      if (playPromiseRef.current) {
+        await playPromiseRef.current.catch(() => {});
+        playPromiseRef.current = null;
+      }
+      v.pause();
+      try {
+        v.currentTime = 0;
+      } catch {
+        /* noop */
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  const safePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      const p = v.play();
+      if (p && typeof p.then === "function") {
+        playPromiseRef.current = p;
+        p.catch(() => {}).finally(() => {
+          playPromiseRef.current = null;
+        });
+      }
+    } catch {
+      /* noop */
+    }
+  };
 
   // Répare la durée pour les WebM MediaRecorder (duration = Infinity)
   const fixDuration = () => {
@@ -49,7 +87,7 @@ export function SessionVideoNavigator({ clips }: Props) {
           /* noop */
         }
         if (Number.isFinite(real)) setDurationSec(real);
-        if (shouldAutoPlay) v.play().catch(() => {});
+        if (shouldAutoPlay) safePlay();
       };
       v.addEventListener("timeupdate", onTime);
       try {
@@ -74,7 +112,6 @@ export function SessionVideoNavigator({ clips }: Props) {
         /* noop */
       }
       if (v.duration === Infinity) {
-        // seek réparation : autoplay déclenché après reset
         fixDuration();
       } else {
         try {
@@ -83,12 +120,20 @@ export function SessionVideoNavigator({ clips }: Props) {
           /* noop */
         }
         if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-        if (shouldAutoPlay) v.play().catch(() => {});
+        if (shouldAutoPlay) safePlay();
       }
     };
     if (v.readyState >= 1) apply();
     else v.addEventListener("loadedmetadata", apply, { once: true });
-    return () => v.removeEventListener("loadedmetadata", apply);
+    return () => {
+      v.removeEventListener("loadedmetadata", apply);
+      // Coupe l'audio résiduel sur l'élément démonté
+      try {
+        v.pause();
+      } catch {
+        /* noop */
+      }
+    };
   }, [index, shouldAutoPlay]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
@@ -100,13 +145,21 @@ export function SessionVideoNavigator({ clips }: Props) {
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
-  const prev = () => {
-    setShouldAutoPlay(true);
-    setIndex((i) => Math.max(0, i - 1));
+
+  const goTo = async (newIndex: number, autoplay: boolean) => {
+    if (newIndex === index) return;
+    await stopCurrent();
+    setShouldAutoPlay(autoplay);
+    setIndex(newIndex);
   };
-  const next = () => {
-    setShouldAutoPlay(true);
-    setIndex((i) => Math.min(clips.length - 1, i + 1));
+
+  const prev = () => goTo(Math.max(0, index - 1), true);
+  const next = () => goTo(Math.min(clips.length - 1, index + 1), true);
+
+  const handleEnded = () => {
+    if (index < clips.length - 1) {
+      goTo(index + 1, true);
+    }
   };
 
   return (
@@ -114,9 +167,31 @@ export function SessionVideoNavigator({ clips }: Props) {
       <CardContent className="space-y-3 pt-6">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-semibold">
-              Question {index + 1} / {clips.length}
-            </span>
+            <Select
+              value={String(index)}
+              onValueChange={(v) => goTo(Number(v), true)}
+            >
+              <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
+                <SelectValue>
+                  Question {index + 1} / {clips.length}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-w-[22rem]">
+                {clips.map((c, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">Q{i + 1}</span>
+                      <span className="truncate text-muted-foreground">— {c.questionText}</span>
+                      {c.isFollowUp && (
+                        <Badge variant="outline" className="ml-1 text-[10px]">
+                          Relance
+                        </Badge>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2">
               {current.isFollowUp && (
                 <Badge variant="outline" className="text-xs">
@@ -146,6 +221,7 @@ export function SessionVideoNavigator({ clips }: Props) {
               if (Number.isFinite(d)) setDurationSec(d);
               else if (d === Infinity) fixDuration();
             }}
+            onEnded={handleEnded}
             className="h-full w-full object-contain"
           />
         </div>
@@ -190,4 +266,3 @@ export function SessionVideoNavigator({ clips }: Props) {
     </Card>
   );
 }
-
