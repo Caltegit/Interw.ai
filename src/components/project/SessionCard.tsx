@@ -218,18 +218,22 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
+                "inline-flex h-6 items-center gap-1 rounded-full px-2.5 leading-none",
                 scoreColor(scoreVal),
               )}
             >
-              <span className="text-sm font-bold leading-none tabular-nums">
+              <span className="text-sm font-bold tabular-nums">
                 {scoreVal != null ? scoreVal : "—"}
               </span>
               <span className="text-[9px] font-medium uppercase tracking-wide opacity-90">
                 Note IA
               </span>
             </span>
-            {reco && <Badge className={cn(reco.className)}>{reco.label}</Badge>}
+            {reco && (
+              <Badge className={cn("h-6 rounded-full px-2.5 leading-none", reco.className)}>
+                {reco.label}
+              </Badge>
+            )}
           </div>
         </div>
 
