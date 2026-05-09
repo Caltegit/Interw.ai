@@ -781,7 +781,7 @@ export default function ProjectDetail() {
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                            <td className="py-3 pr-6" onClick={(e) => e.stopPropagation()}>
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
