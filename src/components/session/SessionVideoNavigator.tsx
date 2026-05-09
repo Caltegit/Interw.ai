@@ -208,7 +208,7 @@ export function SessionVideoNavigator({ clips }: Props) {
           <p className="text-xs text-muted-foreground line-clamp-2">{current.questionText}</p>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-black aspect-video">
+        <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             key={current.url}
             ref={videoRef}
@@ -224,7 +224,39 @@ export function SessionVideoNavigator({ clips }: Props) {
             onEnded={handleEnded}
             className="h-full w-full object-contain"
           />
+          <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
+            <button
+              type="button"
+              aria-label="Reculer de 10 secondes"
+              disabled={durationSec === null}
+              onClick={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                v.currentTime = Math.max(0, v.currentTime - 10);
+              }}
+              className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              10s
+            </button>
+            <button
+              type="button"
+              aria-label="Avancer de 10 secondes"
+              disabled={durationSec === null}
+              onClick={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                const d = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
+                v.currentTime = Math.min(Math.max(0, d - 0.1), v.currentTime + 10);
+              }}
+              className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+            >
+              10s
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
+
 
         <div className="flex items-center justify-between gap-2">
           <Button
