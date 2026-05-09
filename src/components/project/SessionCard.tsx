@@ -126,50 +126,39 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
     if (v.duration === Infinity) {
       const onTime = () => {
         v.removeEventListener("timeupdate", onTime);
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
-        try {
-          v.playbackRate = rateRef.current;
-        } catch {
-          /* noop */
-        }
-        if (autoPlayRef.current) v.play().catch(() => {});
+        const real = v.duration;
+        try { v.currentTime = 0; } catch { /* noop */ }
+        try { v.playbackRate = rateRef.current; } catch { /* noop */ }
+        if (Number.isFinite(real)) setDurationSec(real);
+        if (autoPlayRef.current) safePlay();
       };
       v.addEventListener("timeupdate", onTime);
-      try {
-        v.currentTime = 1e9;
-      } catch {
-        /* noop */
-      }
+      try { v.currentTime = 1e9; } catch { /* noop */ }
+    } else if (Number.isFinite(v.duration)) {
+      setDurationSec(v.duration);
     }
   };
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    setDurationSec(null);
     const apply = () => {
-      try {
-        v.playbackRate = rateRef.current;
-      } catch {
-        /* noop */
-      }
+      try { v.playbackRate = rateRef.current; } catch { /* noop */ }
       if (v.duration === Infinity) {
         fixDuration();
       } else {
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
-        if (autoPlayRef.current) v.play().catch(() => {});
+        try { v.currentTime = 0; } catch { /* noop */ }
+        if (Number.isFinite(v.duration)) setDurationSec(v.duration);
+        if (autoPlayRef.current) safePlay();
       }
     };
     if (v.readyState >= 1) apply();
     else v.addEventListener("loadedmetadata", apply, { once: true });
-    return () => v.removeEventListener("loadedmetadata", apply);
+    return () => {
+      v.removeEventListener("loadedmetadata", apply);
+      try { v.pause(); } catch { /* noop */ }
+    };
   }, [index, clips.length]);
 
   useEffect(() => {
