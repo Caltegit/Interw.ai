@@ -205,23 +205,13 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   const scoreVal = report?.overall_score != null ? Math.round(Number(report.overall_score)) : null;
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden transition-colors hover:bg-muted/50">
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        {/* En-tête : identité + score */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link
-              to={`/sessions/${session.id}`}
-              className="block truncate text-base font-semibold hover:underline"
-            >
-              {session.candidate_name}
-            </Link>
-            <p className="truncate text-xs text-muted-foreground">{session.candidate_email}</p>
-            {reco && <Badge className={cn("mt-1.5", reco.className)}>{reco.label}</Badge>}
-          </div>
+        {/* En-tête : note + identité + recommandation, centrés */}
+        <div className="flex flex-col items-center gap-2 rounded-lg border bg-card p-3 text-center">
           <div
             className={cn(
-              "flex shrink-0 flex-col items-center justify-center rounded-xl px-3 py-1.5 min-w-[64px]",
+              "flex h-14 w-14 flex-col items-center justify-center rounded-xl",
               scoreColor(scoreVal),
             )}
           >
@@ -232,6 +222,13 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
               Note IA
             </span>
           </div>
+          <Link
+            to={`/sessions/${session.id}`}
+            className="block max-w-full truncate text-base font-semibold hover:underline"
+          >
+            {session.candidate_name}
+          </Link>
+          {reco && <Badge className={cn(reco.className)}>{reco.label}</Badge>}
         </div>
 
         {/* Vidéo */}
