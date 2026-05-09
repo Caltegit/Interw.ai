@@ -835,7 +835,7 @@ export default function ProjectDetail() {
                               value={s.assigned_to ?? "none"}
                               onValueChange={(v) => reassignSession(s.id, v === "none" ? null : v)}
                             >
-                              <SelectTrigger className="h-8 w-full max-w-[12rem] text-xs">
+                              <SelectTrigger className="h-8 w-full max-w-[9rem] text-xs">
                                 <SelectValue placeholder="—">{memberLabel(s.assigned_to)}</SelectValue>
                               </SelectTrigger>
                               <SelectContent>
