@@ -1342,6 +1342,7 @@ export type Database = {
           recruiter_decision_by: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["session_status"]
+          thumbnail_url: string | null
           token: string
           video_recording_url: string | null
           video_viewed_at: string | null
@@ -1366,6 +1367,7 @@ export type Database = {
           recruiter_decision_by?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
+          thumbnail_url?: string | null
           token?: string
           video_recording_url?: string | null
           video_viewed_at?: string | null
@@ -1390,6 +1392,7 @@ export type Database = {
           recruiter_decision_by?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
+          thumbnail_url?: string | null
           token?: string
           video_recording_url?: string | null
           video_viewed_at?: string | null

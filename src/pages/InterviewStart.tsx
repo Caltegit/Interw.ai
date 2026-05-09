@@ -83,6 +83,67 @@ async function prepareMediaUrl(url: string): Promise<boolean> {
   return attempt();
 }
 
+async function extractVideoThumbnail(blob: Blob): Promise<Blob | null> {
+  const objectUrl = URL.createObjectURL(blob);
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.muted = true;
+  video.playsInline = true;
+
+  const waitForEvent = (target: HTMLVideoElement, eventName: "loadedmetadata" | "seeked") =>
+    new Promise<void>((resolve, reject) => {
+      const onSuccess = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error(`Échec chargement vidéo: ${eventName}`));
+      };
+      const cleanup = () => {
+        target.removeEventListener(eventName, onSuccess);
+        target.removeEventListener("error", onError);
+      };
+      target.addEventListener(eventName, onSuccess, { once: true });
+      target.addEventListener("error", onError, { once: true });
+    });
+
+  try {
+    video.src = objectUrl;
+    await waitForEvent(video, "loadedmetadata");
+
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    const targetTime = duration > 0 ? Math.min(1.5, Math.max(0.05, duration / 2)) : 0;
+    if (targetTime > 0) {
+      video.currentTime = targetTime;
+      await waitForEvent(video, "seeked");
+    }
+
+    const size = Math.min(video.videoWidth || 0, video.videoHeight || 0);
+    if (!size) return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 240;
+    canvas.height = 240;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    const sx = ((video.videoWidth || size) - size) / 2;
+    const sy = ((video.videoHeight || size) - size) / 2;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 240, 240);
+
+    return await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((result) => resolve(result), "image/jpeg", 0.82);
+    });
+  } catch (error) {
+    console.warn("[thumbnail] extraction impossible", error);
+    return null;
+  } finally {
+    video.src = "";
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function InterviewStart() {
   const { slug, token } = useParams();
   const navigate = useNavigate();
@@ -1405,12 +1466,12 @@ export default function InterviewStart() {
     async (
       sessionId: string,
       questionIndex: number,
-    ): Promise<{ videoUrl: string | null; audioUrl: string | null }> => {
+    ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
       const audioRecorder = questionAudioRecorderRef.current;
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
-        return { videoUrl: null, audioUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
       // Arrêt simultané vidéo + audio.
@@ -1435,7 +1496,7 @@ export default function InterviewStart() {
 
       if (questionVideoChunksRef.current.length === 0) {
         questionAudioChunksRef.current = [];
-        return { videoUrl: null, audioUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
       const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
@@ -1493,6 +1554,23 @@ export default function InterviewStart() {
         return null;
       })();
 
+      let thumbnailUrl: string | null = null;
+      const thumbnailBlob = await extractVideoThumbnail(blob);
+      if (thumbnailBlob) {
+        const thumbnailPath = `interviews/${sessionId}/thumbnail.jpg`;
+        try {
+          const { error: thumbError } = await supabase.storage
+            .from("media")
+            .upload(thumbnailPath, thumbnailBlob, { contentType: "image/jpeg", upsert: true });
+          if (!thumbError) {
+            const { data: thumbUrlData } = supabase.storage.from("media").getPublicUrl(thumbnailPath);
+            thumbnailUrl = thumbUrlData.publicUrl;
+          }
+        } catch (error) {
+          console.warn("[thumbnail] upload impossible", error);
+        }
+      }
+
       // Retry avec attente progressive (1 s, 3 s, 8 s) pour absorber les coupures réseau.
       const backoffs = [1000, 3000, 8000];
       let videoUrl: string | null = null;
@@ -1528,7 +1606,7 @@ export default function InterviewStart() {
         });
       }
       const audioUrl = await audioUploadPromise;
-      return { videoUrl, audioUrl };
+      return { videoUrl, audioUrl, thumbnailUrl };
     },
     [trackBackground],
   );

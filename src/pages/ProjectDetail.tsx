@@ -157,7 +157,7 @@ export default function ProjectDetail() {
     const loadSessionsAndReports = async () => {
       const { data: sList } = await supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, video_recording_url, thumbnail_url")
         .eq("project_id", id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -774,7 +774,7 @@ export default function ProjectDetail() {
                             </td>
                             <td className="py-3 max-w-[14rem]">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <SessionVideoThumb videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
+                                <SessionVideoThumb thumbnailUrl={(s as any).thumbnail_url} videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
                                 <div className="min-w-0">
                                   <p className="font-medium truncate">{s.candidate_name}</p>
                                   <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
