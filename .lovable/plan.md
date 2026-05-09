@@ -1,23 +1,20 @@
-## En-tête vignette plus compact
+## Vidéo d'introduction candidat plus haut sur l'écran
 
-Fichier : `src/components/project/SessionCard.tsx` (lignes 210–233)
+Fichier : `src/pages/InterviewLanding.tsx` (ligne 288)
 
-### Nouvelle disposition
+### Constat
+`CandidateLayout` utilise `<main className="flex-1 flex items-center justify-center …">` : tout le contenu est centré verticalement. Pour le cas vidéo, la lecture se retrouve trop bas, surtout sur mobile.
 
-```text
-+--------------------------------+
-|        Mahaut Tourriol         |
-|     [62 NOTE IA] · [Mitigé]    |
-+--------------------------------+
+### Changement
+Sur l'écran d'intro (`showIntroMedia`), uniquement quand `introMediaType === "video"`, ajouter `self-start mt-4 sm:mt-6` au conteneur racine pour aligner le bloc en haut du `<main>` plutôt qu'au centre.
+
+```tsx
+<div className={`${introMediaType === "video"
+  ? "max-w-2xl self-start mt-4 sm:mt-6"
+  : "max-w-md"} w-full animate-fade-in space-y-3`}>
 ```
 
-### Changements
-
-1. **Nom en haut**, centré, `text-base font-semibold`, lien vers la session.
-2. **Ligne unique en dessous** : pastille note + badge recommandation, centrés, `gap-2`.
-3. **Pastille note compacte horizontale** : remplacer le carré 14×14 par une puce arrondie en ligne — fond coloré (`scoreColor`), `rounded-full px-2 py-0.5`, contenu inline « **62**  NOTE IA » (chiffre `font-bold`, label `text-[9px] uppercase tracking-wide opacity-90`).
-4. **Suppression** de l'encadré avec bordure interne (`rounded-lg border bg-card p-3`) — on garde juste un `flex flex-col items-center gap-1` directement dans la carte pour gagner de la place.
-5. Conserver `hover:bg-muted/50` sur la `Card`.
+Réduire aussi le padding vertical de la `Card` interne pour le cas vidéo (`py-8` → `py-5`) pour gagner encore un peu de hauteur.
 
 ### Hors scope
-Pas de modification vidéo / sélecteur / boutons décision.
+Pas de modification audio / texte / TTS, ni du layout global.
