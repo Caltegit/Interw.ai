@@ -28,7 +28,9 @@ import {
   ChevronDown,
   Settings2,
   HelpCircle,
+  Globe,
 } from "lucide-react";
+import { detectBrowserCompat, type BrowserCompatResult } from "@/lib/browserCompat";
 import CandidateLayout from "@/components/CandidateLayout";
 import {
   classifyMediaError,
@@ -71,34 +73,6 @@ async function playBeep(): Promise<boolean> {
     try { await ctx.close(); } catch { /* ignore */ }
     return false;
   }
-}
-
-interface BrowserSupport {
-  supported: boolean;
-  reason?: string;
-}
-
-function detectUnsupportedBrowser(): BrowserSupport {
-  if (typeof navigator === "undefined") return { supported: true };
-  const ua = navigator.userAgent || "";
-  const inApp: Array<[RegExp, string]> = [
-    [/Instagram/i, "Instagram"],
-    [/FBAN|FBAV|FB_IAB/i, "Facebook"],
-    [/Snapchat/i, "Snapchat"],
-    [/musical_ly|TikTok|Bytedance/i, "TikTok"],
-    [/LinkedInApp/i, "LinkedIn"],
-    [/Line\//i, "Line"],
-  ];
-  for (const [re, name] of inApp) {
-    if (re.test(ua)) return { supported: false, reason: `Vous utilisez le navigateur intégré à ${name}. Il ne permet pas l'accès au micro et à la caméra.` };
-  }
-  if (/FxiOS/i.test(ua)) return { supported: false, reason: "Firefox sur iPhone ne permet pas l'enregistrement audio. Utilisez Safari." };
-  if (typeof window !== "undefined") {
-    if (!("MediaRecorder" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'enregistrement audio." };
-    if (!navigator.mediaDevices?.getUserMedia) return { supported: false, reason: "Votre navigateur ne permet pas l'accès au micro et à la caméra." };
-    if (!("AudioContext" in window) && !("webkitAudioContext" in window)) return { supported: false, reason: "Votre navigateur ne prend pas en charge l'audio Web." };
-  }
-  return { supported: true };
 }
 
 const MIC_LEVEL_THRESHOLD = 0.05;
@@ -180,8 +154,16 @@ export default function InterviewDeviceTest() {
 
   const [preSessionMessage, setPreSessionMessage] = useState<string | null>(null);
 
-  const browserSupport = useRef<BrowserSupport>(detectUnsupportedBrowser());
-  const [browserBlocked, setBrowserBlocked] = useState(!browserSupport.current.supported);
+  const browserCompat = useRef<BrowserCompatResult>(detectBrowserCompat());
+  const browserStatus: Status =
+    browserCompat.current.level === "ok"
+      ? "ok"
+      : browserCompat.current.level === "warning"
+      ? "warning"
+      : "error";
+  const [browserBypassed, setBrowserBypassed] = useState(false);
+  const browserBlocking = browserCompat.current.level === "blocked" && !browserBypassed;
+  const attemptIdRef = useRef<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
   const [micStatus, setMicStatus] = useState<Status>("idle");
@@ -452,7 +434,7 @@ export default function InterviewDeviceTest() {
 
   // ================== LIFECYCLE ==================
   useEffect(() => {
-    if (browserBlocked) return;
+    if (browserBlocking) return;
     let cancelled = false;
     (async () => {
       const perms = await queryPermissions();
@@ -482,14 +464,14 @@ export default function InterviewDeviceTest() {
       if (videoRef.current) videoRef.current.srcObject = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [browserBlocked]);
+  }, [browserBlocking]);
 
   useEffect(() => {
-    if (browserBlocked) return;
+    if (browserBlocking) return;
     const handler = () => { void refreshDevices(); };
     navigator.mediaDevices?.addEventListener?.("devicechange", handler);
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
-  }, [browserBlocked, refreshDevices]);
+  }, [browserBlocking, refreshDevices]);
 
   useEffect(() => {
     if (!slug) return;
@@ -499,6 +481,56 @@ export default function InterviewDeviceTest() {
       if (d?.pre_session_message?.trim()) setPreSessionMessage(d.pre_session_message.trim());
     })();
   }, [slug]);
+
+  // Journal de la tentative (user-agent + compatibilité navigateur)
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: sess } = await supabase
+          .from("sessions")
+          .select("id")
+          .eq("token", token)
+          .maybeSingle();
+        if (cancelled || !sess?.id) return;
+        const c = browserCompat.current;
+        const { data: inserted } = await supabase
+          .from("session_attempts")
+          .insert({
+            session_id: sess.id,
+            user_agent: c.userAgent,
+            browser: c.browser,
+            browser_version: c.browserVersion ?? null,
+            os: c.os,
+            device_type: c.deviceType,
+            is_in_app_webview: c.isInAppWebview,
+            webview_host: c.webviewHost ?? null,
+            compat_level: c.level,
+            block_reason: c.reason ?? null,
+            has_get_user_media: c.hasGetUserMedia,
+            has_media_recorder: c.hasMediaRecorder,
+            has_audio_context: c.hasAudioContext,
+            screen_w: window.screen?.width ?? null,
+            screen_h: window.screen?.height ?? null,
+            viewport_w: window.innerWidth ?? null,
+            viewport_h: window.innerHeight ?? null,
+            language: navigator.language ?? null,
+          })
+          .select("id")
+          .maybeSingle();
+        if (!cancelled && inserted?.id) attemptIdRef.current = inserted.id;
+      } catch { /* silencieux : ne doit jamais bloquer le candidat */ }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
+
+  const continueAnyway = useCallback(async () => {
+    setBrowserBypassed(true);
+    if (attemptIdRef.current) {
+      try { await supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current }); } catch { /* ignore */ }
+    }
+  }, []);
 
   // ================== HANDLERS ==================
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
@@ -527,10 +559,11 @@ export default function InterviewDeviceTest() {
     return "idle";
   }, [netStatus, netQuality]);
 
-  const allTests: Status[] = [camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const allTests: Status[] = [browserStatus, camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
   const verifiedCount = allTests.filter((s) => s === "ok" || s === "warning").length;
 
   const canContinue =
+    !browserBlocking &&
     (micStatus === "ok" || micStatus === "warning") &&
     camStatus === "ok" &&
     soundStatus === "ok" &&
@@ -552,41 +585,12 @@ export default function InterviewDeviceTest() {
       (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
     );
 
-  // ================== ÉCRAN BLOQUANT ==================
-  if (browserBlocked) {
-    return (
-      <CandidateLayout>
-        <div className="w-full max-w-lg space-y-6 animate-fade-in">
-          <div className="rounded-xl border bg-card p-6 space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/15">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
-              <h1 className="text-lg font-semibold">Navigateur non compatible</h1>
-            </div>
-            <p className="text-sm text-foreground">{browserSupport.current.reason}</p>
-            <p className="text-sm text-muted-foreground">
-              Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
-              <strong>Chrome</strong> (Android et ordinateur).
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button onClick={copyLink} variant="outline" className="w-full">
-                {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
-              </Button>
-              <button onClick={() => setBrowserBlocked(false)} className="text-xs text-muted-foreground hover:text-foreground underline mt-2">
-                Continuer quand même
-              </button>
-            </div>
-          </div>
-        </div>
-      </CandidateLayout>
-    );
-  }
+  // (L'écran 100% bloquant a été remplacé par la carte « Navigateur » dans la liste des tests.)
 
   // ================== UI PRINCIPALE ==================
   // La caméra n'est plus un segment de progression : elle est visible en permanence
   // dans le bandeau d'en-tête, son statut s'y lit directement.
-  const progressTests: Status[] = [micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const progressTests: Status[] = [browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
   const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
 
   return (
@@ -694,6 +698,48 @@ export default function InterviewDeviceTest() {
 
         {/* Liste verticale des tests */}
         <div className="space-y-2.5">
+          {/* Navigateur compatible */}
+          <TestCard
+            status={browserStatus}
+            title="Navigateur compatible"
+            icon={Globe}
+            fullWidth
+            forceExpanded={browserCompat.current.level !== "ok"}
+          >
+            {browserCompat.current.level === "ok" && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5" />
+                {browserCompat.current.browser}
+                {browserCompat.current.browserVersion ? ` ${browserCompat.current.browserVersion.split(".")[0]}` : ""}
+                {` sur ${browserCompat.current.os}`}
+              </p>
+            )}
+            {browserCompat.current.level === "warning" && browserCompat.current.reason && (
+              <p className="text-xs text-amber-600 dark:text-amber-400">{browserCompat.current.reason}</p>
+            )}
+            {browserCompat.current.level === "blocked" && (
+              <div className="space-y-3">
+                <p className="text-xs text-destructive">{browserCompat.current.reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
+                  <strong>Chrome</strong> (Android et ordinateur).
+                </p>
+                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                </Button>
+                {browserBlocking && (
+                  <button
+                    type="button"
+                    onClick={continueAnyway}
+                    className="block w-full text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Continuer quand même
+                  </button>
+                )}
+              </div>
+            )}
+          </TestCard>
+
           {/* Micro */}
           <TestCard
             status={micStatus}
