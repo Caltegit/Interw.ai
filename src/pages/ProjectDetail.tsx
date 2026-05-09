@@ -746,8 +746,8 @@ export default function ProjectDetail() {
                           />
                         </th>
                         <th className="pb-2 font-medium max-w-[14rem]">Candidat</th>
-                        <th className="pb-2 font-medium w-[7rem]">Sélection</th>
-                        <th className="pb-2 font-medium">Score</th>
+                        <th className="pb-2 pr-6 font-medium w-[7rem]">Sélection</th>
+                        <th className="pb-2 pl-2 font-medium">Score</th>
                         <th className="pb-2 font-medium">Date</th>
                         <th className="pb-2 font-medium hidden md:table-cell">Assignée à</th>
                         <th className="pb-2 font-medium min-w-[200px] hidden lg:table-cell">Note recruteur</th>
