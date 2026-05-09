@@ -772,8 +772,8 @@ export default function ProjectDetail() {
                                 aria-label="Sélectionner"
                               />
                             </td>
-                            <td className="py-3">
-                              <div className="flex items-center gap-2.5">
+                            <td className="py-3 max-w-[14rem]">
+                              <div className="flex items-center gap-2.5 min-w-0">
                                 <SessionVideoThumb videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
                                 <div className="min-w-0">
                                   <p className="font-medium truncate">{s.candidate_name}</p>
