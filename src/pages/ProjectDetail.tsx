@@ -787,10 +787,10 @@ export default function ProjectDetail() {
                               const meta = decisionByValue[current] ?? decisionByValue.none;
                               return (
                                 <Select value={current} onValueChange={(v) => updateDecision(s.id, v)}>
-                                  <SelectTrigger className={`h-8 w-[10.5rem] text-xs ${meta.text}`}>
-                                    <span className="flex items-center gap-2">
-                                      <span className={`inline-block h-2 w-2 rounded-full border ${meta.dot}`} />
-                                      {meta.label}
+                                  <SelectTrigger className={`h-8 w-[7rem] text-xs ${meta.text}`}>
+                                    <span className="flex items-center gap-1.5 min-w-0">
+                                      <span className={`inline-block h-2 w-2 rounded-full border shrink-0 ${meta.dot}`} />
+                                      <span className="truncate">{meta.label}</span>
                                     </span>
                                   </SelectTrigger>
                                   <SelectContent>
