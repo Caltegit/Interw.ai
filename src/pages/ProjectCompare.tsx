@@ -1,238 +1,456 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RecommendationBadge } from "@/components/RecommendationBadge";
-import { ArrowLeft } from "lucide-react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Trophy, X, ExternalLink, Sparkles, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { SessionCard } from "@/components/project/SessionCard";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
-const COLORS = ["#6366F1", "#EC4899", "#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6"];
-
-interface CandidateReport {
-  sessionId: string;
-  candidateName: string;
-  candidateEmail: string;
-  overallScore: number;
+interface ReportLite {
+  overall_score: number | null;
   recommendation: string | null;
-  criteriaScores: Record<string, { label: string; score: number; max: number }>;
+  executive_summary_short: string | null;
+  executive_summary: string | null;
+  strengths: string[] | null;
+  areas_for_improvement: string[] | null;
+  red_flags: any;
+  criteria_scores: Record<string, { label?: string; score: number; max: number }> | null;
+  soft_skills: any;
 }
+
+interface SessionFull {
+  id: string;
+  candidate_name: string;
+  candidate_email: string;
+  status: string;
+  recruiter_decision: string | null;
+  recruiter_note: string | null;
+  report: ReportLite | null;
+}
+
+const recoLabel: Record<string, string> = {
+  strong_yes: "Très favorable",
+  yes: "Favorable",
+  maybe: "Mitigé",
+  no: "Défavorable",
+};
 
 export default function ProjectCompare() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const ids = useMemo(
+    () => (searchParams.get("ids") ?? "").split(",").filter(Boolean).slice(0, 4),
+    [searchParams],
+  );
+
   const [project, setProject] = useState<any>(null);
-  const [candidates, setCandidates] = useState<CandidateReport[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionFull[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
-
-    const load = async () => {
-      const [pRes, sRes] = await Promise.all([
+    if (!id || ids.length === 0) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      const [pRes, qRes, sRes, rRes] = await Promise.all([
         supabase.from("projects").select("*").eq("id", id).single(),
-        supabase.from("sessions").select("id, candidate_name, candidate_email").eq("project_id", id).eq("status", "completed" as never),
+        supabase.from("questions").select("id, order_index, content").eq("project_id", id).order("order_index"),
+        supabase.from("sessions").select("id, candidate_name, candidate_email, status, recruiter_decision, recruiter_note").in("id", ids),
+        supabase.from("reports").select("session_id, overall_score, recommendation, executive_summary_short, executive_summary, strengths, areas_for_improvement, red_flags, criteria_scores, soft_skills").in("session_id", ids),
       ]);
 
       setProject(pRes.data);
-
-      if (!sRes.data?.length) {
-        setLoading(false);
-        return;
-      }
-
-      const sessionIds = sRes.data.map((s) => s.id);
-      const { data: reports } = await supabase
-        .from("reports")
-        .select("*")
-        .in("session_id", sessionIds);
-
-      const candidateReports: CandidateReport[] = (reports ?? []).map((r) => {
-        const session = sRes.data!.find((s) => s.id === r.session_id);
-        return {
-          sessionId: r.session_id,
-          candidateName: session?.candidate_name ?? "Inconnu",
-          candidateEmail: session?.candidate_email ?? "",
-          overallScore: Number(r.overall_score),
-          recommendation: r.recommendation,
-          criteriaScores: (r.criteria_scores as Record<string, any>) ?? {},
-        };
-      });
-
-      // Sort by overall score desc
-      candidateReports.sort((a, b) => b.overallScore - a.overallScore);
-      setCandidates(candidateReports);
+      setQuestions(qRes.data ?? []);
+      const reportsBySid = new Map((rRes.data ?? []).map((r: any) => [r.session_id, r]));
+      const ordered: SessionFull[] = ids
+        .map((sid) => {
+          const s = (sRes.data ?? []).find((x: any) => x.id === sid);
+          if (!s) return null;
+          const r: any = reportsBySid.get(sid);
+          return {
+            ...s,
+            report: r
+              ? {
+                  overall_score: r.overall_score != null ? Number(r.overall_score) : null,
+                  recommendation: r.recommendation,
+                  executive_summary_short: r.executive_summary_short,
+                  executive_summary: r.executive_summary,
+                  strengths: r.strengths,
+                  areas_for_improvement: r.areas_for_improvement,
+                  red_flags: r.red_flags,
+                  criteria_scores: r.criteria_scores,
+                  soft_skills: r.soft_skills,
+                }
+              : null,
+          } as SessionFull;
+        })
+        .filter(Boolean) as SessionFull[];
+      setSessions(ordered);
       setLoading(false);
-    };
+    })();
+  }, [id, ids]);
 
-    load();
-  }, [id]);
+  const handleDecisionChange = async (sessionId: string, decision: string) => {
+    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+    const { error } = await supabase
+      .from("sessions")
+      .update({ recruiter_decision: decision as any })
+      .eq("id", sessionId);
+    if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
+  };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
-  if (!project) return <p>Projet introuvable</p>;
+  const removeColumn = (sid: string) => {
+    const remaining = ids.filter((x) => x !== sid);
+    if (remaining.length < 2) {
+      navigate(`/projects/${id}`);
+      return;
+    }
+    navigate(`/projects/${id}/compare?ids=${remaining.join(",")}`);
+  };
 
-  // Build radar data from criteria
-  const criteriaLabels = new Set<string>();
-  candidates.forEach((c) =>
-    Object.entries(c.criteriaScores).forEach(([, val]) => criteriaLabels.add(val.label || "Critère"))
+  // Best score per criterion (label-based)
+  const bestByCriterion = useMemo(() => {
+    const map = new Map<string, number>();
+    sessions.forEach((s) => {
+      Object.values(s.report?.criteria_scores ?? {}).forEach((c) => {
+        const pct = c.max ? c.score / c.max : 0;
+        const label = c.label || "Critère";
+        if (!map.has(label) || pct > map.get(label)!) map.set(label, pct);
+      });
+    });
+    return map;
+  }, [sessions]);
+
+  const allCriteriaLabels = useMemo(() => {
+    const set = new Set<string>();
+    sessions.forEach((s) =>
+      Object.values(s.report?.criteria_scores ?? {}).forEach((c) => set.add(c.label || "Critère")),
+    );
+    return Array.from(set);
+  }, [sessions]);
+
+  const bestScore = useMemo(
+    () =>
+      sessions.reduce<number | null>((acc, s) => {
+        const v = s.report?.overall_score ?? null;
+        if (v == null) return acc;
+        return acc == null ? v : Math.max(acc, v);
+      }, null),
+    [sessions],
   );
 
-  const radarData = Array.from(criteriaLabels).map((label) => {
-    const entry: Record<string, any> = { criterion: label };
-    candidates.forEach((c) => {
-      const match = Object.values(c.criteriaScores).find((v) => (v.label || "Critère") === label);
-      entry[c.candidateName] = match ? Math.round((match.score / match.max) * 100) : 0;
-    });
-    return entry;
-  });
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-          <Link to={`/projects/${project.id}`}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  if (!project) return <p>Projet introuvable</p>;
+  if (sessions.length === 0)
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link to={`/projects/${id}`}>
+            <ArrowLeft className="mr-1 h-4 w-4" /> Retour
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold">Comparaison des candidats</h1>
-        <p className="text-muted-foreground">{project.title}</p>
+        <p className="text-muted-foreground">Aucun candidat sélectionné.</p>
+      </div>
+    );
+
+  // Grid columns based on count
+  const gridCols =
+    sessions.length === 2
+      ? "md:grid-cols-2"
+      : sessions.length === 3
+      ? "md:grid-cols-2 xl:grid-cols-3"
+      : "md:grid-cols-2 xl:grid-cols-4";
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <Button variant="ghost" size="sm" asChild className="mb-1 -ml-2">
+            <Link to={`/projects/${id}`}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+            </Link>
+          </Button>
+          <h1 className="text-2xl font-bold">Comparaison</h1>
+          <p className="text-sm text-muted-foreground">
+            {project.title} · {sessions.length} candidat{sessions.length > 1 ? "s" : ""}
+            {bestScore != null && <> · Meilleur score : {Math.round(bestScore)}%</>}
+          </p>
+        </div>
       </div>
 
-      {candidates.length === 0 ? (
+      <div className={cn("grid gap-4 grid-cols-1", gridCols)}>
+        {sessions.map((s) => (
+          <CompareColumn
+            key={s.id}
+            session={s}
+            questions={questions}
+            allCriteriaLabels={allCriteriaLabels}
+            bestByCriterion={bestByCriterion}
+            isBestScore={s.report?.overall_score != null && s.report.overall_score === bestScore}
+            onDecisionChange={handleDecisionChange}
+            onRemove={() => removeColumn(s.id)}
+            canRemove={sessions.length > 2}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CompareColumn({
+  session,
+  questions,
+  allCriteriaLabels,
+  bestByCriterion,
+  isBestScore,
+  onDecisionChange,
+  onRemove,
+  canRemove,
+}: {
+  session: SessionFull;
+  questions: any[];
+  allCriteriaLabels: string[];
+  bestByCriterion: Map<string, number>;
+  isBestScore: boolean;
+  onDecisionChange: (sid: string, dec: string) => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const r = session.report;
+  const reco = r?.recommendation ? recoLabel[r.recommendation] : null;
+
+  // Note recruteur — debounced save
+  const [note, setNote] = useState(session.recruiter_note ?? "");
+  const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
+  const timerRef = useRef<number | null>(null);
+  const initialRef = useRef(session.recruiter_note ?? "");
+
+  useEffect(() => {
+    if (note === initialRef.current) return;
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    setSaving("saving");
+    timerRef.current = window.setTimeout(async () => {
+      const { error } = await supabase
+        .from("sessions")
+        .update({ recruiter_note: note })
+        .eq("id", session.id);
+      if (!error) {
+        initialRef.current = note;
+        setSaving("saved");
+        window.setTimeout(() => setSaving("idle"), 1500);
+      } else {
+        setSaving("idle");
+      }
+    }, 800);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [note, session.id]);
+
+  // Build criteria rows aligned on allCriteriaLabels
+  const criteriaByLabel = useMemo(() => {
+    const m = new Map<string, { score: number; max: number }>();
+    Object.values(r?.criteria_scores ?? {}).forEach((c) => {
+      m.set(c.label || "Critère", { score: c.score, max: c.max });
+    });
+    return m;
+  }, [r]);
+
+  const softSkills: string[] = useMemo(() => {
+    const ss = r?.soft_skills;
+    if (!ss) return [];
+    if (Array.isArray(ss)) return ss.map((x: any) => (typeof x === "string" ? x : x?.label)).filter(Boolean);
+    if (typeof ss === "object") return Object.keys(ss);
+    return [];
+  }, [r]);
+
+  return (
+    <div className="relative flex flex-col gap-3">
+      {canRemove && (
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className="absolute -top-2 -right-2 z-10 h-7 w-7 rounded-full bg-background shadow-sm"
+          onClick={onRemove}
+          aria-label="Retirer ce candidat"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
+
+      {isBestScore && r?.overall_score != null && (
+        <div className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
+          <Trophy className="h-3.5 w-3.5" /> Meilleur score
+        </div>
+      )}
+
+      {/* 1. Bloc SessionCard */}
+      <SessionCard
+        session={session}
+        report={r ? { overall_score: r.overall_score, recommendation: r.recommendation } : null}
+        questions={questions}
+        onDecisionChange={onDecisionChange}
+      />
+
+      {/* 2. Note recruteur */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-sm">
+            Note recruteur
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {saving === "saving" && "Enregistrement…"}
+              {saving === "saved" && "Enregistré"}
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Vos impressions, points à creuser…"
+            rows={3}
+            className="resize-none text-sm"
+          />
+        </CardContent>
+      </Card>
+
+      {/* 3. Synthèse rapport */}
+      {r ? (
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Aucun candidat avec un rapport généré pour ce projet.
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-1.5 text-sm">
+              <Sparkles className="h-4 w-4 text-primary" /> Synthèse IA
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {r.executive_summary_short && (
+              <p className="text-foreground leading-relaxed">{r.executive_summary_short}</p>
+            )}
+            {reco && (
+              <div className="text-xs text-muted-foreground">
+                Recommandation : <span className="font-medium text-foreground">{reco}</span>
+              </div>
+            )}
+
+            {r.strengths && r.strengths.length > 0 && (
+              <div>
+                <p className="mb-1 text-xs font-semibold text-success">Points forts</p>
+                <ul className="space-y-1">
+                  {r.strengths.slice(0, 3).map((s, i) => (
+                    <li key={i} className="flex gap-1.5 text-xs text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-success" />
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {r.areas_for_improvement && r.areas_for_improvement.length > 0 && (
+              <div>
+                <p className="mb-1 text-xs font-semibold text-warning">Points de vigilance</p>
+                <ul className="space-y-1">
+                  {r.areas_for_improvement.slice(0, 3).map((s, i) => (
+                    <li key={i} className="flex gap-1.5 text-xs text-muted-foreground">
+                      <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0 text-warning" />
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <>
-          {/* Ranking table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Classement</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 font-medium w-10">#</th>
-                      <th className="pb-2 font-medium">Candidat</th>
-                      <th className="pb-2 font-medium">Score</th>
-                      <th className="pb-2 font-medium">Recommandation</th>
-                      <th className="pb-2 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.map((c, i) => (
-                      <tr key={c.sessionId} className="border-b last:border-0">
-                        <td className="py-3">
-                          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                            i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                          }`}>
-                            {i + 1}
-                          </span>
-                        </td>
-                        <td className="py-3">
-                          <p className="font-medium">{c.candidateName}</p>
-                          <p className="text-xs text-muted-foreground">{c.candidateEmail}</p>
-                        </td>
-                        <td className="py-3">
-                          <Badge variant={c.overallScore >= 70 ? "default" : c.overallScore >= 50 ? "secondary" : "destructive"}>
-                            {c.overallScore}%
-                          </Badge>
-                        </td>
-                        <td className="py-3">
-                          <RecommendationBadge recommendation={c.recommendation} />
-                        </td>
-                        <td className="py-3">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/sessions/${c.sessionId}`}>Détails</Link>
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Radar chart */}
-          {radarData.length > 0 && candidates.length >= 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Comparaison par critère</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={radarData}>
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="criterion" tick={{ fontSize: 12 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      {candidates.map((c, i) => (
-                        <Radar
-                          key={c.sessionId}
-                          name={c.candidateName}
-                          dataKey={c.candidateName}
-                          stroke={COLORS[i % COLORS.length]}
-                          fill={COLORS[i % COLORS.length]}
-                          fillOpacity={0.15}
-                        />
-                      ))}
-                      <Legend />
-                      <Tooltip />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Criteria breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Détail par critère</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 font-medium">Critère</th>
-                      {candidates.map((c) => (
-                        <th key={c.sessionId} className="pb-2 font-medium">{c.candidateName}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from(criteriaLabels).map((label) => (
-                      <tr key={label} className="border-b last:border-0">
-                        <td className="py-2 font-medium">{label}</td>
-                        {candidates.map((c) => {
-                          const match = Object.values(c.criteriaScores).find((v) => (v.label || "Critère") === label);
-                          const pct = match ? Math.round((match.score / match.max) * 100) : 0;
-                          return (
-                            <td key={c.sessionId} className="py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-16 rounded-full bg-muted">
-                                  <div className="h-2 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-xs">{match ? `${match.score}/${match.max}` : "—"}</span>
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </>
+        <Card>
+          <CardContent className="py-6 text-center text-xs text-muted-foreground">
+            Aucun rapport disponible.
+          </CardContent>
+        </Card>
       )}
+
+      {/* 4. Scores par critère */}
+      {allCriteriaLabels.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Scores par critère</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {allCriteriaLabels.map((label) => {
+              const c = criteriaByLabel.get(label);
+              const pct = c && c.max ? c.score / c.max : null;
+              const isBest = pct != null && bestByCriterion.get(label) === pct && pct > 0;
+              return (
+                <div
+                  key={label}
+                  className={cn(
+                    "rounded-md px-2 py-1.5 transition-colors",
+                    isBest && "bg-success/10",
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="flex items-center gap-1 truncate">
+                      {isBest && <Trophy className="h-3 w-3 shrink-0 text-success" />}
+                      <span className="truncate">{label}</span>
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {c ? `${c.score}/${c.max}` : "—"}
+                    </span>
+                  </div>
+                  {pct != null && (
+                    <div className="mt-1 h-1.5 rounded-full bg-muted">
+                      <div
+                        className={cn("h-1.5 rounded-full", isBest ? "bg-success" : "bg-primary")}
+                        style={{ width: `${Math.round(pct * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 5. Soft skills */}
+      {softSkills.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Soft skills</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-1.5">
+              {softSkills.map((ss, i) => (
+                <Badge key={i} variant="secondary" className="text-[11px]">
+                  {ss}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 6. Lien rapport */}
+      <Button variant="outline" size="sm" asChild>
+        <Link to={`/sessions/${session.id}`}>
+          Voir le rapport complet <ExternalLink className="ml-1 h-3 w-3" />
+        </Link>
+      </Button>
     </div>
   );
 }
