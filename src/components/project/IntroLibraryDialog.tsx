@@ -46,11 +46,13 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
       setLoading(false);
       return;
     }
+    // Quand on demande "text", on inclut aussi les intros TTS (qui ont un intro_text)
+    const typesFilter = type === "text" ? ["text", "tts"] : [type];
     const { data, error } = await supabase
       .from("intro_templates" as never)
       .select("*")
       .eq("organization_id", orgId)
-      .eq("type", type)
+      .in("type", typesFilter)
       .order("created_at", { ascending: false });
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -98,11 +100,17 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
                         <p className="text-xs text-muted-foreground">{item.description}</p>
                       )}
                     </div>
-                    <Badge variant="secondary">
-                      <Icon className="mr-1 h-3 w-3" /> {meta.label}
-                    </Badge>
+                    {(() => {
+                      const itemMeta = INTRO_FORMAT_META[item.type] ?? meta;
+                      const ItemIcon = itemMeta.icon;
+                      return (
+                        <Badge variant="secondary">
+                          <ItemIcon className="mr-1 h-3 w-3" /> {itemMeta.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
-                  {(type === "text" || type === "tts") && item.intro_text && (
+                  {(item.type === "text" || item.type === "tts") && item.intro_text && (
                     <p className="text-sm whitespace-pre-wrap line-clamp-4 rounded-md bg-muted/40 p-2">
                       {item.intro_text}
                     </p>
