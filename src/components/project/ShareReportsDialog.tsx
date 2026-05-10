@@ -80,7 +80,7 @@ export function ShareReportsDialog({
       });
       const text =
         `Bonjour,\n\nVoici les candidats intéressants à regarder :\n\n` +
-        lines.join("\n") +
+        lines.join("\n\n") +
         `\n\nN'hésite pas à me faire un retour.\n\nMerci,`;
       setSubject(`Rapports candidats - ${projectTitle}`);
       setBody(text);
