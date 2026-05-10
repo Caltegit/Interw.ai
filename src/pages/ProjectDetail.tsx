@@ -727,6 +727,7 @@ export default function ProjectDetail() {
                     onClear={clearSelection}
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
+                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
                   />
                 )}
                 <div className="overflow-x-auto">
