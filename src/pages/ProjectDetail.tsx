@@ -219,7 +219,7 @@ export default function ProjectDetail() {
       supabase
         .from("projects")
         .select(
-          "id, title, description, slug, status, language, ai_persona_name, ai_voice, max_duration_minutes, record_audio, record_video, organization_id, created_by, job_title, avatar_image_url, intro_audio_url",
+          "id, title, slug, status, language, ai_persona_name, ai_voice, max_duration_minutes, record_audio, record_video, organization_id, created_by, job_title, avatar_image_url, intro_audio_url",
         )
         .eq("id", id)
         .single(),
@@ -371,7 +371,6 @@ export default function ProjectDetail() {
           created_by: user.id,
           title: `${project.title} (copie)`,
           job_title: project.job_title,
-          description: project.description,
           language: project.language,
           ai_persona_name: project.ai_persona_name,
           ai_voice: project.ai_voice,

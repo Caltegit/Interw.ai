@@ -5,7 +5,6 @@ import { queryKeys } from "@/lib/queryClient";
 export interface ProjectListItem {
   id: string;
   title: string;
-  description: string;
   status: string;
   slug: string | null;
   created_at: string;
@@ -15,7 +14,7 @@ export interface ProjectListItem {
 async function fetchProjects(): Promise<ProjectListItem[]> {
   const { data, error } = await supabase
     .from("projects")
-    .select("id, title, description, status, slug, created_at, sessions(count)")
+    .select("id, title, status, slug, created_at, sessions(count)")
     .order("created_at", { ascending: false });
 
   if (error) throw error;

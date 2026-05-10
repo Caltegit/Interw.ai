@@ -16,7 +16,6 @@ interface Project {
   id: string;
   title: string;
   job_title: string;
-  description: string;
   slug: string | null;
 }
 
@@ -45,7 +44,7 @@ export default function OrgPublic() {
 
       const { data: projectsData } = await supabase
         .from("projects")
-        .select("id, title, job_title, description, slug")
+        .select("id, title, job_title, slug")
         .eq("organization_id", orgData.id)
         .eq("status", "active")
         .order("created_at", { ascending: false });
@@ -106,9 +105,6 @@ export default function OrgPublic() {
                   <CardTitle className="text-lg">{p.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {p.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-3">{p.description}</p>
-                  )}
                   {p.slug && (
                     <Button asChild size="sm">
                       <Link to={`/session/${p.slug}`}>
