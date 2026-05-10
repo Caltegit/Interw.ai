@@ -125,20 +125,20 @@ export default function SessionDetail() {
   );
 
   useEffect(() => {
-    if (report?.id && !notesInitialized) {
-      setRecruiterNotes(report.recruiter_notes ?? "");
+    if (session?.id && !notesInitialized) {
+      setRecruiterNotes(session.recruiter_note ?? "");
       setNotesInitialized(true);
     }
-  }, [report?.id, report?.recruiter_notes, notesInitialized]);
+  }, [session?.id, session?.recruiter_note, notesInitialized]);
 
   useEffect(() => {
-    if (!report?.id || !notesInitialized) return;
-    if ((report.recruiter_notes ?? "") === recruiterNotes) return;
+    if (!session?.id || !notesInitialized) return;
+    if ((session.recruiter_note ?? "") === recruiterNotes) return;
     const t = setTimeout(() => {
-      updateNotes.mutate({ reportId: report.id, notes: recruiterNotes });
+      updateNotes.mutate({ notes: recruiterNotes });
     }, 1000);
     return () => clearTimeout(t);
-  }, [recruiterNotes, report?.id, report?.recruiter_notes, notesInitialized]);
+  }, [recruiterNotes, session?.id, session?.recruiter_note, notesInitialized]);
 
   const handleShare = async () => {
     if (!report?.id || !user) return;
