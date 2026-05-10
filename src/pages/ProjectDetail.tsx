@@ -41,8 +41,8 @@ import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsBar({
-  count, onClear, onEmail, onDelete, onCompare,
-}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void }) {
+  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
   const canCompare = count >= 2 && count <= 4;
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
@@ -55,6 +55,13 @@ function BulkActionsBar({
         <DropdownMenuContent align="start">
           <DropdownMenuItem onClick={onEmail}>
             <Mail className="mr-2 h-4 w-4" /> Envoyer un email
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onShareReports} disabled={!canShareReports}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Partager les rapports
+            {!canShareReports && (
+              <span className="ml-2 text-xs text-muted-foreground">Aucun rapport</span>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onCompare}
