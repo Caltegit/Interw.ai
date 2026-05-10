@@ -63,3 +63,4 @@ export const template = {
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = { padding: '24px', maxWidth: '640px', margin: '0 auto' }
 const text = { fontSize: '14px', color: '#374151', lineHeight: '1.6', margin: '0 0 14px' }
+const link = { color: '#6366F1', textDecoration: 'underline' }
