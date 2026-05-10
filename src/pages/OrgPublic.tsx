@@ -44,7 +44,7 @@ export default function OrgPublic() {
 
       const { data: projectsData } = await supabase
         .from("projects")
-        .select("id, title, job_title, description, slug")
+        .select("id, title, job_title, slug")
         .eq("organization_id", orgData.id)
         .eq("status", "active")
         .order("created_at", { ascending: false });
