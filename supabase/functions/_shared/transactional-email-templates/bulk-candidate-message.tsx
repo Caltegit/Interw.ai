@@ -10,6 +10,19 @@ interface BulkCandidateMessageProps {
   firstName?: string
 }
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+
+const renderWithLinks = (text: string, keyPrefix: string) => {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <Link key={`${keyPrefix}-${i}`} href={part} style={link}>{part}</Link>
+    ) : (
+      <React.Fragment key={`${keyPrefix}-${i}`}>{part}</React.Fragment>
+    ),
+  )
+}
+
 const BulkCandidateMessageEmail = ({
   body = '',
 }: BulkCandidateMessageProps) => {
@@ -24,7 +37,7 @@ const BulkCandidateMessageEmail = ({
             <Text key={i} style={text}>
               {p.split('\n').map((line, j, arr) => (
                 <React.Fragment key={j}>
-                  {line}
+                  {renderWithLinks(line, `${i}-${j}`)}
                   {j < arr.length - 1 ? <br /> : null}
                 </React.Fragment>
               ))}
