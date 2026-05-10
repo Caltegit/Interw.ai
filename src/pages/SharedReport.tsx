@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Play, FileText } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
-import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
+
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
 import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
