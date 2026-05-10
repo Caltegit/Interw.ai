@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Mail } from "lucide-react";
 
 export interface CandidateRecipient {
@@ -87,6 +88,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
   const [dirty, setDirty] = useState(false);
   const [allowReply, setAllowReply] = useState(true);
   const [replyTo, setReplyTo] = useState("");
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
 
   useEffect(() => {
     if (open && user?.email) setReplyTo(user.email);
@@ -120,6 +122,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
     setSubject(`${t.subject} - ${projectTitle}`);
     setBody(t.body);
     setDirty(false);
+    setSaveAsDefault(false);
   }, [open, selectedKey, templates, projectTitle]);
 
   const validRecipients = recipients.filter((r) => !!r.candidate_email);
@@ -175,6 +178,28 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
         .from("sessions")
         .update({ last_candidate_email_key: selectedKey })
         .in("id", successIds);
+    }
+    if (saveAsDefault && organizationId && ok > 0) {
+      const suffix = ` - ${projectTitle}`;
+      const rawSubject = subject.endsWith(suffix) ? subject.slice(0, -suffix.length) : subject;
+      const { error: saveError } = await supabase
+        .from("candidate_message_templates")
+        .upsert(
+          {
+            organization_id: organizationId,
+            key: selectedKey,
+            subject: rawSubject,
+            body,
+          },
+          { onConflict: "organization_id,key" }
+        );
+      if (saveError) {
+        console.error("save_template_failed", saveError);
+      } else {
+        setTemplates((prev) =>
+          prev.map((t) => (t.key === selectedKey ? { ...t, subject: rawSubject, body } : t))
+        );
+      }
     }
     if (failed === 0) {
       toast({ title: `Email envoyé à ${ok} candidat(s)` });
@@ -273,6 +298,16 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               }}
               rows={10}
             />
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox
+                id="bulk-save-default"
+                checked={saveAsDefault}
+                onCheckedChange={(v) => setSaveAsDefault(v === true)}
+              />
+              <Label htmlFor="bulk-save-default" className="cursor-pointer text-sm font-normal">
+                Garder ce texte en mémoire pour les prochains messages
+              </Label>
+            </div>
           </div>
         </div>
 
