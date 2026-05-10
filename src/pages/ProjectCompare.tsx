@@ -293,11 +293,6 @@ function CompareColumn({
         </Button>
       )}
 
-      {isBestScore && r?.overall_score != null && (
-        <div className="flex items-center gap-1 rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">
-          <Trophy className="h-3.5 w-3.5" /> Meilleur score
-        </div>
-      )}
 
       {/* 1. Bloc SessionCard */}
       <SessionCard
