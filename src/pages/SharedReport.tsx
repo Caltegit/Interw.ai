@@ -239,7 +239,7 @@ export default function SharedReport() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
-        <div>
+        <div className="order-2 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="decision" className="gap-1">
@@ -355,7 +355,7 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
         </div>
       </div>

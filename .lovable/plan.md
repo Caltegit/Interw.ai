@@ -1,22 +1,11 @@
 ## Objectif
+Sur mobile, dans la page de rapport partagé (`/shared-report/:token`), la colonne vidéo est actuellement affichée **après** les onglets (Décision / Réponses / Transcription). On veut qu'elle apparaisse **en premier**, au-dessus des onglets, sur mobile uniquement. Le layout desktop (vidéo sticky à droite) reste inchangé.
 
-Ajouter le choix du « Répondre à » dans la pop-up de partage des rapports, pour que l'utilisateur puisse choisir entre :
-- pas de réponse possible (no-reply, par défaut désactivé)
-- son propre email de compte (par défaut quand le toggle est activé)
-- un autre email saisi manuellement
+## Changement
+Dans `src/pages/SharedReport.tsx`, sur le conteneur `grid lg:grid-cols-[1fr_510px]` :
+- Ajouter `order-2 lg:order-1` à la colonne des onglets
+- Ajouter `order-1 lg:order-2` à la colonne vidéo (`SessionVideoNavigator`)
 
-## Modifications
+Résultat : sur mobile, la vignette vidéo s'affiche juste sous le `DecisionBanner`, avant les onglets. Sur desktop (≥ lg), l'ordre actuel est préservé grâce à `lg:order-*`.
 
-Dans `src/components/project/ShareReportsDialog.tsx` :
-
-1. Ajouter un toggle (Switch) « Autoriser une réponse »
-   - Désactivé = no-reply (aucun `replyTo` envoyé)
-   - Activé = un champ email apparaît, pré-rempli avec l'email du compte connecté (`user.email`), modifiable
-
-2. Validation : si le toggle est activé, valider le format de l'email avant envoi
-
-3. Passer `replyTo` dans le `templateData` / body de l'appel `supabase.functions.invoke("send-transactional-email", ...)` uniquement si le toggle est activé
-
-## Backend
-
-Aucun changement nécessaire : la fonction `send-transactional-email` accepte déjà le paramètre `replyTo`.
+Aucune autre modification (pas de logique métier, pas de changement de données).
