@@ -41,6 +41,8 @@ export function ShareReportsDialog({
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
