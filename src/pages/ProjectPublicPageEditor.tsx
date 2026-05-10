@@ -117,18 +117,6 @@ export default function ProjectPublicPageEditor() {
     toast({ title: next ? "Page activée" : "Page désactivée" });
   };
 
-  const handleCoverUpload = async (file: File) => {
-    if (!projectId) return;
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `public-pages/${projectId}/cover-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type, upsert: true });
-    if (error) {
-      toast({ title: "Échec téléversement", description: error.message, variant: "destructive" });
-      return;
-    }
-    const { data } = supabase.storage.from("media").getPublicUrl(path);
-    setPage((p) => ({ ...p, cover_image_url: data.publicUrl }));
-  };
 
   if (loading) {
     return (
