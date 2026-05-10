@@ -184,7 +184,7 @@ export default function ProjectDetail() {
     const loadSessionsAndReports = async () => {
       const { data: sList } = await supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_note, video_recording_url, thumbnail_url")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
         .eq("project_id", id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -907,17 +907,38 @@ export default function ProjectDetail() {
                                   <Copy className="mr-1 h-3 w-3" /> Relancer
                                 </Button>
                               )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Envoyer un email"
-                                onClick={() => {
-                                  setSelectedIds(new Set([s.id]));
-                                  setBulkEmailOpen(true);
-                                }}
-                              >
-                                <Mail className="h-3 w-3" />
-                              </Button>
+                              {(() => {
+                                const k = (s as any).last_candidate_email_key as string | null;
+                                const colorClass =
+                                  k === "candidate-refusal"
+                                    ? "text-destructive"
+                                    : k === "candidate-new-interview"
+                                      ? "text-success"
+                                      : k === "candidate-more-info"
+                                        ? "text-warning"
+                                        : "";
+                                const titleText =
+                                  k === "candidate-refusal"
+                                    ? "Refus envoyé"
+                                    : k === "candidate-new-interview"
+                                      ? "Nouvel entretien envoyé"
+                                      : k === "candidate-more-info"
+                                        ? "Infos complémentaires envoyées"
+                                        : "Envoyer un email";
+                                return (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title={titleText}
+                                    onClick={() => {
+                                      setSelectedIds(new Set([s.id]));
+                                      setBulkEmailOpen(true);
+                                    }}
+                                  >
+                                    <Mail className={`h-3 w-3 ${colorClass}`} />
+                                  </Button>
+                                );
+                              })()}
                               {false && (<AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">

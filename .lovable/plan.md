@@ -1,14 +1,33 @@
 ## Objectif
-Ajouter au dialogue « Envoyer un email aux candidats sélectionnés » (`BulkEmailDialog`) la même section « Autoriser une réponse » que dans `ShareReportsDialog`, avec un switch et un champ email pré-rempli avec l'email de l'utilisateur connecté.
 
-## Modifications dans `src/components/project/BulkEmailDialog.tsx`
+Sur la liste des candidats d'un projet, l'icône enveloppe à droite de chaque ligne doit refléter le dernier modèle d'email envoyé au candidat :
 
-1. Importer `useAuth` depuis `@/contexts/AuthContext` et `Switch` depuis `@/components/ui/switch`.
-2. Ajouter deux états : `allowReply` (bool, défaut `true`) et `replyTo` (string).
-3. Pré-remplir `replyTo` avec `user.email` à l'ouverture du dialogue.
-4. Insérer le bloc UI (switch + input email conditionnel) entre l'objet et le message, copié du style de `ShareReportsDialog`.
-5. Dans `handleSend` :
-   - Valider l'adresse `replyTo` si `allowReply` est actif (toast d'erreur sinon).
-   - Ajouter `replyTo: replyToTrimmed` dans le `body` de chaque appel `supabase.functions.invoke('send-transactional-email', ...)` quand `allowReply` est vrai.
+- Rouge → Refus
+- Vert → Nouvel entretien
+- Orange → Infos complémentaires
+- Couleur neutre par défaut (aucun email envoyé)
 
-Aucun changement côté Edge Function — `send-transactional-email` accepte déjà le champ `replyTo` (utilisé par `ShareReportsDialog`).
+## Étapes
+
+1. **Base de données**
+   - Ajouter une colonne `last_candidate_email_key text` sur la table `sessions` (nullable, valeurs attendues : `candidate-refusal`, `candidate-new-interview`, `candidate-more-info`).
+
+2. **Envoi de l'email (`BulkEmailDialog.tsx`)**
+   - Après un envoi réussi, mettre à jour `sessions.last_candidate_email_key = selectedKey` pour chaque destinataire ayant reçu l'email.
+   - Appeler `onSent` (déjà existant) pour rafraîchir la liste côté `ProjectDetail`.
+
+3. **Affichage de l'icône (`ProjectDetail.tsx`)**
+   - Charger `last_candidate_email_key` avec les sessions.
+   - Appliquer une classe de couleur sur l'icône `Mail` selon la valeur :
+     - `candidate-refusal` → `text-destructive`
+     - `candidate-new-interview` → `text-success` (token existant ou ajout d'un token vert)
+     - `candidate-more-info` → `text-warning` (token existant ou ajout d'un token orange)
+     - Sinon : couleur par défaut.
+   - Ajouter un `title` dynamique indiquant le type d'email envoyé.
+   - Rafraîchir la liste après envoi (via `onSent` qui rejoue le fetch des sessions).
+
+## Détails techniques
+
+- La colonne est mise à jour côté client (RLS doit permettre au RH de mettre à jour ses propres sessions — à vérifier ; sinon ajouter une RPC `set_session_last_email_key`).
+- Vérifier les tokens `success` / `warning` dans `index.css` / `tailwind.config.ts` ; les ajouter si absents pour rester conforme au design system (HSL, semantic tokens).
+- Aucun changement sur l'envoi vers les rapports partagés ni sur les autres dialogues.

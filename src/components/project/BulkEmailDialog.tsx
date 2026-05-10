@@ -164,6 +164,18 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       (r) => r.status === "rejected" || (r as any).value?.error
     ).length;
     const ok = results.length - failed;
+    const successIds = validRecipients
+      .filter((_, i) => {
+        const r = results[i];
+        return r.status === "fulfilled" && !(r as any).value?.error;
+      })
+      .map((r) => r.id);
+    if (successIds.length > 0) {
+      await supabase
+        .from("sessions")
+        .update({ last_candidate_email_key: selectedKey })
+        .in("id", successIds);
+    }
     if (failed === 0) {
       toast({ title: `Email envoyé à ${ok} candidat(s)` });
     } else {
