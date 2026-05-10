@@ -33,6 +33,15 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
     },
   });
 
+  useEffect(() => {
+    if (!editor) return;
+    const current = JSON.stringify(editor.getJSON());
+    const incoming = JSON.stringify(value ?? {});
+    if (current !== incoming && value && Object.keys(value).length) {
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+  }, [value, editor]);
+
   if (!editor) return null;
 
   const uploadImage = async (file: File) => {
