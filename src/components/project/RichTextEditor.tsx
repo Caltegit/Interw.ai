@@ -24,6 +24,7 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
       StarterKit,
       Image.configure({ HTMLAttributes: { class: "rounded-lg my-4 max-w-full" } }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
+      TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
     ],
     content: value && Object.keys(value).length ? value : "<p></p>",
     onUpdate: ({ editor }) => onChange(editor.getJSON()),
