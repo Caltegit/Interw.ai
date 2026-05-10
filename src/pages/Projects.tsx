@@ -127,9 +127,6 @@ export default function Projects() {
                       <TableCell className="font-medium">
                         <div className="min-w-0">
                           <div className="truncate">{project.title}</div>
-                          {project.description && (
-                            <div className="text-xs text-muted-foreground truncate max-w-md">{project.description}</div>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
