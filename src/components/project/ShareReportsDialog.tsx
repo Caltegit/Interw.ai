@@ -102,9 +102,28 @@ export function ShareReportsDialog({
     }
   };
 
-  const handleMailto = () => {
-    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = url;
+  const handleSend = async () => {
+    const email = recipientEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ title: "Email invalide", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    const { error } = await supabase.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "bulk-candidate-message",
+        recipientEmail: email,
+        idempotencyKey: `share-reports-${Date.now()}`,
+        templateData: { subject, body, firstName: "" },
+      },
+    });
+    setSending(false);
+    if (error) {
+      toast({ title: "Échec de l'envoi", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `Email envoyé à ${email}` });
+    onOpenChange(false);
   };
 
   return (
