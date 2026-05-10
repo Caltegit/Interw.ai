@@ -287,9 +287,9 @@ export default function ProjectDetail() {
     noteTimers.current[sessionId] = setTimeout(async () => {
       setSavingNote((p) => ({ ...p, [sessionId]: true }));
       const { error } = await supabase
-        .from("reports")
-        .update({ recruiter_notes: value })
-        .eq("session_id", sessionId);
+        .from("sessions")
+        .update({ recruiter_note: value })
+        .eq("id", sessionId);
       setSavingNote((p) => ({ ...p, [sessionId]: false }));
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
