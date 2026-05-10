@@ -661,6 +661,13 @@ Champs secondaires (toujours produits, format inchangé) :
       }
     }
 
+    // Note hybride : moyenne note IA globale + score critères pondéré
+    const aiOverallScore = Math.min(Math.max(Number(parsed.overall_score) || 0, 0), 100);
+    const finalOverallScore =
+      fitScore !== null
+        ? Math.round(Math.min(100, Math.max(0, (aiOverallScore + fitScore) / 2)))
+        : aiOverallScore;
+
     const stats = {
       duration_seconds: session.duration_seconds || 0,
       exchanges_count: messages.length,
@@ -677,6 +684,12 @@ Champs secondaires (toujours produits, format inchangé) :
       fit_score: fitScore,
       signals: Array.isArray(parsed.signals) ? parsed.signals : [],
       communication_profile: parsed.communication_profile || null,
+      score_breakdown: {
+        ai_score: aiOverallScore,
+        weighted_criteria_score: fitScore,
+        final_score: finalOverallScore,
+        method: "hybrid_v1",
+      },
     };
 
     // Save report
@@ -684,7 +697,7 @@ Champs secondaires (toujours produits, format inchangé) :
       session_id,
       executive_summary: parsed.executive_summary || "",
       executive_summary_short: parsed.verdict_headline || parsed.executive_summary_short || null,
-      overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+      overall_score: finalOverallScore,
       overall_grade: parsed.overall_grade || null,
       recommendation: parsed.recommendation || null,
       strengths: parsed.strengths || [],
@@ -767,7 +780,7 @@ Champs secondaires (toujours produits, format inchangé) :
           candidateEmail: session.candidate_email,
           jobTitle: project.job_title,
           projectTitle: project.title,
-          overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+          overallScore: finalOverallScore,
           overallGrade: parsed.overall_grade || null,
           recommendation: parsed.recommendation || null,
           executiveSummary: parsed.executive_summary || "",
