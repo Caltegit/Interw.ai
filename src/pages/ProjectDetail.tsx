@@ -198,7 +198,7 @@ export default function ProjectDetail() {
 
       const { data: reps } = await supabase
         .from("reports")
-        .select("session_id, overall_score, recommendation")
+        .select("id, session_id, overall_score, recommendation")
         .in("session_id", ids);
       if (cancelled) return;
 
