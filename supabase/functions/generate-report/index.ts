@@ -661,6 +661,13 @@ Champs secondaires (toujours produits, format inchangé) :
       }
     }
 
+    // Note hybride : moyenne note IA globale + score critères pondéré
+    const aiOverallScore = Math.min(Math.max(Number(parsed.overall_score) || 0, 0), 100);
+    const finalOverallScore =
+      fitScore !== null
+        ? Math.round(Math.min(100, Math.max(0, (aiOverallScore + fitScore) / 2)))
+        : aiOverallScore;
+
     const stats = {
       duration_seconds: session.duration_seconds || 0,
       exchanges_count: messages.length,
@@ -677,6 +684,12 @@ Champs secondaires (toujours produits, format inchangé) :
       fit_score: fitScore,
       signals: Array.isArray(parsed.signals) ? parsed.signals : [],
       communication_profile: parsed.communication_profile || null,
+      score_breakdown: {
+        ai_score: aiOverallScore,
+        weighted_criteria_score: fitScore,
+        final_score: finalOverallScore,
+        method: "hybrid_v1",
+      },
     };
 
     // Save report
