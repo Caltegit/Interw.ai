@@ -90,6 +90,10 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
         <ToolbarBtn editor={editor} active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} icon={List} />
         <ToolbarBtn editor={editor} active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} icon={ListOrdered} />
         <div className="mx-1 h-5 w-px bg-border" />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} icon={AlignLeft} />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()} icon={AlignCenter} />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()} icon={AlignRight} />
+        <div className="mx-1 h-5 w-px bg-border" />
         <ToolbarBtn editor={editor} active={editor.isActive("link")} onClick={addLink} icon={Link2} />
         <ToolbarBtn editor={editor} active={false} onClick={() => fileRef.current?.click()} icon={ImageIcon} />
         <ToolbarBtn editor={editor} active={false} onClick={addVideo} icon={Video} />
