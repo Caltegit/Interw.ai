@@ -420,9 +420,14 @@ export default function SessionDetail() {
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
+              </TabsTrigger>
+              <TabsTrigger value="bigfive" className="gap-1">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Big Five</span>
+                <BigFiveBadge profile={report?.personality_profile} size={22} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
