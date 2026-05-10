@@ -37,6 +37,8 @@ import ProjectsArchives from "./pages/ProjectsArchives";
 import ProjectNew from "./pages/ProjectNew";
 import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
+import ProjectPublicPageEditor from "./pages/ProjectPublicPageEditor";
+import ProjectPublicPage from "./pages/ProjectPublicPage";
 import ProjectCompare from "./pages/ProjectCompare";
 import SessionDetail from "./pages/SessionDetail";
 import SessionVideoExport from "./pages/SessionVideoExport";
@@ -118,6 +120,7 @@ const App = () => (
             <Route path="/shared-report/:token" element={<SharedReport />} />
             <Route path="/highlights/:token" element={<HighlightsPublic />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
+            <Route path="/p/:slugPublic" element={<ProjectPublicPage />} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/email-unsubscribe" element={<Unsubscribe />} />
 
@@ -129,6 +132,7 @@ const App = () => (
               <Route path="/projects/archives" element={<ProjectsArchives />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
+              <Route path="/projects/:id/public-page" element={<ProjectPublicPageEditor />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />
               <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
               <Route path="/library" element={<LibraryHome />} />

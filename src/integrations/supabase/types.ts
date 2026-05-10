@@ -795,6 +795,48 @@ export type Database = {
           },
         ]
       }
+      project_public_pages: {
+        Row: {
+          content: Json
+          cover_image_url: string | null
+          created_at: string
+          enabled: boolean
+          id: string
+          project_id: string
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug_public: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          cover_image_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          project_id: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug_public: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          cover_image_url?: string | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          project_id?: string
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug_public?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           ai_intro_custom_text: string | null
