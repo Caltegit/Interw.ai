@@ -77,8 +77,8 @@ export function ShareReportsDialog({
       );
       if (cancelled) return;
       const lines = links.map((r, i) => {
-        const score = r.score != null ? `${r.score.toFixed(1)}/10` : "—";
-        return `${i + 1}) ${r.name} - Score IA : ${score} - ${r.url ?? "(lien indisponible)"}`;
+        const score = r.score != null ? `${Math.round(r.score * 10)} sur 100` : "—";
+        return `${i + 1}) ${r.name} - ${score}\n\n${r.url ?? "(lien indisponible)"}`;
       });
       const text =
         `Bonjour,\n\nVoici les candidats intéressants à regarder :\n\n` +
