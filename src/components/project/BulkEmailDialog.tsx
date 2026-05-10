@@ -298,6 +298,16 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               }}
               rows={10}
             />
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox
+                id="bulk-save-default"
+                checked={saveAsDefault}
+                onCheckedChange={(v) => setSaveAsDefault(v === true)}
+              />
+              <Label htmlFor="bulk-save-default" className="cursor-pointer text-sm font-normal">
+                Garder ce texte en mémoire pour les prochains messages
+              </Label>
+            </div>
           </div>
         </div>
 
