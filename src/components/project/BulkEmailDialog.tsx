@@ -88,6 +88,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
   const [dirty, setDirty] = useState(false);
   const [allowReply, setAllowReply] = useState(true);
   const [replyTo, setReplyTo] = useState("");
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
 
   useEffect(() => {
     if (open && user?.email) setReplyTo(user.email);
