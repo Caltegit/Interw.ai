@@ -641,7 +641,7 @@ export default function ProjectDetail() {
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
-          {sessions.length === 0 ? (
+          {visibleSessions.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.
             </p>
