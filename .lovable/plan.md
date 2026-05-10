@@ -1,19 +1,30 @@
-## Bibliothèque d'intros — afficher les TTS dans la liste « Texte »
+## Diagnostic
 
-Fichier : `src/components/project/IntroLibraryDialog.tsx`
+Sur le projet en question, il y a 60 sessions prêtes (avec rapport) :
+- 47 « Non » (rejected)
+- 9 « Retenu »
+- 4 « À discuter »
+- 0 « À traiter »
 
-### Constat
-Le dialog filtre strictement par `type = text`. Or les intros sauvegardées sont presque toutes en `tts` (texte lu par voix IA), qui contiennent aussi un `intro_text`. Résultat : la bibliothèque paraît vide alors qu'il y a du contenu réutilisable.
+La page Projet affiche 4 chips de filtre au-dessus de la liste (« À traiter / Retenu / À discuter / Non »). Ces chips agissent comme un filtre de visibilité stocké dans `localStorage` (clé `projectDecisionVisibility:<id>`).
 
-### Changement
-- Quand `type === "text"` : élargir la requête à `type IN ('text', 'tts')` pour récupérer les deux.
-- Pour les autres formats (`tts`, `audio`, `video`) : comportement inchangé (filtre strict).
-- Sur chaque carte de résultat, afficher un **badge distinct** :
-  - « Texte » (badge gris) pour les intros pures `type = text`
-  - « Voix IA » (badge indigo) pour les `type = tts`
-- À la sélection d'une intro `tts` depuis la liste « Texte » : on la passe telle quelle au parent — le composant appelant garde le `type` original de l'intro (donc `tts`), ce qui est cohérent avec son contenu.
+Deux problèmes se combinent :
 
-### Hors scope
-- Pas de modification des autres formats (audio, vidéo)
-- Pas de migration : les données existantes restent telles quelles
-- Pas de changement du sélecteur de format dans `StepIntro`
+1. **Chip « Non » désactivé par défaut** : la valeur initiale ne contient que `none`, `shortlisted`, `second_opinion`. Donc les 47 candidats rejetés sont invisibles dès la première visite — l'utilisateur a l'impression que la liste est vide ou très courte.
+2. **Si tous les chips sont désactivés → liste totalement vide**, sans aucun message ni moyen évident de comprendre que c'est un filtre de chips qui masque tout. Le `localStorage` peut aussi se retrouver à `[]` après manipulation, ce qui masque définitivement toutes les sessions tant qu'on n'a pas re-cliqué sur un chip.
+
+## Correction proposée
+
+Dans `src/pages/ProjectDetail.tsx` :
+
+1. Inclure `rejected` dans l'ensemble par défaut → tous les statuts visibles à la première visite.
+2. Si `visibleDecisions` est vide (aucun chip actif), considérer cela comme « tout afficher » plutôt que « tout masquer ». Cela évite l'état piège où la liste est vide sans raison apparente.
+3. Garder l'affichage visuel actuel des chips (actifs / inactifs) inchangé.
+
+Aucun changement de schéma, de RLS, ni de logique métier — uniquement le filtre de présentation côté front.
+
+## Vérification
+
+- Recharger la page projet : les 60 sessions prêtes apparaissent.
+- Désactiver tous les chips : la liste reste visible (comportement « aucun filtre »).
+- Activer un seul chip : seul le sous-ensemble correspondant s'affiche.

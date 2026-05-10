@@ -141,15 +141,19 @@ export default function ProjectDetail() {
 
   // Visibilité des sélections (chips au-dessus des sessions)
   const DECISION_KEYS = ["none", "shortlisted", "second_opinion", "rejected"] as const;
+  const DEFAULT_VISIBLE_DECISIONS = ["none", "shortlisted", "second_opinion", "rejected"];
   const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set(["none", "shortlisted", "second_opinion"]);
+    if (typeof window === "undefined") return new Set(DEFAULT_VISIBLE_DECISIONS);
     try {
       const raw = localStorage.getItem(`projectDecisionVisibility:${id}`);
-      if (raw) return new Set(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+      }
     } catch {
       /* ignore */
     }
-    return new Set(["none", "shortlisted", "second_opinion"]);
+    return new Set(DEFAULT_VISIBLE_DECISIONS);
   });
   useEffect(() => {
     if (id) localStorage.setItem(`projectDecisionVisibility:${id}`, JSON.stringify([...visibleDecisions]));
