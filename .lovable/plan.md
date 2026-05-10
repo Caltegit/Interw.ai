@@ -1,11 +1,14 @@
 ## Objectif
-Sur mobile, dans la page de rapport partagé (`/shared-report/:token`), la colonne vidéo est actuellement affichée **après** les onglets (Décision / Réponses / Transcription). On veut qu'elle apparaisse **en premier**, au-dessus des onglets, sur mobile uniquement. Le layout desktop (vidéo sticky à droite) reste inchangé.
+Ajouter au dialogue « Envoyer un email aux candidats sélectionnés » (`BulkEmailDialog`) la même section « Autoriser une réponse » que dans `ShareReportsDialog`, avec un switch et un champ email pré-rempli avec l'email de l'utilisateur connecté.
 
-## Changement
-Dans `src/pages/SharedReport.tsx`, sur le conteneur `grid lg:grid-cols-[1fr_510px]` :
-- Ajouter `order-2 lg:order-1` à la colonne des onglets
-- Ajouter `order-1 lg:order-2` à la colonne vidéo (`SessionVideoNavigator`)
+## Modifications dans `src/components/project/BulkEmailDialog.tsx`
 
-Résultat : sur mobile, la vignette vidéo s'affiche juste sous le `DecisionBanner`, avant les onglets. Sur desktop (≥ lg), l'ordre actuel est préservé grâce à `lg:order-*`.
+1. Importer `useAuth` depuis `@/contexts/AuthContext` et `Switch` depuis `@/components/ui/switch`.
+2. Ajouter deux états : `allowReply` (bool, défaut `true`) et `replyTo` (string).
+3. Pré-remplir `replyTo` avec `user.email` à l'ouverture du dialogue.
+4. Insérer le bloc UI (switch + input email conditionnel) entre l'objet et le message, copié du style de `ShareReportsDialog`.
+5. Dans `handleSend` :
+   - Valider l'adresse `replyTo` si `allowReply` est actif (toast d'erreur sinon).
+   - Ajouter `replyTo: replyToTrimmed` dans le `body` de chaque appel `supabase.functions.invoke('send-transactional-email', ...)` quand `allowReply` est vrai.
 
-Aucune autre modification (pas de logique métier, pas de changement de données).
+Aucun changement côté Edge Function — `send-transactional-email` accepte déjà le champ `replyTo` (utilisé par `ShareReportsDialog`).

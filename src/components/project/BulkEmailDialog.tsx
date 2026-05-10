@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useOrgRole } from "@/hooks/useOrgRole";
+import { useAuth } from "@/contexts/AuthContext";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,12 +78,19 @@ const firstNameOf = (full?: string | null) => {
 export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, onSent }: Props) {
   const { toast } = useToast();
   const { organizationId } = useOrgRole();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<CandidateMessageTemplate[]>(DEFAULT_TEMPLATES);
   const [selectedKey, setSelectedKey] = useState<string>(DEFAULT_TEMPLATES[0].key);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [allowReply, setAllowReply] = useState(true);
+  const [replyTo, setReplyTo] = useState("");
+
+  useEffect(() => {
+    if (open && user?.email) setReplyTo(user.email);
+  }, [open, user?.email]);
 
   // Charger les overrides de l'orga
   useEffect(() => {
@@ -125,6 +134,11 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       });
       return;
     }
+    const replyToTrimmed = replyTo.trim();
+    if (allowReply && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToTrimmed)) {
+      toast({ title: "Adresse de réponse invalide", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
@@ -140,6 +154,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               body: personalizedBody,
               firstName,
             },
+            ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },
         });
       })
@@ -210,6 +225,27 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
                 setDirty(true);
               }}
             />
+          </div>
+
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bulk-allow-reply" className="cursor-pointer">
+                Autoriser une réponse
+              </Label>
+              <Switch
+                id="bulk-allow-reply"
+                checked={allowReply}
+                onCheckedChange={setAllowReply}
+              />
+            </div>
+            {allowReply && (
+              <Input
+                type="email"
+                placeholder="prenom.nom@exemple.com"
+                value={replyTo}
+                onChange={(e) => setReplyTo(e.target.value)}
+              />
+            )}
           </div>
 
           <div className="space-y-1">
