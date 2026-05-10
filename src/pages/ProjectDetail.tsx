@@ -105,6 +105,7 @@ export default function ProjectDetail() {
   // Sélection multiple (vue tableau uniquement)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [shareReportsOpen, setShareReportsOpen] = useState(false);
   const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (sid: string) => {
