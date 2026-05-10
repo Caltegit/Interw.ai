@@ -896,7 +896,18 @@ export default function ProjectDetail() {
                                   <Copy className="mr-1 h-3 w-3" /> Relancer
                                 </Button>
                               )}
-                              <AlertDialog>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Envoyer un email"
+                                onClick={() => {
+                                  setSelectedIds(new Set([s.id]));
+                                  setBulkEmailOpen(true);
+                                }}
+                              >
+                                <Mail className="h-3 w-3" />
+                              </Button>
+                              {false && (<AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
                                     <Trash2 className="h-3 w-3" />
@@ -936,7 +947,7 @@ export default function ProjectDetail() {
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
-                              </AlertDialog>
+                              </AlertDialog>)}
                             </div>
                           </td>
                         </tr>
