@@ -9,7 +9,6 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
-import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
