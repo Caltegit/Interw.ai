@@ -36,7 +36,6 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
-import { DecisionDriversCard } from "@/components/session/DecisionDriversCard";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
@@ -423,7 +422,7 @@ export default function SessionDetail() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="decision" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Décision</span>
+                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
@@ -436,13 +435,6 @@ export default function SessionDetail() {
             <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
                 <>
-                  <DecisionDriversCard
-                    drivers={stats.decision_drivers}
-                    strengths={report.strengths as string[] | null}
-                    weaknesses={report.areas_for_improvement as string[] | null}
-                    onGoToMessage={goToMessage}
-                  />
-
                   <FitBreakdownCard
                     items={stats.fit_breakdown}
                     legacyCriteriaScores={criteriaScores as any}
