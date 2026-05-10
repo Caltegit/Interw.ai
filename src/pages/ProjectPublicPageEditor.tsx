@@ -89,6 +89,36 @@ export default function ProjectPublicPageEditor() {
     toast({ title: "Enregistré" });
   };
 
+  const handleToggleEnabled = async (next: boolean) => {
+    setPage((p) => ({ ...p, enabled: next }));
+    if (!projectId) return;
+    if (!page.slug_public.trim()) {
+      toast({ title: "Lien invalide", description: "Choisissez un identifiant pour le lien public.", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("project_public_pages")
+      .upsert(
+        {
+          project_id: projectId,
+          enabled: next,
+          slug_public: page.slug_public.trim(),
+          content: page.content,
+          cover_image_url: page.cover_image_url,
+          seo_title: page.seo_title,
+          seo_description: page.seo_description,
+          published_at: next ? new Date().toISOString() : null,
+        },
+        { onConflict: "project_id" },
+      );
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      setPage((p) => ({ ...p, enabled: !next }));
+      return;
+    }
+    toast({ title: next ? "Page activée" : "Page désactivée" });
+  };
+
   const handleCoverUpload = async (file: File) => {
     if (!projectId) return;
     const ext = file.name.split(".").pop() || "jpg";
@@ -141,7 +171,7 @@ export default function ProjectPublicPageEditor() {
             <Label className="text-base">Activer la page publique</Label>
             <p className="text-sm text-muted-foreground">Une fois activée, la page est accessible à toute personne disposant du lien.</p>
           </div>
-          <Switch checked={page.enabled} onCheckedChange={(v) => setPage((p) => ({ ...p, enabled: v }))} />
+          <Switch checked={page.enabled} onCheckedChange={handleToggleEnabled} />
         </div>
 
         <div className="space-y-2">
