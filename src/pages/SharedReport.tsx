@@ -355,7 +355,7 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
           {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
         </div>
       </div>
