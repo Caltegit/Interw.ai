@@ -120,6 +120,36 @@ export default function ProjectPublicPageEditor() {
     toast({ title: next ? "Page activée" : "Page désactivée" });
   };
 
+  const handleImportFromUrl = async () => {
+    const trimmed = importUrl.trim();
+    if (!trimmed) return;
+    try {
+      const u = new URL(trimmed);
+      if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error();
+    } catch {
+      toast({ title: "URL invalide", variant: "destructive" });
+      return;
+    }
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-public-page-from-url", {
+        body: { url: trimmed },
+      });
+      if (error) throw error;
+      if (!data?.tiptap) throw new Error(data?.error || "Réponse invalide");
+      setPage((p) => ({ ...p, content: data.tiptap }));
+      toast({ title: "Annonce importée" });
+    } catch (e: any) {
+      toast({
+        title: "Échec de l'import",
+        description: e?.message || "Impossible de lire la page",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
 
   if (loading) {
     return (
