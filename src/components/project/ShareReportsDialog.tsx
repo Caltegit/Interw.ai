@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { Copy, Loader2, Mail } from "lucide-react";
 
 export interface ShareReportRecipient {
@@ -45,6 +46,12 @@ export function ShareReportsDialog({
   const [recipientEmail, setRecipientEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [allowReply, setAllowReply] = useState(true);
+  const [replyTo, setReplyTo] = useState("");
+
+  useEffect(() => {
+    if (open && user?.email) setReplyTo(user.email);
+  }, [open, user?.email]);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -108,6 +115,11 @@ export function ShareReportsDialog({
       toast({ title: "Email invalide", variant: "destructive" });
       return;
     }
+    const replyToTrimmed = replyTo.trim();
+    if (allowReply && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToTrimmed)) {
+      toast({ title: "Adresse de réponse invalide", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const { error } = await supabase.functions.invoke("send-transactional-email", {
       body: {
@@ -115,6 +127,7 @@ export function ShareReportsDialog({
         recipientEmail: email,
         idempotencyKey: `share-reports-${Date.now()}`,
         templateData: { subject, body, firstName: "" },
+        ...(allowReply ? { replyTo: replyToTrimmed } : {}),
       },
     });
     setSending(false);
@@ -155,6 +168,26 @@ export function ShareReportsDialog({
             <div className="space-y-1">
               <Label>Objet</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="allow-reply" className="cursor-pointer">
+                  Autoriser une réponse
+                </Label>
+                <Switch
+                  id="allow-reply"
+                  checked={allowReply}
+                  onCheckedChange={setAllowReply}
+                />
+              </div>
+              {allowReply && (
+                <Input
+                  type="email"
+                  placeholder="prenom.nom@exemple.com"
+                  value={replyTo}
+                  onChange={(e) => setReplyTo(e.target.value)}
+                />
+              )}
             </div>
             <div className="space-y-1">
               <Label>Message</Label>
