@@ -179,6 +179,28 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
         .update({ last_candidate_email_key: selectedKey })
         .in("id", successIds);
     }
+    if (saveAsDefault && organizationId && ok > 0) {
+      const suffix = ` - ${projectTitle}`;
+      const rawSubject = subject.endsWith(suffix) ? subject.slice(0, -suffix.length) : subject;
+      const { error: saveError } = await supabase
+        .from("candidate_message_templates")
+        .upsert(
+          {
+            organization_id: organizationId,
+            key: selectedKey,
+            subject: rawSubject,
+            body,
+          },
+          { onConflict: "organization_id,key" }
+        );
+      if (saveError) {
+        console.error("save_template_failed", saveError);
+      } else {
+        setTemplates((prev) =>
+          prev.map((t) => (t.key === selectedKey ? { ...t, subject: rawSubject, body } : t))
+        );
+      }
+    }
     if (failed === 0) {
       toast({ title: `Email envoyé à ${ok} candidat(s)` });
     } else {
