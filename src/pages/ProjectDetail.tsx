@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -550,11 +550,6 @@ export default function ProjectDetail() {
                 defaultDuration={project.max_duration_minutes}
                 defaultLanguage={project.language}
               />
-              {completedSessions.length >= 2 && (
-                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/compare`)}>
-                  <BarChart3 className="mr-2 h-4 w-4" /> Comparer les candidats
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
