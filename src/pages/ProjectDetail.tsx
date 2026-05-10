@@ -186,7 +186,7 @@ export default function ProjectDetail() {
 
       const { data: reps } = await supabase
         .from("reports")
-        .select("session_id, overall_score, recommendation, recruiter_notes")
+        .select("session_id, overall_score, recommendation")
         .in("session_id", ids);
       if (cancelled) return;
 
@@ -194,7 +194,9 @@ export default function ProjectDetail() {
       const drafts: Record<string, string> = {};
       for (const r of reps ?? []) {
         map[r.session_id] = r;
-        drafts[r.session_id] = r.recruiter_notes ?? "";
+      }
+      for (const s of sessionsList) {
+        drafts[s.id] = (s as any).recruiter_note ?? "";
       }
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
