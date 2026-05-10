@@ -21,9 +21,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3 } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2 } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
+import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
