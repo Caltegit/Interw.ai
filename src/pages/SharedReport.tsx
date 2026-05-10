@@ -243,7 +243,7 @@ export default function SharedReport() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="decision" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Décision</span>
+                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
@@ -256,13 +256,6 @@ export default function SharedReport() {
             <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
                 <>
-                  <DecisionDriversCard
-                    drivers={stats.decision_drivers}
-                    strengths={report.strengths as string[] | null}
-                    weaknesses={report.areas_for_improvement as string[] | null}
-                    onGoToMessage={goToMessage}
-                  />
-
                   <FitBreakdownCard
                     items={stats.fit_breakdown}
                     legacyCriteriaScores={criteriaScores as any}
