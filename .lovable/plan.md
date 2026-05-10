@@ -1,5 +1,6 @@
-Réorganiser `src/pages/ProjectPublicPageEditor.tsx` :
+Ajouter l'alignement de texte dans `RichTextEditor.tsx` :
 
-1. Déplacer le bloc « Activer la page publique » (avec toggle + lien) tout en haut, juste après le titre « Page publique ».
-2. Si `page.enabled` est `false`, ne rien afficher en dessous (masquer le bloc « Importer depuis une URL » et la section « Contenu de la page »).
-3. Si `page.enabled` est `true`, afficher dans l'ordre : lien public, importer depuis URL, contenu de la page.
+1. Installer `@tiptap/extension-text-align`.
+2. L'ajouter aux extensions Tiptap, configuré pour `heading` et `paragraph`, alignements `left|center|right`.
+3. Ajouter 3 boutons dans la toolbar (icônes `AlignLeft`, `AlignCenter`, `AlignRight` de lucide), avec état actif via `editor.isActive({ textAlign: 'xxx' })` et action `setTextAlign('xxx')`.
+4. Vérifier que `prose` rend bien `text-align` (sinon ajouter une classe utilitaire — Tiptap applique `style="text-align"` inline donc OK).
