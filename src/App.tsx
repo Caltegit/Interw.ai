@@ -33,6 +33,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import ProjectsArchives from "./pages/ProjectsArchives";
 import ProjectNew from "./pages/ProjectNew";
 import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
