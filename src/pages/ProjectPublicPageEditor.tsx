@@ -174,14 +174,9 @@ export default function ProjectPublicPageEditor() {
           <Switch checked={page.enabled} onCheckedChange={handleToggleEnabled} />
         </div>
 
-        <div className="space-y-2">
-          <Label>Identifiant du lien</Label>
-          <Input
-            value={page.slug_public}
-            onChange={(e) => setPage((p) => ({ ...p, slug_public: slugify(e.target.value) }))}
-            placeholder="mon-poste"
-          />
-          {page.enabled && (
+        {page.enabled && (
+          <div className="space-y-2">
+            <Label>Lien de la page publique</Label>
             <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-sm">
               <span className="flex-1 truncate font-mono">{publicUrl}</span>
               <Button
@@ -196,44 +191,9 @@ export default function ProjectPublicPageEditor() {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      <div className="rounded-lg border p-4 space-y-4">
-        <h2 className="font-semibold">Référencement</h2>
-        <div className="space-y-2">
-          <Label>Image de couverture</Label>
-          {page.cover_image_url && (
-            <img src={page.cover_image_url} alt="" className="max-h-40 rounded-md border" />
-          )}
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) handleCoverUpload(f);
-            }}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Titre SEO</Label>
-          <Input
-            value={page.seo_title ?? ""}
-            onChange={(e) => setPage((p) => ({ ...p, seo_title: e.target.value }))}
-            placeholder={project?.title ?? ""}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Description SEO</Label>
-          <Textarea
-            value={page.seo_description ?? ""}
-            onChange={(e) => setPage((p) => ({ ...p, seo_description: e.target.value }))}
-            rows={2}
-          />
-        </div>
-      </div>
-
       <div className="space-y-2">
         <h2 className="font-semibold">Contenu de la page</h2>
         <p className="text-sm text-muted-foreground">
