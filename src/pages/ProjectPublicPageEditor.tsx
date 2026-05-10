@@ -171,7 +171,7 @@ export default function ProjectPublicPageEditor() {
             <Label className="text-base">Activer la page publique</Label>
             <p className="text-sm text-muted-foreground">Une fois activée, la page est accessible à toute personne disposant du lien.</p>
           </div>
-          <Switch checked={page.enabled} onCheckedChange={(v) => setPage((p) => ({ ...p, enabled: v }))} />
+          <Switch checked={page.enabled} onCheckedChange={handleToggleEnabled} />
         </div>
 
         <div className="space-y-2">
