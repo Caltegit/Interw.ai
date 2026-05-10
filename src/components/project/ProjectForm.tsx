@@ -739,7 +739,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Brouillon</SelectItem>
                       <SelectItem value="active">Actif</SelectItem>
                       {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
                     </SelectContent>
