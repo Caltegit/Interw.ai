@@ -41,6 +41,9 @@ import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
+import { BigFiveBadge } from "@/components/session/BigFiveBadge";
+import { PersonalityRadar } from "@/components/session/PersonalityRadar";
+import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
 
 const formatDuration = (seconds?: number | null) => {
