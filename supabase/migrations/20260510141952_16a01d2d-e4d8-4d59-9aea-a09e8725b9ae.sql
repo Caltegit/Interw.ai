@@ -1,0 +1,1 @@
+UPDATE public.projects SET status = 'active' WHERE status = 'draft';

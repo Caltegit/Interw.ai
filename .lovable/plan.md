@@ -1,33 +1,42 @@
 ## Objectif
 
-Sur la liste des candidats d'un projet, l'icône enveloppe à droite de chaque ligne doit refléter le dernier modèle d'email envoyé au candidat :
+Sur la liste des projets : remplacer l'action « Supprimer » par « Archiver », ajouter un bouton « Archives » en haut à droite menant à une page dédiée, et supprimer complètement le statut « Brouillon ».
 
-- Rouge → Refus
-- Vert → Nouvel entretien
-- Orange → Infos complémentaires
-- Couleur neutre par défaut (aucun email envoyé)
+## Changements
 
-## Étapes
+### 1. Liste des projets (`src/pages/Projects.tsx`)
 
-1. **Base de données**
-   - Ajouter une colonne `last_candidate_email_key text` sur la table `sessions` (nullable, valeurs attendues : `candidate-refusal`, `candidate-new-interview`, `candidate-more-info`).
+- Header en `flex justify-between` :
+  - À gauche : bouton **Nouveau projet** (existant)
+  - À droite : nouveau bouton **Archives** (variant `outline`, icône `Archive`) → lien vers `/projects/archives`
+- N'afficher que les projets non archivés (`status !== 'archived'`)
+- Colonne « Statut » supprimée (puisque tous les projets affichés sont actifs)
+- Dernière colonne renommée « Archiver » : icône `Archive` (lucide), couleur normale (plus rouge)
+- Action : confirmation via `AlertDialog` (« Archiver le projet ? Il sera déplacé dans les archives, vous pourrez le restaurer à tout moment. ») puis `update({ status: 'archived' })`
+- Toast « Projet archivé » avec invalidation des queries
 
-2. **Envoi de l'email (`BulkEmailDialog.tsx`)**
-   - Après un envoi réussi, mettre à jour `sessions.last_candidate_email_key = selectedKey` pour chaque destinataire ayant reçu l'email.
-   - Appeler `onSent` (déjà existant) pour rafraîchir la liste côté `ProjectDetail`.
+### 2. Nouvelle page `src/pages/ProjectsArchives.tsx`
 
-3. **Affichage de l'icône (`ProjectDetail.tsx`)**
-   - Charger `last_candidate_email_key` avec les sessions.
-   - Appliquer une classe de couleur sur l'icône `Mail` selon la valeur :
-     - `candidate-refusal` → `text-destructive`
-     - `candidate-new-interview` → `text-success` (token existant ou ajout d'un token vert)
-     - `candidate-more-info` → `text-warning` (token existant ou ajout d'un token orange)
-     - Sinon : couleur par défaut.
-   - Ajouter un `title` dynamique indiquant le type d'email envoyé.
-   - Rafraîchir la liste après envoi (via `onSent` qui rejoue le fetch des sessions).
+- Même structure de tableau que `Projects.tsx` mais filtrée sur `status = 'archived'`
+- Header : bouton retour « ← Projets actifs »
+- Colonnes : Titre, Sessions, Archivé depuis, Restaurer, Supprimer
+- **Restaurer** : icône `ArchiveRestore` → repasse `status = 'active'`
+- **Supprimer** (définitif) : icône `Trash2` rouge → confirmation puis `rpc('delete_project')`
 
-## Détails techniques
+### 3. Route
 
-- La colonne est mise à jour côté client (RLS doit permettre au RH de mettre à jour ses propres sessions — à vérifier ; sinon ajouter une RPC `set_session_last_email_key`).
-- Vérifier les tokens `success` / `warning` dans `index.css` / `tailwind.config.ts` ; les ajouter si absents pour rester conforme au design system (HSL, semantic tokens).
-- Aucun changement sur l'envoi vers les rapports partagés ni sur les autres dialogues.
+- Ajouter `/projects/archives` dans `src/App.tsx` (layout RH protégé)
+
+### 4. Suppression du statut « Brouillon »
+
+- **Migration** : `UPDATE projects SET status = 'active' WHERE status = 'draft'`
+  (l'enum reste en place pour éviter de casser les types Supabase générés ; aucune nouvelle écriture ne créera de draft)
+- `src/pages/ProjectDetail.tsx` ligne 380 : duplication crée le projet en `'active'` au lieu de `'draft'`
+- `src/pages/ProjectDetail.tsx` ligne 455 : retirer l'entrée `draft` du label
+- `src/components/project/ProjectForm.tsx` ligne 742 : retirer `<SelectItem value="draft">Brouillon</SelectItem>`
+- `src/components/project/ProjectForm.tsx` ligne 963 : simplifier l'affichage (Actif / Archivé)
+- `src/pages/ProjectEdit.tsx` : type cast laissé tel quel (l'enum existe toujours côté DB)
+
+### 5. Hook `useProjectsList`
+
+- Aucun changement de signature ; le filtre archivé / actif sera fait côté composant pour réutiliser la même query (déjà mise en cache)
