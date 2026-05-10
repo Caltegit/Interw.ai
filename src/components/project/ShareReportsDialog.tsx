@@ -173,13 +173,16 @@ export function ShareReportsDialog({
         ) : (
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Destinataire</Label>
+              <Label>Destinataires</Label>
               <Input
-                type="email"
-                placeholder="prenom.nom@exemple.com"
+                type="text"
+                placeholder="prenom.nom@exemple.com, autre@exemple.com"
                 value={recipientEmail}
                 onChange={(e) => setRecipientEmail(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Séparez plusieurs adresses par une virgule.
+              </p>
             </div>
             <div className="space-y-1">
               <Label>Objet</Label>
