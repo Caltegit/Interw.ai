@@ -550,11 +550,6 @@ export default function ProjectDetail() {
                 defaultDuration={project.max_duration_minutes}
                 defaultLanguage={project.language}
               />
-              {completedSessions.length >= 2 && (
-                <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/compare`)}>
-                  <BarChart3 className="mr-2 h-4 w-4" /> Comparer les candidats
-                </DropdownMenuItem>
-              )}
               <DropdownMenuSeparator />
               <AlertDialog>
                 <AlertDialogTrigger asChild>
