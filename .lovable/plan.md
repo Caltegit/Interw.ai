@@ -1,104 +1,68 @@
-## Page publique d'annonce — par projet
+## Import depuis une URL — Page publique
 
-Ajout d'une option « Page publique » dans le menu « ⋯ » d'un projet, ouvrant un éditeur dédié pour publier une vraie page web d'annonce du poste, partageable par lien, avec un éditeur riche (texte, images, vidéo) et un bouton vers l'entretien.
+Ajouter en haut de l'éditeur de page publique un encart « Importer depuis une URL ». L'utilisateur colle un lien (LinkedIn, Welcome to the Jungle, site carrière…), clique sur « Importer », et l'éditeur WYSIWYG est rempli avec une annonce reformatée par IA.
 
-### 1. Base de données
+### 1. Connecteur Firecrawl
 
-Nouvelle table `project_public_pages` (1‑1 avec `projects`) :
+Activer le connecteur **Firecrawl** pour scraper proprement les sites complexes (rendu JS, anti-bot). La clé `FIRECRAWL_API_KEY` sera disponible dans les edge functions.
 
-- `project_id` (clé unique vers `projects`)
-- `enabled` (bool, défaut `false`)
-- `slug_public` (texte, unique — ex. `acme-dev-senior-2024`)
-- `content` (jsonb — document de l'éditeur riche, format Tiptap)
-- `cover_image_url` (texte, optionnel)
-- `seo_title`, `seo_description` (texte, optionnels)
-- `published_at`, `updated_at`
+### 2. Edge function `import-public-page-from-url`
 
-RLS :
-- `SELECT` anonyme uniquement si `enabled = true`
-- `SELECT/INSERT/UPDATE/DELETE` pour les membres de l'organisation du projet (même règle que `projects`)
+Nouvelle fonction `supabase/functions/import-public-page-from-url/index.ts`.
 
-Bucket de stockage : on réutilise le bucket `media` existant, sous le préfixe `public-pages/{project_id}/…`, avec lecture publique.
+Entrée : `{ url: string }`
+Sortie : `{ tiptap: object }` (document JSON Tiptap directement injectable dans l'éditeur)
 
-### 2. Routes
+Étapes côté serveur :
+1. Validation de l'URL avec Zod (https obligatoire, longueur max).
+2. Vérifie que l'utilisateur est authentifié (JWT).
+3. Appel **Firecrawl v2 `/scrape`** avec `formats: ['markdown']`, `onlyMainContent: true`.
+4. Tronque le markdown à ~15 000 caractères pour rester dans la fenêtre du modèle.
+5. Appel **Lovable AI Gateway** (`google/gemini-3-flash-preview`) avec un prompt système qui :
+   - reçoit le markdown brut,
+   - rédige une annonce en français claire et structurée,
+   - renvoie un **JSON Tiptap** directement (sections H2, paragraphes, listes à puces),
+   - sections cibles : « À propos de l'entreprise », « Le poste », « Missions », « Profil recherché », « Ce que nous offrons ».
+6. Renvoie le JSON Tiptap au client.
 
-- **RH (protégée)** : `/projects/:id/public-page` → nouvelle page `ProjectPublicPageEditor.tsx`
-- **Public (anonyme)** : `/p/:slugPublic` → nouvelle page `ProjectPublicPage.tsx`
+Gestion d'erreurs : 402 (crédits Firecrawl ou AI épuisés), 429 (rate-limit), 4xx upstream, et toujours retour CORS propre.
 
-Ajout dans `src/App.tsx` à côté des autres routes publiques `/o/:slug` et `/session/:slug`.
+### 3. UI dans `ProjectPublicPageEditor.tsx`
 
-### 3. Entrée dans l'UI
-
-Dans `src/pages/ProjectDetail.tsx`, dans le `DropdownMenu` (ligne ~573), ajouter en première position :
-
-```
-<DropdownMenuItem asChild>
-  <Link to={`/projects/${project.id}/public-page`}>
-    <Globe className="mr-2 h-4 w-4" /> Page publique
-  </Link>
-</DropdownMenuItem>
-```
-
-### 4. Page éditeur RH `ProjectPublicPageEditor`
-
-Layout :
+Nouveau bloc en haut de la page, au-dessus du toggle d'activation :
 
 ```text
-┌─ En-tête ──────────────────────────────────────────┐
-│ ← Retour au projet           [Aperçu]  [Enregistrer]│
-│ Page publique — {titre du projet}                   │
-├────────────────────────────────────────────────────┤
-│ [Toggle ●━━]  Activer la page publique              │
-│                                                    │
-│ Lien public :  https://interw.ai/p/acme-dev   [📋] │
-│ (visible uniquement si activé)                      │
-├────────────────────────────────────────────────────┤
-│ Image de couverture  [Téléverser]                   │
-│ Titre SEO            [____________________]         │
-│ Description SEO      [____________________]         │
-├────────────────────────────────────────────────────┤
-│ Contenu de la page                                  │
-│ ┌──────────────────────────────────────────────┐   │
-│ │ [B I U] [H1 H2] [• Liste] [Image] [Vidéo]    │   │
-│ │                                              │   │
-│ │   éditeur WYSIWYG (Tiptap)                   │   │
-│ │                                              │   │
-│ └──────────────────────────────────────────────┘   │
-│                                                    │
-│ Le bouton « Postuler » vers l'entretien est ajouté │
-│ automatiquement en bas de la page publique.        │
-└────────────────────────────────────────────────────┘
+┌─ Importer depuis une URL ───────────────────────────┐
+│ Collez le lien d'une annonce existante pour pré-    │
+│ remplir le contenu de la page.                      │
+│                                                     │
+│ [ https://www.welcometothejungle.com/... ] [Importer]│
+│                                                     │
+│ ⚠ Le contenu actuel de l'éditeur sera remplacé.    │
+└─────────────────────────────────────────────────────┘
 ```
 
-- Toggle d'activation : met à jour `enabled`.
-- Slug public auto‑généré à partir du titre du projet (modifiable, vérification d'unicité).
-- Lien copiable une fois activé.
-- Sauvegarde manuelle (bouton « Enregistrer ») + indicateur « Modifié ».
+Comportement :
+- Bouton « Importer » désactivé si URL vide ou invalide.
+- Pendant l'appel : spinner + bouton désactivé + toast « Lecture de la page… ».
+- Au retour : remplace `page.content` par le JSON Tiptap reçu, l'éditeur Tiptap se met à jour automatiquement (déjà géré par la prop `value`).
+- Toast de succès « Annonce importée » ou toast d'erreur avec message clair (URL inaccessible, site protégé, crédits épuisés).
+- Pas de dialogue de confirmation — le bandeau d'avertissement sous le champ suffit (choix utilisateur : Remplacer).
 
-### 5. Page publique `ProjectPublicPage`
+### 4. RichTextEditor — synchronisation avec `value`
 
-- Charge `project_public_pages` par `slug_public` (anon, `enabled = true`), sinon 404.
-- Affiche : image de couverture, titre du poste, contenu rendu depuis le JSON Tiptap, et bouton CTA fixe en bas « Passer l'entretien » → redirige vers `/session/{project.slug}` (page candidat existante).
-- En-tête épuré avec le logo de l'organisation (déjà chargeable depuis `organizations.logo_url`).
-- SEO : `<title>` et `<meta description>` dynamiques, OG tags, image OG = cover.
+L'éditeur Tiptap actuel n'est initialisé qu'au montage et ne réagit pas aux changements de `value` venant du parent. Ajouter un `useEffect` qui appelle `editor.commands.setContent(value)` quand `value` change suite à un import, sans déclencher `onUpdate` (utiliser `false` en deuxième argument).
 
 ### Détails techniques
 
-- **Éditeur WYSIWYG** : Tiptap (`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-link`, extension vidéo custom pour iframes YouTube/Vimeo + upload direct vers le bucket `media`). Tiptap est léger, headless, parfait pour shadcn/Tailwind.
-- **Stockage du contenu** : JSON Tiptap (`content` jsonb) → restitution avec `generateHTML` côté page publique pour SSR‑safe rendering.
-- **Upload images/vidéos** : composant existant pas encore présent ; ajouter un petit helper `uploadPublicPageMedia(projectId, file)` qui pousse dans `media/public-pages/{projectId}/...` et retourne l'URL publique.
-- **Slug public** : `slugify(project.title) + "-" + short(project.id)` avec recalcul si conflit. Utiliser `src/lib/slug.ts` existant.
-- **Politique RLS anon** :
-  ```sql
-  create policy "Anon view active public pages"
-  on public.project_public_pages for select to anon
-  using (enabled = true);
-  ```
-- **Liens** : la page publique pointe vers `/session/{project.slug}` (déjà la landing candidat). Pas de duplication de logique d'entretien.
+- **Validation URL** côté client (Zod ou simple `URL` constructor) avant appel.
+- **Edge function** `verify_jwt = true` (par défaut) pour éviter les abus.
+- **Rate-limit** simple en mémoire dans la fonction : 10 imports / heure / utilisateur (suffisant pour ce cas, à durcir plus tard si besoin).
+- **Modèle IA** : `google/gemini-3-flash-preview` (rapide, peu coûteux, suffisant pour reformater une annonce). Réponse forcée en JSON via `response_format: json_object` + prompt système strict.
+- **Sécurité** : la fonction ne stocke rien, ne renvoie que du JSON Tiptap. La sauvegarde reste manuelle côté éditeur (bouton « Enregistrer »).
 
-### Hors périmètre (à confirmer plus tard)
+### Hors périmètre
 
-- Domaine personnalisé par organisation
-- Formulaire de pré‑qualification sur la page publique
-- Statistiques de vues / clics CTA
-- Versioning du contenu / brouillons
+- Détection automatique du nom de poste / catégorie pour pré-remplir d'autres champs du projet.
+- Import récurrent / synchronisation continue avec la source.
+- Aperçu côte-à-côte avant remplacement.
