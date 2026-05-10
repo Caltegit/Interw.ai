@@ -86,7 +86,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [allowReply, setAllowReply] = useState(true);
+  const [allowReply, setAllowReply] = useState(false);
   const [replyTo, setReplyTo] = useState("");
   const [saveAsDefault, setSaveAsDefault] = useState(false);
 
