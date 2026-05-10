@@ -3,9 +3,10 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react";
 import { slugify } from "@/lib/slug";
 import { RichTextEditor } from "@/components/project/RichTextEditor";
 
@@ -26,6 +27,8 @@ export default function ProjectPublicPageEditor() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
   const [project, setProject] = useState<{ title: string; slug: string | null } | null>(null);
   const [page, setPage] = useState<PageRow>({
     enabled: false,
@@ -117,6 +120,36 @@ export default function ProjectPublicPageEditor() {
     toast({ title: next ? "Page activée" : "Page désactivée" });
   };
 
+  const handleImportFromUrl = async () => {
+    const trimmed = importUrl.trim();
+    if (!trimmed) return;
+    try {
+      const u = new URL(trimmed);
+      if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error();
+    } catch {
+      toast({ title: "URL invalide", variant: "destructive" });
+      return;
+    }
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-public-page-from-url", {
+        body: { url: trimmed },
+      });
+      if (error) throw error;
+      if (!data?.tiptap) throw new Error(data?.error || "Réponse invalide");
+      setPage((p) => ({ ...p, content: data.tiptap }));
+      toast({ title: "Annonce importée" });
+    } catch (e: any) {
+      toast({
+        title: "Échec de l'import",
+        description: e?.message || "Impossible de lire la page",
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -151,6 +184,35 @@ export default function ProjectPublicPageEditor() {
         <p className="text-muted-foreground text-sm">{project?.title}</p>
       </div>
 
+      <div className="rounded-lg border p-4 space-y-3">
+        <div>
+          <Label className="text-base">Importer depuis une URL</Label>
+          <p className="text-sm text-muted-foreground">
+            Collez le lien d'une annonce existante pour pré-remplir le contenu de la page.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            type="url"
+            placeholder="https://exemple.com/offre-emploi"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            disabled={importing}
+          />
+          <Button onClick={handleImportFromUrl} disabled={importing || !importUrl.trim()}>
+            {importing ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1 h-4 w-4" />
+            )}
+            {importing ? "Lecture en cours…" : "Importer"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Le contenu actuel de l'éditeur sera remplacé.
+        </p>
+      </div>
+
       <div className="rounded-lg border p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -159,6 +221,7 @@ export default function ProjectPublicPageEditor() {
           </div>
           <Switch checked={page.enabled} onCheckedChange={handleToggleEnabled} />
         </div>
+
 
         {page.enabled && (
           <div className="space-y-2">

@@ -4,7 +4,7 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Image as ImageIcon, Link2, Video, Undo, Redo } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +32,15 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
       },
     },
   });
+
+  useEffect(() => {
+    if (!editor) return;
+    const current = JSON.stringify(editor.getJSON());
+    const incoming = JSON.stringify(value ?? {});
+    if (current !== incoming && value && Object.keys(value).length) {
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+  }, [value, editor]);
 
   if (!editor) return null;
 
