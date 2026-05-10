@@ -518,18 +518,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 />
               </div>
               <div>
-                <Label>Langue de la session</Label>
-                <Select value={language} onValueChange={(v) => setLanguage(v as "fr" | "en")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label>Nom du recruteur IA</Label>
                 <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
