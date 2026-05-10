@@ -780,7 +780,7 @@ Champs secondaires (toujours produits, format inchangé) :
           candidateEmail: session.candidate_email,
           jobTitle: project.job_title,
           projectTitle: project.title,
-          overallScore: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+          overallScore: finalOverallScore,
           overallGrade: parsed.overall_grade || null,
           recommendation: parsed.recommendation || null,
           executiveSummary: parsed.executive_summary || "",
