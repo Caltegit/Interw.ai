@@ -78,12 +78,19 @@ const firstNameOf = (full?: string | null) => {
 export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, onSent }: Props) {
   const { toast } = useToast();
   const { organizationId } = useOrgRole();
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<CandidateMessageTemplate[]>(DEFAULT_TEMPLATES);
   const [selectedKey, setSelectedKey] = useState<string>(DEFAULT_TEMPLATES[0].key);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [allowReply, setAllowReply] = useState(true);
+  const [replyTo, setReplyTo] = useState("");
+
+  useEffect(() => {
+    if (open && user?.email) setReplyTo(user.email);
+  }, [open, user?.email]);
 
   // Charger les overrides de l'orga
   useEffect(() => {
