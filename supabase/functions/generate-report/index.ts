@@ -697,7 +697,7 @@ Champs secondaires (toujours produits, format inchangé) :
       session_id,
       executive_summary: parsed.executive_summary || "",
       executive_summary_short: parsed.verdict_headline || parsed.executive_summary_short || null,
-      overall_score: Math.min(Math.max(parsed.overall_score || 0, 0), 100),
+      overall_score: finalOverallScore,
       overall_grade: parsed.overall_grade || null,
       recommendation: parsed.recommendation || null,
       strengths: parsed.strengths || [],
