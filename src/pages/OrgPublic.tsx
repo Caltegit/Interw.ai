@@ -105,9 +105,6 @@ export default function OrgPublic() {
                   <CardTitle className="text-lg">{p.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {p.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-3">{p.description}</p>
-                  )}
                   {p.slug && (
                     <Button asChild size="sm">
                       <Link to={`/session/${p.slug}`}>
