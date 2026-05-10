@@ -812,7 +812,6 @@ export type Database = {
           completion_message: string | null
           created_at: string
           created_by: string
-          description: string
           expires_at: string | null
           id: string
           intro_audio_url: string | null
@@ -851,7 +850,6 @@ export type Database = {
           completion_message?: string | null
           created_at?: string
           created_by: string
-          description?: string
           expires_at?: string | null
           id?: string
           intro_audio_url?: string | null
@@ -890,7 +888,6 @@ export type Database = {
           completion_message?: string | null
           created_at?: string
           created_by?: string
-          description?: string
           expires_at?: string | null
           id?: string
           intro_audio_url?: string | null
