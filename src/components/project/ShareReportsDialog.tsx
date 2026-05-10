@@ -84,7 +84,7 @@ export function ShareReportsDialog({
       );
       if (cancelled) return;
       const lines = links.map((r, i) => {
-        const score = r.score != null ? `${Math.round(r.score * 10)} sur 100` : "—";
+        const score = r.score != null ? `${Math.round(r.score)} sur 100` : "—";
         return `${i + 1}) ${r.name} - ${score}\n\n${r.url ?? "(lien indisponible)"}`;
       });
       const text =
