@@ -371,7 +371,6 @@ export default function ProjectDetail() {
           created_by: user.id,
           title: `${project.title} (copie)`,
           job_title: project.job_title,
-          description: project.description,
           language: project.language,
           ai_persona_name: project.ai_persona_name,
           ai_voice: project.ai_voice,
