@@ -144,6 +144,15 @@ export function ShareReportsDialog({
         ) : (
           <div className="space-y-3">
             <div className="space-y-1">
+              <Label>Destinataire</Label>
+              <Input
+                type="email"
+                placeholder="prenom.nom@exemple.com"
+                value={recipientEmail}
+                onChange={(e) => setRecipientEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
               <Label>Objet</Label>
               <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
             </div>
@@ -160,14 +169,18 @@ export function ShareReportsDialog({
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Fermer
           </Button>
-          <Button variant="outline" onClick={handleCopy} disabled={loading}>
+          <Button variant="outline" onClick={handleCopy} disabled={loading || sending}>
             <Copy className="mr-2 h-4 w-4" /> Copier le texte
           </Button>
-          <Button onClick={handleMailto} disabled={loading}>
-            <Mail className="mr-2 h-4 w-4" /> Ouvrir dans ma messagerie
+          <Button onClick={handleSend} disabled={loading || sending || !recipientEmail.trim()}>
+            {sending ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Envoi…</>
+            ) : (
+              <><Mail className="mr-2 h-4 w-4" /> Envoyer</>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
