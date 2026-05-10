@@ -448,6 +448,7 @@ export default function ProjectDetail() {
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
+  const visibleSessions = sessions.filter((s) => s.status !== "cancelled");
   const completedSessions = readySessions;
   const processingCount = sessions.filter(
     (s) => s.status === "completed" && !reportsBySession[s.id],
