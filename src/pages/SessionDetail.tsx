@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -41,6 +41,9 @@ import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
+import { BigFiveBadge } from "@/components/session/BigFiveBadge";
+import { PersonalityRadar } from "@/components/session/PersonalityRadar";
+import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
 
 const formatDuration = (seconds?: number | null) => {
@@ -420,9 +423,14 @@ export default function SessionDetail() {
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
+              </TabsTrigger>
+              <TabsTrigger value="bigfive" className="gap-1">
+                <Brain className="h-4 w-4" />
+                <span className="hidden sm:inline">Big Five</span>
+                <BigFiveBadge profile={report?.personality_profile} size={22} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
@@ -473,13 +481,6 @@ export default function SessionDetail() {
                       </CardContent>
                     </Card>
                   )}
-
-                  <DeepAnalysisAccordion
-                    personalityProfile={report.personality_profile}
-                    softSkills={report.soft_skills as any}
-                    projectAverages={projectAverages?.bigFive}
-                    onGoToMessage={goToMessage}
-                  />
                 </>
               ) : (
                 <Card>
@@ -488,6 +489,28 @@ export default function SessionDetail() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Le rapport sera généré automatiquement après l'analyse de la session.
                     </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="bigfive" className="mt-4 space-y-4">
+              {report && (report.personality_profile || report.soft_skills) ? (
+                <>
+                  <PersonalityRadar
+                    profile={report.personality_profile}
+                    onGoToMessage={goToMessage}
+                    projectAverages={projectAverages?.bigFive}
+                  />
+                  <SoftSkillsCard
+                    skills={report.soft_skills as any}
+                    onGoToMessage={goToMessage}
+                  />
+                </>
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse Big Five non disponible.
                   </CardContent>
                 </Card>
               )}
