@@ -32,7 +32,13 @@ interface Props {
   skippedCount?: number;
 }
 
-export function ShareReportsDialog({ open, onOpenChange, recipients, projectTitle, skippedCount = 0 }: Props) {
+export function ShareReportsDialog({
+  open,
+  onOpenChange,
+  recipients,
+  projectTitle,
+  skippedCount = 0,
+}: Props) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -52,7 +58,9 @@ export function ShareReportsDialog({ open, onOpenChange, recipients, projectTitl
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const sorted = [...recipients].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+      const sorted = [...recipients].sort(
+        (a, b) => (b.score ?? -1) - (a.score ?? -1),
+      );
       const links = await Promise.all(
         sorted.map(async (r) => {
           const { data: existing } = await supabase
@@ -164,9 +172,13 @@ export function ShareReportsDialog({ open, onOpenChange, recipients, projectTitl
             <div className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
                 <Label htmlFor="allow-reply" className="cursor-pointer">
-                  Autoriser une réponse à
+                  Autoriser une réponse
                 </Label>
-                <Switch id="allow-reply" checked={allowReply} onCheckedChange={setAllowReply} />
+                <Switch
+                  id="allow-reply"
+                  checked={allowReply}
+                  onCheckedChange={setAllowReply}
+                />
               </div>
               {allowReply && (
                 <Input
@@ -198,13 +210,9 @@ export function ShareReportsDialog({ open, onOpenChange, recipients, projectTitl
           </Button>
           <Button onClick={handleSend} disabled={loading || sending || !recipientEmail.trim()}>
             {sending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Envoi…
-              </>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Envoi…</>
             ) : (
-              <>
-                <Mail className="mr-2 h-4 w-4" /> Envoyer
-              </>
+              <><Mail className="mr-2 h-4 w-4" /> Envoyer</>
             )}
           </Button>
         </DialogFooter>
