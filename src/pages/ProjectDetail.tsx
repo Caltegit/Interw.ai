@@ -947,7 +947,7 @@ export default function ProjectDetail() {
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
-                              </AlertDialog>
+                              </AlertDialog>)}
                             </div>
                           </td>
                         </tr>
