@@ -452,7 +452,7 @@ export default function ProjectDetail() {
   if (!project) return <p>Projet introuvable</p>;
 
   const statusLabel =
-    { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
