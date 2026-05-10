@@ -14,7 +14,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SITE_NAME = 'interw'
+const SITE_NAME = 'interw.ai'
 const SITE_URL = 'https://interw.ai'
 const SAMPLE_URL = 'https://interw.ai/sample'
 const SAMPLE_EMAIL = 'candidat@example.com'
