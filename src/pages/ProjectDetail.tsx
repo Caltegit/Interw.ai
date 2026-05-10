@@ -470,7 +470,9 @@ export default function ProjectDetail() {
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
     if (decisionFilter !== "all")
       list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
-    list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
+    if (visibleDecisions.size > 0) {
+      list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
+    }
     if (recoFilter !== "all")
       list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
     if (scoreMin !== "")
