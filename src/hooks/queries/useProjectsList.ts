@@ -5,7 +5,6 @@ import { queryKeys } from "@/lib/queryClient";
 export interface ProjectListItem {
   id: string;
   title: string;
-  description: string;
   status: string;
   slug: string | null;
   created_at: string;
