@@ -108,9 +108,6 @@ export default function ProjectPublicPage() {
       </header>
 
       <main className="container mx-auto max-w-3xl px-4 py-8">
-        {data.cover_image_url && (
-          <img src={data.cover_image_url} alt="" className="mb-6 w-full rounded-lg object-cover max-h-80" />
-        )}
         <h1 className="text-3xl font-bold mb-6">{data.project?.title}</h1>
 
         <article className="prose prose-sm sm:prose max-w-none">
