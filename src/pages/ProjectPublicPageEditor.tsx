@@ -27,6 +27,8 @@ export default function ProjectPublicPageEditor() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
   const [project, setProject] = useState<{ title: string; slug: string | null } | null>(null);
   const [page, setPage] = useState<PageRow>({
     enabled: false,
