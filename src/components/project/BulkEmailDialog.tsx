@@ -134,6 +134,11 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       });
       return;
     }
+    const replyToTrimmed = replyTo.trim();
+    if (allowReply && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToTrimmed)) {
+      toast({ title: "Adresse de réponse invalide", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
@@ -149,6 +154,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               body: personalizedBody,
               firstName,
             },
+            ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },
         });
       })
