@@ -59,11 +59,12 @@ export function useSessionDetail(sessionId: string | undefined) {
 export function useUpdateRecruiterNotes(sessionId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ reportId, notes }: { reportId: string; notes: string }) => {
+    mutationFn: async ({ notes }: { reportId?: string; notes: string }) => {
+      if (!sessionId) throw new Error("Session manquante");
       const { error } = await supabase
-        .from("reports")
-        .update({ recruiter_notes: notes })
-        .eq("id", reportId);
+        .from("sessions")
+        .update({ recruiter_note: notes })
+        .eq("id", sessionId);
       if (error) throw error;
     },
     onSuccess: () => {
