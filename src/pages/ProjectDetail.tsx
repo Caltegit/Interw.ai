@@ -171,7 +171,7 @@ export default function ProjectDetail() {
     const loadSessionsAndReports = async () => {
       const { data: sList } = await supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, video_recording_url, thumbnail_url")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_note, video_recording_url, thumbnail_url")
         .eq("project_id", id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -186,7 +186,7 @@ export default function ProjectDetail() {
 
       const { data: reps } = await supabase
         .from("reports")
-        .select("session_id, overall_score, recommendation, recruiter_notes")
+        .select("session_id, overall_score, recommendation")
         .in("session_id", ids);
       if (cancelled) return;
 
@@ -194,7 +194,9 @@ export default function ProjectDetail() {
       const drafts: Record<string, string> = {};
       for (const r of reps ?? []) {
         map[r.session_id] = r;
-        drafts[r.session_id] = r.recruiter_notes ?? "";
+      }
+      for (const s of sessionsList) {
+        drafts[s.id] = (s as any).recruiter_note ?? "";
       }
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
@@ -285,9 +287,9 @@ export default function ProjectDetail() {
     noteTimers.current[sessionId] = setTimeout(async () => {
       setSavingNote((p) => ({ ...p, [sessionId]: true }));
       const { error } = await supabase
-        .from("reports")
-        .update({ recruiter_notes: value })
-        .eq("session_id", sessionId);
+        .from("sessions")
+        .update({ recruiter_note: value })
+        .eq("id", sessionId);
       setSavingNote((p) => ({ ...p, [sessionId]: false }));
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
