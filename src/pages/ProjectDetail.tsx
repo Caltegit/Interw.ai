@@ -974,6 +974,8 @@ export default function ProjectDetail() {
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
                     onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                    onShareReports={() => setShareReportsOpen(true)}
+                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
                   />
                 )}
               </div>
