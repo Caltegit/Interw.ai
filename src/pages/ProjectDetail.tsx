@@ -607,7 +607,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* Filtres rapides Sélection */}
-      {sessions.length > 0 && (
+      {visibleSessions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {decisionOptions.map((d) => {
             const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
