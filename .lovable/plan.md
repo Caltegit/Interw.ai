@@ -1,42 +1,104 @@
-## Objectif
+## Page publique d'annonce — par projet
 
-Sur la liste des projets : remplacer l'action « Supprimer » par « Archiver », ajouter un bouton « Archives » en haut à droite menant à une page dédiée, et supprimer complètement le statut « Brouillon ».
+Ajout d'une option « Page publique » dans le menu « ⋯ » d'un projet, ouvrant un éditeur dédié pour publier une vraie page web d'annonce du poste, partageable par lien, avec un éditeur riche (texte, images, vidéo) et un bouton vers l'entretien.
 
-## Changements
+### 1. Base de données
 
-### 1. Liste des projets (`src/pages/Projects.tsx`)
+Nouvelle table `project_public_pages` (1‑1 avec `projects`) :
 
-- Header en `flex justify-between` :
-  - À gauche : bouton **Nouveau projet** (existant)
-  - À droite : nouveau bouton **Archives** (variant `outline`, icône `Archive`) → lien vers `/projects/archives`
-- N'afficher que les projets non archivés (`status !== 'archived'`)
-- Colonne « Statut » supprimée (puisque tous les projets affichés sont actifs)
-- Dernière colonne renommée « Archiver » : icône `Archive` (lucide), couleur normale (plus rouge)
-- Action : confirmation via `AlertDialog` (« Archiver le projet ? Il sera déplacé dans les archives, vous pourrez le restaurer à tout moment. ») puis `update({ status: 'archived' })`
-- Toast « Projet archivé » avec invalidation des queries
+- `project_id` (clé unique vers `projects`)
+- `enabled` (bool, défaut `false`)
+- `slug_public` (texte, unique — ex. `acme-dev-senior-2024`)
+- `content` (jsonb — document de l'éditeur riche, format Tiptap)
+- `cover_image_url` (texte, optionnel)
+- `seo_title`, `seo_description` (texte, optionnels)
+- `published_at`, `updated_at`
 
-### 2. Nouvelle page `src/pages/ProjectsArchives.tsx`
+RLS :
+- `SELECT` anonyme uniquement si `enabled = true`
+- `SELECT/INSERT/UPDATE/DELETE` pour les membres de l'organisation du projet (même règle que `projects`)
 
-- Même structure de tableau que `Projects.tsx` mais filtrée sur `status = 'archived'`
-- Header : bouton retour « ← Projets actifs »
-- Colonnes : Titre, Sessions, Archivé depuis, Restaurer, Supprimer
-- **Restaurer** : icône `ArchiveRestore` → repasse `status = 'active'`
-- **Supprimer** (définitif) : icône `Trash2` rouge → confirmation puis `rpc('delete_project')`
+Bucket de stockage : on réutilise le bucket `media` existant, sous le préfixe `public-pages/{project_id}/…`, avec lecture publique.
 
-### 3. Route
+### 2. Routes
 
-- Ajouter `/projects/archives` dans `src/App.tsx` (layout RH protégé)
+- **RH (protégée)** : `/projects/:id/public-page` → nouvelle page `ProjectPublicPageEditor.tsx`
+- **Public (anonyme)** : `/p/:slugPublic` → nouvelle page `ProjectPublicPage.tsx`
 
-### 4. Suppression du statut « Brouillon »
+Ajout dans `src/App.tsx` à côté des autres routes publiques `/o/:slug` et `/session/:slug`.
 
-- **Migration** : `UPDATE projects SET status = 'active' WHERE status = 'draft'`
-  (l'enum reste en place pour éviter de casser les types Supabase générés ; aucune nouvelle écriture ne créera de draft)
-- `src/pages/ProjectDetail.tsx` ligne 380 : duplication crée le projet en `'active'` au lieu de `'draft'`
-- `src/pages/ProjectDetail.tsx` ligne 455 : retirer l'entrée `draft` du label
-- `src/components/project/ProjectForm.tsx` ligne 742 : retirer `<SelectItem value="draft">Brouillon</SelectItem>`
-- `src/components/project/ProjectForm.tsx` ligne 963 : simplifier l'affichage (Actif / Archivé)
-- `src/pages/ProjectEdit.tsx` : type cast laissé tel quel (l'enum existe toujours côté DB)
+### 3. Entrée dans l'UI
 
-### 5. Hook `useProjectsList`
+Dans `src/pages/ProjectDetail.tsx`, dans le `DropdownMenu` (ligne ~573), ajouter en première position :
 
-- Aucun changement de signature ; le filtre archivé / actif sera fait côté composant pour réutiliser la même query (déjà mise en cache)
+```
+<DropdownMenuItem asChild>
+  <Link to={`/projects/${project.id}/public-page`}>
+    <Globe className="mr-2 h-4 w-4" /> Page publique
+  </Link>
+</DropdownMenuItem>
+```
+
+### 4. Page éditeur RH `ProjectPublicPageEditor`
+
+Layout :
+
+```text
+┌─ En-tête ──────────────────────────────────────────┐
+│ ← Retour au projet           [Aperçu]  [Enregistrer]│
+│ Page publique — {titre du projet}                   │
+├────────────────────────────────────────────────────┤
+│ [Toggle ●━━]  Activer la page publique              │
+│                                                    │
+│ Lien public :  https://interw.ai/p/acme-dev   [📋] │
+│ (visible uniquement si activé)                      │
+├────────────────────────────────────────────────────┤
+│ Image de couverture  [Téléverser]                   │
+│ Titre SEO            [____________________]         │
+│ Description SEO      [____________________]         │
+├────────────────────────────────────────────────────┤
+│ Contenu de la page                                  │
+│ ┌──────────────────────────────────────────────┐   │
+│ │ [B I U] [H1 H2] [• Liste] [Image] [Vidéo]    │   │
+│ │                                              │   │
+│ │   éditeur WYSIWYG (Tiptap)                   │   │
+│ │                                              │   │
+│ └──────────────────────────────────────────────┘   │
+│                                                    │
+│ Le bouton « Postuler » vers l'entretien est ajouté │
+│ automatiquement en bas de la page publique.        │
+└────────────────────────────────────────────────────┘
+```
+
+- Toggle d'activation : met à jour `enabled`.
+- Slug public auto‑généré à partir du titre du projet (modifiable, vérification d'unicité).
+- Lien copiable une fois activé.
+- Sauvegarde manuelle (bouton « Enregistrer ») + indicateur « Modifié ».
+
+### 5. Page publique `ProjectPublicPage`
+
+- Charge `project_public_pages` par `slug_public` (anon, `enabled = true`), sinon 404.
+- Affiche : image de couverture, titre du poste, contenu rendu depuis le JSON Tiptap, et bouton CTA fixe en bas « Passer l'entretien » → redirige vers `/session/{project.slug}` (page candidat existante).
+- En-tête épuré avec le logo de l'organisation (déjà chargeable depuis `organizations.logo_url`).
+- SEO : `<title>` et `<meta description>` dynamiques, OG tags, image OG = cover.
+
+### Détails techniques
+
+- **Éditeur WYSIWYG** : Tiptap (`@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-image`, `@tiptap/extension-link`, extension vidéo custom pour iframes YouTube/Vimeo + upload direct vers le bucket `media`). Tiptap est léger, headless, parfait pour shadcn/Tailwind.
+- **Stockage du contenu** : JSON Tiptap (`content` jsonb) → restitution avec `generateHTML` côté page publique pour SSR‑safe rendering.
+- **Upload images/vidéos** : composant existant pas encore présent ; ajouter un petit helper `uploadPublicPageMedia(projectId, file)` qui pousse dans `media/public-pages/{projectId}/...` et retourne l'URL publique.
+- **Slug public** : `slugify(project.title) + "-" + short(project.id)` avec recalcul si conflit. Utiliser `src/lib/slug.ts` existant.
+- **Politique RLS anon** :
+  ```sql
+  create policy "Anon view active public pages"
+  on public.project_public_pages for select to anon
+  using (enabled = true);
+  ```
+- **Liens** : la page publique pointe vers `/session/{project.slug}` (déjà la landing candidat). Pas de duplication de logique d'entretien.
+
+### Hors périmètre (à confirmer plus tard)
+
+- Domaine personnalisé par organisation
+- Formulaire de pré‑qualification sur la page publique
+- Statistiques de vues / clics CTA
+- Versioning du contenu / brouillons
