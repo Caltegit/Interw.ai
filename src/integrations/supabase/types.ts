@@ -1340,6 +1340,7 @@ export type Database = {
           recruiter_decision: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at: string | null
           recruiter_decision_by: string | null
+          recruiter_note: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["session_status"]
           thumbnail_url: string | null
@@ -1365,6 +1366,7 @@ export type Database = {
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
           recruiter_decision_by?: string | null
+          recruiter_note?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           thumbnail_url?: string | null
@@ -1390,6 +1392,7 @@ export type Database = {
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
           recruiter_decision_by?: string | null
+          recruiter_note?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           thumbnail_url?: string | null

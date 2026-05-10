@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3 } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,8 +40,9 @@ import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsBar({
-  count, onClear, onEmail, onDelete,
-}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void }) {
+  count, onClear, onEmail, onDelete, onCompare,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void }) {
+  const canCompare = count >= 2 && count <= 4;
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
       <DropdownMenu>
@@ -54,6 +55,19 @@ function BulkActionsBar({
           <DropdownMenuItem onClick={onEmail}>
             <Mail className="mr-2 h-4 w-4" /> Envoyer un email
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onCompare}
+            disabled={!canCompare}
+          >
+            <Columns3 className="mr-2 h-4 w-4" />
+            Comparer
+            {!canCompare && (
+              <span className="ml-2 text-xs text-muted-foreground">
+                {count > 4 ? "Maximum 4" : "Min. 2"}
+              </span>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
             <Trash2 className="mr-2 h-4 w-4" /> Supprimer
           </DropdownMenuItem>
@@ -713,6 +727,7 @@ export default function ProjectDetail() {
                     onClear={clearSelection}
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
+                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
                   />
                 )}
                 <div className="overflow-x-auto">
@@ -927,6 +942,7 @@ export default function ProjectDetail() {
                     onClear={clearSelection}
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
+                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
                   />
                 )}
               </div>
