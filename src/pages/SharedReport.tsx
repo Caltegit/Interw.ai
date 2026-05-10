@@ -239,7 +239,7 @@ export default function SharedReport() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
-        <div>
+        <div className="order-2 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="decision" className="gap-1">
