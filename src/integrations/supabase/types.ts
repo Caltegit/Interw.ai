@@ -1332,6 +1332,7 @@ export type Database = {
           duration_seconds: number | null
           id: string
           last_activity_at: string | null
+          last_candidate_email_key: string | null
           last_question_index: number
           project_id: string
           recruiter_decision: Database["public"]["Enums"]["recruiter_decision_type"]
@@ -1358,6 +1359,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           last_activity_at?: string | null
+          last_candidate_email_key?: string | null
           last_question_index?: number
           project_id: string
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
@@ -1384,6 +1386,7 @@ export type Database = {
           duration_seconds?: number | null
           id?: string
           last_activity_at?: string | null
+          last_candidate_email_key?: string | null
           last_question_index?: number
           project_id?: string
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
