@@ -122,6 +122,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
     setSubject(`${t.subject} - ${projectTitle}`);
     setBody(t.body);
     setDirty(false);
+    setSaveAsDefault(false);
   }, [open, selectedKey, templates, projectTitle]);
 
   const validRecipients = recipients.filter((r) => !!r.candidate_email);
