@@ -2,8 +2,9 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import TextAlign from "@tiptap/extension-text-align";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Image as ImageIcon, Link2, Video, Undo, Redo } from "lucide-react";
+import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Image as ImageIcon, Link2, Video, Undo, Redo, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
       StarterKit,
       Image.configure({ HTMLAttributes: { class: "rounded-lg my-4 max-w-full" } }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
+      TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
     ],
     content: value && Object.keys(value).length ? value : "<p></p>",
     onUpdate: ({ editor }) => onChange(editor.getJSON()),
@@ -87,6 +89,10 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
         <ToolbarBtn editor={editor} active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} icon={Heading3} />
         <ToolbarBtn editor={editor} active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} icon={List} />
         <ToolbarBtn editor={editor} active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} icon={ListOrdered} />
+        <div className="mx-1 h-5 w-px bg-border" />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} icon={AlignLeft} />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()} icon={AlignCenter} />
+        <ToolbarBtn editor={editor} active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()} icon={AlignRight} />
         <div className="mx-1 h-5 w-px bg-border" />
         <ToolbarBtn editor={editor} active={editor.isActive("link")} onClick={addLink} icon={Link2} />
         <ToolbarBtn editor={editor} active={false} onClick={() => fileRef.current?.click()} icon={ImageIcon} />
