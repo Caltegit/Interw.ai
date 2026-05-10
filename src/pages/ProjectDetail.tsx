@@ -661,7 +661,7 @@ export default function ProjectDetail() {
                   <Button
                     variant={view === "table" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-9 rounded-r-none"
+                    className="h-9 w-16 rounded-r-none"
                     onClick={() => setView("table")}
                     title="Vue tableau"
                   >
@@ -670,7 +670,7 @@ export default function ProjectDetail() {
                   <Button
                     variant={view === "cards" ? "secondary" : "ghost"}
                     size="sm"
-                    className="h-9 rounded-l-none"
+                    className="h-9 w-16 rounded-l-none"
                     onClick={() => setView("cards")}
                     title="Vue cartes"
                   >
