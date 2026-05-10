@@ -120,7 +120,7 @@ export default function ProjectPublicPage() {
         {data.project?.slug && (
           <div className="mt-10 flex justify-center">
             <Button size="lg" asChild>
-              <Link to={`/session/${data.project.slug}`}>Postuler à cet entretien</Link>
+              <Link to={`/session/${data.project.slug}`}>Démarrer l'entretien digital</Link>
             </Button>
           </div>
         )}
@@ -130,7 +130,7 @@ export default function ProjectPublicPage() {
         {data.project?.slug && (
           <div className="container mx-auto p-3">
             <Button className="w-full" asChild>
-              <Link to={`/session/${data.project.slug}`}>Postuler à cet entretien</Link>
+              <Link to={`/session/${data.project.slug}`}>Démarrer l'entretien digital</Link>
             </Button>
           </div>
         )}
