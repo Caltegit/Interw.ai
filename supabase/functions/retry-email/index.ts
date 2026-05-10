@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     payload: {
       message_id: newMessageId,
       to: log.recipient_email,
-      from: 'interw <noreply@notify.interw.ai>',
+      from: 'interw.ai <noreply@notify.interw.ai>',
       sender_domain: 'notify.interw.ai',
       subject: '[Renvoi] ' + (log.template_name || 'Email'),
       html: '<p>Cet email a été renvoyé manuellement par un administrateur. Le contenu original n\'a pas pu être régénéré automatiquement — contactez l\'équipe pour les détails complets.</p>',

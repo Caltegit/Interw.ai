@@ -4,7 +4,7 @@ import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
 
-const SITE_NAME = "interw";
+const SITE_NAME = "interw.ai";
 const SENDER_DOMAIN = "notify.interw.ai";
 const FROM_DOMAIN = "notify.interw.ai";
 
