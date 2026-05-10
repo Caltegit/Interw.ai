@@ -739,7 +739,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Brouillon</SelectItem>
                       <SelectItem value="active">Actif</SelectItem>
                       {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
                     </SelectContent>
@@ -960,7 +959,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </p>
                   <p>
                     <strong>Statut :</strong>{" "}
-                    {status === "draft" ? "Brouillon" : status === "active" ? "Actif" : "Archivé"}
+                    {status === "archived" ? "Archivé" : "Actif"}
                   </p>
                   <p>
                     <strong>Intro :</strong>{" "}

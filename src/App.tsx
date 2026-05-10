@@ -33,6 +33,7 @@ import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
+import ProjectsArchives from "./pages/ProjectsArchives";
 import ProjectNew from "./pages/ProjectNew";
 import ProjectEdit from "./pages/ProjectEdit";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -125,6 +126,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/projects/new" element={<ProjectNew />} />
+              <Route path="/projects/archives" element={<ProjectsArchives />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />

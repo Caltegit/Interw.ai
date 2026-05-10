@@ -377,7 +377,7 @@ export default function ProjectDetail() {
           max_duration_minutes: project.max_duration_minutes,
           record_audio: project.record_audio,
           record_video: project.record_video,
-          status: "draft" as never,
+          status: "active" as never,
           slug,
           avatar_image_url: project.avatar_image_url,
           intro_audio_url: project.intro_audio_url,
@@ -452,7 +452,7 @@ export default function ProjectDetail() {
   if (!project) return <p>Projet introuvable</p>;
 
   const statusLabel =
-    { draft: "Brouillon", active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);

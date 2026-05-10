@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -17,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
+import { Plus, Pencil, Archive, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useProjectsList } from "@/hooks/queries/useProjectsList";
 import { queryKeys } from "@/lib/queryClient";
@@ -25,19 +24,14 @@ import { logger } from "@/lib/logger";
 
 const PAGE_SIZE = 20;
 
-const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  draft: { label: "Brouillon", variant: "secondary" },
-  active: { label: "Actif", variant: "default" },
-  archived: { label: "Archivé", variant: "outline" },
-};
-
 export default function Projects() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: projects = [], isLoading } = useProjectsList(user?.id);
-  const [toDelete, setToDelete] = useState<{ id: string; title: string } | null>(null);
+  const { data: allProjects = [], isLoading } = useProjectsList(user?.id);
+  const projects = useMemo(() => allProjects.filter((p) => p.status !== "archived"), [allProjects]);
+  const [toArchive, setToArchive] = useState<{ id: string; title: string } | null>(null);
   const [page, setPage] = useState(0);
 
   const totalPages = Math.max(1, Math.ceil(projects.length / PAGE_SIZE));
@@ -55,20 +49,20 @@ export default function Projects() {
     toast({ title: "Lien candidat copié !" });
   };
 
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    const { error } = await supabase.rpc("delete_project", { _project_id: toDelete.id });
+  const handleArchive = async () => {
+    if (!toArchive) return;
+    const { error } = await supabase.from("projects").update({ status: "archived" }).eq("id", toArchive.id);
     if (error) {
-      logger.error("project_delete_failed", { projectId: toDelete.id, error: error.message });
-      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+      logger.error("project_archive_failed", { projectId: toArchive.id, error: error.message });
+      toast({ title: "Erreur", description: "Impossible d'archiver le projet.", variant: "destructive" });
     } else {
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.projects(user.id) });
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
       }
-      toast({ title: "Projet supprimé" });
+      toast({ title: "Projet archivé" });
     }
-    setToDelete(null);
+    setToArchive(null);
   };
 
   if (isLoading) {
@@ -81,11 +75,17 @@ export default function Projects() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <Button asChild>
           <Link to="/projects/new">
             <Plus className="mr-2 h-4 w-4" />
             Nouveau projet
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/projects/archives">
+            <Archive className="mr-2 h-4 w-4" />
+            Archives
           </Link>
         </Button>
       </div>
@@ -93,7 +93,7 @@ export default function Projects() {
       {projects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">Aucun projet créé</p>
+            <p className="text-muted-foreground mb-4">Aucun projet</p>
             <Button asChild>
               <Link to="/projects/new">Créer votre premier projet</Link>
             </Button>
@@ -106,17 +106,15 @@ export default function Projects() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Titre</TableHead>
-                  <TableHead>Statut</TableHead>
                   <TableHead className="text-center">Sessions</TableHead>
                   <TableHead className="hidden sm:table-cell">Depuis</TableHead>
                   <TableHead className="text-center">Lien candidat</TableHead>
                   <TableHead className="text-center">Modifier</TableHead>
-                  <TableHead className="text-center">Supprimer</TableHead>
+                  <TableHead className="text-center">Archiver</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pageProjects.map((project) => {
-                  const status = statusLabels[project.status] ?? { label: project.status, variant: "outline" as const };
                   const sessionCount = project.sessions?.[0]?.count ?? 0;
                   return (
                     <TableRow
@@ -128,9 +126,6 @@ export default function Projects() {
                         <div className="min-w-0">
                           <div className="truncate">{project.title}</div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <span className="text-sm font-medium">{sessionCount}</span>
@@ -164,11 +159,10 @@ export default function Projects() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setToDelete({ id: project.id, title: project.title })}
-                          aria-label="Supprimer"
+                          onClick={() => setToArchive({ id: project.id, title: project.title })}
+                          aria-label="Archiver"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Archive className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -206,22 +200,17 @@ export default function Projects() {
         </div>
       )}
 
-      <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
+      <AlertDialog open={!!toArchive} onOpenChange={(open) => !open && setToArchive(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer « {toDelete?.title} » ?</AlertDialogTitle>
+            <AlertDialogTitle>Archiver « {toArchive?.title} » ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
+              Le projet sera déplacé dans les archives. Vous pourrez le restaurer à tout moment.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Supprimer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleArchive}>Archiver</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
