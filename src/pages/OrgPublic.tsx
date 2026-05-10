@@ -16,7 +16,6 @@ interface Project {
   id: string;
   title: string;
   job_title: string;
-  description: string;
   slug: string | null;
 }
 
