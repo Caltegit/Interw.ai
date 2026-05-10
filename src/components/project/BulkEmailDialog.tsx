@@ -227,6 +227,27 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
             />
           </div>
 
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bulk-allow-reply" className="cursor-pointer">
+                Autoriser une réponse
+              </Label>
+              <Switch
+                id="bulk-allow-reply"
+                checked={allowReply}
+                onCheckedChange={setAllowReply}
+              />
+            </div>
+            {allowReply && (
+              <Input
+                type="email"
+                placeholder="prenom.nom@exemple.com"
+                value={replyTo}
+                onChange={(e) => setReplyTo(e.target.value)}
+              />
+            )}
+          </div>
+
           <div className="space-y-1">
             <Label>Message</Label>
             <p className="text-xs text-muted-foreground">
