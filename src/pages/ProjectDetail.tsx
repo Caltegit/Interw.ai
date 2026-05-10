@@ -377,7 +377,7 @@ export default function ProjectDetail() {
           max_duration_minutes: project.max_duration_minutes,
           record_audio: project.record_audio,
           record_video: project.record_video,
-          status: "draft" as never,
+          status: "active" as never,
           slug,
           avatar_image_url: project.avatar_image_url,
           intro_audio_url: project.intro_audio_url,
