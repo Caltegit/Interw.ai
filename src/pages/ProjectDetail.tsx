@@ -21,9 +21,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3 } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2 } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
+import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { SaveAsTemplateDialog } from "@/components/project/SaveAsTemplateDialog";
@@ -40,8 +41,8 @@ import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsBar({
-  count, onClear, onEmail, onDelete, onCompare,
-}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void }) {
+  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
   const canCompare = count >= 2 && count <= 4;
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
@@ -54,6 +55,13 @@ function BulkActionsBar({
         <DropdownMenuContent align="start">
           <DropdownMenuItem onClick={onEmail}>
             <Mail className="mr-2 h-4 w-4" /> Envoyer un email
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onShareReports} disabled={!canShareReports}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Partager les rapports
+            {!canShareReports && (
+              <span className="ml-2 text-xs text-muted-foreground">Aucun rapport</span>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={onCompare}
@@ -97,6 +105,7 @@ export default function ProjectDetail() {
   // Sélection multiple (vue tableau uniquement)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [shareReportsOpen, setShareReportsOpen] = useState(false);
   const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const toggleSelect = (sid: string) => {
@@ -190,7 +199,7 @@ export default function ProjectDetail() {
 
       const { data: reps } = await supabase
         .from("reports")
-        .select("session_id, overall_score, recommendation")
+        .select("id, session_id, overall_score, recommendation")
         .in("session_id", ids);
       if (cancelled) return;
 
@@ -737,6 +746,8 @@ export default function ProjectDetail() {
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
                     onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                    onShareReports={() => setShareReportsOpen(true)}
+                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
                   />
                 )}
                 <div className="overflow-x-auto">
@@ -963,6 +974,8 @@ export default function ProjectDetail() {
                     onEmail={() => setBulkEmailOpen(true)}
                     onDelete={() => setBulkDeleteStep(1)}
                     onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                    onShareReports={() => setShareReportsOpen(true)}
+                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
                   />
                 )}
               </div>
@@ -1040,6 +1053,21 @@ export default function ProjectDetail() {
         }))}
         projectTitle={project?.title ?? ""}
         onSent={clearSelection}
+      />
+
+      <ShareReportsDialog
+        open={shareReportsOpen}
+        onOpenChange={setShareReportsOpen}
+        projectTitle={project?.title ?? ""}
+        recipients={sessions
+          .filter((s) => selectedIds.has(s.id) && reportsBySession[s.id]?.id)
+          .map((s) => ({
+            sessionId: s.id,
+            name: s.candidate_name ?? "Candidat",
+            score: reportsBySession[s.id]?.overall_score ?? null,
+            reportId: reportsBySession[s.id].id,
+          }))}
+        skippedCount={[...selectedIds].filter((sid) => !reportsBySession[sid]?.id).length}
       />
 
       <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
