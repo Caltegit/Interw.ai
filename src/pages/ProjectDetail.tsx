@@ -670,7 +670,7 @@ export default function ProjectDetail() {
                   </Button>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {filteredSessions.length} / {sessions.length}
+                  {filteredSessions.length} / {visibleSessions.length}
                 </span>
                 <Input
                   placeholder="Rechercher (nom ou email)…"
