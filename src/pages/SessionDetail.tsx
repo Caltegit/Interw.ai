@@ -31,7 +31,7 @@ import {
 } from "@/hooks/queries/useSessionDetail";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
-import { AiAnalysisDisclaimer } from "@/components/session/AiAnalysisDisclaimer";
+
 
 import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
@@ -436,8 +436,6 @@ export default function SessionDetail() {
             <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
                 <>
-                  <AiAnalysisDisclaimer />
-
                   <DecisionDriversCard
                     drivers={stats.decision_drivers}
                     strengths={report.strengths as string[] | null}
