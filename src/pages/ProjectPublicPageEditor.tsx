@@ -184,6 +184,35 @@ export default function ProjectPublicPageEditor() {
         <p className="text-muted-foreground text-sm">{project?.title}</p>
       </div>
 
+      <div className="rounded-lg border p-4 space-y-3">
+        <div>
+          <Label className="text-base">Importer depuis une URL</Label>
+          <p className="text-sm text-muted-foreground">
+            Collez le lien d'une annonce existante pour pré-remplir le contenu de la page.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            type="url"
+            placeholder="https://exemple.com/offre-emploi"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            disabled={importing}
+          />
+          <Button onClick={handleImportFromUrl} disabled={importing || !importUrl.trim()}>
+            {importing ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1 h-4 w-4" />
+            )}
+            {importing ? "Lecture en cours…" : "Importer"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Le contenu actuel de l'éditeur sera remplacé.
+        </p>
+      </div>
+
       <div className="rounded-lg border p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div>
@@ -192,6 +221,7 @@ export default function ProjectPublicPageEditor() {
           </div>
           <Switch checked={page.enabled} onCheckedChange={handleToggleEnabled} />
         </div>
+
 
         {page.enabled && (
           <div className="space-y-2">
