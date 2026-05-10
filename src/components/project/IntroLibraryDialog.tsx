@@ -46,11 +46,13 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
       setLoading(false);
       return;
     }
+    // Quand on demande "text", on inclut aussi les intros TTS (qui ont un intro_text)
+    const typesFilter = type === "text" ? ["text", "tts"] : [type];
     const { data, error } = await supabase
       .from("intro_templates" as never)
       .select("*")
       .eq("organization_id", orgId)
-      .eq("type", type)
+      .in("type", typesFilter)
       .order("created_at", { ascending: false });
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
