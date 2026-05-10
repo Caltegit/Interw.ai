@@ -1,27 +1,29 @@
-Passer la note IA en mode **hybride** dans `supabase/functions/generate-report/index.ts`.
+## Objectif
 
-## Formule
+Ajouter un 4ᵉ onglet **« Big Five »** dans le rapport (`SessionDetail` + `SharedReport`), avec un petit pictogramme rond affichant le score Big Five moyen sur 10. Déplacer dans cet onglet le contenu actuellement en bas de l'onglet « Reco IA » (`DeepAnalysisAccordion` = PersonalityRadar + SoftSkills).
 
-```
-overall_score_final = round( (overall_score_IA + fit_score_pondéré) / 2 )
-```
+## Calcul du score Big Five /10
 
-- `overall_score_IA` = note 0-100 actuellement posée par Gemini
-- `fit_score_pondéré` = `fitScore` déjà calculé ligne 510-517 (somme(score critère × poids) / somme(poids))
+Moyenne des 5 traits (`openness`, `conscientiousness`, `extraversion`, `agreeableness`, `emotional_stability`) qui ont un score, divisée par 10. Borné 0-10, arrondi à 1 décimale. Si aucun trait disponible → onglet quand même cliquable mais pictogramme remplacé par « — ».
 
 ## Implémentation
 
-1. Calculer une variable `finalOverallScore` après le calcul de `fitScore` :
-   - Si `fitScore` est `null` (aucun critère), garder la note IA seule.
-   - Sinon, moyenne des deux, bornée 0-100.
-2. Utiliser `finalOverallScore` :
-   - dans l'`insert` de `reports.overall_score` (ligne 687)
-   - dans `templateData.overallScore` pour l'email (ligne 770)
-3. Stocker dans `stats` un détail traçable pour debug/affichage futur :
-   - `stats.score_breakdown = { ai_score, weighted_criteria_score, final_score, method: "hybrid_v1" }`
+1. **Nouveau composant** `src/components/session/BigFiveBadge.tsx` :
+   - Petit cercle 22×22 avec le chiffre /10 au centre
+   - Couleur selon valeur (success ≥ 6.5, warning ≥ 4.5, sinon destructive) — réutilise les tokens existants
+   - Helper exporté `computeBigFiveAverage(profile) → number | null`
 
-## Hors scope (pour plus tard si besoin)
+2. **`SessionDetail.tsx`** :
+   - `TabsList` passe de `grid-cols-3` à `grid-cols-4`
+   - Ajouter `<TabsTrigger value="bigfive">` avec icône `Brain` + `BigFiveBadge`
+   - Retirer `<DeepAnalysisAccordion>` de l'onglet `decision`
+   - Nouveau `<TabsContent value="bigfive">` qui rend `<PersonalityRadar>` + `<SoftSkillsCard>` directement (pas en accordéon, c'est l'onglet)
 
-- Recalculer `overall_grade` à partir de `finalOverallScore` (on garde celui de l'IA pour l'instant).
-- UI montrant le détail du calcul au RH.
-- Migration des rapports déjà générés (on n'y touche pas, seuls les nouveaux rapports utilisent l'hybride).
+3. **`SharedReport.tsx`** : mêmes modifs.
+
+4. Le composant `DeepAnalysisAccordion` n'est plus utilisé → on peut le laisser pour l'instant (pas critique de supprimer).
+
+## Hors scope
+
+- Pas de changement DB
+- Pas de refonte du PersonalityRadar (juste réutilisé tel quel)
