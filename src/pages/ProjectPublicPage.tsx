@@ -75,7 +75,7 @@ export default function ProjectPublicPage() {
   const editor = useEditor(
     {
       editable: false,
-      extensions: [StarterKit, Image, TLink],
+      extensions: [StarterKit, Image, TiptapLink],
       content: data?.content && Object.keys(data.content).length ? data.content : "<p></p>",
     },
     [data?.content],
