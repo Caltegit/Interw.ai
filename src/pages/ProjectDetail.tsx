@@ -448,6 +448,7 @@ export default function ProjectDetail() {
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
+  const visibleSessions = sessions.filter((s) => s.status !== "cancelled");
   const completedSessions = readySessions;
   const processingCount = sessions.filter(
     (s) => s.status === "completed" && !reportsBySession[s.id],
@@ -606,7 +607,7 @@ export default function ProjectDetail() {
       </div>
 
       {/* Filtres rapides Sélection */}
-      {sessions.length > 0 && (
+      {visibleSessions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {decisionOptions.map((d) => {
             const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
@@ -634,13 +635,13 @@ export default function ProjectDetail() {
 
       <Tabs defaultValue="sessions">
         <TabsList className="hidden">
-          <TabsTrigger value="sessions">Sessions ({sessions.length})</TabsTrigger>
+          <TabsTrigger value="sessions">Sessions ({visibleSessions.length})</TabsTrigger>
           <TabsTrigger value="questions">Questions ({questions.length})</TabsTrigger>
           <TabsTrigger value="criteria">Critères ({criteria.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sessions" className="space-y-4">
-          {sessions.length === 0 ? (
+          {visibleSessions.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.
             </p>
@@ -669,7 +670,7 @@ export default function ProjectDetail() {
                   </Button>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {filteredSessions.length} / {sessions.length}
+                  {filteredSessions.length} / {visibleSessions.length}
                 </span>
                 <Input
                   placeholder="Rechercher (nom ou email)…"
