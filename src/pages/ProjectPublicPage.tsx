@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import Link as TLink from "@tiptap/extension-link";
+import TiptapLink from "@tiptap/extension-link";
 
 export default function ProjectPublicPage() {
   const { slugPublic } = useParams<{ slugPublic: string }>();
