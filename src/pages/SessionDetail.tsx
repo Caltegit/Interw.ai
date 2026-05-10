@@ -481,13 +481,6 @@ export default function SessionDetail() {
                       </CardContent>
                     </Card>
                   )}
-
-                  <DeepAnalysisAccordion
-                    personalityProfile={report.personality_profile}
-                    softSkills={report.soft_skills as any}
-                    projectAverages={projectAverages?.bigFive}
-                    onGoToMessage={goToMessage}
-                  />
                 </>
               ) : (
                 <Card>
@@ -496,6 +489,28 @@ export default function SessionDetail() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Le rapport sera généré automatiquement après l'analyse de la session.
                     </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="bigfive" className="mt-4 space-y-4">
+              {report && (report.personality_profile || report.soft_skills) ? (
+                <>
+                  <PersonalityRadar
+                    profile={report.personality_profile}
+                    onGoToMessage={goToMessage}
+                    projectAverages={projectAverages?.bigFive}
+                  />
+                  <SoftSkillsCard
+                    skills={report.soft_skills as any}
+                    onGoToMessage={goToMessage}
+                  />
+                </>
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse Big Five non disponible.
                   </CardContent>
                 </Card>
               )}
