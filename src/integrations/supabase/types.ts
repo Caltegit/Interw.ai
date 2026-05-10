@@ -1113,7 +1113,6 @@ export type Database = {
           recommendation:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
-          recruiter_notes: string | null
           red_flags: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1140,7 +1139,6 @@ export type Database = {
           recommendation?:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
-          recruiter_notes?: string | null
           red_flags?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1167,7 +1165,6 @@ export type Database = {
           recommendation?:
             | Database["public"]["Enums"]["recommendation_type"]
             | null
-          recruiter_notes?: string | null
           red_flags?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
