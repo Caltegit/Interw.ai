@@ -21,7 +21,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, BarChart3, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { Checkbox } from "@/components/ui/checkbox";
