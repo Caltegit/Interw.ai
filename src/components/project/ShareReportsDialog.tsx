@@ -115,6 +115,11 @@ export function ShareReportsDialog({
       toast({ title: "Email invalide", variant: "destructive" });
       return;
     }
+    const replyToTrimmed = replyTo.trim();
+    if (allowReply && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyToTrimmed)) {
+      toast({ title: "Adresse de réponse invalide", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const { error } = await supabase.functions.invoke("send-transactional-email", {
       body: {
@@ -122,6 +127,7 @@ export function ShareReportsDialog({
         recipientEmail: email,
         idempotencyKey: `share-reports-${Date.now()}`,
         templateData: { subject, body, firstName: "" },
+        ...(allowReply ? { replyTo: replyToTrimmed } : {}),
       },
     });
     setSending(false);
