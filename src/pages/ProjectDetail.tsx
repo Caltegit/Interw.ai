@@ -1055,6 +1055,21 @@ export default function ProjectDetail() {
         onSent={clearSelection}
       />
 
+      <ShareReportsDialog
+        open={shareReportsOpen}
+        onOpenChange={setShareReportsOpen}
+        projectTitle={project?.title ?? ""}
+        recipients={sessions
+          .filter((s) => selectedIds.has(s.id) && reportsBySession[s.id]?.id)
+          .map((s) => ({
+            sessionId: s.id,
+            name: s.candidate_name ?? "Candidat",
+            score: reportsBySession[s.id]?.overall_score ?? null,
+            reportId: reportsBySession[s.id].id,
+          }))}
+        skippedCount={[...selectedIds].filter((sid) => !reportsBySession[sid]?.id).length}
+      />
+
       <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
         <AlertDialogContent>
           <AlertDialogHeader>
