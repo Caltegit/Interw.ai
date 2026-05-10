@@ -46,6 +46,12 @@ export function ShareReportsDialog({
   const [recipientEmail, setRecipientEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [allowReply, setAllowReply] = useState(true);
+  const [replyTo, setReplyTo] = useState("");
+
+  useEffect(() => {
+    if (open && user?.email) setReplyTo(user.email);
+  }, [open, user?.email]);
 
   useEffect(() => {
     if (!open || !user) return;
