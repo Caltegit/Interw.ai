@@ -29,7 +29,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export function SessionVideoNavigator({ clips }: Props) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
@@ -38,6 +38,8 @@ export function SessionVideoNavigator({ clips }: Props) {
   const rateRef = useRef(rate);
   rateRef.current = rate;
   const [durationSec, setDurationSec] = useState<number | null>(null);
+  // Position en secondes à appliquer au prochain chargement de clip (0 par défaut).
+  const pendingSeekRef = useRef<number>(0);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
