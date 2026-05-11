@@ -61,6 +61,7 @@ export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMess
               <EvidenceLink
                 quote={d.quote}
                 messageId={d.message_id}
+                startSeconds={d.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />
