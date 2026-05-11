@@ -23,6 +23,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 
 export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_opinion";
 
