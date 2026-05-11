@@ -53,6 +53,8 @@ interface DecisionBannerProps {
   onEmail?: () => void;
   onDelete?: () => void;
   readOnly?: boolean;
+  decisionByName?: string | null;
+  decisionAt?: string | null;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
