@@ -458,6 +458,7 @@ Champs secondaires (toujours produits, format inchangé) :
                   "recommendation",
                   "question_evaluations",
                   "communication_profile",
+                  "personality_profile",
                 ],
               },
             },
