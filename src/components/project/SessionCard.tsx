@@ -22,6 +22,8 @@ interface SessionLite {
   candidate_email: string;
   status: string;
   recruiter_decision: string | null;
+  recruiter_decision_at?: string | null;
+  recruiter_decision_by?: string | null;
 }
 
 interface ReportLite {
@@ -34,6 +36,7 @@ interface Props {
   report?: ReportLite | null;
   questions: Question[];
   onDecisionChange: (sessionId: string, decision: string) => void;
+  decisionByName?: string | null;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
