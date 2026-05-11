@@ -347,6 +347,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         severity: { type: "string", enum: ["low", "medium", "high"] },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                         suggested_question: {
                           type: "string",
                           description: "Question précise à poser en entretien physique",
