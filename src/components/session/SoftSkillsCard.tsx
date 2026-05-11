@@ -8,6 +8,7 @@ interface SoftSkill {
   score?: number; // 0-10
   quote?: string;
   evidence_message_id?: string;
+  evidence_start_seconds?: number;
 }
 
 interface Props {
