@@ -836,8 +836,16 @@ export default function InterviewDeviceTest() {
             title="Reconnaissance vocale"
             icon={MessageSquare}
             fullWidth
+            forceExpanded={sttStatus === "error"}
           >
-            {sttStatus === "warning" && sttError && <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>}
+            {sttStatus === "error" && sttError && (
+              <div className="space-y-3">
+                <p className="text-xs text-destructive">{sttError}</p>
+                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                </Button>
+              </div>
+            )}
           </TestCard>
 
           {/* Réseau */}
