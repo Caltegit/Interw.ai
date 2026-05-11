@@ -23,6 +23,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 
 export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_opinion";
 
@@ -51,6 +53,8 @@ interface DecisionBannerProps {
   onEmail?: () => void;
   onDelete?: () => void;
   readOnly?: boolean;
+  decisionByName?: string | null;
+  decisionAt?: string | null;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
@@ -100,9 +104,12 @@ export function DecisionBanner(props: DecisionBannerProps) {
     onEmail,
     onDelete,
     readOnly,
+    decisionByName,
+    decisionAt,
   } = props;
 
   const reco = recommendation ? recoConfig[recommendation] : null;
+  const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
   const meta = [jobTitle, durationLabel, `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`]
     .filter(Boolean)
     .join(" · ");
@@ -147,6 +154,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="success"
                 icon={Check}
                 label="Retenu"
+                tooltip={decision === "shortlisted" ? authorTooltip : null}
               />
               <DecisionButton
                 active={decision === "second_opinion"}
@@ -157,6 +165,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="warning"
                 icon={HelpCircle}
                 label="À discuter"
+                tooltip={decision === "second_opinion" ? authorTooltip : null}
               />
               <DecisionButton
                 active={decision === "rejected"}
@@ -165,6 +174,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="destructive"
                 icon={X}
                 label="Non"
+                tooltip={decision === "rejected" ? authorTooltip : null}
               />
             </div>
           )}
@@ -253,6 +263,7 @@ function DecisionButton({
   tone,
   icon: Icon,
   label,
+  tooltip,
 }: {
   active: boolean;
   onClick: () => void;
@@ -260,6 +271,7 @@ function DecisionButton({
   tone: "success" | "warning" | "destructive";
   icon: typeof Check;
   label: string;
+  tooltip?: string | null;
 }) {
   const toneClass = active
     ? tone === "success"
@@ -269,7 +281,7 @@ function DecisionButton({
       : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
     : "";
 
-  return (
+  const button = (
     <Button
       type="button"
       variant={active ? "default" : "outline"}
@@ -282,4 +294,14 @@ function DecisionButton({
       <span className="hidden sm:inline">{label}</span>
     </Button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  return button;
 }

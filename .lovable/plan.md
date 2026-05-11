@@ -1,42 +1,37 @@
 ## Objectif
+Afficher au survol de la sélection d'un candidat (Retenu / À discuter / Non / À traiter) le nom de la personne qui a effectué la dernière action, sous la forme « Par Prénom Nom » (avec la date).
 
-Corriger le bug du **0/10** affiché sur chaque question et garantir que l'IA produit bien une note /10 par question (basée sur son impression de la réponse).
-
-## Diagnostic
-
-Aujourd'hui, quand l'IA omet le bloc `question_evaluations` (typiquement sur les longs entretiens), le serveur applique un fallback qui écrit `score: 0` + "Évaluation IA indisponible" pour toutes les questions. Résultat : badges rouges 0/10 partout, alors que le candidat est bon.
+## Bonne nouvelle
+La table `sessions` contient déjà `recruiter_decision_by` (uuid) et `recruiter_decision_at` (timestamp), et ces champs sont déjà mis à jour côté front lors d'un changement de décision (`useSessionDetail.ts`, `ProjectDetail.tsx`). Aucune migration n'est nécessaire.
 
 ## Changements
 
-### 1. Backend — `supabase/functions/generate-report/index.ts`
+### 1. Récupération du nom de l'auteur
+- **`src/pages/ProjectDetail.tsx`** : ajouter `recruiter_decision_at, recruiter_decision_by` dans le `select` des sessions, puis charger en une requête les profils correspondants (`profiles` filtré par `user_id IN (...)`) pour construire un map `userId → full_name`. Passer ces infos à `SessionCard`.
+- **`src/pages/ProjectCompare.tsx`** : même traitement (select + map profils).
+- **`src/hooks/queries/useSessionDetail.ts`** : déjà renvoie `recruiter_decision_by/at`. Ajouter une petite requête (ou jointure) pour récupérer le `full_name` du décideur et l'exposer via le hook.
 
-**a) Renforcer le prompt** pour rendre la notation par question fiable :
-- Insister explicitement : "Tu DOIS retourner une entrée `question_evaluations` pour CHAQUE question posée, même si la réponse est vague."
-- Préciser la grille de notation /10 :
-  - 1-3 : réponse absente, hors-sujet ou très superficielle
-  - 4-6 : réponse correcte mais générique, peu d'exemples
-  - 7-8 : réponse claire avec exemples concrets
-  - 9-10 : réponse experte, structurée, démonstrative
-- Ajouter : "Note selon ton impression globale de la réponse (clarté + pertinence + profondeur)."
+### 2. Affichage au survol (tooltips)
+- **`src/components/project/SessionCard.tsx`** : envelopper le badge/pill de décision actif dans un `Tooltip` (composant déjà disponible) affichant :
+  - « Par {Prénom Nom} »
+  - « le {date courte FR} » sur une 2e ligne
+  - Si `recruiter_decision_by` est null → ne rien afficher (tooltip masqué).
+- **`src/components/session/DecisionBanner.tsx`** : entourer le bouton de décision actif (Retenu / À discuter / Non) du même `Tooltip`. Nouveau prop optionnel `decisionByName` + `decisionAt`.
+- **`src/pages/SessionDetail.tsx`** & **`src/pages/SharedReport.tsx`** : passer ces nouvelles props au `DecisionBanner`. Sur la page partagée publique, masquer si pas dispo (RLS anon).
+- **`src/pages/ProjectCompare.tsx`** : tooltip identique sur la cellule de décision.
 
-**b) Fallback honnête (lignes 611-620)** : au lieu d'écrire `score: 0`, écrire `score: null` quand l'IA n'a rien retourné. Le composant `QuestionAnswerRow` affiche déjà **"Non évalué"** (badge gris) quand `score === null`.
-
-**c) Validation par entrée** : si l'IA renvoie une entrée sans `score` numérique valide, mettre `score: null` (au lieu de laisser tomber sur 0 par défaut côté front).
-
-**d) Retry ciblé** : si après le premier appel `question_evaluations` est vide ou incomplet (< nombre de questions), relancer un second appel IA avec un prompt court qui demande UNIQUEMENT les évaluations par question manquantes. Ça évite que tout le rapport soit régénéré juste pour récupérer les notes.
-
-### 2. Front — déjà compatible
-
-`QuestionAnswerRow` (lignes 38-43, 69-71) gère déjà `score === null` → badge gris "Non évalué". Aucun changement nécessaire.
-
-`SessionStatsCard` ignore déjà les entrées sans score pour "Meilleure / Question la plus faible" (vérifier que `bestScore !== undefined` filtre bien `null`).
-
-## Détails techniques
-
-- Pas de changement DB ni de migration.
-- Pas de nouveau champ : on garde `question_evaluations[i].score` (0-10 ou null).
-- **Rapports existants** : ils continueront d'afficher 0/10 jusqu'à régénération via le bouton "Régénérer le rapport" (déjà présent).
+### 3. Détails UX
+- Format date : `11 mai 2026` (Intl français court).
+- Si décision = `none` (À traiter) sans auteur → pas de tooltip.
+- Tooltip texte simple, pas de badge supplémentaire visible (zéro pollution visuelle).
 
 ## Fichiers modifiés
+- `src/pages/ProjectDetail.tsx`
+- `src/pages/ProjectCompare.tsx`
+- `src/pages/SessionDetail.tsx`
+- `src/pages/SharedReport.tsx`
+- `src/hooks/queries/useSessionDetail.ts`
+- `src/components/project/SessionCard.tsx`
+- `src/components/session/DecisionBanner.tsx`
 
-- `supabase/functions/generate-report/index.ts` (prompt + fallback + retry ciblé)
+Aucune migration DB, aucune modification de logique métier hormis la lecture des profils.

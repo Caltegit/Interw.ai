@@ -401,6 +401,8 @@ export default function SessionDetail() {
         isRegenerating={regenerate.isPending}
         onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
         onDelete={() => setDeleteOpen(true)}
+        decisionByName={(session as any).decision_by_name ?? null}
+        decisionAt={(session as any).recruiter_decision_at ?? null}
       />
 
       <BulkEmailDialog

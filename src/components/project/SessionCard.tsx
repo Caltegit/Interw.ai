@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Check, HelpCircle, X, RotateCcw, RotateCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 
 interface Question {
   id: string;
@@ -20,6 +22,8 @@ interface SessionLite {
   candidate_email: string;
   status: string;
   recruiter_decision: string | null;
+  recruiter_decision_at?: string | null;
+  recruiter_decision_by?: string | null;
 }
 
 interface ReportLite {
@@ -32,6 +36,7 @@ interface Props {
   report?: ReportLite | null;
   questions: Question[];
   onDecisionChange: (sessionId: string, decision: string) => void;
+  decisionByName?: string | null;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
@@ -48,7 +53,7 @@ function scoreColor(score: number | null | undefined) {
   return "bg-destructive text-destructive-foreground";
 }
 
-export function SessionCard({ session, report, questions, onDecisionChange }: Props) {
+export function SessionCard({ session, report, questions, onDecisionChange, decisionByName }: Props) {
   const [clips, setClips] = useState<
     { url: string; questionId: string | null; isFollowUp: boolean }[]
   >([]);
@@ -172,6 +177,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
   const qOrder = currentQ ? currentQ.order_index + 1 : null;
 
   const decision = (session.recruiter_decision ?? "none") as string;
+  const authorTooltip = formatDecisionAuthor(decisionByName, session.recruiter_decision_at);
 
   const decisionBtn = (
     value: string,
@@ -187,7 +193,7 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
         ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
         : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
       : "";
-    return (
+    const btn = (
       <Button
         type="button"
         size="sm"
@@ -199,6 +205,15 @@ export function SessionCard({ session, report, questions, onDecisionChange }: Pr
         <span className="ml-1">{label}</span>
       </Button>
     );
+    if (active && authorTooltip) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+          <TooltipContent>{authorTooltip}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return btn;
   };
 
   const reco = report?.recommendation ? recoConfig[report.recommendation] : null;

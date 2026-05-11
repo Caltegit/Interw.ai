@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,7 +185,7 @@ export default function ProjectDetail() {
     const loadSessionsAndReports = async () => {
       const { data: sList } = await supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
         .eq("project_id", id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
@@ -291,7 +292,18 @@ export default function ProjectDetail() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              recruiter_decision: decision,
+              recruiter_decision_at: patch.recruiter_decision_at,
+              recruiter_decision_by: patch.recruiter_decision_by,
+            }
+          : s,
+      ),
+    );
   };
 
   const saveNote = (sessionId: string, value: string) => {
@@ -734,6 +746,7 @@ export default function ProjectDetail() {
                       report={reportsBySession[s.id]}
                       questions={questions}
                       onDecisionChange={updateDecision}
+                      decisionByName={memberById((s as any).recruiter_decision_by)?.full_name ?? memberById((s as any).recruiter_decision_by)?.email ?? null}
                     />
                   ))}
                   {pagedSessions.length === 0 && (
@@ -820,14 +833,29 @@ export default function ProjectDetail() {
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
+                              const author = memberById((s as any).recruiter_decision_by);
+                              const authorLabel = formatDecisionAuthor(
+                                author?.full_name || author?.email,
+                                (s as any).recruiter_decision_at,
+                              );
+                              const trigger = (
+                                <SelectTrigger className={`h-8 w-[7rem] text-xs ${meta.text}`}>
+                                  <span className="flex items-center gap-1.5 min-w-0">
+                                    <span className={`inline-block h-2 w-2 rounded-full border shrink-0 ${meta.dot}`} />
+                                    <span className="truncate">{meta.label}</span>
+                                  </span>
+                                </SelectTrigger>
+                              );
                               return (
                                 <Select value={current} onValueChange={(v) => updateDecision(s.id, v)}>
-                                  <SelectTrigger className={`h-8 w-[7rem] text-xs ${meta.text}`}>
-                                    <span className="flex items-center gap-1.5 min-w-0">
-                                      <span className={`inline-block h-2 w-2 rounded-full border shrink-0 ${meta.dot}`} />
-                                      <span className="truncate">{meta.label}</span>
-                                    </span>
-                                  </SelectTrigger>
+                                  {authorLabel ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                                      <TooltipContent>{authorLabel}</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    trigger
+                                  )}
                                   <SelectContent>
                                     {decisionOptions.map((d) => (
                                       <SelectItem key={d.value} value={d.value}>

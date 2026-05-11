@@ -9,6 +9,7 @@ import { ArrowLeft, Trophy, X, ExternalLink, Sparkles, AlertTriangle, CheckCircl
 import { SessionCard } from "@/components/project/SessionCard";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ReportLite {
   overall_score: number | null;
@@ -28,7 +29,10 @@ interface SessionFull {
   candidate_email: string;
   status: string;
   recruiter_decision: string | null;
+  recruiter_decision_at: string | null;
+  recruiter_decision_by: string | null;
   recruiter_note: string | null;
+  decision_by_name?: string | null;
   report: ReportLite | null;
 }
 
@@ -44,6 +48,7 @@ export default function ProjectCompare() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
   const ids = useMemo(
     () => (searchParams.get("ids") ?? "").split(",").filter(Boolean).slice(0, 4),
     [searchParams],
@@ -63,13 +68,28 @@ export default function ProjectCompare() {
       const [pRes, qRes, sRes, rRes] = await Promise.all([
         supabase.from("projects").select("*").eq("id", id).single(),
         supabase.from("questions").select("id, order_index, content").eq("project_id", id).order("order_index"),
-        supabase.from("sessions").select("id, candidate_name, candidate_email, status, recruiter_decision, recruiter_note").in("id", ids),
+        supabase.from("sessions").select("id, candidate_name, candidate_email, status, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note").in("id", ids),
         supabase.from("reports").select("session_id, overall_score, recommendation, executive_summary_short, executive_summary, strengths, areas_for_improvement, red_flags, criteria_scores, soft_skills").in("session_id", ids),
       ]);
 
       setProject(pRes.data);
       setQuestions(qRes.data ?? []);
       const reportsBySid = new Map((rRes.data ?? []).map((r: any) => [r.session_id, r]));
+
+      const decisionByIds = Array.from(
+        new Set((sRes.data ?? []).map((s: any) => s.recruiter_decision_by).filter(Boolean)),
+      );
+      let nameByUserId = new Map<string, string>();
+      if (decisionByIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, email")
+          .in("user_id", decisionByIds as string[]);
+        nameByUserId = new Map(
+          (profs ?? []).map((p: any) => [p.user_id, p.full_name || p.email || ""]),
+        );
+      }
+
       const ordered: SessionFull[] = ids
         .map((sid) => {
           const s = (sRes.data ?? []).find((x: any) => x.id === sid);
@@ -77,6 +97,7 @@ export default function ProjectCompare() {
           const r: any = reportsBySid.get(sid);
           return {
             ...s,
+            decision_by_name: s.recruiter_decision_by ? nameByUserId.get(s.recruiter_decision_by) ?? null : null,
             report: r
               ? {
                   overall_score: r.overall_score != null ? Number(r.overall_score) : null,
@@ -99,10 +120,25 @@ export default function ProjectCompare() {
   }, [id, ids]);
 
   const handleDecisionChange = async (sessionId: string, decision: string) => {
-    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+    const at = decision === "none" ? null : new Date().toISOString();
+    const by = decision === "none" ? null : user?.id ?? null;
+    const myName = profile?.full_name || profile?.email || null;
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              recruiter_decision: decision,
+              recruiter_decision_at: at,
+              recruiter_decision_by: by,
+              decision_by_name: by ? myName : null,
+            }
+          : s,
+      ),
+    );
     const { error } = await supabase
       .from("sessions")
-      .update({ recruiter_decision: decision as any })
+      .update({ recruiter_decision: decision as any, recruiter_decision_at: at, recruiter_decision_by: by })
       .eq("id", sessionId);
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
   };
@@ -300,6 +336,7 @@ function CompareColumn({
         report={r ? { overall_score: r.overall_score, recommendation: r.recommendation } : null}
         questions={questions}
         onDecisionChange={onDecisionChange}
+        decisionByName={session.decision_by_name ?? null}
       />
 
       {/* 2. Note recruteur */}
