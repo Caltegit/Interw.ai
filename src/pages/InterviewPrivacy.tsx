@@ -93,7 +93,7 @@ export default function InterviewPrivacy() {
         throw new Error(msg);
       }
       setDeleted(true);
-      setStep(0);
+      setConfirmOpen(false);
       toast({
         title: "Données supprimées",
         description: "Toutes les données liées à votre entretien ont été effacées.",
