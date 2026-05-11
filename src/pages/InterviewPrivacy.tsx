@@ -138,13 +138,16 @@ export default function InterviewPrivacy() {
   if (deleted) {
     return (
       <CandidateLayout>
-        <div className="max-w-2xl mx-auto p-6 text-center space-y-4">
+        <div className="max-w-2xl mx-auto p-6 text-center space-y-6">
           <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
           <h1 className="text-2xl font-bold">Vos données ont été supprimées</h1>
           <p className="text-muted-foreground">
             Toutes les données liées à votre entretien (vidéos, audios, transcription, rapport) ont été
             définitivement effacées de nos serveurs. Cette action est irréversible.
           </p>
+          <Button asChild>
+            <Link to="/">Quitter cette page</Link>
+          </Button>
         </div>
       </CandidateLayout>
     );
