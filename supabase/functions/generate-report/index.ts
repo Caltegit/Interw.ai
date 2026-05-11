@@ -399,6 +399,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         score: { type: "number", minimum: 0, maximum: 10 },
                         quote: { type: "string" },
                         evidence_message_id: { type: "string" },
+                        evidence_start_seconds: { type: "number" },
                       },
                       required: ["skill", "quote"],
                     },
