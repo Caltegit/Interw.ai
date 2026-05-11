@@ -28,6 +28,7 @@ function dimensionSchema() {
       comment: { type: "string" },
       quote: { type: "string" },
       message_id: { type: "string" },
+      start_seconds: { type: "number" },
     },
   } as const;
 }
@@ -46,6 +47,7 @@ function personalityProfileSchema() {
           properties: {
             quote: { type: "string" },
             message_id: { type: "string" },
+            start_seconds: { type: "number" },
           },
         },
       },
@@ -256,6 +258,7 @@ Règles ABSOLUES :
 2. N'invente jamais un message_id : si tu ne peux pas citer, omets le champ.
 3. Si la transcription est trop courte ou vague pour conclure, dis-le explicitement plutôt que d'inventer.
 4. Pas de jargon RH/psy dans verdict_headline, decision_drivers, fit_breakdown.statement, signals : du français concret de manager.
+5. À chaque fois que tu fournis un message_id (ou evidence_message_id), fournis aussi start_seconds : la seconde estimée à laquelle commence la phrase citée DANS la réponse vidéo de ce message (0 = début de la réponse). Estime à partir de la position du texte cité dans la transcription du message, en supposant un débit de ~160 mots/minute (≈2,7 mots/seconde). Exemple : si la citation commence après ~80 mots, start_seconds ≈ 30.
 
 Produis un rapport orienté DÉCISION en utilisant l'outil generate_report.
 
@@ -312,6 +315,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                       },
                       required: ["label", "sentiment"],
                     },
@@ -328,6 +332,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         statement: { type: "string", description: "1 phrase concrète" },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                       },
                       required: ["criterion", "score", "statement"],
                     },
@@ -343,6 +348,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         severity: { type: "string", enum: ["low", "medium", "high"] },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                         suggested_question: {
                           type: "string",
                           description: "Question précise à poser en entretien physique",
@@ -377,6 +383,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         comment: { type: "string" },
                         key_quote: { type: "string" },
                         evidence_message_id: { type: "string" },
+                        evidence_start_seconds: { type: "number" },
                         depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
                         had_followup: { type: "boolean" },
                         followup_helped: { type: "boolean" },
@@ -393,6 +400,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         score: { type: "number", minimum: 0, maximum: 10 },
                         quote: { type: "string" },
                         evidence_message_id: { type: "string" },
+                        evidence_start_seconds: { type: "number" },
                       },
                       required: ["skill", "quote"],
                     },

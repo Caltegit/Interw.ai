@@ -6,6 +6,7 @@ import { Brain, ChevronDown, ChevronUp, Play } from "lucide-react";
 interface Evidence {
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Trait {
@@ -45,7 +46,7 @@ const confidenceLabel: Record<string, string> = {
 
 interface Props {
   profile?: Profile | null;
-  onGoToMessage?: (messageId: string) => void;
+  onGoToMessage?: (messageId: string, startSeconds?: number) => void;
   /** Moyenne du projet (Big Five) à superposer en marqueur. */
   projectAverages?: Partial<Record<keyof Profile, number>>;
 }
@@ -115,7 +116,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Pr
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0 text-primary"
-                          onClick={() => onGoToMessage(ev.message_id!)}
+                          onClick={() => onGoToMessage(ev.message_id!, ev.start_seconds)}
                           title="Voir le moment"
                         >
                           <Play className="h-3 w-3" />

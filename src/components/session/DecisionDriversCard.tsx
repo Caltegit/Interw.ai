@@ -8,6 +8,7 @@ export interface DecisionDriver {
   sentiment?: "positive" | "neutral" | "negative";
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
   // Fallbacks pour les anciens rapports
   strengths?: string[] | null;
   weaknesses?: string[] | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const sentimentMap = {
@@ -60,6 +61,7 @@ export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMess
               <EvidenceLink
                 quote={d.quote}
                 messageId={d.message_id}
+                startSeconds={d.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />

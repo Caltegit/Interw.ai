@@ -8,6 +8,7 @@ interface Dimension {
   comment?: string;
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 export interface CommunicationProfile {
@@ -20,7 +21,7 @@ export interface CommunicationProfile {
 
 interface Props {
   profile?: CommunicationProfile | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const groups = [
@@ -95,6 +96,7 @@ export function CommunicationProfileCard({ profile, onGoToMessage }: Props) {
                     <EvidenceLink
                       quote={dim!.quote}
                       messageId={dim!.message_id}
+                      startSeconds={dim!.start_seconds}
                       onGoToMessage={onGoToMessage}
                       compact
                     />

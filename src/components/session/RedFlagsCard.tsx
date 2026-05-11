@@ -25,7 +25,7 @@ const severityClass: Record<string, string> = {
 
 interface Props {
   flags?: RedFlag[] | null;
-  onGoToMessage?: (messageId: string) => void;
+  onGoToMessage?: (messageId: string, startSeconds?: number) => void;
 }
 
 export function RedFlagsCard({ flags, onGoToMessage }: Props) {

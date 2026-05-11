@@ -10,6 +10,7 @@ export interface Signal {
   severity?: "low" | "medium" | "high";
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
   suggested_question?: string;
 }
 
@@ -24,7 +25,7 @@ interface Props {
     evidence_message_id?: string;
   }> | null;
   legacyFollowups?: Array<{ question: string; rationale?: string }> | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const sevTone: Record<string, string> = {
@@ -92,6 +93,7 @@ export function SignalsCard({ signals, legacyRedFlags, legacyFollowups, onGoToMe
               <EvidenceLink
                 quote={s.quote}
                 messageId={s.message_id}
+                startSeconds={s.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />

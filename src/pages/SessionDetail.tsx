@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,7 +33,7 @@ import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
 
-import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
+import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
@@ -112,8 +112,22 @@ export default function SessionDetail() {
     }
   };
 
+  const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+
   const goToMessage = useCallback(
-    (messageId: string) => {
+    (messageId: string, startSeconds?: number) => {
+      // 1) Tente de jouer le clip vidéo correspondant.
+      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+      if (played) {
+        // Sur petit écran le panneau vidéo est sous le contenu : on l'amène en vue.
+        setTimeout(() => {
+          document
+            .getElementById("session-video-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+        return;
+      }
+      // 2) Fallback transcript pour les messages sans clip vidéo.
       const idx = messages.findIndex((m: any) => m.id === messageId);
       if (idx === -1) return;
       setActiveTab("transcript");
@@ -192,6 +206,7 @@ export default function SessionDetail() {
           questionLabel: num ? `Question ${num}` : "Question",
           questionText: projectQ?.content ?? "",
           isFollowUp: !!m.is_follow_up,
+          messageId: m.id as string,
         };
       });
   }, [candidateVideos, session]);
@@ -575,8 +590,8 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+        <div id="session-video-panel" className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
 
           {report && (
             <Card>

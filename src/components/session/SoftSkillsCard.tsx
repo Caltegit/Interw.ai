@@ -8,11 +8,12 @@ interface SoftSkill {
   score?: number; // 0-10
   quote?: string;
   evidence_message_id?: string;
+  evidence_start_seconds?: number;
 }
 
 interface Props {
   skills?: SoftSkill[] | null;
-  onGoToMessage?: (messageId: string) => void;
+  onGoToMessage?: (messageId: string, startSeconds?: number) => void;
 }
 
 export function SoftSkillsCard({ skills, onGoToMessage }: Props) {
@@ -51,6 +52,7 @@ export function SoftSkillsCard({ skills, onGoToMessage }: Props) {
             <EvidenceLink
               quote={s.quote}
               messageId={s.evidence_message_id}
+              startSeconds={s.evidence_start_seconds}
               onGoToMessage={onGoToMessage}
             />
           </div>

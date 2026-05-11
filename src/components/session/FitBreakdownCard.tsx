@@ -11,13 +11,14 @@ export interface FitItem {
   statement?: string;
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Props {
   items?: FitItem[] | null;
   // Fallback ancien format : criteria_scores { id: { label, score, max, comment } }
   legacyCriteriaScores?: Record<string, { label?: string; score: number; max: number; comment?: string }> | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const levelLabel: Record<string, string> = {
@@ -103,6 +104,7 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage }:
               <EvidenceLink
                 quote={item.quote}
                 messageId={item.message_id}
+                startSeconds={item.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />

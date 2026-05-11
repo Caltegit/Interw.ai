@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { MessageSquare, Play, FileText, Brain } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
-import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
+import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, RecruiterDecision } from "@/components/session/DecisionBanner";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
@@ -132,6 +132,7 @@ export default function SharedReport() {
           questionLabel: num ? `Question ${num}` : "Question",
           questionText: projectQ?.content ?? "",
           isFollowUp: !!m.is_follow_up,
+          messageId: m.id as string,
         };
       });
   }, [candidateVideos, project]);
@@ -144,8 +145,19 @@ export default function SharedReport() {
   const fitScore =
     typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
 
+  const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+
   const goToMessage = useCallback(
-    (messageId: string) => {
+    (messageId: string, startSeconds?: number) => {
+      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+      if (played) {
+        setTimeout(() => {
+          document
+            .getElementById("session-video-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+        return;
+      }
       const idx = messages.findIndex((m: any) => m.id === messageId);
       if (idx === -1) return;
       setActiveTab("transcript");
@@ -368,8 +380,8 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
-          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+        <div id="session-video-panel" className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
+          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
         </div>
       </div>
 

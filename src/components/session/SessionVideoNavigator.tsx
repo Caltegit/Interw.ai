@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,12 @@ export interface SessionVideoClip {
   questionLabel: string;
   questionText: string;
   isFollowUp: boolean;
+  messageId?: string;
+}
+
+export interface SessionVideoNavigatorHandle {
+  /** Joue le clip lié à `messageId`, positionné à `startSeconds - 5s` (≥ 0). Retourne false si aucun clip ne correspond. */
+  playMessage: (messageId: string, startSeconds?: number) => boolean;
 }
 
 interface Props {
@@ -23,7 +29,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export function SessionVideoNavigator({ clips }: Props) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
@@ -32,6 +38,8 @@ export function SessionVideoNavigator({ clips }: Props) {
   const rateRef = useRef(rate);
   rateRef.current = rate;
   const [durationSec, setDurationSec] = useState<number | null>(null);
+  // Position en secondes à appliquer au prochain chargement de clip (0 par défaut).
+  const pendingSeekRef = useRef<number>(0);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -73,6 +81,17 @@ export function SessionVideoNavigator({ clips }: Props) {
     }
   };
 
+  // Applique le seek en attente, en bornant à la durée connue.
+  const applyPendingSeek = (v: HTMLVideoElement, duration: number) => {
+    const target = Math.max(0, Math.min(pendingSeekRef.current, Math.max(0, duration - 0.1)));
+    try {
+      v.currentTime = target;
+    } catch {
+      /* noop */
+    }
+    pendingSeekRef.current = 0;
+  };
+
   // Répare la durée pour les WebM MediaRecorder (duration = Infinity)
   const fixDuration = () => {
     const v = videoRef.current;
@@ -81,11 +100,7 @@ export function SessionVideoNavigator({ clips }: Props) {
       const onTime = () => {
         v.removeEventListener("timeupdate", onTime);
         const real = v.duration;
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
+        applyPendingSeek(v, Number.isFinite(real) ? real : 0);
         if (Number.isFinite(real)) setDurationSec(real);
         if (shouldAutoPlay) safePlay();
       };
@@ -114,11 +129,7 @@ export function SessionVideoNavigator({ clips }: Props) {
       if (v.duration === Infinity) {
         fixDuration();
       } else {
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
+        applyPendingSeek(v, Number.isFinite(v.duration) ? v.duration : 0);
         if (Number.isFinite(v.duration)) setDurationSec(v.duration);
         if (shouldAutoPlay) safePlay();
       }
@@ -141,6 +152,42 @@ export function SessionVideoNavigator({ clips }: Props) {
     const v = videoRef.current;
     if (v) v.playbackRate = rate;
   }, [rate]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      playMessage: (messageId, startSeconds) => {
+        const i = clips.findIndex((c) => c.messageId === messageId);
+        if (i === -1) return false;
+        const seek = Math.max(0, (startSeconds ?? 0) - 5);
+        if (i === index) {
+          // Même clip : seek direct + relance.
+          stopCurrent().then(() => {
+            const v = videoRef.current;
+            if (v) {
+              const dur = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
+              const target = dur > 0 ? Math.min(seek, Math.max(0, dur - 0.1)) : seek;
+              try {
+                v.currentTime = target;
+              } catch {
+                /* noop */
+              }
+              safePlay();
+            }
+          });
+        } else {
+          // Autre clip : on charge, l'effet de chargement appliquera pendingSeekRef.
+          pendingSeekRef.current = seek;
+          stopCurrent().then(() => {
+            setShouldAutoPlay(true);
+            setIndex(i);
+          });
+        }
+        return true;
+      },
+    }),
+    [clips, index, durationSec],
+  );
 
   if (!clips || clips.length === 0) return null;
 
@@ -297,4 +344,4 @@ export function SessionVideoNavigator({ clips }: Props) {
       </CardContent>
     </Card>
   );
-}
+});
