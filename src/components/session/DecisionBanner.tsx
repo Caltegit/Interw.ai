@@ -263,6 +263,7 @@ function DecisionButton({
   tone,
   icon: Icon,
   label,
+  tooltip,
 }: {
   active: boolean;
   onClick: () => void;
@@ -270,6 +271,7 @@ function DecisionButton({
   tone: "success" | "warning" | "destructive";
   icon: typeof Check;
   label: string;
+  tooltip?: string | null;
 }) {
   const toneClass = active
     ? tone === "success"
@@ -279,7 +281,7 @@ function DecisionButton({
       : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
     : "";
 
-  return (
+  const button = (
     <Button
       type="button"
       variant={active ? "default" : "outline"}
@@ -292,4 +294,14 @@ function DecisionButton({
       <span className="hidden sm:inline">{label}</span>
     </Button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  return button;
 }
