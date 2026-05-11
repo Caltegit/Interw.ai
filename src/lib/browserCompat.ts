@@ -138,6 +138,9 @@ export function detectBrowserCompat(): BrowserCompatResult {
   if (!hasAudioContext) {
     return { ...base, level: "blocked", reason: "Votre navigateur ne prend pas en charge l'audio Web.", isInAppWebview: false };
   }
+  if (!hasSpeechRecognition) {
+    return { ...base, level: "blocked", reason: "Votre navigateur ne prend pas en charge la reconnaissance vocale nécessaire à l'entretien. Ouvrez ce lien dans Chrome (Android, Mac, PC) ou Safari (iPhone).", isInAppWebview: false };
+  }
 
   // 4) Avertissements (compatible mais à risque)
   const major = browser.version ? parseInt(browser.version.split(".")[0], 10) : 0;
