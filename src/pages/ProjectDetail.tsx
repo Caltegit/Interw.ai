@@ -833,14 +833,29 @@ export default function ProjectDetail() {
                             {(() => {
                               const current = (s.recruiter_decision ?? "none") as string;
                               const meta = decisionByValue[current] ?? decisionByValue.none;
+                              const author = memberById((s as any).recruiter_decision_by);
+                              const authorLabel = formatDecisionAuthor(
+                                author?.full_name || author?.email,
+                                (s as any).recruiter_decision_at,
+                              );
+                              const trigger = (
+                                <SelectTrigger className={`h-8 w-[7rem] text-xs ${meta.text}`}>
+                                  <span className="flex items-center gap-1.5 min-w-0">
+                                    <span className={`inline-block h-2 w-2 rounded-full border shrink-0 ${meta.dot}`} />
+                                    <span className="truncate">{meta.label}</span>
+                                  </span>
+                                </SelectTrigger>
+                              );
                               return (
                                 <Select value={current} onValueChange={(v) => updateDecision(s.id, v)}>
-                                  <SelectTrigger className={`h-8 w-[7rem] text-xs ${meta.text}`}>
-                                    <span className="flex items-center gap-1.5 min-w-0">
-                                      <span className={`inline-block h-2 w-2 rounded-full border shrink-0 ${meta.dot}`} />
-                                      <span className="truncate">{meta.label}</span>
-                                    </span>
-                                  </SelectTrigger>
+                                  {authorLabel ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                                      <TooltipContent>{authorLabel}</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    trigger
+                                  )}
                                   <SelectContent>
                                     {decisionOptions.map((d) => (
                                       <SelectItem key={d.value} value={d.value}>
