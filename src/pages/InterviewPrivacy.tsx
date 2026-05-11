@@ -24,7 +24,7 @@ export default function InterviewPrivacy() {
   const [notFound, setNotFound] = useState(false);
   const [project, setProject] = useState<{ job_title?: string | null; title?: string | null } | null>(null);
   const [orgName, setOrgName] = useState<string>("");
-  const [step, setStep] = useState<0 | 1 | 2>(0); // 0 = idle, 1 = first confirm, 2 = final
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
 
