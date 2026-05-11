@@ -9,6 +9,7 @@ import { ArrowLeft, Trophy, X, ExternalLink, Sparkles, AlertTriangle, CheckCircl
 import { SessionCard } from "@/components/project/SessionCard";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ReportLite {
   overall_score: number | null;
