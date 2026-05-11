@@ -104,6 +104,7 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage }:
               <EvidenceLink
                 quote={item.quote}
                 messageId={item.message_id}
+                startSeconds={item.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />
