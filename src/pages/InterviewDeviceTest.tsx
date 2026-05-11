@@ -524,11 +524,6 @@ export default function InterviewDeviceTest() {
     return () => { cancelled = true; };
   }, [token]);
 
-  const markAttemptProceeded = useCallback(async () => {
-    if (attemptIdRef.current) {
-      try { await supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current }); } catch { /* ignore */ }
-    }
-  }, []);
 
   // ================== HANDLERS ==================
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
