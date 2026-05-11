@@ -268,8 +268,8 @@ export default function SharedReport() {
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
-              <TabsTrigger value="transcript" className="gap-1">
-                <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
+              <TabsTrigger value="voice" className="gap-1">
+                <Mic className="h-4 w-4" /> <span className="hidden sm:inline">Communication orale</span>
               </TabsTrigger>
             </TabsList>
 
