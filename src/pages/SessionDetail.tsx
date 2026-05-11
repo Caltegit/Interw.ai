@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain } from "lucide-react";
+import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -453,8 +453,8 @@ export default function SessionDetail() {
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
-              <TabsTrigger value="transcript" className="gap-1">
-                <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
+              <TabsTrigger value="voice" className="gap-1">
+                <Mic className="h-4 w-4" /> <span className="hidden sm:inline">Communication orale</span>
               </TabsTrigger>
             </TabsList>
 
@@ -476,11 +476,6 @@ export default function SessionDetail() {
 
                   <CommunicationProfileCard
                     profile={stats.communication_profile}
-                    onGoToMessage={goToMessage}
-                  />
-
-                  <ParaverbalProfileCard
-                    analysis={(report as any).paraverbal_analysis}
                     onGoToMessage={goToMessage}
                   />
 
@@ -553,47 +548,19 @@ export default function SessionDetail() {
               )}
             </TabsContent>
 
-            <TabsContent value="transcript" className="mt-4 space-y-3">
-              {candidateMessagesWithMedia.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    {pendingTranscriptionCount > 0
-                      ? `${pendingTranscriptionCount} réponse(s) à nettoyer par l'IA.`
-                      : "Toutes les réponses ont été nettoyées par l'IA."}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={pendingTranscriptionCount > 0 ? "default" : "outline"}
-                    onClick={() => handleRetranscribe(pendingTranscriptionCount === 0)}
-                    disabled={retranscribing}
-                  >
-                    {retranscribing ? (
-                      <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> En cours…</>
-                    ) : pendingTranscriptionCount > 0 ? (
-                      "Nettoyer la transcription"
-                    ) : (
-                      "Tout re-transcrire"
-                    )}
-                  </Button>
-                </div>
+            <TabsContent value="voice" className="mt-4 space-y-4">
+              {report && (report as any).paraverbal_analysis?.profile ? (
+                <ParaverbalProfileCard
+                  analysis={(report as any).paraverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse vocale non disponible pour cette session.
+                  </CardContent>
+                </Card>
               )}
-              <Card>
-                <CardContent className="p-0">
-                  {messages.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
-                      Aucun message enregistré.
-                    </div>
-                  ) : (
-                    <VirtualizedMessageList
-                      messages={messages}
-                      aiPersonaName={project?.ai_persona_name}
-                      activeIndex={activeMessageIndex}
-                      onSelect={setActiveMessageIndex}
-                    />
-                  )}
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
         </div>

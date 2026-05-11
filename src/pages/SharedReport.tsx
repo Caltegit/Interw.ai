@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Play, FileText, Brain } from "lucide-react";
+import { MessageSquare, Play, FileText, Brain, Mic } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
@@ -268,8 +268,8 @@ export default function SharedReport() {
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
-              <TabsTrigger value="transcript" className="gap-1">
-                <MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">Transcription</span>
+              <TabsTrigger value="voice" className="gap-1">
+                <Mic className="h-4 w-4" /> <span className="hidden sm:inline">Communication orale</span>
               </TabsTrigger>
             </TabsList>
 
@@ -291,11 +291,6 @@ export default function SharedReport() {
 
                   <CommunicationProfileCard
                     profile={stats.communication_profile}
-                    onGoToMessage={goToMessage}
-                  />
-
-                  <ParaverbalProfileCard
-                    analysis={(report as any).paraverbal_analysis}
                     onGoToMessage={goToMessage}
                   />
 
@@ -365,23 +360,19 @@ export default function SharedReport() {
               )}
             </TabsContent>
 
-            <TabsContent value="transcript" className="mt-4">
-              <Card>
-                <CardContent className="p-0">
-                  {messages.length === 0 ? (
-                    <div className="p-8 text-center text-sm text-muted-foreground">
-                      Aucun message enregistré.
-                    </div>
-                  ) : (
-                    <VirtualizedMessageList
-                      messages={messages}
-                      aiPersonaName={project?.ai_persona_name}
-                      activeIndex={activeMessageIndex}
-                      onSelect={setActiveMessageIndex}
-                    />
-                  )}
-                </CardContent>
-              </Card>
+            <TabsContent value="voice" className="mt-4 space-y-4">
+              {report && (report as any).paraverbal_analysis?.profile ? (
+                <ParaverbalProfileCard
+                  analysis={(report as any).paraverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse vocale non disponible pour cette session.
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>
