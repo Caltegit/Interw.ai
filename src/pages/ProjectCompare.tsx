@@ -28,7 +28,10 @@ interface SessionFull {
   candidate_email: string;
   status: string;
   recruiter_decision: string | null;
+  recruiter_decision_at: string | null;
+  recruiter_decision_by: string | null;
   recruiter_note: string | null;
+  decision_by_name?: string | null;
   report: ReportLite | null;
 }
 
