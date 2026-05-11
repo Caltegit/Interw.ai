@@ -120,10 +120,25 @@ export default function ProjectCompare() {
   }, [id, ids]);
 
   const handleDecisionChange = async (sessionId: string, decision: string) => {
-    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+    const at = decision === "none" ? null : new Date().toISOString();
+    const by = decision === "none" ? null : user?.id ?? null;
+    const myName = profile?.full_name || profile?.email || null;
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              recruiter_decision: decision,
+              recruiter_decision_at: at,
+              recruiter_decision_by: by,
+              decision_by_name: by ? myName : null,
+            }
+          : s,
+      ),
+    );
     const { error } = await supabase
       .from("sessions")
-      .update({ recruiter_decision: decision as any })
+      .update({ recruiter_decision: decision as any, recruiter_decision_at: at, recruiter_decision_by: by })
       .eq("id", sessionId);
     if (error) toast({ title: "Erreur", description: error.message, variant: "destructive" });
   };
