@@ -1,32 +1,79 @@
 ## Objectif
 
-Standardiser tous les scores Big Five sur **0-100** par trait. Le badge de l'onglet « Big Five » affiche la **moyenne des 5 traits** sur 100, avec couleur rouge → orange → vert (mêmes seuils que les scores IA : < 45 rouge, < 65 orange, ≥ 65 vert).
+Cliquer « Voir le moment » lance la lecture du clip de la question correspondante dans la vidéo vignette de droite, **positionnée 5 s avant** le passage cité (estimé par l'IA).
+
+## Contexte
+
+- Panneau droit : `<SessionVideoNavigator clips={sessionClips} />` (sticky `lg:sticky top-4`).
+- Chaque clip = 1 `session_message` ayant un `video_segment_url`. L'`id` du message identifie le clip.
+- Aucun timing fin n'est stocké en base (pas de word-timestamps).
+- Les boutons « Voir le moment » appellent `goToMessage(messageId)` (`EvidenceLink` + inlines dans `PersonalityRadar`).
 
 ## Changements
 
-### 1. Migration des données existantes (Option A)
-`UPDATE` SQL sur `reports` : pour chaque rapport ayant `personality_profile`, multiplier par 10 le `score` de chaque trait Big Five (`openness`, `conscientiousness`, `extraversion`, `agreeableness`, `emotional_stability`), borné à 100. Ne s'applique qu'aux scores ≤ 10 (idempotent : un rapport déjà migré ne sera pas re-multiplié).
+### 1. Backend — `supabase/functions/generate-report/index.ts`
 
-### 2. `supabase/functions/generate-report/index.ts`
-- Schéma JSON Big Five : `score` passe de `min 0 / max 10` à **`min 0 / max 100`**.
-- Mettre à jour la consigne dans le prompt en conséquence.
+Pour chaque evidence/citation produite par l'IA, ajouter un champ optionnel `start_seconds: number` représentant la seconde estimée de début de la citation **dans le clip de la question concernée** (commence à 0).
 
-### 3. `src/components/session/BigFiveBadge.tsx`
-Déjà correct (calcule la moyenne, borne 0-100, couleurs alignées sur les seuils IA). Aucun changement.
+Schémas à étendre (chacun a déjà `quote` + `message_id`) :
+- `decision_drivers[].quote` → ajouter `start_seconds`
+- `signals[].quote` → idem
+- `fit_breakdown[].quote` → idem
+- `red_flags[].quote` → idem
+- `personality_profile.<trait>.evidences[]` → idem
+- `soft_skills[].evidence` → idem
+- `communication_profile.<dim>.quote` → idem
+- `question_evaluations[].key_quote` → idem (le `evidence_message_id` existe déjà)
 
-### 4. `src/components/session/PersonalityRadar.tsx`
-Déjà correct (affichage `X/100`, barre `width: score%`, marqueur projet en %). Aucun changement.
+Mettre à jour le prompt : « Pour chaque citation, fournis `start_seconds` : la seconde estimée à laquelle la phrase citée commence dans la vidéo de réponse à la question (0 = début de la réponse). Estime à partir de la position du texte dans la transcription de la réponse et de sa durée. »
 
-### 5. `src/hooks/queries/useProjectAverages.ts`
-Aucun changement (calcul brut, échelle conservée).
+Côté front : pas de migration nécessaire — champ simplement absent sur les anciens rapports → fallback début du clip.
 
-## Validation
+### 2. Frontend — `SessionVideoNavigator.tsx`
 
-Sur la session `7a9bd667-…` après migration :
-- Rigueur 9 → **90/100** (barre quasi pleine)
-- Ouverture 7 → **70/100**
-- Moyenne ≈ **74** → badge vert avec « 74 »
+- Étendre `SessionVideoClip` avec `messageId: string` et `durationSec?: number` (déjà calculée à la volée par `loadedmetadata`, on garde le mécanisme actuel).
+- Convertir le composant en `forwardRef` exposant :
+  ```ts
+  type SessionVideoNavigatorHandle = {
+    playMessage: (messageId: string, startSeconds?: number) => boolean;
+  };
+  ```
+- Logique `playMessage` :
+  1. Trouver l'index du clip via `messageId`.
+  2. Calcul du seek : `seek = Math.max(0, (startSeconds ?? 0) - 5)` (marge 5 s).
+  3. Si l'index change → `setIndex` + `setShouldAutoPlay(true)` + mémoriser `pendingSeek`. Le `useEffect` existant qui repositionne `currentTime = 0` doit appliquer `pendingSeek` à la place.
+  4. Si l'index ne change pas → `videoRef.current.currentTime = seek` puis `safePlay()`.
+  5. Retourne `true`/`false`.
+- Si `startSeconds` non fourni → seek = 0 (comportement « début de la réponse »).
+
+### 3. Frontend — `SessionDetail.tsx` & `SharedReport.tsx`
+
+- Inclure `messageId: m.id` dans le `useMemo` qui construit `sessionClips`.
+- Créer `const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);` et passer `ref={videoNavRef}`.
+- Propager un `start_seconds` optionnel à travers `onGoToMessage` :
+  - Nouvelle signature côté parent : `goToMessage(messageId: string, startSeconds?: number)`.
+  - Comportement :
+    1. `const ok = videoNavRef.current?.playMessage(messageId, startSeconds)`.
+    2. Si `ok` → sur petit écran, `scrollIntoView` du conteneur vidéo. Pas de bascule d'onglet.
+    3. Sinon (message sans clip vidéo : message IA, message texte) → fallback actuel (onglet Transcript + scroll vers le message).
+
+### 4. Composants enfants — propagation du `start_seconds`
+
+Mettre à jour la signature `onGoToMessage?: (id: string, startSeconds?: number) => void` et passer `ev.start_seconds` (ou équivalent) au handler dans :
+
+- `EvidenceLink.tsx` (utilisé par la majorité des cartes) — accepte une prop `startSeconds?: number` et la transmet.
+- `PersonalityRadar.tsx` — appelle directement `onGoToMessage(ev.message_id!, ev.start_seconds)`.
+- Cartes parentes qui rendent `EvidenceLink` : `DecisionDriversCard`, `SignalsCard`, `FitBreakdownCard`, `RedFlagsCard`, `CommunicationProfileCard`, `SoftSkillsCard` — ajouter `startSeconds={item.start_seconds}` au `<EvidenceLink>`.
 
 ## Hors scope
-- Pas de refonte visuelle.
-- Pas de changement de structure de table.
+
+- Pas de word-level timestamps (Whisper).
+- Pas de migration des anciens rapports : champ `start_seconds` absent → fallback seek = 0.
+- Pas de retouche visuelle des cartes / du libellé des boutons.
+
+## Cas limites
+
+- `start_seconds` absent → seek 0 (début du clip).
+- `start_seconds` > durée du clip → on borne à `max(0, duration - 5)`.
+- Citation sur un message sans clip vidéo (IA / texte) → fallback transcript actuel.
+- Re-clic sur la même citation → relance la lecture depuis `start_seconds - 5`.
