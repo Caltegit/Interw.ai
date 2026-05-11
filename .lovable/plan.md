@@ -1,41 +1,42 @@
-## Bug
+## Objectif
 
-La suppression groupée dans `ProjectDetail.tsx` ne se déclenche jamais : aucun appel à la fonction `delete-session` n'arrive côté serveur (vérifié via les logs).
+Corriger le bug du **0/10** affiché sur chaque question et garantir que l'IA produit bien une note /10 par question (basée sur son impression de la réponse).
 
-## Cause
+## Diagnostic
 
-Les deux confirmations de suppression groupée utilisent la même variable d'état `bulkDeleteStep` (valeurs 0 → 1 → 2) avec deux `<AlertDialog>` distincts :
+Aujourd'hui, quand l'IA omet le bloc `question_evaluations` (typiquement sur les longs entretiens), le serveur applique un fallback qui écrit `score: 0` + "Évaluation IA indisponible" pour toutes les questions. Résultat : badges rouges 0/10 partout, alors que le candidat est bon.
 
-- Dialog A : `open={bulkDeleteStep === 1}`, `onOpenChange={(o) => !o && setBulkDeleteStep(0)}`
-- Dialog B : `open={bulkDeleteStep === 2}`, `onOpenChange={(o) => !o && setBulkDeleteStep(0)}`
+## Changements
 
-Quand l'utilisateur clique sur « Continuer » dans le dialog A, on appelle `setBulkDeleteStep(2)`. Conséquence en chaîne :
+### 1. Backend — `supabase/functions/generate-report/index.ts`
 
-1. L'état passe à `2`.
-2. Dialog A reçoit `open={false}` → Radix déclenche `onOpenChange(false)`.
-3. Le handler `!o && setBulkDeleteStep(0)` **remet l'état à 0**.
-4. Dialog B ne s'ouvre jamais, et la sélection redevient cliquable comme si rien ne s'était passé.
+**a) Renforcer le prompt** pour rendre la notation par question fiable :
+- Insister explicitement : "Tu DOIS retourner une entrée `question_evaluations` pour CHAQUE question posée, même si la réponse est vague."
+- Préciser la grille de notation /10 :
+  - 1-3 : réponse absente, hors-sujet ou très superficielle
+  - 4-6 : réponse correcte mais générique, peu d'exemples
+  - 7-8 : réponse claire avec exemples concrets
+  - 9-10 : réponse experte, structurée, démonstrative
+- Ajouter : "Note selon ton impression globale de la réponse (clarté + pertinence + profondeur)."
 
-C'est un effet de bord typique quand deux dialogues partagent une seule machine d'états.
+**b) Fallback honnête (lignes 611-620)** : au lieu d'écrire `score: 0`, écrire `score: null` quand l'IA n'a rien retourné. Le composant `QuestionAnswerRow` affiche déjà **"Non évalué"** (badge gris) quand `score === null`.
 
-## Correctif
+**c) Validation par entrée** : si l'IA renvoie une entrée sans `score` numérique valide, mettre `score: null` (au lieu de laisser tomber sur 0 par défaut côté front).
 
-Dans `src/pages/ProjectDetail.tsx`, remplacer les `onOpenChange` des deux `AlertDialog` de suppression groupée par une version qui ne remet à 0 **que si l'étape courante correspond au dialogue qui se ferme** :
+**d) Retry ciblé** : si après le premier appel `question_evaluations` est vide ou incomplet (< nombre de questions), relancer un second appel IA avec un prompt court qui demande UNIQUEMENT les évaluations par question manquantes. Ça évite que tout le rapport soit régénéré juste pour récupérer les notes.
 
-```ts
-// Dialog A (étape 1)
-onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 1 ? 0 : s)); }}
+### 2. Front — déjà compatible
 
-// Dialog B (étape 2)
-onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 2 ? 0 : s)); }}
-```
+`QuestionAnswerRow` (lignes 38-43, 69-71) gère déjà `score === null` → badge gris "Non évalué". Aucun changement nécessaire.
 
-Bonus de robustesse : remplacer le `<Button variant="destructive">` du Dialog A par un `<AlertDialogAction>` (comportement standard Radix, ferme le dialogue proprement après le clic).
+`SessionStatsCard` ignore déjà les entrées sans score pour "Meilleure / Question la plus faible" (vérifier que `bestScore !== undefined` filtre bien `null`).
 
-## Hors scope
-- Pas de modification de la fonction edge `delete-session` (elle fonctionne, simplement jamais appelée).
-- Pas de refonte du flow ; on garde la double confirmation existante.
+## Détails techniques
 
-## Vérification
-- Ouvrir un projet, cocher 2 candidats, Actions → Supprimer → Continuer → Supprimer.
-- La fonction `delete-session` doit apparaître dans les logs et les sessions doivent disparaître de la liste.
+- Pas de changement DB ni de migration.
+- Pas de nouveau champ : on garde `question_evaluations[i].score` (0-10 ou null).
+- **Rapports existants** : ils continueront d'afficher 0/10 jusqu'à régénération via le bouton "Régénérer le rapport" (déjà présent).
+
+## Fichiers modifiés
+
+- `supabase/functions/generate-report/index.ts` (prompt + fallback + retry ciblé)
