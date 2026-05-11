@@ -8,6 +8,7 @@ export interface DecisionDriver {
   sentiment?: "positive" | "neutral" | "negative";
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Props {
