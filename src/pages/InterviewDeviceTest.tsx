@@ -161,8 +161,7 @@ export default function InterviewDeviceTest() {
       : browserCompat.current.level === "warning"
       ? "warning"
       : "error";
-  const [browserBypassed, setBrowserBypassed] = useState(false);
-  const browserBlocking = browserCompat.current.level === "blocked" && !browserBypassed;
+  const browserBlocking = browserCompat.current.level === "blocked";
   const attemptIdRef = useRef<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
@@ -323,8 +322,8 @@ export default function InterviewDeviceTest() {
     setSttStatus("testing");
     setSttError(null);
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const fallbackMsg = "La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.";
-    if (!SR) { setSttError(fallbackMsg); setSttStatus("warning"); return; }
+    const blockMsg = "La reconnaissance vocale n'a pas démarré. Utilisez Chrome (Android, Mac, PC) ou Safari (iPhone) pour réaliser l'entretien.";
+    if (!SR) { setSttError(blockMsg); setSttStatus("error"); return; }
     try {
       const recognition = new SR();
       recognition.lang = "fr-FR";
@@ -347,10 +346,10 @@ export default function InterviewDeviceTest() {
         try { recognition.start(); } catch { finish(false); }
       });
       if (ok) setSttStatus("ok");
-      else { setSttError(fallbackMsg); setSttStatus("warning"); }
+      else { setSttError(blockMsg); setSttStatus("error"); }
     } catch {
-      setSttError(fallbackMsg);
-      setSttStatus("warning");
+      setSttError(blockMsg);
+      setSttStatus("error");
     }
   }, []);
 
@@ -525,12 +524,6 @@ export default function InterviewDeviceTest() {
     return () => { cancelled = true; };
   }, [token]);
 
-  const continueAnyway = useCallback(async () => {
-    setBrowserBypassed(true);
-    if (attemptIdRef.current) {
-      try { await supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current }); } catch { /* ignore */ }
-    }
-  }, []);
 
   // ================== HANDLERS ==================
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
@@ -568,6 +561,7 @@ export default function InterviewDeviceTest() {
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
+    sttStatus === "ok" &&
     !networkBlocking;
 
   // Quand toutes les vérifications sont vertes : transition automatique vers l'écran suivant
@@ -582,7 +576,7 @@ export default function InterviewDeviceTest() {
   }, [canContinue]);
 
   const showSkipPrimary =
-    !canContinue && (
+    !canContinue && !browserBlocking && sttStatus !== "error" && (
       micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
       (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
     );
@@ -729,15 +723,6 @@ export default function InterviewDeviceTest() {
                 <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
                   {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
                 </Button>
-                {browserBlocking && (
-                  <button
-                    type="button"
-                    onClick={continueAnyway}
-                    className="block w-full text-xs text-muted-foreground hover:text-foreground underline"
-                  >
-                    Continuer quand même
-                  </button>
-                )}
               </div>
             )}
           </TestCard>
@@ -846,8 +831,16 @@ export default function InterviewDeviceTest() {
             title="Reconnaissance vocale"
             icon={MessageSquare}
             fullWidth
+            forceExpanded={sttStatus === "error"}
           >
-            {sttStatus === "warning" && sttError && <p className="text-xs text-amber-600 dark:text-amber-400">{sttError}</p>}
+            {sttStatus === "error" && sttError && (
+              <div className="space-y-3">
+                <p className="text-xs text-destructive">{sttError}</p>
+                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                </Button>
+              </div>
+            )}
           </TestCard>
 
           {/* Réseau */}
@@ -925,7 +918,7 @@ export default function InterviewDeviceTest() {
                 </div>
                 <div>
                   <p className="font-medium mb-1">Navigateurs recommandés</p>
-                  <p className="text-muted-foreground text-xs">Safari (iPhone), Chrome (Android, Mac, PC).</p>
+                  <p className="text-muted-foreground text-xs">Chrome ou Edge (Android, Mac, PC), Safari (iPhone). Firefox et les navigateurs intégrés (LinkedIn, Gmail, Outlook…) ne sont pas pris en charge.</p>
                 </div>
                 <Button onClick={copyLink} variant="outline" className="w-full">
                   {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien pour ouvrir sur un autre appareil</>)}

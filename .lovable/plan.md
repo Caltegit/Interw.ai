@@ -1,35 +1,33 @@
-## Problème
+## Objectif
 
-Sur 164 rapports, **106 (65%)** n'ont pas de profil Big Five (`personality_profile = null`), dont celui que tu as ouvert. Cause : dans `generate-report/index.ts`, le champ `personality_profile` est défini dans le schéma de l'outil IA mais **n'est pas marqué comme requis** (ni dans `required`, ni explicité comme obligatoire dans le prompt). Le modèle (gemini-2.5-pro) choisit donc régulièrement de l'omettre, surtout quand la transcription est courte ou que les indices sont faibles.
+Empêcher un candidat dont le navigateur ne supporte pas la reconnaissance vocale (cas de Daphnée) de démarrer l'entretien. Aujourd'hui le test technique affiche un avertissement mais laisse passer.
 
-L'instruction actuelle dit : « Si la transcription ne permet pas de conclure, mets `confidence` à "low" » — mais elle ne dit pas explicitement « tu dois TOUJOURS produire ce bloc ».
+## Cause du problème
 
-## Plan
+`src/lib/browserCompat.ts` bloque les webviews intégrées (LinkedIn, Gmail…) et Firefox iOS, mais pas **Firefox desktop / Firefox Android**, qui n'ont pas l'API `webkitSpeechRecognition`. Côté `InterviewDeviceTest.tsx`, le test STT (lignes 322-355) tombe en `warning` au lieu de bloquer, et un bouton « Continuer quand même » permet de passer outre.
 
-### 1. Rendre `personality_profile` obligatoire dans le schéma de l'outil
-Dans `supabase/functions/generate-report/index.ts`, fonction `personalityProfileSchema()` :
-- Ajouter `required: ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"]` sur l'objet racine.
-- Ajouter `required: ["score", "confidence"]` sur chaque trait (`interpretation` et `evidences` restent optionnels).
+## Changements
 
-Et dans le bloc `parameters` du tool `generate_report`, ajouter `personality_profile` dans la liste `required` du niveau racine (vérifier qu'elle existe ; sinon la créer avec les champs vraiment indispensables : `verdict_headline`, `recommendation`, `decision_drivers`, `fit_breakdown`, `personality_profile`).
+### 1. `src/lib/browserCompat.ts`
+- Ajouter une vérification `SpeechRecognition` / `webkitSpeechRecognition` dans `detectBrowserCompat`. Si absente → `level: "blocked"` avec le motif : « Votre navigateur ne prend pas en charge la reconnaissance vocale nécessaire à l'entretien. Ouvrez ce lien dans Chrome (Android, Mac, PC) ou Safari (iPhone). »
+- Conséquence : Firefox (toutes plateformes), Brave avec Shields stricts, et certains navigateurs alternatifs sont désormais bloqués dès l'arrivée sur le test technique.
 
-### 2. Renforcer le prompt
-Modifier la ligne 278 du prompt système :
-> « **personality_profile (Big Five) : OBLIGATOIRE.** Tu dois TOUJOURS retourner les 5 traits (openness, conscientiousness, extraversion, agreeableness, emotional_stability) avec un score 0-100 et une confidence (low/medium/high). Si la transcription est courte ou les indices faibles, mets confidence à "low" et un score neutre (~50), mais ne saute jamais ce bloc. Fournis 1-2 evidences par trait quand c'est possible. »
+### 2. `src/pages/InterviewDeviceTest.tsx`
+- Quand `browserCompat.level === "blocked"`, **supprimer le bouton « Continuer quand même »** (suppression du bloc lignes 732-740 et de la variable `browserBlocking` / `browserBypassed`). L'objectif est qu'un candidat ne puisse plus passer outre.
+- Conserver le bouton « Copier le lien de l'entretien » pour qu'il puisse rouvrir l'invitation sur un autre appareil/navigateur.
+- Quand le test STT échoue (`sttStatus === "warning"` actuel), passer le statut à `"error"` et bloquer `canContinue`. Message : « La reconnaissance vocale n'a pas démarré. Utilisez Chrome ou Safari pour réaliser l'entretien. »
+- Ajuster `canContinue` pour exiger explicitement `sttStatus === "ok"`.
+- Retirer `showSkipPrimary` (le bouton secondaire « Continuer quand même » du bas, lignes 956-960) **uniquement** quand le blocage vient du navigateur ou du STT — on garde le contournement pour les autres cas (réseau faible).
 
-### 3. Filet de sécurité côté code (fallback)
-Juste avant l'`insert` dans `reports` (ligne 715), si `parsed.personality_profile` est `null/undefined` ou s'il manque un trait :
-- Construire un profil par défaut avec `score: 50`, `confidence: "low"`, `interpretation: "Données insuffisantes pour conclure"`, `evidences: []` pour chaque trait manquant.
-- Logger un `console.warn` pour qu'on puisse suivre la fréquence dans les logs edge.
+### 3. Texte d'aide
+- Mettre à jour la liste « Navigateurs recommandés » (ligne 927-929) : ajouter Edge desktop comme alternative valide, préciser que Firefox n'est pas supporté.
 
-Ça garantit que **100% des nouveaux rapports** auront un Big Five affichable, même en cas de réponse IA incomplète.
+## Hors scope
+- Pas de modification de l'email d'invitation (à voir plus tard).
+- Pas de fallback transcription serveur (option 2 reportée).
+- Pas de changement sur le flux d'entretien lui-même.
 
-### 4. Hors scope
-- Ne pas régénérer les 106 rapports existants (l'utilisateur peut relancer manuellement « Régénérer le rapport » sur ceux qu'il veut).
-- Pas de changement UI : `PersonalityRadar` sait déjà afficher les scores avec confidence "low".
-- Pas de migration DB : la colonne `personality_profile` accepte déjà `null`.
-
-## Ce que ça change pour toi
-
-- Les **nouveaux rapports** auront systématiquement le radar Big Five.
-- Pour le rapport `76c4a8fd…` (et les 105 autres), il faudra cliquer sur « Régénérer le rapport » dans le détail de la session pour obtenir le profil.
+## Vérification
+- Test manuel : ouvrir un lien d'entretien dans Firefox → carte « Navigateur compatible » rouge, CTA désactivé, pas de contournement possible.
+- Chrome desktop : tout reste vert, comportement inchangé.
+- Test E2E existant `candidate-journey.spec.ts` reste vert (Chromium headless = OK).
