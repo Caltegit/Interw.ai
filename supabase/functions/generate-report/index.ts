@@ -297,7 +297,12 @@ Champs prioritaires :
 - fit_breakdown : UNE entrée par critère du poste (utilise le label exact). score 0-100, level (excellent/solid/partial/gap), statement (1 phrase concrète "Maîtrise X mais aucune expérience démontrée sur Y"), citation + message_id.
 - signals : signaux à creuser ou questions à reposer en entretien physique. Chacun = label, severity, description, citation, ET suggested_question (la question précise à poser pour lever le doute).
 - communication_profile : scores 0-10 sur clarity, structure, concision, posture, energy. Chaque dim a un commentaire 1 ligne et idéalement une citation.
-- question_evaluations : indexé par "0","1","2"… Pour chaque question : question (texte), score 0-10, summary (1 phrase qui résume la réponse du candidat), comment (1-2 phrases d'analyse), key_quote, evidence_message_id, depth_level (surface/concret/expert), had_followup (true si une relance a été déclenchée), followup_helped (true si la relance a fait progresser la réponse).
+- question_evaluations : OBLIGATOIRE. Tu DOIS retourner UNE entrée pour CHAQUE question posée (indexée par "0","1","2"… dans l'ordre des questions ci-dessus), même si la réponse du candidat est vague, courte, hors-sujet ou absente. Ne saute jamais une question. Pour chaque question : question (texte exact), score 0-10 (voir grille ci-dessous), summary (1 phrase qui résume la réponse du candidat), comment (1-2 phrases d'analyse), key_quote, evidence_message_id, depth_level (surface/concret/expert), had_followup (true si une relance a été déclenchée), followup_helped (true si la relance a fait progresser la réponse).
+  Grille de notation /10 (selon ton impression globale : clarté + pertinence + profondeur) :
+  • 1-3 : réponse absente, hors-sujet, ou très superficielle
+  • 4-6 : réponse correcte mais générique, peu d'exemples concrets
+  • 7-8 : réponse claire avec exemples concrets et structure
+  • 9-10 : réponse experte, structurée, démonstrative
 
 Champs secondaires (toujours produits, format inchangé) :
 - executive_summary : 3-5 phrases bilan global
