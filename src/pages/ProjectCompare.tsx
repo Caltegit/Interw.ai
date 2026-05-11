@@ -336,6 +336,7 @@ function CompareColumn({
         report={r ? { overall_score: r.overall_score, recommendation: r.recommendation } : null}
         questions={questions}
         onDecisionChange={onDecisionChange}
+        decisionByName={session.decision_by_name ?? null}
       />
 
       {/* 2. Note recruteur */}
