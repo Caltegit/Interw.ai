@@ -153,6 +153,42 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (v) v.playbackRate = rate;
   }, [rate]);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      playMessage: (messageId, startSeconds) => {
+        const i = clips.findIndex((c) => c.messageId === messageId);
+        if (i === -1) return false;
+        const seek = Math.max(0, (startSeconds ?? 0) - 5);
+        if (i === index) {
+          // Même clip : seek direct + relance.
+          stopCurrent().then(() => {
+            const v = videoRef.current;
+            if (v) {
+              const dur = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
+              const target = dur > 0 ? Math.min(seek, Math.max(0, dur - 0.1)) : seek;
+              try {
+                v.currentTime = target;
+              } catch {
+                /* noop */
+              }
+              safePlay();
+            }
+          });
+        } else {
+          // Autre clip : on charge, l'effet de chargement appliquera pendingSeekRef.
+          pendingSeekRef.current = seek;
+          stopCurrent().then(() => {
+            setShouldAutoPlay(true);
+            setIndex(i);
+          });
+        }
+        return true;
+      },
+    }),
+    [clips, index, durationSec],
+  );
+
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
