@@ -410,6 +410,5 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         </div>
       </CardContent>
     </Card>
-    </TooltipProvider>
   );
 }
