@@ -303,7 +303,7 @@ Champs secondaires (toujours produits, format inchangé) :
 - executive_summary : 3-5 phrases bilan global
 - overall_score : 0-100 (cohérent avec recommendation)
 - overall_grade : A/B/C/D/E
-- personality_profile (Big Five) : score de 0 à 100 pour chaque trait (openness, conscientiousness, extraversion, agreeableness, emotional_stability). Si la transcription ne permet pas de conclure, mets confidence à "low".
+- personality_profile (Big Five) : OBLIGATOIRE. Tu dois TOUJOURS retourner les 5 traits (openness, conscientiousness, extraversion, agreeableness, emotional_stability) avec un score 0-100 et une confidence (low/medium/high). Si la transcription est courte ou les indices faibles, mets confidence à "low" et un score neutre proche de 50, mais ne saute jamais ce bloc. Fournis 1 à 2 evidences par trait quand c'est possible.
 - soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
 - highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
