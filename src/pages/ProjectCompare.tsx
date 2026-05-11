@@ -48,6 +48,7 @@ export default function ProjectCompare() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, profile } = useAuth();
   const ids = useMemo(
     () => (searchParams.get("ids") ?? "").split(",").filter(Boolean).slice(0, 4),
     [searchParams],
