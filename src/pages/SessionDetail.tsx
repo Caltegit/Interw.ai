@@ -206,6 +206,7 @@ export default function SessionDetail() {
           questionLabel: num ? `Question ${num}` : "Question",
           questionText: projectQ?.content ?? "",
           isFollowUp: !!m.is_follow_up,
+          messageId: m.id as string,
         };
       });
   }, [candidateVideos, session]);
