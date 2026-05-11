@@ -479,11 +479,6 @@ export default function SessionDetail() {
                     onGoToMessage={goToMessage}
                   />
 
-                  <ParaverbalProfileCard
-                    analysis={(report as any).paraverbal_analysis}
-                    onGoToMessage={goToMessage}
-                  />
-
                   {projectAverages && projectAverages.count >= 3 && (
                     <ProjectComparisonCard
                       candidateScore={fitScore}
