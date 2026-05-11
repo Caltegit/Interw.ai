@@ -33,7 +33,7 @@ import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
 
-import { SessionVideoNavigator, SessionVideoClip } from "@/components/session/SessionVideoNavigator";
+import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
