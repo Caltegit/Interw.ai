@@ -179,8 +179,7 @@ export default function ProjectEdit() {
         aiQuestionTransitionsCustomText:
           (project as { ai_question_transitions_custom_text?: string | null })
             .ai_question_transitions_custom_text ?? "",
-        audioAnalysisEnabled:
-          (project as { audio_analysis_enabled?: boolean }).audio_analysis_enabled ?? false,
+        audioAnalysisEnabled: true,
       });
 
       setLoading(false);
