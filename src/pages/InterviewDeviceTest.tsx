@@ -727,15 +727,6 @@ export default function InterviewDeviceTest() {
                 <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
                   {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
                 </Button>
-                {browserBlocking && (
-                  <button
-                    type="button"
-                    onClick={continueAnyway}
-                    className="block w-full text-xs text-muted-foreground hover:text-foreground underline"
-                  >
-                    Continuer quand même
-                  </button>
-                )}
               </div>
             )}
           </TestCard>
