@@ -104,9 +104,12 @@ export function DecisionBanner(props: DecisionBannerProps) {
     onEmail,
     onDelete,
     readOnly,
+    decisionByName,
+    decisionAt,
   } = props;
 
   const reco = recommendation ? recoConfig[recommendation] : null;
+  const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
   const meta = [jobTitle, durationLabel, `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`]
     .filter(Boolean)
     .join(" · ");
