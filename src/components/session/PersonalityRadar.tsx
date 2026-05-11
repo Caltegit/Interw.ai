@@ -116,7 +116,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Pr
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0 text-primary"
-                          onClick={() => onGoToMessage(ev.message_id!)}
+                          onClick={() => onGoToMessage(ev.message_id!, ev.start_seconds)}
                           title="Voir le moment"
                         >
                           <Play className="h-3 w-3" />
