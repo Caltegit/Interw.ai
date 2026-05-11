@@ -99,6 +99,7 @@ export function detectBrowserCompat(): BrowserCompatResult {
   const hasGetUserMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
   const hasMediaRecorder = typeof window !== "undefined" && "MediaRecorder" in window;
   const hasAudioContext = typeof window !== "undefined" && ("AudioContext" in window || "webkitAudioContext" in window);
+  const hasSpeechRecognition = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
   const base = {
     browser: browser.name,
