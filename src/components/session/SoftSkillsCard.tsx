@@ -52,6 +52,7 @@ export function SoftSkillsCard({ skills, onGoToMessage }: Props) {
             <EvidenceLink
               quote={s.quote}
               messageId={s.evidence_message_id}
+              startSeconds={s.evidence_start_seconds}
               onGoToMessage={onGoToMessage}
             />
           </div>
