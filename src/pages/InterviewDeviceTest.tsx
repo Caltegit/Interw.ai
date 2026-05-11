@@ -524,8 +524,7 @@ export default function InterviewDeviceTest() {
     return () => { cancelled = true; };
   }, [token]);
 
-  const continueAnyway = useCallback(async () => {
-    setBrowserBypassed(true);
+  const markAttemptProceeded = useCallback(async () => {
     if (attemptIdRef.current) {
       try { await supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current }); } catch { /* ignore */ }
     }
