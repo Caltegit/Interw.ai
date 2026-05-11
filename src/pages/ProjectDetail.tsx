@@ -745,6 +745,7 @@ export default function ProjectDetail() {
                       report={reportsBySession[s.id]}
                       questions={questions}
                       onDecisionChange={updateDecision}
+                      decisionByName={memberById((s as any).recruiter_decision_by)?.full_name ?? memberById((s as any).recruiter_decision_by)?.email ?? null}
                     />
                   ))}
                   {pagedSessions.length === 0 && (
