@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 import {
   AlertDialog,
   AlertDialogAction,
