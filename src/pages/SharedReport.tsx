@@ -145,8 +145,19 @@ export default function SharedReport() {
   const fitScore =
     typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
 
+  const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+
   const goToMessage = useCallback(
-    (messageId: string) => {
+    (messageId: string, startSeconds?: number) => {
+      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+      if (played) {
+        setTimeout(() => {
+          document
+            .getElementById("session-video-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+        return;
+      }
       const idx = messages.findIndex((m: any) => m.id === messageId);
       if (idx === -1) return;
       setActiveTab("transcript");
