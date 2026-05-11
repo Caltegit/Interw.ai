@@ -382,6 +382,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         comment: { type: "string" },
                         key_quote: { type: "string" },
                         evidence_message_id: { type: "string" },
+                        evidence_start_seconds: { type: "number" },
                         depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
                         had_followup: { type: "boolean" },
                         followup_helped: { type: "boolean" },
