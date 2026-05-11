@@ -6,6 +6,7 @@ import { Brain, ChevronDown, ChevronUp, Play } from "lucide-react";
 interface Evidence {
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Trait {
