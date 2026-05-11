@@ -96,6 +96,7 @@ export function CommunicationProfileCard({ profile, onGoToMessage }: Props) {
                     <EvidenceLink
                       quote={dim!.quote}
                       messageId={dim!.message_id}
+                      startSeconds={dim!.start_seconds}
                       onGoToMessage={onGoToMessage}
                       compact
                     />
