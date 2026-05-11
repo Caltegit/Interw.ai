@@ -10,6 +10,7 @@ export interface Signal {
   severity?: "low" | "medium" | "high";
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
   suggested_question?: string;
 }
 
