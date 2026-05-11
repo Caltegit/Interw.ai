@@ -291,7 +291,18 @@ export default function ProjectDetail() {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
       return;
     }
-    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_decision: decision } : s)));
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId
+          ? {
+              ...s,
+              recruiter_decision: decision,
+              recruiter_decision_at: patch.recruiter_decision_at,
+              recruiter_decision_by: patch.recruiter_decision_by,
+            }
+          : s,
+      ),
+    );
   };
 
   const saveNote = (sessionId: string, value: string) => {
