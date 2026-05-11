@@ -17,7 +17,7 @@ interface Props {
   items?: FitItem[] | null;
   // Fallback ancien format : criteria_scores { id: { label, score, max, comment } }
   legacyCriteriaScores?: Record<string, { label?: string; score: number; max: number; comment?: string }> | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const levelLabel: Record<string, string> = {

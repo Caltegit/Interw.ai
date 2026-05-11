@@ -20,7 +20,7 @@ export interface CommunicationProfile {
 
 interface Props {
   profile?: CommunicationProfile | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const groups = [

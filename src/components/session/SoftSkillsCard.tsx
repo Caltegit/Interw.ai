@@ -12,7 +12,7 @@ interface SoftSkill {
 
 interface Props {
   skills?: SoftSkill[] | null;
-  onGoToMessage?: (messageId: string) => void;
+  onGoToMessage?: (messageId: string, startSeconds?: number) => void;
 }
 
 export function SoftSkillsCard({ skills, onGoToMessage }: Props) {

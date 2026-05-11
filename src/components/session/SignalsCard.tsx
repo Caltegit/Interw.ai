@@ -24,7 +24,7 @@ interface Props {
     evidence_message_id?: string;
   }> | null;
   legacyFollowups?: Array<{ question: string; rationale?: string }> | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const sevTone: Record<string, string> = {

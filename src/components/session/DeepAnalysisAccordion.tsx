@@ -12,7 +12,7 @@ interface Props {
   personalityProfile?: any;
   softSkills?: any;
   projectAverages?: any;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 export function DeepAnalysisAccordion({

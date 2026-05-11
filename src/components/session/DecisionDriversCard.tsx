@@ -15,7 +15,7 @@ interface Props {
   // Fallbacks pour les anciens rapports
   strengths?: string[] | null;
   weaknesses?: string[] | null;
-  onGoToMessage?: (id: string) => void;
+  onGoToMessage?: (id: string, startSeconds?: number) => void;
 }
 
 const sentimentMap = {
