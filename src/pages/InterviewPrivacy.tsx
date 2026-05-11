@@ -196,34 +196,19 @@ export default function InterviewPrivacy() {
         </section>
       </div>
 
-      <AlertDialog open={step === 1} onOpenChange={(o) => !o && setStep(0)}>
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !deleting && setConfirmOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est définitive. Toutes les données liées à votre entretien seront effacées de nos
-              serveurs et ne pourront pas être restaurées.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setStep(2)}>Continuer</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={step === 2} onOpenChange={(o) => !o && setStep(0)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmation finale</AlertDialogTitle>
-            <AlertDialogDescription>
-              Confirmez-vous la suppression définitive de toutes vos données ?
+              Cette action est définitive. Toutes les données liées à votre entretien (vidéos, audios,
+              transcription, rapport) seront effacées de nos serveurs et ne pourront pas être restaurées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
