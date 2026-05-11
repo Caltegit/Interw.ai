@@ -47,6 +47,7 @@ function personalityProfileSchema() {
           properties: {
             quote: { type: "string" },
             message_id: { type: "string" },
+            start_seconds: { type: "number" },
           },
         },
       },
