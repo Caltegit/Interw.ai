@@ -597,15 +597,25 @@ Champs secondaires (toujours produits, format inchangé) :
         / criteriaScoreValues.length
       : 0;
 
-    // Fallback : si l'IA n'a pas produit question_evaluations, on en construit
-    // une minimale à partir des questions du projet pour que la page Questions
-    // affiche les vidéos même sans évaluation IA.
+    // Question evaluations : on garantit une entrée par question, avec score
+    // numérique valide (0-10) ou null (= "Non évalué"). Jamais de 0 par défaut.
     let questionEvals: Record<string, any> = parsed.question_evaluations || {};
-    // Enrichir chaque entrée avec question_id (pour matcher la vidéo)
     const sortedQuestions = [...questions].sort(
       (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
     );
+
+    const normalizeEval = (entry: any) => {
+      if (!entry || typeof entry !== "object") return entry;
+      const rawScore = entry.score;
+      const numScore = typeof rawScore === "number" && Number.isFinite(rawScore)
+        ? Math.max(0, Math.min(10, rawScore))
+        : null;
+      entry.score = numScore;
+      return entry;
+    };
+
     Object.keys(questionEvals).forEach((key) => {
+      normalizeEval(questionEvals[key]);
       const idx = parseInt(key);
       if (!Number.isFinite(idx)) return;
       const q = sortedQuestions[idx];
@@ -613,16 +623,134 @@ Champs secondaires (toujours produits, format inchangé) :
         questionEvals[key].question_id = q.id;
       }
     });
-    if (Object.keys(questionEvals).length === 0 && questions.length > 0) {
-      sortedQuestions.forEach((q: any, idx: number) => {
+
+    // Identifie les questions sans évaluation (manquantes ou avec score null)
+    const missingIndexes: number[] = [];
+    sortedQuestions.forEach((_q: any, idx: number) => {
+      const entry = questionEvals[String(idx)];
+      if (!entry || entry.score === null || entry.score === undefined) {
+        missingIndexes.push(idx);
+      }
+    });
+
+    // Retry ciblé : si l'IA a omis des évaluations, on relance un appel court
+    // qui demande UNIQUEMENT les notes manquantes (évite la régénération totale).
+    if (missingIndexes.length > 0 && LOVABLE_API_KEY) {
+      try {
+        const missingQuestionsList = missingIndexes
+          .map((i) => `${i}. ${sortedQuestions[i]?.content ?? ""}`)
+          .join("\n");
+        const retryPrompt = `Tu as oublié d'évaluer certaines questions de cet entretien. Évalue MAINTENANT, et seulement, les questions ci-dessous, en te basant sur la transcription.
+
+Candidat : ${session.candidate_name}
+Poste : ${project.job_title}
+
+Questions à évaluer (index → texte) :
+${missingQuestionsList}
+
+Transcription complète :
+${fullText}
+
+Pour chaque question, retourne :
+- question (texte exact)
+- score 0-10 (1-3 absente/hors-sujet, 4-6 générique, 7-8 claire avec exemples, 9-10 experte)
+- summary (1 phrase qui résume la réponse)
+- comment (1-2 phrases d'analyse)
+- key_quote (citation exacte si possible)
+- depth_level (surface/concret/expert)
+
+Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute aucune question listée.`;
+
+        const retryRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: retryPrompt },
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: "evaluate_questions",
+                  description: "Retourne les évaluations par question manquantes",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      question_evaluations: {
+                        type: "object",
+                        additionalProperties: {
+                          type: "object",
+                          properties: {
+                            question: { type: "string" },
+                            score: { type: "number", minimum: 0, maximum: 10 },
+                            summary: { type: "string" },
+                            comment: { type: "string" },
+                            key_quote: { type: "string" },
+                            depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
+                          },
+                          required: ["score", "summary"],
+                        },
+                      },
+                    },
+                    required: ["question_evaluations"],
+                  },
+                },
+              },
+            ],
+            tool_choice: { type: "function", function: { name: "evaluate_questions" } },
+          }),
+        });
+
+        if (retryRes.ok) {
+          const retryData = await retryRes.json();
+          const retryArgs = retryData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+          const retryParsed = retryArgs
+            ? (typeof retryArgs === "string" ? JSON.parse(retryArgs) : retryArgs)
+            : null;
+          const retryEvals = retryParsed?.question_evaluations || {};
+          for (const idx of missingIndexes) {
+            const entry = retryEvals[String(idx)];
+            if (!entry) continue;
+            normalizeEval(entry);
+            if (entry.score === null) continue;
+            const q = sortedQuestions[idx];
+            entry.question = entry.question || q?.content;
+            entry.question_id = q?.id;
+            questionEvals[String(idx)] = entry;
+          }
+        } else {
+          console.warn("Retry question_evaluations failed:", retryRes.status);
+        }
+      } catch (e) {
+        console.error("Retry question_evaluations error:", e);
+      }
+    }
+
+    // Fallback final : pour les questions toujours sans évaluation, on insère
+    // une entrée avec score=null (affichée "Non évalué" en gris côté front),
+    // jamais score=0 (qui s'affichait à tort en rouge).
+    sortedQuestions.forEach((q: any, idx: number) => {
+      const entry = questionEvals[String(idx)];
+      if (!entry) {
         questionEvals[String(idx)] = {
           question: q.content,
           question_id: q.id,
-          score: 0,
-          comment: "Évaluation IA indisponible pour cette question.",
+          score: null,
+          summary: null,
+          comment: null,
         };
-      });
-    }
+      } else if (entry.score === null || entry.score === undefined) {
+        entry.score = null;
+        entry.question = entry.question || q.content;
+        entry.question_id = entry.question_id || q.id;
+      }
+    });
 
     // Best/worst question + highlight clips selection
     const evalEntries = Object.entries(questionEvals) as [string, any][];
