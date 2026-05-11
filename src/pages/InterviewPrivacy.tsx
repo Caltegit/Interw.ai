@@ -24,7 +24,7 @@ export default function InterviewPrivacy() {
   const [notFound, setNotFound] = useState(false);
   const [project, setProject] = useState<{ job_title?: string | null; title?: string | null } | null>(null);
   const [orgName, setOrgName] = useState<string>("");
-  const [step, setStep] = useState<0 | 1 | 2>(0); // 0 = idle, 1 = first confirm, 2 = final
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
 
@@ -93,7 +93,7 @@ export default function InterviewPrivacy() {
         throw new Error(msg);
       }
       setDeleted(true);
-      setStep(0);
+      setConfirmOpen(false);
       toast({
         title: "Données supprimées",
         description: "Toutes les données liées à votre entretien ont été effacées.",
@@ -138,13 +138,16 @@ export default function InterviewPrivacy() {
   if (deleted) {
     return (
       <CandidateLayout>
-        <div className="max-w-2xl mx-auto p-6 text-center space-y-4">
+        <div className="max-w-2xl mx-auto p-6 text-center space-y-6">
           <CheckCircle2 className="h-12 w-12 text-success mx-auto" />
           <h1 className="text-2xl font-bold">Vos données ont été supprimées</h1>
           <p className="text-muted-foreground">
             Toutes les données liées à votre entretien (vidéos, audios, transcription, rapport) ont été
             définitivement effacées de nos serveurs. Cette action est irréversible.
           </p>
+          <Button asChild>
+            <Link to="/">Quitter cette page</Link>
+          </Button>
         </div>
       </CandidateLayout>
     );
@@ -183,7 +186,7 @@ export default function InterviewPrivacy() {
           </p>
           <Button
             variant="destructive"
-            onClick={() => setStep(1)}
+            onClick={() => setConfirmOpen(true)}
             disabled={deleting}
             data-testid="candidate-self-delete-button"
           >
@@ -193,34 +196,19 @@ export default function InterviewPrivacy() {
         </section>
       </div>
 
-      <AlertDialog open={step === 1} onOpenChange={(o) => !o && setStep(0)}>
+      <AlertDialog open={confirmOpen} onOpenChange={(o) => !deleting && setConfirmOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Êtes-vous sûr(e) ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est définitive. Toutes les données liées à votre entretien seront effacées de nos
-              serveurs et ne pourront pas être restaurées.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setStep(2)}>Continuer</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={step === 2} onOpenChange={(o) => !o && setStep(0)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmation finale</AlertDialogTitle>
-            <AlertDialogDescription>
-              Confirmez-vous la suppression définitive de toutes vos données ?
+              Cette action est définitive. Toutes les données liées à votre entretien (vidéos, audios,
+              transcription, rapport) seront effacées de nos serveurs et ne pourront pas être restaurées.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
