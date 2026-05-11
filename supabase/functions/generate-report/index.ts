@@ -729,6 +729,18 @@ Champs secondaires (toujours produits, format inchangé) :
       },
     };
 
+    // Filet de sécurité : garantir un personality_profile complet
+    const incomingProfile = parsed.personality_profile;
+    const missingTraits = !incomingProfile || typeof incomingProfile !== "object"
+      || PERSONALITY_TRAITS.some((t) => !incomingProfile[t] || typeof incomingProfile[t].score !== "number");
+    if (missingTraits) {
+      console.warn("[generate-report] personality_profile incomplet, application du fallback", {
+        session_id,
+        had_profile: !!incomingProfile,
+      });
+    }
+    const personalityProfile = buildFallbackPersonalityProfile(incomingProfile);
+
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
@@ -741,7 +753,7 @@ Champs secondaires (toujours produits, format inchangé) :
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
       question_evaluations: questionEvals,
-      personality_profile: parsed.personality_profile || null,
+      personality_profile: personalityProfile,
       soft_skills: parsed.soft_skills || null,
       red_flags: parsed.red_flags || null,
       motivation_scores: parsed.motivation_scores || null,
