@@ -93,6 +93,7 @@ export function SignalsCard({ signals, legacyRedFlags, legacyFollowups, onGoToMe
               <EvidenceLink
                 quote={s.quote}
                 messageId={s.message_id}
+                startSeconds={s.start_seconds}
                 onGoToMessage={onGoToMessage}
                 compact
               />
