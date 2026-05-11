@@ -11,6 +11,7 @@ export interface FitItem {
   statement?: string;
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 interface Props {
