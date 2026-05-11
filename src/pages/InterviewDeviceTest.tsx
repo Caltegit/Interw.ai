@@ -923,7 +923,7 @@ export default function InterviewDeviceTest() {
                 </div>
                 <div>
                   <p className="font-medium mb-1">Navigateurs recommandés</p>
-                  <p className="text-muted-foreground text-xs">Safari (iPhone), Chrome (Android, Mac, PC).</p>
+                  <p className="text-muted-foreground text-xs">Chrome ou Edge (Android, Mac, PC), Safari (iPhone). Firefox et les navigateurs intégrés (LinkedIn, Gmail, Outlook…) ne sont pas pris en charge.</p>
                 </div>
                 <Button onClick={copyLink} variant="outline" className="w-full">
                   {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien pour ouvrir sur un autre appareil</>)}
