@@ -1,33 +1,41 @@
-## Objectif
+## Bug
 
-Empêcher un candidat dont le navigateur ne supporte pas la reconnaissance vocale (cas de Daphnée) de démarrer l'entretien. Aujourd'hui le test technique affiche un avertissement mais laisse passer.
+La suppression groupée dans `ProjectDetail.tsx` ne se déclenche jamais : aucun appel à la fonction `delete-session` n'arrive côté serveur (vérifié via les logs).
 
-## Cause du problème
+## Cause
 
-`src/lib/browserCompat.ts` bloque les webviews intégrées (LinkedIn, Gmail…) et Firefox iOS, mais pas **Firefox desktop / Firefox Android**, qui n'ont pas l'API `webkitSpeechRecognition`. Côté `InterviewDeviceTest.tsx`, le test STT (lignes 322-355) tombe en `warning` au lieu de bloquer, et un bouton « Continuer quand même » permet de passer outre.
+Les deux confirmations de suppression groupée utilisent la même variable d'état `bulkDeleteStep` (valeurs 0 → 1 → 2) avec deux `<AlertDialog>` distincts :
 
-## Changements
+- Dialog A : `open={bulkDeleteStep === 1}`, `onOpenChange={(o) => !o && setBulkDeleteStep(0)}`
+- Dialog B : `open={bulkDeleteStep === 2}`, `onOpenChange={(o) => !o && setBulkDeleteStep(0)}`
 
-### 1. `src/lib/browserCompat.ts`
-- Ajouter une vérification `SpeechRecognition` / `webkitSpeechRecognition` dans `detectBrowserCompat`. Si absente → `level: "blocked"` avec le motif : « Votre navigateur ne prend pas en charge la reconnaissance vocale nécessaire à l'entretien. Ouvrez ce lien dans Chrome (Android, Mac, PC) ou Safari (iPhone). »
-- Conséquence : Firefox (toutes plateformes), Brave avec Shields stricts, et certains navigateurs alternatifs sont désormais bloqués dès l'arrivée sur le test technique.
+Quand l'utilisateur clique sur « Continuer » dans le dialog A, on appelle `setBulkDeleteStep(2)`. Conséquence en chaîne :
 
-### 2. `src/pages/InterviewDeviceTest.tsx`
-- Quand `browserCompat.level === "blocked"`, **supprimer le bouton « Continuer quand même »** (suppression du bloc lignes 732-740 et de la variable `browserBlocking` / `browserBypassed`). L'objectif est qu'un candidat ne puisse plus passer outre.
-- Conserver le bouton « Copier le lien de l'entretien » pour qu'il puisse rouvrir l'invitation sur un autre appareil/navigateur.
-- Quand le test STT échoue (`sttStatus === "warning"` actuel), passer le statut à `"error"` et bloquer `canContinue`. Message : « La reconnaissance vocale n'a pas démarré. Utilisez Chrome ou Safari pour réaliser l'entretien. »
-- Ajuster `canContinue` pour exiger explicitement `sttStatus === "ok"`.
-- Retirer `showSkipPrimary` (le bouton secondaire « Continuer quand même » du bas, lignes 956-960) **uniquement** quand le blocage vient du navigateur ou du STT — on garde le contournement pour les autres cas (réseau faible).
+1. L'état passe à `2`.
+2. Dialog A reçoit `open={false}` → Radix déclenche `onOpenChange(false)`.
+3. Le handler `!o && setBulkDeleteStep(0)` **remet l'état à 0**.
+4. Dialog B ne s'ouvre jamais, et la sélection redevient cliquable comme si rien ne s'était passé.
 
-### 3. Texte d'aide
-- Mettre à jour la liste « Navigateurs recommandés » (ligne 927-929) : ajouter Edge desktop comme alternative valide, préciser que Firefox n'est pas supporté.
+C'est un effet de bord typique quand deux dialogues partagent une seule machine d'états.
+
+## Correctif
+
+Dans `src/pages/ProjectDetail.tsx`, remplacer les `onOpenChange` des deux `AlertDialog` de suppression groupée par une version qui ne remet à 0 **que si l'étape courante correspond au dialogue qui se ferme** :
+
+```ts
+// Dialog A (étape 1)
+onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 1 ? 0 : s)); }}
+
+// Dialog B (étape 2)
+onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 2 ? 0 : s)); }}
+```
+
+Bonus de robustesse : remplacer le `<Button variant="destructive">` du Dialog A par un `<AlertDialogAction>` (comportement standard Radix, ferme le dialogue proprement après le clic).
 
 ## Hors scope
-- Pas de modification de l'email d'invitation (à voir plus tard).
-- Pas de fallback transcription serveur (option 2 reportée).
-- Pas de changement sur le flux d'entretien lui-même.
+- Pas de modification de la fonction edge `delete-session` (elle fonctionne, simplement jamais appelée).
+- Pas de refonte du flow ; on garde la double confirmation existante.
 
 ## Vérification
-- Test manuel : ouvrir un lien d'entretien dans Firefox → carte « Navigateur compatible » rouge, CTA désactivé, pas de contournement possible.
-- Chrome desktop : tout reste vert, comportement inchangé.
-- Test E2E existant `candidate-journey.spec.ts` reste vert (Chromium headless = OK).
+- Ouvrir un projet, cocher 2 candidats, Actions → Supprimer → Continuer → Supprimer.
+- La fonction `delete-session` doit apparaître dans les logs et les sessions doivent disparaître de la liste.

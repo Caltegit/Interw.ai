@@ -1096,7 +1096,7 @@ export default function ProjectDetail() {
         skippedCount={[...selectedIds].filter((sid) => !reportsBySession[sid]?.id).length}
       />
 
-      <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+      <AlertDialog open={bulkDeleteStep === 1} onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 1 ? 0 : s)); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer {selectedIds.size} candidat(s) ?</AlertDialogTitle>
@@ -1106,17 +1106,17 @@ export default function ProjectDetail() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={() => setBulkDeleteStep(2)}
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); setBulkDeleteStep(2); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Continuer
-            </Button>
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={bulkDeleteStep === 2} onOpenChange={(o) => !o && setBulkDeleteStep(0)}>
+      <AlertDialog open={bulkDeleteStep === 2} onOpenChange={(o) => { if (!o) setBulkDeleteStep((s) => (s === 2 ? 0 : s)); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer définitivement ?</AlertDialogTitle>
