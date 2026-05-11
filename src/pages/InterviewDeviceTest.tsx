@@ -161,8 +161,7 @@ export default function InterviewDeviceTest() {
       : browserCompat.current.level === "warning"
       ? "warning"
       : "error";
-  const [browserBypassed, setBrowserBypassed] = useState(false);
-  const browserBlocking = browserCompat.current.level === "blocked" && !browserBypassed;
+  const browserBlocking = browserCompat.current.level === "blocked";
   const attemptIdRef = useRef<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
