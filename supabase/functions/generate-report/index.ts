@@ -331,6 +331,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         statement: { type: "string", description: "1 phrase concrète" },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                       },
                       required: ["criterion", "score", "statement"],
                     },
