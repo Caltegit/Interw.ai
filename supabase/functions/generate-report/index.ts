@@ -52,6 +52,7 @@ function personalityProfileSchema() {
         },
       },
     },
+    required: ["score", "confidence"],
   } as const;
   return {
     type: "object",
@@ -62,7 +63,34 @@ function personalityProfileSchema() {
       agreeableness: trait,
       emotional_stability: trait,
     },
+    required: ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"],
   } as const;
+}
+
+const PERSONALITY_TRAITS = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"] as const;
+
+function buildFallbackPersonalityProfile(existing: any) {
+  const result: Record<string, any> = {};
+  const src = existing && typeof existing === "object" ? existing : {};
+  for (const trait of PERSONALITY_TRAITS) {
+    const t = src[trait];
+    if (t && typeof t === "object" && typeof t.score === "number") {
+      result[trait] = {
+        score: t.score,
+        confidence: t.confidence || "low",
+        interpretation: t.interpretation || "",
+        evidences: Array.isArray(t.evidences) ? t.evidences : [],
+      };
+    } else {
+      result[trait] = {
+        score: 50,
+        confidence: "low",
+        interpretation: "Données insuffisantes pour conclure",
+        evidences: [],
+      };
+    }
+  }
+  return result;
 }
 
 serve(async (req) => {
@@ -275,7 +303,7 @@ Champs secondaires (toujours produits, format inchangé) :
 - executive_summary : 3-5 phrases bilan global
 - overall_score : 0-100 (cohérent avec recommendation)
 - overall_grade : A/B/C/D/E
-- personality_profile (Big Five) : score de 0 à 100 pour chaque trait (openness, conscientiousness, extraversion, agreeableness, emotional_stability). Si la transcription ne permet pas de conclure, mets confidence à "low".
+- personality_profile (Big Five) : OBLIGATOIRE. Tu dois TOUJOURS retourner les 5 traits (openness, conscientiousness, extraversion, agreeableness, emotional_stability) avec un score 0-100 et une confidence (low/medium/high). Si la transcription est courte ou les indices faibles, mets confidence à "low" et un score neutre proche de 50, mais ne saute jamais ce bloc. Fournis 1 à 2 evidences par trait quand c'est possible.
 - soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
 - highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
@@ -430,6 +458,7 @@ Champs secondaires (toujours produits, format inchangé) :
                   "recommendation",
                   "question_evaluations",
                   "communication_profile",
+                  "personality_profile",
                 ],
               },
             },
@@ -700,6 +729,18 @@ Champs secondaires (toujours produits, format inchangé) :
       },
     };
 
+    // Filet de sécurité : garantir un personality_profile complet
+    const incomingProfile = parsed.personality_profile;
+    const missingTraits = !incomingProfile || typeof incomingProfile !== "object"
+      || PERSONALITY_TRAITS.some((t) => !incomingProfile[t] || typeof incomingProfile[t].score !== "number");
+    if (missingTraits) {
+      console.warn("[generate-report] personality_profile incomplet, application du fallback", {
+        session_id,
+        had_profile: !!incomingProfile,
+      });
+    }
+    const personalityProfile = buildFallbackPersonalityProfile(incomingProfile);
+
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
       session_id,
@@ -712,7 +753,7 @@ Champs secondaires (toujours produits, format inchangé) :
       areas_for_improvement: parsed.areas_for_improvement || [],
       criteria_scores: criteriaScores,
       question_evaluations: questionEvals,
-      personality_profile: parsed.personality_profile || null,
+      personality_profile: personalityProfile,
       soft_skills: parsed.soft_skills || null,
       red_flags: parsed.red_flags || null,
       motivation_scores: parsed.motivation_scores || null,
@@ -793,7 +834,7 @@ Champs secondaires (toujours produits, format inchangé) :
           recommendation: parsed.recommendation || null,
           executiveSummary: parsed.executive_summary || "",
           executiveSummaryShort: parsed.executive_summary_short || null,
-          personalityProfile: parsed.personality_profile || null,
+          personalityProfile,
           followupQuestions: parsed.followup_questions || null,
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
