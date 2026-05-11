@@ -581,7 +581,7 @@ export default function InterviewDeviceTest() {
   }, [canContinue]);
 
   const showSkipPrimary =
-    !canContinue && (
+    !canContinue && !browserBlocking && sttStatus !== "error" && (
       micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
       (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
     );
