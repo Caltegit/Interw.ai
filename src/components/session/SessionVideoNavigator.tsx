@@ -344,4 +344,4 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       </CardContent>
     </Card>
   );
-}
+});
