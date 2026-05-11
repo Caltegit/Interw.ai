@@ -834,7 +834,7 @@ Champs secondaires (toujours produits, format inchangé) :
           recommendation: parsed.recommendation || null,
           executiveSummary: parsed.executive_summary || "",
           executiveSummaryShort: parsed.executive_summary_short || null,
-          personalityProfile: parsed.personality_profile || null,
+          personalityProfile,
           followupQuestions: parsed.followup_questions || null,
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
