@@ -154,6 +154,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="success"
                 icon={Check}
                 label="Retenu"
+                tooltip={decision === "shortlisted" ? authorTooltip : null}
               />
               <DecisionButton
                 active={decision === "second_opinion"}
@@ -164,6 +165,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="warning"
                 icon={HelpCircle}
                 label="À discuter"
+                tooltip={decision === "second_opinion" ? authorTooltip : null}
               />
               <DecisionButton
                 active={decision === "rejected"}
@@ -172,6 +174,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tone="destructive"
                 icon={X}
                 label="Non"
+                tooltip={decision === "rejected" ? authorTooltip : null}
               />
             </div>
           )}
