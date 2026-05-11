@@ -46,7 +46,7 @@ const confidenceLabel: Record<string, string> = {
 
 interface Props {
   profile?: Profile | null;
-  onGoToMessage?: (messageId: string) => void;
+  onGoToMessage?: (messageId: string, startSeconds?: number) => void;
   /** Moyenne du projet (Big Five) à superposer en marqueur. */
   projectAverages?: Partial<Record<keyof Profile, number>>;
 }
