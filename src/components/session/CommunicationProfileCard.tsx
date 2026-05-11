@@ -8,6 +8,7 @@ interface Dimension {
   comment?: string;
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 export interface CommunicationProfile {
