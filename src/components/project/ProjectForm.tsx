@@ -723,16 +723,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={introFirstScreen} onCheckedChange={setIntroFirstScreen} />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Analyse vocale du candidat</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Évalue débit, intonation, énergie, assurance et stress à partir de l'audio des réponses.
-                      Le rapport est plus complet, son traitement prend une à deux minutes supplémentaires.
-                    </p>
-                  </div>
-                  <Switch checked={audioAnalysisEnabled} onCheckedChange={setAudioAnalysisEnabled} />
-                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
