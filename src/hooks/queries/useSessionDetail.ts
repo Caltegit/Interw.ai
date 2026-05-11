@@ -39,8 +39,19 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     }
   }
 
+  let decisionByName: string | null = null;
+  const decisionByUserId = (sRes.data as any)?.recruiter_decision_by;
+  if (decisionByUserId) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("user_id", decisionByUserId)
+      .maybeSingle();
+    decisionByName = prof?.full_name || prof?.email || null;
+  }
+
   return {
-    session: sRes.data,
+    session: sRes.data ? { ...sRes.data, decision_by_name: decisionByName } : null,
     report: rRes.data ?? null,
     messages: mRes.data ?? [],
     shareUrl,
