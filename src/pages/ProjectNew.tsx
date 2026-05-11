@@ -83,7 +83,7 @@ const initialState: ProjectFormState = {
   aiQuestionTransitionsEnabled: true,
   aiQuestionTransitionsMode: "auto",
   aiQuestionTransitionsCustomText: "",
-  audioAnalysisEnabled: false,
+  audioAnalysisEnabled: true,
 };
 
 export default function ProjectNew() {
