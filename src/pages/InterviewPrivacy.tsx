@@ -186,7 +186,7 @@ export default function InterviewPrivacy() {
           </p>
           <Button
             variant="destructive"
-            onClick={() => setStep(1)}
+            onClick={() => setConfirmOpen(true)}
             disabled={deleting}
             data-testid="candidate-self-delete-button"
           >
