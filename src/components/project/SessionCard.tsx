@@ -177,6 +177,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const qOrder = currentQ ? currentQ.order_index + 1 : null;
 
   const decision = (session.recruiter_decision ?? "none") as string;
+  const authorTooltip = formatDecisionAuthor(decisionByName, session.recruiter_decision_at);
 
   const decisionBtn = (
     value: string,
@@ -192,7 +193,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
         : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
       : "";
-    return (
+    const btn = (
       <Button
         type="button"
         size="sm"
@@ -204,6 +205,15 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         <span className="ml-1">{label}</span>
       </Button>
     );
+    if (active && authorTooltip) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+          <TooltipContent>{authorTooltip}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return btn;
   };
 
   const reco = report?.recommendation ? recoConfig[report.recommendation] : null;
