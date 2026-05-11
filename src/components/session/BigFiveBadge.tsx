@@ -19,8 +19,8 @@ export function computeBigFiveAverage(profile?: Profile | null): number | null {
     .map((k) => profile[k]?.score)
     .filter((s): s is number => typeof s === "number");
   if (scores.length === 0) return null;
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length / 10;
-  return Math.round(Math.max(0, Math.min(10, avg)) * 10) / 10;
+  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  return Math.round(Math.max(0, Math.min(100, avg)));
 }
 
 interface Props {
@@ -32,10 +32,10 @@ export function BigFiveBadge({ profile, size = 24 }: Props) {
   const value = computeBigFiveAverage(profile);
   const colorClass =
     value === null
-      ? "bg-muted text-muted-foreground"
-      : value >= 6.5
+      ? "bg-muted text-muted-foreground border-border"
+      : value >= 65
       ? "bg-success/15 text-success border-success/30"
-      : value >= 4.5
+      : value >= 45
       ? "bg-warning/15 text-warning border-warning/30"
       : "bg-destructive/15 text-destructive border-destructive/30";
 
@@ -43,9 +43,9 @@ export function BigFiveBadge({ profile, size = 24 }: Props) {
     <span
       className={`inline-flex items-center justify-center rounded-full border text-[10px] font-semibold leading-none ${colorClass}`}
       style={{ width: size, height: size }}
-      title={value === null ? "Big Five non disponible" : `Score Big Five : ${value}/10`}
+      title={value === null ? "Big Five non disponible" : `Score Big Five : ${value}/100`}
     >
-      {value === null ? "—" : value.toFixed(1)}
+      {value === null ? "—" : value}
     </span>
   );
 }
