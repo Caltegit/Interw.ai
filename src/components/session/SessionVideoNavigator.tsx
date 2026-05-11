@@ -129,11 +129,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (v.duration === Infinity) {
         fixDuration();
       } else {
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
+        applyPendingSeek(v, Number.isFinite(v.duration) ? v.duration : 0);
         if (Number.isFinite(v.duration)) setDurationSec(v.duration);
         if (shouldAutoPlay) safePlay();
       }
