@@ -81,6 +81,17 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
+  // Applique le seek en attente, en bornant à la durée connue.
+  const applyPendingSeek = (v: HTMLVideoElement, duration: number) => {
+    const target = Math.max(0, Math.min(pendingSeekRef.current, Math.max(0, duration - 0.1)));
+    try {
+      v.currentTime = target;
+    } catch {
+      /* noop */
+    }
+    pendingSeekRef.current = 0;
+  };
+
   // Répare la durée pour les WebM MediaRecorder (duration = Infinity)
   const fixDuration = () => {
     const v = videoRef.current;
@@ -89,11 +100,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       const onTime = () => {
         v.removeEventListener("timeupdate", onTime);
         const real = v.duration;
-        try {
-          v.currentTime = 0;
-        } catch {
-          /* noop */
-        }
+        applyPendingSeek(v, Number.isFinite(real) ? real : 0);
         if (Number.isFinite(real)) setDurationSec(real);
         if (shouldAutoPlay) safePlay();
       };
