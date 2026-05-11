@@ -36,7 +36,7 @@ function personalityProfileSchema() {
   const trait = {
     type: "object",
     properties: {
-      score: { type: "number" },
+      score: { type: "number", minimum: 0, maximum: 100 },
       interpretation: { type: "string" },
       confidence: { type: "string", enum: ["low", "medium", "high"] },
       evidences: {
