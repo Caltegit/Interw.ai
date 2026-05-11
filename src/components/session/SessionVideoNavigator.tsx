@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,12 @@ export interface SessionVideoClip {
   questionLabel: string;
   questionText: string;
   isFollowUp: boolean;
+  messageId?: string;
+}
+
+export interface SessionVideoNavigatorHandle {
+  /** Joue le clip lié à `messageId`, positionné à `startSeconds - 5s` (≥ 0). Retourne false si aucun clip ne correspond. */
+  playMessage: (messageId: string, startSeconds?: number) => boolean;
 }
 
 interface Props {
