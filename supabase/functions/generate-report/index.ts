@@ -314,6 +314,7 @@ Champs secondaires (toujours produits, format inchangé) :
                         sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
                         quote: { type: "string" },
                         message_id: { type: "string" },
+                        start_seconds: { type: "number" },
                       },
                       required: ["label", "sentiment"],
                     },
