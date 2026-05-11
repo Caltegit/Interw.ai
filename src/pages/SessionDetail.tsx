@@ -112,8 +112,22 @@ export default function SessionDetail() {
     }
   };
 
+  const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+
   const goToMessage = useCallback(
-    (messageId: string) => {
+    (messageId: string, startSeconds?: number) => {
+      // 1) Tente de jouer le clip vidéo correspondant.
+      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+      if (played) {
+        // Sur petit écran le panneau vidéo est sous le contenu : on l'amène en vue.
+        setTimeout(() => {
+          document
+            .getElementById("session-video-panel")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 50);
+        return;
+      }
+      // 2) Fallback transcript pour les messages sans clip vidéo.
       const idx = messages.findIndex((m: any) => m.id === messageId);
       if (idx === -1) return;
       setActiveTab("transcript");
