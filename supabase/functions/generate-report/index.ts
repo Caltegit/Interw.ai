@@ -752,9 +752,14 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       }
     });
 
-    // Best/worst question + highlight clips selection
+    // Best/worst question + highlight clips selection — on ignore les entrées
+    // sans score (null) pour ne pas désigner une question "Non évaluée" comme
+    // la plus faible.
     const evalEntries = Object.entries(questionEvals) as [string, any][];
-    const sortedEvals = [...evalEntries].sort(
+    const scoredEvals = evalEntries.filter(
+      ([, v]) => typeof v?.score === "number" && Number.isFinite(v.score),
+    );
+    const sortedEvals = [...scoredEvals].sort(
       (a, b) => (Number(b[1]?.score) || 0) - (Number(a[1]?.score) || 0),
     );
     const bestQuestionIdx = sortedEvals.length > 0 ? parseInt(sortedEvals[0][0]) : null;
