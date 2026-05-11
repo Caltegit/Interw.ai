@@ -322,8 +322,8 @@ export default function InterviewDeviceTest() {
     setSttStatus("testing");
     setSttError(null);
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const fallbackMsg = "La transcription en direct ne fonctionnera pas sur ce navigateur. L'entretien reste possible : vos réponses sont enregistrées et transcrites après coup.";
-    if (!SR) { setSttError(fallbackMsg); setSttStatus("warning"); return; }
+    const blockMsg = "La reconnaissance vocale n'a pas démarré. Utilisez Chrome (Android, Mac, PC) ou Safari (iPhone) pour réaliser l'entretien.";
+    if (!SR) { setSttError(blockMsg); setSttStatus("error"); return; }
     try {
       const recognition = new SR();
       recognition.lang = "fr-FR";
@@ -346,10 +346,10 @@ export default function InterviewDeviceTest() {
         try { recognition.start(); } catch { finish(false); }
       });
       if (ok) setSttStatus("ok");
-      else { setSttError(fallbackMsg); setSttStatus("warning"); }
+      else { setSttError(blockMsg); setSttStatus("error"); }
     } catch {
-      setSttError(fallbackMsg);
-      setSttStatus("warning");
+      setSttError(blockMsg);
+      setSttStatus("error");
     }
   }, []);
 
