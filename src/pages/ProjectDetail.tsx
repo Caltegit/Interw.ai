@@ -1106,7 +1106,12 @@ export default function ProjectDetail() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => setBulkDeleteStep(2)}>Continuer</AlertDialogAction>
+            <Button
+              variant="destructive"
+              onClick={() => setBulkDeleteStep(2)}
+            >
+              Continuer
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
