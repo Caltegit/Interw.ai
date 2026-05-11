@@ -36,7 +36,7 @@ function personalityProfileSchema() {
   const trait = {
     type: "object",
     properties: {
-      score: { type: "number" },
+      score: { type: "number", minimum: 0, maximum: 100 },
       interpretation: { type: "string" },
       confidence: { type: "string", enum: ["low", "medium", "high"] },
       evidences: {
@@ -272,7 +272,7 @@ Champs secondaires (toujours produits, format inchangé) :
 - executive_summary : 3-5 phrases bilan global
 - overall_score : 0-100 (cohérent avec recommendation)
 - overall_grade : A/B/C/D/E
-- personality_profile (Big Five) : conservé pour l'analyse approfondie. Si la transcription ne permet pas de conclure, mets confidence à "low".
+- personality_profile (Big Five) : score de 0 à 100 pour chaque trait (openness, conscientiousness, extraversion, agreeableness, emotional_stability). Si la transcription ne permet pas de conclure, mets confidence à "low".
 - soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
 - highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
