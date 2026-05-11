@@ -220,7 +220,6 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const scoreVal = report?.overall_score != null ? Math.round(Number(report.overall_score)) : null;
 
   return (
-    <TooltipProvider delayDuration={150}>
     <Card className="flex flex-col overflow-hidden transition-colors hover:bg-muted/50">
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {/* En-tête : nom puis note + recommandation */}
