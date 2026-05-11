@@ -52,6 +52,7 @@ function personalityProfileSchema() {
         },
       },
     },
+    required: ["score", "confidence"],
   } as const;
   return {
     type: "object",
@@ -62,7 +63,34 @@ function personalityProfileSchema() {
       agreeableness: trait,
       emotional_stability: trait,
     },
+    required: ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"],
   } as const;
+}
+
+const PERSONALITY_TRAITS = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"] as const;
+
+function buildFallbackPersonalityProfile(existing: any) {
+  const result: Record<string, any> = {};
+  const src = existing && typeof existing === "object" ? existing : {};
+  for (const trait of PERSONALITY_TRAITS) {
+    const t = src[trait];
+    if (t && typeof t === "object" && typeof t.score === "number") {
+      result[trait] = {
+        score: t.score,
+        confidence: t.confidence || "low",
+        interpretation: t.interpretation || "",
+        evidences: Array.isArray(t.evidences) ? t.evidences : [],
+      };
+    } else {
+      result[trait] = {
+        score: 50,
+        confidence: "low",
+        interpretation: "Données insuffisantes pour conclure",
+        evidences: [],
+      };
+    }
+  }
+  return result;
 }
 
 serve(async (req) => {
