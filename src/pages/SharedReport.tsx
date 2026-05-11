@@ -380,8 +380,8 @@ export default function SharedReport() {
           </Tabs>
         </div>
 
-        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
-          {sessionClips.length > 0 && <SessionVideoNavigator clips={sessionClips} />}
+        <div id="session-video-panel" className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4 lg:self-start">
+          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
         </div>
       </div>
 
