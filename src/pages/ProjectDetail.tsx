@@ -184,7 +184,7 @@ export default function ProjectDetail() {
     const loadSessionsAndReports = async () => {
       const { data: sList } = await supabase
         .from("sessions")
-        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
+        .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
         .eq("project_id", id)
         .order("created_at", { ascending: false });
       if (cancelled) return;
