@@ -99,6 +99,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsEnabled: boolean;
   aiQuestionTransitionsMode: "auto" | "custom";
   aiQuestionTransitionsCustomText: string;
+  audioAnalysisEnabled: boolean;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -302,6 +303,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [aiQuestionTransitionsCustomText, setAiQuestionTransitionsCustomText] = useState(
     initial.aiQuestionTransitionsCustomText,
   );
+  const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
@@ -354,6 +356,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       aiQuestionTransitionsEnabled,
       aiQuestionTransitionsMode,
       aiQuestionTransitionsCustomText,
+      audioAnalysisEnabled,
     });
   };
 
@@ -719,6 +722,16 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </p>
                   </div>
                   <Switch checked={introFirstScreen} onCheckedChange={setIntroFirstScreen} />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Analyse vocale du candidat</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Évalue débit, intonation, énergie, assurance et stress à partir de l'audio des réponses.
+                      Le rapport est plus complet, son traitement prend une à deux minutes supplémentaires.
+                    </p>
+                  </div>
+                  <Switch checked={audioAnalysisEnabled} onCheckedChange={setAudioAnalysisEnabled} />
                 </div>
                 <div>
                   <Label>Statut</Label>

@@ -849,6 +849,7 @@ export type Database = {
           ai_voice: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause: boolean
           allow_skip_question: boolean
+          audio_analysis_enabled: boolean
           auto_skip_silence: boolean
           avatar_image_url: string | null
           completion_message: string | null
@@ -887,6 +888,7 @@ export type Database = {
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           allow_skip_question?: boolean
+          audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
           completion_message?: string | null
@@ -925,6 +927,7 @@ export type Database = {
           ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
           allow_pause?: boolean
           allow_skip_question?: boolean
+          audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
           completion_message?: string | null
@@ -1147,6 +1150,7 @@ export type Database = {
           motivation_scores: Json | null
           overall_grade: string | null
           overall_score: number
+          paraverbal_analysis: Json | null
           personality_profile: Json | null
           question_evaluations: Json | null
           recommendation:
@@ -1173,6 +1177,7 @@ export type Database = {
           motivation_scores?: Json | null
           overall_grade?: string | null
           overall_score?: number
+          paraverbal_analysis?: Json | null
           personality_profile?: Json | null
           question_evaluations?: Json | null
           recommendation?:
@@ -1199,6 +1204,7 @@ export type Database = {
           motivation_scores?: Json | null
           overall_grade?: string | null
           overall_score?: number
+          paraverbal_analysis?: Json | null
           personality_profile?: Json | null
           question_evaluations?: Json | null
           recommendation?:

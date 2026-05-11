@@ -39,6 +39,7 @@ import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
+import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCard";
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
@@ -475,6 +476,11 @@ export default function SessionDetail() {
 
                   <CommunicationProfileCard
                     profile={stats.communication_profile}
+                    onGoToMessage={goToMessage}
+                  />
+
+                  <ParaverbalProfileCard
+                    analysis={(report as any).paraverbal_analysis}
                     onGoToMessage={goToMessage}
                   />
 

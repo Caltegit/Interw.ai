@@ -179,6 +179,8 @@ export default function ProjectEdit() {
         aiQuestionTransitionsCustomText:
           (project as { ai_question_transitions_custom_text?: string | null })
             .ai_question_transitions_custom_text ?? "",
+        audioAnalysisEnabled:
+          (project as { audio_analysis_enabled?: boolean }).audio_analysis_enabled ?? false,
       });
 
       setLoading(false);
@@ -268,6 +270,7 @@ export default function ProjectEdit() {
           ai_question_transitions_enabled: s.aiQuestionTransitionsEnabled,
           ai_question_transitions_mode: s.aiQuestionTransitionsMode,
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
+          audio_analysis_enabled: s.audioAnalysisEnabled,
         } as never)
         .eq("id", id);
 

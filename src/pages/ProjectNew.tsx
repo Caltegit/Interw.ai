@@ -83,6 +83,7 @@ const initialState: ProjectFormState = {
   aiQuestionTransitionsEnabled: true,
   aiQuestionTransitionsMode: "auto",
   aiQuestionTransitionsCustomText: "",
+  audioAnalysisEnabled: false,
 };
 
 export default function ProjectNew() {
@@ -177,6 +178,7 @@ export default function ProjectNew() {
           allow_pause: s.allowPause,
           allow_skip_question: s.allowSkipQuestion,
           intro_first_screen: s.introFirstScreen,
+          audio_analysis_enabled: s.audioAnalysisEnabled,
           slug,
           avatar_image_url: avatarUrl,
           intro_enabled: s.introEnabled,

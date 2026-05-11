@@ -1102,6 +1102,24 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       console.error("Email enqueue threw:", e);
     }
 
+    // Analyse para-verbale (audio) en arrière-plan si activée sur le projet
+    if (project?.audio_analysis_enabled) {
+      try {
+        // Fire-and-forget : on n'attend pas la réponse pour ne pas bloquer
+        // (l'analyse audio peut prendre 60-120 s).
+        fetch(`${SUPABASE_URL}/functions/v1/analyze-paraverbal`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ session_id }),
+        }).catch((e) => console.warn("analyze-paraverbal trigger failed:", e));
+      } catch (e) {
+        console.warn("analyze-paraverbal trigger threw:", e);
+      }
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
