@@ -9,25 +9,25 @@ import { useToast } from "@/hooks/use-toast";
 
 export type VoiceGender = "female" | "male";
 
-export const FEMALE_VOICE_DEFAULT_ID = "ICk609TItINMseDpChFt"; // Léa - FR natif, calme, pédagogue
-export const MALE_VOICE_DEFAULT_ID = "IPgYtHTNLjC7Bq7IPHrm"; // Martin - FR natif
+export const FEMALE_VOICE_DEFAULT_ID = "ICk609TItINMseDpChFt"; // Léa - FR natif, posée, pédagogue
+export const MALE_VOICE_DEFAULT_ID = "0igQGE0lbNpTaWsexf1r"; // Paul K - FR natif
 
 export const FEMALE_VOICES = [
-  { id: "kENkNtk0xyzG09WW40xE", name: "Marine", description: "FR natif · jeune, dynamique" },
-  { id: "1a3lMdKLUcfcMtvN772u", name: "Adeline", description: "FR natif · posée, professionnelle" },
-  { id: "ICk609TItINMseDpChFt", name: "Léa", description: "FR natif · calme, pédagogue" },
-  { id: "WeAAwKYcS06VmXw086yZ", name: "Victoria", description: "FR natif · chaleureuse, posée" },
-  { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte", description: "Multilingue · léger accent" },
+  { id: "ICk609TItINMseDpChFt", name: "Léa", description: "FR · posée, pédagogue" },
+  { id: "WeAAwKYcS06VmXw086yZ", name: "Victoria", description: "FR · chaleureuse, posée" },
+  { id: "XB0fDUnXU5powFXDhCwa", name: "Helen", description: "EN 🇬🇧 · accent britannique" },
+  { id: "AZnzlk1XvdvUeBnXmlld", name: "Elara", description: "EN 🇺🇸 · narratrice claire" },
+  { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Gülsu", description: "TR 🇹🇷 · turc Istanbul" },
 ];
 
 export const MALE_VOICES = [
-  { id: "IPgYtHTNLjC7Bq7IPHrm", name: "Martin", description: "FR natif · posée, professionnelle" },
-  { id: "AZnzlk1XvdvUeBnXmlld", name: "Guillaume", description: "FR natif · grave, sérieuse" },
-  { id: "jbJMQWv1eS4YjQ6PCcn6", name: "Julien", description: "FR natif · chaleureuse" },
-  { id: "hgPNbZ1myT05ziSdrji2", name: "Clément", description: "FR natif · voix personnalisée" },
-  { id: "0igQGE0lbNpTaWsexf1r", name: "Paul K", description: "FR natif · pédagogue, agréable" },
-  { id: "jsScnYkNNda9Q1NES5nn", name: "Léo", description: "FR natif · énergique, engageant" },
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "Multilingue · léger accent" },
+  { id: "kENkNtk0xyzG09WW40xE", name: "Marcel", description: "FR · French touch" },
+  { id: "1a3lMdKLUcfcMtvN772u", name: "Antoine", description: "FR · parisien, emphase" },
+  { id: "IPgYtHTNLjC7Bq7IPHrm", name: "Alexandre", description: "FR 🇨🇦 · accent québécois" },
+  { id: "hgPNbZ1myT05ziSdrji2", name: "Clément", description: "FR · neutre" },
+  { id: "0igQGE0lbNpTaWsexf1r", name: "Paul K", description: "FR · pédagogue, agréable" },
+  { id: "jsScnYkNNda9Q1NES5nn", name: "Léo", description: "FR · énergique, engageant" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George", description: "EN 🇬🇧 · narrateur captivant" },
 ];
 
 export function getDefaultVoiceForGender(gender: VoiceGender): string {
