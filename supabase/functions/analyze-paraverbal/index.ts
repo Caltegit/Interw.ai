@@ -124,7 +124,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { session_id } = await req.json();
+    const { session_id, force } = await req.json();
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id is required" }), {
         status: 400,
@@ -169,7 +169,7 @@ serve(async (req) => {
     if (!report) {
       return new Response(JSON.stringify({ error: "no_report_yet" }), { status: 400, headers: corsHeaders });
     }
-    if (report.paraverbal_analysis) {
+    if (report.paraverbal_analysis && !force) {
       return new Response(JSON.stringify({ skipped: "already_analyzed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
