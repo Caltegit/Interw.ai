@@ -44,6 +44,8 @@ import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
+import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
+import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
