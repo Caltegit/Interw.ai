@@ -1102,18 +1102,24 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       console.error("Email enqueue threw:", e);
     }
 
-    // Analyse para-verbale (audio) en arrière-plan, systématique
+    // Analyse para-verbale (audio) en arrière-plan, systématique.
+    // EdgeRuntime.waitUntil garantit que le fetch part même après le return.
     try {
-      // Fire-and-forget : on n'attend pas la réponse pour ne pas bloquer
-      // (l'analyse audio peut prendre 60-120 s).
-      fetch(`${SUPABASE_URL}/functions/v1/analyze-paraverbal`, {
+      const paraverbalPromise = fetch(`${SUPABASE_URL}/functions/v1/analyze-paraverbal`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
         body: JSON.stringify({ session_id }),
-      }).catch((e) => console.warn("analyze-paraverbal trigger failed:", e));
+      })
+        .then((r) => console.log("analyze-paraverbal triggered:", r.status))
+        .catch((e) => console.warn("analyze-paraverbal trigger failed:", e));
+      // @ts-ignore - EdgeRuntime est fourni par Supabase Edge Runtime
+      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(paraverbalPromise);
+      }
     } catch (e) {
       console.warn("analyze-paraverbal trigger threw:", e);
     }
