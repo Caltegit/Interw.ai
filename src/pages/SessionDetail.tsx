@@ -71,6 +71,7 @@ export default function SessionDetail() {
   const [copied, setCopied] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [analyzingVoice, setAnalyzingVoice] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
@@ -556,8 +557,60 @@ export default function SessionDetail() {
                 />
               ) : (
                 <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Analyse vocale non disponible pour cette session.
+                  <CardContent className="space-y-4 py-8 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Analyse vocale non disponible pour cette session.
+                    </p>
+                    {report && id && (
+                      <Button
+                        size="sm"
+                        disabled={analyzingVoice}
+                        onClick={async () => {
+                          setAnalyzingVoice(true);
+                          toast({
+                            title: "Analyse vocale lancée",
+                            description: "Cela peut prendre 1 à 2 minutes.",
+                          });
+                          try {
+                            const { data, error } = await supabase.functions.invoke(
+                              "analyze-paraverbal",
+                              { body: { session_id: id, force: true } },
+                            );
+                            if (error) throw error;
+                            if ((data as any)?.skipped) {
+                              toast({
+                                title: "Analyse non effectuée",
+                                description: String((data as any).skipped),
+                                variant: "destructive",
+                              });
+                            } else {
+                              toast({ title: "Analyse vocale terminée" });
+                              queryClient.invalidateQueries({ queryKey: queryKeys.session(id) });
+                            }
+                          } catch (e: any) {
+                            toast({
+                              title: "Erreur de l'analyse vocale",
+                              description: e.message ?? String(e),
+                              variant: "destructive",
+                            });
+                          } finally {
+                            setAnalyzingVoice(false);
+                          }
+                        }}
+                      >
+                        {analyzingVoice ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Analyse en cours…
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="mr-2 h-4 w-4" />
+                            Lancer l'analyse vocale
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
