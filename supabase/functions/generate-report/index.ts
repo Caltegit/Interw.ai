@@ -533,6 +533,7 @@ Champs secondaires (toujours produits, format inchangé) :
           statement: aiEntry?.statement || aiEntry?.comment || "",
           quote: aiEntry?.quote || null,
           message_id: aiEntry?.message_id || null,
+          start_seconds: typeof aiEntry?.start_seconds === "number" ? aiEntry.start_seconds : null,
         });
       });
     } else {
@@ -545,6 +546,7 @@ Champs secondaires (toujours produits, format inchangé) :
           statement: f?.statement || "",
           quote: f?.quote || null,
           message_id: f?.message_id || null,
+          start_seconds: typeof f?.start_seconds === "number" ? f.start_seconds : null,
         });
       });
     }
