@@ -609,6 +609,23 @@ export default function SessionDetail() {
               )}
             </TabsContent>
 
+            <TabsContent value="attitude" className="mt-4 space-y-4">
+              {report && (report as any).nonverbal_analysis?.profile ? (
+                <NonverbalProfileCard
+                  analysis={(report as any).nonverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    {(report as any)?.nonverbal_analysis?.status === "failed"
+                      ? "La dernière analyse corporelle a échoué. Régénérez le rapport pour réessayer."
+                      : "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien."}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="answers" className="mt-4 space-y-3">
               {questionItems.length === 0 ? (
                 <Card>
