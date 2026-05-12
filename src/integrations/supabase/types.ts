@@ -713,6 +713,7 @@ export type Database = {
         Row: {
           client_notes: string | null
           created_at: string
+          enable_bias_detection: boolean
           id: string
           logo_url: string | null
           name: string
@@ -725,6 +726,7 @@ export type Database = {
         Insert: {
           client_notes?: string | null
           created_at?: string
+          enable_bias_detection?: boolean
           id?: string
           logo_url?: string | null
           name: string
@@ -737,6 +739,7 @@ export type Database = {
         Update: {
           client_notes?: string | null
           created_at?: string
+          enable_bias_detection?: boolean
           id?: string
           logo_url?: string | null
           name?: string
@@ -1139,6 +1142,7 @@ export type Database = {
       reports: {
         Row: {
           areas_for_improvement: string[] | null
+          coherence: Json | null
           criteria_scores: Json | null
           executive_summary: string
           executive_summary_short: string | null
@@ -1146,8 +1150,10 @@ export type Database = {
           followup_questions: Json | null
           generated_at: string
           highlight_clips: Json
+          highlights: Json | null
           id: string
           motivation_scores: Json | null
+          nonverbal_analysis: Json | null
           overall_grade: string | null
           overall_score: number
           paraverbal_analysis: Json | null
@@ -1157,15 +1163,18 @@ export type Database = {
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           red_flags: Json | null
+          reliability: Json | null
           reviewed_at: string | null
           reviewed_by: string | null
           session_id: string
           soft_skills: Json | null
           stats: Json
           strengths: string[] | null
+          timeline: Json | null
         }
         Insert: {
           areas_for_improvement?: string[] | null
+          coherence?: Json | null
           criteria_scores?: Json | null
           executive_summary?: string
           executive_summary_short?: string | null
@@ -1173,8 +1182,10 @@ export type Database = {
           followup_questions?: Json | null
           generated_at?: string
           highlight_clips?: Json
+          highlights?: Json | null
           id?: string
           motivation_scores?: Json | null
+          nonverbal_analysis?: Json | null
           overall_grade?: string | null
           overall_score?: number
           paraverbal_analysis?: Json | null
@@ -1184,15 +1195,18 @@ export type Database = {
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           red_flags?: Json | null
+          reliability?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id: string
           soft_skills?: Json | null
           stats?: Json
           strengths?: string[] | null
+          timeline?: Json | null
         }
         Update: {
           areas_for_improvement?: string[] | null
+          coherence?: Json | null
           criteria_scores?: Json | null
           executive_summary?: string
           executive_summary_short?: string | null
@@ -1200,8 +1214,10 @@ export type Database = {
           followup_questions?: Json | null
           generated_at?: string
           highlight_clips?: Json
+          highlights?: Json | null
           id?: string
           motivation_scores?: Json | null
+          nonverbal_analysis?: Json | null
           overall_grade?: string | null
           overall_score?: number
           paraverbal_analysis?: Json | null
@@ -1211,12 +1227,14 @@ export type Database = {
             | Database["public"]["Enums"]["recommendation_type"]
             | null
           red_flags?: Json | null
+          reliability?: Json | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           session_id?: string
           soft_skills?: Json | null
           stats?: Json
           strengths?: string[] | null
+          timeline?: Json | null
         }
         Relationships: [
           {
