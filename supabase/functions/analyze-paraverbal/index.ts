@@ -13,7 +13,7 @@ const corsHeaders = {
 };
 
 const GEMINI_BASE = "https://generativelanguage.googleapis.com";
-const MODEL = "gemini-2.5-pro";
+const MODEL = "google/gemini-2.5-flash";
 
 type Segment = {
   message_id: string;
