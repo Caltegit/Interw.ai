@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Play, FileText, Brain, Mic } from "lucide-react";
+import { MessageSquare, Play, FileText, Brain, Mic, User } from "lucide-react";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
 import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
 
@@ -18,6 +18,8 @@ import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
+import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
+import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
@@ -253,7 +255,7 @@ export default function SharedReport() {
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div className="order-2 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
               </TabsTrigger>
@@ -266,6 +268,11 @@ export default function SharedReport() {
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">À l'oral</span>
                 <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+              </TabsTrigger>
+              <TabsTrigger value="attitude" className="gap-1">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Attitude</span>
+                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
@@ -355,6 +362,21 @@ export default function SharedReport() {
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
                     Analyse vocale non disponible pour cette session.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="attitude" className="mt-4 space-y-4">
+              {report && (report as any).nonverbal_analysis?.profile ? (
+                <NonverbalProfileCard
+                  analysis={(report as any).nonverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse corporelle non disponible pour cette session.
                   </CardContent>
                 </Card>
               )}

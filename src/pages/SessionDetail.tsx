@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic } from "lucide-react";
+import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,6 +44,8 @@ import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
+import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
+import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
@@ -438,7 +440,7 @@ export default function SessionDetail() {
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
               </TabsTrigger>
@@ -451,6 +453,11 @@ export default function SessionDetail() {
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">À l'oral</span>
                 <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+              </TabsTrigger>
+              <TabsTrigger value="attitude" className="gap-1">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Attitude</span>
+                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
@@ -597,6 +604,23 @@ export default function SessionDetail() {
                         )}
                       </Button>
                     )}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="attitude" className="mt-4 space-y-4">
+              {report && (report as any).nonverbal_analysis?.profile ? (
+                <NonverbalProfileCard
+                  analysis={(report as any).nonverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    {(report as any)?.nonverbal_analysis?.status === "failed"
+                      ? "La dernière analyse corporelle a échoué. Régénérez le rapport pour réessayer."
+                      : "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien."}
                   </CardContent>
                 </Card>
               )}

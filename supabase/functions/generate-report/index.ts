@@ -1221,6 +1221,27 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       console.warn("analyze-paraverbal trigger threw:", e);
     }
 
+    // Analyse non-verbale (vidéo) en arrière-plan, systématique.
+    try {
+      const nonverbalPromise = fetch(`${SUPABASE_URL}/functions/v1/analyze-nonverbal`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ session_id, force: true }),
+      })
+        .then((r) => console.log("analyze-nonverbal triggered:", r.status))
+        .catch((e) => console.warn("analyze-nonverbal trigger failed:", e));
+      // @ts-ignore - EdgeRuntime fourni par Supabase Edge Runtime
+      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(nonverbalPromise);
+      }
+    } catch (e) {
+      console.warn("analyze-nonverbal trigger threw:", e);
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
