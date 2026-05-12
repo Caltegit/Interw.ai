@@ -45,6 +45,7 @@ import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordio
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
+import { NonverbalTabContent } from "@/components/session/NonverbalTabContent";
 import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
