@@ -119,10 +119,8 @@ export default function SessionDetail() {
 
   const goToMessage = useCallback(
     (messageId: string, startSeconds?: number) => {
-      // 1) Tente de jouer le clip vidéo correspondant.
       const played = videoNavRef.current?.playMessage(messageId, startSeconds);
       if (played) {
-        // Sur petit écran le panneau vidéo est sous le contenu : on l'amène en vue.
         setTimeout(() => {
           document
             .getElementById("session-video-panel")
@@ -130,17 +128,14 @@ export default function SessionDetail() {
         }, 50);
         return;
       }
-      // 2) Fallback transcript pour les messages sans clip vidéo.
-      const idx = messages.findIndex((m: any) => m.id === messageId);
-      if (idx === -1) return;
-      setActiveTab("transcript");
-      setActiveMessageIndex(idx);
-      setTimeout(() => {
-        const el = document.querySelector(`[data-index="${idx}"]`);
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      // Aucun clip vidéo correspondant : informe le recruteur.
+      toast({
+        title: "Extrait vidéo indisponible",
+        description: "Ce moment n'a pas pu être retrouvé dans les enregistrements.",
+        variant: "destructive",
+      });
     },
-    [messages],
+    [toast],
   );
 
   useEffect(() => {
