@@ -151,8 +151,8 @@ export default function SharedReport() {
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
 
   const goToMessage = useCallback(
-    (messageId: string, startSeconds?: number) => {
-      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+    (messageId: string, _startSeconds?: number) => {
+      const played = videoNavRef.current?.playMessage(messageId, _startSeconds);
       if (played) {
         setTimeout(() => {
           document
@@ -161,16 +161,11 @@ export default function SharedReport() {
         }, 50);
         return;
       }
-      const idx = messages.findIndex((m: any) => m.id === messageId);
-      if (idx === -1) return;
-      setActiveTab("transcript");
-      setActiveMessageIndex(idx);
-      setTimeout(() => {
-        const el = document.querySelector(`[data-index="${idx}"]`);
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      toast.error("Extrait vidéo indisponible", {
+        description: "Ce moment n'a pas pu être retrouvé dans les enregistrements.",
+      });
     },
-    [messages],
+    [],
   );
 
   const questionItems = useMemo(() => {
