@@ -455,7 +455,9 @@ export default function SessionDetail() {
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
               <TabsTrigger value="voice" className="gap-1">
-                <Mic className="h-4 w-4" /> <span className="hidden sm:inline">Communication orale</span>
+                <Mic className="h-4 w-4" />
+                <span className="hidden sm:inline">À l'oral</span>
+                <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
               </TabsTrigger>
             </TabsList>
 
