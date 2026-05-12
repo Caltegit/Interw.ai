@@ -367,6 +367,21 @@ export default function SharedReport() {
               )}
             </TabsContent>
 
+            <TabsContent value="attitude" className="mt-4 space-y-4">
+              {report && (report as any).nonverbal_analysis?.profile ? (
+                <NonverbalProfileCard
+                  analysis={(report as any).nonverbal_analysis}
+                  onGoToMessage={goToMessage}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Analyse corporelle non disponible pour cette session.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="answers" className="mt-4 space-y-3">
               {questionItems.length === 0 ? (
                 <Card>
