@@ -1,45 +1,42 @@
-## Diagnostic
+## Problème constaté
 
-Les boutons « Voir le moment » utilisent un champ `start_seconds` que l'IA **estime** à partir d'une heuristique très approximative (`generate-report/index.ts` ligne 289) :
+Pour la session `bd82a2ff…`, le rapport a bien été régénéré (`generated_at` = 2026‑05‑12 07:02:31) et `analyze-paraverbal` a bien été déclenchée par `generate-report` (logs : `analyze-paraverbal triggered: 502`).
 
-> « Estime à partir de la position du texte cité dans la transcription du message, en supposant un débit de ~160 mots/minute »
+L'analyse a échoué côté Gemini :
+```
+[paraverbal] gemini error 503 — "This model is currently experiencing high demand…"
+```
 
-Aucune vraie donnée temporelle n'est stockée. La fonction `transcribe-session` demande seulement du texte brut à Gemini, sans horodatage. Conséquence : la valeur retournée est souvent fausse (souvent ~0 ou très éloignée de la réalité), donc le lecteur démarre près du début du clip.
+Trois faiblesses se cumulent :
 
-Vérifié en base : les `start_seconds` retournés sont bien présents mais incohérents (0, 12, 43, 54… sans corrélation fiable avec le contenu).
+1. **Aucun retry** dans `analyze-paraverbal` : un seul 503/429 transitoire suffit à perdre l'analyse, sans trace côté UI.
+2. **Pas de `force: true`** lors du déclenchement par `generate-report` : si une analyse partielle existait déjà, elle ne serait pas relancée.
+3. **Aucun statut d'analyse** stocké en base : impossible de distinguer « jamais lancée » de « échouée » → l'UI affiche toujours « Analyse vocale non disponible » sans indice.
 
-## Correctif
+## Plan
 
-Passer d'une estimation à de **vrais timestamps** issus de Gemini, puis recalculer côté serveur le `start_seconds` exact à partir de la citation.
+### 1. `supabase/functions/analyze-paraverbal/index.ts`
+- Ajouter un retry avec backoff exponentiel (3 tentatives, 2 s → 5 s → 12 s) sur les statuts Gemini `429`, `500`, `502`, `503`, `504`.
+- En cas d'échec final, écrire un objet de statut dans `reports.paraverbal_analysis` :
+  ```json
+  { "status": "failed", "error": "gemini_503", "failed_at": "…" }
+  ```
+  (sans `profile`, donc l'UI continue de proposer le bouton « Lancer l'analyse vocale »).
+- En cas de succès, conserver le payload existant (`profile`, `summary`, …) — pas de changement de format pour l'UI.
 
-### 1. Transcription horodatée (`supabase/functions/transcribe-session/index.ts`)
+### 2. `supabase/functions/generate-report/index.ts`
+- Passer `{ session_id, force: true }` au déclenchement automatique pour réécraser un éventuel état `failed` ou ancien.
 
-- Modifier le prompt pour demander à Gemini une transcription **segmentée avec horodatage** (format JSON : `[{"start": 0, "end": 4.2, "text": "..."}]`), un segment ≈ 1 phrase ou ~5 s.
-- Parser la réponse, stocker :
-  - `content` : texte concaténé (inchangé pour le reste de l'app)
-  - **nouvelle colonne** `transcript_segments JSONB` sur `session_messages` (array de `{start, end, text}`)
-- Garder un fallback texte brut si le parsing échoue.
+### 3. UI (`SessionDetail.tsx`)
+- Si `report.paraverbal_analysis?.status === "failed"`, afficher un petit message « La dernière analyse vocale a échoué (Gemini surchargé). Réessayez. » au‑dessus du bouton « Lancer l'analyse vocale ».
+- Aucun changement sur `SharedReport.tsx` (lecture seule).
 
-### 2. Migration DB
+### Détails techniques
+- Le retry reste dans la même invocation (durée maximale ≈ 25 s ajoutées en pire cas, largement sous la limite 150 s d'edge function).
+- Le payload `paraverbal_analysis` continue d'être un `jsonb` ; les composants existants testent `analysis?.profile`, donc un objet `{status:"failed"}` sera traité comme « non disponible » sans casser.
+- Pas de migration SQL nécessaire.
 
-- Ajouter `transcript_segments JSONB NULL` à `session_messages`. Pas de RLS à toucher (héritée).
-
-### 3. Recalcul déterministe dans `generate-report/index.ts`
-
-- Charger `transcript_segments` avec les messages.
-- Après réception du JSON de l'IA, post-traiter chaque entrée qui contient `message_id`/`evidence_message_id` + une citation (`quote`/`citation`/`key_quote`/`evidence_quote`) :
-  - Trouver dans `transcript_segments` du message le segment dont `text` contient (matching tolérant : minuscules, sans ponctuation, premiers ~6 mots de la citation) la citation.
-  - Remplacer `start_seconds` par le `start` du segment trouvé (sinon laisser la valeur de l'IA en fallback).
-- Appliquer aux blocs : `decision_drivers`, `fit_breakdown`, `signals`, `red_flags`, `soft_skills` (`evidence_start_seconds`), `personality_profile.evidences`, `communication_profile.dimensions`, `paraverbal_analysis.dimensions`, `highlight_clips`.
-- Simplifier le prompt : retirer la consigne d'estimer à 160 wpm (devient inutile).
-
-### 4. Compatibilité ascendante
-
-- Les anciens rapports gardent leurs valeurs estimées (rien à migrer).
-- Les nouveaux rapports/transcriptions bénéficient automatiquement des bons timestamps.
-- Aucun changement front nécessaire (le navigateur vidéo continue d'utiliser `startSeconds - 5 s`).
-
-## Hors-scope
-
-- Pas de retraitement rétroactif des sessions déjà transcrites (proposable plus tard via un bouton « re-transcrire »).
-- Pas de modification UI.
+## Fichiers modifiés
+- `supabase/functions/analyze-paraverbal/index.ts`
+- `supabase/functions/generate-report/index.ts`
+- `src/pages/SessionDetail.tsx`

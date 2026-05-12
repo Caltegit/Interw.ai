@@ -1208,7 +1208,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
           "Content-Type": "application/json",
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
-        body: JSON.stringify({ session_id }),
+        body: JSON.stringify({ session_id, force: true }),
       })
         .then((r) => console.log("analyze-paraverbal triggered:", r.status))
         .catch((e) => console.warn("analyze-paraverbal trigger failed:", e));
