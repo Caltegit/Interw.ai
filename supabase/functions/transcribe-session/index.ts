@@ -245,13 +245,15 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const cleaned = await callGeminiInline(LOVABLE_API_KEY, mediaUrl, buf);
+        const raw = await callGeminiInline(LOVABLE_API_KEY, mediaUrl, buf);
+        const { text: cleaned, segments } = parseSegments(raw);
         const rawBackup = (m as any).content_raw ?? (m as any).content ?? null;
         await admin
           .from("session_messages")
           .update({
             content: cleaned || (m as any).content || "",
             content_raw: rawBackup,
+            transcript_segments: segments.length > 0 ? segments : null,
             transcription_status: cleaned ? "done" : "skipped",
             transcribed_at: new Date().toISOString(),
           })
