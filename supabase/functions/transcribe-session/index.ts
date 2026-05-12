@@ -12,14 +12,38 @@ const MAX_SEGMENTS_PER_RUN = 8;
 const MODEL = "google/gemini-2.5-flash";
 
 const TRANSCRIBE_PROMPT = `Tu es un transcripteur professionnel.
-Transcris EXACTEMENT ce que dit la personne dans cette vidéo, en français.
+Transcris EXACTEMENT ce que dit la personne dans cette vidéo/audio, en français, avec des horodatages précis.
 
 Règles strictes :
 - Verbatim : garde les mots exacts, n'invente rien, ne reformule pas, ne corrige pas le sens.
-- Supprime UNIQUEMENT les répétitions involontaires consécutives identiques (artefacts de reconnaissance vocale).
-- Ajoute une ponctuation correcte et des majuscules en début de phrase.
-- N'ajoute aucun commentaire, aucun préambule, aucune note. Renvoie uniquement le texte transcrit.
-- Si la vidéo ne contient aucune parole audible, renvoie une chaîne vide.`;
+- Supprime UNIQUEMENT les répétitions involontaires consécutives identiques.
+- Ponctuation correcte, majuscules en début de phrase.
+- Découpe en segments courts (1 phrase ou ~5 secondes max).
+- Les horodatages sont en SECONDES depuis le début du média (0 = début).
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans bloc markdown, au format :
+{"segments":[{"start":0.0,"end":3.4,"text":"..."},{"start":3.4,"end":7.1,"text":"..."}]}
+
+Si aucune parole audible : {"segments":[]}`;
+
+function parseSegments(raw: string): { text: string; segments: Array<{ start: number; end: number; text: string }> } {
+  const cleaned = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  try {
+    const obj = JSON.parse(cleaned);
+    const segs = Array.isArray(obj?.segments) ? obj.segments : [];
+    const norm = segs
+      .map((s: any) => ({
+        start: Number(s?.start),
+        end: Number(s?.end),
+        text: typeof s?.text === "string" ? s.text.trim() : "",
+      }))
+      .filter((s: any) => Number.isFinite(s.start) && s.text.length > 0);
+    const text = norm.map((s: any) => s.text).join(" ").trim();
+    return { text, segments: norm };
+  } catch {
+    return { text: cleaned, segments: [] };
+  }
+}
 
 function b64encode(bytes: Uint8Array): string {
   let binary = "";
