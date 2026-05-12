@@ -16,6 +16,7 @@ import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCar
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
+import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
@@ -269,7 +270,9 @@ export default function SharedReport() {
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
               <TabsTrigger value="voice" className="gap-1">
-                <Mic className="h-4 w-4" /> <span className="hidden sm:inline">Communication orale</span>
+                <Mic className="h-4 w-4" />
+                <span className="hidden sm:inline">À l'oral</span>
+                <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
               </TabsTrigger>
             </TabsList>
 
