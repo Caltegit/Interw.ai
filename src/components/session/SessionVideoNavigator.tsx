@@ -68,13 +68,32 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const safePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    // Chrome bloque l'autoplay non-mute après un délai depuis le geste utilisateur.
+    // On force mute avant play() puis on restaure le son une fois lecture lancée.
+    const wasMuted = v.muted;
+    v.muted = true;
     try {
       const p = v.play();
       if (p && typeof p.then === "function") {
         playPromiseRef.current = p;
-        p.catch(() => {}).finally(() => {
-          playPromiseRef.current = null;
-        });
+        p.then(() => {
+          if (!wasMuted) {
+            // Restaure le son après démarrage effectif.
+            try {
+              v.muted = false;
+            } catch {
+              /* noop */
+            }
+          }
+        })
+          .catch(() => {
+            // Si play() échoue, on laisse mute pour éviter un état incohérent.
+          })
+          .finally(() => {
+            playPromiseRef.current = null;
+          });
+      } else if (!wasMuted) {
+        v.muted = false;
       }
     } catch {
       /* noop */
