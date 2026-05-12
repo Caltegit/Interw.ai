@@ -266,13 +266,13 @@ export default function SharedReport() {
                 <span className="hidden sm:inline">Big Five</span>
                 <BigFiveBadge profile={report?.personality_profile} size={22} />
               </TabsTrigger>
+              <TabsTrigger value="answers" className="gap-1">
+                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
+              </TabsTrigger>
               <TabsTrigger value="voice" className="gap-1">
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">À l'oral</span>
                 <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
-              </TabsTrigger>
-              <TabsTrigger value="answers" className="gap-1">
-                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
             </TabsList>
 
