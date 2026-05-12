@@ -255,7 +255,7 @@ export default function SharedReport() {
       <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
         <div className="order-2 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
               </TabsTrigger>
@@ -268,6 +268,11 @@ export default function SharedReport() {
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">À l'oral</span>
                 <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+              </TabsTrigger>
+              <TabsTrigger value="attitude" className="gap-1">
+                <User className="h-4 w-4" />
+                <span className="hidden sm:inline">Attitude</span>
+                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
