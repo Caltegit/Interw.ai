@@ -548,7 +548,9 @@ export default function SessionDetail() {
                 <Card>
                   <CardContent className="space-y-4 py-8 text-center">
                     <p className="text-sm text-muted-foreground">
-                      Analyse vocale non disponible pour cette session.
+                      {(report as any)?.paraverbal_analysis?.status === "failed"
+                        ? "La dernière analyse vocale a échoué (modèle surchargé). Réessayez."
+                        : "Analyse vocale non disponible pour cette session."}
                     </p>
                     {report && id && (
                       <Button

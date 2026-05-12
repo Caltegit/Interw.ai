@@ -240,26 +240,48 @@ Retourne le résultat via l'outil report_paraverbal.`;
         "\n\nProduis maintenant l'analyse para-verbale via l'outil report_paraverbal. Base-toi sur l'audio que tu viens d'écouter.",
     });
 
-    const geminiRes = await fetch(
-      `${GEMINI_BASE}/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ role: "user", parts }],
-          tools: [{ functionDeclarations: [TOOL_SCHEMA] }],
-          toolConfig: {
-            functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["report_paraverbal"] },
-          },
-        }),
-      },
-    );
+    const RETRY_STATUSES = new Set([429, 500, 502, 503, 504]);
+    const BACKOFFS_MS = [2000, 5000, 12000];
+    let geminiRes: Response | null = null;
+    let lastStatus = 0;
+    let lastTxt = "";
+    for (let attempt = 0; attempt < BACKOFFS_MS.length + 1; attempt++) {
+      geminiRes = await fetch(
+        `${GEMINI_BASE}/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ role: "user", parts }],
+            tools: [{ functionDeclarations: [TOOL_SCHEMA] }],
+            toolConfig: {
+              functionCallingConfig: { mode: "ANY", allowedFunctionNames: ["report_paraverbal"] },
+            },
+          }),
+        },
+      );
+      if (geminiRes.ok) break;
+      lastStatus = geminiRes.status;
+      lastTxt = await geminiRes.text();
+      console.warn(`[paraverbal] gemini attempt ${attempt + 1} failed`, lastStatus, lastTxt.slice(0, 200));
+      if (!RETRY_STATUSES.has(geminiRes.status) || attempt === BACKOFFS_MS.length) break;
+      await new Promise((r) => setTimeout(r, BACKOFFS_MS[attempt]));
+    }
 
-    if (!geminiRes.ok) {
-      const txt = await geminiRes.text();
-      console.error("[paraverbal] gemini error", geminiRes.status, txt);
-      return new Response(JSON.stringify({ error: "gemini_failed", status: geminiRes.status }), {
+    if (!geminiRes || !geminiRes.ok) {
+      console.error("[paraverbal] gemini error final", lastStatus, lastTxt);
+      await supabase
+        .from("reports")
+        .update({
+          paraverbal_analysis: {
+            status: "failed",
+            error: `gemini_${lastStatus}`,
+            failed_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", report.id);
+      return new Response(JSON.stringify({ error: "gemini_failed", status: lastStatus }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
