@@ -538,20 +538,6 @@ export default function SessionDetail() {
               )}
             </TabsContent>
 
-            <TabsContent value="answers" className="mt-4 space-y-3">
-              {questionItems.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune réponse vidéo enregistrée.
-                  </CardContent>
-                </Card>
-              ) : (
-                questionItems.map((item, i) => (
-                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
-                ))
-              )}
-            </TabsContent>
-
             <TabsContent value="voice" className="mt-4 space-y-4">
               {report && (report as any).paraverbal_analysis?.profile ? (
                 <ParaverbalProfileCard
@@ -616,6 +602,20 @@ export default function SessionDetail() {
                     )}
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="answers" className="mt-4 space-y-3">
+              {questionItems.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Aucune réponse vidéo enregistrée.
+                  </CardContent>
+                </Card>
+              ) : (
+                questionItems.map((item, i) => (
+                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
+                ))
               )}
             </TabsContent>
           </Tabs>
