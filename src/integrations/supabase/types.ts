@@ -1312,6 +1312,7 @@ export type Database = {
           session_id: string
           timestamp: string
           transcribed_at: string | null
+          transcript_segments: Json | null
           transcription_status: string
           video_chunks_manifest_url: string | null
           video_segment_url: string | null
@@ -1327,6 +1328,7 @@ export type Database = {
           session_id: string
           timestamp?: string
           transcribed_at?: string | null
+          transcript_segments?: Json | null
           transcription_status?: string
           video_chunks_manifest_url?: string | null
           video_segment_url?: string | null
@@ -1342,6 +1344,7 @@ export type Database = {
           session_id?: string
           timestamp?: string
           transcribed_at?: string | null
+          transcript_segments?: Json | null
           transcription_status?: string
           video_chunks_manifest_url?: string | null
           video_segment_url?: string | null
