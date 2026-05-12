@@ -71,6 +71,7 @@ export default function SessionDetail() {
   const [copied, setCopied] = useState(false);
   const [retranscribing, setRetranscribing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [analyzingVoice, setAnalyzingVoice] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
