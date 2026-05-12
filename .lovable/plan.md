@@ -1,42 +1,34 @@
-## Problème constaté
+# Correction « Voir le moment » / « Écouter l'extrait »
 
-Pour la session `bd82a2ff…`, le rapport a bien été régénéré (`generated_at` = 2026‑05‑12 07:02:31) et `analyze-paraverbal` a bien été déclenchée par `generate-report` (logs : `analyze-paraverbal triggered: 502`).
+## Objectif
+Faire fonctionner les boutons qui sautent vers le moment vidéo correspondant à une preuve dans le rapport (SessionDetail + SharedReport).
 
-L'analyse a échoué côté Gemini :
-```
-[paraverbal] gemini error 503 — "This model is currently experiencing high demand…"
-```
+## Causes identifiées
+1. **Onglet fallback inexistant** : si le clip n'est pas trouvé, `goToMessage` fait `setActiveTab("transcript")` → cet onglet a été supprimé (`decision | bigfive | voice | answers`), donc rien ne se passe visuellement.
+2. **Autoplay bloqué après seek** : `playMessage` enchaîne `setShouldAutoPlay(true)` puis `setIndex(i)`. Le `play()` est déclenché dans un `useEffect` après chargement metadata → trop loin du geste utilisateur, Chrome rejette parfois l'autoplay (surtout sur les WebM `duration = Infinity` qui passent par `fixDuration` → seek artificiel à `1e9`).
+3. **Pas de feedback** : aucun toast ni log si l'opération échoue silencieusement.
+4. **Bornage du seek** : `pendingSeekRef` peut être appliqué avant que la durée réelle soit connue (cas WebM Infinity).
 
-Trois faiblesses se cumulent :
+## Changements
 
-1. **Aucun retry** dans `analyze-paraverbal` : un seul 503/429 transitoire suffit à perdre l'analyse, sans trace côté UI.
-2. **Pas de `force: true`** lors du déclenchement par `generate-report` : si une analyse partielle existait déjà, elle ne serait pas relancée.
-3. **Aucun statut d'analyse** stocké en base : impossible de distinguer « jamais lancée » de « échouée » → l'UI affiche toujours « Analyse vocale non disponible » sans indice.
+### `src/components/session/SessionVideoNavigator.tsx`
+- Quand `playMessage` est appelé pour un **autre clip** : forcer un appel direct `videoRef.current.load()` puis attendre `loadedmetadata`/`canplay` une seule fois pour appeler `play()` immédiatement, sans dépendre du double setState.
+- Toujours **muter brièvement** la vidéo avant `play()` puis remettre le son après `playing` (contournement Chrome autoplay policy quand l'appel est différé).
+- Borner `pendingSeekRef` après résolution de la vraie durée (WebM Infinity).
+- Retourner `true` uniquement si le clip cible existe (déjà le cas).
 
-## Plan
+### `src/pages/SessionDetail.tsx` & `src/pages/SharedReport.tsx`
+- Dans `goToMessage` :
+  - Remplacer le fallback `setActiveTab("transcript")` par `setActiveTab("answers")` (onglet existant).
+  - Si `playMessage` retourne `false` ET aucun message correspondant → afficher un `toast` "Extrait introuvable".
+  - Toujours scroller vers `#session-video-panel` quand un clip est joué (déjà fait, garder).
+- Ajouter un `id="session-video-panel"` autour du `<SessionVideoNavigator>` si manquant.
 
-### 1. `supabase/functions/analyze-paraverbal/index.ts`
-- Ajouter un retry avec backoff exponentiel (3 tentatives, 2 s → 5 s → 12 s) sur les statuts Gemini `429`, `500`, `502`, `503`, `504`.
-- En cas d'échec final, écrire un objet de statut dans `reports.paraverbal_analysis` :
-  ```json
-  { "status": "failed", "error": "gemini_503", "failed_at": "…" }
-  ```
-  (sans `profile`, donc l'UI continue de proposer le bouton « Lancer l'analyse vocale »).
-- En cas de succès, conserver le payload existant (`profile`, `summary`, …) — pas de changement de format pour l'UI.
+## Validation
+- Ouvrir `/sessions/{id}` d'une session avec rapport contenant des `evidence_message_id` (ex: `f5672a0b-640e-4c7e-a7ea-39e01137ca64`).
+- Cliquer « Voir le moment » dans Soft Skills → la vidéo correspondante doit charger et démarrer, et le panneau doit scroller en vue.
+- Tester sur `/shared-report/{token}` la même session.
+- Vérifier en console qu'il n'y a pas d'erreur `play() failed`.
 
-### 2. `supabase/functions/generate-report/index.ts`
-- Passer `{ session_id, force: true }` au déclenchement automatique pour réécraser un éventuel état `failed` ou ancien.
-
-### 3. UI (`SessionDetail.tsx`)
-- Si `report.paraverbal_analysis?.status === "failed"`, afficher un petit message « La dernière analyse vocale a échoué (Gemini surchargé). Réessayez. » au‑dessus du bouton « Lancer l'analyse vocale ».
-- Aucun changement sur `SharedReport.tsx` (lecture seule).
-
-### Détails techniques
-- Le retry reste dans la même invocation (durée maximale ≈ 25 s ajoutées en pire cas, largement sous la limite 150 s d'edge function).
-- Le payload `paraverbal_analysis` continue d'être un `jsonb` ; les composants existants testent `analysis?.profile`, donc un objet `{status:"failed"}` sera traité comme « non disponible » sans casser.
-- Pas de migration SQL nécessaire.
-
-## Fichiers modifiés
-- `supabase/functions/analyze-paraverbal/index.ts`
-- `supabase/functions/generate-report/index.ts`
-- `src/pages/SessionDetail.tsx`
+## Périmètre
+Frontend uniquement (2 pages + 1 composant navigateur vidéo). Aucun changement backend ni base de données.
