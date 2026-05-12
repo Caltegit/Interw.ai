@@ -1,110 +1,47 @@
-# Plan : Rapport vidéo enrichi
+# Correction du bug Attitude — Passerelle IA Lovable
 
-Objectif : enrichir le rapport actuel avec 5 nouveaux blocs analytiques basés sur la vidéo, livrés en 3 vagues indépendantes et testables.
+## Diagnostic
 
-## Décisions validées
-- **Best-of v1** : lecteur séquentiel dans le navigateur (pas d'export MP4 pour l'instant)
-- **Détection de biais** : incluse en Vague 3 avec cadrage légal explicite
-- **Régénération** : bouton manuel sur chaque session (pas d'auto-batch)
+L'analyse a échoué avec **HTTP 429 — quota Gemini Free Tier épuisé** sur `gemini-2.5-pro`. La fonction `analyze-nonverbal` appelle l'API Google directe via `GEMINI_API_KEY` (clé gratuite à zéro), au lieu de la passerelle IA Lovable.
 
----
+En base : `reports.nonverbal_analysis = { status: "failed", error: "gemini_429" }` → l'UI affiche « La dernière analyse corporelle a échoué ».
 
-## Architecture cible
+## Correctif
 
-```text
-Pipeline actuel :   VIDEO → transcribe → paraverbal → generate-report
-Pipeline cible :    VIDEO ┬→ transcribe ────────┐
-                          ├→ paraverbal ────────┤
-                          ├→ nonverbal ─────────┼→ generate-report (consolidé)
-                          ├→ build-timeline ────┤
-                          └→ select-highlights ─┘
-```
+Réécriture de `supabase/functions/analyze-nonverbal/index.ts` pour utiliser la passerelle IA Lovable (`LOVABLE_API_KEY`, endpoint `https://ai.gateway.lovable.dev/v1/chat/completions`, format OpenAI).
 
-`finalize-session` orchestre déjà la séquence — on ajoute les nouvelles étapes en parallèle après la transcription.
+### Changements clés
 
----
+1. **Suppression de l'upload Gemini Files API** (non disponible via la passerelle). Envoi de chaque segment vidéo en **inline base64** (`data:video/webm;base64,...`) dans un message multimodal.
+2. **Cap durci pour rester dans la limite inline** : 4 segments max, 15 Mo par segment.
+3. **Payload OpenAI-compatible** :
+   - `model: "google/gemini-2.5-pro"`
+   - `tools: [{ type: "function", function: TOOL_SCHEMA }]` + `tool_choice` forcé sur `report_nonverbal`
+   - `messages` avec parties `text` + `image_url` (la passerelle accepte la vidéo via ce canal pour Gemini)
+4. **Gestion d'erreurs explicite** :
+   - `429` → `nonverbal_analysis = { status: "rate_limited" }`
+   - `402` → `status: "no_credits"`
+   - autres → `status: "failed"`
+5. **Schéma de sortie identique** (`profile`, `micro_tensions`, `summary`) → aucun changement front nécessaire côté affichage des données.
+6. **État « en cours »** : avant l'appel, on écrit `status: "running"` pour que l'UI ne reste pas bloquée sur « échouée ».
 
-## Vague 1 — Non-verbal (fondation)
+### UI
 
-**Livrable** : nouvel onglet « Attitude » avec contact visuel, posture, gestuelle, micro-tensions, et liens « Voir le moment ».
+`NonverbalProfileCard` (et son parent dans `SessionDetail.tsx` / `SharedReport.tsx`) : afficher trois nouveaux états avec messages clairs et un bouton « Réessayer » :
+- `running` → spinner + « Analyse corporelle en cours… »
+- `rate_limited` → « Trop de requêtes, réessayez dans quelques minutes »
+- `no_credits` → « Crédits IA épuisés, ajoutez des crédits dans Workspace → Usage »
 
-### Backend
-1. **Migration** : ajout de colonnes JSONB sur `reports` :
-   - `nonverbal_analysis`, `highlights`, `timeline`, `reliability`, `coherence`
-2. **Edge function `analyze-nonverbal`** :
-   - Pour chaque clip vidéo candidat, appel Gemini 2.5 Pro multimodal avec schéma Zod strict (Output API)
-   - Sortie : `{ eye_contact, posture, gestures, micro_tensions: [{message_id, timestamp, description}] }`
-   - Agrégation pondérée par durée
-3. **Orchestration** : `finalize-session` lance `analyze-nonverbal` en parallèle de `analyze-paraverbal`, puis `generate-report` consolide.
-4. **`generate-report`** : intègre `nonverbal_analysis` dans le prompt final pour enrichir le bilan.
+## Fichiers touchés
 
-### Frontend
-5. Onglet **« Attitude »** dans `SessionDetail.tsx` et `SharedReport.tsx` (entre « À l'oral » et « Réponses »).
-6. Composant `NonverbalProfileCard` (calqué sur `ParaverbalProfileCard`) : jauges, observations, liste de moments cliquables.
-7. **Bouton « Régénérer le rapport »** sur `SessionDetail` (RH uniquement) qui réinvoque `finalize-session` avec un flag `force=true`.
+- `supabase/functions/analyze-nonverbal/index.ts` — réécriture complète du transport.
+- `src/pages/SessionDetail.tsx` + `src/pages/SharedReport.tsx` — rendu des nouveaux statuts dans l'onglet Attitude (le composant `NonverbalProfileCard` ne change que pour exposer le statut au parent).
 
----
+## Test
 
-## Vague 2 — Best-of vidéo + Timeline
+1. Re-déployer `analyze-nonverbal`.
+2. Sur la session « Olivier Vernet », cliquer « Régénérer ».
+3. Vérifier les logs → 200 via passerelle Lovable.
+4. Vérifier que `reports.nonverbal_analysis.profile` est rempli et que l'onglet Attitude affiche les 4 scores.
 
-### Best-of (lecteur navigateur)
-1. **Edge function `select-highlights`** :
-   - Croise transcription + paraverbal + nonverbal
-   - Gemini 2.5 Pro choisit 4 moments (forces / personnalité / vigilance / clôture)
-   - Sortie : `[{message_id, start_seconds, end_seconds, label, justification}]` → `reports.highlights`
-2. **Composant `HighlightsReel`** : lit `reports.highlights`, joue les 4 segments en séquence avec overlays (label + justification), barre de progression et boutons précédent/suivant.
-
-### Timeline énergie/sentiment
-3. **Edge function `build-timeline`** :
-   - Découpe la session en fenêtres de 30 s
-   - Gemini 2.5 Flash score énergie (0-100) et sentiment (-1..+1) par fenêtre
-   - Sortie : `[{t_start, t_end, energy, sentiment, message_id}]` → `reports.timeline`
-4. **Composant `EngagementTimeline`** : courbe SVG (Recharts), survol = aperçu, clic = `goToMessage()`.
-
-Les deux blocs s'affichent dans l'onglet « Reco IA », au-dessus du bilan global.
-
----
-
-## Vague 3 — Cohérence + Fiabilité + Biais
-
-### Cohérence verbal/non-verbal
-1. **Edge function `analyze-coherence`** :
-   - Croise transcription + paraverbal + nonverbal
-   - Détecte incongruences (ex : discours assuré + voix tremblante)
-   - Sortie : `[{moment, verbal, nonverbal, incongruence_level, message_id}]`
-
-### Fiabilité + Biais
-2. **Edge function `analyze-reliability`** :
-   - Qualité technique (réseau, audio, vidéo) depuis métriques existantes
-   - Détection de réponse pré-écrite (lecture détectée via paraverbal)
-   - Jauges biais : genre, accent, apparence
-3. **Cadrage légal RGPD** :
-   - Mention obligatoire en tête de bloc : « Indicateurs informatifs et non décisionnels, fournis pour aider à objectiver le jugement humain. »
-   - Toggle org-level `enable_bias_detection` (colonne sur `organizations`), désactivé par défaut, activable par un admin
-   - Page d'aide dédiée expliquant la méthodologie
-
-### Frontend
-4. Composants `CoherenceTable` et `ReliabilityCard` ajoutés à l'onglet « Reco IA ».
-
----
-
-## Détails techniques transverses
-
-- **Modèles IA** : Gemini 2.5 Pro pour analyses vidéo multimodales, Gemini 2.5 Flash pour la timeline (volume), via Lovable AI Gateway (clé déjà disponible).
-- **Coût estimé** : ~0,50 € par entretien de 30 min pour le stack complet.
-- **Idempotence** : chaque edge function vérifie si sa colonne JSONB est déjà remplie avant de relancer (sauf flag `force=true` du bouton régénérer).
-- **Performance** : les 3 analyses parallélisées → temps total ≈ max(des 3) au lieu de la somme.
-- **Schéma strict** : Output API + Zod sur chaque function pour éviter les hallucinations de structure.
-- **Tests** : pour chaque vague, curl direct sur la function + vérification du rapport régénéré + test du clic « Voir le moment » sur le frontend.
-
----
-
-## Ordre d'implémentation
-
-1. **Vague 1** (migration + nonverbal + onglet Attitude + bouton régénérer)
-2. **Vague 2** (timeline d'abord, puis best-of v1)
-3. **Vague 3** (cohérence + fiabilité + toggle biais)
-
-Chaque vague est livrée et validée avant de passer à la suivante.
-
-Je démarre la Vague 1 dès validation.
+Si beaucoup de segments dépassent 15 Mo après ce premier test, on évaluera l'ajout d'une compression `ffmpeg` (option B mise de côté pour l'instant, comme convenu).

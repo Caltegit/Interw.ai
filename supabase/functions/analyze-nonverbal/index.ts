@@ -1,7 +1,6 @@
 // Edge function : analyse non-verbale (vidéo) d'un entretien.
-// Téléverse les segments vidéo candidat vers Gemini Files API, puis appelle
-// Gemini 2.5 Pro multimodal pour produire 4 scores corporels + micro-tensions.
-// Met à jour reports.nonverbal_analysis (jsonb).
+// Passe par la passerelle IA Lovable (LOVABLE_API_KEY) au format OpenAI-compatible
+// avec tool calling. Envoie chaque segment vidéo en inline base64.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -12,82 +11,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GEMINI_BASE = "https://generativelanguage.googleapis.com";
-const MODEL = "gemini-2.5-pro";
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = "google/gemini-2.5-pro";
+
+const MAX_SEGMENTS = 2;
+const MAX_BYTES_PER_SEGMENT = 4 * 1024 * 1024; // 4 Mo (limite mémoire edge ~256 Mo)
 
 type Segment = {
   message_id: string;
   question_label: string;
   video_url: string;
 };
-
-async function uploadToGemini(
-  apiKey: string,
-  blob: Blob,
-  displayName: string,
-): Promise<{ uri: string; mimeType: string } | null> {
-  try {
-    const startRes = await fetch(
-      `${GEMINI_BASE}/upload/v1beta/files?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "X-Goog-Upload-Protocol": "resumable",
-          "X-Goog-Upload-Command": "start",
-          "X-Goog-Upload-Header-Content-Length": String(blob.size),
-          "X-Goog-Upload-Header-Content-Type": blob.type || "video/webm",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ file: { display_name: displayName } }),
-      },
-    );
-    const uploadUrl = startRes.headers.get("X-Goog-Upload-URL");
-    if (!uploadUrl) {
-      console.warn("[nonverbal] no upload URL", await startRes.text());
-      return null;
-    }
-    const buf = new Uint8Array(await blob.arrayBuffer());
-    const finalRes = await fetch(uploadUrl, {
-      method: "POST",
-      headers: {
-        "X-Goog-Upload-Offset": "0",
-        "X-Goog-Upload-Command": "upload, finalize",
-        "Content-Length": String(buf.byteLength),
-      },
-      body: buf,
-    });
-    if (!finalRes.ok) {
-      console.warn("[nonverbal] upload failed", finalRes.status, await finalRes.text());
-      return null;
-    }
-    const data = await finalRes.json();
-    const uri = data?.file?.uri;
-    const state = data?.file?.state;
-    const mimeType = data?.file?.mimeType || blob.type || "video/webm";
-    if (!uri) return null;
-    // Pour la vidéo, Gemini Files API peut renvoyer l'état PROCESSING : on poll.
-    if (state === "PROCESSING") {
-      const fileName = data.file.name; // ex: files/abc123
-      for (let i = 0; i < 20; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        const check = await fetch(
-          `${GEMINI_BASE}/v1beta/${fileName}?key=${apiKey}`,
-        );
-        if (!check.ok) continue;
-        const cdata = await check.json();
-        if (cdata?.state === "ACTIVE") break;
-        if (cdata?.state === "FAILED") {
-          console.warn("[nonverbal] file processing failed", fileName);
-          return null;
-        }
-      }
-    }
-    return { uri, mimeType };
-  } catch (e) {
-    console.error("[nonverbal] upload error", e);
-    return null;
-  }
-}
 
 function dim(description: string) {
   return {
@@ -103,47 +37,66 @@ function dim(description: string) {
 }
 
 const TOOL_SCHEMA = {
-  name: "report_nonverbal",
-  description:
-    "Retourne 4 scores corporels 0-10 + une liste de micro-tensions observées",
-  parameters: {
-    type: "object",
-    properties: {
-      nonverbal_profile: {
-        type: "object",
-        properties: {
-          eye_contact: dim("Contact visuel avec la caméra (10 = soutenu et naturel)"),
-          posture: dim("Posture (10 = ouverte, droite, stable)"),
-          gestures: dim("Gestuelle (10 = expressive et adaptée, ni figée ni agitée)"),
-          facial_expressivity: dim("Expressivité du visage (10 = vivante et congruente)"),
-        },
-        required: ["eye_contact", "posture", "gestures", "facial_expressivity"],
-      },
-      micro_tensions: {
-        type: "array",
-        description:
-          "Moments précis (3 max) où un signe corporel mérite attention : raideur, fuite du regard, geste répétitif, etc.",
-        items: {
+  type: "function",
+  function: {
+    name: "report_nonverbal",
+    description:
+      "Retourne 4 scores corporels 0-10 + une liste de micro-tensions observées",
+    parameters: {
+      type: "object",
+      properties: {
+        nonverbal_profile: {
           type: "object",
           properties: {
-            message_id: { type: "string" },
-            description: { type: "string", description: "1 phrase factuelle" },
+            eye_contact: dim("Contact visuel avec la caméra (10 = soutenu et naturel)"),
+            posture: dim("Posture (10 = ouverte, droite, stable)"),
+            gestures: dim("Gestuelle (10 = expressive et adaptée, ni figée ni agitée)"),
+            facial_expressivity: dim("Expressivité du visage (10 = vivante et congruente)"),
           },
-          required: ["message_id", "description"],
+          required: ["eye_contact", "posture", "gestures", "facial_expressivity"],
+        },
+        micro_tensions: {
+          type: "array",
+          description:
+            "Moments précis (3 max) où un signe corporel mérite attention : raideur, fuite du regard, geste répétitif, etc.",
+          items: {
+            type: "object",
+            properties: {
+              message_id: { type: "string" },
+              description: { type: "string", description: "1 phrase factuelle" },
+            },
+            required: ["message_id", "description"],
+          },
+        },
+        summary: {
+          type: "string",
+          description:
+            "1 à 2 phrases de synthèse corporelle globale, langage manager, sans jargon",
         },
       },
-      summary: {
-        type: "string",
-        description:
-          "1 à 2 phrases de synthèse corporelle globale, langage manager, sans jargon",
-      },
+      required: ["nonverbal_profile", "summary"],
     },
-    required: ["nonverbal_profile", "summary"],
   },
 } as const;
 
+function bytesToBase64(bytes: Uint8Array): string {
+  // Encode par chunks pour éviter le stack overflow sur de gros buffers
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  let reportId: string | null = null;
 
   try {
     const { session_id, force } = await req.json();
@@ -154,17 +107,13 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "no_api_key" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     const { data: session } = await supabase
       .from("sessions")
@@ -200,11 +149,24 @@ serve(async (req) => {
         headers: corsHeaders,
       });
     }
-    if (report.nonverbal_analysis && (report.nonverbal_analysis as any).profile && !force) {
+    reportId = report.id;
+    const existing = report.nonverbal_analysis as any;
+    if (existing?.profile && !force) {
       return new Response(JSON.stringify({ skipped: "already_analyzed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Marque "en cours"
+    await supabase
+      .from("reports")
+      .update({
+        nonverbal_analysis: {
+          status: "running",
+          started_at: new Date().toISOString(),
+        },
+      })
+      .eq("id", report.id);
 
     const { data: messages } = await supabase
       .from("session_messages")
@@ -216,6 +178,10 @@ serve(async (req) => {
       (m: any) => m.role === "candidate" && m.video_segment_url,
     );
     if (candidateMsgs.length === 0) {
+      await supabase
+        .from("reports")
+        .update({ nonverbal_analysis: { status: "skipped", reason: "no_video" } })
+        .eq("id", report.id);
       return new Response(JSON.stringify({ skipped: "no_video" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -224,44 +190,75 @@ serve(async (req) => {
     const questionsById = new Map<string, any>();
     (project.questions ?? []).forEach((q: any) => questionsById.set(q.id, q));
 
-    // Cap à 6 segments vidéo (coût + latence Gemini Pro vidéo)
-    const segments: Segment[] = candidateMsgs.slice(0, 6).map((m: any) => ({
+    const segments: Segment[] = candidateMsgs.slice(0, MAX_SEGMENTS).map((m: any) => ({
       message_id: m.id,
       question_label:
         questionsById.get(m.question_id)?.content?.slice(0, 120) ?? "Question libre",
       video_url: m.video_segment_url,
     }));
 
-    const parts: any[] = [];
+    // Construit la liste des "parts" multimodales
+    const userParts: any[] = [
+      {
+        type: "text",
+        text:
+          `Candidat : ${session.candidate_name}\nPoste : ${project.job_title}\n\nVoici jusqu'à ${MAX_SEGMENTS} segments vidéo de réponses du candidat. Analyse uniquement la communication non-verbale.`,
+      },
+    ];
     let uploaded = 0;
     for (const seg of segments) {
       try {
         const res = await fetch(seg.video_url);
-        if (!res.ok) continue;
+        if (!res.ok) {
+          console.warn("[nonverbal] fetch segment failed", res.status, seg.message_id);
+          continue;
+        }
         const blob = await res.blob();
-        // 80 Mo cap par segment vidéo
-        if (blob.size > 80 * 1024 * 1024) continue;
-        const file = await uploadToGemini(apiKey, blob, `vid-${seg.message_id}`);
-        if (!file) continue;
-        parts.push({
-          text: `\n--- Segment [message_id=${seg.message_id}] ---\nQuestion : ${seg.question_label}\nVidéo :`,
+        if (blob.size > MAX_BYTES_PER_SEGMENT) {
+          console.warn("[nonverbal] segment too large", seg.message_id, blob.size);
+          continue;
+        }
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        const b64 = bytesToBase64(buf);
+        const mime = blob.type || "video/webm";
+        userParts.push({
+          type: "text",
+          text: `\n--- Segment [message_id=${seg.message_id}] ---\nQuestion : ${seg.question_label}`,
         });
-        parts.push({ fileData: { fileUri: file.uri, mimeType: file.mimeType } });
+        userParts.push({
+          type: "image_url",
+          image_url: { url: `data:${mime};base64,${b64}` },
+        });
         uploaded += 1;
       } catch (e) {
         console.warn("[nonverbal] segment skipped", e);
       }
     }
 
-    if (uploaded < 2) {
-      console.warn("[nonverbal] not enough video uploaded", uploaded);
+    if (uploaded < 1) {
+      await supabase
+        .from("reports")
+        .update({
+          nonverbal_analysis: {
+            status: "skipped",
+            reason: "not_enough_video",
+            failed_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", report.id);
       return new Response(JSON.stringify({ skipped: "not_enough_video" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const systemInstruction = `Tu es un expert en communication non-verbale en entretien d'embauche. Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat ${session.candidate_name} pour le poste ${project.job_title}.
-Tu observes la vidéo fournie. Note 4 dimensions sur 10 :
+    userParts.push({
+      type: "text",
+      text:
+        "\n\nProduis maintenant l'analyse non-verbale via l'outil report_nonverbal en t'appuyant uniquement sur ce que tu vois.",
+    });
+
+    const systemPrompt = `Tu es un expert en communication non-verbale en entretien d'embauche. Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat.
+Note 4 dimensions sur 10 :
 - eye_contact (10 = regard caméra naturel et soutenu)
 - posture (10 = ouverte, droite, stable)
 - gestures (10 = expressive et adaptée)
@@ -271,78 +268,78 @@ Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard, 
 Ne juge JAMAIS l'apparence physique, l'âge, le genre, l'origine ou le handicap. Reste factuel et bienveillant.
 Retourne le résultat via l'outil report_nonverbal.`;
 
-    parts.push({
-      text:
-        "\n\nProduis maintenant l'analyse non-verbale via l'outil report_nonverbal en t'appuyant uniquement sur ce que tu vois.",
+    const gatewayRes = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userParts },
+        ],
+        tools: [TOOL_SCHEMA],
+        tool_choice: { type: "function", function: { name: "report_nonverbal" } },
+      }),
     });
 
-    const RETRY_STATUSES = new Set([429, 500, 502, 503, 504]);
-    const BACKOFFS_MS = [2000, 5000, 12000];
-    let geminiRes: Response | null = null;
-    let lastStatus = 0;
-    let lastTxt = "";
-    for (let attempt = 0; attempt < BACKOFFS_MS.length + 1; attempt++) {
-      geminiRes = await fetch(
-        `${GEMINI_BASE}/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemInstruction }] },
-            contents: [{ role: "user", parts }],
-            tools: [{ functionDeclarations: [TOOL_SCHEMA] }],
-            toolConfig: {
-              functionCallingConfig: {
-                mode: "ANY",
-                allowedFunctionNames: ["report_nonverbal"],
-              },
-            },
-          }),
-        },
-      );
-      if (geminiRes.ok) break;
-      lastStatus = geminiRes.status;
-      lastTxt = await geminiRes.text();
-      console.warn(
-        `[nonverbal] gemini attempt ${attempt + 1} failed`,
-        lastStatus,
-        lastTxt.slice(0, 200),
-      );
-      if (!RETRY_STATUSES.has(geminiRes.status) || attempt === BACKOFFS_MS.length) break;
-      await new Promise((r) => setTimeout(r, BACKOFFS_MS[attempt]));
-    }
-
-    if (!geminiRes || !geminiRes.ok) {
-      console.error("[nonverbal] gemini error final", lastStatus, lastTxt);
+    if (!gatewayRes.ok) {
+      const txt = await gatewayRes.text();
+      console.error("[nonverbal] gateway error", gatewayRes.status, txt.slice(0, 400));
+      const status =
+        gatewayRes.status === 429
+          ? "rate_limited"
+          : gatewayRes.status === 402
+          ? "no_credits"
+          : "failed";
       await supabase
         .from("reports")
         .update({
           nonverbal_analysis: {
-            status: "failed",
-            error: `gemini_${lastStatus}`,
+            status,
+            error: `gateway_${gatewayRes.status}`,
             failed_at: new Date().toISOString(),
           },
         })
         .eq("id", report.id);
       return new Response(
-        JSON.stringify({ error: "gemini_failed", status: lastStatus }),
+        JSON.stringify({ error: status, status: gatewayRes.status }),
         {
-          status: 502,
+          status: gatewayRes.status === 429 || gatewayRes.status === 402
+            ? gatewayRes.status
+            : 502,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
     }
 
-    const data = await geminiRes.json();
-    const call = data?.candidates?.[0]?.content?.parts?.find(
-      (p: any) => p.functionCall,
-    )?.functionCall;
-    const args = call?.args;
+    const data = await gatewayRes.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    let args: any = null;
+    if (toolCall?.function?.arguments) {
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch (e) {
+        console.warn("[nonverbal] failed to parse tool args", e);
+      }
+    }
     if (!args?.nonverbal_profile) {
-      console.warn("[nonverbal] no functionCall in response", JSON.stringify(data).slice(0, 500));
-      return new Response(JSON.stringify({ error: "no_function_call" }), {
+      console.warn("[nonverbal] no tool_call in response", JSON.stringify(data).slice(0, 500));
+      await supabase
+        .from("reports")
+        .update({
+          nonverbal_analysis: {
+            status: "failed",
+            error: "no_tool_call",
+            failed_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", report.id);
+      return new Response(JSON.stringify({ error: "no_tool_call" }), {
         status: 502,
-        headers: corsHeaders,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -353,6 +350,7 @@ Retourne le résultat via l'outil report_nonverbal.`;
       segments_analyzed: uploaded,
       generated_at: new Date().toISOString(),
       model: MODEL,
+      status: "ok",
     };
 
     await supabase
@@ -366,6 +364,18 @@ Retourne le résultat via l'outil report_nonverbal.`;
     );
   } catch (e) {
     console.error("analyze-nonverbal error:", e);
+    if (reportId) {
+      await supabase
+        .from("reports")
+        .update({
+          nonverbal_analysis: {
+            status: "failed",
+            error: e instanceof Error ? e.message : "unknown",
+            failed_at: new Date().toISOString(),
+          },
+        })
+        .eq("id", reportId);
+    }
     return new Response(
       JSON.stringify({ error: e instanceof Error ? e.message : "unknown" }),
       {
