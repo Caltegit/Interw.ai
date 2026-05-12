@@ -1,0 +1,1 @@
+ALTER TABLE public.session_messages ADD COLUMN IF NOT EXISTS transcript_segments JSONB NULL;

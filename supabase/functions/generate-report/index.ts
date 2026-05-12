@@ -286,7 +286,7 @@ Règles ABSOLUES :
 2. N'invente jamais un message_id : si tu ne peux pas citer, omets le champ.
 3. Si la transcription est trop courte ou vague pour conclure, dis-le explicitement plutôt que d'inventer.
 4. Pas de jargon RH/psy dans verdict_headline, decision_drivers, fit_breakdown.statement, signals : du français concret de manager.
-5. À chaque fois que tu fournis un message_id (ou evidence_message_id), fournis aussi start_seconds : la seconde estimée à laquelle commence la phrase citée DANS la réponse vidéo de ce message (0 = début de la réponse). Estime à partir de la position du texte cité dans la transcription du message, en supposant un débit de ~160 mots/minute (≈2,7 mots/seconde). Exemple : si la citation commence après ~80 mots, start_seconds ≈ 30.
+5. À chaque fois que tu fournis un message_id (ou evidence_message_id), fournis aussi start_seconds : la seconde approximative où commence la phrase citée DANS la réponse vidéo (0 = début). Le serveur recalculera ensuite l'horodatage exact à partir de la transcription : ton estimation sert de filet de secours.
 
 Produis un rapport orienté DÉCISION en utilisant l'outil generate_report.
 
@@ -533,6 +533,7 @@ Champs secondaires (toujours produits, format inchangé) :
           statement: aiEntry?.statement || aiEntry?.comment || "",
           quote: aiEntry?.quote || null,
           message_id: aiEntry?.message_id || null,
+          start_seconds: typeof aiEntry?.start_seconds === "number" ? aiEntry.start_seconds : null,
         });
       });
     } else {
@@ -545,6 +546,7 @@ Champs secondaires (toujours produits, format inchangé) :
           statement: f?.statement || "",
           quote: f?.quote || null,
           message_id: f?.message_id || null,
+          start_seconds: typeof f?.start_seconds === "number" ? f.start_seconds : null,
         });
       });
     }
@@ -834,6 +836,101 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         }
         if (highlightClips.length >= 3) break;
       }
+    }
+
+    // ============================================================
+    // Recalcul des start_seconds à partir des transcriptions horodatées.
+    // L'IA fournit une estimation grossière ; on la remplace par le vrai
+    // timestamp dès qu'on retrouve la citation dans transcript_segments.
+    // ============================================================
+    const segmentsByMessage = new Map<string, Array<{ start: number; end: number; text: string }>>();
+    for (const m of messages as any[]) {
+      const segs = (m as any).transcript_segments;
+      if (Array.isArray(segs) && segs.length > 0) {
+        segmentsByMessage.set(m.id, segs);
+      }
+    }
+    const normalizeForMatch = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+    const resolveStart = (messageId: any, quote: any, fallback: any): number | null => {
+      const fb = typeof fallback === "number" && Number.isFinite(fallback) ? Math.max(0, fallback) : null;
+      if (!messageId || typeof quote !== "string" || !quote.trim()) return fb;
+      const segs = segmentsByMessage.get(messageId);
+      if (!segs || segs.length === 0) return fb;
+      const qNorm = normalizeForMatch(quote);
+      if (!qNorm) return fb;
+      const needle = qNorm.split(" ").slice(0, 6).join(" ");
+      if (!needle) return fb;
+      // Recherche par segment unique
+      for (const s of segs) {
+        const t = normalizeForMatch(s.text);
+        if (t.includes(needle)) return Math.max(0, Math.round(s.start * 10) / 10);
+      }
+      // Recherche sur fenêtre glissante (citation à cheval sur 2-3 segments)
+      for (let i = 0; i < segs.length; i++) {
+        const window = normalizeForMatch(segs.slice(i, i + 3).map((s) => s.text).join(" "));
+        if (window.includes(needle)) return Math.max(0, Math.round(segs[i].start * 10) / 10);
+      }
+      return fb;
+    };
+
+    const fixEntry = (e: any, msgKey = "message_id", tsKey = "start_seconds", quoteKey = "quote") => {
+      if (!e || typeof e !== "object") return;
+      e[tsKey] = resolveStart(e[msgKey], e[quoteKey] ?? e.citation ?? e.key_quote, e[tsKey]);
+    };
+
+    // decision_drivers, signals
+    const driversArr = Array.isArray(parsed.decision_drivers) ? parsed.decision_drivers : [];
+    driversArr.forEach((e: any) => fixEntry(e, "message_id", "start_seconds", "quote"));
+    const signalsArr = Array.isArray(parsed.signals) ? parsed.signals : [];
+    signalsArr.forEach((e: any) => fixEntry(e, "message_id", "start_seconds", "quote"));
+
+    // fit_breakdown (déjà construit plus haut)
+    fitBreakdown.forEach((e: any) => {
+      e.start_seconds = resolveStart(e.message_id, e.quote, e.start_seconds);
+    });
+
+    // communication_profile.dimensions
+    const commProfile = parsed.communication_profile;
+    if (commProfile && typeof commProfile === "object") {
+      for (const k of Object.keys(commProfile)) {
+        const dim = commProfile[k];
+        if (dim && typeof dim === "object") fixEntry(dim, "message_id", "start_seconds", "quote");
+      }
+    }
+
+    // soft_skills (clé spécifique evidence_*)
+    if (Array.isArray(parsed.soft_skills)) {
+      parsed.soft_skills.forEach((e: any) => {
+        if (!e || typeof e !== "object") return;
+        e.evidence_start_seconds = resolveStart(
+          e.evidence_message_id,
+          e.evidence_quote ?? e.quote,
+          e.evidence_start_seconds,
+        );
+      });
+    }
+
+    // red_flags
+    if (Array.isArray(parsed.red_flags)) {
+      parsed.red_flags.forEach((e: any) => fixEntry(e, "message_id", "start_seconds", "quote"));
+    }
+
+    // personality_profile.<trait>.evidences
+    if (parsed.personality_profile && typeof parsed.personality_profile === "object") {
+      for (const trait of PERSONALITY_TRAITS) {
+        const t = (parsed.personality_profile as any)[trait];
+        if (t && Array.isArray(t.evidences)) {
+          t.evidences.forEach((e: any) => fixEntry(e, "message_id", "start_seconds", "quote"));
+        }
+      }
+    }
+
+    // paraverbal_analysis.dimensions (si déjà présent dans parsed)
+    const para = parsed.paraverbal_analysis;
+    if (para && Array.isArray(para.dimensions)) {
+      para.dimensions.forEach((d: any) => fixEntry(d, "evidence_message_id", "evidence_start_seconds", "evidence_quote"));
     }
 
     // Note hybride : moyenne note IA globale + score critères pondéré
