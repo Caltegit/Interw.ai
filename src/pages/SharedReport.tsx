@@ -266,13 +266,13 @@ export default function SharedReport() {
                 <span className="hidden sm:inline">Big Five</span>
                 <BigFiveBadge profile={report?.personality_profile} size={22} />
               </TabsTrigger>
-              <TabsTrigger value="answers" className="gap-1">
-                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
-              </TabsTrigger>
               <TabsTrigger value="voice" className="gap-1">
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">À l'oral</span>
                 <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+              </TabsTrigger>
+              <TabsTrigger value="answers" className="gap-1">
+                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
               </TabsTrigger>
             </TabsList>
 
@@ -349,20 +349,6 @@ export default function SharedReport() {
               )}
             </TabsContent>
 
-            <TabsContent value="answers" className="mt-4 space-y-3">
-              {questionItems.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune réponse vidéo enregistrée.
-                  </CardContent>
-                </Card>
-              ) : (
-                questionItems.map((item, i) => (
-                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
-                ))
-              )}
-            </TabsContent>
-
             <TabsContent value="voice" className="mt-4 space-y-4">
               {report && (report as any).paraverbal_analysis?.profile ? (
                 <ParaverbalProfileCard
@@ -375,6 +361,20 @@ export default function SharedReport() {
                     Analyse vocale non disponible pour cette session.
                   </CardContent>
                 </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="answers" className="mt-4 space-y-3">
+              {questionItems.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Aucune réponse vidéo enregistrée.
+                  </CardContent>
+                </Card>
+              ) : (
+                questionItems.map((item, i) => (
+                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
+                ))
               )}
             </TabsContent>
           </Tabs>
