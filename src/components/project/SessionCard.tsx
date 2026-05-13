@@ -412,6 +412,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
           {decisionBtn("shortlisted", "Retenu", Check, "success")}
           {decisionBtn("in_progress", "En cours", Clock, "info")}
+          {decisionBtn("accepted", "Oui", ThumbsUp, "success-strong")}
         </div>
       </CardContent>
     </Card>
