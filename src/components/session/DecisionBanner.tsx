@@ -72,6 +72,7 @@ const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }>
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
+  accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" },
 };
 
 function fitColor(score: number | null) {
