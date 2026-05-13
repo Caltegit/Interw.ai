@@ -83,6 +83,117 @@ async function prepareMediaUrl(url: string): Promise<boolean> {
   return attempt();
 }
 
+/**
+ * Calcule un carré de recadrage centré sur le visage si possible (FaceDetector
+ * disponible), sinon fallback heuristique : carré centré horizontalement,
+ * décalé vers le haut (centre Y = 38%), taille = min(w,h) * 0.75.
+ * Renvoie {sx, sy, size} dans le repère de la source.
+ */
+async function computeFaceCrop(
+  source: HTMLVideoElement | HTMLCanvasElement,
+  width: number,
+  height: number,
+): Promise<{ sx: number; sy: number; size: number }> {
+  const FD = (window as any).FaceDetector;
+  if (FD) {
+    try {
+      const detector = new FD({ fastMode: true, maxDetectedFaces: 1 });
+      const faces: Array<{ boundingBox: DOMRectReadOnly }> = await detector.detect(source);
+      if (faces && faces.length > 0) {
+        const box = faces[0].boundingBox;
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        // Agrandir ×1.8 autour du visage pour inclure tête + épaules
+        const target = Math.max(box.width, box.height) * 1.8;
+        const maxSize = Math.min(width, height);
+        const size = Math.min(target, maxSize);
+        let sx = cx - size / 2;
+        let sy = cy - size / 2;
+        sx = Math.max(0, Math.min(width - size, sx));
+        sy = Math.max(0, Math.min(height - size, sy));
+        return { sx, sy, size };
+      }
+    } catch (error) {
+      console.warn("[thumbnail] FaceDetector indisponible", error);
+    }
+  }
+  // Fallback heuristique : carré centré horizontalement, décalé vers le haut
+  const minSide = Math.min(width, height);
+  const size = minSide * 0.75;
+  const sx = (width - size) / 2;
+  let sy = height * 0.38 - size / 2;
+  sy = Math.max(0, Math.min(height - size, sy));
+  return { sx, sy, size };
+}
+
+/**
+ * Capture une photo en direct depuis une MediaStream caméra et la recadre
+ * autour du visage. Plus fiable que d'extraire un frame depuis le .webm
+ * enregistré (souvent noir sur Safari/iOS).
+ */
+async function captureStreamSnapshot(stream: MediaStream): Promise<Blob | null> {
+  if (!stream || stream.getVideoTracks().length === 0) return null;
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.autoplay = true;
+  try {
+    video.srcObject = stream;
+    await new Promise<void>((resolve, reject) => {
+      const onLoaded = () => {
+        video.removeEventListener("loadeddata", onLoaded);
+        video.removeEventListener("error", onError);
+        resolve();
+      };
+      const onError = () => {
+        video.removeEventListener("loadeddata", onLoaded);
+        video.removeEventListener("error", onError);
+        reject(new Error("loadeddata failed"));
+      };
+      video.addEventListener("loadeddata", onLoaded, { once: true });
+      video.addEventListener("error", onError, { once: true });
+    });
+    try {
+      await video.play();
+    } catch { /* ignore : muted autoplay */ }
+
+    // Attendre 2 frames pour éviter un frame noir
+    const waitFrame = () =>
+      new Promise<void>((resolve) => {
+        const v: any = video;
+        if (typeof v.requestVideoFrameCallback === "function") {
+          v.requestVideoFrameCallback(() => resolve());
+        } else {
+          setTimeout(resolve, 250);
+        }
+      });
+    await waitFrame();
+    await waitFrame();
+
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) return null;
+
+    const { sx, sy, size } = await computeFaceCrop(video, w, h);
+    const canvas = document.createElement("canvas");
+    canvas.width = 320;
+    canvas.height = 320;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 320, 320);
+
+    return await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85);
+    });
+  } catch (error) {
+    console.warn("[thumbnail] live snapshot impossible", error);
+    return null;
+  } finally {
+    try { video.pause(); } catch { /* noop */ }
+    video.srcObject = null;
+  }
+}
+
 async function extractVideoThumbnail(blob: Blob): Promise<Blob | null> {
   const objectUrl = URL.createObjectURL(blob);
   const video = document.createElement("video");
@@ -119,21 +230,21 @@ async function extractVideoThumbnail(blob: Blob): Promise<Blob | null> {
       await waitForEvent(video, "seeked");
     }
 
-    const size = Math.min(video.videoWidth || 0, video.videoHeight || 0);
-    if (!size) return null;
+    const w = video.videoWidth || 0;
+    const h = video.videoHeight || 0;
+    if (!w || !h) return null;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 240;
-    canvas.height = 240;
+    canvas.width = 320;
+    canvas.height = 320;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    const sx = ((video.videoWidth || size) - size) / 2;
-    const sy = ((video.videoHeight || size) - size) / 2;
-    ctx.drawImage(video, sx, sy, size, size, 0, 0, 240, 240);
+    const { sx, sy, size } = await computeFaceCrop(video, w, h);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 320, 320);
 
     return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((result) => resolve(result), "image/jpeg", 0.82);
+      canvas.toBlob((result) => resolve(result), "image/jpeg", 0.85);
     });
   } catch (error) {
     console.warn("[thumbnail] extraction impossible", error);
@@ -235,6 +346,7 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const thumbnailCapturedRef = useRef(false);
   // On garde TOUS les éléments <video> selfview montés (mobile + desktop) pour
   // pouvoir leur rattacher le flux caméra simultanément. Indispensable car
   // Tailwind monte les deux variants dans le DOM même quand l'un est masqué.
@@ -1555,7 +1667,16 @@ export default function InterviewStart() {
       })();
 
       let thumbnailUrl: string | null = null;
-      const thumbnailBlob = await extractVideoThumbnail(blob);
+      let thumbnailBlob: Blob | null = null;
+      // 1) Tentative live depuis la MediaStream (caméra réchauffée, candidat cadré)
+      if (!thumbnailCapturedRef.current && streamRef.current) {
+        thumbnailBlob = await captureStreamSnapshot(streamRef.current);
+        if (thumbnailBlob) thumbnailCapturedRef.current = true;
+      }
+      // 2) Fallback : extraction depuis la vidéo enregistrée
+      if (!thumbnailBlob) {
+        thumbnailBlob = await extractVideoThumbnail(blob);
+      }
       if (thumbnailBlob) {
         const thumbnailPath = `interviews/${sessionId}/thumbnail.jpg`;
         try {
