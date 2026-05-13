@@ -183,12 +183,14 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
     value: string,
     label: string,
     Icon: typeof Check,
-    tone: "success" | "warning" | "destructive" | "info",
+    tone: "success" | "success-strong" | "warning" | "destructive" | "info",
   ) => {
     const active = decision === value;
     const toneClass = active
       ? tone === "success"
         ? "bg-success text-success-foreground hover:bg-success/90 border-success"
+        : tone === "success-strong"
+        ? "bg-success-strong text-success-strong-foreground hover:bg-success-strong/90 border-success-strong"
         : tone === "warning"
         ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
         : tone === "info"
