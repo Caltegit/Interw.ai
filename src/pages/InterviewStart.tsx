@@ -2075,21 +2075,26 @@ export default function InterviewStart() {
             });
           }
         }
-        if (videoUrl) {
+        if (videoUrl || thumbnailUrl) {
           try {
             const { data: sessRow } = await supabase
               .from("sessions")
-              .select("video_recording_url")
+              .select("video_recording_url, thumbnail_url")
               .eq("id", sessionId)
               .maybeSingle();
-            if (sessRow && !sessRow.video_recording_url) {
-              await supabase.from("sessions").update({ video_recording_url: videoUrl }).eq("id", sessionId);
-              setSession((prev: any) => (prev ? { ...prev, video_recording_url: videoUrl } : prev));
+            if (sessRow) {
+              const patch: Record<string, string> = {};
+              if (videoUrl && !sessRow.video_recording_url) patch.video_recording_url = videoUrl;
+              if (thumbnailUrl && !(sessRow as any).thumbnail_url) patch.thumbnail_url = thumbnailUrl;
+              if (Object.keys(patch).length > 0) {
+                await supabase.from("sessions").update(patch).eq("id", sessionId);
+                setSession((prev: any) => (prev ? { ...prev, ...patch } : prev));
+              }
             }
           } catch (e) {
             logger.error("interview_session_update_failed", {
               sessionId,
-              fields: ["video_recording_url"],
+              fields: ["video_recording_url", "thumbnail_url"],
               error: e instanceof Error ? e.message : String(e),
             });
           }
