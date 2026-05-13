@@ -150,6 +150,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
               <DecisionButton
+                active={decision === "in_progress"}
+                onClick={() => onDecisionChange(decision === "in_progress" ? "none" : "in_progress")}
+                disabled={isDecisionPending}
+                tone="info"
+                icon={Clock}
+                label="En cours"
+                tooltip={decision === "in_progress" ? authorTooltip : null}
+              />
+              <DecisionButton
                 active={decision === "shortlisted"}
                 onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
                 disabled={isDecisionPending}
