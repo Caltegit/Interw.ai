@@ -1,48 +1,58 @@
-## Capturer la photo du candidat depuis le flux caméra en direct + cadrage visage
+## Nouveau statut « Oui » (vert foncé) après « En cours »
 
-### Constat
+Ordre final dans la catégorie Sélection : **À traiter → Non → À discuter → Retenu → En cours → Oui**
 
-Aujourd'hui, la miniature est extraite **a posteriori** depuis le `.webm` enregistré (`extractVideoThumbnail`, l. 88-145 de `src/pages/InterviewStart.tsx`). Cette méthode renvoie souvent un frame noir (Safari/iOS, codecs VP8/VP9, seek qui échoue) → grand nombre de cercles noirs dans la liste.
+### 1. Migration BDD
 
-De plus, même quand un frame est récupéré, le recadrage est un simple carré centré : le visage est souvent décentré ou trop petit selon la position de la webcam.
+Ajouter la valeur `accepted` à l'enum `recruiter_decision_type`, **après** `in_progress` :
 
-### Solution
+```sql
+ALTER TYPE public.recruiter_decision_type ADD VALUE 'accepted' AFTER 'in_progress';
+```
 
-1. **Capturer une photo en direct** depuis la `MediaStream` de la caméra (`streamRef.current`), au moment où la caméra est réchauffée et le candidat cadré.
-2. **Détecter le visage** pour zoomer dessus et produire des vignettes uniformes.
+(Postgres ne permet pas d'insérer après une valeur d'enum dans la même transaction qu'une utilisation — ok ici car on n'utilise pas la valeur immédiatement.)
 
-### Implémentation
+### 2. Tokens couleur (`src/index.css` + `tailwind.config.ts`)
 
-**1. Nouveau helper `captureStreamSnapshot(stream)` dans `src/pages/InterviewStart.tsx`**
+- **`--success`** (Retenu) : passe d'un vert moyen à un vert plus clair.
+  - Light : `160 84% 39%` → `152 60% 52%`
+  - Dark : ajuster l'équivalent dans `.dark`
+- **`--success-strong`** : nouveau token vert foncé pour « Oui ».
+  - Light : `152 70% 30%`
+  - Dark : `152 60% 38%`
+- `--success-strong-foreground` : `0 0% 100%`
+- Ajouter `success-strong` dans `tailwind.config.ts` (mêmes mappings DEFAULT/foreground que `success`).
 
-- Crée un `<video>` détaché, `srcObject = stream`, `muted`, `playsInline`.
-- Attend `loadeddata` puis 2 frames (`requestVideoFrameCallback`, fallback `setTimeout 250 ms`) pour éviter un frame noir.
-- Détection visage via l'API native **`FaceDetector`** (Chrome/Edge desktop & Android) si disponible :
-  - Si visage détecté → recadrage carré centré sur le visage, agrandi de **×1,8** autour de la bounding box pour inclure tête + épaules, clampé aux bords du frame.
-  - Sinon → fallback heuristique : carré centré horizontalement, **décalé vers le haut** (centre Y = 38% de la hauteur, taille = `min(w, h) × 0.75`) — bien plus représentatif d'un buste face caméra que le centre géométrique.
-- Dessine sur un canvas **320×320** (légèrement plus grand qu'avant pour le retina).
-- Renvoie un `Blob` JPEG (qualité 0.85).
-- Libère le `<video>` ensuite (`srcObject = null`).
+### 3. Code TypeScript
 
-**2. Déclenchement**
+**`src/hooks/queries/useSessionDetail.ts`** (l. 105) — étendre le type :
+```ts
+export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion" | "accepted";
+```
 
-- Une seule capture par session, gardée par `thumbnailCapturedRef = useRef(false)`.
-- Déclenchée à la **fin de la première réponse candidat** (bloc `persistCandidatePromise`, l. 2037-2104), avant l'upload vidéo : caméra active depuis plusieurs secondes, candidat cadré et regardant l'écran.
-- Upload vers `media/interviews/{sessionId}/thumbnail.jpg` (`upsert: true`), persistance dans `sessions.thumbnail_url` via le patch déjà en place (l. 2086-2092).
+**`src/pages/ProjectDetail.tsx`** :
+- `DECISION_KEYS` (l. 153) → ajouter `"accepted"` à la fin
+- `DEFAULT_VISIBLE_DECISIONS` (l. 154) → idem
+- `decisionOptions` (l. 535-540) → ajouter `{ value: "accepted", label: "Oui", dot: "bg-success-strong", text: "text-success-strong" }`
 
-**3. Repli (fallback)**
+**`src/components/session/DecisionBanner.tsx`** :
+- `decisionConfig` (l. 70-73) → ajouter `accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" }`
+- Étendre le type `tone` pour inclure `"success-strong"`
+- Ajouter un `DecisionButton` après « En cours » (icône `ThumbsUp` ou `CheckCheck` de lucide)
 
-- Si `captureStreamSnapshot` échoue (stream perdu, permission révoquée), on conserve l'extraction depuis la vidéo (`extractVideoThumbnail`) en secours.
-- Ordre : live snapshot d'abord, puis extraction vidéo si la live a échoué.
-- L'extraction vidéo bénéficie aussi du cadrage haut (38% Y) pour rester cohérente.
+**`src/components/project/SessionCard.tsx`** :
+- Étendre le type `tone`
+- Ajouter `decisionBtn("accepted", "Oui", ThumbsUp, "success-strong")` après « En cours »
 
-**4. Hors périmètre**
+**`src/pages/SessionDetail.tsx`** (l. 272-275) :
+- Ajouter `else if (d === "accepted") toast({ title: "Candidat accepté." });`
 
-- Pas de migration BDD (colonne `thumbnail_url` déjà présente).
-- Pas de modification de `SessionVideoThumb` ni de la liste candidats.
-- Pas de regénération des miniatures existantes (anciennes sessions noires restent telles quelles).
-- Pas d'edge function : la détection visage tourne côté client uniquement.
+### 4. Vérification
 
-### Note technique sur `FaceDetector`
+- `tsc --noEmit` doit passer.
+- Inspection visuelle de la palette (Retenu plus clair, Oui plus foncé que Retenu).
 
-API native dispo sur Chrome/Edge (desktop + Android). Sur Safari/Firefox, le fallback heuristique (carré centré décalé en haut) prend le relais — c'est suffisant car les candidats se positionnent quasi systématiquement face caméra.
+### Hors périmètre
+
+- Pas de changement dans le rapport généré ni dans les emails.
+- Pas de regénération de la liste des décisions historiques.

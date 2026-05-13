@@ -1653,6 +1653,7 @@ export type Database = {
       recruiter_decision_type:
         | "none"
         | "in_progress"
+        | "accepted"
         | "shortlisted"
         | "rejected"
         | "second_opinion"
@@ -1804,6 +1805,7 @@ export const Constants = {
       recruiter_decision_type: [
         "none",
         "in_progress",
+        "accepted",
         "shortlisted",
         "rejected",
         "second_opinion",
