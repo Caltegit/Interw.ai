@@ -30,8 +30,10 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 84% 39%;
+    --success: 152 60% 52%;
     --success-foreground: 0 0% 100%;
+    --success-strong: 152 70% 30%;
+    --success-strong-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -80,8 +82,10 @@
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --success: 160 84% 39%;
+    --success: 152 55% 58%;
     --success-foreground: 0 0% 100%;
+    --success-strong: 152 60% 38%;
+    --success-strong-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;

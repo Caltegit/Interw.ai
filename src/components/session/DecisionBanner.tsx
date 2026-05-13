@@ -22,12 +22,13 @@ import {
   Mail,
   Trash2,
   Clock,
+  ThumbsUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 
-export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion";
+export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion" | "accepted";
 
 interface DecisionBannerProps {
   candidateName: string;
@@ -71,6 +72,7 @@ const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }>
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
+  accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" },
 };
 
 function fitColor(score: number | null) {
@@ -187,6 +189,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 label="En cours"
                 tooltip={decision === "in_progress" ? authorTooltip : null}
               />
+              <DecisionButton
+                active={decision === "accepted"}
+                onClick={() => onDecisionChange(decision === "accepted" ? "none" : "accepted")}
+                disabled={isDecisionPending}
+                tone="success-strong"
+                icon={ThumbsUp}
+                label="Oui"
+                tooltip={decision === "accepted" ? authorTooltip : null}
+              />
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
@@ -279,7 +290,7 @@ function DecisionButton({
   active: boolean;
   onClick: () => void;
   disabled?: boolean;
-  tone: "success" | "warning" | "destructive" | "info";
+  tone: "success" | "success-strong" | "warning" | "destructive" | "info";
   icon: typeof Check;
   label: string;
   tooltip?: string | null;
@@ -287,6 +298,8 @@ function DecisionButton({
   const toneClass = active
     ? tone === "success"
       ? "bg-success text-success-foreground hover:bg-success/90 border-success"
+      : tone === "success-strong"
+      ? "bg-success-strong text-success-strong-foreground hover:bg-success-strong/90 border-success-strong"
       : tone === "warning"
       ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
       : tone === "info"

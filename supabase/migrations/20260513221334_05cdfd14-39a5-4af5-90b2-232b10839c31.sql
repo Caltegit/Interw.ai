@@ -1,0 +1,1 @@
+ALTER TYPE public.recruiter_decision_type ADD VALUE IF NOT EXISTS 'accepted' AFTER 'in_progress';

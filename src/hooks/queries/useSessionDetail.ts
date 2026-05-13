@@ -102,7 +102,7 @@ export function useCreateReportShare(sessionId: string | undefined) {
   });
 }
 
-export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion";
+export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion" | "accepted";
 
 export function useUpdateRecruiterDecision(sessionId: string | undefined) {
   const qc = useQueryClient();

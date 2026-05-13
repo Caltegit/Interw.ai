@@ -273,6 +273,7 @@ export default function SessionDetail() {
         else if (d === "shortlisted") toast({ title: "Candidat retenu." });
         else if (d === "rejected") toast({ title: "Candidat noté Non." });
         else if (d === "second_opinion") toast({ title: "Candidat à discuter." });
+        else if (d === "accepted") toast({ title: "Candidat accepté." });
       },
       onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
     });

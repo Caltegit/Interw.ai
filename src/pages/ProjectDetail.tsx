@@ -150,8 +150,8 @@ export default function ProjectDetail() {
   const PAGE_SIZE = 50;
 
   // Visibilité des sélections (chips au-dessus des sessions)
-  const DECISION_KEYS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress"] as const;
-  const DEFAULT_VISIBLE_DECISIONS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress"];
+  const DECISION_KEYS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress", "accepted"] as const;
+  const DEFAULT_VISIBLE_DECISIONS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress", "accepted"];
   const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set(DEFAULT_VISIBLE_DECISIONS);
     try {
@@ -538,6 +538,7 @@ export default function ProjectDetail() {
     { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
     { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
     { value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" },
+    { value: "accepted", label: "Oui", dot: "bg-success-strong", text: "text-success-strong" },
   ];
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
