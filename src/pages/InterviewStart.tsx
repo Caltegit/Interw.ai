@@ -230,21 +230,21 @@ async function extractVideoThumbnail(blob: Blob): Promise<Blob | null> {
       await waitForEvent(video, "seeked");
     }
 
-    const size = Math.min(video.videoWidth || 0, video.videoHeight || 0);
-    if (!size) return null;
+    const w = video.videoWidth || 0;
+    const h = video.videoHeight || 0;
+    if (!w || !h) return null;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 240;
-    canvas.height = 240;
+    canvas.width = 320;
+    canvas.height = 320;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    const sx = ((video.videoWidth || size) - size) / 2;
-    const sy = ((video.videoHeight || size) - size) / 2;
-    ctx.drawImage(video, sx, sy, size, size, 0, 0, 240, 240);
+    const { sx, sy, size } = await computeFaceCrop(video, w, h);
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, 320, 320);
 
     return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((result) => resolve(result), "image/jpeg", 0.82);
+      canvas.toBlob((result) => resolve(result), "image/jpeg", 0.85);
     });
   } catch (error) {
     console.warn("[thumbnail] extraction impossible", error);
