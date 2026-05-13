@@ -534,6 +534,7 @@ export default function ProjectDetail() {
 
   const decisionOptions: { value: string; label: string; dot: string; text: string }[] = [
     { value: "none", label: "À traiter", dot: "bg-muted-foreground/40", text: "" },
+    { value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" },
     { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
     { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
     { value: "rejected", label: "Non", dot: "bg-destructive", text: "text-destructive" },
