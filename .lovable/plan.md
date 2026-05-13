@@ -1,47 +1,68 @@
-# Correction du bug Attitude — Passerelle IA Lovable
 
-## Diagnostic
+## Cause racine identifiée
 
-L'analyse a échoué avec **HTTP 429 — quota Gemini Free Tier épuisé** sur `gemini-2.5-pro`. La fonction `analyze-nonverbal` appelle l'API Google directe via `GEMINI_API_KEY` (clé gratuite à zéro), au lieu de la passerelle IA Lovable.
+`finalize-session` appelle `transcribe-session` **une seule fois**. Or `transcribe-session` plafonne à **8 segments par exécution** (`MAX_SEGMENTS_PER_RUN = 8`). Pour un entretien de 15 questions, ~7 segments restent en `pending` quand `generate-report` se lance → l'IA reçoit une transcription tronquée → score 0.
 
-En base : `reports.nonverbal_analysis = { status: "failed", error: "gemini_429" }` → l'UI affiche « La dernière analyse corporelle a échoué ».
+C'est exactement ce qui s'est passé pour Typhaine (16 réponses, 9 transcrites au moment de la génération).
 
 ## Correctif
 
-Réécriture de `supabase/functions/analyze-nonverbal/index.ts` pour utiliser la passerelle IA Lovable (`LOVABLE_API_KEY`, endpoint `https://ai.gateway.lovable.dev/v1/chat/completions`, format OpenAI).
+### Modifier `supabase/functions/finalize-session/index.ts`
 
-### Changements clés
+Remplacer l'appel unique à `transcribe-session` par une **boucle** qui :
 
-1. **Suppression de l'upload Gemini Files API** (non disponible via la passerelle). Envoi de chaque segment vidéo en **inline base64** (`data:video/webm;base64,...`) dans un message multimodal.
-2. **Cap durci pour rester dans la limite inline** : 4 segments max, 15 Mo par segment.
-3. **Payload OpenAI-compatible** :
-   - `model: "google/gemini-2.5-pro"`
-   - `tools: [{ type: "function", function: TOOL_SCHEMA }]` + `tool_choice` forcé sur `report_nonverbal`
-   - `messages` avec parties `text` + `image_url` (la passerelle accepte la vidéo via ce canal pour Gemini)
-4. **Gestion d'erreurs explicite** :
-   - `429` → `nonverbal_analysis = { status: "rate_limited" }`
-   - `402` → `status: "no_credits"`
-   - autres → `status: "failed"`
-5. **Schéma de sortie identique** (`profile`, `micro_tensions`, `summary`) → aucun changement front nécessaire côté affichage des données.
-6. **État « en cours »** : avant l'appel, on écrit `status: "running"` pour que l'UI ne reste pas bloquée sur « échouée ».
+1. Appelle `transcribe-session` ;
+2. Lit la réponse JSON et regarde `remaining` ;
+3. Re-appelle tant que `remaining > 0` ;
+4. S'arrête après **N itérations max** (filet de sécurité, par ex. 8 → couvre jusqu'à 64 segments) ou après un **timeout total** (par ex. 4 min) pour ne jamais bloquer indéfiniment ;
+5. Une fois la boucle finie, vérifie en base que tous les `session_messages` candidats avec média sont en statut terminal (`done`, `skipped`, `failed`, `too_large`) ;
+6. **Seulement ensuite** appelle `generate-report`.
 
-### UI
+Si après la boucle il reste des segments non terminaux, on génère quand même le rapport (mieux qu'un rapport manquant) **mais on log un warning** pour audit.
 
-`NonverbalProfileCard` (et son parent dans `SessionDetail.tsx` / `SharedReport.tsx`) : afficher trois nouveaux états avec messages clairs et un bouton « Réessayer » :
-- `running` → spinner + « Analyse corporelle en cours… »
-- `rate_limited` → « Trop de requêtes, réessayez dans quelques minutes »
-- `no_credits` → « Crédits IA épuisés, ajoutez des crédits dans Workspace → Usage »
+### Pourquoi pas un trigger « post-transcription » ?
 
-## Fichiers touchés
+Plus complexe (nécessite de savoir « est-ce que c'était le dernier segment ? » à chaque appel transcribe-session, et d'éviter les doubles déclenchements concurrents). La boucle dans `finalize-session` reste simple, idempotente, et tient dans le runtime edge (background task via `EdgeRuntime.waitUntil`, déjà en place).
 
-- `supabase/functions/analyze-nonverbal/index.ts` — réécriture complète du transport.
-- `src/pages/SessionDetail.tsx` + `src/pages/SharedReport.tsx` — rendu des nouveaux statuts dans l'onglet Attitude (le composant `NonverbalProfileCard` ne change que pour exposer le statut au parent).
+### Garde-fou supplémentaire
 
-## Test
+Dans `generate-report`, ajouter un **garde-fou défensif** : si la transcription totale (somme des `length(content)` candidats) est inférieure à un seuil (ex. 200 caractères) **alors que la session a duré plus de 2 minutes**, on log une erreur et on **ne crée pas de rapport** (au lieu d'en créer un à 0). Ça force `finalize-session` ou un retry manuel à régénérer plus tard avec des données complètes.
 
-1. Re-déployer `analyze-nonverbal`.
-2. Sur la session « Olivier Vernet », cliquer « Régénérer ».
-3. Vérifier les logs → 200 via passerelle Lovable.
-4. Vérifier que `reports.nonverbal_analysis.profile` est rempli et que l'onglet Attitude affiche les 4 scores.
+## Détails techniques
 
-Si beaucoup de segments dépassent 15 Mo après ce premier test, on évaluera l'ajout d'une compression `ffmpeg` (option B mise de côté pour l'instant, comme convenu).
+**Boucle dans `finalize-session`** :
+```
+const MAX_TRANSCRIBE_RUNS = 8;
+for (let i = 0; i < MAX_TRANSCRIBE_RUNS; i++) {
+  const res = await invoke("transcribe-session", { session_id });
+  const json = JSON.parse(res);
+  if (!json.remaining || json.remaining === 0) break;
+}
+```
+
+**Vérification finale** avant `generate-report` :
+```
+const { data: pending } = await supabase
+  .from("session_messages")
+  .select("id")
+  .eq("session_id", session_id)
+  .eq("role", "candidate")
+  .or("video_segment_url.not.is.null,audio_segment_url.not.is.null")
+  .not("transcription_status", "in", "(done,skipped,failed,too_large)");
+if (pending && pending.length > 0) {
+  console.warn("finalize-session: generating report with pending transcriptions", session_id, pending.length);
+}
+```
+
+**Garde-fou dans `generate-report`** : au tout début, si `total_chars < 200 && duration_seconds > 120` → return sans créer de rapport, log explicite.
+
+## Test après déploiement
+
+1. Régénérer manuellement le rapport de Typhaine (`dfc86b36-…`) → doit passer de 0 à un score réaliste.
+2. Vérifier les logs `finalize-session` : présence des appels itératifs `transcribe-session` sur la prochaine longue session.
+3. Pas de régression sur les sessions courtes (1 seul appel suffit, boucle se termine immédiatement).
+
+## Hors périmètre (volontairement)
+
+- Pas de page d'audit super-admin ici (à voir dans une étape séparée si besoin).
+- Pas de batch de régénération des 15 rapports passés (à faire à la main pour les 5 critiques, ou demande dédiée).

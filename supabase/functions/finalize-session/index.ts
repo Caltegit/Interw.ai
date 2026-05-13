@@ -85,11 +85,50 @@ async function processSession(sessionId: string) {
     .maybeSingle();
 
   if (!existing) {
-    try {
-      await invoke("transcribe-session", { session_id: sessionId });
-    } catch (e) {
-      console.error("finalize-session: transcribe failed (continuing)", e);
+    // Boucle la transcription tant qu'il reste des segments en attente.
+    // transcribe-session plafonne à 8 segments par exécution, donc une seule
+    // passe ne suffit pas pour les entretiens longs (15+ questions).
+    const MAX_TRANSCRIBE_RUNS = 10;
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes max
+    for (let i = 0; i < MAX_TRANSCRIBE_RUNS; i++) {
+      try {
+        const raw = await invoke("transcribe-session", { session_id: sessionId });
+        let remaining = 0;
+        try {
+          const json = JSON.parse(raw);
+          remaining = Number(json?.remaining ?? 0);
+        } catch {
+          // réponse non-JSON : on sort de la boucle
+          break;
+        }
+        if (remaining <= 0) break;
+        if (Date.now() - startedAt > TIMEOUT_MS) {
+          console.warn("finalize-session: transcribe loop timeout", sessionId, "remaining=", remaining);
+          break;
+        }
+      } catch (e) {
+        console.error("finalize-session: transcribe failed (continuing)", e);
+        break;
+      }
     }
+
+    // Vérification finale : log d'un warning si des segments restent non terminaux.
+    const { data: pending } = await supabase
+      .from("session_messages")
+      .select("id, transcription_status")
+      .eq("session_id", sessionId)
+      .eq("role", "candidate")
+      .or("video_segment_url.not.is.null,audio_segment_url.not.is.null")
+      .not("transcription_status", "in", "(done,skipped,failed,too_large)");
+    if (pending && pending.length > 0) {
+      console.warn(
+        "finalize-session: generating report with pending transcriptions",
+        sessionId,
+        "pending=", pending.length,
+      );
+    }
+
     await invoke("generate-report", { session_id: sessionId });
   } else {
     console.log("finalize-session: report already exists", sessionId);
