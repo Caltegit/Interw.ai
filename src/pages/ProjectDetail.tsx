@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
@@ -636,26 +636,30 @@ export default function ProjectDetail() {
 
       {/* Filtres rapides Sélection */}
       {visibleSessions.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {decisionOptions.map((d) => {
+        <div className="flex flex-wrap items-center gap-1">
+          {decisionOptions.map((d, idx) => {
             const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
             const active = visibleDecisions.has(d.value);
             return (
-              <button
-                key={d.value}
-                type="button"
-                onClick={() => toggleDecision(d.value)}
-                className={`flex items-center gap-3 rounded-full border px-5 py-2.5 text-base transition-colors ${
-                  active
-                    ? "bg-muted border-foreground/20"
-                    : "bg-transparent border-transparent text-muted-foreground opacity-60 hover:opacity-100"
-                }`}
-                aria-pressed={active}
-              >
-                <span className={`inline-block h-3 w-3 rounded-full ${d.dot}`} />
-                <span className={active ? d.text : ""}>{d.label}</span>
-                <span className="text-muted-foreground">{count}</span>
-              </button>
+              <div key={d.value} className="flex items-center gap-1">
+                {idx > 0 && (
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" aria-hidden="true" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => toggleDecision(d.value)}
+                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-muted border-foreground/20"
+                      : "bg-transparent border-transparent text-muted-foreground opacity-60 hover:opacity-100"
+                  }`}
+                  aria-pressed={active}
+                >
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${d.dot}`} />
+                  <span className={active ? d.text : ""}>{d.label}</span>
+                  <span className="text-muted-foreground">{count}</span>
+                </button>
+              </div>
             );
           })}
         </div>
