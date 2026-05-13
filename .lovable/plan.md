@@ -1,43 +1,33 @@
-## Diagnostic
+## Objectif
+Ajouter un nouveau statut **« En cours »** entre « À traiter » et « Retenu » dans la sélection des candidats, en bleu clair.
 
-Les pictos affichent les initiales parce que `sessions.thumbnail_url` est `NULL` pour 139 sessions sur 187 ayant une vidéo.
+## Changements
 
-**Cause racine** (`src/pages/InterviewStart.tsx`, ligne 2042) :
-```ts
-const urls = await stopAndUploadQuestionVideo(sessionId, questionIdx);
-videoUrl = urls.videoUrl;
-audioUrl = urls.audioUrl;
-// ⚠️ urls.thumbnailUrl est ignoré
-```
-La fonction `stopAndUploadQuestionVideo` extrait bien la vignette, l'envoie dans `media/interviews/{sessionId}/thumbnail.jpg` (vérifié en storage : les fichiers existent bien depuis le 10 mai), mais l'URL retournée n'est jamais écrite dans la colonne `sessions.thumbnail_url`. D'où une régression complète à partir du 10 mai (0 thumbnail/jour vs 10–14/jour avant).
-
-## Correctif
-
-### 1. Persister `thumbnail_url` à la première question — `src/pages/InterviewStart.tsx`
-Dans le bloc `persistCandidatePromise` (autour de la ligne 2040) :
-- Récupérer `thumbnailUrl` du destructuring.
-- Étendre le `update sessions` déjà fait pour `video_recording_url` (lignes 2076–2094) afin d'écrire aussi `thumbnail_url` si la session n'en a pas encore.
-- Conserver l'idempotence : on n'écrase pas une vignette existante.
-
-### 2. Backfill des 139 sessions existantes
-Migration SQL one-shot : pour toute session sans `thumbnail_url` mais dont l'objet `interviews/{id}/thumbnail.jpg` existe dans le bucket `media`, écrire l'URL publique correspondante.
-
+### 1. Base de données — migration
+Ajouter la valeur `in_progress` à l'enum `recruiter_decision_type` (entre `none` et `shortlisted`).
 ```sql
-UPDATE public.sessions s
-SET thumbnail_url = 
-  current_setting('app.settings.supabase_url', true)
-  || '/storage/v1/object/public/media/interviews/' || s.id || '/thumbnail.jpg'
-FROM storage.objects o
-WHERE o.bucket_id = 'media'
-  AND o.name = 'interviews/' || s.id || '/thumbnail.jpg'
-  AND s.thumbnail_url IS NULL;
+ALTER TYPE public.recruiter_decision_type ADD VALUE 'in_progress' BEFORE 'shortlisted';
 ```
-(URL construite directement avec le domaine projet ; pas besoin de setting.)
 
-### 3. Vérification
-- Recompter `with_video` vs `with_thumb` (cible : ~égal).
-- Recharger la page projet → vérifier qu'Hugues, Romain, Hortense, Anne, Élodie affichent bien leur photo.
+### 2. Design system — token bleu clair
+Ajouter un token sémantique `info` dans `src/index.css` (light + dark) et `tailwind.config.ts`, calé sur un bleu clair (~`hsl(210 90% 56%)` clair / `hsl(210 85% 65%)` dark) avec son `info-foreground`.
+
+### 3. UI — ajouter l'option dans la liste de sélection
+- `src/pages/ProjectDetail.tsx`
+  - `DECISION_KEYS` et `DEFAULT_VISIBLE_DECISIONS` : insérer `"in_progress"` après `"none"`.
+  - `decisionOptions` : ajouter `{ value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" }` en 2ᵉ position.
+- `src/hooks/queries/useSessionDetail.ts` : étendre `RecruiterDecision` avec `"in_progress"`.
+- `src/components/session/DecisionBanner.tsx`
+  - Étendre le type `RecruiterDecision`.
+  - Ajouter l'entrée dans `decisionConfig` (`label: "En cours"`, tone bleu clair).
+  - Ajouter un bouton dans la barre d'action (entre l'état neutre et « Retenu »).
+- `src/components/project/SessionCard.tsx` : ajouter le bouton « En cours » avant « Retenu ».
+- `src/pages/SessionDetail.tsx` : ajouter un toast `"Candidat en cours."` dans `handleDecision`.
+
+### 4. Vérification
+- Recharger `ProjectDetail` → onglet Sélection : le nouvel onglet « En cours » apparaît en 2ᵉ position avec une pastille bleu clair, le filtre fonctionne.
+- Sur `SessionDetail` : le bouton « En cours » est cliquable, persiste, et affiche le badge bleu clair.
 
 ## Hors scope
-- Ré-extraction de vignettes pour les sessions où le fichier n'a jamais été uploadé (avant le 6 mai). On laisse les initiales pour celles-là.
-- Refactor de `stopAndUploadQuestionVideo` (la fonction marche, seul l'appelant ignorait la valeur).
+- Pas de migration de données existantes : aucune session n'a encore ce statut.
+- Pas de modification des emails ou rapports.

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Check, HelpCircle, X, RotateCcw, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, HelpCircle, X, RotateCcw, RotateCw, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
@@ -183,7 +183,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
     value: string,
     label: string,
     Icon: typeof Check,
-    tone: "success" | "warning" | "destructive",
+    tone: "success" | "warning" | "destructive" | "info",
   ) => {
     const active = decision === value;
     const toneClass = active
@@ -191,6 +191,8 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         ? "bg-success text-success-foreground hover:bg-success/90 border-success"
         : tone === "warning"
         ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
+        : tone === "info"
+        ? "bg-info text-info-foreground hover:bg-info/90 border-info"
         : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
       : "";
     const btn = (
@@ -404,6 +406,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
 
         {/* Décision */}
         <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+          {decisionBtn("in_progress", "En cours", Clock, "info")}
           {decisionBtn("shortlisted", "Retenu", Check, "success")}
           {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
           {decisionBtn("rejected", "Non", X, "destructive")}

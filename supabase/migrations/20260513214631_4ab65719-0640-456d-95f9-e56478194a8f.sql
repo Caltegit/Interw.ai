@@ -1,0 +1,1 @@
+ALTER TYPE public.recruiter_decision_type ADD VALUE IF NOT EXISTS 'in_progress' BEFORE 'shortlisted';

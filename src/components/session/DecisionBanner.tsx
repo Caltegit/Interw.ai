@@ -21,12 +21,13 @@ import {
   Sparkles,
   Mail,
   Trash2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDecisionAuthor } from "@/lib/decisionAuthor";
 
-export type RecruiterDecision = "none" | "shortlisted" | "rejected" | "second_opinion";
+export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion";
 
 interface DecisionBannerProps {
   candidateName: string;
@@ -66,6 +67,7 @@ const recoConfig: Record<string, { label: string; tone: string }> = {
 
 const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
   none: { label: "Aucune décision", tone: "bg-muted text-muted-foreground" },
+  in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
@@ -147,6 +149,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
           </div>
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
+              <DecisionButton
+                active={decision === "in_progress"}
+                onClick={() => onDecisionChange(decision === "in_progress" ? "none" : "in_progress")}
+                disabled={isDecisionPending}
+                tone="info"
+                icon={Clock}
+                label="En cours"
+                tooltip={decision === "in_progress" ? authorTooltip : null}
+              />
               <DecisionButton
                 active={decision === "shortlisted"}
                 onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
@@ -268,7 +279,7 @@ function DecisionButton({
   active: boolean;
   onClick: () => void;
   disabled?: boolean;
-  tone: "success" | "warning" | "destructive";
+  tone: "success" | "warning" | "destructive" | "info";
   icon: typeof Check;
   label: string;
   tooltip?: string | null;
@@ -278,6 +289,8 @@ function DecisionButton({
       ? "bg-success text-success-foreground hover:bg-success/90 border-success"
       : tone === "warning"
       ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
+      : tone === "info"
+      ? "bg-info text-info-foreground hover:bg-info/90 border-info"
       : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
     : "";
 
