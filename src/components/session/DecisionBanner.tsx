@@ -279,7 +279,7 @@ function DecisionButton({
   active: boolean;
   onClick: () => void;
   disabled?: boolean;
-  tone: "success" | "warning" | "destructive";
+  tone: "success" | "warning" | "destructive" | "info";
   icon: typeof Check;
   label: string;
   tooltip?: string | null;
@@ -289,6 +289,8 @@ function DecisionButton({
       ? "bg-success text-success-foreground hover:bg-success/90 border-success"
       : tone === "warning"
       ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
+      : tone === "info"
+      ? "bg-info text-info-foreground hover:bg-info/90 border-info"
       : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
     : "";
 
