@@ -189,6 +189,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 label="En cours"
                 tooltip={decision === "in_progress" ? authorTooltip : null}
               />
+              <DecisionButton
+                active={decision === "accepted"}
+                onClick={() => onDecisionChange(decision === "accepted" ? "none" : "accepted")}
+                disabled={isDecisionPending}
+                tone="success-strong"
+                icon={ThumbsUp}
+                label="Oui"
+                tooltip={decision === "accepted" ? authorTooltip : null}
+              />
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
