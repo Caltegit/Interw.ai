@@ -67,6 +67,7 @@ const recoConfig: Record<string, { label: string; tone: string }> = {
 
 const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
   none: { label: "Aucune décision", tone: "bg-muted text-muted-foreground" },
+  in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
