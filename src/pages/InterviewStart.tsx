@@ -2083,7 +2083,7 @@ export default function InterviewStart() {
               .eq("id", sessionId)
               .maybeSingle();
             if (sessRow) {
-              const patch: Record<string, string> = {};
+              const patch: { video_recording_url?: string; thumbnail_url?: string } = {};
               if (videoUrl && !sessRow.video_recording_url) patch.video_recording_url = videoUrl;
               if (thumbnailUrl && !(sessRow as any).thumbnail_url) patch.thumbnail_url = thumbnailUrl;
               if (Object.keys(patch).length > 0) {
