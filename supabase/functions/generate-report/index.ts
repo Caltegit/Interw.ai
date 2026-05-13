@@ -219,6 +219,31 @@ serve(async (req) => {
       });
     }
 
+    // Garde-fou : refuse de générer un rapport sur un transcript quasi vide
+    // alors que la session a duré assez longtemps. Évite les rapports à 0/100
+    // dûs à une transcription incomplète au moment de la génération.
+    const totalCandidateChars = messages
+      .filter((m: any) => m.role === "candidate")
+      .reduce((sum: number, m: any) => sum + (typeof m.content === "string" ? m.content.length : 0), 0);
+    const sessionDuration = Number(session.duration_seconds ?? 0);
+    if (totalCandidateChars < 200 && sessionDuration > 120) {
+      console.error(
+        "generate-report: aborting — transcript too short for session duration",
+        session_id,
+        "chars=", totalCandidateChars,
+        "duration=", sessionDuration,
+      );
+      return new Response(
+        JSON.stringify({
+          error: "transcript_incomplete",
+          message: "Transcription incomplète : rapport non généré pour éviter un score erroné.",
+          chars: totalCandidateChars,
+          duration_seconds: sessionDuration,
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Build full transcript text
     const fullText = messages
       .map((m: any) => `${m.role === "ai" ? project.ai_persona_name : session.candidate_name}: ${m.content}`)
