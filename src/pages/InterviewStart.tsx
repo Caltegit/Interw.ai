@@ -1667,7 +1667,16 @@ export default function InterviewStart() {
       })();
 
       let thumbnailUrl: string | null = null;
-      const thumbnailBlob = await extractVideoThumbnail(blob);
+      let thumbnailBlob: Blob | null = null;
+      // 1) Tentative live depuis la MediaStream (caméra réchauffée, candidat cadré)
+      if (!thumbnailCapturedRef.current && streamRef.current) {
+        thumbnailBlob = await captureStreamSnapshot(streamRef.current);
+        if (thumbnailBlob) thumbnailCapturedRef.current = true;
+      }
+      // 2) Fallback : extraction depuis la vidéo enregistrée
+      if (!thumbnailBlob) {
+        thumbnailBlob = await extractVideoThumbnail(blob);
+      }
       if (thumbnailBlob) {
         const thumbnailPath = `interviews/${sessionId}/thumbnail.jpg`;
         try {
