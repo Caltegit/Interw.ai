@@ -269,6 +269,7 @@ export default function SessionDetail() {
     updateDecision.mutate({ decision: d, userId: user.id }, {
       onSuccess: () => {
         if (d === "none") toast({ title: "Décision annulée." });
+        else if (d === "in_progress") toast({ title: "Candidat en cours." });
         else if (d === "shortlisted") toast({ title: "Candidat retenu." });
         else if (d === "rejected") toast({ title: "Candidat noté Non." });
         else if (d === "second_opinion") toast({ title: "Candidat à discuter." });
