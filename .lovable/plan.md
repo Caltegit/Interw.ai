@@ -1,33 +1,21 @@
-## Objectif
-Ajouter un nouveau statut **« En cours »** entre « À traiter » et « Retenu » dans la sélection des candidats, en bleu clair.
+## Réordonner les statuts de la catégorie « Sélection »
 
-## Changements
+Nouvel ordre demandé : **À traiter → Non → À discuter → Retenu → En cours**
 
-### 1. Base de données — migration
-Ajouter la valeur `in_progress` à l'enum `recruiter_decision_type` (entre `none` et `shortlisted`).
-```sql
-ALTER TYPE public.recruiter_decision_type ADD VALUE 'in_progress' BEFORE 'shortlisted';
-```
+### Fichiers à modifier
 
-### 2. Design system — token bleu clair
-Ajouter un token sémantique `info` dans `src/index.css` (light + dark) et `tailwind.config.ts`, calé sur un bleu clair (~`hsl(210 90% 56%)` clair / `hsl(210 85% 65%)` dark) avec son `info-foreground`.
+**1. `src/pages/ProjectDetail.tsx`**
+- `DECISION_KEYS` (l. 153) → `["none", "rejected", "second_opinion", "shortlisted", "in_progress"]`
+- `DEFAULT_VISIBLE_DECISIONS` (l. 154) → même ordre
+- `decisionOptions` (l. 535-540) : réordonner les entrées dans le même ordre
 
-### 3. UI — ajouter l'option dans la liste de sélection
-- `src/pages/ProjectDetail.tsx`
-  - `DECISION_KEYS` et `DEFAULT_VISIBLE_DECISIONS` : insérer `"in_progress"` après `"none"`.
-  - `decisionOptions` : ajouter `{ value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" }` en 2ᵉ position.
-- `src/hooks/queries/useSessionDetail.ts` : étendre `RecruiterDecision` avec `"in_progress"`.
-- `src/components/session/DecisionBanner.tsx`
-  - Étendre le type `RecruiterDecision`.
-  - Ajouter l'entrée dans `decisionConfig` (`label: "En cours"`, tone bleu clair).
-  - Ajouter un bouton dans la barre d'action (entre l'état neutre et « Retenu »).
-- `src/components/project/SessionCard.tsx` : ajouter le bouton « En cours » avant « Retenu ».
-- `src/pages/SessionDetail.tsx` : ajouter un toast `"Candidat en cours."` dans `handleDecision`.
+**2. `src/components/project/SessionCard.tsx` (l. 409-412)**
+Réordonner les boutons : Non → À discuter → Retenu → En cours
 
-### 4. Vérification
-- Recharger `ProjectDetail` → onglet Sélection : le nouvel onglet « En cours » apparaît en 2ᵉ position avec une pastille bleu clair, le filtre fonctionne.
-- Sur `SessionDetail` : le bouton « En cours » est cliquable, persiste, et affiche le badge bleu clair.
+**3. `src/components/session/DecisionBanner.tsx`**
+- `decisionConfig` (l. 70-73) : réordonner les clés
+- Bloc des `DecisionButton` (l. 152-189) : réordonner dans Non / À discuter / Retenu / En cours
 
-## Hors scope
-- Pas de migration de données existantes : aucune session n'a encore ce statut.
-- Pas de modification des emails ou rapports.
+### Hors périmètre
+- Pas de changement de design, libellés, couleurs, ni de la base de données.
+- Le type `RecruiterDecision` n'est pas modifié (l'ordre des unions n'a pas d'impact UI).
