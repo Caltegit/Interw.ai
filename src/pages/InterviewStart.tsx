@@ -346,6 +346,7 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const thumbnailCapturedRef = useRef(false);
   // On garde TOUS les éléments <video> selfview montés (mobile + desktop) pour
   // pouvoir leur rattacher le flux caméra simultanément. Indispensable car
   // Tailwind monte les deux variants dans le DOM même quand l'un est masqué.
