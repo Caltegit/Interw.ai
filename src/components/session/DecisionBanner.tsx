@@ -67,10 +67,10 @@ const recoConfig: Record<string, { label: string; tone: string }> = {
 
 const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
   none: { label: "Aucune décision", tone: "bg-muted text-muted-foreground" },
-  in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
-  shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
+  shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
+  in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
 };
 
 function fitColor(score: number | null) {
@@ -150,22 +150,13 @@ export function DecisionBanner(props: DecisionBannerProps) {
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
               <DecisionButton
-                active={decision === "in_progress"}
-                onClick={() => onDecisionChange(decision === "in_progress" ? "none" : "in_progress")}
+                active={decision === "rejected"}
+                onClick={() => onDecisionChange(decision === "rejected" ? "none" : "rejected")}
                 disabled={isDecisionPending}
-                tone="info"
-                icon={Clock}
-                label="En cours"
-                tooltip={decision === "in_progress" ? authorTooltip : null}
-              />
-              <DecisionButton
-                active={decision === "shortlisted"}
-                onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
-                disabled={isDecisionPending}
-                tone="success"
-                icon={Check}
-                label="Retenu"
-                tooltip={decision === "shortlisted" ? authorTooltip : null}
+                tone="destructive"
+                icon={X}
+                label="Non"
+                tooltip={decision === "rejected" ? authorTooltip : null}
               />
               <DecisionButton
                 active={decision === "second_opinion"}
@@ -179,13 +170,22 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 tooltip={decision === "second_opinion" ? authorTooltip : null}
               />
               <DecisionButton
-                active={decision === "rejected"}
-                onClick={() => onDecisionChange(decision === "rejected" ? "none" : "rejected")}
+                active={decision === "shortlisted"}
+                onClick={() => onDecisionChange(decision === "shortlisted" ? "none" : "shortlisted")}
                 disabled={isDecisionPending}
-                tone="destructive"
-                icon={X}
-                label="Non"
-                tooltip={decision === "rejected" ? authorTooltip : null}
+                tone="success"
+                icon={Check}
+                label="Retenu"
+                tooltip={decision === "shortlisted" ? authorTooltip : null}
+              />
+              <DecisionButton
+                active={decision === "in_progress"}
+                onClick={() => onDecisionChange(decision === "in_progress" ? "none" : "in_progress")}
+                disabled={isDecisionPending}
+                tone="info"
+                icon={Clock}
+                label="En cours"
+                tooltip={decision === "in_progress" ? authorTooltip : null}
               />
             </div>
           )}

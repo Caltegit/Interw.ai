@@ -406,10 +406,10 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
 
         {/* Décision */}
         <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-          {decisionBtn("in_progress", "En cours", Clock, "info")}
-          {decisionBtn("shortlisted", "Retenu", Check, "success")}
-          {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
           {decisionBtn("rejected", "Non", X, "destructive")}
+          {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
+          {decisionBtn("shortlisted", "Retenu", Check, "success")}
+          {decisionBtn("in_progress", "En cours", Clock, "info")}
         </div>
       </CardContent>
     </Card>

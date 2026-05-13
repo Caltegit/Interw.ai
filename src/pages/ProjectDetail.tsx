@@ -150,8 +150,8 @@ export default function ProjectDetail() {
   const PAGE_SIZE = 50;
 
   // Visibilité des sélections (chips au-dessus des sessions)
-  const DECISION_KEYS = ["none", "in_progress", "shortlisted", "second_opinion", "rejected"] as const;
-  const DEFAULT_VISIBLE_DECISIONS = ["none", "in_progress", "shortlisted", "second_opinion", "rejected"];
+  const DECISION_KEYS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress"] as const;
+  const DEFAULT_VISIBLE_DECISIONS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress"];
   const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set(DEFAULT_VISIBLE_DECISIONS);
     try {
@@ -534,10 +534,10 @@ export default function ProjectDetail() {
 
   const decisionOptions: { value: string; label: string; dot: string; text: string }[] = [
     { value: "none", label: "À traiter", dot: "bg-muted-foreground/40", text: "" },
-    { value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" },
-    { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
-    { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
     { value: "rejected", label: "Non", dot: "bg-destructive", text: "text-destructive" },
+    { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
+    { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
+    { value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" },
   ];
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
