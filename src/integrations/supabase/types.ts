@@ -1652,6 +1652,7 @@ export type Database = {
       recommendation_type: "strong_yes" | "yes" | "maybe" | "no"
       recruiter_decision_type:
         | "none"
+        | "in_progress"
         | "shortlisted"
         | "rejected"
         | "second_opinion"
@@ -1802,6 +1803,7 @@ export const Constants = {
       recommendation_type: ["strong_yes", "yes", "maybe", "no"],
       recruiter_decision_type: [
         "none",
+        "in_progress",
         "shortlisted",
         "rejected",
         "second_opinion",
