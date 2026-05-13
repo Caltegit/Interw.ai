@@ -150,8 +150,8 @@ export default function ProjectDetail() {
   const PAGE_SIZE = 50;
 
   // Visibilité des sélections (chips au-dessus des sessions)
-  const DECISION_KEYS = ["none", "shortlisted", "second_opinion", "rejected"] as const;
-  const DEFAULT_VISIBLE_DECISIONS = ["none", "shortlisted", "second_opinion", "rejected"];
+  const DECISION_KEYS = ["none", "in_progress", "shortlisted", "second_opinion", "rejected"] as const;
+  const DEFAULT_VISIBLE_DECISIONS = ["none", "in_progress", "shortlisted", "second_opinion", "rejected"];
   const [visibleDecisions, setVisibleDecisions] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set(DEFAULT_VISIBLE_DECISIONS);
     try {
