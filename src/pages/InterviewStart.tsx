@@ -2038,10 +2038,12 @@ export default function InterviewStart() {
       persistCandidatePromise = (async () => {
         let videoUrl: string | null = null;
         let audioUrl: string | null = null;
+        let thumbnailUrl: string | null = null;
         try {
           const urls = await stopAndUploadQuestionVideo(sessionId, questionIdx);
           videoUrl = urls.videoUrl;
           audioUrl = urls.audioUrl;
+          thumbnailUrl = urls.thumbnailUrl;
         } catch (e) {
           logger.error("interview_upload_failed", {
             sessionId,
