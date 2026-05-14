@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, ChevronRight, Check, HelpCircle, X, RotateCcw, RotateCw, Clock, ThumbsUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,6 +38,8 @@ interface Props {
   questions: Question[];
   onDecisionChange: (sessionId: string, decision: string) => void;
   decisionByName?: string | null;
+  selected?: boolean;
+  onToggleSelect?: (sessionId: string) => void;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
@@ -53,7 +56,7 @@ function scoreColor(score: number | null | undefined) {
   return "bg-destructive text-destructive-foreground";
 }
 
-export function SessionCard({ session, report, questions, onDecisionChange, decisionByName }: Props) {
+export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect }: Props) {
   const [clips, setClips] = useState<
     { url: string; questionId: string | null; isFollowUp: boolean }[]
   >([]);
@@ -224,7 +227,19 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const scoreVal = report?.overall_score != null ? Math.round(Number(report.overall_score)) : null;
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-colors hover:bg-muted/50">
+    <Card className={cn("relative flex flex-col overflow-hidden transition-colors hover:bg-muted/50", selected && "ring-2 ring-primary")}>
+      {onToggleSelect && (
+        <div
+          className="absolute left-2 top-2 z-10 rounded-md bg-background/80 p-1 backdrop-blur-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={!!selected}
+            onCheckedChange={() => onToggleSelect(session.id)}
+            aria-label="Sélectionner ce candidat"
+          />
+        </div>
+      )}
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {/* En-tête : nom puis note + recommandation */}
         <div className="flex flex-col items-center gap-1">

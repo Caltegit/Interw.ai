@@ -688,7 +688,7 @@ export default function ProjectDetail() {
             <>
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
-                {view === "table" && selectedIds.size > 0 && (
+                {selectedIds.size > 0 && (
                   <BulkActionsButton
                     count={selectedIds.size}
                     onClear={clearSelection}
@@ -771,6 +771,8 @@ export default function ProjectDetail() {
                       questions={questions}
                       onDecisionChange={updateDecision}
                       decisionByName={memberById((s as any).recruiter_decision_by)?.full_name ?? memberById((s as any).recruiter_decision_by)?.email ?? null}
+                      selected={selectedIds.has(s.id)}
+                      onToggleSelect={toggleSelect}
                     />
                   ))}
                   {pagedSessions.length === 0 && (
