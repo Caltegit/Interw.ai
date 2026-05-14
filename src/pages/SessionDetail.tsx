@@ -374,11 +374,6 @@ export default function SessionDetail() {
 
   return (
     <div className="space-y-4">
-      <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link to={`/projects/${session.project_id}`}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
-        </Link>
-      </Button>
 
       <DecisionBanner
         candidateName={session.candidate_name}
