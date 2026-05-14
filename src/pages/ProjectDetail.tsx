@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X, UserCog } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
@@ -37,6 +37,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -44,8 +47,8 @@ import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsButton({
-  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
-}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
+  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports, members, onAssign,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean; members: { user_id: string; full_name: string; email: string }[]; onAssign: (assignee: string | null) => void }) {
   const canCompare = count >= 2 && count <= 4;
   return (
     <div className="flex items-center gap-2 animate-fade-in">
@@ -75,6 +78,22 @@ function BulkActionsButton({
               </span>
             )}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <UserCog className="mr-2 h-4 w-4" /> Assigner à
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-72 overflow-auto">
+              <DropdownMenuItem onClick={() => onAssign(null)}>
+                Non assignée
+              </DropdownMenuItem>
+              {members.length > 0 && <DropdownMenuSeparator />}
+              {members.map((m) => (
+                <DropdownMenuItem key={m.user_id} onClick={() => onAssign(m.user_id)}>
+                  {m.full_name || m.email}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
             <Trash2 className="mr-2 h-4 w-4" /> Supprimer
@@ -289,6 +308,22 @@ export default function ProjectDetail() {
     }
     setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, assigned_to: newAssignee } : s)));
     toast({ title: "Session réassignée." });
+  };
+
+  const bulkAssign = async (assignee: string | null) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("sessions")
+      .update({ assigned_to: assignee })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, assigned_to: assignee } : s)));
+    const label = assignee ? memberLabel(assignee) : "personne";
+    toast({ title: `${ids.length} session${ids.length > 1 ? "s" : ""} assignée${ids.length > 1 ? "s" : ""} à ${label}` });
   };
 
   const updateDecision = async (sessionId: string, decision: string) => {
@@ -703,6 +738,8 @@ export default function ProjectDetail() {
                     onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
                     onShareReports={() => setShareReportsOpen(true)}
                     canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                    members={orgMembers}
+                    onAssign={bulkAssign}
                   />
                 )}
                 <div className="flex rounded-md border">
@@ -1056,6 +1093,8 @@ export default function ProjectDetail() {
                       onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
                       onShareReports={() => setShareReportsOpen(true)}
                       canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                      members={orgMembers}
+                      onAssign={bulkAssign}
                     />
                   </div>
                 )}

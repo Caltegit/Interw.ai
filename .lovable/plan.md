@@ -1,97 +1,62 @@
-## Diagnostic du bug
+## Objectif
 
-Les notes recruteur ne se synchronisent pas entre la **vue Tableau (`ProjectDetail`)** et la **fiche candidat (`SessionDetail`)** à cause de deux problèmes combinés :
+Ajouter une entrée **« Assigner à »** dans le menu déroulant `BulkActionsButton` (vue Tableau & Cartes du projet). Au survol, un sous-menu déroule la liste des membres de l'organisation (plus « Non assignée ») et applique le choix à toutes les sessions sélectionnées.
 
-1. **`ProjectDetail.saveNote`** écrit en base mais **n'invalide pas** la requête `queryKeys.session(sessionId)` utilisée par la fiche candidat → le cache React Query reste périmé jusqu'au prochain `refetchInterval` (5s).
+## Comportement
 
-2. **`SessionDetail` (lignes 148-162)** initialise `recruiterNotes` une seule fois (`notesInitialized`) puis déclenche un autosave dès que `recruiterNotes !== session.recruiter_note`. Quand la valeur change côté serveur (par exemple parce qu'on a édité depuis la vue tableau), le refetch de 5 s remet `session.recruiter_note` à la nouvelle valeur DB, mais `recruiterNotes` (état local) est resté à l'ancienne → l'effet d'autosave **réécrit l'ancienne valeur** par-dessus la nouvelle. Résultat : l'édition faite ailleurs est silencieusement écrasée et l'utilisateur ne voit aucun changement.
+- Nouvelle ligne dans le `DropdownMenu` du composant `BulkActionsButton`, entre « Comparer » et le séparateur « Supprimer ».
+- Icône `UserCog` (lucide), libellé « Assigner à ».
+- Au survol : `DropdownMenuSub` ouvre un sous-menu :
+  - Première option : « Non assignée » (envoie `null`).
+  - Ensuite : un item par membre de l'orga (`full_name` sinon `email`).
+- Au clic :
+  - Lance `Promise.allSettled` d'updates Supabase `sessions.assigned_to` pour chaque id sélectionné.
+  - Met à jour `sessions` localement (optimiste après réponse).
+  - Toast : « N session(s) assignée(s) à X » ou « Échec sur N sessions » si échecs partiels.
+  - Pas de fermeture/effacement de la sélection (cohérent avec les autres actions groupées).
 
-## Correctifs
+## Détails techniques
 
-### 1. `src/hooks/queries/useSessionDetail.ts`
-Aucun changement nécessaire (la mutation existante est correcte). On va juste l'invalider depuis ailleurs.
+### `src/pages/ProjectDetail.tsx`
 
-### 2. `src/pages/ProjectDetail.tsx` — `saveNote`
-Après l'`update` réussi, en plus de mettre à jour le draft local :
-- Mettre à jour `sessions[].recruiter_note` localement (pour que la vue tableau reflète l'état serveur sans dépendre d'un refetch).
-- Invalider `queryKeys.session(sessionId)` via `queryClient.invalidateQueries(...)` afin que la fiche candidat (si ouverte plus tard) reçoive la valeur à jour.
+1. **Étendre les props** de `BulkActionsButton` :
+   ```ts
+   members: { user_id: string; full_name: string; email: string }[];
+   onAssign: (assignee: string | null) => void;
+   ```
+2. **Ajouter l'item dans le menu**, en utilisant `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent` (déjà disponibles dans shadcn — sinon importer depuis `@/components/ui/dropdown-menu`).
+3. **Ajouter dans le composant parent** une fonction `bulkAssign(assignee: string | null)` :
+   ```ts
+   const bulkAssign = async (assignee: string | null) => {
+     const ids = [...selectedIds];
+     if (ids.length === 0) return;
+     const { error } = await supabase
+       .from("sessions")
+       .update({ assigned_to: assignee })
+       .in("id", ids);
+     if (error) {
+       toast({ title: "Erreur", description: error.message, variant: "destructive" });
+       return;
+     }
+     setSessions((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, assigned_to: assignee } : s)));
+     const label = assignee ? memberLabel(assignee) : "personne";
+     toast({ title: `${ids.length} session(s) assignée(s) à ${label}` });
+   };
+   ```
+4. **Passer les props** dans les deux usages existants de `<BulkActionsButton ...>` (lignes ~698 et ~1051) :
+   ```tsx
+   members={orgMembers}
+   onAssign={bulkAssign}
+   ```
 
-```ts
-const saveNote = (sessionId, value) => {
-  setNoteDrafts(...);
-  if (noteTimers.current[sessionId]) clearTimeout(...);
-  noteTimers.current[sessionId] = setTimeout(async () => {
-    setSavingNote(...true);
-    const { error } = await supabase.from("sessions").update({ recruiter_note: value }).eq("id", sessionId);
-    setSavingNote(...false);
-    if (error) {
-      toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
-      return;
-    }
-    setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_note: value } : s)));
-    queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
-  }, 1000);
-};
-```
-
-(`queryClient` est déjà importé via `useQueryClient` dans le fichier ; sinon l'ajouter.)
-
-### 3. `src/pages/SessionDetail.tsx` — sync notes robuste
-
-Remplacer la logique « initialize once + auto-save sur divergence » par un pattern « server est source de vérité, autosave uniquement sur saisie utilisateur » :
-
-- Conserver `recruiterNotes` en état local.
-- Ajouter `lastServerNoteRef = useRef<string | null>(null)` qui mémorise la dernière valeur vue côté serveur.
-- Effet de sync : quand `session.recruiter_note` change ET diffère de `lastServerNoteRef.current`, mettre à jour `recruiterNotes` (= la valeur serveur gagne) et le ref. Cela résout l'écrasement.
-- Ajouter `dirtyRef = useRef(false)`. Le `<Textarea onChange>` met `dirtyRef.current = true` ET met à jour `recruiterNotes`.
-- L'effet d'autosave debounce ne se déclenche que si `dirtyRef.current === true`. Après un save réussi, remettre `dirtyRef.current = false` et mettre à jour `lastServerNoteRef.current = recruiterNotes`.
-- Supprimer `notesInitialized`.
-
-Squelette :
-```tsx
-const lastServerNoteRef = useRef<string | null>(null);
-const dirtyRef = useRef(false);
-
-useEffect(() => {
-  const server = session?.recruiter_note ?? "";
-  if (lastServerNoteRef.current === null) {
-    lastServerNoteRef.current = server;
-    setRecruiterNotes(server);
-    return;
-  }
-  if (server !== lastServerNoteRef.current && !dirtyRef.current) {
-    lastServerNoteRef.current = server;
-    setRecruiterNotes(server);
-  }
-}, [session?.recruiter_note]);
-
-useEffect(() => {
-  if (!session?.id || !dirtyRef.current) return;
-  if (recruiterNotes === (lastServerNoteRef.current ?? "")) return;
-  const t = setTimeout(() => {
-    updateNotes.mutate(
-      { notes: recruiterNotes },
-      { onSuccess: () => {
-          lastServerNoteRef.current = recruiterNotes;
-          dirtyRef.current = false;
-        }
-      },
-    );
-  }, 1000);
-  return () => clearTimeout(t);
-}, [recruiterNotes, session?.id]);
-```
-
-Et sur le `<Textarea>` : `onChange={(e) => { dirtyRef.current = true; setRecruiterNotes(e.target.value); }}`.
-
-### 4. (bonus cohérence) Vue Cartes
-Pas de changement nécessaire : `ProjectDetail.saveNote` écrit dans `noteDrafts` qui est partagé entre vue tableau et `SessionCard`.
+### Vérifications RLS
+La table `sessions` a déjà des policies UPDATE permettant aux membres de l'orga de modifier les sessions de leurs projets. Aucune migration n'est nécessaire.
 
 ## Hors scope
-- Pas de changement de schéma BD.
-- Pas de modification de `ProjectCompare` (sa logique avec `initialRef` est déjà saine).
+- Pas de modification de la vue Cartes (le bouton Actions est partagé, donc l'option apparaît automatiquement).
+- Pas de filtre/réorganisation après assignation.
+- Pas de notification email à la personne assignée.
 
 ## Vérification
-1. Ouvrir la fiche candidat, taper une note → 1s plus tard, recharger : la note est en base.
-2. Depuis la vue Tableau, modifier la note du même candidat → après 1s, ouvrir la fiche : la valeur tableau apparaît (et inversement).
-3. Avoir la fiche ouverte ET modifier depuis la vue tableau dans un autre onglet → après le refetch (5s), la fiche affiche la nouvelle valeur sans l'écraser.
+- Sélectionner 2 sessions → ouvrir Actions → « Assigner à » → choisir un membre → toast confirme et la colonne « Assignée à » est mise à jour pour les 2 lignes.
+- Choisir « Non assignée » → `assigned_to = null` → la cellule affiche « — ».
