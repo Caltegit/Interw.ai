@@ -74,7 +74,7 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage }:
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Target className="h-4 w-4 text-primary" /> Adéquation au poste
+          <Target className="h-4 w-4 text-primary" /> Adéquation selon les critères définis
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
