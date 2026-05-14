@@ -41,6 +41,10 @@ interface Props {
   decisionByName?: string | null;
   selected?: boolean;
   onToggleSelect?: (sessionId: string) => void;
+  noteValue?: string;
+  noteSaving?: boolean;
+  onNoteChange?: (sessionId: string, value: string) => void;
+  hasReport?: boolean;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
