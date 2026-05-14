@@ -55,7 +55,7 @@ const formatDuration = (seconds?: number | null) => {
   if (!seconds || seconds <= 0) return undefined;
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${m} min ${s.toString().padStart(2, "0")}`;
+  return `${m} min`;
 };
 
 export default function SessionDetail() {
