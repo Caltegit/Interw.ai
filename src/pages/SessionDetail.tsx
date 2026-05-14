@@ -407,7 +407,7 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_510px]">
+      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:400px]" : "gap-6 [--video-col:510px]"}`}>
         <div className="flex flex-col gap-4 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
