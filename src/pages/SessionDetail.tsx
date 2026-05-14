@@ -590,7 +590,7 @@ export default function SessionDetail() {
         >
           {sessionClips.length > 0 && (
             <div className="shrink-0">
-              <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
+              <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} transcripts={transcriptsByMessageId} />
             </div>
           )}
           {report && (
