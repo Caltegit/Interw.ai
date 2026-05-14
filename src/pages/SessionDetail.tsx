@@ -58,7 +58,10 @@ const formatDuration = (seconds?: number | null) => {
   return `${m} min`;
 };
 
+import { useCopilot } from "@/contexts/CopilotContext";
+
 export default function SessionDetail() {
+  const { open: copilotOpen } = useCopilot();
   const { id } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -407,7 +410,7 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_510px]">
+      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:400px]" : "gap-6 [--video-col:510px]"}`}>
         <div className="flex flex-col gap-4 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
@@ -440,25 +443,25 @@ export default function SessionDetail() {
               />
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="decision" className="gap-1">
-                  <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
+                  <FileText className="h-4 w-4" /> <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
                 </TabsTrigger>
                 <TabsTrigger value="bigfive" className="gap-1">
                   <Brain className="h-4 w-4" />
-                  <span className="hidden sm:inline">Big Five</span>
+                  <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
                   <BigFiveBadge profile={report?.personality_profile} size={22} />
                 </TabsTrigger>
                 <TabsTrigger value="voice" className="gap-1">
                   <Mic className="h-4 w-4" />
-                  <span className="hidden sm:inline">À l'oral</span>
+                  <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>À l'oral</span>
                   <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
                 </TabsTrigger>
                 <TabsTrigger value="attitude" className="gap-1">
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">Attitude</span>
+                  <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
                   <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
                 </TabsTrigger>
                 <TabsTrigger value="answers" className="gap-1">
-                  <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
+                  <Play className="h-4 w-4" /> <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Réponses</span>
                 </TabsTrigger>
               </TabsList>
             </div>
