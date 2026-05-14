@@ -183,10 +183,13 @@ export default function SessionDetail() {
     () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
     [messages],
   );
-  const candidateMainVideos = useMemo(
-    () => candidateVideos.filter((m: any) => !m.is_follow_up),
-    [candidateVideos],
-  );
+  const transcriptsByMessageId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of messages as any[]) {
+      if (m?.id && typeof m?.content === "string") map[m.id] = m.content;
+    }
+    return map;
+  }, [messages]);
 
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
     const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
