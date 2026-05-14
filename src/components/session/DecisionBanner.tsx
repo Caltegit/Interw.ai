@@ -36,6 +36,7 @@ interface DecisionBannerProps {
   jobTitle?: string | null;
   durationLabel?: string;
   videoAnswersCount: number;
+  createdAt?: string | null;
   fitScore: number | null;
   recommendation?: string | null;
   headline?: string | null;
