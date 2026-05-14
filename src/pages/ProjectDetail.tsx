@@ -83,7 +83,7 @@ function BulkActionsBar({
         </DropdownMenuContent>
       </DropdownMenu>
       <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
-      <span className="ml-auto text-sm font-medium">{count} candidat(s) sélectionné(s)</span>
+      <span className="ml-auto text-sm font-medium">{count} profil(s) sélectionné(s)</span>
     </div>
   );
 }
@@ -675,7 +675,7 @@ export default function ProjectDetail() {
         <TabsContent value="sessions" className="space-y-4">
           {visibleSessions.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              Aucune session — les candidats apparaîtront ici quand ils utiliseront le lien.
+              Aucune session — les profils apparaîtront ici quand ils utiliseront le lien.
             </p>
           ) : (
             <>
@@ -799,7 +799,7 @@ export default function ProjectDetail() {
                             aria-label="Tout sélectionner"
                           />
                         </th>
-                        <th className="pb-2 font-medium max-w-[14rem]">Candidat</th>
+                        <th className="pb-2 font-medium max-w-[14rem]">Tous</th>
                         <th className="pb-2 pr-6 font-medium w-[7rem]">Sélection</th>
                         <th className="pb-2 pl-2 font-medium">Score</th>
                         <th className="pb-2 font-medium">Date</th>
