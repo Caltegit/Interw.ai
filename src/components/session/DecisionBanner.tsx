@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
