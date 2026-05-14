@@ -622,9 +622,16 @@ export default function ProjectDetail() {
           <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button variant="outline" size="sm" onClick={copyProjectLink}>
-            <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={copyProjectLink}>
+              <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
+            </Button>
+            {linkCopied && (
+              <span className="inline-flex items-center gap-1 text-sm text-success animate-in fade-in slide-in-from-left-1">
+                <Check className="h-4 w-4" /> Lien copié
+              </span>
+            )}
+          </div>
           <Button variant="outline" size="sm" asChild>
             <Link to={`/projects/${project.id}/edit`}>
               <Pencil className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Modifier</span>
