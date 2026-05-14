@@ -409,57 +409,59 @@ export default function SessionDetail() {
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_510px]">
         <div className="flex flex-col gap-4 min-w-0">
-          <DecisionBanner
-            candidateName={session.candidate_name}
-            candidateEmail={session.candidate_email}
-            jobTitle={project?.job_title}
-            durationLabel={formatDuration(session.duration_seconds)}
-            videoAnswersCount={candidateVideos.length}
-            fitScore={fitScore}
-            recommendation={report?.recommendation ?? null}
-            headline={verdictHeadline}
-            rankLabel={rankLabel}
-            decision={decision}
-            onDecisionChange={handleDecision}
-            isDecisionPending={updateDecision.isPending}
-            shareUrl={shareUrl}
-            onShare={handleShare}
-            onCopyShare={copyShareUrl}
-            copied={copied}
-            isShareLoading={createShare.isPending}
-            canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-            onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-            onRegenerate={report ? handleRegenerate : undefined}
-            isRegenerating={regenerate.isPending}
-            onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-            onDelete={() => setDeleteOpen(true)}
-            decisionByName={(session as any).decision_by_name ?? null}
-            decisionAt={(session as any).recruiter_decision_at ?? null}
-          />
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="decision" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
-              </TabsTrigger>
-              <TabsTrigger value="bigfive" className="gap-1">
-                <Brain className="h-4 w-4" />
-                <span className="hidden sm:inline">Big Five</span>
-                <BigFiveBadge profile={report?.personality_profile} size={22} />
-              </TabsTrigger>
-              <TabsTrigger value="voice" className="gap-1">
-                <Mic className="h-4 w-4" />
-                <span className="hidden sm:inline">À l'oral</span>
-                <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
-              </TabsTrigger>
-              <TabsTrigger value="attitude" className="gap-1">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Attitude</span>
-                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
-              </TabsTrigger>
-              <TabsTrigger value="answers" className="gap-1">
-                <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
+              <DecisionBanner
+                candidateName={session.candidate_name}
+                candidateEmail={session.candidate_email}
+                jobTitle={project?.job_title}
+                durationLabel={formatDuration(session.duration_seconds)}
+                videoAnswersCount={candidateVideos.length}
+                fitScore={fitScore}
+                recommendation={report?.recommendation ?? null}
+                headline={verdictHeadline}
+                rankLabel={rankLabel}
+                decision={decision}
+                onDecisionChange={handleDecision}
+                isDecisionPending={updateDecision.isPending}
+                shareUrl={shareUrl}
+                onShare={handleShare}
+                onCopyShare={copyShareUrl}
+                copied={copied}
+                isShareLoading={createShare.isPending}
+                canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+                onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+                onRegenerate={report ? handleRegenerate : undefined}
+                isRegenerating={regenerate.isPending}
+                onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+                onDelete={() => setDeleteOpen(true)}
+                decisionByName={(session as any).decision_by_name ?? null}
+                decisionAt={(session as any).recruiter_decision_at ?? null}
+              />
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="decision" className="gap-1">
+                  <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
+                </TabsTrigger>
+                <TabsTrigger value="bigfive" className="gap-1">
+                  <Brain className="h-4 w-4" />
+                  <span className="hidden sm:inline">Big Five</span>
+                  <BigFiveBadge profile={report?.personality_profile} size={22} />
+                </TabsTrigger>
+                <TabsTrigger value="voice" className="gap-1">
+                  <Mic className="h-4 w-4" />
+                  <span className="hidden sm:inline">À l'oral</span>
+                  <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+                </TabsTrigger>
+                <TabsTrigger value="attitude" className="gap-1">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Attitude</span>
+                  <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
+                </TabsTrigger>
+                <TabsTrigger value="answers" className="gap-1">
+                  <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="decision" className="mt-4 space-y-4">
               {report ? (
