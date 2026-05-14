@@ -1,39 +1,36 @@
-# Champ « Expéditeur (nom affiché) » dans les dialogues d'envoi d'email
-
 ## Objectif
-Ajouter un champ modifiable dans chaque boîte de dialogue d'envoi d'email pour personnaliser le nom affiché dans le `From:` du destinataire. L'adresse reste `noreply@interw.ai`.
 
-Exemple rendu côté boîte de réception : `Marie Dupont <noreply@interw.ai>`.
+Ajouter une case à cocher en haut à gauche de chaque vignette candidat dans la vue **Cartes** (comme déjà disponible dans la vue Tableau), et faire apparaître la barre d'actions groupées (`BulkActionsButton`) quand au moins une carte est sélectionnée.
 
-## Périmètre
-Boîtes de dialogue concernées (envois manuels par un recruteur) :
-- `ShareReportsDialog` — Partager les rapports
-- `BulkEmailDialog` — Email groupé aux candidats
+## Comportement
 
-Les emails automatiques (rapport, remerciement, invitations) restent inchangés et conservent l'expéditeur par défaut « InterviewAI ».
-
-## Changements
-
-### 1. Edge function `send-transactional-email`
-- Accepter un nouveau champ optionnel `fromName` (string) dans le body.
-- Validation : trim, longueur max 60 caractères, suppression des caractères qui casseraient l'en-tête (`<`, `>`, `"`, `\r`, `\n`).
-- Si fourni et non vide après nettoyage : `from = "${fromName} <noreply@${FROM_DOMAIN}>"`.
-- Sinon comportement inchangé (`SITE_NAME`).
-- Redéploiement requis.
-
-### 2. Front — `ShareReportsDialog.tsx` et `BulkEmailDialog.tsx`
-- Nouveau champ `Input` « Nom de l'expéditeur » au-dessus du champ Destinataires.
-- Pré-rempli avec `profile.full_name` (fallback : partie locale de `user.email`).
-- État local `fromName`, modifiable par le recruteur avant chaque envoi.
-- Validation Zod côté client : trim, 1–60 caractères.
-- Passé dans le body de chaque appel `supabase.functions.invoke('send-transactional-email', ...)`.
-- Combiné au `replyTo` déjà présent.
+- Case à cocher en overlay, position absolue en haut à gauche de la `Card`, au-dessus du header (nom + score).
+- Clic sur la case : sélectionne/désélectionne sans naviguer ni démarrer la vidéo (`stopPropagation`).
+- Sélection partagée avec la vue Tableau : on réutilise `selectedIds` / `toggleSelect` / `clearSelection` déjà présents dans `ProjectDetail.tsx` — ainsi une sélection faite en cartes reste visible si l'utilisateur bascule vers tableau.
+- Barre `BulkActionsButton` (Email, Supprimer, Comparer, Partager rapports) : aujourd'hui affichée uniquement si `view === "table"`. Étendre la condition pour qu'elle s'affiche aussi en `view === "cards"` dès que `selectedIds.size > 0`.
+- Pas de checkbox "tout sélectionner" en vue cartes (cohérent avec une grille). La sélection multiple se fait carte par carte. Le bouton "tout désélectionner" reste accessible via la barre d'actions.
 
 ## Détails techniques
-- Format `from` final RFC 5322 : `"Marie Dupont <noreply@interw.ai>"`.
-- Pas de migration DB, pas de secret, pas de modification de template.
-- Le champ est purement « display name » — l'adresse d'envoi ne change jamais.
 
-## Hors périmètre
-- Pas de personnalisation de l'adresse `noreply@`.
-- Pas de mémorisation par utilisateur (le nom se réinitialise au profil à chaque ouverture du dialogue).
+### `src/components/project/SessionCard.tsx`
+- Ajouter deux props optionnelles : `selected?: boolean` et `onToggleSelect?: (sessionId: string) => void`.
+- Dans le rendu : ajouter `relative` à la `Card` racine (ou conserver `overflow-hidden` mais positionner la checkbox au-dessus). Insérer un `<Checkbox>` shadcn positionné `absolute top-2 left-2 z-10` avec un fond `bg-background/80 backdrop-blur-sm` pour rester lisible sur fond clair/sombre.
+- Quand `selected === true`, ajouter un anneau visuel sur la `Card` (`ring-2 ring-primary`) pour refléter l'état comme dans la vue tableau.
+- `onClick` du conteneur de la checkbox : `e.stopPropagation()` pour ne pas déclencher le `Link` du nom.
+
+### `src/pages/ProjectDetail.tsx`
+- Passer `selected={selectedIds.has(s.id)}` et `onToggleSelect={toggleSelect}` à chaque `<SessionCard />` rendue dans la grille (lignes ~767-774).
+- Modifier la condition d'affichage de `BulkActionsButton` (ligne 691) :
+  - Avant : `view === "table" && selectedIds.size > 0`
+  - Après : `selectedIds.size > 0` (peu importe la vue).
+- Aucun changement nécessaire sur les dialogues `BulkEmailDialog`, `ShareReportsDialog`, `ProjectCompare` : ils consomment déjà `selectedIds`.
+
+### Aucun changement
+- Pas de modification du backend, des hooks, ni du store.
+- Pas de modification de la vue Tableau (déjà fonctionnelle).
+- Pas de nouveau composant : on réutilise `Checkbox` (shadcn) déjà importé dans le projet.
+
+## Vérification
+- En vue Cartes : cocher 2 candidats → la barre d'actions apparaît avec compteur "2", boutons Email / Comparer / Partager / Supprimer fonctionnent.
+- Basculer vers Tableau : les mêmes 2 lignes restent cochées.
+- Clic sur la checkbox ne lance pas la vidéo et ne navigue pas vers la fiche candidat.
