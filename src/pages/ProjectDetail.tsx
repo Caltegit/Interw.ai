@@ -771,6 +771,8 @@ export default function ProjectDetail() {
                       questions={questions}
                       onDecisionChange={updateDecision}
                       decisionByName={memberById((s as any).recruiter_decision_by)?.full_name ?? memberById((s as any).recruiter_decision_by)?.email ?? null}
+                      selected={selectedIds.has(s.id)}
+                      onToggleSelect={toggleSelect}
                     />
                   ))}
                   {pagedSessions.length === 0 && (
