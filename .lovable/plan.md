@@ -1,62 +1,44 @@
-## Objectif
+## Approche unique : timestamp proportionnel
 
-Ajouter une entrée **« Assigner à »** dans le menu déroulant `BulkActionsButton` (vue Tableau & Cartes du projet). Au survol, un sous-menu déroule la liste des membres de l'organisation (plus « Non assignée ») et applique le choix à toutes les sessions sélectionnées.
+Remplacer toute la logique de résolution des `start_seconds` dans `generate-report` par une seule méthode : **position du premier mot de la citation dans la transcription du message, ramenée à la durée du clip**.
 
-## Comportement
+```
+positionMot   = index du 1er mot de la citation dans content normalisé
+totalMots     = nombre de mots de content normalisé
+dureeMessage  = max(transcript_segments[].end) si dispo, sinon totalMots / 2.5
+start_seconds = (positionMot / totalMots) × dureeMessage
+```
 
-- Nouvelle ligne dans le `DropdownMenu` du composant `BulkActionsButton`, entre « Comparer » et le séparateur « Supprimer ».
-- Icône `UserCog` (lucide), libellé « Assigner à ».
-- Au survol : `DropdownMenuSub` ouvre un sous-menu :
-  - Première option : « Non assignée » (envoie `null`).
-  - Ensuite : un item par membre de l'orga (`full_name` sinon `email`).
-- Au clic :
-  - Lance `Promise.allSettled` d'updates Supabase `sessions.assigned_to` pour chaque id sélectionné.
-  - Met à jour `sessions` localement (optimiste après réponse).
-  - Toast : « N session(s) assignée(s) à X » ou « Échec sur N sessions » si échecs partiels.
-  - Pas de fermeture/effacement de la sélection (cohérent avec les autres actions groupées).
+On supprime :
+- la recherche par segment unique,
+- la recherche par fenêtre glissante de 3 segments,
+- le repli sur l'estimation IA (`fallback`).
 
-## Détails techniques
+L'estimation IA n'est plus utilisée : seul le calcul proportionnel est conservé. Si la citation n'est pas trouvable dans le texte (mots manquants), on retourne `null` (le lecteur joue alors depuis le début du clip).
 
-### `src/pages/ProjectDetail.tsx`
+## Modification
 
-1. **Étendre les props** de `BulkActionsButton` :
-   ```ts
-   members: { user_id: string; full_name: string; email: string }[];
-   onAssign: (assignee: string | null) => void;
-   ```
-2. **Ajouter l'item dans le menu**, en utilisant `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent` (déjà disponibles dans shadcn — sinon importer depuis `@/components/ui/dropdown-menu`).
-3. **Ajouter dans le composant parent** une fonction `bulkAssign(assignee: string | null)` :
-   ```ts
-   const bulkAssign = async (assignee: string | null) => {
-     const ids = [...selectedIds];
-     if (ids.length === 0) return;
-     const { error } = await supabase
-       .from("sessions")
-       .update({ assigned_to: assignee })
-       .in("id", ids);
-     if (error) {
-       toast({ title: "Erreur", description: error.message, variant: "destructive" });
-       return;
-     }
-     setSessions((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, assigned_to: assignee } : s)));
-     const label = assignee ? memberLabel(assignee) : "personne";
-     toast({ title: `${ids.length} session(s) assignée(s) à ${label}` });
-   };
-   ```
-4. **Passer les props** dans les deux usages existants de `<BulkActionsButton ...>` (lignes ~698 et ~1051) :
-   ```tsx
-   members={orgMembers}
-   onAssign={bulkAssign}
-   ```
+Dans `supabase/functions/generate-report/index.ts`, remplacer `resolveStart` par une nouvelle implémentation :
 
-### Vérifications RLS
-La table `sessions` a déjà des policies UPDATE permettant aux membres de l'orga de modifier les sessions de leurs projets. Aucune migration n'est nécessaire.
+1. Pré-calcul par message :
+   - `wordsByMessage`  = liste des mots normalisés de `content`.
+   - `durationByMessage` = `max(seg.end)` si segments présents, sinon `words.length / 2.5`.
+2. `resolveStart(messageId, quote)` :
+   - Normalise la citation, prend ses 3 premiers mots.
+   - Cherche cette séquence dans `wordsByMessage[messageId]` ; si introuvable, essaie 2 mots, puis 1 mot.
+   - Retourne `(index / words.length) * duration` arrondi à 0,1 s, ou `null` si rien.
+3. Mise à jour de `fixEntry` et de tous les appels existants : la signature passe à `(messageId, quote)` (plus de `fallback`). Aucun autre site d'appel ne change.
 
-## Hors scope
-- Pas de modification de la vue Cartes (le bouton Actions est partagé, donc l'option apparaît automatiquement).
-- Pas de filtre/réorganisation après assignation.
-- Pas de notification email à la personne assignée.
+Toutes les sections (decision_drivers, signals, fit_breakdown, communication_profile, soft_skills, red_flags, personality_profile, paraverbal_analysis) bénéficient automatiquement.
+
+## Effets de bord
+
+- Aucun changement de schéma.
+- Aucun changement frontend.
+- Les anciens rapports gardent leurs valeurs ; régénérer le rapport de Marine Dupré pour appliquer la nouvelle logique.
 
 ## Vérification
-- Sélectionner 2 sessions → ouvrir Actions → « Assigner à » → choisir un membre → toast confirme et la colonne « Assignée à » est mise à jour pour les 2 lignes.
-- Choisir « Non assignée » → `assigned_to = null` → la cellule affiche « — ».
+
+1. Régénérer le rapport de DUPRÉ Marine.
+2. Cliquer chaque « Voir le moment » du panneau Personnalité — la vidéo doit démarrer à un instant cohérent (au début / milieu / fin selon où la citation apparaît dans la réponse).
+3. Vérifier qu'aucun rapport ne plante (citation introuvable → `null` → lecture depuis 0 acceptée par le lecteur).
