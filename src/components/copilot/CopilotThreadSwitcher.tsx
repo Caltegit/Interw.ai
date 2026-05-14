@@ -1,4 +1,4 @@
-import { useCopilotThreads, useCreateCopilotThread, useDeleteCopilotThread } from "@/hooks/queries/useCopilot";
+import { useCopilotThreads, useCreateCopilotThread, useDeleteCopilotThread, type CopilotMode } from "@/hooks/queries/useCopilot";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,19 +13,20 @@ import { toast } from "sonner";
 interface Props {
   projectId: string;
   userId: string | null;
+  mode: CopilotMode;
   activeThreadId: string | null;
   onSelect: (id: string | null) => void;
 }
 
-export function CopilotThreadSwitcher({ projectId, userId, activeThreadId, onSelect }: Props) {
-  const { data: threads = [] } = useCopilotThreads(projectId, userId);
+export function CopilotThreadSwitcher({ projectId, userId, mode, activeThreadId, onSelect }: Props) {
+  const { data: threads = [] } = useCopilotThreads(projectId, userId, mode);
   const create = useCreateCopilotThread();
   const del = useDeleteCopilotThread();
 
   const handleCreate = async () => {
     if (!userId) return;
     try {
-      const t = await create.mutateAsync({ projectId, userId });
+      const t = await create.mutateAsync({ projectId, userId, mode });
       onSelect(t.id);
     } catch (e: any) {
       toast.error(e?.message || "Impossible de créer la conversation");

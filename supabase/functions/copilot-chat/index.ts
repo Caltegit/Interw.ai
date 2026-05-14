@@ -1,11 +1,8 @@
 // Edge function : copilote IA recruteur
-// POST { threadId, userMessage } -> { assistantMessage: { id, content, created_at } }
-// - vérifie le JWT
-// - vérifie que le thread appartient à l'utilisateur
-// - charge le contexte projet + rapports de toutes les sessions
-// - appelle Lovable AI Gateway (gemini-3-flash-preview)
-// - persiste le message user et la réponse assistant
-// - retourne le message assistant
+// POST { threadId, userMessage } -> { assistantMessage }
+// Modes :
+//  - analysis : analyse des candidats à partir des rapports d'évaluation
+//  - design   : aide à la conception de l'entretien (questions / critères)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -20,8 +17,9 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
-const MAX_HISTORY = 30; // nb de messages chargés en contexte
+const MAX_HISTORY = 30;
 const MAX_USER_LEN = 4000;
+const LIBRARY_SAMPLE = 25;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -30,7 +28,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function buildSystemPrompt(project: any, criteria: any[], reports: any[]): string {
+function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]): string {
   const lines: string[] = [];
   lines.push(
     `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
@@ -113,6 +111,75 @@ function buildSystemPrompt(project: any, criteria: any[], reports: any[]): strin
   return lines.join("\n");
 }
 
+function buildDesignSystemPrompt(
+  project: any,
+  questions: any[],
+  criteria: any[],
+  libQuestions: any[],
+  libCriteria: any[],
+): string {
+  const lines: string[] = [];
+  lines.push(
+    `Tu es un assistant IA expert en conception d'entretiens structurés. Tu aides un recruteur à construire l'entretien du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}, langue : ${project?.language ?? "fr"}, durée cible : ${project?.max_duration_minutes ?? 30} min).`,
+  );
+  lines.push(
+    "Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux). Justifie brièvement chaque suggestion (« pourquoi »).",
+  );
+  lines.push(
+    "Privilégie des questions ouvertes, comportementales (méthode STAR) et alignées sur le poste. Refuse toute question discriminatoire (origine, âge, genre, religion, situation familiale, etc.).",
+  );
+  lines.push(
+    "**Très important** : à chaque fois que tu proposes des éléments concrets activables (questions ou critères), ajoute en plus de ton explication un bloc de code Markdown ```json (et seulement ces blocs au format suivant) que l'application parsera pour afficher des boutons d'ajout :",
+  );
+  lines.push(
+    '```json\n{ "type": "questions_suggestion", "items": [ { "title": "Titre court", "content": "Énoncé complet de la question", "type": "open", "rationale": "pourquoi cette question" } ] }\n```',
+  );
+  lines.push(
+    '```json\n{ "type": "criteria_suggestion", "items": [ { "label": "Nom du critère", "description": "Ce qu\'on évalue concrètement", "weight": 10, "rationale": "pourquoi ce critère" } ] }\n```',
+  );
+  lines.push(
+    "Chaque bloc JSON doit être valide et autonome. Tu peux mettre plusieurs blocs dans une même réponse. N'invente pas d'autres types.",
+  );
+
+  lines.push(`\n## Projet`);
+  if (project?.intro_text) lines.push(`- Description : ${String(project.intro_text).slice(0, 600)}`);
+
+  lines.push(`\n## Questions actuelles du projet (${questions.length})`);
+  if (questions.length === 0) {
+    lines.push("Aucune question pour le moment.");
+  } else {
+    questions.forEach((q, i) => {
+      lines.push(
+        `${i + 1}. **${q.title || "(sans titre)"}** — ${q.content ?? ""} _(type: ${q.type}, relances: ${q.follow_up_enabled ? `oui (${q.max_follow_ups})` : "non"})_`,
+      );
+    });
+  }
+
+  lines.push(`\n## Critères d'évaluation actuels (${criteria.length})`);
+  if (criteria.length === 0) {
+    lines.push("Aucun critère défini.");
+  } else {
+    for (const c of criteria) {
+      lines.push(`- **${c.label}** (poids ${c.weight ?? 0}) : ${c.description ?? ""}`.trim());
+    }
+  }
+
+  if (libQuestions.length > 0) {
+    lines.push(`\n## Bibliothèque de questions de l'organisation (échantillon de ${libQuestions.length})`);
+    for (const q of libQuestions) {
+      lines.push(`- ${q.title || "(sans titre)"}${q.category ? ` _[${q.category}]_` : ""} — ${String(q.content ?? "").slice(0, 160)}`);
+    }
+  }
+  if (libCriteria.length > 0) {
+    lines.push(`\n## Bibliothèque de critères de l'organisation (échantillon de ${libCriteria.length})`);
+    for (const c of libCriteria) {
+      lines.push(`- **${c.label}**${c.category ? ` _[${c.category}]_` : ""} — ${String(c.description ?? "").slice(0, 160)}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
@@ -137,16 +204,16 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Vérification du thread + propriété
     const { data: thread, error: threadErr } = await admin
       .from("copilot_threads")
-      .select("id, project_id, created_by, title")
+      .select("id, project_id, created_by, title, mode")
       .eq("id", threadId)
       .maybeSingle();
     if (threadErr || !thread) return jsonResponse({ error: "Thread introuvable" }, 404);
     if (thread.created_by !== userId) return jsonResponse({ error: "Accès refusé" }, 403);
 
-    // Insertion du message user
+    const mode: "analysis" | "design" = (thread as any).mode === "design" ? "design" : "analysis";
+
     const { data: insertedUser, error: insUserErr } = await admin
       .from("copilot_messages")
       .insert({ thread_id: threadId, role: "user", content: userMessage })
@@ -154,29 +221,78 @@ Deno.serve(async (req) => {
       .single();
     if (insUserErr) return jsonResponse({ error: "Erreur sauvegarde message" }, 500);
 
-    // Charge contexte projet + critères + rapports
-    const [{ data: project }, { data: criteria }, { data: sessionsData }] = await Promise.all([
-      admin.from("projects").select("id, title, job_title").eq("id", thread.project_id).maybeSingle(),
-      admin.from("evaluation_criteria").select("label, description, weight").eq("project_id", thread.project_id).order("order_index"),
-      admin
-        .from("sessions")
-        .select(
-          "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
-        )
-        .eq("project_id", thread.project_id),
-    ]);
+    let systemPrompt = "";
+    if (mode === "analysis") {
+      const [{ data: project }, { data: criteria }, { data: sessionsData }] = await Promise.all([
+        admin.from("projects").select("id, title, job_title").eq("id", thread.project_id).maybeSingle(),
+        admin.from("evaluation_criteria").select("label, description, weight").eq("project_id", thread.project_id).order("order_index"),
+        admin
+          .from("sessions")
+          .select(
+            "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
+          )
+          .eq("project_id", thread.project_id),
+      ]);
 
-    const reports = (sessionsData ?? [])
-      .filter((s: any) => s.reports)
-      .map((s: any) => ({
-        candidate_name: s.candidate_name,
-        candidate_email: s.candidate_email,
-        recruiter_decision: s.recruiter_decision,
-        recruiter_note: s.recruiter_note,
-        ...(Array.isArray(s.reports) ? s.reports[0] : s.reports),
-      }));
+      const reports = (sessionsData ?? [])
+        .filter((s: any) => s.reports)
+        .map((s: any) => ({
+          candidate_name: s.candidate_name,
+          candidate_email: s.candidate_email,
+          recruiter_decision: s.recruiter_decision,
+          recruiter_note: s.recruiter_note,
+          ...(Array.isArray(s.reports) ? s.reports[0] : s.reports),
+        }));
 
-    // Charge l'historique de la conversation (les N derniers, ordre chronologique)
+      systemPrompt = buildAnalysisSystemPrompt(project, criteria ?? [], reports);
+    } else {
+      const { data: project } = await admin
+        .from("projects")
+        .select("id, title, job_title, language, max_duration_minutes, intro_text, organization_id")
+        .eq("id", thread.project_id)
+        .maybeSingle();
+
+      const orgId = (project as any)?.organization_id;
+
+      const [{ data: questions }, { data: criteria }, libQuestionsRes, libCriteriaRes] = await Promise.all([
+        admin
+          .from("questions")
+          .select("title, content, type, order_index, follow_up_enabled, max_follow_ups")
+          .eq("project_id", thread.project_id)
+          .is("archived_at", null)
+          .order("order_index"),
+        admin
+          .from("evaluation_criteria")
+          .select("label, description, weight")
+          .eq("project_id", thread.project_id)
+          .order("order_index"),
+        orgId
+          ? admin
+              .from("question_templates")
+              .select("title, content, category")
+              .eq("organization_id", orgId)
+              .order("created_at", { ascending: false })
+              .limit(LIBRARY_SAMPLE)
+          : Promise.resolve({ data: [] as any[] }),
+        orgId
+          ? admin
+              .from("criteria_templates")
+              .select("label, description, category, weight")
+              .eq("organization_id", orgId)
+              .order("created_at", { ascending: false })
+              .limit(LIBRARY_SAMPLE)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      systemPrompt = buildDesignSystemPrompt(
+        project,
+        questions ?? [],
+        criteria ?? [],
+        (libQuestionsRes as any).data ?? [],
+        (libCriteriaRes as any).data ?? [],
+      );
+    }
+
     const { data: history } = await admin
       .from("copilot_messages")
       .select("role, content")
@@ -184,8 +300,6 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(MAX_HISTORY);
     const chronological = (history ?? []).reverse();
-
-    const systemPrompt = buildSystemPrompt(project, criteria ?? [], reports);
 
     const aiMessages = [
       { role: "system", content: systemPrompt },
@@ -217,7 +331,6 @@ Deno.serve(async (req) => {
       aiData?.choices?.[0]?.message?.content?.trim() ||
       "Désolé, je n'ai pas pu générer de réponse.";
 
-    // Insertion du message assistant
     const { data: insertedAi, error: insAiErr } = await admin
       .from("copilot_messages")
       .insert({ thread_id: threadId, role: "assistant", content: assistantContent })
@@ -228,7 +341,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Erreur sauvegarde réponse" }, 500);
     }
 
-    // Génère le titre du thread depuis le 1er message si encore par défaut
     if (thread.title === "Nouvelle conversation") {
       const newTitle = userMessage.replace(/\s+/g, " ").slice(0, 60);
       await admin

@@ -1,84 +1,95 @@
-# Copilote IA recruteur
+## Objectif
 
-Un assistant conversationnel qui aide chaque recruteur à comparer, classer et interroger les candidats d'un projet en s'appuyant sur leurs rapports d'évaluation.
+Étendre le Copilote IA pour qu'il aide aussi à **concevoir** un projet (questions, critères, structure d'entretien) — pas seulement à analyser les candidats déjà passés.
 
-## Expérience utilisateur
+Aujourd'hui, l'edge function `copilot-chat` n'injecte que les rapports d'évaluation. Le copilote ne sait donc rien des questions du projet, de la bibliothèque de questions/critères de l'organisation, et n'a aucun moyen d'agir sur le projet.
 
-**Bouton flottant contextuel**
-- Bouton fixed en bas à droite, visible sur toutes les pages RH protégées (masqué sur les pages candidat publiques, landing, superadmin).
-- Icône `Sparkles` indigo, pastille de notification discrète si nouveau thread non lu.
-- Détecte automatiquement le projet actif via la route (`/projects/:id/*`, `/sessions/:id`).
-- Hors contexte projet : sélecteur de projet en haut du drawer.
+## Ce qu'on ajoute
 
-**Drawer latéral droit** (Sheet shadcn, ~480px, responsive)
-- Header : nom du projet · sélecteur de fil (dropdown) · bouton « Nouveau fil » · fermer.
-- Zone messages : style ChatGPT, markdown rendu (tableaux, listes, gras), avec streaming.
-- Composer : textarea + envoyer + 3 suggestions cliquables ("Compare X et Y sur l'organisation", "Top 3 candidats", "Forces de Z").
-- État loading : « Réflexion… ».
-- Erreurs : toast clair pour 429 (limite) / 402 (crédits).
+### 1. Deux modes de copilote dans le drawer
 
-**Threads multiples par projet, privés au recruteur**
-- Chaque recruteur ne voit QUE ses propres conversations (RLS sur `created_by`).
-- Liste déroulante des fils du projet (titre auto-généré depuis le 1er message).
-- Création/suppression depuis le dropdown.
-- Persistance complète des messages.
+Un petit sélecteur en haut du drawer (segmenté) :
 
-## Fonctionnement IA
+- **Analyser les candidats** (mode actuel, inchangé)
+- **Concevoir l'entretien** (nouveau)
 
-**Contexte injecté dans le prompt système** (à l'ouverture de chaque fil)
-- Infos projet : titre, poste, description.
-- Pour chaque session du projet ayant un rapport : nom candidat, score global, recommandation, scores par critère, résumé exécutif, forces, axes d'amélioration, soft skills, red flags, décision recruteur.
-- Critères d'évaluation du projet (libellés + descriptions).
-- **Pas** les transcripts complets en V1 (volume trop important).
+Le mode est mémorisé par thread (nouvelle colonne `mode` sur `copilot_threads`), pour ne pas mélanger les contextes dans une même conversation.
 
-**Modèle** : `google/gemini-3-flash-preview` via Lovable AI Gateway, streaming Vercel AI SDK.
+### 2. Mode « Concevoir l'entretien »
 
-**Prompt système** : persona « assistant recruteur expert », français, ton factuel, doit citer les noms, doit refuser les critères discriminatoires (origine, âge, genre, etc.).
+Le copilote reçoit un contexte différent et propose des suggestions concrètes :
 
-## Architecture technique
+**Contexte injecté :**
+- Projet : titre, intitulé du poste, langue, durée, description publique
+- Questions actuelles du projet (titre, contenu, type, ordre, relances)
+- Critères d'évaluation actuels (label, description, poids)
+- Bibliothèque de l'organisation : questions modèles + critères modèles (échantillon, pour s'en inspirer)
 
-**Tables** (2 nouvelles)
+**Suggestions de départ (chips) :**
+- « Propose-moi 5 questions pour ce poste »
+- « Mes questions couvrent-elles bien tous les critères ? »
+- « Améliore la formulation de la question 2 »
+- « Suggère 3 critères d'évaluation manquants »
 
-```text
-copilot_threads
-  id, project_id (FK projects), created_by (FK auth.users),
-  title, created_at, updated_at
+**Format de réponse :** Markdown structuré. Quand l'IA propose des questions ou critères concrets, elle les renvoie aussi dans un bloc JSON balisé (` ```json ... ``` `) avec un schéma simple :
 
-copilot_messages
-  id, thread_id (FK copilot_threads, ON DELETE CASCADE),
-  role ('user'|'assistant'), content (text),
-  parts (jsonb pour AI SDK UIMessage), created_at
+```json
+{
+  "type": "questions_suggestion",
+  "items": [
+    { "title": "...", "content": "...", "type": "open", "rationale": "..." }
+  ]
+}
 ```
 
-**RLS — privé par recruteur**
-- `copilot_threads` : SELECT/INSERT/UPDATE/DELETE seulement si `created_by = auth.uid()` ET le projet est accessible (org member via `get_user_organization_id`).
-- `copilot_messages` : accès uniquement via thread dont `created_by = auth.uid()`.
+### 3. Actions « 1-clic » dans le chat
 
-**Edge function** `supabase/functions/copilot-chat/index.ts`
-- POST `{ threadId, messages }`.
-- Vérifie le JWT et que le thread appartient bien à l'utilisateur.
-- Charge contexte projet + rapports (1 requête optimisée).
-- Construit system prompt + appelle `streamText` (Lovable AI Gateway).
-- `onFinish` : sauvegarde le dernier message user + le message assistant complet (avec `parts`).
-- Gère 429 / 402 / erreurs validation.
-- Génère automatiquement le `title` du thread à partir du 1er message user (tronqué).
+Quand un message assistant contient un bloc JSON `questions_suggestion` ou `criteria_suggestion`, le `CopilotChatWindow` le détecte et affiche sous la bulle des cartes avec un bouton :
 
-**Composants React**
-- `src/components/copilot/CopilotFloatingButton.tsx` — bouton fixed, masqué selon route.
-- `src/components/copilot/CopilotDrawer.tsx` — Sheet : header + ThreadSwitcher + ChatWindow.
-- `src/components/copilot/CopilotThreadSwitcher.tsx` — dropdown sélection/nouveau/supprimer.
-- `src/components/copilot/CopilotChatWindow.tsx` — `useChat` AI SDK, rendu `message.parts`, markdown via `react-markdown`.
-- `src/components/copilot/CopilotSuggestions.tsx` — chips de questions suggérées.
-- `src/contexts/CopilotContext.tsx` — état global (drawer ouvert/fermé, projet actif détecté).
-- `src/hooks/queries/useCopilotThreads.ts` — React Query : liste/création/suppression/messages.
+- **Ajouter cette question au projet** → insère dans `questions` (à la fin)
+- **Ajouter ce critère au projet** → insère dans `evaluation_criteria` (avec rééquilibrage des poids existant)
+- **Ajouter à la bibliothèque** → insère dans `question_templates` / `criteria_templates`
 
-**Intégration**
-- Monter `<CopilotProvider>` + `<CopilotFloatingButton/>` dans `AppLayout.tsx`.
-- Détection du `projectId` via `useLocation` / `useParams`.
+Toutes les actions passent par les hooks/queries existants côté front (pas de nouvelle edge function), avec invalidation React Query pour que le projet se mette à jour en direct.
 
-## Hors périmètre (V1)
+V1 : pas de modification ni suppression automatique de questions/critères existants — seulement des ajouts, pour rester sûr.
 
-- Pas de transcripts complets dans le contexte (potentiel V2 avec RAG).
-- Pas d'actions automatiques depuis le chat (envoi mail, changement décision).
-- Pas d'export ni de partage de conversation.
-- Pas d'accès au chat depuis les pages candidat publiques.
+### 4. Système prompt distinct
+
+Deux fonctions `buildAnalysisSystemPrompt` (existante, renommée) et `buildDesignSystemPrompt` (nouvelle) dans `copilot-chat`. Le mode est lu sur le thread.
+
+Le prompt « design » insiste sur :
+- répondre en français concis
+- proposer des questions ouvertes, comportementales, alignées sur le poste
+- toujours expliquer brièvement le « pourquoi » (rationale)
+- renvoyer le JSON balisé quand il propose des éléments concrets activables
+- refuser les questions discriminatoires
+
+## Détails techniques
+
+**Migration DB**
+- `ALTER TABLE copilot_threads ADD COLUMN mode text NOT NULL DEFAULT 'analysis' CHECK (mode IN ('analysis','design'));`
+
+**Edge function `copilot-chat`**
+- Lit `thread.mode`
+- Si `analysis` → contexte rapports (actuel)
+- Si `design` → contexte questions/critères projet + échantillon bibliothèque (organisation déduite via le projet)
+- Construit le system prompt correspondant
+
+**Front**
+- `CopilotDrawer` : ajoute un `<Tabs>` ou `<ToggleGroup>` Mode au-dessus du `CopilotThreadSwitcher` ; le mode choisi est passé à `useCreateCopilotThread` (nouveau paramètre).
+- `CopilotChatWindow` :
+  - suggestions différentes selon le mode
+  - parser markdown : extrait les blocs ```json ... ``` typés et rend des `<SuggestionActionCard>` sous le message assistant
+  - les boutons appellent de nouveaux hooks `useAddQuestionToProject`, `useAddCriterionToProject`, `useAddQuestionToLibrary`, `useAddCriterionToLibrary` (tous via le client Supabase, RLS existant suffit).
+- `useCopilot.ts` : ajoute `mode` au type `CopilotThread` et au paramètre de `useCreateCopilotThread`.
+
+**Hors périmètre V1**
+- Édition/suppression automatique de questions ou critères existants
+- Réordonnancement automatique
+- Génération de fichiers audio/vidéo pour les questions (TTS)
+- Application en lot (« ajouter les 5 questions d'un coup ») — possible plus tard si l'usage le justifie
+
+## Question ouverte
+
+Quand l'IA propose une question, on insère par défaut **dans le projet courant** ou **dans la bibliothèque** ? Mon choix : 2 boutons côte à côte sur chaque carte (« Ajouter au projet » + « Enregistrer en bibliothèque »), pour laisser le recruteur décider au cas par cas. Ok pour toi ?

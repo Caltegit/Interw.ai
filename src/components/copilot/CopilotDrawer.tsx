@@ -5,24 +5,25 @@ import { useEffect, useState } from "react";
 import { CopilotProjectPicker } from "./CopilotProjectPicker";
 import { CopilotThreadSwitcher } from "./CopilotThreadSwitcher";
 import { CopilotChatWindow } from "./CopilotChatWindow";
-import { useCopilotThreads } from "@/hooks/queries/useCopilot";
+import { useCopilotThreads, type CopilotMode } from "@/hooks/queries/useCopilot";
 import { Sparkles } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function CopilotDrawer() {
   const { open, setOpen, activeProjectId } = useCopilot();
   const { user } = useAuth();
   const [pickedProjectId, setPickedProjectId] = useState<string | null>(null);
   const projectId = activeProjectId ?? pickedProjectId;
+  const [mode, setMode] = useState<CopilotMode>("analysis");
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
-  // Reset thread sélectionné quand on change de projet
+  // Reset thread quand projet ou mode change
   useEffect(() => {
     setActiveThreadId(null);
-  }, [projectId]);
+  }, [projectId, mode]);
 
-  const { data: threads } = useCopilotThreads(projectId, user?.id ?? null);
+  const { data: threads } = useCopilotThreads(projectId, user?.id ?? null, mode);
 
-  // Auto-sélection du thread le plus récent
   useEffect(() => {
     if (!activeThreadId && threads && threads.length > 0) {
       setActiveThreadId(threads[0].id);
@@ -44,9 +45,18 @@ export function CopilotDrawer() {
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="border-b px-4 py-2">
+              <Tabs value={mode} onValueChange={(v) => setMode(v as CopilotMode)}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="analysis">Analyser les candidats</TabsTrigger>
+                  <TabsTrigger value="design">Concevoir l'entretien</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className="border-b px-4 py-2">
               <CopilotThreadSwitcher
                 projectId={projectId}
                 userId={user?.id ?? null}
+                mode={mode}
                 activeThreadId={activeThreadId}
                 onSelect={setActiveThreadId}
               />
@@ -55,6 +65,7 @@ export function CopilotDrawer() {
               <CopilotChatWindow
                 projectId={projectId}
                 userId={user?.id ?? null}
+                mode={mode}
                 threadId={activeThreadId}
                 onCreatedThread={setActiveThreadId}
               />
