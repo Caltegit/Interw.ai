@@ -970,22 +970,22 @@ export default function InterviewStart() {
         utterance.rate = 0.95;
         utterance.pitch = 1.1;
 
-        const femaleVoice =
-          voices.find(
-            (v) =>
-              v.lang.startsWith("fr") &&
-              /female|femme|amelie|marie|thomas/i.test(v.name) === false &&
-              /amelie|audrey|marie|céline|léa|sophie|virginie|siri.*female|google.*fr/i.test(v.name),
-          ) ||
-          voices.find(
-            (v) =>
-              v.lang.startsWith("fr") &&
-              (/female/i.test(v.name) ||
-                v.name.toLowerCase().includes("amelie") ||
-                v.name.toLowerCase().includes("audrey")),
-          ) ||
-          voices.find((v) => v.lang.startsWith("fr"));
-        if (femaleVoice) utterance.voice = femaleVoice;
+        const gender: "female" | "male" =
+          (project as { tts_voice_gender?: string } | null)?.tts_voice_gender === "male"
+            ? "male"
+            : "female";
+        const frVoices = voices.filter((v) => v.lang.startsWith("fr"));
+        const femaleRe = /amelie|amélie|audrey|marie|céline|celine|léa|lea|sophie|virginie|aurélie|aurelie|julie|chantal|female|femme/i;
+        const maleRe = /thomas|nicolas|daniel|paul|antoine|henri|sébastien|sebastien|male|homme/i;
+        const matchByGender = frVoices.find((v) =>
+          gender === "female" ? femaleRe.test(v.name) : maleRe.test(v.name),
+        );
+        const excludeOpposite = frVoices.find((v) =>
+          gender === "female" ? !maleRe.test(v.name) : !femaleRe.test(v.name),
+        );
+        const chosenVoice = matchByGender || excludeOpposite || frVoices[0];
+        if (chosenVoice) utterance.voice = chosenVoice;
+        utterance.pitch = gender === "male" ? 0.95 : 1.1;
 
         // ~12 caractères/seconde en français + 5 s de marge, plafonné à 90 s.
         // Évite de couper la lecture des questions longues.
