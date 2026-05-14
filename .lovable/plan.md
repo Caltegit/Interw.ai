@@ -1,58 +1,30 @@
-## Nouveau statut « Oui » (vert foncé) après « En cours »
+## Objectif
 
-Ordre final dans la catégorie Sélection : **À traiter → Non → À discuter → Retenu → En cours → Oui**
+Quand des profils sont sélectionnés dans la vue tableau, ne plus faire apparaître la barre pleine largeur `BulkActionsBar` au-dessus et en dessous du tableau. Faire apparaître seulement le bouton dropdown **Actions** (avec son menu : Email, Partager, Comparer, Supprimer), positionné juste à gauche du toggle "vue tableau / vue cartes" — en haut **et** en bas.
 
-### 1. Migration BDD
+## Changements (src/pages/ProjectDetail.tsx)
 
-Ajouter la valeur `accepted` à l'enum `recruiter_decision_type`, **après** `in_progress` :
+1. **Nouveau composant compact** `BulkActionsButton` (ou refacto de `BulkActionsBar`) :
+   - Rend uniquement le `DropdownMenu` avec le trigger `<Button size="sm">Actions <ChevronDown/></Button>`.
+   - Conserve les mêmes items (Email, Partager les rapports, Comparer, Supprimer) avec les mêmes états `disabled`.
+   - Affiche discrètement à droite du bouton un petit texte `"{count} sélectionné(s)"` + un `×` cliquable pour `onClear` (au lieu d'un bouton "Tout désélectionner" séparé).
 
-```sql
-ALTER TYPE public.recruiter_decision_type ADD VALUE 'accepted' AFTER 'in_progress';
-```
+2. **Insertion en haut** (~ligne 683, dans la barre de filtres) :
+   - Avant le `<div className="flex rounded-md border">` du toggle vue, ajouter `{selectedIds.size > 0 && <BulkActionsButton ... />}`.
 
-(Postgres ne permet pas d'insérer après une valeur d'enum dans la même transaction qu'une utilisation — ok ici car on n'utilise pas la valeur immédiatement.)
+3. **Insertion en bas** :
+   - Supprimer les deux blocs `BulkActionsBar` actuels (lignes 766–776 au-dessus du tableau, et 1030–1040 sous le tableau).
+   - Ajouter une rangée compacte sous le tableau, alignée comme la barre de filtres du haut, contenant à gauche `<BulkActionsButton ... />` (uniquement si sélection > 0) — pas de toggle vue en bas, le bouton apparaît seul à gauche.
 
-### 2. Tokens couleur (`src/index.css` + `tailwind.config.ts`)
+4. **Comportement inchangé** : sélection multi-lignes via checkbox du tableau, callbacks `onEmail / onDelete / onCompare / onShareReports / onClear` identiques.
 
-- **`--success`** (Retenu) : passe d'un vert moyen à un vert plus clair.
-  - Light : `160 84% 39%` → `152 60% 52%`
-  - Dark : ajuster l'équivalent dans `.dark`
-- **`--success-strong`** : nouveau token vert foncé pour « Oui ».
-  - Light : `152 70% 30%`
-  - Dark : `152 60% 38%`
-- `--success-strong-foreground` : `0 0% 100%`
-- Ajouter `success-strong` dans `tailwind.config.ts` (mêmes mappings DEFAULT/foreground que `success`).
+## Détails visuels
 
-### 3. Code TypeScript
+- Bouton `size="sm"` `variant="default"` — même style qu'aujourd'hui dans le dropdown, mais sans le conteneur `bg-muted/40 border` plein largeur.
+- Apparition douce : ajouter `animate-fade-in` (déjà disponible via Tailwind/tailwindcss-animate) sur le wrapper.
+- Le compteur reste visible mais discret (`text-xs text-muted-foreground`).
 
-**`src/hooks/queries/useSessionDetail.ts`** (l. 105) — étendre le type :
-```ts
-export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "rejected" | "second_opinion" | "accepted";
-```
+## Hors scope
 
-**`src/pages/ProjectDetail.tsx`** :
-- `DECISION_KEYS` (l. 153) → ajouter `"accepted"` à la fin
-- `DEFAULT_VISIBLE_DECISIONS` (l. 154) → idem
-- `decisionOptions` (l. 535-540) → ajouter `{ value: "accepted", label: "Oui", dot: "bg-success-strong", text: "text-success-strong" }`
-
-**`src/components/session/DecisionBanner.tsx`** :
-- `decisionConfig` (l. 70-73) → ajouter `accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" }`
-- Étendre le type `tone` pour inclure `"success-strong"`
-- Ajouter un `DecisionButton` après « En cours » (icône `ThumbsUp` ou `CheckCheck` de lucide)
-
-**`src/components/project/SessionCard.tsx`** :
-- Étendre le type `tone`
-- Ajouter `decisionBtn("accepted", "Oui", ThumbsUp, "success-strong")` après « En cours »
-
-**`src/pages/SessionDetail.tsx`** (l. 272-275) :
-- Ajouter `else if (d === "accepted") toast({ title: "Candidat accepté." });`
-
-### 4. Vérification
-
-- `tsc --noEmit` doit passer.
-- Inspection visuelle de la palette (Retenu plus clair, Oui plus foncé que Retenu).
-
-### Hors périmètre
-
-- Pas de changement dans le rapport généré ni dans les emails.
-- Pas de regénération de la liste des décisions historiques.
+- Pas de changement de la logique de sélection, des dialogs, ni de la vue cartes.
+- Pas de changement sur `Dashboard.tsx` (la demande concerne la page projet).

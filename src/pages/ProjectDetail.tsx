@@ -41,15 +41,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
-function BulkActionsBar({
+function BulkActionsButton({
   count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
 }: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
   const canCompare = count >= 2 && count <= 4;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+    <div className="flex items-center gap-2 animate-fade-in">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="default">
+          <Button size="sm" variant="default" className="h-9">
             Actions <ChevronDown className="ml-1 h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
@@ -64,10 +64,7 @@ function BulkActionsBar({
               <span className="ml-2 text-xs text-muted-foreground">Aucun rapport</span>
             )}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={onCompare}
-            disabled={!canCompare}
-          >
+          <DropdownMenuItem onClick={onCompare} disabled={!canCompare}>
             <Columns3 className="mr-2 h-4 w-4" />
             Comparer
             {!canCompare && (
@@ -82,8 +79,18 @@ function BulkActionsBar({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
-      <span className="ml-auto text-sm font-medium">{count} profil(s) sélectionné(s)</span>
+      <span className="text-xs text-muted-foreground">
+        {count} sélectionné{count > 1 ? "s" : ""}
+      </span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Tout désélectionner"
+        title="Tout désélectionner"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 }
