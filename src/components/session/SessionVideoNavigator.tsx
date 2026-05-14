@@ -113,6 +113,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const target = Math.max(0, Math.min(pendingSeekRef.current, Math.max(0, duration - 0.1)));
     try {
       v.currentTime = target;
+      console.log("[VideoNav] applyPendingSeek", { target, duration, ct: v.currentTime });
     } catch {
       /* noop */
     }
