@@ -67,6 +67,7 @@ import { useCopilot } from "@/contexts/CopilotContext";
 
 function AppShell() {
   const { open: copilotOpen } = useCopilot();
+  useAutoCollapseSidebar(copilotOpen);
   return (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
