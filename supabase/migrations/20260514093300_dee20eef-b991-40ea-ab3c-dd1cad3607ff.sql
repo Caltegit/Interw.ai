@@ -1,0 +1,1 @@
+ALTER TABLE public.copilot_threads ADD COLUMN mode text NOT NULL DEFAULT 'analysis' CHECK (mode IN ('analysis','design'));
