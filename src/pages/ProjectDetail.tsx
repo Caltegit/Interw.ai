@@ -310,6 +310,22 @@ export default function ProjectDetail() {
     toast({ title: "Session réassignée." });
   };
 
+  const bulkAssign = async (assignee: string | null) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("sessions")
+      .update({ assigned_to: assignee })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSessions((prev) => prev.map((s) => (ids.includes(s.id) ? { ...s, assigned_to: assignee } : s)));
+    const label = assignee ? memberLabel(assignee) : "personne";
+    toast({ title: `${ids.length} session${ids.length > 1 ? "s" : ""} assignée${ids.length > 1 ? "s" : ""} à ${label}` });
+  };
+
   const updateDecision = async (sessionId: string, decision: string) => {
     const patch: any = {
       recruiter_decision: decision,
