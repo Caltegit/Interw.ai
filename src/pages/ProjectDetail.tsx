@@ -1035,15 +1035,17 @@ export default function ProjectDetail() {
                 </table>
               </div>
                 {selectedIds.size > 0 && (
-                  <BulkActionsBar
-                    count={selectedIds.size}
-                    onClear={clearSelection}
-                    onEmail={() => setBulkEmailOpen(true)}
-                    onDelete={() => setBulkDeleteStep(1)}
-                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
-                    onShareReports={() => setShareReportsOpen(true)}
-                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
-                  />
+                  <div className="pt-2">
+                    <BulkActionsButton
+                      count={selectedIds.size}
+                      onClear={clearSelection}
+                      onEmail={() => setBulkEmailOpen(true)}
+                      onDelete={() => setBulkDeleteStep(1)}
+                      onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                      onShareReports={() => setShareReportsOpen(true)}
+                      canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                    />
+                  </div>
                 )}
               </div>
               )}
