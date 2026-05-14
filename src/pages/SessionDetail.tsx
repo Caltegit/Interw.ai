@@ -373,42 +373,35 @@ export default function SessionDetail() {
       : null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
 
-      <div className="sticky top-0 z-30 grid gap-4 lg:grid-cols-[1fr_510px]">
-        <DecisionBanner
-          candidateName={session.candidate_name}
-          candidateEmail={session.candidate_email}
-          jobTitle={project?.job_title}
-          durationLabel={formatDuration(session.duration_seconds)}
-          videoAnswersCount={candidateVideos.length}
-          fitScore={fitScore}
-          recommendation={report?.recommendation ?? null}
-          headline={verdictHeadline}
-          rankLabel={rankLabel}
-          decision={decision}
-          onDecisionChange={handleDecision}
-          isDecisionPending={updateDecision.isPending}
-          shareUrl={shareUrl}
-          onShare={handleShare}
-          onCopyShare={copyShareUrl}
-          copied={copied}
-          isShareLoading={createShare.isPending}
-          canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-          onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-          onRegenerate={report ? handleRegenerate : undefined}
-          isRegenerating={regenerate.isPending}
-          onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-          onDelete={() => setDeleteOpen(true)}
-          decisionByName={(session as any).decision_by_name ?? null}
-          decisionAt={(session as any).recruiter_decision_at ?? null}
-        />
-        {sessionClips.length > 0 && (
-          <div className="max-h-[60vh] overflow-hidden">
-            <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
-          </div>
-        )}
-      </div>
+      <DecisionBanner
+        candidateName={session.candidate_name}
+        candidateEmail={session.candidate_email}
+        jobTitle={project?.job_title}
+        durationLabel={formatDuration(session.duration_seconds)}
+        videoAnswersCount={candidateVideos.length}
+        fitScore={fitScore}
+        recommendation={report?.recommendation ?? null}
+        headline={verdictHeadline}
+        rankLabel={rankLabel}
+        decision={decision}
+        onDecisionChange={handleDecision}
+        isDecisionPending={updateDecision.isPending}
+        shareUrl={shareUrl}
+        onShare={handleShare}
+        onCopyShare={copyShareUrl}
+        copied={copied}
+        isShareLoading={createShare.isPending}
+        canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+        onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+        onRegenerate={report ? handleRegenerate : undefined}
+        isRegenerating={regenerate.isPending}
+        onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+        onDelete={() => setDeleteOpen(true)}
+        decisionByName={(session as any).decision_by_name ?? null}
+        decisionAt={(session as any).recruiter_decision_at ?? null}
+      />
 
       <BulkEmailDialog
         open={emailOpen}
@@ -442,8 +435,8 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
-        <div>
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1fr_510px]">
+        <div className="min-h-0 overflow-y-auto pr-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
@@ -638,7 +631,8 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="space-y-4">
+        <div id="session-video-panel" className="min-h-0 space-y-4 overflow-y-auto pr-2">
+          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
           {report && (
             <Card>
               <CardHeader className="pb-2">
