@@ -17,6 +17,7 @@ import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCar
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
+import { FitScoreBadge } from "@/components/session/FitScoreBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
 import { NonverbalBadge } from "@/components/session/NonverbalBadge";
@@ -258,7 +259,9 @@ export default function SharedReport() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
-                <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Reco IA</span>
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Reco IA</span>
+                <FitScoreBadge score={fitScore} size={22} />
               </TabsTrigger>
               <TabsTrigger value="bigfive" className="gap-1">
                 <Brain className="h-4 w-4" />
