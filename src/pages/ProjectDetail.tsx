@@ -688,7 +688,7 @@ export default function ProjectDetail() {
             <>
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
-                {view === "table" && selectedIds.size > 0 && (
+                {selectedIds.size > 0 && (
                   <BulkActionsButton
                     count={selectedIds.size}
                     onClear={clearSelection}
