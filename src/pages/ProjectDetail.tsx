@@ -83,7 +83,7 @@ function BulkActionsBar({
         </DropdownMenuContent>
       </DropdownMenu>
       <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
-      <span className="ml-auto text-sm font-medium">{count} candidat(s) sélectionné(s)</span>
+      <span className="ml-auto text-sm font-medium">{count} profil(s) sélectionné(s)</span>
     </div>
   );
 }
