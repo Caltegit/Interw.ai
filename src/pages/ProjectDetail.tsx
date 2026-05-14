@@ -78,6 +78,22 @@ function BulkActionsButton({
               </span>
             )}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <UserCog className="mr-2 h-4 w-4" /> Assigner à
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="max-h-72 overflow-auto">
+              <DropdownMenuItem onClick={() => onAssign(null)}>
+                Non assignée
+              </DropdownMenuItem>
+              {members.length > 0 && <DropdownMenuSeparator />}
+              {members.map((m) => (
+                <DropdownMenuItem key={m.user_id} onClick={() => onAssign(m.user_id)}>
+                  {m.full_name || m.email}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
             <Trash2 className="mr-2 h-4 w-4" /> Supprimer
