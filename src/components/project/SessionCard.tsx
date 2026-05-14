@@ -227,7 +227,19 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const scoreVal = report?.overall_score != null ? Math.round(Number(report.overall_score)) : null;
 
   return (
-    <Card className="flex flex-col overflow-hidden transition-colors hover:bg-muted/50">
+    <Card className={cn("relative flex flex-col overflow-hidden transition-colors hover:bg-muted/50", selected && "ring-2 ring-primary")}>
+      {onToggleSelect && (
+        <div
+          className="absolute left-2 top-2 z-10 rounded-md bg-background/80 p-1 backdrop-blur-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Checkbox
+            checked={!!selected}
+            onCheckedChange={() => onToggleSelect(session.id)}
+            aria-label="Sélectionner ce candidat"
+          />
+        </div>
+      )}
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {/* En-tête : nom puis note + recommandation */}
         <div className="flex flex-col items-center gap-1">
