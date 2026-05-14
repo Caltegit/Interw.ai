@@ -60,10 +60,10 @@ interface DecisionBannerProps {
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
-  strong_yes: { label: "Fortement recommandé", tone: "bg-success text-success-foreground" },
-  yes: { label: "Recommandé", tone: "bg-success/85 text-success-foreground" },
-  maybe: { label: "À étudier", tone: "bg-warning text-warning-foreground" },
-  no: { label: "Non retenu", tone: "bg-destructive text-destructive-foreground" },
+  strong_yes: { label: "Fortement recommandé", tone: "bg-success text-success-foreground hover:bg-success" },
+  yes: { label: "Recommandé", tone: "bg-success/85 text-success-foreground hover:bg-success/85" },
+  maybe: { label: "À étudier", tone: "bg-warning text-warning-foreground hover:bg-warning" },
+  no: { label: "Non retenu", tone: "bg-destructive text-destructive-foreground hover:bg-destructive" },
 };
 
 const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
