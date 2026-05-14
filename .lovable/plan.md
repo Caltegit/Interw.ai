@@ -1,49 +1,24 @@
-# Correctif proposé
+## Objectif
 
-Je propose de repartir sur une structure de scroll simple et stable, puis de vérifier dans l’aperçu avant toute autre retouche.
+Comme pour le bloc vidéo à droite, garder visible en haut de la colonne de gauche le bloc joint (carte candidat « DecisionBanner » + barre d'onglets Reco IA / Big Five / À l'oral / Attitude / Réponses) pendant que le contenu de l'onglet défile.
 
-## Ce que je vais faire
+## Changements
 
-1. **Corriger le conteneur principal**
-   - retirer le `overflow-auto` du `<main>` global dans `AppLayout`
-   - laisser la page utiliser le scroll normal du viewport
+Dans `src/pages/SessionDetail.tsx` (autour des lignes 410–620) :
 
-2. **Reposer la page session sur une structure fiable**
-   - garder la colonne de gauche comme contenu long normal
-   - transformer la colonne de droite en vrai panneau `sticky`
-   - limiter sa hauteur à la fenêtre sous le header
-   - faire défiler uniquement la zone de notes si son contenu dépasse
+1. Restructurer la colonne de gauche en deux parties :
+   - **En-tête figé** : `DecisionBanner` + `TabsList` regroupés dans un conteneur `lg:sticky lg:top-6 lg:z-10` avec un fond (`bg-background`) pour éviter la transparence pendant le scroll.
+   - **Contenu défilant** : les `TabsContent` restent en flux normal et défilent sous l'en-tête figé.
 
-3. **Supprimer les conflits de hauteur**
-   - enlever les combinaisons `min-h-0` / `h-[calc(...)]` inutiles ou contradictoires sur les parents
-   - vérifier qu’aucun parent du panneau sticky n’a un `overflow` qui casse le comportement
+2. Comme `<Tabs>` doit englober `TabsList` et `TabsContent`, déplacer le composant `<Tabs>` au niveau supérieur de la colonne de gauche, puis :
+   - Mettre `TabsList` (et le `DecisionBanner`) dans un wrapper sticky.
+   - Laisser les `TabsContent` en dessous, sans contrainte de hauteur.
 
-4. **Validation réelle**
-   - tester le scroll sur la page session dans l’aperçu
-   - confirmer que la vidéo reste en haut pendant que le contenu de gauche défile
-   - confirmer que les notes restent visibles et utilisables
+3. Ajouter un léger padding/ombre sous le bloc sticky pour bien le détacher visuellement du contenu qui défile.
 
-## Pourquoi ça bloque aujourd’hui
+4. Ne rien changer à la colonne de droite (vidéo) ni au layout global.
 
-Le problème principal vient du fait que le scroll est piloté par le `<main>` global (`overflow-auto`). Dans cette configuration, le `sticky` du panneau vidéo devient instable ou inopérant selon la hiérarchie des blocs.
+## Validation
 
-## Résultat attendu
-
-- la colonne de gauche défile normalement
-- le bloc vidéo à droite reste figé en haut
-- les notes recruteur restent dans le panneau de droite sans disparaître
-
-## Détail technique
-
-```text
-AppLayout
-└── main sans overflow-auto
-    └── SessionDetail
-        └── grid 2 colonnes
-            ├── gauche: contenu long normal
-            └── droite: sticky top-6
-                ├── vidéo
-                └── notes avec overflow interne si besoin
-```
-
-Si tu valides, j’applique ce correctif propre maintenant.
+- Recharger `/sessions/:id`, scroller dans la zone de gauche : la fiche candidat et la barre d'onglets doivent rester collées en haut, la vidéo à droite reste figée (comportement actuel conservé).
+- Vérifier l'apparence en viewport ~1559 px (config actuelle) et en dessous du breakpoint `lg` (le sticky se désactive, comportement normal).
