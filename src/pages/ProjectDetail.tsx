@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
@@ -41,15 +41,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
-function BulkActionsBar({
+function BulkActionsButton({
   count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
 }: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
   const canCompare = count >= 2 && count <= 4;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
+    <div className="flex items-center gap-2 animate-fade-in">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="sm" variant="default">
+          <Button size="sm" variant="default" className="h-9">
             Actions <ChevronDown className="ml-1 h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
@@ -64,10 +64,7 @@ function BulkActionsBar({
               <span className="ml-2 text-xs text-muted-foreground">Aucun rapport</span>
             )}
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={onCompare}
-            disabled={!canCompare}
-          >
+          <DropdownMenuItem onClick={onCompare} disabled={!canCompare}>
             <Columns3 className="mr-2 h-4 w-4" />
             Comparer
             {!canCompare && (
@@ -82,8 +79,18 @@ function BulkActionsBar({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button size="sm" variant="ghost" onClick={onClear}>Tout désélectionner</Button>
-      <span className="ml-auto text-sm font-medium">{count} profil(s) sélectionné(s)</span>
+      <span className="text-xs text-muted-foreground">
+        {count} sélectionné{count > 1 ? "s" : ""}
+      </span>
+      <button
+        type="button"
+        onClick={onClear}
+        className="text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Tout désélectionner"
+        title="Tout désélectionner"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -681,6 +688,17 @@ export default function ProjectDetail() {
             <>
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
+                {view === "table" && selectedIds.size > 0 && (
+                  <BulkActionsButton
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                    onShareReports={() => setShareReportsOpen(true)}
+                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                  />
+                )}
                 <div className="flex rounded-md border">
                   <Button
                     variant={view === "table" ? "secondary" : "ghost"}
@@ -763,17 +781,6 @@ export default function ProjectDetail() {
                 </div>
               ) : (
               <div className="space-y-2">
-                {selectedIds.size > 0 && (
-                  <BulkActionsBar
-                    count={selectedIds.size}
-                    onClear={clearSelection}
-                    onEmail={() => setBulkEmailOpen(true)}
-                    onDelete={() => setBulkDeleteStep(1)}
-                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
-                    onShareReports={() => setShareReportsOpen(true)}
-                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
-                  />
-                )}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -1028,15 +1035,17 @@ export default function ProjectDetail() {
                 </table>
               </div>
                 {selectedIds.size > 0 && (
-                  <BulkActionsBar
-                    count={selectedIds.size}
-                    onClear={clearSelection}
-                    onEmail={() => setBulkEmailOpen(true)}
-                    onDelete={() => setBulkDeleteStep(1)}
-                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
-                    onShareReports={() => setShareReportsOpen(true)}
-                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
-                  />
+                  <div className="pt-2">
+                    <BulkActionsButton
+                      count={selectedIds.size}
+                      onClear={clearSelection}
+                      onEmail={() => setBulkEmailOpen(true)}
+                      onDelete={() => setBulkDeleteStep(1)}
+                      onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                      onShareReports={() => setShareReportsOpen(true)}
+                      canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                    />
+                  </div>
                 )}
               </div>
               )}
