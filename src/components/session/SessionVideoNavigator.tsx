@@ -45,8 +45,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
 
-  // Coupe proprement la vidéo en cours (annule un play() en attente puis pause)
-  const stopCurrent = async () => {
+  // Annule un play() en attente puis pause, sans toucher à currentTime.
+  const pauseOnly = async () => {
     const v = videoRef.current;
     if (!v) return;
     try {
@@ -55,11 +55,19 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         playPromiseRef.current = null;
       }
       v.pause();
-      try {
-        v.currentTime = 0;
-      } catch {
-        /* noop */
-      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  // Coupe proprement la vidéo en cours (annule un play() en attente puis pause + reset à 0).
+  // Utilisé uniquement lors d'un changement de clip.
+  const stopCurrent = async () => {
+    await pauseOnly();
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      v.currentTime = 0;
     } catch {
       /* noop */
     }
