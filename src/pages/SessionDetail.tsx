@@ -407,7 +407,7 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_510px]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_510px]">
         <div className="flex flex-col gap-4 min-w-0">
           <DecisionBanner
             candidateName={session.candidate_name}
@@ -632,7 +632,7 @@ export default function SessionDetail() {
 
         <div
           id="session-video-panel"
-          className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-6.5rem)]"
+          className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]"
         >
           {sessionClips.length > 0 && (
             <div className="shrink-0">
@@ -640,16 +640,16 @@ export default function SessionDetail() {
             </div>
           )}
           {report && (
-            <Card className="flex min-h-0 flex-1 flex-col">
+            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden lg:min-h-0">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Notes recruteur</CardTitle>
               </CardHeader>
-              <CardContent className="flex min-h-0 flex-1 flex-col">
+              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <Textarea
                   placeholder="Ajoutez vos observations…"
                   value={recruiterNotes}
                   onChange={(e) => setRecruiterNotes(e.target.value)}
-                  className="min-h-0 flex-1 resize-none"
+                  className="min-h-[220px] flex-1 resize-none overflow-y-auto"
                 />
               </CardContent>
             </Card>
