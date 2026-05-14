@@ -73,7 +73,8 @@ export default function SessionDetail() {
   const shareUrl = data?.shareUrl ?? null;
 
   const [recruiterNotes, setRecruiterNotes] = useState("");
-  const [notesInitialized, setNotesInitialized] = useState(false);
+  const lastServerNoteRef = useRef<string | null>(null);
+  const noteDirtyRef = useRef(false);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
@@ -146,20 +147,35 @@ export default function SessionDetail() {
   );
 
   useEffect(() => {
-    if (session?.id && !notesInitialized) {
-      setRecruiterNotes(session.recruiter_note ?? "");
-      setNotesInitialized(true);
+    if (!session?.id) return;
+    const server = session.recruiter_note ?? "";
+    if (lastServerNoteRef.current === null) {
+      lastServerNoteRef.current = server;
+      setRecruiterNotes(server);
+      return;
     }
-  }, [session?.id, session?.recruiter_note, notesInitialized]);
+    if (server !== lastServerNoteRef.current && !noteDirtyRef.current) {
+      lastServerNoteRef.current = server;
+      setRecruiterNotes(server);
+    }
+  }, [session?.id, session?.recruiter_note]);
 
   useEffect(() => {
-    if (!session?.id || !notesInitialized) return;
-    if ((session.recruiter_note ?? "") === recruiterNotes) return;
+    if (!session?.id || !noteDirtyRef.current) return;
+    if (recruiterNotes === (lastServerNoteRef.current ?? "")) return;
     const t = setTimeout(() => {
-      updateNotes.mutate({ notes: recruiterNotes });
+      updateNotes.mutate(
+        { notes: recruiterNotes },
+        {
+          onSuccess: () => {
+            lastServerNoteRef.current = recruiterNotes;
+            noteDirtyRef.current = false;
+          },
+        },
+      );
     }, 1000);
     return () => clearTimeout(t);
-  }, [recruiterNotes, session?.id, session?.recruiter_note, notesInitialized]);
+  }, [recruiterNotes, session?.id]);
 
   const handleShare = async () => {
     if (!report?.id || !user) return;
@@ -602,7 +618,7 @@ export default function SessionDetail() {
                 <Textarea
                   placeholder="Ajoutez vos observations…"
                   value={recruiterNotes}
-                  onChange={(e) => setRecruiterNotes(e.target.value)}
+                  onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
                   className="min-h-[220px] flex-1 resize-none overflow-y-auto"
                 />
               </CardContent>

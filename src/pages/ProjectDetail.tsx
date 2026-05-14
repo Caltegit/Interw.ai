@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,6 +102,7 @@ export default function ProjectDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [criteria, setCriteria] = useState<any[]>([]);
@@ -325,7 +328,10 @@ export default function ProjectDetail() {
       setSavingNote((p) => ({ ...p, [sessionId]: false }));
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
+        return;
       }
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_note: value } : s)));
+      queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
     }, 1000);
   };
 
