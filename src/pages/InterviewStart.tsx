@@ -968,7 +968,7 @@ export default function InterviewStart() {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "fr-FR";
         utterance.rate = 0.95;
-        utterance.pitch = 1.1;
+        
 
         const gender: "female" | "male" =
           (project as { tts_voice_gender?: string } | null)?.tts_voice_gender === "male"
