@@ -90,6 +90,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     jobTitle,
     durationLabel,
     videoAnswersCount,
+    createdAt,
     fitScore,
     recommendation,
     headline,
