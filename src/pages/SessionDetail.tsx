@@ -638,9 +638,7 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
-
+        <div id="session-video-panel" className="space-y-4">
           {report && (
             <Card>
               <CardHeader className="pb-2">
