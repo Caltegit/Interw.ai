@@ -390,12 +390,27 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         </div>
 
         {/* Décision */}
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-          {decisionBtn("rejected", "Non", X, "destructive")}
-          {decisionBtn("second_opinion", "À discuter", HelpCircle, "warning")}
-          {decisionBtn("shortlisted", "Retenu", Check, "success")}
-          {decisionBtn("in_progress", "En cours", Clock, "info")}
-          {decisionBtn("accepted", "Oui", ThumbsUp, "success-strong")}
+        <div className="mt-auto flex justify-center pt-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
+                  <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune décision</SelectItem>
+                    <SelectItem value="rejected">Non</SelectItem>
+                    <SelectItem value="second_opinion">À discuter</SelectItem>
+                    <SelectItem value="shortlisted">Retenu</SelectItem>
+                    <SelectItem value="in_progress">En cours</SelectItem>
+                    <SelectItem value="accepted">Oui</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TooltipTrigger>
+            {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
+          </Tooltip>
         </div>
       </CardContent>
     </Card>
