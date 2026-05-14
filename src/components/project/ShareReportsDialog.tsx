@@ -50,12 +50,17 @@ export function ShareReportsDialog({
   const [replyTo, setReplyTo] = useState("");
   const [fromName, setFromName] = useState("");
 
+  const fromNameStorageKey = user?.id ? `emailFromName:${user.id}` : null;
+
   useEffect(() => {
     if (!open) return;
     if (user?.email) setReplyTo(user.email);
-    const defaultName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
+    const stored = fromNameStorageKey
+      ? (typeof window !== "undefined" ? localStorage.getItem(fromNameStorageKey) : null)
+      : null;
+    const defaultName = stored?.trim() || profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
     setFromName(defaultName);
-  }, [open, user?.email, profile?.full_name]);
+  }, [open, user?.email, profile?.full_name, fromNameStorageKey]);
 
   useEffect(() => {
     if (!open || !user) return;
