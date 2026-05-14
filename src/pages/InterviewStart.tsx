@@ -772,34 +772,44 @@ export default function InterviewStart() {
       // vraies réponses ; ici on signale 0 ms = pas d'aller-retour).
       const cached = getCachedTtsBlob(text, proj.tts_voice_id ?? null);
       if (cached) return { blob: cached, bytes: cached.size, ms: 0 };
-      try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
-        const start = performance.now();
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text, projectId: proj.id }),
-        });
-        if (!res.ok) return null;
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) return null;
-        const blob = await res.blob();
-        const ms = performance.now() - start;
-        if (!blob || blob.size === 0) return null;
-        // Mémorise les phrases statiques pour les transitions suivantes.
-        const staticSet = new Set<string>(Object.values(STATIC_TRANSITION_PHRASES));
-        if (staticSet.has(text.trim())) {
-          setCachedTtsBlob(text, proj.tts_voice_id ?? null, blob);
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+      const staticSet = new Set<string>(Object.values(STATIC_TRANSITION_PHRASES));
+      const maxAttempts = 3;
+      const backoffs = [300, 600, 1200];
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const start = performance.now();
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ text, projectId: proj.id }),
+          });
+          if (!res.ok) throw new Error(`tts http ${res.status}`);
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) throw new Error("tts json (skip)");
+          const blob = await res.blob();
+          const ms = performance.now() - start;
+          if (!blob || blob.size === 0) throw new Error("tts empty blob");
+          if (staticSet.has(text.trim())) {
+            setCachedTtsBlob(text, proj.tts_voice_id ?? null, blob);
+          }
+          if (attempt > 1) {
+            console.log(`[interview] fetchElevenLabsBlob succeeded on attempt ${attempt}`);
+          }
+          return { blob, bytes: blob.size, ms };
+        } catch (e) {
+          console.warn(`[interview] fetchElevenLabsBlob attempt ${attempt}/${maxAttempts} failed`, e);
+          if (attempt < maxAttempts) {
+            await new Promise((r) => setTimeout(r, backoffs[attempt - 1]));
+          }
         }
-        return { blob, bytes: blob.size, ms };
-      } catch (e) {
-        console.warn("[interview] fetchElevenLabsBlob failed", e);
-        return null;
       }
+      console.warn("[interview_tts_fallback_browser]", { textPreview: text.slice(0, 60) });
+      return null;
     },
     [project],
   );
