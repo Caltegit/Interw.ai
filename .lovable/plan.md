@@ -1,48 +1,38 @@
-# Plan de correction
-
 ## Objectif
-Faire en sorte que la colonne de droite reste visible en haut pendant le scroll, sans disparaître, avec :
-- le bloc vidéo en haut à droite ;
-- les notes recruteur juste en dessous ;
-- la colonne gauche qui scrolle indépendamment.
+Rendre le panneau de droite réellement fixe en haut, avec un scroll indépendant à gauche, sans faire disparaître la vidéo ni les notes.
 
-## Schéma visuel cible
-```text
-┌──────────────────────────────────────────────────────────────────────┐
-│ En-tête                                                             │
-├───────────────────────────────┬──────────────────────────────────────┤
-│ Colonne gauche                │ Colonne droite                      │
-│                               │ ┌──────────────────────────────────┐ │
-│ ┌───────────────────────────┐ │ │ Vidéo                           │ │
-│ │ Bloc NOM compact          │ │ └──────────────────────────────────┘ │
-│ └───────────────────────────┘ │ ┌──────────────────────────────────┐ │
-│                               │ │ Notes recruteur                  │ │
-│ Onglets + contenu             │ │                                  │ │
-│                               │ │                                  │ │
-│                               │ └──────────────────────────────────┘ │
-│                               │                                      │
-│ Scroll propre à gauche        │ Scroll propre à droite              │
-└───────────────────────────────┴──────────────────────────────────────┘
-```
-
-## Ce que je vais corriger
-1. Revoir le conteneur principal de la page session pour lui donner une vraie hauteur contrainte sous l’en-tête.
-2. Supprimer le conflit actuel entre le scroll principal de la page et les scrolls internes des colonnes.
-3. Mettre le bloc vidéo dans un vrai conteneur sticky attaché au bon parent.
-4. Garder les notes dans la colonne de droite, sous la vidéo, avec leur propre zone visible.
-5. Vérifier que la colonne droite reste à l’écran quand on scrolle le contenu de gauche.
+## Plan
+1. Reprendre la structure de hauteur de la page session pour supprimer le conflit entre le scroll global de la page et les scrolls internes.
+2. Transformer la grille en zone à hauteur contrainte, avec :
+   - colonne gauche = scroll interne,
+   - colonne droite = panneau fixe,
+   - notes = zone qui prend le reste de la hauteur.
+3. Réappliquer le comportement figé au bloc vidéo sur le bon parent, au lieu de le laisser dans un conteneur qui sort du viewport.
+4. Garder le bloc candidat compact à gauche, sans rajouter de texte.
+5. Tester visuellement dans l’aperçu sur la page session actuelle en scrollant fortement pour vérifier que :
+   - la vidéo reste en haut,
+   - les notes restent visibles,
+   - seule la colonne gauche défile.
+6. Si le test n’est pas concluant, revenir immédiatement à la structure précédente stable au lieu d’empiler d’autres correctifs.
 
 ## Détail technique
-- Ajuster `SessionDetail.tsx` pour que la grille prenne une hauteur stable du type `h-[calc(100vh-...)]` ou équivalent compatible avec la structure existante.
-- Éviter un `overflow` sur un parent qui casse le `sticky`.
-- Garder un seul niveau de scroll par colonne.
-- Si nécessaire, limiter le scroll global du `<main>` pour cette page afin que le comportement soit prévisible.
-- Conserver le bloc NOM compact à gauche, sans ajouter de texte inutile.
+```text
+AppLayout
+└── main : ne doit plus piloter le scroll qui casse le sticky
 
-## Validation
-Je testerai ensuite dans l’aperçu :
-- scroll de la colonne gauche ;
-- scroll de la colonne droite ;
-- maintien du bloc vidéo en haut ;
-- notes toujours visibles sous la vidéo ;
-- absence de disparition de la colonne droite.
+SessionDetail
+└── wrapper hauteur contrainte
+    ├── gauche : overflow-y-auto
+    └── droite : sticky top-0 + flex-col
+        ├── vidéo : bloc figé
+        └── notes : flex-1 min-h-0
+```
+
+## Validation attendue
+- En scrollant le contenu d’analyse, la colonne droite reste en place.
+- La vidéo ne sort plus par le haut.
+- Les notes recruteur restent dans la colonne droite, sous la vidéo.
+- Aucun ajout de texte ni changement fonctionnel hors layout.
+
+## Si tu veux limiter le risque
+Si ce correctif unique ne passe pas la validation visuelle, la bonne suite sera un retour à la dernière version stable, pas un nouveau bricolage.
