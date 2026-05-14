@@ -527,7 +527,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium">Voix du recruteur</Label>
+                  <Label className="text-sm font-medium">Durée maximale : 30 min</Label>
                   <p className="text-xs text-muted-foreground">
                     Choisissez la voix qui sera utilisée pendant l'entretien.
                   </p>
