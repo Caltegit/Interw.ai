@@ -116,7 +116,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
 
   const reco = recommendation ? recoConfig[recommendation] : null;
   const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
-  const meta = [jobTitle, durationLabel, `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`]
+  const relativeDate = createdAt
+    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr })
+    : null;
+  const meta = [
+    jobTitle,
+    durationLabel,
+    `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`,
+    relativeDate,
+  ]
     .filter(Boolean)
     .join(" · ");
 
