@@ -1,95 +1,55 @@
 ## Objectif
 
-Étendre le Copilote IA pour qu'il aide aussi à **concevoir** un projet (questions, critères, structure d'entretien) — pas seulement à analyser les candidats déjà passés.
+Transformer le copilote en **panneau latéral droit ancré** (docké) plutôt qu'un drawer modal, pour que le recruteur puisse continuer à naviguer dans l'app pendant la conversation.
 
-Aujourd'hui, l'edge function `copilot-chat` n'injecte que les rapports d'évaluation. Le copilote ne sait donc rien des questions du projet, de la bibliothèque de questions/critères de l'organisation, et n'a aucun moyen d'agir sur le projet.
+Aujourd'hui, le copilote utilise `<Sheet>` (shadcn) avec un overlay sombre qui bloque les clics derrière. Impossible de cliquer sur la sidebar, le contenu, les boutons.
 
-## Ce qu'on ajoute
+## Comportement cible
 
-### 1. Deux modes de copilote dans le drawer
+- Bouton flottant (en bas à droite) → ouvre/ferme le panneau, identique à aujourd'hui.
+- Quand le panneau est ouvert :
+  - Il occupe une **colonne fixe à droite** (largeur ~420 px sur desktop, plein écran sur mobile).
+  - Le **contenu principal de l'app se rétrécit** automatiquement (la `main` perd la largeur du panneau) — pas de superposition, pas d'overlay.
+  - La sidebar gauche, le header, et toute la navigation restent **pleinement cliquables**.
+  - Le copilote **reste monté** quand on navigue entre pages : la conversation continue, les messages ne se perdent pas.
+  - Le `activeProjectId` se met à jour automatiquement en suivant l'URL (déjà le cas via `CopilotContext`). Si on quitte une page projet, le panneau reste ouvert mais demande à choisir un projet (comme aujourd'hui).
+- Sur mobile (< 768 px) : on garde un comportement de type drawer plein écran (overlay), car ancrer une colonne à 420 px ne tient pas.
 
-Un petit sélecteur en haut du drawer (segmenté) :
+## Implémentation
 
-- **Analyser les candidats** (mode actuel, inchangé)
-- **Concevoir l'entretien** (nouveau)
+**`AppLayout.tsx`**
+- Ajouter une 3ᵉ colonne à droite, conditionnée sur `copilot.open`, qui rend `<CopilotPanel />` (nouveau) à largeur fixe.
+- Sur mobile, ne pas ajouter cette colonne — laisser `CopilotDrawer` s'occuper du cas mobile en mode `Sheet`.
 
-Le mode est mémorisé par thread (nouvelle colonne `mode` sur `copilot_threads`), pour ne pas mélanger les contextes dans une même conversation.
-
-### 2. Mode « Concevoir l'entretien »
-
-Le copilote reçoit un contexte différent et propose des suggestions concrètes :
-
-**Contexte injecté :**
-- Projet : titre, intitulé du poste, langue, durée, description publique
-- Questions actuelles du projet (titre, contenu, type, ordre, relances)
-- Critères d'évaluation actuels (label, description, poids)
-- Bibliothèque de l'organisation : questions modèles + critères modèles (échantillon, pour s'en inspirer)
-
-**Suggestions de départ (chips) :**
-- « Propose-moi 5 questions pour ce poste »
-- « Mes questions couvrent-elles bien tous les critères ? »
-- « Améliore la formulation de la question 2 »
-- « Suggère 3 critères d'évaluation manquants »
-
-**Format de réponse :** Markdown structuré. Quand l'IA propose des questions ou critères concrets, elle les renvoie aussi dans un bloc JSON balisé (` ```json ... ``` `) avec un schéma simple :
-
-```json
-{
-  "type": "questions_suggestion",
-  "items": [
-    { "title": "...", "content": "...", "type": "open", "rationale": "..." }
-  ]
-}
+```text
+┌──────────┬───────────────────┬──────────────┐
+│ Sidebar  │   <Outlet />      │  Copilote    │
+│          │                   │  (420 px)    │
+└──────────┴───────────────────┴──────────────┘
 ```
 
-### 3. Actions « 1-clic » dans le chat
+**Nouveau composant `CopilotPanel.tsx`**
+- Reprend tout le contenu actuel de `CopilotDrawer` (header, tabs mode, thread switcher, chat window) sans le `Sheet`.
+- Header avec titre + bouton fermer (X) qui appelle `setOpen(false)`.
+- Bordure gauche (`border-l`) pour la séparation visuelle, fond `bg-background`.
 
-Quand un message assistant contient un bloc JSON `questions_suggestion` ou `criteria_suggestion`, le `CopilotChatWindow` le détecte et affiche sous la bulle des cartes avec un bouton :
+**`CopilotDrawer.tsx`** (renommé en usage)
+- Ne sert plus que sur mobile : on l'enveloppe d'un check `useIsMobile()` et il reste un `<Sheet>`.
+- Sur desktop, le panneau est rendu via `CopilotPanel` dans le layout.
 
-- **Ajouter cette question au projet** → insère dans `questions` (à la fin)
-- **Ajouter ce critère au projet** → insère dans `evaluation_criteria` (avec rééquilibrage des poids existant)
-- **Ajouter à la bibliothèque** → insère dans `question_templates` / `criteria_templates`
+**Persistance d'état**
+- Toute la logique d'état (mode, thread actif, projet) doit vivre **dans le `CopilotContext`** au lieu d'être locale à `CopilotDrawer`. Sinon, naviguer démonterait/remonterait le panneau et perdrait la sélection.
+- À déplacer dans le contexte : `mode`, `activeThreadId`, `pickedProjectId`.
 
-Toutes les actions passent par les hooks/queries existants côté front (pas de nouvelle edge function), avec invalidation React Query pour que le projet se mette à jour en direct.
+**Bouton flottant**
+- Inchangé visuellement, mais quand le panneau est ouvert sur desktop, on peut le masquer (puisque la croix de fermeture est dans le panneau) ou le laisser et il sert juste à refermer. Mon choix : **masquer** le bouton flottant quand le panneau est ouvert sur desktop.
 
-V1 : pas de modification ni suppression automatique de questions/critères existants — seulement des ajouts, pour rester sûr.
+## Hors périmètre
 
-### 4. Système prompt distinct
+- Pas de redimensionnement à la souris du panneau (largeur fixe pour V1).
+- Pas de mémorisation `localStorage` de l'état ouvert/fermé entre rechargements (V1 : fermé par défaut au reload).
+- Pas de mode « épinglé/détaché » en fenêtre flottante.
 
-Deux fonctions `buildAnalysisSystemPrompt` (existante, renommée) et `buildDesignSystemPrompt` (nouvelle) dans `copilot-chat`. Le mode est lu sur le thread.
+## Question
 
-Le prompt « design » insiste sur :
-- répondre en français concis
-- proposer des questions ouvertes, comportementales, alignées sur le poste
-- toujours expliquer brièvement le « pourquoi » (rationale)
-- renvoyer le JSON balisé quand il propose des éléments concrets activables
-- refuser les questions discriminatoires
-
-## Détails techniques
-
-**Migration DB**
-- `ALTER TABLE copilot_threads ADD COLUMN mode text NOT NULL DEFAULT 'analysis' CHECK (mode IN ('analysis','design'));`
-
-**Edge function `copilot-chat`**
-- Lit `thread.mode`
-- Si `analysis` → contexte rapports (actuel)
-- Si `design` → contexte questions/critères projet + échantillon bibliothèque (organisation déduite via le projet)
-- Construit le system prompt correspondant
-
-**Front**
-- `CopilotDrawer` : ajoute un `<Tabs>` ou `<ToggleGroup>` Mode au-dessus du `CopilotThreadSwitcher` ; le mode choisi est passé à `useCreateCopilotThread` (nouveau paramètre).
-- `CopilotChatWindow` :
-  - suggestions différentes selon le mode
-  - parser markdown : extrait les blocs ```json ... ``` typés et rend des `<SuggestionActionCard>` sous le message assistant
-  - les boutons appellent de nouveaux hooks `useAddQuestionToProject`, `useAddCriterionToProject`, `useAddQuestionToLibrary`, `useAddCriterionToLibrary` (tous via le client Supabase, RLS existant suffit).
-- `useCopilot.ts` : ajoute `mode` au type `CopilotThread` et au paramètre de `useCreateCopilotThread`.
-
-**Hors périmètre V1**
-- Édition/suppression automatique de questions ou critères existants
-- Réordonnancement automatique
-- Génération de fichiers audio/vidéo pour les questions (TTS)
-- Application en lot (« ajouter les 5 questions d'un coup ») — possible plus tard si l'usage le justifie
-
-## Question ouverte
-
-Quand l'IA propose une question, on insère par défaut **dans le projet courant** ou **dans la bibliothèque** ? Mon choix : 2 boutons côte à côte sur chaque carte (« Ajouter au projet » + « Enregistrer en bibliothèque »), pour laisser le recruteur décider au cas par cas. Ok pour toi ?
+Largeur du panneau : **420 px** (compact, laisse de la place au contenu) ou **480 px** (comme le drawer actuel, plus confortable pour lire) ? Mon défaut : **420 px**.
