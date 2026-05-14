@@ -123,7 +123,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
       <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-start">
         {/* Score circle + reco + actions */}
         <div className="flex shrink-0 items-start gap-4">
-          <div className="flex flex-col items-center gap-2 min-w-[88px]">
+          <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
             {!readOnly && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
