@@ -373,7 +373,7 @@ export default function SessionDetail() {
       : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex flex-col gap-4">
 
       <BulkEmailDialog
         open={emailOpen}
@@ -407,8 +407,8 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1fr_510px]">
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto pr-2">
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_510px]">
+        <div className="flex flex-col gap-4 min-w-0">
           <DecisionBanner
             candidateName={session.candidate_name}
             candidateEmail={session.candidate_email}
@@ -630,7 +630,10 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="flex min-h-0 flex-col gap-4">
+        <div
+          id="session-video-panel"
+          className="flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-6.5rem)]"
+        >
           {sessionClips.length > 0 && (
             <div className="shrink-0">
               <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
