@@ -40,7 +40,7 @@ export function ShareReportsDialog({
   skippedCount = 0,
 }: Props) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -48,10 +48,14 @@ export function ShareReportsDialog({
   const [body, setBody] = useState("");
   const [allowReply, setAllowReply] = useState(true);
   const [replyTo, setReplyTo] = useState("");
+  const [fromName, setFromName] = useState("");
 
   useEffect(() => {
-    if (open && user?.email) setReplyTo(user.email);
-  }, [open, user?.email]);
+    if (!open) return;
+    if (user?.email) setReplyTo(user.email);
+    const defaultName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
+    setFromName(defaultName);
+  }, [open, user?.email, profile?.full_name]);
 
   useEffect(() => {
     if (!open || !user) return;
