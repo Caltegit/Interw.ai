@@ -1,55 +1,81 @@
 ## Objectif
 
-Rendre la largeur du panneau latéral Copilote IA adaptative selon la taille de l'écran, plutôt que figée à 420 px.
+Quand l'utilisateur ouvre le Copilote IA sur un écran trop étroit, replier automatiquement la barre latérale gauche pour libérer de l'espace. Restaurer son état précédent quand le Copilote se referme.
 
-## Constat
+## Comportement proposé
 
-Aujourd'hui, dans `src/components/copilot/CopilotSidePanel.tsx`, la largeur est codée en dur :
-- Caché en dessous de `md` (mobile → drawer plein écran, déjà bon).
-- `w-[420px]` à partir de `md` (≥ 768 px), que l'écran fasse 800 px ou 2560 px.
+- Seuil : largeur de fenêtre **< 1440 px** (en dessous, l'addition sidebar étendue + copilote + contenu principal devient à l'étroit ; au-dessus on a la place pour tout garder ouvert).
+- À l'ouverture du Copilote :
+  - Si `window.innerWidth < 1440` **et** la sidebar est étendue → la replier, et mémoriser « je l'ai repliée moi-même ».
+  - Sinon → ne rien toucher (respect du choix utilisateur).
+- À la fermeture du Copilote :
+  - Si on l'avait repliée nous-mêmes → la rouvrir.
+  - Sinon → ne rien toucher.
+- Si l'utilisateur rouvre/replie manuellement la sidebar pendant que le Copilote est ouvert → on oublie notre « marqueur » et on ne touchera plus à rien à la fermeture (priorité à l'action utilisateur).
+- Mobile (< 768 px) : inchangé. Le Copilote est en drawer plein écran, la sidebar mobile a déjà son propre comportement.
 
-Conséquences :
-- Sur petit laptop (1280–1440 px), 420 px mange une grande part de la zone de travail.
-- Sur grand écran (≥ 1920 px), le panneau paraît étriqué alors qu'on a la place pour respirer et mieux lire les réponses IA.
+## Implémentation
 
-## Proposition
+Un seul endroit, dans `src/components/AppLayout.tsx` (composant `AppShell`), parce qu'il a déjà accès à `useCopilot()` et peut accéder à `useSidebar()` (les deux providers sont au-dessus).
 
-Largeur fluide par paliers, bornée par un min et un max, avec une part proportionnelle de la fenêtre au milieu :
+Petit hook local `useAutoCollapseSidebar(copilotOpen)` :
 
-```text
-écran < 768 px        → drawer plein écran (inchangé)
-768 – 1279 px         → 360 px           (laptop compact, on préserve l'espace de travail)
-1280 – 1535 px        → 400 px
-1536 – 1919 px        → 30 vw  (≈ 460–575 px)
-≥ 1920 px             → 33 vw, plafonné à 640 px
+```ts
+const { state, setOpen } = useSidebar();
+const autoCollapsedRef = useRef(false);
+const prevCopilotOpenRef = useRef(copilotOpen);
+const prevSidebarStateRef = useRef(state);
+
+useEffect(() => {
+  const wasOpen = prevCopilotOpenRef.current;
+  prevCopilotOpenRef.current = copilotOpen;
+
+  // Détecter une action manuelle utilisateur sur la sidebar pendant que le copilote est ouvert
+  if (copilotOpen && wasOpen && state !== prevSidebarStateRef.current) {
+    autoCollapsedRef.current = false;
+  }
+  prevSidebarStateRef.current = state;
+
+  // Ouverture du copilote
+  if (copilotOpen && !wasOpen) {
+    if (window.innerWidth < 1440 && state === "expanded") {
+      autoCollapsedRef.current = true;
+      setOpen(false);
+    }
+    return;
+  }
+
+  // Fermeture du copilote
+  if (!copilotOpen && wasOpen && autoCollapsedRef.current) {
+    autoCollapsedRef.current = false;
+    setOpen(true);
+  }
+}, [copilotOpen, state, setOpen]);
 ```
 
-Implémentation Tailwind, une seule classe responsive :
+Branché dans `AppShell` :
 
 ```tsx
-open
-  ? "w-[360px] xl:w-[400px] 2xl:w-[30vw] min-[1920px]:w-[33vw] min-[1920px]:max-w-[640px]"
-  : "w-0"
+function AppShell() {
+  const { open: copilotOpen } = useCopilot();
+  useAutoCollapseSidebar(copilotOpen);
+  // ... reste inchangé
+}
 ```
 
-Bornes :
-- `min-w-[320px]` de sécurité pour ne jamais descendre trop bas si on ajoute des breakpoints.
-- `max-w-[640px]` pour éviter qu'un ultra-wide ne donne un panneau démesuré.
+## Points de détail
 
-## Pourquoi c'est « intelligent »
-
-- **Pas de JS** : 100 % CSS via Tailwind, zéro coût runtime, pas de listener resize.
-- **Respecte les breakpoints existants** du design system (`md`, `xl`, `2xl`).
-- **Proportionnel sur grand écran** (`vw`) → le panneau grandit naturellement avec la fenêtre.
-- **Borné** → jamais trop petit, jamais trop large, lecture confortable des messages IA.
-- **Mobile inchangé** : le drawer reste plein écran, déjà optimal.
+- Le seuil est lu **au moment de l'ouverture** du Copilote, pas en continu — pas de listener resize, pas de re-pli/dépli intempestif si l'utilisateur redimensionne après coup.
+- Aucun changement visuel sur les écrans larges (≥ 1440 px) : la sidebar reste ouverte comme aujourd'hui.
+- Aucun changement sur mobile.
+- `SidebarProvider` persiste déjà son état dans un cookie ; notre `setOpen` met simplement à jour le même state, donc cohérent.
 
 ## Fichier modifié
 
-- `src/components/copilot/CopilotSidePanel.tsx` : remplacer la classe `w-[420px]` par la classe responsive ci-dessus, ajouter `min-w-0` sur le conteneur si besoin pour éviter tout débordement.
+- `src/components/AppLayout.tsx` : ajout du hook `useAutoCollapseSidebar` et de son appel dans `AppShell`.
 
 ## Hors périmètre
 
-- Pas de poignée de redimensionnement manuel (possible plus tard avec `react-resizable-panels` déjà présent, mais ajoute de la complexité et un état à persister — à valider séparément si tu le souhaites).
-- Pas de changement du drawer mobile.
-- Pas de modification du contenu du panneau.
+- Pas de réglage utilisateur pour désactiver ce comportement (peut s'ajouter plus tard si demandé).
+- Pas de changement du seuil en fonction de la taille du Copilote (déjà responsive).
+- Pas de modification du Copilote ni de la sidebar elle-même.
