@@ -1,19 +1,80 @@
-## Problème
+## Objectif
 
-Le panneau du copilote à droite n'a pas de contrainte de hauteur. Il vit dans le flex row `min-h-screen` de `AppLayout`, donc il s'étire à la hauteur naturelle du contenu de la page. Résultat : la zone de saisie tout en bas du panneau sort sous le viewport et il faut scroller la page entière pour l'atteindre.
+Déplacer le lecteur vidéo (actuellement dans la colonne droite) en haut à droite du bloc d'en-tête (NOM + score + décisions), et figer cet ensemble en haut de l'écran lors du scroll.
 
-## Correctif
+## Schéma visuel
 
-Dans `src/components/copilot/CopilotSidePanel.tsx`, fixer le panneau à la hauteur de l'écran et le rendre collant en haut :
+### Avant
 
-- Ajouter `sticky top-0 h-screen` sur le `<aside>`.
-- Garder `overflow-hidden` pour que `CopilotPanelContent` (déjà en `flex h-full min-h-0 flex-col`) gère son propre scroll interne (messages scrollables, header / tabs / input restent visibles).
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  [SCORE]  NOM CANDIDAT              [Non][Discuter][Oui]    │ ← sticky
+│   Reco    email · poste · 23 min                            │
+└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────┐ ┌──────────────────────┐
+│ [Onglets : Reco IA | Big Five | …] │ │  ┌────────────────┐  │
+│                                    │ │  │  VIDEO PLAYER  │  │ ← sticky
+│  ┌──────────────────────────────┐  │ │  └────────────────┘  │   (col droite)
+│  │  Fit breakdown               │  │ │  Notes recruteur     │
+│  │  Signals                     │  │ │  ┌────────────────┐  │
+│  │  …                           │  │ │  │                │  │
+│  │  (scroll)                    │  │ │  └────────────────┘  │
+│  └──────────────────────────────┘  │ │                      │
+└────────────────────────────────────┘ └──────────────────────┘
+```
 
-Aucun autre fichier à modifier — la structure interne du panneau est déjà prête à occuper 100% de la hauteur disponible.
+### Après
+
+```text
+┌──────────────────────────────────────┬──────────────────────┐
+│  [SCORE]  NOM CANDIDAT               │  ┌────────────────┐  │
+│   Reco    email · poste · 23 min     │  │  VIDEO PLAYER  │  │ ← sticky
+│           [Non][Discuter][Oui][...]  │  └────────────────┘  │   (ensemble)
+├──────────────────────────────────────┴──────────────────────┤
+┌────────────────────────────────────┐ ┌──────────────────────┐
+│ [Onglets : Reco IA | Big Five | …] │ │  Notes recruteur     │
+│                                    │ │  ┌────────────────┐  │
+│  ┌──────────────────────────────┐  │ │  │                │  │
+│  │  Fit breakdown               │  │ │  └────────────────┘  │
+│  │  Signals                     │  │ │                      │
+│  │  …                           │  │ │                      │
+│  │  (scroll)                    │  │ │                      │
+│  └──────────────────────────────┘  │ │                      │
+└────────────────────────────────────┘ └──────────────────────┘
+```
+
+Au scroll, la barre du haut (NOM + décisions à gauche, VIDÉO à droite) reste collée en haut. Les onglets et les notes défilent normalement en dessous.
+
+## Modifications
+
+### 1. Nouveau bloc d'en-tête sticky combiné
+
+Dans `src/pages/SessionDetail.tsx`, créer un wrapper `sticky top-0 z-30` contenant deux colonnes alignées sur la même grille que le contenu (`lg:grid-cols-[1fr_510px]`) :
+- Gauche : `<DecisionBanner>` (sans son `sticky` propre)
+- Droite : `<SessionVideoNavigator>` (déplacé depuis la colonne droite)
+
+### 2. Ajustements `DecisionBanner.tsx`
+
+- Retirer `sticky top-0 z-30` de la `<Card>` racine (la stickyness passe au wrapper parent).
+- Garder le reste intact.
+
+### 3. Colonne droite réduite
+
+- Retirer `<SessionVideoNavigator>` de `#session-video-panel`.
+- Ne conserver que la carte « Notes recruteur ».
+- Retirer `lg:sticky lg:top-4` de cette colonne (le sticky est désormais en haut, plus besoin).
+
+### 4. Hauteur du lecteur vidéo
+
+Limiter la hauteur du `SessionVideoNavigator` dans la zone sticky pour qu'il ne dépasse pas (ex. `max-h-[60vh]` ou hauteur calée sur le banner) afin que l'utilisateur voie toujours le contenu défilant en dessous. À ajuster visuellement après implémentation.
+
+### 5. Cas mobile
+
+Sur mobile (`< lg`), la grille passe en une seule colonne. Le bloc vidéo s'affichera donc sous le banner, comme avant (pas de sticky lourd sur petit écran).
 
 ## Vérification
 
-Recharger une page longue (ex. liste de sessions), ouvrir le copilote, confirmer que :
-- Le champ de saisie reste visible en bas du panneau sans scroller la page.
-- Les messages scrollent à l'intérieur du panneau.
-- La sidebar de gauche et le contenu principal restent navigables.
+- Scroller la page : NOM + décisions + vidéo restent visibles en haut.
+- La sidebar gauche du site et le copilote latéral ne sont pas impactés.
+- Sur mobile, pas de chevauchement.
+- Responsive 1440px et 1753px (viewports observés).
