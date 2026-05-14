@@ -772,34 +772,44 @@ export default function InterviewStart() {
       // vraies réponses ; ici on signale 0 ms = pas d'aller-retour).
       const cached = getCachedTtsBlob(text, proj.tts_voice_id ?? null);
       if (cached) return { blob: cached, bytes: cached.size, ms: 0 };
-      try {
-        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
-        const start = performance.now();
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text, projectId: proj.id }),
-        });
-        if (!res.ok) return null;
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) return null;
-        const blob = await res.blob();
-        const ms = performance.now() - start;
-        if (!blob || blob.size === 0) return null;
-        // Mémorise les phrases statiques pour les transitions suivantes.
-        const staticSet = new Set<string>(Object.values(STATIC_TRANSITION_PHRASES));
-        if (staticSet.has(text.trim())) {
-          setCachedTtsBlob(text, proj.tts_voice_id ?? null, blob);
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-elevenlabs`;
+      const staticSet = new Set<string>(Object.values(STATIC_TRANSITION_PHRASES));
+      const maxAttempts = 3;
+      const backoffs = [300, 600, 1200];
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const start = performance.now();
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ text, projectId: proj.id }),
+          });
+          if (!res.ok) throw new Error(`tts http ${res.status}`);
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) throw new Error("tts json (skip)");
+          const blob = await res.blob();
+          const ms = performance.now() - start;
+          if (!blob || blob.size === 0) throw new Error("tts empty blob");
+          if (staticSet.has(text.trim())) {
+            setCachedTtsBlob(text, proj.tts_voice_id ?? null, blob);
+          }
+          if (attempt > 1) {
+            console.log(`[interview] fetchElevenLabsBlob succeeded on attempt ${attempt}`);
+          }
+          return { blob, bytes: blob.size, ms };
+        } catch (e) {
+          console.warn(`[interview] fetchElevenLabsBlob attempt ${attempt}/${maxAttempts} failed`, e);
+          if (attempt < maxAttempts) {
+            await new Promise((r) => setTimeout(r, backoffs[attempt - 1]));
+          }
         }
-        return { blob, bytes: blob.size, ms };
-      } catch (e) {
-        console.warn("[interview] fetchElevenLabsBlob failed", e);
-        return null;
       }
+      console.warn("[interview_tts_fallback_browser]", { textPreview: text.slice(0, 60) });
+      return null;
     },
     [project],
   );
@@ -958,24 +968,24 @@ export default function InterviewStart() {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "fr-FR";
         utterance.rate = 0.95;
-        utterance.pitch = 1.1;
+        
 
-        const femaleVoice =
-          voices.find(
-            (v) =>
-              v.lang.startsWith("fr") &&
-              /female|femme|amelie|marie|thomas/i.test(v.name) === false &&
-              /amelie|audrey|marie|céline|léa|sophie|virginie|siri.*female|google.*fr/i.test(v.name),
-          ) ||
-          voices.find(
-            (v) =>
-              v.lang.startsWith("fr") &&
-              (/female/i.test(v.name) ||
-                v.name.toLowerCase().includes("amelie") ||
-                v.name.toLowerCase().includes("audrey")),
-          ) ||
-          voices.find((v) => v.lang.startsWith("fr"));
-        if (femaleVoice) utterance.voice = femaleVoice;
+        const gender: "female" | "male" =
+          (project as { tts_voice_gender?: string } | null)?.tts_voice_gender === "male"
+            ? "male"
+            : "female";
+        const frVoices = voices.filter((v) => v.lang.startsWith("fr"));
+        const femaleRe = /amelie|amélie|audrey|marie|céline|celine|léa|lea|sophie|virginie|aurélie|aurelie|julie|chantal|female|femme/i;
+        const maleRe = /thomas|nicolas|daniel|paul|antoine|henri|sébastien|sebastien|male|homme/i;
+        const matchByGender = frVoices.find((v) =>
+          gender === "female" ? femaleRe.test(v.name) : maleRe.test(v.name),
+        );
+        const excludeOpposite = frVoices.find((v) =>
+          gender === "female" ? !maleRe.test(v.name) : !femaleRe.test(v.name),
+        );
+        const chosenVoice = matchByGender || excludeOpposite || frVoices[0];
+        if (chosenVoice) utterance.voice = chosenVoice;
+        utterance.pitch = gender === "male" ? 0.95 : 1.1;
 
         // ~12 caractères/seconde en français + 5 s de marge, plafonné à 90 s.
         // Évite de couper la lecture des questions longues.
@@ -1958,7 +1968,7 @@ export default function InterviewStart() {
     // ÉTAPE 1 : warm-up TTS — on ping ElevenLabs pour réveiller le service.
     updateStep("voice", "running");
     setBootPercent(10);
-    let greetingBlob: Blob | null = null;
+    // greetingBlob est déclaré plus bas, après le calcul du texte du greeting.
     if (usesEleven) {
       // On warm avec une phrase courte et neutre pour mesurer le réseau.
       const warmText = `Bonjour ${firstName || ""}.`.trim();
@@ -1975,6 +1985,40 @@ export default function InterviewStart() {
     updateStep("voice", "done");
     updateStep("network", "done");
     setBootPercent(40);
+
+    const introEnabled =
+      (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
+    const introMode =
+      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
+    const introCustomText =
+      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
+
+    const computeGreeting = (mediaType: typeof firstQMediaType) => {
+      const isMedia = mediaType !== "written";
+      const defaultGreeting = isMedia
+        ? `Bonjour ${firstName}, nous allons démarrer la session. ${mediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+        : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+      const interpolate = (tpl: string) =>
+        tpl
+          .replace(/\{prenom\}/g, firstName ?? "")
+          .replace(/\{poste\}/g, project?.job_title ?? "")
+          .replace(/\{question_suivante\}/g, q0.content ?? "")
+          .trim();
+      return !introEnabled
+        ? (isMedia ? "" : q0.content)
+        : introMode === "custom" && introCustomText
+          ? interpolate(introCustomText)
+          : defaultGreeting;
+    };
+
+    // Lance le préchargement du greeting EN PARALLÈLE du chargement média.
+    // Le texte est calculé sur l'hypothèse du média prévu ; si le média échoue,
+    // on refera un fetch ciblé après bascule en "written".
+    const optimisticGreeting = computeGreeting(firstQMediaType);
+    const greetingBlobPromise: Promise<{ blob: Blob; bytes: number; ms: number } | null> =
+      usesEleven && optimisticGreeting
+        ? fetchElevenLabsBlob(optimisticGreeting)
+        : Promise.resolve(null);
 
     // ÉTAPE 3 : préparer le média de la Q1
     updateStep("media", "running");
@@ -1995,40 +2039,23 @@ export default function InterviewStart() {
     setBootPercent(75);
     const isFirstQMedia = firstQMediaType !== "written";
 
-    const introEnabled =
-      (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
-    const introMode =
-      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
-    const introCustomText =
-      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
+    const greeting = computeGreeting(firstQMediaType);
 
-    // Greeting :
-    // - introEnabled = false → pas de greeting (Q1 média : rien ; Q1 texte : on prononce juste la question).
-    // - introMode = "custom" et texte fourni → on l'utilise tel quel avec interpolation.
-    // - sinon → texte par défaut contextuel.
-    const defaultGreeting = isFirstQMedia
-      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
-
-    const interpolate = (tpl: string) =>
-      tpl
-        .replace(/\{prenom\}/g, firstName ?? "")
-        .replace(/\{poste\}/g, project?.job_title ?? "")
-        .replace(/\{question_suivante\}/g, q0.content ?? "")
-        .trim();
-
-    const greeting = !introEnabled
-      ? (isFirstQMedia ? "" : q0.content)
-      : introMode === "custom" && introCustomText
-        ? interpolate(introCustomText)
-        : defaultGreeting;
-
-    // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
+    // Récupère le blob préchargé si le greeting n'a pas changé, sinon refetch.
+    let greetingBlob: Blob | null = null;
     if (usesEleven && greeting) {
-      const g = await fetchElevenLabsBlob(greeting);
-      if (g) {
-        greetingBlob = g.blob;
-        recordTtsTiming(g.bytes, g.ms);
+      if (greeting === optimisticGreeting) {
+        const g = await greetingBlobPromise;
+        if (g) {
+          greetingBlob = g.blob;
+          recordTtsTiming(g.bytes, g.ms);
+        }
+      } else {
+        const g = await fetchElevenLabsBlob(greeting);
+        if (g) {
+          greetingBlob = g.blob;
+          recordTtsTiming(g.bytes, g.ms);
+        }
       }
     }
 

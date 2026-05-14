@@ -1,44 +1,54 @@
-## Approche unique : timestamp proportionnel
+# Plan : améliorer la qualité et stabilité de la voix ElevenLabs
 
-Remplacer toute la logique de résolution des `start_seconds` dans `generate-report` par une seule méthode : **position du premier mot de la citation dans la transcription du message, ramenée à la durée du clip**.
+## Objectif
+1. Améliorer la qualité timbrale (réduire la variation entre Q1 et les questions suivantes)
+2. Solidifier le pipeline TTS avec retry avant fallback navigateur
+3. Quand le fallback `speechSynthesis` se déclenche, choisir une voix système du bon genre (féminine ou masculine) selon la configuration de la session
+4. Compenser la latence supplémentaire par du préchargement
 
-```
-positionMot   = index du 1er mot de la citation dans content normalisé
-totalMots     = nombre de mots de content normalisé
-dureeMessage  = max(transcript_segments[].end) si dispo, sinon totalMots / 2.5
-start_seconds = (positionMot / totalMots) × dureeMessage
-```
+## Changements
 
-On supprime :
-- la recherche par segment unique,
-- la recherche par fenêtre glissante de 3 segments,
-- le repli sur l'estimation IA (`fallback`).
+### 1. Backend — `supabase/functions/tts-elevenlabs/index.ts`
+- Remplacer `model_id: "eleven_flash_v2_5"` par `model_id: "eleven_turbo_v2_5"`
+- Monter `stability: 0.6` → `stability: 0.75` (timbre plus consistant entre générations)
 
-L'estimation IA n'est plus utilisée : seul le calcul proportionnel est conservé. Si la citation n'est pas trouvable dans le texte (mots manquants), on retourne `null` (le lecteur joue alors depuis le début du clip).
+### 2. Frontend — `src/pages/InterviewStart.tsx`
 
-## Modification
+**a) Retry x3 sur `fetchElevenLabsBlob`**
+- Si l'appel échoue (timeout, erreur réseau, statut non-OK), retenter jusqu'à 3 fois avec backoff progressif (300ms, 600ms, 1200ms)
+- Si les 3 tentatives échouent, logger `interview_tts_fallback_browser` avec le contexte (greeting / question / relance / transition)
+- Ensuite seulement, basculer sur `speechSynthesis`
 
-Dans `supabase/functions/generate-report/index.ts`, remplacer `resolveStart` par une nouvelle implémentation :
+**b) Précharger le greeting Q1 dès le boot** (compense les +225ms de Turbo)
+- Au moment du warm-up TTS (~ligne 1965), lancer en parallèle `fetchElevenLabsBlob(greeting)` et stocker le blob dans une `ref`
+- Au moment de jouer le greeting (~ligne 2028), utiliser le blob préchargé via `prefetchedBlob` au lieu de refetch
 
-1. Pré-calcul par message :
-   - `wordsByMessage`  = liste des mots normalisés de `content`.
-   - `durationByMessage` = `max(seg.end)` si segments présents, sinon `words.length / 2.5`.
-2. `resolveStart(messageId, quote)` :
-   - Normalise la citation, prend ses 3 premiers mots.
-   - Cherche cette séquence dans `wordsByMessage[messageId]` ; si introuvable, essaie 2 mots, puis 1 mot.
-   - Retourne `(index / words.length) * duration` arrondi à 0,1 s, ou `null` si rien.
-3. Mise à jour de `fixEntry` et de tous les appels existants : la signature passe à `(messageId, quote)` (plus de `fallback`). Aucun autre site d'appel ne change.
+**c) Sélection genrée de la voix `speechSynthesis`**
+- Lire le genre de la voix configurée pour la session (via `project.tts_voice_id` mappé sur les listes `FEMALE_VOICES` / `MALE_VOICES` de `VoiceSelectorDialog.tsx`, ou ajouter un champ `tts_voice_gender` dans `projects` si plus simple)
+- Dans la fonction `speak()` (~lignes 920-978), filtrer `window.speechSynthesis.getVoices()` :
+  - Préférer une voix `lang.startsWith("fr")`
+  - Filtrer par genre via la propriété `voice.name` (heuristique : "Amélie", "Audrey", "Marie", "Aurélie", "Virginie" = féminin ; "Thomas", "Daniel", "Nicolas" = masculin) ou via `voice.gender` quand disponible
+  - Fallback : première voix française disponible si aucune correspondance de genre
+- Mémoriser la voix choisie pour la session (pas de re-sélection à chaque appel)
 
-Toutes les sections (decision_drivers, signals, fit_breakdown, communication_profile, soft_skills, red_flags, personality_profile, paraverbal_analysis) bénéficient automatiquement.
+## Détails techniques
 
-## Effets de bord
+| Fichier | Modification |
+|---|---|
+| `supabase/functions/tts-elevenlabs/index.ts` | `model_id` + `stability` |
+| `src/pages/InterviewStart.tsx` | Retry x3, préchargement greeting, sélection voix `speechSynthesis` selon genre |
+| `src/lib/voiceGender.ts` (nouveau) | Helper qui mappe un `voiceId` ElevenLabs vers `"female" \| "male"` (utilise les constantes de `VoiceSelectorDialog.tsx`) |
 
-- Aucun changement de schéma.
-- Aucun changement frontend.
-- Les anciens rapports gardent leurs valeurs ; régénérer le rapport de Marine Dupré pour appliquer la nouvelle logique.
+## Validation après déploiement
+1. Démarrer un entretien et vérifier que la voix Q1 = voix Q2/Q3 (même timbre)
+2. Vérifier dans la console qu'aucun `interview_tts_fallback_browser` n'apparaît en conditions normales
+3. Test du fallback : bloquer temporairement l'edge function `tts-elevenlabs` (ex. via DevTools) et vérifier que la voix système qui prend le relais correspond au genre configuré
+4. Vérifier les logs de `tts-elevenlabs` pour confirmer `eleven_turbo_v2_5`
 
-## Vérification
+## Coût
+Inchangé : Flash v2.5 et Turbo v2.5 sont au même tarif (~500 crédits / 1000 caractères).
 
-1. Régénérer le rapport de DUPRÉ Marine.
-2. Cliquer chaque « Voir le moment » du panneau Personnalité — la vidéo doit démarrer à un instant cohérent (au début / milieu / fin selon où la citation apparaît dans la réponse).
-3. Vérifier qu'aucun rapport ne plante (citation introuvable → `null` → lecture depuis 0 acceptée par le lecteur).
+## Hors scope
+- Changement de voix ou de provider TTS
+- Modification des phrases de transition statiques
+- Refonte du système de cache TTS
