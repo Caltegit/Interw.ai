@@ -40,7 +40,7 @@ import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
 import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCard";
-import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
+
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { FitScoreBadge } from "@/components/session/FitScoreBadge";
