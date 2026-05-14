@@ -61,7 +61,7 @@ function scoreColor(score: number | null | undefined) {
   return "bg-destructive text-destructive-foreground";
 }
 
-export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect }: Props) {
+export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect, noteValue, noteSaving, onNoteChange, hasReport }: Props) {
   const [clips, setClips] = useState<
     { url: string; questionId: string | null; isFollowUp: boolean }[]
   >([]);
