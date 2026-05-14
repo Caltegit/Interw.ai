@@ -228,48 +228,6 @@ export default function SessionDetail() {
     stats.verdict_headline || report?.executive_summary_short || null;
   const fitScore = typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
 
-  // Construit la vue Réponses (fusion vidéos + évaluations)
-  const questionItems = useMemo(() => {
-    const evalByQuestionId = new Map<string, any>();
-    const evalByIndex = new Map<number, any>();
-    Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
-      const idx = parseInt(key);
-      if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
-      if (val?.question_id) evalByQuestionId.set(val.question_id, val);
-    });
-    const projectQuestions = (project?.questions as any[]) ?? [];
-
-    return candidateMainVideos.map((video: any, idx: number) => {
-      const evalEntry =
-        (video.question_id && evalByQuestionId.get(video.question_id)) ||
-        evalByIndex.get(idx);
-      const projectQ = video.question_id
-        ? projectQuestions.find((q: any) => q.id === video.question_id)
-        : projectQuestions[idx];
-
-      // Trouve la réponse texte du candidat liée à cette question (premier message non-follow-up)
-      const candidateMsg = messages.find(
-        (m: any) =>
-          m.role === "candidate" &&
-          !m.is_follow_up &&
-          (video.question_id ? m.question_id === video.question_id : true),
-      );
-
-      return {
-        index: idx,
-        questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
-        videoUrl: video.video_segment_url,
-        score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
-        summary: evalEntry?.summary ?? null,
-        comment: evalEntry?.comment ?? null,
-        keyQuote: evalEntry?.key_quote ?? null,
-        depthLevel: evalEntry?.depth_level ?? null,
-        hadFollowup: !!evalEntry?.had_followup,
-        followupHelped: !!evalEntry?.followup_helped,
-        candidateAnswerText: candidateMsg?.content ?? null,
-      };
-    });
-  }, [candidateMainVideos, questionEvaluations, project, messages]);
 
   const handleDecision = (d: RecruiterDecision) => {
     if (!user) return;
