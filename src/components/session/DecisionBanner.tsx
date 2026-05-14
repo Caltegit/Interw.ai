@@ -181,15 +181,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <div className="flex w-full flex-col items-center justify-center rounded-2xl border bg-muted/40 p-3">
-              <span className={cn("text-3xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
+            <div className="flex w-full flex-col items-center justify-center rounded-xl border bg-muted/40 px-2 py-1.5">
+              <span className={cn("text-2xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
                 {fitScore !== null ? fitScore : "—"}
               </span>
-              <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
                 Fit poste
               </span>
             </div>
-            {reco && <Badge className={cn(reco.tone, "w-full justify-center hover:bg-inherit")}>{reco.label}</Badge>}
+            {reco && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
             <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
