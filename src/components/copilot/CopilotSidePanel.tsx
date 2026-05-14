@@ -11,7 +11,9 @@ export function CopilotSidePanel() {
       className={cn(
         "hidden md:flex flex-col border-l bg-background transition-[width] duration-200 overflow-hidden",
         "sticky top-0 h-screen self-start",
-        open ? "w-[420px]" : "w-0",
+        open
+          ? "w-[360px] xl:w-[400px] 2xl:w-[30vw] min-[1920px]:w-[33vw] min-w-[320px] max-w-[640px]"
+          : "w-0",
       )}
       aria-hidden={!open}
     >
