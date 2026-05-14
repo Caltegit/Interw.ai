@@ -10,6 +10,7 @@ export function CopilotSidePanel() {
     <aside
       className={cn(
         "hidden md:flex flex-col border-l bg-background transition-[width] duration-200 overflow-hidden",
+        "sticky top-0 h-screen self-start",
         open ? "w-[420px]" : "w-0",
       )}
       aria-hidden={!open}
