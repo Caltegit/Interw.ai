@@ -182,45 +182,13 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const decision = (session.recruiter_decision ?? "none") as string;
   const authorTooltip = formatDecisionAuthor(decisionByName, session.recruiter_decision_at);
 
-  const decisionBtn = (
-    value: string,
-    label: string,
-    Icon: typeof Check,
-    tone: "success" | "success-strong" | "warning" | "destructive" | "info",
-  ) => {
-    const active = decision === value;
-    const toneClass = active
-      ? tone === "success"
-        ? "bg-success text-success-foreground hover:bg-success/90 border-success"
-        : tone === "success-strong"
-        ? "bg-success-strong text-success-strong-foreground hover:bg-success-strong/90 border-success-strong"
-        : tone === "warning"
-        ? "bg-warning text-warning-foreground hover:bg-warning/90 border-warning"
-        : tone === "info"
-        ? "bg-info text-info-foreground hover:bg-info/90 border-info"
-        : "bg-destructive text-destructive-foreground hover:bg-destructive/90 border-destructive"
-      : "";
-    const btn = (
-      <Button
-        type="button"
-        size="sm"
-        variant={active ? "default" : "outline"}
-        className={cn("h-9 flex-1", toneClass)}
-        onClick={() => onDecisionChange(session.id, active ? "none" : value)}
-      >
-        <Icon className="h-4 w-4" />
-        <span className="ml-1">{label}</span>
-      </Button>
-    );
-    if (active && authorTooltip) {
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>{btn}</TooltipTrigger>
-          <TooltipContent>{authorTooltip}</TooltipContent>
-        </Tooltip>
-      );
-    }
-    return btn;
+  const decisionConfig: Record<string, { label: string; className: string }> = {
+    none: { label: "Aucune décision", className: "" },
+    rejected: { label: "Non", className: "bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90" },
+    second_opinion: { label: "À discuter", className: "bg-warning text-warning-foreground border-warning hover:bg-warning/90" },
+    shortlisted: { label: "Retenu", className: "bg-success text-success-foreground border-success hover:bg-success/90" },
+    in_progress: { label: "En cours", className: "bg-info text-info-foreground border-info hover:bg-info/90" },
+    accepted: { label: "Oui", className: "bg-success-strong text-success-strong-foreground border-success-strong hover:bg-success-strong/90" },
   };
 
   const reco = report?.recommendation ? recoConfig[report.recommendation] : null;
