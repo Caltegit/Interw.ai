@@ -154,10 +154,7 @@ export default function Landing() {
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-6xl px-6 pt-12 pb-14 text-center md:pt-16 md:pb-18">
-          <div className="landing-fade-up inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs" style={{ borderColor: "hsl(var(--l-border))", color: "hsl(var(--l-fg-dim))" }}>
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: "hsl(var(--l-accent))" }} />
-            L'outil d'entretien IA pour les équipes de recrutement
-          </div>
+          {/* Badge removed */}
           <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
             <span className="landing-gradient-text">Évaluez les candidats,<br />pas leur CV.</span>
           </h1>
