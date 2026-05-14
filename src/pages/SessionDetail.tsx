@@ -630,23 +630,23 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="min-h-0 overflow-y-auto pr-2">
+        <div id="session-video-panel" className="flex min-h-0 flex-col gap-4">
           {sessionClips.length > 0 && (
-            <div className="sticky top-0 z-20 bg-background pb-4">
+            <div className="shrink-0">
               <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
             </div>
           )}
           {report && (
-            <Card>
+            <Card className="flex min-h-0 flex-1 flex-col">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Notes recruteur</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex min-h-0 flex-1 flex-col">
                 <Textarea
                   placeholder="Ajoutez vos observations…"
                   value={recruiterNotes}
                   onChange={(e) => setRecruiterNotes(e.target.value)}
-                  rows={8}
+                  className="min-h-0 flex-1 resize-none"
                 />
               </CardContent>
             </Card>
