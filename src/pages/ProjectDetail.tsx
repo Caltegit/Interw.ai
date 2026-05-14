@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X, UserCog } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X, UserCog, Check } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
@@ -400,10 +400,14 @@ export default function ProjectDetail() {
     }
   };
 
+  const [linkCopied, setLinkCopied] = useState(false);
+  const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyProjectLink = () => {
     if (!project?.slug) return;
     navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}`);
-    toast({ title: "Lien copié !" });
+    setLinkCopied(true);
+    if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
+    linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const copyCandidateLink = (token: string) => {
@@ -618,9 +622,16 @@ export default function ProjectDetail() {
           <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button variant="outline" size="sm" onClick={copyProjectLink}>
-            <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={copyProjectLink}>
+              <Copy className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Lien candidat</span>
+            </Button>
+            {linkCopied && (
+              <span className="inline-flex items-center gap-1 text-sm text-success animate-in fade-in slide-in-from-left-1">
+                <Check className="h-4 w-4" /> Lien copié
+              </span>
+            )}
+          </div>
           <Button variant="outline" size="sm" asChild>
             <Link to={`/projects/${project.id}/edit`}>
               <Pencil className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Modifier</span>
