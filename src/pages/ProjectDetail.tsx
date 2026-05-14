@@ -713,7 +713,7 @@ export default function ProjectDetail() {
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                   <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes les sessions</SelectItem>
+                    <SelectItem value="all">Toutes</SelectItem>
                     <SelectItem value="me">Mes sessions</SelectItem>
                     {orgMembers
                       .filter((m) => m.user_id !== user?.id)
