@@ -688,6 +688,17 @@ export default function ProjectDetail() {
             <>
               {/* Barre filtres compacte */}
               <div className="flex flex-wrap items-center gap-2">
+                {view === "table" && selectedIds.size > 0 && (
+                  <BulkActionsButton
+                    count={selectedIds.size}
+                    onClear={clearSelection}
+                    onEmail={() => setBulkEmailOpen(true)}
+                    onDelete={() => setBulkDeleteStep(1)}
+                    onCompare={() => navigate(`/projects/${id}/compare?ids=${[...selectedIds].slice(0, 4).join(",")}`)}
+                    onShareReports={() => setShareReportsOpen(true)}
+                    canShareReports={[...selectedIds].some((sid) => !!reportsBySession[sid]?.id)}
+                  />
+                )}
                 <div className="flex rounded-md border">
                   <Button
                     variant={view === "table" ? "secondary" : "ghost"}
