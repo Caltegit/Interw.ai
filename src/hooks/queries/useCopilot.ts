@@ -85,10 +85,10 @@ export function useDeleteCopilotThread() {
   });
 }
 
-export function useSendCopilotMessage(threadId: string | null) {
+export function useSendCopilotMessage() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userMessage }: { userMessage: string }) => {
+    mutationFn: async ({ threadId, userMessage }: { threadId: string; userMessage: string }) => {
       if (!threadId) throw new Error("Aucune conversation sélectionnée");
       const { data, error } = await supabase.functions.invoke("copilot-chat", {
         body: { threadId, userMessage },
@@ -100,11 +100,9 @@ export function useSendCopilotMessage(threadId: string | null) {
         assistantMessage: { id: string; content: string; created_at: string };
       };
     },
-    onSuccess: () => {
-      if (threadId) {
-        qc.invalidateQueries({ queryKey: messagesKey(threadId) });
-        qc.invalidateQueries({ queryKey: ["copilot", "threads"] });
-      }
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: messagesKey(vars.threadId) });
+      qc.invalidateQueries({ queryKey: ["copilot", "threads"] });
     },
   });
 }

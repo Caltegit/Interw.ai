@@ -24,7 +24,7 @@ const SUGGESTIONS = [
 export function CopilotChatWindow({ projectId, userId, threadId, onCreatedThread }: Props) {
   const { data: messages = [], isLoading } = useCopilotMessages(threadId);
   const create = useCreateCopilotThread();
-  const send = useSendCopilotMessage(threadId);
+  const send = useSendCopilotMessage();
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -47,8 +47,7 @@ export function CopilotChatWindow({ projectId, userId, threadId, onCreatedThread
         onCreatedThread(t.id);
       }
       setInput("");
-      // Force le hook à pointer sur le bon thread après création
-      await send.mutateAsync({ userMessage: text });
+      await send.mutateAsync({ threadId: activeId, userMessage: text });
     } catch (e: any) {
       toast.error(e?.message || "Erreur lors de l'envoi");
       setInput(text);
