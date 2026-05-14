@@ -1986,6 +1986,40 @@ export default function InterviewStart() {
     updateStep("network", "done");
     setBootPercent(40);
 
+    const introEnabled =
+      (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
+    const introMode =
+      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
+    const introCustomText =
+      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
+
+    const computeGreeting = (mediaType: typeof firstQMediaType) => {
+      const isMedia = mediaType !== "written";
+      const defaultGreeting = isMedia
+        ? `Bonjour ${firstName}, nous allons démarrer la session. ${mediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
+        : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
+      const interpolate = (tpl: string) =>
+        tpl
+          .replace(/\{prenom\}/g, firstName ?? "")
+          .replace(/\{poste\}/g, project?.job_title ?? "")
+          .replace(/\{question_suivante\}/g, q0.content ?? "")
+          .trim();
+      return !introEnabled
+        ? (isMedia ? "" : q0.content)
+        : introMode === "custom" && introCustomText
+          ? interpolate(introCustomText)
+          : defaultGreeting;
+    };
+
+    // Lance le préchargement du greeting EN PARALLÈLE du chargement média.
+    // Le texte est calculé sur l'hypothèse du média prévu ; si le média échoue,
+    // on refera un fetch ciblé après bascule en "written".
+    const optimisticGreeting = computeGreeting(firstQMediaType);
+    const greetingBlobPromise: Promise<{ blob: Blob; bytes: number; ms: number } | null> =
+      usesEleven && optimisticGreeting
+        ? fetchElevenLabsBlob(optimisticGreeting)
+        : Promise.resolve(null);
+
     // ÉTAPE 3 : préparer le média de la Q1
     updateStep("media", "running");
     if (firstQMediaUrl) prefetchMedia(firstQMediaUrl);
@@ -2005,40 +2039,23 @@ export default function InterviewStart() {
     setBootPercent(75);
     const isFirstQMedia = firstQMediaType !== "written";
 
-    const introEnabled =
-      (project as { ai_intro_enabled?: boolean })?.ai_intro_enabled ?? true;
-    const introMode =
-      ((project as { ai_intro_mode?: string })?.ai_intro_mode as "auto" | "custom") ?? "auto";
-    const introCustomText =
-      ((project as { ai_intro_custom_text?: string | null })?.ai_intro_custom_text ?? "").trim();
+    const greeting = computeGreeting(firstQMediaType);
 
-    // Greeting :
-    // - introEnabled = false → pas de greeting (Q1 média : rien ; Q1 texte : on prononce juste la question).
-    // - introMode = "custom" et texte fourni → on l'utilise tel quel avec interpolation.
-    // - sinon → texte par défaut contextuel.
-    const defaultGreeting = isFirstQMedia
-      ? `Bonjour ${firstName}, nous allons démarrer la session. ${firstQMediaType === "video" ? "Regardez" : "Écoutez"} la première question.`
-      : `Bonjour ${firstName}, nous allons démarrer la session, voici la première question : ${q0.content}`;
-
-    const interpolate = (tpl: string) =>
-      tpl
-        .replace(/\{prenom\}/g, firstName ?? "")
-        .replace(/\{poste\}/g, project?.job_title ?? "")
-        .replace(/\{question_suivante\}/g, q0.content ?? "")
-        .trim();
-
-    const greeting = !introEnabled
-      ? (isFirstQMedia ? "" : q0.content)
-      : introMode === "custom" && introCustomText
-        ? interpolate(introCustomText)
-        : defaultGreeting;
-
-    // Pré-fetch du blob TTS du greeting réel (rapide car service déjà chaud).
+    // Récupère le blob préchargé si le greeting n'a pas changé, sinon refetch.
+    let greetingBlob: Blob | null = null;
     if (usesEleven && greeting) {
-      const g = await fetchElevenLabsBlob(greeting);
-      if (g) {
-        greetingBlob = g.blob;
-        recordTtsTiming(g.bytes, g.ms);
+      if (greeting === optimisticGreeting) {
+        const g = await greetingBlobPromise;
+        if (g) {
+          greetingBlob = g.blob;
+          recordTtsTiming(g.bytes, g.ms);
+        }
+      } else {
+        const g = await fetchElevenLabsBlob(greeting);
+        if (g) {
+          greetingBlob = g.blob;
+          recordTtsTiming(g.bytes, g.ms);
+        }
       }
     }
 
