@@ -47,8 +47,8 @@ import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
 
 function BulkActionsButton({
-  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports,
-}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean }) {
+  count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports, members, onAssign,
+}: { count: number; onClear: () => void; onEmail: () => void; onDelete: () => void; onCompare: () => void; onShareReports: () => void; canShareReports: boolean; members: { user_id: string; full_name: string; email: string }[]; onAssign: (assignee: string | null) => void }) {
   const canCompare = count >= 2 && count <= 4;
   return (
     <div className="flex items-center gap-2 animate-fade-in">
