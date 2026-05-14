@@ -1,36 +1,72 @@
 ## Objectif
 
-Ajouter une case à cocher en haut à gauche de chaque vignette candidat dans la vue **Cartes** (comme déjà disponible dans la vue Tableau), et faire apparaître la barre d'actions groupées (`BulkActionsButton`) quand au moins une carte est sélectionnée.
+Dans la vignette candidat (composant `SessionCard`, vue Cartes), remplacer la rangée de 5 boutons de décision (Non / À discuter / Retenu / En cours / Oui) par un **menu déroulant unique**, centré, placé juste sous la ligne « Précédent / vitesse / Suivant ».
 
 ## Comportement
 
-- Case à cocher en overlay, position absolue en haut à gauche de la `Card`, au-dessus du header (nom + score).
-- Clic sur la case : sélectionne/désélectionne sans naviguer ni démarrer la vidéo (`stopPropagation`).
-- Sélection partagée avec la vue Tableau : on réutilise `selectedIds` / `toggleSelect` / `clearSelection` déjà présents dans `ProjectDetail.tsx` — ainsi une sélection faite en cartes reste visible si l'utilisateur bascule vers tableau.
-- Barre `BulkActionsButton` (Email, Supprimer, Comparer, Partager rapports) : aujourd'hui affichée uniquement si `view === "table"`. Étendre la condition pour qu'elle s'affiche aussi en `view === "cards"` dès que `selectedIds.size > 0`.
-- Pas de checkbox "tout sélectionner" en vue cartes (cohérent avec une grille). La sélection multiple se fait carte par carte. Le bouton "tout désélectionner" reste accessible via la barre d'actions.
+- Un seul `Select` shadcn affichant la décision courante (libellé + petite pastille de couleur correspondant au ton actuel : destructive, warning, success, info, success-strong).
+- Options proposées (dans l'ordre) :
+  - « Aucune » (valeur `none`)
+  - « Non » (`rejected`)
+  - « À discuter » (`second_opinion`)
+  - « Retenu » (`shortlisted`)
+  - « En cours » (`in_progress`)
+  - « Oui » (`accepted`)
+- Le `SelectTrigger` est centré horizontalement, largeur auto (mini ~12rem), et adopte la couleur de fond de la décision active (mêmes tokens que les boutons actuels). Quand `none`, apparence neutre (`outline`).
+- Tooltip sur le trigger : affiche `authorTooltip` (auteur + date) lorsqu'une décision est définie, comme aujourd'hui.
+- Changer d'option appelle `onDecisionChange(session.id, value)`. Sélectionner « Aucune » envoie `"none"`.
 
 ## Détails techniques
 
 ### `src/components/project/SessionCard.tsx`
-- Ajouter deux props optionnelles : `selected?: boolean` et `onToggleSelect?: (sessionId: string) => void`.
-- Dans le rendu : ajouter `relative` à la `Card` racine (ou conserver `overflow-hidden` mais positionner la checkbox au-dessus). Insérer un `<Checkbox>` shadcn positionné `absolute top-2 left-2 z-10` avec un fond `bg-background/80 backdrop-blur-sm` pour rester lisible sur fond clair/sombre.
-- Quand `selected === true`, ajouter un anneau visuel sur la `Card` (`ring-2 ring-primary`) pour refléter l'état comme dans la vue tableau.
-- `onClick` du conteneur de la checkbox : `e.stopPropagation()` pour ne pas déclencher le `Link` du nom.
 
-### `src/pages/ProjectDetail.tsx`
-- Passer `selected={selectedIds.has(s.id)}` et `onToggleSelect={toggleSelect}` à chaque `<SessionCard />` rendue dans la grille (lignes ~767-774).
-- Modifier la condition d'affichage de `BulkActionsButton` (ligne 691) :
-  - Avant : `view === "table" && selectedIds.size > 0`
-  - Après : `selectedIds.size > 0` (peu importe la vue).
-- Aucun changement nécessaire sur les dialogues `BulkEmailDialog`, `ShareReportsDialog`, `ProjectCompare` : ils consomment déjà `selectedIds`.
+- Supprimer la fonction interne `decisionBtn` et le bloc `<div className="mt-auto flex flex-wrap gap-1.5 pt-1">…</div>` (lignes ~409-416).
+- Déplacer la décision **dans** le bloc `{clips.length > 0 && (...)}`, **juste après** la `div` « Précédent / vitesse / Suivant », à l'intérieur du même fragment. Si `clips.length === 0`, afficher quand même le sélecteur (la décision doit rester accessible) — l'envelopper dans un conteneur `mt-auto` pour qu'il reste collé en bas dans les deux cas.
+- Construire un objet `decisionConfig` :
+  ```ts
+  const decisionConfig: Record<string, { label: string; className: string }> = {
+    none: { label: "Aucune décision", className: "" },
+    rejected: { label: "Non", className: "bg-destructive text-destructive-foreground border-destructive" },
+    second_opinion: { label: "À discuter", className: "bg-warning text-warning-foreground border-warning" },
+    shortlisted: { label: "Retenu", className: "bg-success text-success-foreground border-success" },
+    in_progress: { label: "En cours", className: "bg-info text-info-foreground border-info" },
+    accepted: { label: "Oui", className: "bg-success-strong text-success-strong-foreground border-success-strong" },
+  };
+  ```
+- Rendu :
+  ```tsx
+  <div className="mt-auto flex justify-center pt-2">
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div>
+          <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
+            <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Aucune décision</SelectItem>
+              <SelectItem value="rejected">Non</SelectItem>
+              <SelectItem value="second_opinion">À discuter</SelectItem>
+              <SelectItem value="shortlisted">Retenu</SelectItem>
+              <SelectItem value="in_progress">En cours</SelectItem>
+              <SelectItem value="accepted">Oui</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </TooltipTrigger>
+      {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
+    </Tooltip>
+  </div>
+  ```
+- Nettoyer les imports devenus inutiles : `Check, HelpCircle, X, ThumbsUp, Clock` de `lucide-react` (garder `ChevronLeft`, `ChevronRight`, `RotateCcw`, `RotateCw`).
+- Aucune modification des props ni du contrat avec `ProjectDetail.tsx` : `onDecisionChange` reçoit déjà une string.
 
-### Aucun changement
-- Pas de modification du backend, des hooks, ni du store.
-- Pas de modification de la vue Tableau (déjà fonctionnelle).
-- Pas de nouveau composant : on réutilise `Checkbox` (shadcn) déjà importé dans le projet.
+### Hors scope
+- La vue Tableau (rangs) garde son `Select` actuel — aucune modification.
+- Aucune modification backend, ni de type, ni du store.
 
 ## Vérification
-- En vue Cartes : cocher 2 candidats → la barre d'actions apparaît avec compteur "2", boutons Email / Comparer / Partager / Supprimer fonctionnent.
-- Basculer vers Tableau : les mêmes 2 lignes restent cochées.
-- Clic sur la checkbox ne lance pas la vidéo et ne navigue pas vers la fiche candidat.
+- Vue Cartes : le sélecteur apparaît centré sous « Précédent / Suivant ».
+- Choisir « Retenu » → trigger devient vert, la valeur persiste après rechargement, l'auteur s'affiche en tooltip.
+- Choisir « Aucune décision » → trigger redevient neutre.
+- Si la session n'a aucune vidéo (`clips.length === 0`), le sélecteur reste affiché en bas de la carte.
