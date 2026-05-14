@@ -128,6 +128,11 @@ export function ShareReportsDialog({
       toast({ title: "Adresse de réponse invalide", variant: "destructive" });
       return;
     }
+    const fromNameTrimmed = fromName.trim().slice(0, 60);
+    if (!fromNameTrimmed) {
+      toast({ title: "Nom de l'expéditeur requis", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const stamp = Date.now();
     const results = await Promise.allSettled(
@@ -138,6 +143,7 @@ export function ShareReportsDialog({
             recipientEmail: email,
             idempotencyKey: `share-reports-${stamp}-${email}`,
             templateData: { subject, body, firstName: "" },
+            fromName: fromNameTrimmed,
             ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },
         }),
