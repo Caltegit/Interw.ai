@@ -21,6 +21,7 @@ export interface SessionVideoNavigatorHandle {
 
 interface Props {
   clips: SessionVideoClip[];
+  transcripts?: Record<string, string>;
 }
 
 function formatMinutes(s: number): string {
