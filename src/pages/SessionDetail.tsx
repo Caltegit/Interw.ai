@@ -631,7 +631,8 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="space-y-4">
+        <div id="session-video-panel" className="min-h-0 space-y-4 overflow-y-auto pr-2">
+          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
           {report && (
             <Card>
               <CardHeader className="pb-2">
