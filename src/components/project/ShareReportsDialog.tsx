@@ -138,6 +138,9 @@ export function ShareReportsDialog({
       toast({ title: "Nom de l'expéditeur requis", variant: "destructive" });
       return;
     }
+    if (fromNameStorageKey && typeof window !== "undefined") {
+      localStorage.setItem(fromNameStorageKey, fromNameTrimmed);
+    }
     setSending(true);
     const stamp = Date.now();
     const results = await Promise.allSettled(
