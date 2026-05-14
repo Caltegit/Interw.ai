@@ -400,10 +400,14 @@ export default function ProjectDetail() {
     }
   };
 
+  const [linkCopied, setLinkCopied] = useState(false);
+  const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyProjectLink = () => {
     if (!project?.slug) return;
     navigator.clipboard.writeText(`${window.location.origin}/session/${project.slug}`);
-    toast({ title: "Lien copié !" });
+    setLinkCopied(true);
+    if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current);
+    linkCopiedTimerRef.current = setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const copyCandidateLink = (token: string) => {
