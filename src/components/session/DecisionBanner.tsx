@@ -260,79 +260,10 @@ export function DecisionBanner(props: DecisionBannerProps) {
               />
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            {reco && <Badge className={reco.tone}>{reco.label}</Badge>}
-            {rankLabel && (
-              <Badge variant="outline" className="font-normal">
-                {rankLabel}
-              </Badge>
-            )}
-          </div>
           {headline && (
             <p className="text-sm font-medium leading-snug text-foreground">« {headline} »</p>
           )}
         </div>
-
-        {/* Actions */}
-        {!readOnly && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {shareUrl ? (
-                  <DropdownMenuItem onClick={onCopyShare}>
-                    {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                    {copied ? "Lien copié" : "Copier le lien de partage"}
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {isShareLoading ? "Génération…" : "Créer un lien de partage"}
-                  </DropdownMenuItem>
-                )}
-                {canDownloadVideos && (
-                  <DropdownMenuItem onClick={onDownloadVideos}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Télécharger les vidéos
-                  </DropdownMenuItem>
-                )}
-                {onRegenerate && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onRegenerate} disabled={isRegenerating}>
-                      {isRegenerating ? (
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {(onEmail || onDelete) && <DropdownMenuSeparator />}
-                {onEmail && (
-                  <DropdownMenuItem onClick={onEmail}>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Envoyer un e-mail
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Supprimer
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
       </div>
     </Card>
   );
