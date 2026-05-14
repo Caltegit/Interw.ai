@@ -723,10 +723,10 @@ export default function ProjectDetail() {
                   {filteredSessions.length} / {visibleSessions.length}
                 </span>
                 <Input
-                  placeholder="Rechercher (nom ou email)…"
+                  placeholder="Rechercher"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="ml-auto max-w-xs h-9"
+                  className="ml-auto max-w-[10rem] h-9"
                 />
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                   <SelectTrigger className="h-9 w-auto min-w-[10rem]"><SelectValue /></SelectTrigger>
