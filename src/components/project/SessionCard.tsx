@@ -38,6 +38,8 @@ interface Props {
   questions: Question[];
   onDecisionChange: (sessionId: string, decision: string) => void;
   decisionByName?: string | null;
+  selected?: boolean;
+  onToggleSelect?: (sessionId: string) => void;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
