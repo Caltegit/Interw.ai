@@ -864,45 +864,58 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     }
 
     // ============================================================
-    // Recalcul des start_seconds à partir des transcriptions horodatées.
-    // L'IA fournit une estimation grossière ; on la remplace par le vrai
-    // timestamp dès qu'on retrouve la citation dans transcript_segments.
+    // Recalcul des start_seconds par méthode proportionnelle :
+    // position du 1er mot de la citation dans la transcription du message,
+    // ramenée à la durée du clip. Aucun fallback IA.
     // ============================================================
-    const segmentsByMessage = new Map<string, Array<{ start: number; end: number; text: string }>>();
-    for (const m of messages as any[]) {
-      const segs = (m as any).transcript_segments;
-      if (Array.isArray(segs) && segs.length > 0) {
-        segmentsByMessage.set(m.id, segs);
-      }
-    }
     const normalizeForMatch = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
-    const resolveStart = (messageId: any, quote: any, fallback: any): number | null => {
-      const fb = typeof fallback === "number" && Number.isFinite(fallback) ? Math.max(0, fallback) : null;
-      if (!messageId || typeof quote !== "string" || !quote.trim()) return fb;
-      const segs = segmentsByMessage.get(messageId);
-      if (!segs || segs.length === 0) return fb;
-      const qNorm = normalizeForMatch(quote);
-      if (!qNorm) return fb;
-      const needle = qNorm.split(" ").slice(0, 6).join(" ");
-      if (!needle) return fb;
-      // Recherche par segment unique
-      for (const s of segs) {
-        const t = normalizeForMatch(s.text);
-        if (t.includes(needle)) return Math.max(0, Math.round(s.start * 10) / 10);
+    const wordsByMessage = new Map<string, string[]>();
+    const durationByMessage = new Map<string, number>();
+    for (const m of messages as any[]) {
+      if (m.role !== "candidate") continue;
+      const words = normalizeForMatch(typeof m.content === "string" ? m.content : "")
+        .split(" ")
+        .filter(Boolean);
+      wordsByMessage.set(m.id, words);
+      const segs = (m as any).transcript_segments;
+      let dur = 0;
+      if (Array.isArray(segs) && segs.length > 0) {
+        for (const s of segs) {
+          const e = Number(s?.end);
+          if (Number.isFinite(e) && e > dur) dur = e;
+        }
       }
-      // Recherche sur fenêtre glissante (citation à cheval sur 2-3 segments)
-      for (let i = 0; i < segs.length; i++) {
-        const window = normalizeForMatch(segs.slice(i, i + 3).map((s) => s.text).join(" "));
-        if (window.includes(needle)) return Math.max(0, Math.round(segs[i].start * 10) / 10);
+      // Repli : 2,5 mots/seconde (≈ 150 mots/min) si aucun segment.
+      if (dur <= 0) dur = words.length / 2.5;
+      durationByMessage.set(m.id, dur);
+    }
+
+    const resolveStart = (messageId: any, quote: any): number | null => {
+      if (!messageId || typeof quote !== "string" || !quote.trim()) return null;
+      const words = wordsByMessage.get(messageId);
+      const duration = durationByMessage.get(messageId);
+      if (!words || words.length === 0 || !duration || duration <= 0) return null;
+      const qWords = normalizeForMatch(quote).split(" ").filter(Boolean);
+      if (qWords.length === 0) return null;
+      // Cherche une séquence de 3 mots, puis 2, puis 1.
+      for (const n of [3, 2, 1]) {
+        if (qWords.length < n) continue;
+        const needle = qWords.slice(0, n);
+        outer: for (let i = 0; i <= words.length - n; i++) {
+          for (let k = 0; k < n; k++) {
+            if (words[i + k] !== needle[k]) continue outer;
+          }
+          return Math.max(0, Math.round((i / words.length) * duration * 10) / 10);
+        }
       }
-      return fb;
+      return null;
     };
 
     const fixEntry = (e: any, msgKey = "message_id", tsKey = "start_seconds", quoteKey = "quote") => {
       if (!e || typeof e !== "object") return;
-      e[tsKey] = resolveStart(e[msgKey], e[quoteKey] ?? e.citation ?? e.key_quote, e[tsKey]);
+      e[tsKey] = resolveStart(e[msgKey], e[quoteKey] ?? e.citation ?? e.key_quote);
     };
 
     // decision_drivers, signals
@@ -913,7 +926,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
 
     // fit_breakdown (déjà construit plus haut)
     fitBreakdown.forEach((e: any) => {
-      e.start_seconds = resolveStart(e.message_id, e.quote, e.start_seconds);
+      e.start_seconds = resolveStart(e.message_id, e.quote);
     });
 
     // communication_profile.dimensions
