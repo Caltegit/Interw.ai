@@ -73,7 +73,8 @@ export default function SessionDetail() {
   const shareUrl = data?.shareUrl ?? null;
 
   const [recruiterNotes, setRecruiterNotes] = useState("");
-  const [notesInitialized, setNotesInitialized] = useState(false);
+  const lastServerNoteRef = useRef<string | null>(null);
+  const noteDirtyRef = useRef(false);
   const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
