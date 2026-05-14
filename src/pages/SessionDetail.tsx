@@ -435,8 +435,8 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
-        <div>
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[1fr_510px]">
+        <div className="min-h-0 overflow-y-auto pr-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="decision" className="gap-1">
