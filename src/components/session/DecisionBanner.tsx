@@ -120,16 +120,76 @@ export function DecisionBanner(props: DecisionBannerProps) {
 
   return (
     <Card className="sticky top-0 z-30 border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center">
-        {/* Score circle */}
-        <div className="flex shrink-0 items-center gap-4">
-          <div className="flex flex-col items-center justify-center rounded-2xl border bg-muted/40 p-3 min-w-[88px]">
-            <span className={cn("text-3xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
-              {fitScore !== null ? fitScore : "—"}
-            </span>
-            <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Fit poste
-            </span>
+      <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-start">
+        {/* Score circle + reco + actions */}
+        <div className="flex shrink-0 items-start gap-4">
+          <div className="flex flex-col items-center gap-2 min-w-[88px]">
+            {!readOnly && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {shareUrl ? (
+                    <DropdownMenuItem onClick={onCopyShare}>
+                      {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                      {copied ? "Lien copié" : "Copier le lien de partage"}
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
+                      <Share2 className="mr-2 h-4 w-4" />
+                      {isShareLoading ? "Génération…" : "Créer un lien de partage"}
+                    </DropdownMenuItem>
+                  )}
+                  {canDownloadVideos && (
+                    <DropdownMenuItem onClick={onDownloadVideos}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Télécharger les vidéos
+                    </DropdownMenuItem>
+                  )}
+                  {onRegenerate && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={onRegenerate} disabled={isRegenerating}>
+                        {isRegenerating ? (
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Sparkles className="mr-2 h-4 w-4" />
+                        )}
+                        {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {(onEmail || onDelete) && <DropdownMenuSeparator />}
+                  {onEmail && (
+                    <DropdownMenuItem onClick={onEmail}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Envoyer un e-mail
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <DropdownMenuItem
+                      onClick={onDelete}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Supprimer
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <div className="flex w-full flex-col items-center justify-center rounded-2xl border bg-muted/40 p-3">
+              <span className={cn("text-3xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
+                {fitScore !== null ? fitScore : "—"}
+              </span>
+              <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Fit poste
+              </span>
+            </div>
+            {reco && <Badge className={cn(reco.tone, "w-full justify-center")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
             <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
@@ -200,79 +260,10 @@ export function DecisionBanner(props: DecisionBannerProps) {
               />
             </div>
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            {reco && <Badge className={reco.tone}>{reco.label}</Badge>}
-            {rankLabel && (
-              <Badge variant="outline" className="font-normal">
-                {rankLabel}
-              </Badge>
-            )}
-          </div>
           {headline && (
             <p className="text-sm font-medium leading-snug text-foreground">« {headline} »</p>
           )}
         </div>
-
-        {/* Actions */}
-        {!readOnly && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9 w-9 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {shareUrl ? (
-                  <DropdownMenuItem onClick={onCopyShare}>
-                    {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                    {copied ? "Lien copié" : "Copier le lien de partage"}
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
-                    <Share2 className="mr-2 h-4 w-4" />
-                    {isShareLoading ? "Génération…" : "Créer un lien de partage"}
-                  </DropdownMenuItem>
-                )}
-                {canDownloadVideos && (
-                  <DropdownMenuItem onClick={onDownloadVideos}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Télécharger les vidéos
-                  </DropdownMenuItem>
-                )}
-                {onRegenerate && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onRegenerate} disabled={isRegenerating}>
-                      {isRegenerating ? (
-                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                      )}
-                      {isRegenerating ? "Régénération…" : "Régénérer le rapport"}
-                    </DropdownMenuItem>
-                  </>
-                )}
-                {(onEmail || onDelete) && <DropdownMenuSeparator />}
-                {onEmail && (
-                  <DropdownMenuItem onClick={onEmail}>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Envoyer un e-mail
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <DropdownMenuItem
-                    onClick={onDelete}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Supprimer
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
       </div>
     </Card>
   );
