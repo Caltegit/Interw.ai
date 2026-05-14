@@ -773,6 +773,10 @@ export default function ProjectDetail() {
                       decisionByName={memberById((s as any).recruiter_decision_by)?.full_name ?? memberById((s as any).recruiter_decision_by)?.email ?? null}
                       selected={selectedIds.has(s.id)}
                       onToggleSelect={toggleSelect}
+                      noteValue={noteDrafts[s.id]}
+                      noteSaving={!!savingNote[s.id]}
+                      onNoteChange={saveNote}
+                      hasReport={!!reportsBySession[s.id]}
                     />
                   ))}
                   {pagedSessions.length === 0 && (

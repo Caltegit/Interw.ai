@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -40,6 +41,10 @@ interface Props {
   decisionByName?: string | null;
   selected?: boolean;
   onToggleSelect?: (sessionId: string) => void;
+  noteValue?: string;
+  noteSaving?: boolean;
+  onNoteChange?: (sessionId: string, value: string) => void;
+  hasReport?: boolean;
 }
 
 const recoConfig: Record<string, { label: string; className: string }> = {
@@ -56,7 +61,7 @@ function scoreColor(score: number | null | undefined) {
   return "bg-destructive text-destructive-foreground";
 }
 
-export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect }: Props) {
+export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect, noteValue, noteSaving, onNoteChange, hasReport }: Props) {
   const [clips, setClips] = useState<
     { url: string; questionId: string | null; isFollowUp: boolean }[]
   >([]);
@@ -389,28 +394,50 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           )}
         </div>
 
-        {/* Décision */}
-        <div className="mt-auto flex justify-center pt-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
-                  <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucune décision</SelectItem>
-                    <SelectItem value="rejected">Non</SelectItem>
-                    <SelectItem value="second_opinion">À discuter</SelectItem>
-                    <SelectItem value="shortlisted">Retenu</SelectItem>
-                    <SelectItem value="in_progress">En cours</SelectItem>
-                    <SelectItem value="accepted">Oui</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* Décision + note */}
+        <div className="mt-auto flex flex-col gap-2 pt-1">
+          <div className="flex justify-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
+                    <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucune décision</SelectItem>
+                      <SelectItem value="rejected">Non</SelectItem>
+                      <SelectItem value="second_opinion">À discuter</SelectItem>
+                      <SelectItem value="shortlisted">Retenu</SelectItem>
+                      <SelectItem value="in_progress">En cours</SelectItem>
+                      <SelectItem value="accepted">Oui</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </TooltipTrigger>
+              {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
+            </Tooltip>
+          </div>
+          {onNoteChange && (
+            hasReport ? (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={noteValue ?? ""}
+                  onChange={(e) => onNoteChange(session.id, e.target.value)}
+                  placeholder="Ajouter une note…"
+                  className="h-8 text-xs"
+                />
+                {noteSaving && <span className="text-xs text-muted-foreground">…</span>}
               </div>
-            </TooltipTrigger>
-            {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
-          </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Input disabled placeholder="Pas de rapport" className="h-8 text-xs" />
+                </TooltipTrigger>
+                <TooltipContent>Note disponible une fois le rapport généré</TooltipContent>
+              </Tooltip>
+            )
+          )}
         </div>
       </CardContent>
     </Card>
