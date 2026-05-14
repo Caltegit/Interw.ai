@@ -373,42 +373,35 @@ export default function SessionDetail() {
       : null;
 
   return (
-    <div className="space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
 
-      <div className="sticky top-0 z-30 grid gap-4 lg:grid-cols-[1fr_510px]">
-        <DecisionBanner
-          candidateName={session.candidate_name}
-          candidateEmail={session.candidate_email}
-          jobTitle={project?.job_title}
-          durationLabel={formatDuration(session.duration_seconds)}
-          videoAnswersCount={candidateVideos.length}
-          fitScore={fitScore}
-          recommendation={report?.recommendation ?? null}
-          headline={verdictHeadline}
-          rankLabel={rankLabel}
-          decision={decision}
-          onDecisionChange={handleDecision}
-          isDecisionPending={updateDecision.isPending}
-          shareUrl={shareUrl}
-          onShare={handleShare}
-          onCopyShare={copyShareUrl}
-          copied={copied}
-          isShareLoading={createShare.isPending}
-          canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-          onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-          onRegenerate={report ? handleRegenerate : undefined}
-          isRegenerating={regenerate.isPending}
-          onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-          onDelete={() => setDeleteOpen(true)}
-          decisionByName={(session as any).decision_by_name ?? null}
-          decisionAt={(session as any).recruiter_decision_at ?? null}
-        />
-        {sessionClips.length > 0 && (
-          <div className="max-h-[60vh] overflow-hidden">
-            <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
-          </div>
-        )}
-      </div>
+      <DecisionBanner
+        candidateName={session.candidate_name}
+        candidateEmail={session.candidate_email}
+        jobTitle={project?.job_title}
+        durationLabel={formatDuration(session.duration_seconds)}
+        videoAnswersCount={candidateVideos.length}
+        fitScore={fitScore}
+        recommendation={report?.recommendation ?? null}
+        headline={verdictHeadline}
+        rankLabel={rankLabel}
+        decision={decision}
+        onDecisionChange={handleDecision}
+        isDecisionPending={updateDecision.isPending}
+        shareUrl={shareUrl}
+        onShare={handleShare}
+        onCopyShare={copyShareUrl}
+        copied={copied}
+        isShareLoading={createShare.isPending}
+        canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+        onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+        onRegenerate={report ? handleRegenerate : undefined}
+        isRegenerating={regenerate.isPending}
+        onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+        onDelete={() => setDeleteOpen(true)}
+        decisionByName={(session as any).decision_by_name ?? null}
+        decisionAt={(session as any).recruiter_decision_at ?? null}
+      />
 
       <BulkEmailDialog
         open={emailOpen}
