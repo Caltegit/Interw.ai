@@ -120,10 +120,10 @@ export function DecisionBanner(props: DecisionBannerProps) {
 
   return (
     <Card className="border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-start">
         {/* Score circle + reco + actions */}
         <div className="flex shrink-0 items-start gap-4">
-          <div className="flex flex-col items-center gap-2 min-w-[88px]">
+          <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
             {!readOnly && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -181,15 +181,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <div className="flex w-full flex-col items-center justify-center rounded-2xl border bg-muted/40 p-3">
-              <span className={cn("text-3xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
+            <div className="flex w-full flex-col items-center justify-center rounded-xl border bg-muted/40 px-2 py-1.5">
+              <span className={cn("text-2xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
                 {fitScore !== null ? fitScore : "—"}
               </span>
-              <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
                 Fit poste
               </span>
             </div>
-            {reco && <Badge className={cn(reco.tone, "w-full justify-center hover:bg-inherit")}>{reco.label}</Badge>}
+            {reco && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
             <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
@@ -203,7 +203,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="hidden lg:block min-w-0">
-            <h2 className="text-lg font-semibold leading-tight truncate">{candidateName}</h2>
+            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
