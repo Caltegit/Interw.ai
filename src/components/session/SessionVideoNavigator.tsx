@@ -45,8 +45,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
 
-  // Coupe proprement la vidéo en cours (annule un play() en attente puis pause)
-  const stopCurrent = async () => {
+  // Annule un play() en attente puis pause, sans toucher à currentTime.
+  const pauseOnly = async () => {
     const v = videoRef.current;
     if (!v) return;
     try {
@@ -55,11 +55,19 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         playPromiseRef.current = null;
       }
       v.pause();
-      try {
-        v.currentTime = 0;
-      } catch {
-        /* noop */
-      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  // Coupe proprement la vidéo en cours (annule un play() en attente puis pause + reset à 0).
+  // Utilisé uniquement lors d'un changement de clip.
+  const stopCurrent = async () => {
+    await pauseOnly();
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      v.currentTime = 0;
     } catch {
       /* noop */
     }
@@ -178,21 +186,31 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       playMessage: (messageId, startSeconds) => {
         const i = clips.findIndex((c) => c.messageId === messageId);
         if (i === -1) return false;
-        const seek = Math.max(0, (startSeconds ?? 0) - 5);
+        // Marge adaptative : ~15 % du timestamp, bornée entre 0,5 s et 3 s.
+        const raw = Math.max(0, startSeconds ?? 0);
+        const margin = Math.min(3, Math.max(0.5, raw * 0.15));
+        const seek = Math.max(0, raw - margin);
         if (i === index) {
-          // Même clip : seek direct + relance.
-          stopCurrent().then(() => {
+          // Même clip : pause sans reset, puis seek + play.
+          pauseOnly().then(() => {
             const v = videoRef.current;
-            if (v) {
-              const dur = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
-              const target = dur > 0 ? Math.min(seek, Math.max(0, dur - 0.1)) : seek;
-              try {
-                v.currentTime = target;
-              } catch {
-                /* noop */
-              }
-              safePlay();
+            if (!v) return;
+            const dur = v.duration;
+            if (!Number.isFinite(dur) || dur <= 0) {
+              // Durée pas encore connue (WebM Infinity) : passe par le mécanisme
+              // pendingSeekRef + fixDuration, qui seek puis play après timeupdate.
+              pendingSeekRef.current = seek;
+              setShouldAutoPlay(true);
+              fixDuration();
+              return;
             }
+            const target = Math.min(seek, Math.max(0, dur - 0.1));
+            try {
+              v.currentTime = target;
+            } catch {
+              /* noop */
+            }
+            safePlay();
           });
         } else {
           // Autre clip : on charge, l'effet de chargement appliquera pendingSeekRef.
