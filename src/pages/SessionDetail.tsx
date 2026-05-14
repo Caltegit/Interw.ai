@@ -147,20 +147,35 @@ export default function SessionDetail() {
   );
 
   useEffect(() => {
-    if (session?.id && !notesInitialized) {
-      setRecruiterNotes(session.recruiter_note ?? "");
-      setNotesInitialized(true);
+    if (!session?.id) return;
+    const server = session.recruiter_note ?? "";
+    if (lastServerNoteRef.current === null) {
+      lastServerNoteRef.current = server;
+      setRecruiterNotes(server);
+      return;
     }
-  }, [session?.id, session?.recruiter_note, notesInitialized]);
+    if (server !== lastServerNoteRef.current && !noteDirtyRef.current) {
+      lastServerNoteRef.current = server;
+      setRecruiterNotes(server);
+    }
+  }, [session?.id, session?.recruiter_note]);
 
   useEffect(() => {
-    if (!session?.id || !notesInitialized) return;
-    if ((session.recruiter_note ?? "") === recruiterNotes) return;
+    if (!session?.id || !noteDirtyRef.current) return;
+    if (recruiterNotes === (lastServerNoteRef.current ?? "")) return;
     const t = setTimeout(() => {
-      updateNotes.mutate({ notes: recruiterNotes });
+      updateNotes.mutate(
+        { notes: recruiterNotes },
+        {
+          onSuccess: () => {
+            lastServerNoteRef.current = recruiterNotes;
+            noteDirtyRef.current = false;
+          },
+        },
+      );
     }, 1000);
     return () => clearTimeout(t);
-  }, [recruiterNotes, session?.id, session?.recruiter_note, notesInitialized]);
+  }, [recruiterNotes, session?.id]);
 
   const handleShare = async () => {
     if (!report?.id || !user) return;
