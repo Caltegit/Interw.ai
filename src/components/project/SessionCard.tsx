@@ -395,7 +395,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         </div>
 
         {/* Décision + note */}
-        <div className="mt-auto flex flex-col gap-2 pt-1">
+        <div className="flex flex-col gap-2">
           <div className="flex justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
