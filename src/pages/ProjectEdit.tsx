@@ -163,7 +163,7 @@ export default function ProjectEdit() {
         completionMessage:
           (project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE,
         preSessionMessage:
-          (project as { pre_session_message?: string | null }).pre_session_message ?? DEFAULT_PRE_SESSION_MESSAGE,
+          (project as { pre_session_message?: string | null }).pre_session_message ?? "Soyez naturel.le et souriez, vous êtes filmé.e !",
         aiIntroEnabled:
           (project as { ai_intro_enabled?: boolean }).ai_intro_enabled ?? true,
         aiIntroMode:

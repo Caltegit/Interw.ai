@@ -44,9 +44,9 @@ import {
   DEFAULT_AI_TRANSITION_TEXT,
 } from "@/components/project/AiTextCustomizerDialog";
 
-const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publication"];
+const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publier"];
 export const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
-export const DEFAULT_PRE_SESSION_MESSAGE = "Soyez naturel·le et souriez, vous êtes filmé·e !";
+export const DEFAULT_PRE_SESSION_MESSAGE = "Soyez naturel.le et souriez, vous êtes filmé.e !";
 
 export type ProjectStatus = "draft" | "active" | "archived";
 
@@ -527,7 +527,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium">Voix du recruteur</Label>
+                  <Label className="text-sm font-medium">Durée maximale : 30 min</Label>
                   <p className="text-xs text-muted-foreground">
                     Choisissez la voix qui sera utilisée pendant l'entretien.
                   </p>
