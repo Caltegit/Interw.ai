@@ -43,6 +43,7 @@ import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCar
 import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
+import { FitScoreBadge } from "@/components/session/FitScoreBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
 import { NonverbalTabContent } from "@/components/session/NonverbalTabContent";
