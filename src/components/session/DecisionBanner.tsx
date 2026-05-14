@@ -189,7 +189,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 Fit poste
               </span>
             </div>
-            {reco && <Badge className={cn(reco.tone, "w-full justify-center")}>{reco.label}</Badge>}
+            {reco && <Badge className={cn(reco.tone, "w-full justify-center hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
             <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
