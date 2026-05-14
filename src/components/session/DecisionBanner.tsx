@@ -119,7 +119,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     .join(" · ");
 
   return (
-    <Card className="sticky top-0 z-30 border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+    <Card className="border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-start">
         {/* Score circle + reco + actions */}
         <div className="flex shrink-0 items-start gap-4">
