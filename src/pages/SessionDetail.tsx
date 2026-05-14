@@ -375,33 +375,40 @@ export default function SessionDetail() {
   return (
     <div className="space-y-4">
 
-      <DecisionBanner
-        candidateName={session.candidate_name}
-        candidateEmail={session.candidate_email}
-        jobTitle={project?.job_title}
-        durationLabel={formatDuration(session.duration_seconds)}
-        videoAnswersCount={candidateVideos.length}
-        fitScore={fitScore}
-        recommendation={report?.recommendation ?? null}
-        headline={verdictHeadline}
-        rankLabel={rankLabel}
-        decision={decision}
-        onDecisionChange={handleDecision}
-        isDecisionPending={updateDecision.isPending}
-        shareUrl={shareUrl}
-        onShare={handleShare}
-        onCopyShare={copyShareUrl}
-        copied={copied}
-        isShareLoading={createShare.isPending}
-        canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-        onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-        onRegenerate={report ? handleRegenerate : undefined}
-        isRegenerating={regenerate.isPending}
-        onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-        onDelete={() => setDeleteOpen(true)}
-        decisionByName={(session as any).decision_by_name ?? null}
-        decisionAt={(session as any).recruiter_decision_at ?? null}
-      />
+      <div className="sticky top-0 z-30 grid gap-4 lg:grid-cols-[1fr_510px]">
+        <DecisionBanner
+          candidateName={session.candidate_name}
+          candidateEmail={session.candidate_email}
+          jobTitle={project?.job_title}
+          durationLabel={formatDuration(session.duration_seconds)}
+          videoAnswersCount={candidateVideos.length}
+          fitScore={fitScore}
+          recommendation={report?.recommendation ?? null}
+          headline={verdictHeadline}
+          rankLabel={rankLabel}
+          decision={decision}
+          onDecisionChange={handleDecision}
+          isDecisionPending={updateDecision.isPending}
+          shareUrl={shareUrl}
+          onShare={handleShare}
+          onCopyShare={copyShareUrl}
+          copied={copied}
+          isShareLoading={createShare.isPending}
+          canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+          onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+          onRegenerate={report ? handleRegenerate : undefined}
+          isRegenerating={regenerate.isPending}
+          onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+          onDelete={() => setDeleteOpen(true)}
+          decisionByName={(session as any).decision_by_name ?? null}
+          decisionAt={(session as any).recruiter_decision_at ?? null}
+        />
+        {sessionClips.length > 0 && (
+          <div className="max-h-[60vh] overflow-hidden">
+            <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
+          </div>
+        )}
+      </div>
 
       <BulkEmailDialog
         open={emailOpen}
@@ -631,9 +638,7 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div id="session-video-panel" className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          {sessionClips.length > 0 && <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />}
-
+        <div id="session-video-panel" className="space-y-4">
           {report && (
             <Card>
               <CardHeader className="pb-2">
