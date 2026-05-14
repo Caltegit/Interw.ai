@@ -1,59 +1,45 @@
-## Problème
+## Diagnostic
 
-Sur `/sessions/:id`, la mise en page est :
+Le `start_seconds` est bien stocké en base (vérifié : 3, 5, 9, 52 s pour les 5 critères de la session ouverte). Le problème vient de `SessionVideoNavigator.playMessage` côté front (`src/components/session/SessionVideoNavigator.tsx`) :
 
-```text
-[ Sidebar ]  [ Contenu rapport (1fr) | Vidéo (510px fixe) ]  [ Copilote (420px) ]
+1. **Marge de -5 s trop agressive.** Le code fait `seek = max(0, startSeconds - 5)`. Pour les 3 premiers critères (3 s, 5 s, 9 s), on retombe à 0 ou ~4 s → impression de "ça démarre au début".
+2. **Reset à 0 dans `stopCurrent`.** Quand on est déjà sur le bon clip, `stopCurrent()` fait `currentTime = 0` puis on tente `currentTime = target`. Sur les WebM `MediaRecorder` (durée = `Infinity` tant qu'on n'a pas fait l'astuce du `currentTime = 1e9`), le navigateur peut refuser le seek tant que la durée n'est pas connue → la vidéo reste à 0.
+3. **Race au changement de clip.** `pendingSeekRef` est appliqué dans l'effet de chargement, mais si `loadedmetadata` annonce `duration = Infinity`, `applyPendingSeek` est appelé avec `duration = 0` → target borné à 0. La 2e étape (`fixDuration` → `timeupdate`) re-applique bien le seek, mais entre-temps `play()` peut déjà avoir démarré à 0.
+
+## Changements (front uniquement)
+
+Fichier : `src/components/session/SessionVideoNavigator.tsx`
+
+### 1. Marge adaptative au lieu de -5 s fixe
+```ts
+// Avant : const seek = Math.max(0, (startSeconds ?? 0) - 5);
+// Après : marge proportionnelle, mini 0,5 s, maxi 3 s
+const raw = startSeconds ?? 0;
+const margin = Math.min(3, Math.max(0.5, raw * 0.15));
+const seek = Math.max(0, raw - margin);
 ```
+→ pour 3 s on démarre à ~2,5 s ; pour 9 s à ~7,5 s ; pour 52 s à ~49 s.
 
-À 1559px, dès que le copilote s'ouvre, il reste ~1100px pour le rapport. La colonne vidéo garde 510px → la colonne gauche tombe à ~590px et les cartes (FitBreakdown, SignalsCard, etc.) deviennent illisibles.
+### 2. Ne pas reset `currentTime = 0` dans le chemin "même clip"
+Extraire un `pauseOnly()` qui annule le `play()` en attente sans toucher à `currentTime`, et l'utiliser dans `playMessage` (cas `i === index`). Garder le reset à 0 pour les vrais changements de clip.
 
-## Stratégie : adaptation contextuelle pilotée par `useCopilot().open`
+### 3. Garantir la durée avant le seek "même clip"
+Dans le chemin `i === index` :
+- Si `duration === Infinity` ou `NaN`, déclencher `fixDuration()` et faire le seek dans le `timeupdate` final (réutiliser le mécanisme existant via `pendingSeekRef` + remount logique).
+- Sinon, seek direct comme aujourd'hui.
 
-Plutôt que de tout réduire uniformément, on touche **en priorité la colonne vidéo** (qui supporte bien le redimensionnement) et on garde le contenu analytique lisible.
-
-### 1. Rétrécir la colonne vidéo quand le copilote est ouvert
-
-Dans `SessionDetail.tsx` ligne 410, remplacer la largeur fixe `510px` par une valeur conditionnelle :
-
-- Copilote fermé : `510px` (état actuel)
-- Copilote ouvert : `400px`
-
-La `SessionVideoNavigator` reste parfaitement utilisable à 400px (player 16:9 ≈ 225px de hauteur, contrôles compacts).
-
-### 2. Compacter la barre d'onglets quand le copilote est ouvert
-
-Les 5 onglets (Reco IA, Big Five, À l'oral, Attitude, Réponses) ont déjà des libellés masqués sous `sm`. Quand le copilote est ouvert, masquer les libellés à partir d'un breakpoint plus haut (≥ `xl`) pour éviter qu'ils ne tronquent. On garde les icônes + badges.
-
-### 3. Réduire le padding du `<main>` quand le copilote est ouvert
-
-Dans `AppLayout.tsx`, `main` est en `p-6` (24px). Quand le copilote est ouvert, passer à `p-4` (16px) → +16px utiles pour le contenu.
-
-### 4. Réduire le gap de la grille
-
-`gap-6` → `gap-4` quand le copilote est ouvert.
-
-### Bilan d'espace gagné à 1559px
-
-| | Copilote fermé | Copilote ouvert (avant) | Copilote ouvert (après) |
-|---|---|---|---|
-| Colonne contenu | ~870px | ~590px | **~720px** |
-| Colonne vidéo | 510px | 510px | 400px |
-
-→ +130px sur la colonne contenu, ce qui rend les cartes confortables.
-
-## Détails techniques
-
-- Source de vérité : `useCopilot().open` (déjà disponible via `CopilotContext`).
-- `SessionDetail.tsx` ligne 410 : grid-template basculé via template-string conditionnel sur `open`.
-- `SessionDetail.tsx` ligne 441 : ajustement responsive des libellés d'onglets.
-- `AppLayout.tsx` : padding du `<main>` lu depuis `useCopilot()`.
-- Aucun changement back, aucune logique métier touchée.
-- Sous le breakpoint `lg`, la grille passe déjà en colonne unique → comportement mobile inchangé.
+### 4. Différer `safePlay()` après le seek
+Sur changement de clip : ne lancer `safePlay()` qu'après que `applyPendingSeek` a été appelé avec une `duration` finie (et pas dans la branche `Infinity` initiale). Évite le démarrage à 0 visible 0,5 s avant le saut.
 
 ## Validation
 
-1. Ouvrir `/sessions/:id` à 1559px, copilote fermé → état actuel inchangé.
-2. Ouvrir le copilote → la colonne vidéo se rétrécit, le contenu respire, aucune carte ne déborde.
-3. Refermer le copilote → retour fluide à 510px.
-4. Tester à 1280px et en dessous de `lg` pour vérifier qu'on ne casse rien.
+1. Ouvrir `/sessions/f3f4c74b-3b01-4e7f-875d-a08d29224dd4`.
+2. Cliquer sur "Voir le moment" du critère **Expérience hospitality** (start = 3 s) → la vidéo doit démarrer ~2,5 s, pas à 0.
+3. Cliquer sur "Voir le moment" du critère **Leadership & management** (start = 52 s, autre clip) → changement de clip + démarrage ~49 s.
+4. Re-cliquer sur le même bouton plusieurs fois → seek refait à chaque fois, pas de retour à 0.
+5. Tester aussi depuis "Signaux" et "Profil de communication" qui utilisent le même mécanisme.
+
+## Hors périmètre
+
+- L'estimation IA peut rester imprécise quand `transcript_segments` est `null` (cas de la session testée). Améliorer la transcription horodatée est un autre chantier (back).
+- Pas de changement de schéma ni de logique métier.
