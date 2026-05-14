@@ -443,7 +443,7 @@ export default function SessionDetail() {
                 decisionByName={(session as any).decision_by_name ?? null}
                 decisionAt={(session as any).recruiter_decision_at ?? null}
               />
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="decision" className="gap-1">
                   <FileText className="h-4 w-4" />
                   <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
@@ -463,9 +463,6 @@ export default function SessionDetail() {
                   <User className="h-4 w-4" />
                   <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
                   <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
-                </TabsTrigger>
-                <TabsTrigger value="answers" className="gap-1">
-                  <Play className="h-4 w-4" /> <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Réponses</span>
                 </TabsTrigger>
               </TabsList>
             </div>
