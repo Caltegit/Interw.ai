@@ -156,6 +156,9 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       toast({ title: "Nom de l'expéditeur requis", variant: "destructive" });
       return;
     }
+    if (fromNameStorageKey && typeof window !== "undefined") {
+      localStorage.setItem(fromNameStorageKey, fromNameTrimmed);
+    }
     setSending(true);
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
