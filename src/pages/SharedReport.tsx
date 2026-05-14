@@ -253,7 +253,7 @@ export default function SharedReport() {
         onDecisionChange={() => {}}
       />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_510px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_459px]">
         <div className="order-2 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-5">
