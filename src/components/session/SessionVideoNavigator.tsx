@@ -190,7 +190,6 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         const raw = Math.max(0, startSeconds ?? 0);
         const margin = Math.min(3, Math.max(0.5, raw * 0.15));
         const seek = Math.max(0, raw - margin);
-        console.log("[VideoNav] playMessage", { messageId, startSeconds, seek, sameClip: i === index });
         if (i === index) {
           // Même clip : pause sans reset, puis seek + play.
           pauseOnly().then(() => {
