@@ -234,7 +234,7 @@ export default function Landing() {
               </p>
               <div className="mt-6 inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-accent) / 0.1)", color: "hsl(var(--l-fg))", border: "1px solid hsl(var(--l-accent) / 0.3)" }}>
                 <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
-                Avec Interw.ai, vous ne lisez plus que les meilleurs profils.
+                Avec Interw.ai, vous utilisez votre temps pour échanger avec les meilleurs profils.
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
