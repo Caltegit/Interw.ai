@@ -618,7 +618,7 @@ export default function SessionDetail() {
                 <Textarea
                   placeholder="Ajoutez vos observations…"
                   value={recruiterNotes}
-                  onChange={(e) => setRecruiterNotes(e.target.value)}
+                  onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
                   className="min-h-[220px] flex-1 resize-none overflow-y-auto"
                 />
               </CardContent>
