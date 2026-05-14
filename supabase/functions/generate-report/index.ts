@@ -945,7 +945,6 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         e.evidence_start_seconds = resolveStart(
           e.evidence_message_id,
           e.evidence_quote ?? e.quote,
-          e.evidence_start_seconds,
         );
       });
     }
