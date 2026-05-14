@@ -799,7 +799,7 @@ export default function ProjectDetail() {
                             aria-label="Tout sélectionner"
                           />
                         </th>
-                        <th className="pb-2 font-medium max-w-[14rem]">Candidat</th>
+                        <th className="pb-2 font-medium max-w-[14rem]">Tous</th>
                         <th className="pb-2 pr-6 font-medium w-[7rem]">Sélection</th>
                         <th className="pb-2 pl-2 font-medium">Score</th>
                         <th className="pb-2 font-medium">Date</th>
