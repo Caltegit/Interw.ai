@@ -23,23 +23,32 @@ function BackButton() {
   );
 }
 
+import { useCopilot } from "@/contexts/CopilotContext";
+
+function AppShell() {
+  const { open: copilotOpen } = useCopilot();
+  return (
+    <div className="min-h-screen flex w-full">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 flex items-center gap-2 border-b px-4">
+          <SidebarTrigger />
+          <BackButton />
+        </header>
+        <main className={copilotOpen ? "flex-1 p-4" : "flex-1 p-6"}>
+          <Outlet />
+        </main>
+      </div>
+      <CopilotSidePanel />
+    </div>
+  );
+}
+
 export function AppLayout() {
   return (
     <SidebarProvider>
       <CopilotProvider>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <header className="h-14 flex items-center gap-2 border-b px-4">
-              <SidebarTrigger />
-              <BackButton />
-            </header>
-            <main className="flex-1 p-6">
-              <Outlet />
-            </main>
-          </div>
-          <CopilotSidePanel />
-        </div>
+        <AppShell />
         <CopilotFloatingButton />
       </CopilotProvider>
     </SidebarProvider>
