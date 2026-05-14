@@ -159,7 +159,7 @@ export default function Landing() {
             <span className="landing-gradient-text">Évaluez les candidats,<br />pas leur CV.</span>
           </h1>
           <div className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg font-medium">
-            Fini les entretiens inutiles<br />Gardez votre temps pour les meilleurs profils.
+            Fini les entretiens inutiles<br />Gardez votre temps pour les meilleurs profils
           </div>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
             L'outil vous épaule pour mener les premiers entretiens, évalue chaque candidat selon vos critères et vous livre un rapport clair et détaillé.
