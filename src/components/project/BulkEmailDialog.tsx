@@ -91,12 +91,17 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
   const [fromName, setFromName] = useState("");
   const [saveAsDefault, setSaveAsDefault] = useState(false);
 
+  const fromNameStorageKey = user?.id ? `emailFromName:${user.id}` : null;
+
   useEffect(() => {
     if (!open) return;
     if (user?.email) setReplyTo(user.email);
-    const defaultName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
+    const stored = fromNameStorageKey
+      ? (typeof window !== "undefined" ? localStorage.getItem(fromNameStorageKey) : null)
+      : null;
+    const defaultName = stored?.trim() || profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
     setFromName(defaultName);
-  }, [open, user?.email, profile?.full_name]);
+  }, [open, user?.email, profile?.full_name, fromNameStorageKey]);
 
   // Charger les overrides de l'orga
   useEffect(() => {
