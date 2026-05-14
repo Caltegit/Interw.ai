@@ -203,7 +203,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="hidden lg:block min-w-0">
-            <h2 className="text-lg font-semibold leading-tight truncate">{candidateName}</h2>
+            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
