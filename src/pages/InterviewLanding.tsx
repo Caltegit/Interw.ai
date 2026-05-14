@@ -135,6 +135,8 @@ export default function InterviewLanding() {
       introAudioRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
+      introVideoRef.current.muted = false;
+      introVideoRef.current.volume = 1;
       introVideoRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "tts") {
@@ -213,26 +215,21 @@ export default function InterviewLanding() {
     setMediaFinished(true);
   };
 
-  // Démarrage automatique de la vidéo d'intro dès qu'elle est affichée
+  // Démarrage automatique de la vidéo d'intro dès qu'elle est affichée.
+  // Important : on garde le son. Si l'autoplay sonore est bloqué par le
+  // navigateur, on N'AUTORISE PAS de bascule en muet — l'utilisateur cliquera
+  // sur le bouton "Regarder la vidéo" qui constitue un geste utilisateur valide.
   useEffect(() => {
     if (!showIntroMedia || introMediaType !== "video") return;
     if (mediaPlaying || mediaFinished) return;
     const v = introVideoRef.current;
     if (!v) return;
+    v.muted = false;
+    v.volume = 1;
     v.play()
       .then(() => setMediaPlaying(true))
       .catch(() => {
-        // Lecture avec son bloquée : on tente en muet pour démarrer quand même
-        try {
-          v.muted = true;
-          v.play()
-            .then(() => setMediaPlaying(true))
-            .catch(() => {
-              // Échec total : l'utilisateur devra cliquer sur le bouton Play
-            });
-        } catch {
-          /* ignore */
-        }
+        // Autoplay sonore bloqué : on laisse le bouton Play visible.
       });
   }, [showIntroMedia, introMediaType, mediaPlaying, mediaFinished]);
 
