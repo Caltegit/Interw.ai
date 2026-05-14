@@ -135,6 +135,8 @@ export default function InterviewLanding() {
       introAudioRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
+      introVideoRef.current.muted = false;
+      introVideoRef.current.volume = 1;
       introVideoRef.current.play().catch(() => setMediaFinished(true));
       setMediaPlaying(true);
     } else if (introMediaType === "tts") {
