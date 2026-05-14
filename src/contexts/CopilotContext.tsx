@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useLocation, useParams, matchPath } from "react-router-dom";
+import type { CopilotMode } from "@/hooks/queries/useCopilot";
 
 interface CopilotContextValue {
   open: boolean;
@@ -9,6 +10,13 @@ interface CopilotContextValue {
   activeProjectId: string | null;
   /** True si le bouton flottant doit être visible. */
   visible: boolean;
+  /** État persistant entre navigations. */
+  mode: CopilotMode;
+  setMode: (m: CopilotMode) => void;
+  pickedProjectId: string | null;
+  setPickedProjectId: (v: string | null) => void;
+  activeThreadId: string | null;
+  setActiveThreadId: (v: string | null) => void;
 }
 
 const CopilotContext = createContext<CopilotContextValue | null>(null);
@@ -20,30 +28,29 @@ const PROJECT_ROUTE_PATTERNS = [
   "/projects/:id/compare",
 ];
 
-// Routes où le bouton flottant doit être masqué.
 const HIDDEN_PREFIXES = [
   "/admin",
   "/superadmin",
-  "/sessions/", // pour /sessions/:id/export plein écran
+  "/sessions/",
 ];
 
 export function CopilotProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<CopilotMode>("analysis");
+  const [pickedProjectId, setPickedProjectId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const location = useLocation();
   const params = useParams();
 
-  // Détection projet actif
   const activeProjectId = useMemo<string | null>(() => {
     for (const pattern of PROJECT_ROUTE_PATTERNS) {
       const match = matchPath({ path: pattern, end: false }, location.pathname);
       if (match?.params?.id) return match.params.id;
     }
-    // Sur /sessions/:id, le projet est inconnu côté route → null (le drawer demandera de choisir).
     void params;
     return null;
   }, [location.pathname, params]);
 
-  // Visibilité globale
   const visible = useMemo(() => {
     const path = location.pathname;
     if (HIDDEN_PREFIXES.some((p) => path.startsWith(p) && path.endsWith("/export"))) return false;
@@ -51,10 +58,15 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     return true;
   }, [location.pathname]);
 
-  // Ferme le drawer si on quitte une route protégée
   useEffect(() => {
     if (!visible && open) setOpen(false);
   }, [visible, open]);
+
+  // Reset thread quand projet effectif ou mode change
+  const effectiveProjectId = activeProjectId ?? pickedProjectId;
+  useEffect(() => {
+    setActiveThreadId(null);
+  }, [effectiveProjectId, mode]);
 
   const value = useMemo<CopilotContextValue>(
     () => ({
@@ -63,8 +75,14 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
       toggle: () => setOpen((v) => !v),
       activeProjectId,
       visible,
+      mode,
+      setMode,
+      pickedProjectId,
+      setPickedProjectId,
+      activeThreadId,
+      setActiveThreadId,
     }),
-    [open, activeProjectId, visible],
+    [open, activeProjectId, visible, mode, pickedProjectId, activeThreadId],
   );
 
   return <CopilotContext.Provider value={value}>{children}</CopilotContext.Provider>;
