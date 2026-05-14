@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, Play, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User } from "lucide-react";
+import { ArrowLeft, MessageSquare, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,7 +40,7 @@ import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
 import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCard";
-import { QuestionAnswerRow } from "@/components/session/QuestionAnswerRow";
+
 import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
 import { BigFiveBadge } from "@/components/session/BigFiveBadge";
 import { FitScoreBadge } from "@/components/session/FitScoreBadge";
@@ -183,10 +183,13 @@ export default function SessionDetail() {
     () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
     [messages],
   );
-  const candidateMainVideos = useMemo(
-    () => candidateVideos.filter((m: any) => !m.is_follow_up),
-    [candidateVideos],
-  );
+  const transcriptsByMessageId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of messages as any[]) {
+      if (m?.id && typeof m?.content === "string") map[m.id] = m.content;
+    }
+    return map;
+  }, [messages]);
 
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
     const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
@@ -225,48 +228,6 @@ export default function SessionDetail() {
     stats.verdict_headline || report?.executive_summary_short || null;
   const fitScore = typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
 
-  // Construit la vue Réponses (fusion vidéos + évaluations)
-  const questionItems = useMemo(() => {
-    const evalByQuestionId = new Map<string, any>();
-    const evalByIndex = new Map<number, any>();
-    Object.entries(questionEvaluations).forEach(([key, val]: [string, any]) => {
-      const idx = parseInt(key);
-      if (!Number.isNaN(idx)) evalByIndex.set(idx, val);
-      if (val?.question_id) evalByQuestionId.set(val.question_id, val);
-    });
-    const projectQuestions = (project?.questions as any[]) ?? [];
-
-    return candidateMainVideos.map((video: any, idx: number) => {
-      const evalEntry =
-        (video.question_id && evalByQuestionId.get(video.question_id)) ||
-        evalByIndex.get(idx);
-      const projectQ = video.question_id
-        ? projectQuestions.find((q: any) => q.id === video.question_id)
-        : projectQuestions[idx];
-
-      // Trouve la réponse texte du candidat liée à cette question (premier message non-follow-up)
-      const candidateMsg = messages.find(
-        (m: any) =>
-          m.role === "candidate" &&
-          !m.is_follow_up &&
-          (video.question_id ? m.question_id === video.question_id : true),
-      );
-
-      return {
-        index: idx,
-        questionText: evalEntry?.question || projectQ?.content || `Question ${idx + 1}`,
-        videoUrl: video.video_segment_url,
-        score: typeof evalEntry?.score === "number" ? evalEntry.score : null,
-        summary: evalEntry?.summary ?? null,
-        comment: evalEntry?.comment ?? null,
-        keyQuote: evalEntry?.key_quote ?? null,
-        depthLevel: evalEntry?.depth_level ?? null,
-        hadFollowup: !!evalEntry?.had_followup,
-        followupHelped: !!evalEntry?.followup_helped,
-        candidateAnswerText: candidateMsg?.content ?? null,
-      };
-    });
-  }, [candidateMainVideos, questionEvaluations, project, messages]);
 
   const handleDecision = (d: RecruiterDecision) => {
     if (!user) return;
@@ -443,7 +404,7 @@ export default function SessionDetail() {
                 decisionByName={(session as any).decision_by_name ?? null}
                 decisionAt={(session as any).recruiter_decision_at ?? null}
               />
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="decision" className="gap-1">
                   <FileText className="h-4 w-4" />
                   <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
@@ -463,9 +424,6 @@ export default function SessionDetail() {
                   <User className="h-4 w-4" />
                   <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
                   <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
-                </TabsTrigger>
-                <TabsTrigger value="answers" className="gap-1">
-                  <Play className="h-4 w-4" /> <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Réponses</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -623,19 +581,6 @@ export default function SessionDetail() {
               />
             </TabsContent>
 
-            <TabsContent value="answers" className="mt-4 space-y-3">
-              {questionItems.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune réponse vidéo enregistrée.
-                  </CardContent>
-                </Card>
-              ) : (
-                questionItems.map((item, i) => (
-                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
-                ))
-              )}
-            </TabsContent>
           </Tabs>
         </div>
 
@@ -645,7 +590,7 @@ export default function SessionDetail() {
         >
           {sessionClips.length > 0 && (
             <div className="shrink-0">
-              <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} />
+              <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} transcripts={transcriptsByMessageId} />
             </div>
           )}
           {report && (

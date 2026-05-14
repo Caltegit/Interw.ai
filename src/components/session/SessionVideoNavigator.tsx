@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
 
 export interface SessionVideoClip {
   url: string;
@@ -20,6 +21,7 @@ export interface SessionVideoNavigatorHandle {
 
 interface Props {
   clips: SessionVideoClip[];
+  transcripts?: Record<string, string>;
 }
 
 function formatMinutes(s: number): string {
@@ -29,7 +31,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips }, ref) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
@@ -378,6 +380,25 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
+
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="group flex w-full items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/60"
+            >
+              <span>Transcription</span>
+              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="min-h-[220px] max-h-[220px] overflow-y-auto rounded-md border bg-background p-3 text-sm leading-relaxed whitespace-pre-wrap">
+              {current.messageId && transcripts?.[current.messageId]
+                ? transcripts[current.messageId]
+                : <span className="text-muted-foreground">Transcription non disponible.</span>}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
