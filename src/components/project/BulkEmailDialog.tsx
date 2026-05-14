@@ -237,6 +237,19 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
 
         <div className="space-y-3">
           <div className="space-y-1">
+            <Label>Nom de l'expéditeur</Label>
+            <Input
+              value={fromName}
+              onChange={(e) => setFromName(e.target.value.slice(0, 60))}
+              placeholder="Votre nom"
+              maxLength={60}
+            />
+            <p className="text-xs text-muted-foreground">
+              Affiché dans la boîte de réception : « {fromName.trim() || "—"} &lt;noreply@interw.ai&gt; ».
+            </p>
+          </div>
+
+          <div className="space-y-1">
             <Label>Modèle</Label>
             <Select
               value={selectedKey}
