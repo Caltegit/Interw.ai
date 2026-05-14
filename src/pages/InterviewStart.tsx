@@ -1968,7 +1968,7 @@ export default function InterviewStart() {
     // ÉTAPE 1 : warm-up TTS — on ping ElevenLabs pour réveiller le service.
     updateStep("voice", "running");
     setBootPercent(10);
-    let greetingBlob: Blob | null = null;
+    // greetingBlob est déclaré plus bas, après le calcul du texte du greeting.
     if (usesEleven) {
       // On warm avec une phrase courte et neutre pour mesurer le réseau.
       const warmText = `Bonjour ${firstName || ""}.`.trim();
