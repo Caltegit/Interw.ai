@@ -58,7 +58,10 @@ const formatDuration = (seconds?: number | null) => {
   return `${m} min`;
 };
 
+import { useCopilot } from "@/contexts/CopilotContext";
+
 export default function SessionDetail() {
+  const { open: copilotOpen } = useCopilot();
   const { id } = useParams();
   const { user } = useAuth();
   const { toast } = useToast();
