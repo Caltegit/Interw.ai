@@ -620,19 +620,6 @@ export default function SessionDetail() {
               />
             </TabsContent>
 
-            <TabsContent value="answers" className="mt-4 space-y-3">
-              {questionItems.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Aucune réponse vidéo enregistrée.
-                  </CardContent>
-                </Card>
-              ) : (
-                questionItems.map((item, i) => (
-                  <QuestionAnswerRow key={item.index} data={item} defaultOpen={i === 0} />
-                ))
-              )}
-            </TabsContent>
           </Tabs>
         </div>
 
