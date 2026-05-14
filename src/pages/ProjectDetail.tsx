@@ -328,7 +328,10 @@ export default function ProjectDetail() {
       setSavingNote((p) => ({ ...p, [sessionId]: false }));
       if (error) {
         toast({ title: "Erreur", description: "Note non sauvegardée", variant: "destructive" });
+        return;
       }
+      setSessions((prev) => prev.map((s) => (s.id === sessionId ? { ...s, recruiter_note: value } : s)));
+      queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
     }, 1000);
   };
 
