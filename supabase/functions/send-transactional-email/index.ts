@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
   let messageId: string
   let templateData: Record<string, any> = {}
   let replyTo: string | undefined
+  let fromName: string | undefined
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
@@ -129,6 +130,11 @@ Deno.serve(async (req) => {
     const rt = body.replyTo || body.reply_to
     if (typeof rt === 'string' && rt.includes('@')) {
       replyTo = rt
+    }
+    const fn = body.fromName || body.from_name
+    if (typeof fn === 'string') {
+      const cleaned = fn.replace(/[<>"\r\n]/g, '').trim().slice(0, 60)
+      if (cleaned.length > 0) fromName = cleaned
     }
   } catch {
     return new Response(
@@ -374,7 +380,7 @@ Deno.serve(async (req) => {
     payload: {
       message_id: messageId,
       to: effectiveRecipient,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `${fromName || SITE_NAME} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: resolvedSubject,
       html,

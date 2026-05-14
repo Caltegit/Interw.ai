@@ -79,7 +79,7 @@ const firstNameOf = (full?: string | null) => {
 export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, onSent }: Props) {
   const { toast } = useToast();
   const { organizationId } = useOrgRole();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [templates, setTemplates] = useState<CandidateMessageTemplate[]>(DEFAULT_TEMPLATES);
   const [selectedKey, setSelectedKey] = useState<string>(DEFAULT_TEMPLATES[0].key);
   const [subject, setSubject] = useState("");
@@ -88,11 +88,15 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
   const [dirty, setDirty] = useState(false);
   const [allowReply, setAllowReply] = useState(false);
   const [replyTo, setReplyTo] = useState("");
+  const [fromName, setFromName] = useState("");
   const [saveAsDefault, setSaveAsDefault] = useState(false);
 
   useEffect(() => {
-    if (open && user?.email) setReplyTo(user.email);
-  }, [open, user?.email]);
+    if (!open) return;
+    if (user?.email) setReplyTo(user.email);
+    const defaultName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
+    setFromName(defaultName);
+  }, [open, user?.email, profile?.full_name]);
 
   // Charger les overrides de l'orga
   useEffect(() => {
@@ -142,6 +146,11 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       toast({ title: "Adresse de réponse invalide", variant: "destructive" });
       return;
     }
+    const fromNameTrimmed = fromName.trim().slice(0, 60);
+    if (!fromNameTrimmed) {
+      toast({ title: "Nom de l'expéditeur requis", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const results = await Promise.allSettled(
       validRecipients.map((r) => {
@@ -157,6 +166,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               body: personalizedBody,
               firstName,
             },
+            fromName: fromNameTrimmed,
             ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },
         });
@@ -226,6 +236,19 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
         </DialogHeader>
 
         <div className="space-y-3">
+          <div className="space-y-1">
+            <Label>Nom de l'expéditeur</Label>
+            <Input
+              value={fromName}
+              onChange={(e) => setFromName(e.target.value.slice(0, 60))}
+              placeholder="Votre nom"
+              maxLength={60}
+            />
+            <p className="text-xs text-muted-foreground">
+              Affiché dans la boîte de réception : « {fromName.trim() || "—"} &lt;noreply@interw.ai&gt; ».
+            </p>
+          </div>
+
           <div className="space-y-1">
             <Label>Modèle</Label>
             <Select

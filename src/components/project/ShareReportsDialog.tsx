@@ -40,7 +40,7 @@ export function ShareReportsDialog({
   skippedCount = 0,
 }: Props) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState("");
@@ -48,10 +48,14 @@ export function ShareReportsDialog({
   const [body, setBody] = useState("");
   const [allowReply, setAllowReply] = useState(true);
   const [replyTo, setReplyTo] = useState("");
+  const [fromName, setFromName] = useState("");
 
   useEffect(() => {
-    if (open && user?.email) setReplyTo(user.email);
-  }, [open, user?.email]);
+    if (!open) return;
+    if (user?.email) setReplyTo(user.email);
+    const defaultName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "";
+    setFromName(defaultName);
+  }, [open, user?.email, profile?.full_name]);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -124,6 +128,11 @@ export function ShareReportsDialog({
       toast({ title: "Adresse de réponse invalide", variant: "destructive" });
       return;
     }
+    const fromNameTrimmed = fromName.trim().slice(0, 60);
+    if (!fromNameTrimmed) {
+      toast({ title: "Nom de l'expéditeur requis", variant: "destructive" });
+      return;
+    }
     setSending(true);
     const stamp = Date.now();
     const results = await Promise.allSettled(
@@ -134,6 +143,7 @@ export function ShareReportsDialog({
             recipientEmail: email,
             idempotencyKey: `share-reports-${stamp}-${email}`,
             templateData: { subject, body, firstName: "" },
+            fromName: fromNameTrimmed,
             ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },
         }),
@@ -172,6 +182,18 @@ export function ShareReportsDialog({
           </div>
         ) : (
           <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Nom de l'expéditeur</Label>
+              <Input
+                value={fromName}
+                onChange={(e) => setFromName(e.target.value.slice(0, 60))}
+                placeholder="Votre nom"
+                maxLength={60}
+              />
+              <p className="text-xs text-muted-foreground">
+                Affiché dans la boîte de réception : « {fromName.trim() || "—"} &lt;noreply@interw.ai&gt; ».
+              </p>
+            </div>
             <div className="space-y-1">
               <Label>Destinataires</Label>
               <Input
