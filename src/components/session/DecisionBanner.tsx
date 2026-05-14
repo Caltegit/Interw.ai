@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +38,7 @@ interface DecisionBannerProps {
   jobTitle?: string | null;
   durationLabel?: string;
   videoAnswersCount: number;
+  createdAt?: string | null;
   fitScore: number | null;
   recommendation?: string | null;
   headline?: string | null;
@@ -89,6 +92,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     jobTitle,
     durationLabel,
     videoAnswersCount,
+    createdAt,
     fitScore,
     recommendation,
     headline,
@@ -114,7 +118,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
 
   const reco = recommendation ? recoConfig[recommendation] : null;
   const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
-  const meta = [jobTitle, durationLabel, `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`]
+  const relativeDate = createdAt
+    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr })
+    : null;
+  const meta = [
+    jobTitle,
+    durationLabel,
+    `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`,
+    relativeDate,
+  ]
     .filter(Boolean)
     .join(" · ");
 

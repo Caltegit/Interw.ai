@@ -420,6 +420,7 @@ export default function SessionDetail() {
                 jobTitle={project?.job_title}
                 durationLabel={formatDuration(session.duration_seconds)}
                 videoAnswersCount={candidateVideos.length}
+                createdAt={session.created_at}
                 fitScore={fitScore}
                 recommendation={report?.recommendation ?? null}
                 headline={verdictHeadline}
