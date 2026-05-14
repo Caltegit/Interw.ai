@@ -162,10 +162,10 @@ export default function Landing() {
             <span className="landing-gradient-text">Évaluez les candidats,<br />pas leur CV.</span>
           </h1>
           <div className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg font-medium">
-            Fini les entretiens inutiles.
+            Fini les entretiens inutiles.&nbsp;<br />Gardez votre temps pour les meilleurs profils.
           </div>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Gagnez un temps précieux : l'outil vous épaule pour mener les premiers entretiens, évalue chaque candidat selon vos critères et vous livre un rapport clair.
+            L'outil vous épaule pour mener les premiers entretiens, évalue chaque candidat selon vos critères et vous livre un rapport clair et détaillé.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
@@ -234,7 +234,7 @@ export default function Landing() {
               </p>
               <div className="mt-6 inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-accent) / 0.1)", color: "hsl(var(--l-fg))", border: "1px solid hsl(var(--l-accent) / 0.3)" }}>
                 <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
-                Avec Interw.ai, vous ne lisez plus que les meilleurs profils.
+                Avec Interw.ai, vous utilisez votre temps pour échanger avec les meilleurs profils.
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
