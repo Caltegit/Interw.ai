@@ -1,54 +1,42 @@
-# Plan : améliorer la qualité et stabilité de la voix ElevenLabs
+# Pourquoi « Voir le moment » repart à zéro
 
-## Objectif
-1. Améliorer la qualité timbrale (réduire la variation entre Q1 et les questions suivantes)
-2. Solidifier le pipeline TTS avec retry avant fallback navigateur
-3. Quand le fallback `speechSynthesis` se déclenche, choisir une voix système du bon genre (féminine ou masculine) selon la configuration de la session
-4. Compenser la latence supplémentaire par du préchargement
+## Diagnostic
 
-## Changements
+J'ai inspecté la session `f41b9c1d…` directement en base. Deux problèmes se cumulent :
 
-### 1. Backend — `supabase/functions/tts-elevenlabs/index.ts`
-- Remplacer `model_id: "eleven_flash_v2_5"` par `model_id: "eleven_turbo_v2_5"`
-- Monter `stability: 0.6` → `stability: 0.75` (timbre plus consistant entre générations)
+**1. Le rapport stocké ne contient AUCUN `start_seconds` dans `stats.fit_breakdown`.**
+Chaque entrée a bien `message_id` et `quote`, mais la clé `start_seconds` est totalement absente. Conséquence : le composant `EvidenceLink` appelle `onGoToMessage(messageId, undefined)`, et `SessionVideoNavigator.playMessage` calcule donc `seek = max(0, 0 - margin) = 0`. La vidéo se positionne au début du clip, jamais à 1:05.
 
-### 2. Frontend — `src/pages/InterviewStart.tsx`
+Ce rapport a été généré le 11/05 — avant que la logique `resolveStart` (lignes 866-914 de `generate-report/index.ts`) soit fiable. Tant qu'on ne régénère pas, le bouton ne pourra rien faire.
 
-**a) Retry x3 sur `fetchElevenLabsBlob`**
-- Si l'appel échoue (timeout, erreur réseau, statut non-OK), retenter jusqu'à 3 fois avec backoff progressif (300ms, 600ms, 1200ms)
-- Si les 3 tentatives échouent, logger `interview_tts_fallback_browser` avec le contexte (greeting / question / relance / transition)
-- Ensuite seulement, basculer sur `speechSynthesis`
+**2. Même après régénération, le calcul proportionnel actuel est fragile.**
+Sur cette session, AUCUN message candidat n'a de `transcript_segments` (Whisper en mode "segments" n'a jamais tourné — colonne `null` partout). Du coup `resolveStart` retombe sur l'estimation `mots / 2.5` (~150 mots/min), puis fait `i / nbMots × durée`. Pour un message de 350 mots ça peut décaler de ±20 s. De plus :
+- la recherche de la citation ne teste que les **3 premiers mots** (puis 2, puis 1) → si la citation IA paraphrase légèrement le début (cas fréquent), on ne tombe pas sur la bonne occurrence ;
+- on cherche depuis le début → on prend la première occurrence du mot, pas forcément la bonne.
 
-**b) Précharger le greeting Q1 dès le boot** (compense les +225ms de Turbo)
-- Au moment du warm-up TTS (~ligne 1965), lancer en parallèle `fetchElevenLabsBlob(greeting)` et stocker le blob dans une `ref`
-- Au moment de jouer le greeting (~ligne 2028), utiliser le blob préchargé via `prefetchedBlob` au lieu de refetch
+## Plan en 3 étapes
 
-**c) Sélection genrée de la voix `speechSynthesis`**
-- Lire le genre de la voix configurée pour la session (via `project.tts_voice_id` mappé sur les listes `FEMALE_VOICES` / `MALE_VOICES` de `VoiceSelectorDialog.tsx`, ou ajouter un champ `tts_voice_gender` dans `projects` si plus simple)
-- Dans la fonction `speak()` (~lignes 920-978), filtrer `window.speechSynthesis.getVoices()` :
-  - Préférer une voix `lang.startsWith("fr")`
-  - Filtrer par genre via la propriété `voice.name` (heuristique : "Amélie", "Audrey", "Marie", "Aurélie", "Virginie" = féminin ; "Thomas", "Daniel", "Nicolas" = masculin) ou via `voice.gender` quand disponible
-  - Fallback : première voix française disponible si aucune correspondance de genre
-- Mémoriser la voix choisie pour la session (pas de re-sélection à chaque appel)
+### Étape 1 — Rendre `resolveStart` robuste (`supabase/functions/generate-report/index.ts`)
+- Quand `transcript_segments` existe sur le message : parcourir les segments, normaliser leur texte, et retourner le `start` du **premier segment qui contient au moins 3 mots consécutifs de la citation**. C'est précis à la seconde près sans dépendre d'une estimation.
+- Sinon (fallback actuel) : améliorer le matching mots-à-mots :
+  - chercher des fenêtres de 5 → 4 → 3 mots (plus discriminant) ;
+  - parmi toutes les occurrences candidates, garder celle dont les **mots suivants** matchent le mieux la suite de la citation (score de chevauchement) ;
+  - garder la formule `(i / words.length) × duration`, mais clamper la marge adaptative déjà appliquée côté client.
+
+### Étape 2 — Backfill des rapports existants sans régénérer entièrement
+- Ajouter dans `generate-report` (ou en petit endpoint dédié `backfill-report-timestamps`) une routine qui, si un rapport existe déjà, recharge ses `stats.fit_breakdown`, `decision_drivers`, `signals`, `red_flags`, `personality_profile.*.evidences`, `soft_skills`, `communication_profile.*` et `paraverbal_analysis.dimensions`, applique `resolveStart` sur chaque entrée et met à jour la ligne `reports`. Aucun appel IA, aucun coût.
+- Déclencher ce backfill automatiquement à la première ouverture d'un rapport ancien depuis `useSessionDetail` si une entrée `fit_breakdown` a un `message_id` mais pas de `start_seconds`.
+
+### Étape 3 — S'assurer que les futures sessions ont `transcript_segments`
+- Vérifier dans `transcribe-session` que le mode "segments" est bien activé pour toutes les nouvelles transcriptions (le code existe ligne 249-256, mais les messages de cette session sont à `null` — soit la fonction n'a jamais tourné en mode segments, soit l'IA n'a pas renvoyé le format).
+- Ajouter un log structuré côté `transcribe-session` quand `segments.length === 0` pour détecter ces cas et permettre un re-run via le bouton « Re-transcrire » existant.
 
 ## Détails techniques
 
-| Fichier | Modification |
-|---|---|
-| `supabase/functions/tts-elevenlabs/index.ts` | `model_id` + `stability` |
-| `src/pages/InterviewStart.tsx` | Retry x3, préchargement greeting, sélection voix `speechSynthesis` selon genre |
-| `src/lib/voiceGender.ts` (nouveau) | Helper qui mappe un `voiceId` ElevenLabs vers `"female" \| "male"` (utilise les constantes de `VoiceSelectorDialog.tsx`) |
+- Côté client, `SessionVideoNavigator.playMessage` est déjà correct : il applique une marge adaptative et borne à `duration - 0.1`. Aucun changement à prévoir.
+- Le format de citation IA peut contenir « … » ou des coupures (`Math.max(0, raw)` côté serveur tolère déjà les NaN).
+- Le backfill peut être idempotent : si tous les `start_seconds` sont déjà non-nuls, on ne fait rien.
 
-## Validation après déploiement
-1. Démarrer un entretien et vérifier que la voix Q1 = voix Q2/Q3 (même timbre)
-2. Vérifier dans la console qu'aucun `interview_tts_fallback_browser` n'apparaît en conditions normales
-3. Test du fallback : bloquer temporairement l'edge function `tts-elevenlabs` (ex. via DevTools) et vérifier que la voix système qui prend le relais correspond au genre configuré
-4. Vérifier les logs de `tts-elevenlabs` pour confirmer `eleven_turbo_v2_5`
+## Validation
 
-## Coût
-Inchangé : Flash v2.5 et Turbo v2.5 sont au même tarif (~500 crédits / 1000 caractères).
-
-## Hors scope
-- Changement de voix ou de provider TTS
-- Modification des phrases de transition statiques
-- Refonte du système de cache TTS
+Après mise en place : régénérer (ou backfill) le rapport de la session `f41b9c1d…`, cliquer sur « Voir le moment » de l'entrée « Sens du client & du détail » et vérifier que la vidéo démarre autour de 1:05 (et non à 0). Vérifier aussi sur 2-3 autres entrées (decision_drivers, signals).
