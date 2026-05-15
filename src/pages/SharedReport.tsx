@@ -243,6 +243,7 @@ export default function SharedReport() {
         readOnly
         candidateName={session.candidate_name}
         jobTitle={project?.job_title}
+        projectTitle={project?.title}
         durationLabel={formatDuration(session.duration_seconds)}
         videoAnswersCount={candidateVideos.length}
         createdAt={session.created_at}

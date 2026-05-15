@@ -36,6 +36,7 @@ interface DecisionBannerProps {
   candidateName: string;
   candidateEmail?: string | null;
   jobTitle?: string | null;
+  projectTitle?: string | null;
   durationLabel?: string;
   videoAnswersCount: number;
   createdAt?: string | null;
@@ -90,6 +91,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     candidateName,
     candidateEmail,
     jobTitle,
+    projectTitle,
     durationLabel,
     videoAnswersCount,
     createdAt,
@@ -119,10 +121,13 @@ export function DecisionBanner(props: DecisionBannerProps) {
   const reco = recommendation ? recoConfig[recommendation] : null;
   const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
   const relativeDate = createdAt
-    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr })
+    ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr }).replace("environ ", "")
     : null;
+
+  const fullJobLabel = [jobTitle, projectTitle].filter(Boolean).join(" — ");
+
   const meta = [
-    jobTitle,
+    fullJobLabel,
     durationLabel,
     `${videoAnswersCount} réponse${videoAnswersCount > 1 ? "s" : ""}`,
     relativeDate,
