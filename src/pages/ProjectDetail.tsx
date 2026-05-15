@@ -541,9 +541,10 @@ export default function ProjectDetail() {
     }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
-    if (decisionFilter !== "all")
+    const searchActive = search.trim().length > 0;
+    if (!searchActive && decisionFilter !== "all")
       list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
-    if (visibleDecisions.size > 0) {
+    if (!searchActive && visibleDecisions.size > 0) {
       list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
     }
     if (recoFilter !== "all")
