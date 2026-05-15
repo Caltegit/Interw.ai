@@ -434,7 +434,7 @@ export default function SessionDetail() {
                 </TabsTrigger>
                 <TabsTrigger value="voice" className="gap-1">
                   <Mic className="h-4 w-4" />
-                  <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>À l'oral</span>
+                  <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
                   <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
                 </TabsTrigger>
                 <TabsTrigger value="attitude" className="gap-1">
