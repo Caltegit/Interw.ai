@@ -69,7 +69,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Pr
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base text-left">
-          <Brain className="h-4 w-4" />Profil de personnalité (Big Five)&nbsp;
+          <Brain className="h-4 w-4" />Profil de personnalité&nbsp;
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
