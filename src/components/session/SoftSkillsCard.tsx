@@ -21,7 +21,7 @@ export function SoftSkillsCard({ skills, onGoToMessage }: Props) {
     return (
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
+          <CardTitle className="flex items-center gap-2 text-base text-left">
             <Gem className="h-4 w-4" /> Soft skills observées
           </CardTitle>
         </CardHeader>
@@ -36,7 +36,7 @@ export function SoftSkillsCard({ skills, onGoToMessage }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base text-left">
           <Gem className="h-4 w-4" /> Soft skills observées
         </CardTitle>
       </CardHeader>

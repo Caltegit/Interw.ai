@@ -279,7 +279,7 @@ export default function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-base text-left">
               <Trophy className="h-4 w-4 text-primary" />
               Meilleurs candidats (30j)
             </CardTitle>
@@ -325,7 +325,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
+            <CardTitle className="flex items-center gap-2 text-base text-left">
               <BarChart3 className="h-4 w-4 text-primary" />
               Recommandations (30j)
             </CardTitle>
