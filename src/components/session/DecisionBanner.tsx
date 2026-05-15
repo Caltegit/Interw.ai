@@ -124,9 +124,17 @@ export function DecisionBanner(props: DecisionBannerProps) {
     ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr }).replace("environ ", "")
     : null;
 
-  const labels = [jobTitle, projectTitle].filter(Boolean) as string[];
-  const uniqueLabels = labels.filter((val, idx) => labels.indexOf(val) === idx);
-  const fullJobLabel = uniqueLabels.join(" — ");
+  const rawLabels = [jobTitle, projectTitle].filter(Boolean) as string[];
+  const labels: string[] = [];
+  rawLabels.forEach((l) => {
+    if (!labels.some((existing) => existing.includes(l) || l.includes(existing))) {
+      labels.push(l);
+    } else if (labels.length > 0 && l.includes(labels[0])) {
+      // Si le nouveau label est plus complet, on remplace
+      labels[0] = l;
+    }
+  });
+  const fullJobLabel = labels.join(" — ");
 
   const meta = [
     fullJobLabel,
