@@ -44,7 +44,7 @@ export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMess
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base text-left">
           <Lightbulb className="h-4 w-4 text-primary" /> Pourquoi cette recommandation
         </CardTitle>
       </CardHeader>

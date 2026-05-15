@@ -11,7 +11,7 @@ export function FollowupQuestionsCard({ questions }: { questions?: FollowupQuest
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
+        <CardTitle className="flex items-center gap-2 text-base text-left">
           <HelpCircle className="h-4 w-4" /> Questions à creuser en entretien
         </CardTitle>
       </CardHeader>
