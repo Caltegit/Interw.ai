@@ -73,6 +73,17 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Pr
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground leading-relaxed">
+          Le Big Five décrit la personnalité à travers 5 traits : Ouverture, Conscienciosité, Extraversion, Agréabilité, Névrosisme (OCEAN). Chaque trait est un spectre, pas une case. C'est le modèle de référence mondial en psychologie de la personnalité.{" "}
+          <a
+            href="https://fr.wikipedia.org/wiki/Mod%C3%A8le_des_Big_Five_(psychologie)"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            Lien Wikipedia
+          </a>
+        </div>
         {visible.map(({ key, label, trait }) => {
           const score = Math.max(0, Math.min(100, trait!.score));
           const confidence = trait!.confidence ?? "medium";
