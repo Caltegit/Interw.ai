@@ -124,7 +124,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
     ? formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: fr }).replace("environ ", "")
     : null;
 
-  const fullJobLabel = [jobTitle, projectTitle].filter(Boolean).join(" — ");
+  const labels = [jobTitle, projectTitle].filter(Boolean) as string[];
+  const uniqueLabels = labels.filter((val, idx) => labels.indexOf(val) === idx);
+  const fullJobLabel = uniqueLabels.join(" — ");
 
   const meta = [
     fullJobLabel,
