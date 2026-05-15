@@ -109,7 +109,7 @@ export default function Feedback() {
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(new Date(t.last_message_at), { addSuffix: true, locale: fr })}
+                      {formatDistanceToNow(new Date(t.last_message_at), { addSuffix: true, locale: fr }).replace("environ ", "")}
                     </span>
                   </div>
                 </Card>

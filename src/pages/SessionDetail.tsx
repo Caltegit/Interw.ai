@@ -396,6 +396,7 @@ export default function SessionDetail() {
                 candidateName={session.candidate_name}
                 candidateEmail={session.candidate_email}
                 jobTitle={project?.job_title}
+                projectTitle={project?.title}
                 durationLabel={formatDuration(session.duration_seconds)}
                 videoAnswersCount={candidateVideos.length}
                 createdAt={session.created_at}
