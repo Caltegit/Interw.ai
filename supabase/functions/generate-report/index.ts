@@ -868,50 +868,8 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     // position du 1er mot de la citation dans la transcription du message,
     // ramenée à la durée du clip. Aucun fallback IA.
     // ============================================================
-    const normalizeForMatch = (s: string) =>
-      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-
-    const wordsByMessage = new Map<string, string[]>();
-    const durationByMessage = new Map<string, number>();
-    for (const m of messages as any[]) {
-      if (m.role !== "candidate") continue;
-      const words = normalizeForMatch(typeof m.content === "string" ? m.content : "")
-        .split(" ")
-        .filter(Boolean);
-      wordsByMessage.set(m.id, words);
-      const segs = (m as any).transcript_segments;
-      let dur = 0;
-      if (Array.isArray(segs) && segs.length > 0) {
-        for (const s of segs) {
-          const e = Number(s?.end);
-          if (Number.isFinite(e) && e > dur) dur = e;
-        }
-      }
-      // Repli : 2,5 mots/seconde (≈ 150 mots/min) si aucun segment.
-      if (dur <= 0) dur = words.length / 2.5;
-      durationByMessage.set(m.id, dur);
-    }
-
-    const resolveStart = (messageId: any, quote: any): number | null => {
-      if (!messageId || typeof quote !== "string" || !quote.trim()) return null;
-      const words = wordsByMessage.get(messageId);
-      const duration = durationByMessage.get(messageId);
-      if (!words || words.length === 0 || !duration || duration <= 0) return null;
-      const qWords = normalizeForMatch(quote).split(" ").filter(Boolean);
-      if (qWords.length === 0) return null;
-      // Cherche une séquence de 3 mots, puis 2, puis 1.
-      for (const n of [3, 2, 1]) {
-        if (qWords.length < n) continue;
-        const needle = qWords.slice(0, n);
-        outer: for (let i = 0; i <= words.length - n; i++) {
-          for (let k = 0; k < n; k++) {
-            if (words[i + k] !== needle[k]) continue outer;
-          }
-          return Math.max(0, Math.round((i / words.length) * duration * 10) / 10);
-        }
-      }
-      return null;
-    };
+    const { resolveStartFactory } = await import("../_shared/resolve-start-seconds.ts");
+    const resolveStart = resolveStartFactory(messages as any[]);
 
     const fixEntry = (e: any, msgKey = "message_id", tsKey = "start_seconds", quoteKey = "quote") => {
       if (!e || typeof e !== "object") return;
