@@ -615,13 +615,31 @@ export default function InterviewDeviceTest() {
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
   const handleVideoDeviceChange = (id: string) => { setSelectedVideoId(id); setStoredDeviceId("video", id); void testCam(id); };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     camStreamRef.current?.getTracks().forEach((t) => t.stop());
     camStreamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    // Journaliser un éventuel bypass pour que les RH puissent identifier les
+    // candidats qui forcent le passage malgré un micro défaillant.
+    if (attemptIdRef.current && (micStatus === "error" || micStatus === "warning" || browserStatus !== "ok")) {
+      try {
+        void supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current });
+      } catch { /* silencieux */ }
+    }
     navigate(`/session/${slug}/start/${token}`);
-  };
+  }, [navigate, slug, token, micStatus, browserStatus]);
+
+  // Le bouton « Passer » ou « Continuer quand même » ouvre une confirmation
+  // explicite quand le micro est en erreur — c'est la cause N°1 de sessions
+  // ratées (candidat passe outre, l'IA n'entend rien).
+  const requestContinueWithCheck = useCallback(() => {
+    if (micStatus === "error") {
+      setShowSkipConfirm(true);
+    } else {
+      handleContinue();
+    }
+  }, [micStatus, handleContinue]);
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(window.location.href); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); } catch { /* ignore */ }
