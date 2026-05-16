@@ -1596,11 +1596,23 @@ export default function InterviewStart() {
           const audioStream = new MediaStream(audioTracks);
           const audioMime = getSupportedAudioMimeType();
           audioMimeRef.current = audioMime ?? "audio/webm";
-          const audioOptions: MediaRecorderOptions = {
-            ...(audioMime ? { mimeType: audioMime } : {}),
-            audioBitsPerSecond: 24_000,
-          };
-          const audioRecorder = new MediaRecorder(audioStream, audioOptions);
+          let audioRecorder: MediaRecorder | null = null;
+          try {
+            const audioOptions: MediaRecorderOptions = {
+              ...(audioMime ? { mimeType: audioMime } : {}),
+              audioBitsPerSecond: 24_000,
+            };
+            audioRecorder = new MediaRecorder(audioStream, audioOptions);
+          } catch (initErr) {
+            console.warn("[interview] audio recorder init failed, retry with defaults", initErr);
+            logger.error("interview_audio_recorder_failed", {
+              sessionId: session?.id ?? null,
+              phase: "init",
+              error: initErr instanceof Error ? initErr.message : String(initErr),
+            });
+            // Retry sans options spécifiques (compatibilité large).
+            audioRecorder = new MediaRecorder(audioStream);
+          }
           questionAudioRecorderRef.current = audioRecorder;
           audioRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return;
@@ -1611,6 +1623,11 @@ export default function InterviewStart() {
       } catch (e) {
         // Non-bloquant : si l'audio recorder échoue, on retombe sur la vidéo pour la transcription.
         console.warn("[interview] audio recorder failed to start", e);
+        logger.error("interview_audio_recorder_failed", {
+          sessionId: session?.id ?? null,
+          phase: "start",
+          error: e instanceof Error ? e.message : String(e),
+        });
         questionAudioRecorderRef.current = null;
       }
 
