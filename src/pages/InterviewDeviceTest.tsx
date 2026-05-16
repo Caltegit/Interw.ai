@@ -201,6 +201,10 @@ export default function InterviewDeviceTest() {
   const [micRetries, setMicRetries] = useState(0);
   const [camRetries, setCamRetries] = useState(0);
   const [soundRetries, setSoundRetries] = useState(0);
+  // Compte à rebours visuel pendant le test guidé du micro (en s).
+  const [micCountdown, setMicCountdown] = useState<number | null>(null);
+  // Confirmation avant de contourner les vérifications avec un micro en erreur.
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
