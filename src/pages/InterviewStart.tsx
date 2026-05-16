@@ -28,6 +28,7 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
+import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
@@ -317,6 +318,10 @@ export default function InterviewStart() {
   // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
   // on affiche un bandeau permettant au candidat de la relancer ou de passer.
   const [interviewStuck, setInterviewStuck] = useState(false);
+  // Aucun signal capté depuis le micro (STT silencieux + RMS plat) → bandeau ambre.
+  const [noMicSignal, setNoMicSignal] = useState(false);
+  const lastMicRmsAtRef = useRef<number>(0);
+  const micAnalyserRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; buffer: Uint8Array } | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
@@ -1146,17 +1151,53 @@ export default function InterviewStart() {
     // l'écoute active, on force un redémarrage complet de la recognition.
     if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
     lastSttResultAtRef.current = Date.now();
+    lastMicRmsAtRef.current = Date.now();
+    // (Ré)initialisation de l'analyser RMS partagé pour détecter le vrai silence.
+    try {
+      if (!micAnalyserRef.current && streamRef.current) {
+        const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        const ctx = new Ctor();
+        if (ctx.state === "suspended") { ctx.resume().catch(() => { /* ignore */ }); }
+        const source = ctx.createMediaStreamSource(streamRef.current);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        const buf = new Uint8Array(new ArrayBuffer(analyser.fftSize));
+        micAnalyserRef.current = { ctx, analyser, buffer: buf };
+      }
+    } catch { /* analyser facultatif */ }
     sttWatchdogRef.current = setInterval(() => {
       if (!isListeningRef.current || isPausedRef.current) return;
-      const idle = Date.now() - lastSttResultAtRef.current;
-      if (idle > 10000 && !candidateTranscriptRef.current.trim()) {
+      // Mesure RMS instantanée si l'analyser est disponible.
+      const m = micAnalyserRef.current;
+      if (m) {
+        try {
+          m.analyser.getByteTimeDomainData(m.buffer as Uint8Array<ArrayBuffer>);
+          let sum = 0;
+          for (let i = 0; i < m.buffer.length; i++) {
+            const v = (m.buffer[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / m.buffer.length);
+          if (rms > MIC_THRESHOLDS.WARMUP_SILENCE_MAX) lastMicRmsAtRef.current = Date.now();
+        } catch { /* ignore */ }
+      }
+      const sttIdle = Date.now() - lastSttResultAtRef.current;
+      const rmsIdle = Date.now() - lastMicRmsAtRef.current;
+      // Si STT muet ET signal micro plat depuis >10s ET aucun TTS en cours,
+      // on prévient le candidat. Le bandeau disparaît dès que ça revient.
+      if (sttIdle > 10000 && rmsIdle > 10000 && !isSpeaking) {
+        if (!noMicSignal) setNoMicSignal(true);
+      } else if (noMicSignal && rmsIdle < 2000) {
+        setNoMicSignal(false);
+      }
+      if (sttIdle > 10000 && !candidateTranscriptRef.current.trim()) {
         console.warn("[interview] STT watchdog : silence > 10s, redémarrage de la reconnaissance.");
         lastSttResultAtRef.current = Date.now();
         try { recognitionRef.current?.stop(); } catch {}
-        // onend fera le restart automatiquement (ou recréera l'instance).
       }
     }, 2000);
-  }, [toast]);
+  }, [toast, isSpeaking, noMicSignal]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
@@ -1911,6 +1952,29 @@ export default function InterviewStart() {
 
     // Start camera stream
     await startVideoStream();
+
+    // Garde anti-silence : on mesure 1.5 s de signal micro avant la 1ʳᵉ question.
+    // Si rien (piste muted + RMS plat), on prévient le candidat — non bloquant
+    // pour ne pas créer un cul-de-sac, mais visible pour qu'il agisse.
+    try {
+      const s = streamRef.current;
+      if (s) {
+        const m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
+        if (m.ok && m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX && m.muted) {
+          toast({
+            title: "Aucun son détecté",
+            description: "Vérifiez que votre micro est branché et non coupé.",
+            variant: "destructive",
+          });
+          logger.error("interview_mic_warmup_silent", {
+            sessionId: session?.id ?? null,
+            peak: m.peak,
+            activeMs: m.activeMs,
+            muted: m.muted,
+          });
+        }
+      }
+    } catch { /* non bloquant */ }
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();

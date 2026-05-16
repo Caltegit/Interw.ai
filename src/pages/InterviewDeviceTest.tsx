@@ -41,7 +41,18 @@ import {
   type DeviceLists,
 } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
+import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
+const MIC_TEST_PHRASE = "Bonjour, je suis prêt pour l'entretien.";
 
 type Status = "idle" | "testing" | "ok" | "warning" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
@@ -74,8 +85,6 @@ async function playBeep(): Promise<boolean> {
     return false;
   }
 }
-
-const MIC_LEVEL_THRESHOLD = 0.05;
 
 // ============== STATUS BADGE ==============
 function StatusBadge({ status, label }: { status: Status; label?: string }) {
@@ -192,6 +201,10 @@ export default function InterviewDeviceTest() {
   const [micRetries, setMicRetries] = useState(0);
   const [camRetries, setCamRetries] = useState(0);
   const [soundRetries, setSoundRetries] = useState(0);
+  // Compte à rebours visuel pendant le test guidé du micro (en s).
+  const [micCountdown, setMicCountdown] = useState<number | null>(null);
+  // Confirmation avant de contourner les vérifications avec un micro en erreur.
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
@@ -204,51 +217,122 @@ export default function InterviewDeviceTest() {
   }, []);
 
   // ================== TESTS ==================
+  // Test micro guidé : capture 6 s avec phrase à lire, mesure pic RMS +
+  // durée cumulée au-dessus du seuil, vérifie aussi MediaRecorder.
   const testMicAndRecorder = useCallback(async (deviceId?: string | null) => {
     setMicStatus("testing");
     setRecorderStatus("testing");
     setMicError(null);
     setMicWarning(null);
     setMicLevel(0);
+    setMicCountdown(Math.round(MIC_THRESHOLDS.TEST_DURATION_MS / 1000));
+
     let stream: MediaStream | null = null;
-    let audioCtx: AudioContext | null = null;
     let raf: number | null = null;
+    let levelCtx: AudioContext | null = null;
+    let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+    const acquireStream = async (id?: string | null) => {
+      const constraints: MediaStreamConstraints = id
+        ? { audio: { deviceId: { exact: id } } }
+        : { audio: true };
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        // Le périphérique mémorisé n'est plus disponible → on retombe sur le défaut.
+        if (id && (err as { name?: string }).name === "OverconstrainedError") {
+          setStoredDeviceId("audio", null);
+          setSelectedAudioId(null);
+          return await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        throw err;
+      }
+    };
+
     try {
-      const constraints: MediaStreamConstraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-      audioCtx = new Ctor();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
+      stream = await acquireStream(deviceId);
+
+      // Vérification immédiate : la piste est-elle vraiment exploitable ?
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack || audioTrack.readyState !== "live" || audioTrack.muted) {
+        setMicStatus("error");
+        setMicError(
+          audioTrack?.muted
+            ? "Votre système a coupé le micro. Vérifiez qu'il n'est pas désactivé puis réessayez."
+            : "Aucun micro actif détecté. Branchez-en un et réessayez.",
+        );
+        setRecorderStatus("error");
+        setMicRetries((n) => n + 1);
+        return;
+      }
+
+      // Vu-mètre en temps réel pendant la phase de capture (cosmétique).
+      const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      levelCtx = new Ctor();
+      if (levelCtx.state === "suspended") {
+        try { await levelCtx.resume(); } catch { /* ignore */ }
+      }
+      const source = levelCtx.createMediaStreamSource(stream);
+      const analyser = levelCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.4;
       source.connect(analyser);
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      let peak = 0;
-      const poll = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        const normalized = Math.min(avg / 80, 1);
-        if (normalized > peak) peak = normalized;
-        setMicLevel(normalized);
-        raf = requestAnimationFrame(poll);
+      const buffer = new Uint8Array(analyser.fftSize);
+      const tick = () => {
+        analyser.getByteTimeDomainData(buffer);
+        let sum = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          const v = (buffer[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buffer.length);
+        setMicLevel(Math.min(1, rms * 4));
+        raf = requestAnimationFrame(tick);
       };
-      poll();
+      raf = requestAnimationFrame(tick);
       animFrameRef.current = raf;
+
+      // Compte à rebours visuel synchronisé sur la durée de mesure.
+      countdownTimer = setInterval(() => {
+        setMicCountdown((c) => (c !== null && c > 1 ? c - 1 : 0));
+      }, 1000);
+
+      // Test MediaRecorder en parallèle (vérifie qu'on peut bien encoder).
       const recorder = new MediaRecorder(stream);
       const recorderPromise = new Promise<boolean>((resolve) => {
-        const timer = setTimeout(() => resolve(false), 2500);
-        recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) { clearTimeout(timer); resolve(true); } };
-        try { recorder.start(250); } catch { clearTimeout(timer); resolve(false); }
+        const timer = setTimeout(() => resolve(false), MIC_THRESHOLDS.TEST_DURATION_MS - 500);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) { clearTimeout(timer); resolve(true); }
+        };
+        try { recorder.start(500); } catch { clearTimeout(timer); resolve(false); }
       });
-      const [recorderOk] = await Promise.all([recorderPromise, new Promise((r) => setTimeout(r, 3000))]);
+
+      // Mesure réelle du niveau (peak + durée active) via l'utilitaire commun.
+      const [measurement, recorderOk] = await Promise.all([
+        measureMicLevel(stream, MIC_THRESHOLDS.TEST_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS),
+        recorderPromise,
+      ]);
+
       try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
       if (raf) cancelAnimationFrame(raf);
       animFrameRef.current = null;
+      if (countdownTimer) clearInterval(countdownTimer);
+      setMicCountdown(null);
       setMicLevel(0);
       setRecorderStatus(recorderOk ? "ok" : "error");
-      if (peak < MIC_LEVEL_THRESHOLD) {
+
+      const peakOk = measurement.peak >= MIC_THRESHOLDS.TEST_PEAK_MIN;
+      const activeOk = measurement.activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN;
+
+      if (!peakOk && !activeOk) {
+        // Échec franc : rien d'audible → erreur, pas warning. Bloque la suite.
+        setMicStatus("error");
+        setMicError("Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.");
+        setMicRetries((n) => n + 1);
+      } else if (!activeOk) {
+        // Voix détectée par à-coups : on prévient mais on n'érige pas en blocage.
         setMicStatus("warning");
-        setMicWarning("Aucun son détecté. Parlez plus fort, ou choisissez un autre micro ci-dessous.");
+        setMicWarning("Votre voix paraît faible. Rapprochez-vous du micro et relancez si besoin.");
       } else {
         setMicStatus("ok");
       }
@@ -259,8 +343,10 @@ export default function InterviewDeviceTest() {
       setRecorderStatus("error");
       setMicRetries((n) => n + 1);
     } finally {
+      if (countdownTimer) clearInterval(countdownTimer);
+      setMicCountdown(null);
       stream?.getTracks().forEach((t) => t.stop());
-      try { await audioCtx?.close(); } catch { /* ignore */ }
+      try { await levelCtx?.close(); } catch { /* ignore */ }
     }
   }, [refreshDevices]);
 
@@ -529,13 +615,31 @@ export default function InterviewDeviceTest() {
   const handleAudioDeviceChange = (id: string) => { setSelectedAudioId(id); setStoredDeviceId("audio", id); void testMicAndRecorder(id); };
   const handleVideoDeviceChange = (id: string) => { setSelectedVideoId(id); setStoredDeviceId("video", id); void testCam(id); };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     camStreamRef.current?.getTracks().forEach((t) => t.stop());
     camStreamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    // Journaliser un éventuel bypass pour que les RH puissent identifier les
+    // candidats qui forcent le passage malgré un micro défaillant.
+    if (attemptIdRef.current && (micStatus === "error" || micStatus === "warning" || browserStatus !== "ok")) {
+      try {
+        void supabase.rpc("mark_attempt_proceeded", { _attempt_id: attemptIdRef.current });
+      } catch { /* silencieux */ }
+    }
     navigate(`/session/${slug}/start/${token}`);
-  };
+  }, [navigate, slug, token, micStatus, browserStatus]);
+
+  // Le bouton « Passer » ou « Continuer quand même » ouvre une confirmation
+  // explicite quand le micro est en erreur — c'est la cause N°1 de sessions
+  // ratées (candidat passe outre, l'IA n'entend rien).
+  const requestContinueWithCheck = useCallback(() => {
+    if (micStatus === "error") {
+      setShowSkipConfirm(true);
+    } else {
+      handleContinue();
+    }
+  }, [micStatus, handleContinue]);
 
   const copyLink = async () => {
     try { await navigator.clipboard.writeText(window.location.href); setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); } catch { /* ignore */ }
@@ -602,7 +706,7 @@ export default function InterviewDeviceTest() {
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <button
                 type="button"
-                onClick={() => navigate(`/session/${slug}/start/${token}`)}
+                onClick={requestContinueWithCheck}
                 className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 Passer
@@ -738,20 +842,35 @@ export default function InterviewDeviceTest() {
           {micStatus === "idle" && (
               <div className="space-y-3">
                 <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
-                  Lancez le test puis parlez quelques secondes.
+                  Cliquez puis lisez cette phrase à voix haute&nbsp;:
+                </p>
+                <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                  « {MIC_TEST_PHRASE} »
                 </p>
                 <button
                   type="button"
                   onClick={() => testMicAndRecorder(selectedAudioId)}
                   className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
                 >
-                  <Mic className="h-4 w-4" /> Tester le micro
+                  <Mic className="h-4 w-4" /> Tester mon micro
                 </button>
               </div>
             )}
             {micStatus === "testing" && (
-              <div className="space-y-2">
-                <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>Parlez pour tester votre micro…</p>
+              <div className="space-y-3">
+                <p className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                  « {MIC_TEST_PHRASE} »
+                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                    Lisez la phrase à voix haute…
+                  </p>
+                  {micCountdown !== null && (
+                    <span className="text-xs font-mono tabular-nums text-primary">
+                      {micCountdown}s
+                    </span>
+                  )}
+                </div>
                 <div
                   className="w-full h-2 rounded-full overflow-hidden"
                   style={{ background: "hsl(var(--l-fg) / 0.08)" }}
@@ -947,12 +1066,44 @@ export default function InterviewDeviceTest() {
             )}
           </Button>
           {showSkipPrimary && (
-            <Button onClick={handleContinue} variant="outline" size="sm">
+            <Button onClick={requestContinueWithCheck} variant="outline" size="sm">
               Continuer quand même
             </Button>
           )}
         </div>
       </div>
+
+      {/* Confirmation explicite avant de contourner un micro défaillant */}
+      <Dialog open={showSkipConfirm} onOpenChange={setShowSkipConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continuer sans micro fonctionnel&nbsp;?</DialogTitle>
+            <DialogDescription>
+              Votre micro n'a pas été détecté. Sans son, vos réponses ne pourront pas être analysées et la session risque d'échouer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSkipConfirm(false);
+                void testMicAndRecorder(selectedAudioId);
+              }}
+            >
+              Refaire le test
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowSkipConfirm(false);
+                handleContinue();
+              }}
+            >
+              Je continue quand même
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CandidateLayout>
   );
 }
