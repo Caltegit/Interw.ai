@@ -1066,12 +1066,44 @@ export default function InterviewDeviceTest() {
             )}
           </Button>
           {showSkipPrimary && (
-            <Button onClick={handleContinue} variant="outline" size="sm">
+            <Button onClick={requestContinueWithCheck} variant="outline" size="sm">
               Continuer quand même
             </Button>
           )}
         </div>
       </div>
+
+      {/* Confirmation explicite avant de contourner un micro défaillant */}
+      <Dialog open={showSkipConfirm} onOpenChange={setShowSkipConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continuer sans micro fonctionnel&nbsp;?</DialogTitle>
+            <DialogDescription>
+              Votre micro n'a pas été détecté. Sans son, vos réponses ne pourront pas être analysées et la session risque d'échouer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSkipConfirm(false);
+                void testMicAndRecorder(selectedAudioId);
+              }}
+            >
+              Refaire le test
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowSkipConfirm(false);
+                handleContinue();
+              }}
+            >
+              Je continue quand même
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CandidateLayout>
   );
 }
