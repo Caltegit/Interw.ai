@@ -213,51 +213,122 @@ export default function InterviewDeviceTest() {
   }, []);
 
   // ================== TESTS ==================
+  // Test micro guidé : capture 6 s avec phrase à lire, mesure pic RMS +
+  // durée cumulée au-dessus du seuil, vérifie aussi MediaRecorder.
   const testMicAndRecorder = useCallback(async (deviceId?: string | null) => {
     setMicStatus("testing");
     setRecorderStatus("testing");
     setMicError(null);
     setMicWarning(null);
     setMicLevel(0);
+    setMicCountdown(Math.round(MIC_THRESHOLDS.TEST_DURATION_MS / 1000));
+
     let stream: MediaStream | null = null;
-    let audioCtx: AudioContext | null = null;
     let raf: number | null = null;
+    let levelCtx: AudioContext | null = null;
+    let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+    const acquireStream = async (id?: string | null) => {
+      const constraints: MediaStreamConstraints = id
+        ? { audio: { deviceId: { exact: id } } }
+        : { audio: true };
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        // Le périphérique mémorisé n'est plus disponible → on retombe sur le défaut.
+        if (id && (err as { name?: string }).name === "OverconstrainedError") {
+          setStoredDeviceId("audio", null);
+          setSelectedAudioId(null);
+          return await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        throw err;
+      }
+    };
+
     try {
-      const constraints: MediaStreamConstraints = { audio: deviceId ? { deviceId: { exact: deviceId } } : true };
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-      const Ctor = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
-      audioCtx = new Ctor();
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 256;
+      stream = await acquireStream(deviceId);
+
+      // Vérification immédiate : la piste est-elle vraiment exploitable ?
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack || audioTrack.readyState !== "live" || audioTrack.muted) {
+        setMicStatus("error");
+        setMicError(
+          audioTrack?.muted
+            ? "Votre système a coupé le micro. Vérifiez qu'il n'est pas désactivé puis réessayez."
+            : "Aucun micro actif détecté. Branchez-en un et réessayez.",
+        );
+        setRecorderStatus("error");
+        setMicRetries((n) => n + 1);
+        return;
+      }
+
+      // Vu-mètre en temps réel pendant la phase de capture (cosmétique).
+      const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+      levelCtx = new Ctor();
+      if (levelCtx.state === "suspended") {
+        try { await levelCtx.resume(); } catch { /* ignore */ }
+      }
+      const source = levelCtx.createMediaStreamSource(stream);
+      const analyser = levelCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.4;
       source.connect(analyser);
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      let peak = 0;
-      const poll = () => {
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        const normalized = Math.min(avg / 80, 1);
-        if (normalized > peak) peak = normalized;
-        setMicLevel(normalized);
-        raf = requestAnimationFrame(poll);
+      const buffer = new Uint8Array(analyser.fftSize);
+      const tick = () => {
+        analyser.getByteTimeDomainData(buffer);
+        let sum = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          const v = (buffer[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buffer.length);
+        setMicLevel(Math.min(1, rms * 4));
+        raf = requestAnimationFrame(tick);
       };
-      poll();
+      raf = requestAnimationFrame(tick);
       animFrameRef.current = raf;
+
+      // Compte à rebours visuel synchronisé sur la durée de mesure.
+      countdownTimer = setInterval(() => {
+        setMicCountdown((c) => (c !== null && c > 1 ? c - 1 : 0));
+      }, 1000);
+
+      // Test MediaRecorder en parallèle (vérifie qu'on peut bien encoder).
       const recorder = new MediaRecorder(stream);
       const recorderPromise = new Promise<boolean>((resolve) => {
-        const timer = setTimeout(() => resolve(false), 2500);
-        recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) { clearTimeout(timer); resolve(true); } };
-        try { recorder.start(250); } catch { clearTimeout(timer); resolve(false); }
+        const timer = setTimeout(() => resolve(false), MIC_THRESHOLDS.TEST_DURATION_MS - 500);
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) { clearTimeout(timer); resolve(true); }
+        };
+        try { recorder.start(500); } catch { clearTimeout(timer); resolve(false); }
       });
-      const [recorderOk] = await Promise.all([recorderPromise, new Promise((r) => setTimeout(r, 3000))]);
+
+      // Mesure réelle du niveau (peak + durée active) via l'utilitaire commun.
+      const [measurement, recorderOk] = await Promise.all([
+        measureMicLevel(stream, MIC_THRESHOLDS.TEST_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS),
+        recorderPromise,
+      ]);
+
       try { if (recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
       if (raf) cancelAnimationFrame(raf);
       animFrameRef.current = null;
+      if (countdownTimer) clearInterval(countdownTimer);
+      setMicCountdown(null);
       setMicLevel(0);
       setRecorderStatus(recorderOk ? "ok" : "error");
-      if (peak < MIC_LEVEL_THRESHOLD) {
+
+      const peakOk = measurement.peak >= MIC_THRESHOLDS.TEST_PEAK_MIN;
+      const activeOk = measurement.activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN;
+
+      if (!peakOk && !activeOk) {
+        // Échec franc : rien d'audible → erreur, pas warning. Bloque la suite.
+        setMicStatus("error");
+        setMicError("Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.");
+        setMicRetries((n) => n + 1);
+      } else if (!activeOk) {
+        // Voix détectée par à-coups : on prévient mais on n'érige pas en blocage.
         setMicStatus("warning");
-        setMicWarning("Aucun son détecté. Parlez plus fort, ou choisissez un autre micro ci-dessous.");
+        setMicWarning("Votre voix paraît faible. Rapprochez-vous du micro et relancez si besoin.");
       } else {
         setMicStatus("ok");
       }
@@ -268,8 +339,10 @@ export default function InterviewDeviceTest() {
       setRecorderStatus("error");
       setMicRetries((n) => n + 1);
     } finally {
+      if (countdownTimer) clearInterval(countdownTimer);
+      setMicCountdown(null);
       stream?.getTracks().forEach((t) => t.stop());
-      try { await audioCtx?.close(); } catch { /* ignore */ }
+      try { await levelCtx?.close(); } catch { /* ignore */ }
     }
   }, [refreshDevices]);
 
