@@ -26,13 +26,17 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+            shouldCreateUser: false,
+          },
         });
         if (error) throw error;
         toast({
-          title: "Email envoyé",
-          description: "Vérifie ta boîte mail pour réinitialiser ton mot de passe.",
+          title: "Lien de connexion envoyé",
+          description: "Si un compte existe, un lien vient d'être envoyé. Il est valable 24h et utilisable une seule fois.",
         });
         setMode("login");
       } else {
