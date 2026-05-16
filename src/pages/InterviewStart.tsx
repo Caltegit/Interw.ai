@@ -1172,7 +1172,7 @@ export default function InterviewStart() {
       const m = micAnalyserRef.current;
       if (m) {
         try {
-          m.analyser.getByteTimeDomainData(m.buffer);
+          m.analyser.getByteTimeDomainData(m.buffer as Uint8Array<ArrayBuffer>);
           let sum = 0;
           for (let i = 0; i < m.buffer.length; i++) {
             const v = (m.buffer[i] - 128) / 128;
