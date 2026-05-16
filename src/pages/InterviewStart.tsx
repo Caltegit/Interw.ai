@@ -1157,12 +1157,13 @@ export default function InterviewStart() {
       if (!micAnalyserRef.current && streamRef.current) {
         const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
         const ctx = new Ctor();
-        if (ctx.state === "suspended") { try { await ctx.resume(); } catch { /* ignore */ } }
+        if (ctx.state === "suspended") { ctx.resume().catch(() => { /* ignore */ }); }
         const source = ctx.createMediaStreamSource(streamRef.current);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 1024;
         source.connect(analyser);
-        micAnalyserRef.current = { ctx, analyser, buffer: new Uint8Array(analyser.fftSize) };
+        const buf = new Uint8Array(new ArrayBuffer(analyser.fftSize));
+        micAnalyserRef.current = { ctx, analyser, buffer: buf };
       }
     } catch { /* analyser facultatif */ }
     sttWatchdogRef.current = setInterval(() => {
