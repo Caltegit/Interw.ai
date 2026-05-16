@@ -1151,17 +1151,52 @@ export default function InterviewStart() {
     // l'écoute active, on force un redémarrage complet de la recognition.
     if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
     lastSttResultAtRef.current = Date.now();
+    lastMicRmsAtRef.current = Date.now();
+    // (Ré)initialisation de l'analyser RMS partagé pour détecter le vrai silence.
+    try {
+      if (!micAnalyserRef.current && streamRef.current) {
+        const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+        const ctx = new Ctor();
+        if (ctx.state === "suspended") { try { await ctx.resume(); } catch { /* ignore */ } }
+        const source = ctx.createMediaStreamSource(streamRef.current);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 1024;
+        source.connect(analyser);
+        micAnalyserRef.current = { ctx, analyser, buffer: new Uint8Array(analyser.fftSize) };
+      }
+    } catch { /* analyser facultatif */ }
     sttWatchdogRef.current = setInterval(() => {
       if (!isListeningRef.current || isPausedRef.current) return;
-      const idle = Date.now() - lastSttResultAtRef.current;
-      if (idle > 10000 && !candidateTranscriptRef.current.trim()) {
+      // Mesure RMS instantanée si l'analyser est disponible.
+      const m = micAnalyserRef.current;
+      if (m) {
+        try {
+          m.analyser.getByteTimeDomainData(m.buffer);
+          let sum = 0;
+          for (let i = 0; i < m.buffer.length; i++) {
+            const v = (m.buffer[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / m.buffer.length);
+          if (rms > MIC_THRESHOLDS.WARMUP_SILENCE_MAX) lastMicRmsAtRef.current = Date.now();
+        } catch { /* ignore */ }
+      }
+      const sttIdle = Date.now() - lastSttResultAtRef.current;
+      const rmsIdle = Date.now() - lastMicRmsAtRef.current;
+      // Si STT muet ET signal micro plat depuis >10s ET aucun TTS en cours,
+      // on prévient le candidat. Le bandeau disparaît dès que ça revient.
+      if (sttIdle > 10000 && rmsIdle > 10000 && !isSpeaking) {
+        if (!noMicSignal) setNoMicSignal(true);
+      } else if (noMicSignal && rmsIdle < 2000) {
+        setNoMicSignal(false);
+      }
+      if (sttIdle > 10000 && !candidateTranscriptRef.current.trim()) {
         console.warn("[interview] STT watchdog : silence > 10s, redémarrage de la reconnaissance.");
         lastSttResultAtRef.current = Date.now();
         try { recognitionRef.current?.stop(); } catch {}
-        // onend fera le restart automatiquement (ou recréera l'instance).
       }
     }, 2000);
-  }, [toast]);
+  }, [toast, isSpeaking, noMicSignal]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
