@@ -86,8 +86,6 @@ async function playBeep(): Promise<boolean> {
   }
 }
 
-const MIC_LEVEL_THRESHOLD = 0.05;
-
 // ============== STATUS BADGE ==============
 function StatusBadge({ status, label }: { status: Status; label?: string }) {
   const map: Record<Status, { text: string; cls: string }> = {
