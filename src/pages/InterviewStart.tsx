@@ -28,6 +28,7 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
+import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
