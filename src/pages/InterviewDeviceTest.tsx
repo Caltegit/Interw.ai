@@ -842,20 +842,35 @@ export default function InterviewDeviceTest() {
           {micStatus === "idle" && (
               <div className="space-y-3">
                 <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
-                  Lancez le test puis parlez quelques secondes.
+                  Cliquez puis lisez cette phrase à voix haute&nbsp;:
+                </p>
+                <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                  « {MIC_TEST_PHRASE} »
                 </p>
                 <button
                   type="button"
                   onClick={() => testMicAndRecorder(selectedAudioId)}
                   className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
                 >
-                  <Mic className="h-4 w-4" /> Tester le micro
+                  <Mic className="h-4 w-4" /> Tester mon micro
                 </button>
               </div>
             )}
             {micStatus === "testing" && (
-              <div className="space-y-2">
-                <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>Parlez pour tester votre micro…</p>
+              <div className="space-y-3">
+                <p className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                  « {MIC_TEST_PHRASE} »
+                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                    Lisez la phrase à voix haute…
+                  </p>
+                  {micCountdown !== null && (
+                    <span className="text-xs font-mono tabular-nums text-primary">
+                      {micCountdown}s
+                    </span>
+                  )}
+                </div>
                 <div
                   className="w-full h-2 rounded-full overflow-hidden"
                   style={{ background: "hsl(var(--l-fg) / 0.08)" }}
