@@ -57,7 +57,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
           <CardDescription>
-            {mode === "forgot" ? "Réinitialiser votre mot de passe" : "Connexion à votre espace recruteur"}
+            {mode === "forgot" ? "Recevoir un lien de connexion par email" : "Connexion à votre espace recruteur"}
           </CardDescription>
         </CardHeader>
         <CardContent>
