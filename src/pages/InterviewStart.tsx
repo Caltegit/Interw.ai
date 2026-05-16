@@ -1917,6 +1917,29 @@ export default function InterviewStart() {
     // Start camera stream
     await startVideoStream();
 
+    // Garde anti-silence : on mesure 1.5 s de signal micro avant la 1ʳᵉ question.
+    // Si rien (piste muted + RMS plat), on prévient le candidat — non bloquant
+    // pour ne pas créer un cul-de-sac, mais visible pour qu'il agisse.
+    try {
+      const s = streamRef.current;
+      if (s) {
+        const m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
+        if (m.ok && m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX && m.muted) {
+          toast({
+            title: "Aucun son détecté",
+            description: "Vérifiez que votre micro est branché et non coupé.",
+            variant: "destructive",
+          });
+          logger.error("interview_mic_warmup_silent", {
+            sessionId: session?.id ?? null,
+            peak: m.peak,
+            activeMs: m.activeMs,
+            muted: m.muted,
+          });
+        }
+      }
+    } catch { /* non bloquant */ }
+
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
     maxDurationTimerRef.current = setTimeout(() => {
