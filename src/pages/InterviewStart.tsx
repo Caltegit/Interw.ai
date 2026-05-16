@@ -3470,6 +3470,13 @@ export default function InterviewStart() {
           recording={isRecordingActive}
         />
       )}
+      {!interviewFinished && noMicSignal && (
+        <div className="fixed top-4 left-1/2 z-40 -translate-x-1/2 max-w-xl px-4">
+          <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg dark:bg-amber-950/60 dark:text-amber-100">
+            Nous ne recevons pas votre voix. Vérifiez que votre micro est branché et activé, ou mettez la session en pause.
+          </div>
+        </div>
+      )}
       {endCountdown !== null && !interviewFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="mx-4 max-w-md rounded-2xl border border-destructive/30 bg-card p-8 text-center shadow-2xl">
