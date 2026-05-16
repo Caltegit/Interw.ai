@@ -41,7 +41,18 @@ import {
   type DeviceLists,
 } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
+import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
+const MIC_TEST_PHRASE = "Bonjour, je suis prêt pour l'entretien.";
 
 type Status = "idle" | "testing" | "ok" | "warning" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
