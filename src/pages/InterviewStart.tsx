@@ -317,6 +317,10 @@ export default function InterviewStart() {
   // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
   // on affiche un bandeau permettant au candidat de la relancer ou de passer.
   const [interviewStuck, setInterviewStuck] = useState(false);
+  // Aucun signal capté depuis le micro (STT silencieux + RMS plat) → bandeau ambre.
+  const [noMicSignal, setNoMicSignal] = useState(false);
+  const lastMicRmsAtRef = useRef<number>(0);
+  const micAnalyserRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; buffer: Uint8Array } | null>(null);
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
