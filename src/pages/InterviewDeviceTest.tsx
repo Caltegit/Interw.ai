@@ -706,7 +706,7 @@ export default function InterviewDeviceTest() {
             <div className="flex flex-col items-end gap-0.5 shrink-0">
               <button
                 type="button"
-                onClick={() => navigate(`/session/${slug}/start/${token}`)}
+                onClick={requestContinueWithCheck}
                 className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
               >
                 Passer
