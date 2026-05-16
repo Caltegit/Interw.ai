@@ -4081,7 +4081,7 @@ export default function InterviewStart() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Votre entretien est mis en pause. Décrivez ce qui ne va pas, le recruteur sera prévenu par email.
+            Votre entretien est mis en pause. Décrivez ce qui ne va pas, notre équipe sera prévenue.
           </p>
           <Textarea
             value={reportMessage}
@@ -4112,14 +4112,25 @@ export default function InterviewStart() {
                   const { error } = await supabase.functions.invoke("report-interview-issue", {
                     body: { sessionId: session.id, message: msg },
                   });
-                  if (error) throw error;
+                  if (error) {
+                    let detail = "";
+                    try {
+                      const txt = await error.context?.text?.();
+                      if (txt) {
+                        try { detail = JSON.parse(txt)?.error || txt; } catch { detail = txt; }
+                      }
+                    } catch {}
+                    console.error("[report-issue] invoke error", error, detail);
+                    throw new Error(detail || error.message || "Erreur inconnue");
+                  }
                   toast({
                     title: "Signalement envoyé",
-                    description: "Le recruteur a été prévenu. Vous pouvez reprendre quand vous le souhaitez.",
+                    description: "Notre équipe a été prévenue. Vous pouvez reprendre quand vous le souhaitez.",
                   });
                   setShowReportDialog(false);
                   setReportMessage("");
                 } catch (e: any) {
+                  console.error("[report-issue] failed", e);
                   toast({
                     variant: "destructive",
                     title: "Envoi impossible",

@@ -1,58 +1,32 @@
-# Lien de connexion magique (24h, usage unique)
+## Diagnostic
 
-Objectif : permettre à un utilisateur de se connecter en un clic via un lien magique, valable 24h et à usage unique.
+J'ai testé `report-interview-issue` directement avec une vraie session : la fonction répond **200** et crée bien le fil de feedback pour le super admin. Donc côté serveur la logique marche.
 
-## 1. Configuration backend
+Le « non-2xx » que tu as vu dans le toast est donc soit transitoire, soit lié à un cas que je n'arrive pas à reproduire (par exemple : session déjà supprimée, ou un transient réseau côté edge). Et surtout : on n'a **aucun détail** dans le toast ni dans les logs serveur pour diagnostiquer. C'est ça qu'on va corriger.
 
-- Augmenter la durée de validité des OTP/magic links à **86 400 secondes (24h)** dans la configuration Auth (`supabase--configure_auth` n'expose pas ce champ — on documente la valeur et on l'applique via une migration de config, ou on s'aligne sur la valeur courante si déjà 24h).
-- Les magic links Supabase sont nativement **à usage unique** : dès qu'ils sont consommés, ils ne sont plus valides. Pas de logique custom à ajouter.
+## Plan
 
-## 2. Cas 1 — « Mot de passe oublié » → lien de connexion direct
+### 1) Texte de la pop-up — corriger la promesse erronée
+Aujourd'hui : « le recruteur sera prévenu par email ».
+Comme la fonction n'envoie pas d'email (et qu'on ne veut pas en envoyer), on remplace par un texte aligné sur le vrai comportement :
+> « Votre entretien est mis en pause. Décrivez ce qui ne va pas, notre équipe sera prévenue. »
 
-Aujourd'hui, `src/pages/Login.tsx` envoie un `resetPasswordForEmail` qui demande à l'utilisateur de saisir un nouveau mot de passe.
+Fichier : `src/pages/InterviewStart.tsx` (modification du `DialogDescription` du dialog « Signaler un problème »).
 
-Changements :
-- Renommer le mode `forgot` en `magic` (le bouton reste « Mot de passe oublié ? » côté UI, libellé inchangé pour l'utilisateur).
-- Remplacer l'appel par :
-  ```ts
-  supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${window.location.origin}/dashboard`,
-      shouldCreateUser: false,
-    },
-  })
-  ```
-- Message toast adapté : « Si un compte existe, un lien de connexion vient d'être envoyé. Il est valable 24h et utilisable une seule fois. »
-- Le template email à utiliser est le template **Magic Link** déjà présent dans `supabase/functions/_shared/email-templates/magic-link.tsx`. Aucune modification nécessaire.
-- La page `/reset-password` reste en place pour les vraies réinitialisations admin (inchangée).
+### 2) Edge function — logs et messages d'erreur explicites
+Dans `supabase/functions/report-interview-issue/index.ts` :
+- Ajouter des `console.log`/`console.error` étiquetés à chaque étape (`[report-issue] session lookup`, `[report-issue] superadmin lookup`, `[report-issue] thread insert`, `[report-issue] message insert`) pour qu'on voie dans les logs ce qui a raté la prochaine fois.
+- Renvoyer un champ `error` explicite et stable dans chaque branche (404 session, 500 super admin manquant, 500 insert KO).
+- Garder le comportement métier identique : **uniquement** création d'un thread `feedback_threads` + un `feedback_messages` pour le super admin. Aucun email.
 
-## 3. Cas 2 — Bouton « Copier un lien de connexion » dans la gestion super admin
+### 3) Côté client — afficher la vraie cause dans le toast
+Dans `InterviewStart.tsx` (bloc `catch` du dialog) :
+- Quand `supabase.functions.invoke` renvoie une erreur, lire `error.context.text()` pour récupérer le JSON `{ error: "..." }` retourné par la fonction et afficher ce message dans le toast au lieu du générique « Edge Function returned a non-2xx status code ».
+- Loguer aussi en `console.error` côté navigateur pour faciliter le debug.
 
-Dans `src/components/superadmin/UsersTable.tsx`, à côté de l'icône **Modifier** (crayon), ajouter une icône **Link** avec tooltip « Copier un lien de connexion ».
+## Fichiers touchés
 
-Comportement au clic :
-1. Appel d'une nouvelle edge function `superadmin-magic-link` qui :
-   - vérifie que l'appelant est super admin (via RPC `is_super_admin`),
-   - appelle `admin.generateLink({ type: 'magiclink', email, options: { redirectTo: <origin>/dashboard } })`,
-   - retourne `{ action_link }`.
-2. Copie du lien dans le presse-papier via `navigator.clipboard.writeText`.
-3. Toast : « Lien copié. Valable 24h, utilisable une seule fois. »
+- `supabase/functions/report-interview-issue/index.ts` (logs + messages d'erreur)
+- `src/pages/InterviewStart.tsx` (texte du dialog + toast d'erreur enrichi)
 
-Sécurité :
-- L'edge function est gardée par la même logique que `superadmin-manage-user` (Bearer token + check `is_super_admin`).
-- Aucune fuite côté client (clé service uniquement dans l'edge function).
-- Pas de stockage du lien en base.
-
-## 4. Fichiers touchés
-
-- `src/pages/Login.tsx` — passage du flow forgot vers magic link
-- `src/components/superadmin/UsersTable.tsx` — ajout du bouton Link + handler
-- `supabase/functions/superadmin-magic-link/index.ts` — nouvelle edge function
-- Déploiement edge function via outil de déploiement
-
-## 5. Hors périmètre
-
-- Pas de changement du template email magic-link (déjà branché)
-- Pas de modification de `/reset-password` ni du flow d'invitation
-- Pas de nouvelle table : on s'appuie sur le mécanisme natif Supabase (single-use + TTL)
+Aucune table DB modifiée, aucun template email touché, aucun email envoyé.
