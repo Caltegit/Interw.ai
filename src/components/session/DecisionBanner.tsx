@@ -124,7 +124,24 @@ export function DecisionBanner(props: DecisionBannerProps) {
     readOnly,
     decisionByName,
     decisionAt,
+    linkedinUrl,
+    cvUrl,
+    cvFilename,
+    onEditLinks,
   } = props;
+
+  const openCv = async () => {
+    if (!cvUrl) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from("candidate-cvs")
+        .createSignedUrl(cvUrl, 60);
+      if (error || !data?.signedUrl) throw error;
+      window.open(data.signedUrl, "_blank", "noopener");
+    } catch {
+      // silently ignore
+    }
+  };
 
   const reco = recommendation ? recoConfig[recommendation] : null;
   const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
