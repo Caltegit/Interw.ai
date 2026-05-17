@@ -214,11 +214,17 @@ export function DecisionBanner(props: DecisionBannerProps) {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {(onEmail || onDelete) && <DropdownMenuSeparator />}
+                  {(onEmail || onEditLinks || onDelete) && <DropdownMenuSeparator />}
                   {onEmail && (
                     <DropdownMenuItem onClick={onEmail}>
                       <Mail className="mr-2 h-4 w-4" />
                       Envoyer un e-mail
+                    </DropdownMenuItem>
+                  )}
+                  {onEditLinks && (
+                    <DropdownMenuItem onClick={onEditLinks}>
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Ajouter LinkedIn / CV
                     </DropdownMenuItem>
                   )}
                   {onDelete && (
