@@ -369,6 +369,16 @@ export default function SessionDetail() {
         projectTitle={project?.title ?? ""}
       />
 
+      <CandidateLinksDialog
+        open={linksOpen}
+        onOpenChange={setLinksOpen}
+        sessionId={session.id}
+        initialLinkedinUrl={(session as any).candidate_linkedin_url ?? null}
+        initialCvUrl={(session as any).candidate_cv_url ?? null}
+        initialCvFilename={(session as any).candidate_cv_filename ?? null}
+        onSaved={() => qc.invalidateQueries({ queryKey: queryKeys.sessionDetail(id!) })}
+      />
+
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
