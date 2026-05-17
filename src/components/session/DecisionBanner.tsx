@@ -25,7 +25,11 @@ import {
   Trash2,
   Clock,
   ThumbsUp,
+  Linkedin,
+  FileText,
+  UserCog,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDecisionAuthor } from "@/lib/decisionAuthor";
@@ -61,6 +65,10 @@ interface DecisionBannerProps {
   readOnly?: boolean;
   decisionByName?: string | null;
   decisionAt?: string | null;
+  linkedinUrl?: string | null;
+  cvUrl?: string | null;
+  cvFilename?: string | null;
+  onEditLinks?: () => void;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
