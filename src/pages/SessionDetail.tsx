@@ -376,7 +376,7 @@ export default function SessionDetail() {
         initialLinkedinUrl={(session as any).candidate_linkedin_url ?? null}
         initialCvUrl={(session as any).candidate_cv_url ?? null}
         initialCvFilename={(session as any).candidate_cv_filename ?? null}
-        onSaved={() => qc.invalidateQueries({ queryKey: queryKeys.sessionDetail(id!) })}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: queryKeys.session(id!) })}
       />
 
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
