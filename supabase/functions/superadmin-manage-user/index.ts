@@ -28,11 +28,11 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === "create") {
-      const { email, full_name, organization_id, role, password } = body;
+      const { email, full_name, organization_id, role } = body;
       if (!email) return json({ error: "Email requis" }, 400);
 
       const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-      const redirectTo = origin ? `${origin}/reset-password` : undefined;
+      const redirectTo = origin ? `${origin}/auth/magic-link` : undefined;
 
       let newUserId: string | null = null;
       let invited = false;
@@ -58,24 +58,13 @@ Deno.serve(async (req) => {
       };
 
       try {
-        if (password && password.trim().length > 0) {
-          const { data: created, error: createErr } = await admin.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: { full_name: full_name || email },
-          });
-          if (createErr) throw createErr;
-          newUserId = created.user!.id;
-        } else {
-          const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-            data: { full_name: full_name || email },
-            redirectTo,
-          });
-          if (inviteErr) throw inviteErr;
-          newUserId = invitedData.user!.id;
-          invited = true;
-        }
+        const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+          data: { full_name: full_name || email },
+          redirectTo,
+        });
+        if (inviteErr) throw inviteErr;
+        newUserId = invitedData.user!.id;
+        invited = true;
       } catch (err: any) {
         if (!isEmailExists(err)) throw err;
         // Utilisateur existant : on tente de le rattacher à l'organisation
