@@ -25,7 +25,11 @@ import {
   Trash2,
   Clock,
   ThumbsUp,
+  Linkedin,
+  FileText,
+  UserCog,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDecisionAuthor } from "@/lib/decisionAuthor";
@@ -61,6 +65,10 @@ interface DecisionBannerProps {
   readOnly?: boolean;
   decisionByName?: string | null;
   decisionAt?: string | null;
+  linkedinUrl?: string | null;
+  cvUrl?: string | null;
+  cvFilename?: string | null;
+  onEditLinks?: () => void;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
@@ -116,7 +124,24 @@ export function DecisionBanner(props: DecisionBannerProps) {
     readOnly,
     decisionByName,
     decisionAt,
+    linkedinUrl,
+    cvUrl,
+    cvFilename,
+    onEditLinks,
   } = props;
+
+  const openCv = async () => {
+    if (!cvUrl) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from("candidate-cvs")
+        .createSignedUrl(cvUrl, 60);
+      if (error || !data?.signedUrl) throw error;
+      window.open(data.signedUrl, "_blank", "noopener");
+    } catch {
+      // silently ignore
+    }
+  };
 
   const reco = recommendation ? recoConfig[recommendation] : null;
   const authorTooltip = formatDecisionAuthor(decisionByName, decisionAt);
@@ -189,11 +214,17 @@ export function DecisionBanner(props: DecisionBannerProps) {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {(onEmail || onDelete) && <DropdownMenuSeparator />}
+                  {(onEmail || onEditLinks || onDelete) && <DropdownMenuSeparator />}
                   {onEmail && (
                     <DropdownMenuItem onClick={onEmail}>
                       <Mail className="mr-2 h-4 w-4" />
                       Envoyer un e-mail
+                    </DropdownMenuItem>
+                  )}
+                  {onEditLinks && (
+                    <DropdownMenuItem onClick={onEditLinks}>
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Ajouter LinkedIn / CV
                     </DropdownMenuItem>
                   )}
                   {onDelete && (
@@ -219,7 +250,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
             {reco && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
-            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+              <CandidateLinkIcons
+                linkedinUrl={linkedinUrl}
+                cvUrl={cvUrl}
+                cvFilename={cvFilename}
+                onOpenCv={openCv}
+              />
+            </div>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
@@ -230,7 +269,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="hidden lg:block min-w-0">
-            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+              <CandidateLinkIcons
+                linkedinUrl={linkedinUrl}
+                cvUrl={cvUrl}
+                cvFilename={cvFilename}
+                onOpenCv={openCv}
+              />
+            </div>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
@@ -348,4 +395,68 @@ function DecisionButton({
     );
   }
   return button;
+}
+
+function CandidateLinkIcons({
+  linkedinUrl,
+  cvUrl,
+  cvFilename,
+  onOpenCv,
+}: {
+  linkedinUrl?: string | null;
+  cvUrl?: string | null;
+  cvFilename?: string | null;
+  onOpenCv: () => void;
+}) {
+  const hasLinkedin = !!linkedinUrl;
+  const hasCv = !!cvUrl;
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasLinkedin ? (
+            <a
+              href={linkedinUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-[#0A66C2] hover:bg-muted"
+              aria-label="Profil LinkedIn"
+            >
+              <Linkedin className="h-4 w-4" />
+            </a>
+          ) : (
+            <span
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
+              aria-label="LinkedIn non renseigné"
+            >
+              <Linkedin className="h-4 w-4" />
+            </span>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>{hasLinkedin ? "Ouvrir le profil LinkedIn" : "LinkedIn non renseigné"}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasCv ? (
+            <button
+              type="button"
+              onClick={onOpenCv}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-primary hover:bg-muted"
+              aria-label="Ouvrir le CV"
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          ) : (
+            <span
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
+              aria-label="CV non renseigné"
+            >
+              <FileText className="h-4 w-4" />
+            </span>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>{hasCv ? (cvFilename ?? "Ouvrir le CV") : "CV non renseigné"}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
 }

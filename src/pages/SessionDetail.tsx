@@ -35,6 +35,7 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 
 import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
@@ -83,6 +84,7 @@ export default function SessionDetail() {
   const [analyzingVoice, setAnalyzingVoice] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [linksOpen, setLinksOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -367,6 +369,16 @@ export default function SessionDetail() {
         projectTitle={project?.title ?? ""}
       />
 
+      <CandidateLinksDialog
+        open={linksOpen}
+        onOpenChange={setLinksOpen}
+        sessionId={session.id}
+        initialLinkedinUrl={(session as any).candidate_linkedin_url ?? null}
+        initialCvUrl={(session as any).candidate_cv_url ?? null}
+        initialCvFilename={(session as any).candidate_cv_filename ?? null}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: queryKeys.session(id!) })}
+      />
+
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -417,9 +429,13 @@ export default function SessionDetail() {
                 onRegenerate={report ? handleRegenerate : undefined}
                 isRegenerating={regenerate.isPending}
                 onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+                onEditLinks={() => setLinksOpen(true)}
                 onDelete={() => setDeleteOpen(true)}
                 decisionByName={(session as any).decision_by_name ?? null}
                 decisionAt={(session as any).recruiter_decision_at ?? null}
+                linkedinUrl={(session as any).candidate_linkedin_url ?? null}
+                cvUrl={(session as any).candidate_cv_url ?? null}
+                cvFilename={(session as any).candidate_cv_filename ?? null}
               />
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="decision" className="gap-1">

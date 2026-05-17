@@ -1,53 +1,47 @@
-# Lien magique pour la création de comptes
+# LinkedIn et CV du candidat sur le rapport
 
 ## Objectif
 
-Lorsqu'un super admin crée une organisation ou un utilisateur, l'invité reçoit un simple **lien magique Supabase natif** (valable 24h, utilisable une seule fois) qui le connecte directement à l'app. Le mot de passe se définit plus tard dans **Paramètres** (déjà en place).
-
-Si le lien a expiré ou a déjà été utilisé, l'utilisateur arrive sur une page lui permettant de saisir son email pour en recevoir un nouveau.
+Sur le rapport d'entretien, à droite du nom du candidat dans le `DecisionBanner`, afficher deux pictos (LinkedIn + CV). Grisés quand vides, en couleur (cliquables) quand renseignés. Ajouter une entrée dans le menu Actions qui ouvre une pop-up permettant de saisir/modifier l'URL LinkedIn et de drag-and-dropper le CV.
 
 ## Changements
 
-### 1. Edge function `superadmin-create-org`
+### 1. Base de données (migration)
 
-- Au lieu d'utiliser `inviteUserByEmail` + table `organization_invitations` + page `/invite/{token}` :
-  - Créer le user directement : `admin.auth.admin.createUser({ email, email_confirm: true, user_metadata: { full_name } })`
-  - Pré-créer le profil, l'attacher à `organizations.owner_id`, créer `organization_members` et le rôle `admin` (déclenche le seed comme aujourd'hui)
-  - Générer et envoyer un lien magique : `admin.auth.admin.inviteUserByEmail(email, { redirectTo: "{origin}/auth/magic-link" })` — Supabase enverra le template "invite" (lien valable 24h, usage unique)
-- Supprimer la création de ligne dans `organization_invitations` pour ce flux
-- Si l'email existe déjà → rattachement direct comme aujourd'hui (pas d'email)
+Sur la table `sessions` :
+- Ajouter `candidate_linkedin_url text` (nullable)
+- Ajouter `candidate_cv_url text` (nullable) — URL publique vers le fichier dans le storage
+- Ajouter `candidate_cv_filename text` (nullable) — nom d'origine pour l'affichage
 
-### 2. Edge function `superadmin-manage-user` (action `create`)
+Storage :
+- Créer un bucket privé `candidate-cvs`
+- Policies : lecture/écriture autorisées aux membres de l'organisation propriétaire de la session (via jointure `sessions` → `projects` → `organization_id`). Les CV ne sont jamais publics. L'URL stockée est résolue côté client via `createSignedUrl` au moment d'ouvrir le lien.
 
-- Supprimer l'option password (le champ disparaît du dialog)
-- Toujours `createUser({ email_confirm: true })` puis `inviteUserByEmail` avec `redirectTo: "{origin}/auth/magic-link"`
-- Garder la logique de rattachement à l'organisation + rôle inchangée
+### 2. Nouveau composant `CandidateLinksDialog.tsx`
 
-### 3. Dialog `CreateUserInOrgDialog.tsx`
+- Champ texte pour l'URL LinkedIn (validation simple : doit commencer par `http`)
+- Zone drag-and-drop pour le CV (PDF, DOC, DOCX — max 10 Mo)
+- Affichage du CV courant s'il existe, avec bouton « Remplacer » et « Supprimer »
+- Boutons « Annuler » / « Enregistrer »
+- À l'enregistrement : upload du fichier dans `candidate-cvs/{session_id}/{filename}`, puis `UPDATE sessions` avec les nouvelles valeurs
 
-- Retirer le champ "Mot de passe"
-- Texte d'aide : "Un lien magique de connexion sera envoyé. Le mot de passe se définit ensuite dans Paramètres."
+### 3. `DecisionBanner.tsx`
 
-### 4. Nouvelle page `/auth/magic-link`
+- Nouvelles props : `linkedinUrl?: string | null`, `cvUrl?: string | null`, `cvFilename?: string | null`, `onEditLinks?: () => void`
+- À droite du nom du candidat (lignes 222 et 233), ajouter deux pictos `Linkedin` et `FileText` (lucide-react) :
+  - Si l'URL existe : couleur normale (`text-primary`), cliquable, ouvre dans un nouvel onglet (CV via signed URL)
+  - Sinon : grisé (`text-muted-foreground/40`), non cliquable, tooltip « Non renseigné »
+- Dans le menu Actions, nouvelle entrée « Ajouter LinkedIn / CV » qui appelle `onEditLinks`
 
-- Route publique
-- Au chargement :
-  - Si `window.location.hash` contient `error` / `error_code=otp_expired` / `access_token` invalide → afficher message "Lien expiré ou déjà utilisé" + formulaire email
-  - Si une session valide est détectée (lien réussi) → redirection vers `/dashboard`
-- Formulaire : un seul champ email → `supabase.auth.signInWithOtp({ email, shouldCreateUser: false, options: { emailRedirectTo: "{origin}/auth/magic-link" } })`
-- Toast de confirmation, identique au flux "mot de passe oublié" actuel
+### 4. `SessionDetail.tsx`
 
-### 5. Routes (`src/App.tsx`)
-
-- Ajouter `<Route path="/auth/magic-link" element={<MagicLink />} />`
-- Garder `/invite/:token` (rétrocompat pour anciens emails déjà envoyés)
-
-### 6. Page `Login.tsx`
-
-- Le mode "Mot de passe oublié" actuel envoie déjà un `signInWithOtp` — on aligne son `emailRedirectTo` sur `/auth/magic-link` pour une expérience unique
+- État local `linksDialogOpen`
+- Passer les nouvelles props au `DecisionBanner` depuis `session.candidate_linkedin_url` etc.
+- Rendre `<CandidateLinksDialog>` contrôlé par cet état
+- Après enregistrement : invalider la query session pour rafraîchir
 
 ## Hors scope
 
-- Pas de changement sur la table `organization_invitations` ni sur l'ancienne page `/invite/:token`
-- Pas de changement sur les templates email (le template Supabase "invite" sert de lien magique)
-- Pas de changement sur la définition du mot de passe (déjà dans Paramètres)
+- Pas de parsing automatique du CV
+- Pas d'analyse IA du contenu du CV
+- Pas d'affichage du CV embarqué dans la page (juste un lien vers le fichier)

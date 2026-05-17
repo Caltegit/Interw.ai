@@ -1462,7 +1462,10 @@ export type Database = {
           assigned_to: string | null
           audio_recording_url: string | null
           cancelled_at: string | null
+          candidate_cv_filename: string | null
+          candidate_cv_url: string | null
           candidate_email: string
+          candidate_linkedin_url: string | null
           candidate_name: string
           completed_at: string | null
           consent_accepted_at: string | null
@@ -1489,7 +1492,10 @@ export type Database = {
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
+          candidate_cv_filename?: string | null
+          candidate_cv_url?: string | null
           candidate_email: string
+          candidate_linkedin_url?: string | null
           candidate_name: string
           completed_at?: string | null
           consent_accepted_at?: string | null
@@ -1516,7 +1522,10 @@ export type Database = {
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
+          candidate_cv_filename?: string | null
+          candidate_cv_url?: string | null
           candidate_email?: string
+          candidate_linkedin_url?: string | null
           candidate_name?: string
           completed_at?: string | null
           consent_accepted_at?: string | null
