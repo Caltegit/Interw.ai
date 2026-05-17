@@ -396,3 +396,67 @@ function DecisionButton({
   }
   return button;
 }
+
+function CandidateLinkIcons({
+  linkedinUrl,
+  cvUrl,
+  cvFilename,
+  onOpenCv,
+}: {
+  linkedinUrl?: string | null;
+  cvUrl?: string | null;
+  cvFilename?: string | null;
+  onOpenCv: () => void;
+}) {
+  const hasLinkedin = !!linkedinUrl;
+  const hasCv = !!cvUrl;
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasLinkedin ? (
+            <a
+              href={linkedinUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-[#0A66C2] hover:bg-muted"
+              aria-label="Profil LinkedIn"
+            >
+              <Linkedin className="h-4 w-4" />
+            </a>
+          ) : (
+            <span
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
+              aria-label="LinkedIn non renseigné"
+            >
+              <Linkedin className="h-4 w-4" />
+            </span>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>{hasLinkedin ? "Ouvrir le profil LinkedIn" : "LinkedIn non renseigné"}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasCv ? (
+            <button
+              type="button"
+              onClick={onOpenCv}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-primary hover:bg-muted"
+              aria-label="Ouvrir le CV"
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+          ) : (
+            <span
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
+              aria-label="CV non renseigné"
+            >
+              <FileText className="h-4 w-4" />
+            </span>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>{hasCv ? (cvFilename ?? "Ouvrir le CV") : "CV non renseigné"}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
