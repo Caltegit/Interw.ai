@@ -19,10 +19,9 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
 
   const reset = () => {
-    setEmail(""); setFullName(""); setPassword("");
+    setEmail(""); setFullName("");
   };
 
   const handleCreate = async () => {
@@ -34,7 +33,6 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           action: "create",
           email: email.trim().toLowerCase(),
           full_name: fullName.trim(),
-          password: password || undefined,
           organization_id: organizationId,
           role: "member",
         },
