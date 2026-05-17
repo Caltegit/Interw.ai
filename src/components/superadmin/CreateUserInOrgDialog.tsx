@@ -19,10 +19,9 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
 
   const reset = () => {
-    setEmail(""); setFullName(""); setPassword("");
+    setEmail(""); setFullName("");
   };
 
   const handleCreate = async () => {
@@ -34,7 +33,6 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           action: "create",
           email: email.trim().toLowerCase(),
           full_name: fullName.trim(),
-          password: password || undefined,
           organization_id: organizationId,
           role: "member",
         },
@@ -101,7 +99,7 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
         <DialogHeader>
           <DialogTitle>Créer un utilisateur dans {organizationName}</DialogTitle>
           <DialogDescription>
-            Sans mot de passe, un email d'invitation est envoyé.
+            Un lien magique de connexion sera envoyé par email (valable 24h, usage unique). Le mot de passe se définit ensuite dans Paramètres.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -112,10 +110,6 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           <div className="space-y-2">
             <Label htmlFor="cuName">Nom complet *</Label>
             <Input id="cuName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jean Dupont" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cuPwd">Mot de passe</Label>
-            <Input id="cuPwd" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour envoyer une invitation" />
           </div>
         </div>
         <DialogFooter>

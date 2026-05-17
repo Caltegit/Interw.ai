@@ -80,19 +80,36 @@ Deno.serve(async (req) => {
     }
 
     // Recherche d'un user existant avec cet email
-    let existingUserId: string | null = null;
+    let ownerUserId: string | null = null;
     {
       const { data: prof } = await admin
         .from("profiles")
         .select("user_id")
         .eq("email", ownerEmail)
         .maybeSingle();
-      existingUserId = prof?.user_id ?? null;
+      ownerUserId = prof?.user_id ?? null;
     }
 
     const fullName = `${ownerFirstName} ${ownerLastName}`.trim();
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || supabaseUrl;
+    const redirectTo = `${origin}/auth/magic-link`;
 
-    // Création de l'organisation. Si l'utilisateur existe déjà, on l'attache directement comme propriétaire.
+    const ownerAlreadyExisted = !!ownerUserId;
+
+    // Si le propriétaire n'existe pas encore : on l'invite (envoi du lien magique natif Supabase, valable 24h, usage unique).
+    if (!ownerUserId) {
+      const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
+        redirectTo,
+        data: { full_name: fullName },
+      });
+      if (inviteErr) {
+        console.error("inviteUserByEmail failed:", inviteErr);
+        return json({ error: `Envoi du lien magique impossible : ${inviteErr.message}` }, 500);
+      }
+      ownerUserId = invited.user!.id;
+    }
+
+    // Création de l'organisation avec owner_id (déclenche le seed via trigger).
     const { data: org, error: orgErr } = await admin
       .from("organizations")
       .insert({
@@ -100,7 +117,7 @@ Deno.serve(async (req) => {
         slug: candidate,
         pricing,
         client_notes: clientNotes,
-        owner_id: existingUserId,
+        owner_id: ownerUserId,
         session_credits_unlimited: creditsUnlimited,
         session_credits_total: creditsTotal,
       })
@@ -108,51 +125,37 @@ Deno.serve(async (req) => {
       .single();
     if (orgErr) throw orgErr;
 
-    let invitationToken: string | null = null;
+    // Rattachement profil + membership + rôle admin
+    await admin
+      .from("profiles")
+      .update({ organization_id: org.id, full_name: fullName })
+      .eq("user_id", ownerUserId);
 
-    if (existingUserId) {
-      // Rattacher le profil existant à la nouvelle orga
-      await admin
-        .from("profiles")
-        .update({ organization_id: org.id, full_name: fullName })
-        .eq("user_id", existingUserId);
-    } else {
-      // Création d'une invitation
-      const { data: inv, error: invErr } = await admin
-        .from("organization_invitations")
-        .insert({
-          organization_id: org.id,
-          email: ownerEmail,
-          invited_by: user.id,
-        })
-        .select("token")
-        .single();
-      if (invErr) throw invErr;
-      invitationToken = inv.token;
+    await admin
+      .from("organization_members")
+      .upsert({ user_id: ownerUserId, organization_id: org.id }, { onConflict: "user_id,organization_id" });
 
-      // Envoi de l'email d'invitation via auth admin
-      const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || supabaseUrl;
-      const inviteLink = `${origin}/invite/${invitationToken}`;
-
-      const { error: emailErr } = await admin.auth.admin.inviteUserByEmail(ownerEmail, {
-        redirectTo: inviteLink,
-        data: {
-          full_name: fullName,
-          invitation_token: invitationToken,
-          organization_id: org.id,
-        },
+    const { data: existingRole } = await admin
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", ownerUserId)
+      .eq("organization_id", org.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (!existingRole) {
+      await admin.from("user_roles").insert({
+        user_id: ownerUserId,
+        role: "admin",
+        organization_id: org.id,
       });
-      if (emailErr && !emailErr.message?.includes("already been registered")) {
-        console.warn("Invitation email failed:", emailErr.message);
-      }
     }
 
     return json({
       success: true,
       organization_id: org.id,
       seeded: seedLibraries,
-      owner_existing: !!existingUserId,
-      invitation_token: invitationToken,
+      owner_existing: ownerAlreadyExisted,
+      magic_link_sent: !ownerAlreadyExisted,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
