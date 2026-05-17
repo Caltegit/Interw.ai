@@ -250,7 +250,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
             {reco && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
-            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+              <CandidateLinkIcons
+                linkedinUrl={linkedinUrl}
+                cvUrl={cvUrl}
+                cvFilename={cvFilename}
+                onOpenCv={openCv}
+              />
+            </div>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
@@ -261,7 +269,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
         {/* Main info */}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="hidden lg:block min-w-0">
-            <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-base font-semibold leading-tight truncate">{candidateName}</h2>
+              <CandidateLinkIcons
+                linkedinUrl={linkedinUrl}
+                cvUrl={cvUrl}
+                cvFilename={cvFilename}
+                onOpenCv={openCv}
+              />
+            </div>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
