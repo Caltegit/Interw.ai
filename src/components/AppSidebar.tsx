@@ -57,7 +57,7 @@ export function AppSidebar() {
   const bottomItemsList = isSuperAdmin
     ? [
         ...bottomItems,
-        { title: "Super Admin", url: "/admin", icon: Shield },
+        { title: "Super Admin", url: "/admin", icon: Shield, showFeedbackBadge: true },
         { title: "Santé emails", url: "/admin/emails", icon: Mail },
         { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
       ]
