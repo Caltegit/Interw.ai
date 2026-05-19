@@ -32,6 +32,9 @@ interface StepIntroProps {
   ttsVoiceId: string;
   avatarPreview: string | null;
   aiPersonaName: string;
+
+  saveToLibrary: boolean;
+  setSaveToLibrary: (v: boolean) => void;
 }
 
 
