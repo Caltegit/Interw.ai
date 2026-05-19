@@ -1,81 +1,51 @@
-## Problème
+## Objectif
 
-Les tables `sessions`, `session_messages`, `projects`, `questions` exposent leurs données sans restriction :
+Aujourd'hui, `InterviewDeviceTest` affiche les 5 cartes de test simultanément (Navigateur, Micro, Son, Reconnaissance vocale, Connexion). Beaucoup de candidats sont perdus : ils ne savent pas par où commencer, cliquent dans le désordre, ratent un test silencieux.
 
-- `sessions` : politiques anon ET authenticated en `USING (true)` → **n'importe quel utilisateur connecté voit toutes les sessions de tous les comptes**. C'est ce qui permet à `c+m@bap.fr` de voir les sessions du super admin.
-- `session_messages` : `Anon can view session messages` en `USING (true)`.
-- `projects` : `Anon can view projects` et `Authenticated can view active projects` en `USING (status = 'active')` → tous les projets actifs visibles par tous.
-- `questions` : `Anon can view questions` accessible dès que le projet parent est actif.
+On passe à un **parcours guidé étape par étape** : une seule étape visible à la fois, le candidat ne voit l'étape suivante que quand l'actuelle est validée (ou skippée).
 
-Le flux candidat est anonyme (pas de login) et identifié par le `token` présent dans l'URL `/session/:slug/start/:token`. Le code frontend interroge déjà les tables avec `.eq("token", token)`. RLS ne peut pas vérifier qu'un filtre est présent dans la requête → il faut **passer par des RPC `SECURITY DEFINER` token-gated** pour le flux candidat, et fermer l'accès anon direct.
+## Parcours proposé
 
-## Correction
+```text
+[Étape 1/5] Navigateur compatible      → auto-check au chargement
+[Étape 2/5] Caméra                     → auto-démarre
+[Étape 3/5] Micro et enregistrement    → bouton « Tester » + lecture phrase
+[Étape 4/5] Son (bip)                  → bouton « Tester »
+[Étape 5/5] Connexion réseau           → auto-démarre
+       ↓
+  Récap (les 5 ✓) + bouton « Continuer »
+```
 
-### 1. Fermer les politiques trop ouvertes
+Règles :
+- Une seule carte de test affichée à la fois, en grand, centrée.
+- Un **stepper** en haut (1/5, 2/5…) montre la progression.
+- Auto-avance vers l'étape suivante dès qu'un test passe en `ok` (délai 800 ms pour laisser voir le ✓).
+- En cas d'`error` ou `warning` : on reste sur l'étape, on affiche le bouton « Réessayer » + un lien discret « Passer cette étape » (sauf navigateur bloqué qui reste bloquant).
+- Le test STT (reconnaissance vocale) reste exécuté en arrière-plan pendant l'étape Micro — il n'a pas sa propre étape visible sauf s'il échoue (alors il s'intercale en étape bloquante).
+- Écran final récap : les 5 lignes condensées avec leur statut + bouton « Commencer l'entretien ».
 
-Sur `sessions`, `session_messages`, `projects`, `questions` :
-- Supprimer toutes les politiques `USING (true)` ou `USING (status='active')` pour `anon` et `authenticated`.
-- Conserver / s'assurer que les politiques org-scoped restent (membres de l'organisation propriétaire + super admin).
-- Pour `projects` : garder une lecture anon **uniquement** sur la page publique `/p/:slugPublic` via `project_public_pages.enabled = true` (déjà gérée séparément) ; la lecture anon directe de `projects` est supprimée.
+## Bénéfices
 
-Effet : `c+m@bap.fr` ne verra plus que les sessions/projets de son organisation Morning.
-
-### 2. RPC `SECURITY DEFINER` pour le flux candidat anonyme
-
-Créer un jeu de fonctions exposées en `anon` qui exigent le `token` :
-
-- `candidate_get_session(_token text)` → renvoie la session (sans champs sensibles RH : `recruiter_note`, `recruiter_decision*`, `assigned_to`).
-- `candidate_get_project_bundle(_token text)` → renvoie le projet + ses questions + critères, à condition que `_token` corresponde à une session valide du projet.
-- `candidate_update_session(_token text, _patch jsonb)` → autorise uniquement la mise à jour de colonnes "candidat" listées en dur (`status`, `started_at`, `completed_at`, `last_question_index`, `last_activity_at`, `consent_*`, `video_viewed_at`, `audio_recording_url`, `video_recording_url`, `duration_seconds`, `cancelled_at`, `candidate_*`). Refuse `recruiter_*`, `assigned_to`, `project_id`, `token`.
-- `candidate_insert_message(_token text, _role text, _content text, _metadata jsonb)` → insertion contrôlée dans `session_messages`.
-- `candidate_get_messages(_token text)` → lecture des messages de la session.
-
-Chaque fonction commence par : `SELECT id INTO _sid FROM sessions WHERE token = _token` et lève `RAISE EXCEPTION` si introuvable. `search_path = public`, `SECURITY DEFINER`, `GRANT EXECUTE TO anon, authenticated`.
-
-### 3. Adapter le code frontend candidat
-
-Remplacer dans `InterviewLanding.tsx`, `InterviewDeviceTest.tsx`, `InterviewStart.tsx`, `InterviewComplete.tsx`, `InterviewPrivacy.tsx` :
-
-- `supabase.from("sessions").select(...).eq("token", token)` → `supabase.rpc("candidate_get_session", { _token: token })`.
-- `supabase.from("sessions").update(patch).eq("id", sid)` → `supabase.rpc("candidate_update_session", { _token, _patch: patch })`.
-- Lecture projet/questions → `candidate_get_project_bundle`.
-- `session_messages` insert/select → RPC dédiés.
-
-Côté RH (pages protégées), aucun changement : les requêtes passent par les politiques `authenticated` org-scoped déjà en place.
-
-### 4. Vérifier `reports` et `transcripts`
-
-- `reports` : déjà correctement org-scoped pour `authenticated`. Lecture anon via `report_shares` OK (token de partage).
-- `transcripts` : déjà org-scoped. Pas de lecture anon directe nécessaire (le candidat n'y accède jamais).
-
-### 5. Tests de non-régression
-
-- E2E `candidate-journey.spec.ts` : doit continuer à passer (landing → device test → start).
-- Manuel : se connecter en tant que `c+m@bap.fr`, vérifier que seules les sessions Morning apparaissent.
-- Manuel : ouvrir un lien candidat en navigation privée, vérifier que l'entretien se déroule normalement.
+- Charge cognitive réduite : un test = une action claire.
+- Plus de tests oubliés (le candidat scrollait et ratait le réseau ou le son).
+- Meilleur taux de complétion réelle du test micro (cause #1 des incidents).
 
 ## Détails techniques
 
-```text
-Tables touchées (RLS) :
-  sessions          : DROP 4 policies anon/auth open ; conserve org-scoped
-  session_messages  : DROP anon select/insert open  ; conserve org-scoped
-  projects          : DROP anon + auth active-status open
-  questions         : DROP anon open
+Fichier touché : `src/pages/InterviewDeviceTest.tsx` uniquement. Pas de changement de logique de test (`testMicAndRecorder`, `testNetwork`, `testStt`, `testSound`, `browserCompat` restent identiques), pas de migration BDD, pas d'edge function.
 
-Fonctions créées (public, SECURITY DEFINER, search_path=public) :
-  candidate_get_session(_token text) returns sessions
-  candidate_get_project_bundle(_token text) returns jsonb
-  candidate_update_session(_token text, _patch jsonb) returns void
-  candidate_get_messages(_token text) returns setof session_messages
-  candidate_insert_message(_token, _role, _content, _metadata) returns uuid
+Ajouts :
+- État `currentStep: "browser" | "camera" | "mic" | "sound" | "network" | "recap"`.
+- `useEffect` qui observe les `status` et avance automatiquement (avec délai et anti-rebond).
+- Petit composant `Stepper` (5 pastilles + label de l'étape courante).
+- Refacto rendu : remplacer la `div.space-y-2.5` qui empile les 5 `TestCard` par un `switch (currentStep)` qui rend une seule carte à la fois, gardée dans un container `max-w-md mx-auto` avec une animation `fade-in`.
+- Écran récap = liste compacte (icône + label + statut) + CTA `Commencer l'entretien` (le CTA déjà présent en bas est conservé, on le déplace dans le récap).
+- Le bouton « Passer cette étape » n'apparaît que pour mic/son/réseau et marque le test comme `skipped` (nouveau état Status) pour que la session puisse démarrer en best-effort (le filet de sécurité côté `InterviewStart` est déjà là).
 
-Whitelist update colonnes candidat (anti-escalation):
-  status, started_at, completed_at, last_question_index,
-  last_activity_at, consent_given_at, consent_accepted_at,
-  video_viewed_at, audio_recording_url, video_recording_url,
-  duration_seconds, cancelled_at, candidate_name, candidate_email,
-  candidate_linkedin_url, candidate_cv_url, candidate_cv_filename
-```
+Tests E2E à mettre à jour : `interview-start-loading.spec.ts` et `candidate-journey.spec.ts` ne touchent pas le device test directement, donc aucun impact. À vérifier après implémentation.
 
-Edge functions (`finalize-session`, `transcribe-session`, etc.) utilisent la `service_role` key → non impactées par le changement de RLS.
+## Hors champ
+
+- Aucun changement sur `InterviewStart` ni sur les fonctions de mesure.
+- Pas de modification de la logique d'auto-test au chargement (caméra, réseau, STT démarrent toujours en parallèle en background ; on n'affiche juste qu'une étape à la fois).
+- Pas de redesign visuel des cartes elles-mêmes (palette, typo, layout interne conservés).
