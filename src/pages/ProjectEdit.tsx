@@ -275,6 +275,32 @@ export default function ProjectEdit() {
 
       if (updateError) throw updateError;
 
+      if (s.saveIntroToLibrary && s.introEnabled) {
+        const introTextValue =
+          (s.introMode === "text" || s.introMode === "tts") ? s.introText.trim() : "";
+        const cleanAudioUrl = introAudioUrl ? introAudioUrl.split("?")[0] : null;
+        const cleanVideoUrl = presentationVideoUrl ? presentationVideoUrl.split("?")[0] : null;
+        const hasContent =
+          (!!introTextValue) ||
+          (s.introMode === "audio" && !!cleanAudioUrl) ||
+          (s.introMode === "video" && !!cleanVideoUrl);
+        if (hasContent) {
+          const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+          if (orgData) {
+            await supabase.from("intro_templates" as never).insert({
+              organization_id: orgData,
+              created_by: user.id,
+              name: s.title,
+              type: s.introMode,
+              intro_text: introTextValue || null,
+              audio_url: s.introMode === "audio" ? cleanAudioUrl : null,
+              video_url: s.introMode === "video" ? cleanVideoUrl : null,
+              tts_voice_id: s.introMode === "tts" ? s.ttsVoiceId : null,
+            } as never);
+          }
+        }
+      }
+
       // ===== Synchronisation des questions (merge intelligent, jamais de delete global) =====
       const validQuestions = s.questions.filter(
         (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
