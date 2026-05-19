@@ -166,7 +166,6 @@ export default function ProjectNew() {
           created_by: user.id,
           title: s.title,
           job_title: s.title,
-          description: "",
           language: s.language,
           ai_persona_name: s.aiPersonaName,
           ai_voice: s.aiVoice as never,

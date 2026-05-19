@@ -1,17 +1,20 @@
-# Bug création d'organisation
+# Plan
 
-## Cause
+## Objectif
+Corriger l’erreur affichée pendant la création afin que le projet soit bien créé sans référence au champ supprimé `description`.
 
-La création passe bien côté Auth (lien magique envoyé, utilisateur créé), mais l'edge function `superadmin-create-org` reçoit une erreur 500 quand elle insère la nouvelle organisation. Le trigger qui ensemence le projet de démo appelle `public.seed_demo_project`, qui tente d'écrire dans `projects.description` — colonne qui n'existe pas (la table n'a que `title` et `job_title`).
+## Ce que je vais faire
+1. Retirer l’envoi de `description` dans le flux de création de projet (`ProjectNew`).
+2. Vérifier s’il reste d’autres accès frontend au champ `projects.description` sur le parcours de création/publication.
+3. Valider le résultat en testant le parcours concerné pour m’assurer qu’on ne redemande plus cette colonne.
 
-Log Postgres correspondant :
-> column "description" of relation "projects" does not exist
+## Détail technique
+- La migration précédente a bien corrigé la fonction backend de seed.
+- Le bug restant vient du frontend : `src/pages/ProjectNew.tsx` fait encore un `.insert()` sur `projects` avec `description: ""`.
+- La table `projects` n’a plus cette colonne, donc PostgREST renvoie : `Could not find the 'description' column of 'projects' in the schema cache`.
+- La correction devrait être limitée au code de création de projet, sans changement de schéma.
 
-## Correction
-
-Migration unique : recréer `public.seed_demo_project` sans la colonne `description` (le reste de l'INSERT inchangé). Aucune modification frontend nécessaire.
-
-## Vérification
-
-- Relancer une création d'organisation via la console super admin.
-- Vérifier que l'organisation est créée, le projet de démo "Candidature spontanée - TEST -" présent avec ses 5 questions et 3 critères, et que le lien magique est bien envoyé.
+## Résultat attendu
+- Le bouton « Créer le projet » fonctionne à nouveau.
+- Aucun toast d’erreur lié à `projects.description`.
+- Le projet est créé puis redirige vers sa fiche comme prévu.
