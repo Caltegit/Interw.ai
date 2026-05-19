@@ -104,16 +104,42 @@ Deno.serve(async (req) => {
       }
 
       if (organization_id && newUserId) {
-        await admin.from("profiles").update({ organization_id, full_name: full_name || email }).eq("user_id", newUserId);
-        // Membership multi-org pour cohérence avec le sélecteur
-        await admin.from("organization_members").insert({ user_id: newUserId, organization_id });
+        // Attendre que le trigger handle_new_user ait inséré le profil
+        let profileExists = false;
+        for (let i = 0; i < 8; i++) {
+          const { data: prof } = await admin.from("profiles").select("id").eq("user_id", newUserId).maybeSingle();
+          if (prof) { profileExists = true; break; }
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        if (!profileExists) {
+          const { error: profInsertErr } = await admin.from("profiles").insert({
+            user_id: newUserId,
+            email,
+            full_name: full_name || email,
+            organization_id,
+          });
+          if (profInsertErr) return json({ error: `Création du profil impossible : ${profInsertErr.message}` }, 500);
+        } else {
+          const { error: profErr } = await admin
+            .from("profiles")
+            .upsert(
+              { user_id: newUserId, email, full_name: full_name || email, organization_id },
+              { onConflict: "user_id" },
+            );
+          if (profErr) return json({ error: `Rattachement profil impossible : ${profErr.message}` }, 500);
+        }
+        const { error: memErr } = await admin
+          .from("organization_members")
+          .upsert({ user_id: newUserId, organization_id }, { onConflict: "user_id,organization_id" });
+        if (memErr) return json({ error: `Création membership impossible : ${memErr.message}` }, 500);
       }
       if (role && newUserId) {
-        await admin.from("user_roles").insert({
+        const { error: roleErr } = await admin.from("user_roles").insert({
           user_id: newUserId,
           role,
           organization_id: role === "super_admin" ? null : organization_id ?? null,
         });
+        if (roleErr) return json({ error: `Attribution du rôle impossible : ${roleErr.message}` }, 500);
 
         // Si admin d'une org sans owner, on le désigne comme owner (déclenche le seed via trigger)
         if (role === "admin" && organization_id) {
@@ -123,7 +149,8 @@ Deno.serve(async (req) => {
             .eq("id", organization_id)
             .maybeSingle();
           if (org && !org.owner_id) {
-            await admin.from("organizations").update({ owner_id: newUserId }).eq("id", organization_id);
+            const { error: ownErr } = await admin.from("organizations").update({ owner_id: newUserId }).eq("id", organization_id);
+            if (ownErr) return json({ error: `Désignation owner impossible : ${ownErr.message}` }, 500);
           }
         }
       }
