@@ -1,85 +1,66 @@
-## Constats
+# Plan de correction
 
-- Les données ne sont pas perdues : j’ai vérifié en base, **ALBO a 205 sessions** et **Morning en a 3**.
-- Ce n’est donc **pas** un problème de suppression de sessions.
-- Le point le plus suspect est l’interface : dans `ProjectDetail.tsx`, la liste affichée est construite à partir de `readySessions`, donc **uniquement les sessions terminées avec rapport**.
-- Concrètement, le code charge bien `sessions`, mais l’affichage final fait ensuite :
+## Objectif
+Faire en sorte que chaque membre d’une organisation voie tous les projets et toutes les sessions de cette organisation, sans rouvrir l’accès entre organisations.
 
-```text
-sessions -> readySessions (completed + report)
-         -> filteredSessions = readySessions.slice()
-         -> rendu de la table/cartes
-```
+## Ce que je vais corriger
 
-- Si les rapports ne remontent pas, ou si l’utilisateur attend de voir aussi les sessions en cours / en attente, la page peut donner l’impression que **tout a disparu**.
-- Revenir en arrière sur la migration RLS n’est **pas** la bonne option à ce stade : on réintroduirait la fuite de données entre organisations alors que les sessions existent toujours.
+### 1. Unifier les droits d’accès sur la vraie notion de membre d’organisation
+- Remplacer la dépendance trop forte à `profiles.organization_id` par l’appartenance réelle dans `organization_members` pour les lectures RH.
+- Conserver l’organisation active uniquement comme contexte d’affichage et de création, pas comme condition unique de visibilité des données.
+- Garder l’exception super admin intacte.
 
-## Plan de correction
+### 2. Corriger les règles backend pour projets et sessions
+- Mettre à jour les politiques de lecture de `projects` et `sessions` pour autoriser tout membre de l’organisation concernée.
+- Vérifier les tables liées qui dépendent du même périmètre de lecture côté RH : `questions`, `evaluation_criteria`, `reports`, `transcripts`, `session_messages` si nécessaire.
+- Préserver les accès publics candidats et les liens partagés déjà en place.
 
-### 1. Vérifier précisément le flux d’affichage côté RH
-- Contrôler la route exacte utilisée quand vous ouvrez “les sessions”.
-- Vérifier si le vide vient :
-  - de la page **liste des projets**,
-  - de la page **détail d’un projet**,
-  - ou d’une **vue super admin d’organisation**.
-- Relever les réponses réelles des requêtes `sessions` et `reports` dans l’interface pour confirmer si les sessions sont chargées mais ensuite filtrées à l’écran.
+### 3. Aligner l’interface sur l’organisation affichée
+- Vérifier les écrans qui listent les données d’orga (`/projects`, détail projet, dashboard) pour qu’ils affichent bien le périmètre attendu.
+- Garder le sélecteur d’organisation comme filtre d’interface sur l’orga active, tout en s’appuyant sur des droits backend corrects.
+- Éviter qu’un utilisateur membre d’ALBO voie une page vide simplement parce que son `profiles.organization_id` ou son cache ne reflète pas le bon contexte.
 
-### 2. Corriger la logique d’affichage dans `ProjectDetail.tsx`
-- Remplacer la source d’affichage actuelle basée sur `readySessions` par une base plus cohérente : **toutes les sessions visibles** du projet.
-- Garder les sessions “prêtes avec rapport” comme un **sous-ensemble**, pas comme la liste principale.
-- Afficher clairement les états attendus :
-  - session en attente,
-  - session terminée sans rapport,
-  - session prête avec rapport,
-  - session annulée.
-- Éviter qu’une absence de rapport rende la page visuellement vide.
+### 4. Sécuriser les lectures côté frontend les plus sensibles
+- Revoir les requêtes qui reposent encore implicitement sur `get_user_organization_id()` ou `profiles.organization_id` quand cela crée un angle mort.
+- Corriger en priorité les écrans critiques constatés dans ton bug : liste “Sessions” (`/projects`) et détail projet.
 
-### 3. Séparer données visibles et filtres métier
-- Conserver les filtres score / recommandation seulement pour les sessions qui ont un rapport.
-- Empêcher qu’un filtre “rapport requis” soit appliqué implicitement à toute la page.
-- Adapter le compteur pour qu’il reflète la réalité :
-  - total sessions visibles,
-  - dont prêtes,
-  - dont en traitement si nécessaire.
+### 5. Valider le correctif avant de conclure
+- Tester avec un compte membre d’organisation non créateur de projet.
+- Vérifier qu’ALBO remonte bien ses projets puis les sessions associées.
+- Vérifier qu’un membre Morning ne voit que Morning.
+- Vérifier qu’aucune erreur RLS ni page vide injustifiée n’apparaît.
 
-### 4. Vérifier les autres écrans impactés par la même hypothèse
-- Contrôler `Dashboard` et les autres pages qui croisent `sessions` + `reports`.
-- Vérifier la page super admin d’organisation pour s’assurer qu’elle ne donne pas l’impression qu’une organisation n’a aucune activité alors que ses projets ont bien des sessions.
-- Corriger uniquement les écrans réellement touchés, sans élargir le périmètre.
-
-### 5. Valider avant toute conclusion
-- Tester avec `c@bap.fr`.
-- Vérifier au moins un projet ALBO avec beaucoup de sessions et un projet Morning avec peu de sessions.
-- Confirmer après correction :
-  - les sessions sont à nouveau visibles,
-  - la sécurisation entre organisations reste intacte,
-  - aucune régression sur la vue détail d’une session.
-
-## Ce que je recommande
-
-- **Ne pas revenir en arrière** globalement.
-- Corriger d’abord **la logique d’affichage** qui semble masquer les sessions côté organisation.
-- Ensuite seulement, si les requêtes elles-mêmes renvoient vide dans le navigateur, on ajustera la RLS de façon ciblée.
+## Résultat attendu
+- Tous les membres d’une même organisation voient les mêmes projets.
+- Tous les membres d’une même organisation voient les mêmes sessions.
+- Les organisations restent strictement isolées entre elles.
+- Pas besoin de revenir en arrière globalement.
 
 ## Détails techniques
+```text
+Aujourd’hui
+membership réel = organization_members
+mais beaucoup d’accès = get_user_organization_id() -> profiles.organization_id active
 
-**Fichier principal suspect :**
+Cible
+visibilité des données RH = membership organization_members
+contexte d’interface / création = organisation active
+```
+
+### Fichiers probablement concernés
+- `supabase/migrations/...` pour corriger proprement les politiques d’accès
+- `src/hooks/queries/useProjectsList.ts`
+- `src/hooks/queries/useDashboardData.ts`
 - `src/pages/ProjectDetail.tsx`
+- éventuellement les composants qui s’appuient encore sur l’organisation active au lieu de l’appartenance réelle
 
-**Point précis à corriger :**
-```text
-isReady = session completed + report exists
-readySessions = sessions.filter(isReady)
-filteredSessions = readySessions.slice()
-```
+### Principe de sécurité
+- Je ne réouvre aucune politique globale “authenticated = tout voir”.
+- Je limite bien la visibilité au périmètre de l’organisation du projet/session.
+- Je conserve la séparation stricte entre organisations.
 
-**Direction proposée :**
-```text
-baseSessions = sessions visibles
-filteredSessions = baseSessions + filtres compatibles avec leur état
-readySessions = uniquement pour stats / badges / raccourcis
-```
-
-**Objectif :**
-- ne plus confondre “session visible” et “session prête avec rapport”.
-- conserver la sécurité RLS sans réouvrir l’accès inter-organisations.
+## Ordre d’implémentation
+1. Corriger les politiques backend.
+2. Ajuster les requêtes frontend impactées.
+3. Tester avec ALBO et Morning.
+4. Vérifier qu’on n’a pas de régression sur le dashboard et le détail session.
