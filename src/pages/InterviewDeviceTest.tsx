@@ -675,14 +675,14 @@ export default function InterviewDeviceTest() {
 
   // Quand toutes les vérifications sont vertes : transition automatique vers l'écran suivant
   useEffect(() => {
-    if (canContinue && !wasReadyRef.current) {
+    if (canContinue && currentStep === "recap" && !wasReadyRef.current) {
       wasReadyRef.current = true;
       ctaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       try { navigator.vibrate?.(15); } catch { /* ignore */ }
       const t = setTimeout(() => { handleContinue(); }, 1200);
       return () => clearTimeout(t);
     }
-  }, [canContinue]);
+  }, [canContinue, currentStep]);
 
   const showSkipPrimary =
     !canContinue && !browserBlocking && sttStatus !== "error" && (
