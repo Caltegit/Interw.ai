@@ -206,6 +206,11 @@ export default function InterviewDeviceTest() {
   // Confirmation avant de contourner les vérifications avec un micro en erreur.
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
+  // Parcours guidé pas-à-pas : une étape visible à la fois.
+  type Step = "browser" | "mic" | "sound" | "stt" | "network" | "recap";
+  const [currentStep, setCurrentStep] = useState<Step>("browser");
+  const stepAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
