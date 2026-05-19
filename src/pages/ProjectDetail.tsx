@@ -700,7 +700,7 @@ export default function ProjectDetail() {
       {visibleSessions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
           {decisionOptions.map((d, idx) => {
-            const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
+            const count = visibleSessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
             const active = visibleDecisions.has(d.value);
             return (
               <div key={d.value} className="flex items-center gap-1">
