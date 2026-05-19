@@ -215,6 +215,15 @@ export default function ProjectNew() {
 
       if (error) throw error;
 
+      let finalIntroAudioUrl: string | null =
+        s.introEnabled && s.introMode === "audio" && s.introAudioPreviewUrl && !s.introAudioPreviewUrl.startsWith("blob:")
+          ? s.introAudioPreviewUrl
+          : null;
+      let finalIntroVideoUrl: string | null =
+        s.introEnabled && s.introMode === "video" && s.introVideoPreviewUrl && !s.introVideoPreviewUrl.startsWith("blob:")
+          ? s.introVideoPreviewUrl
+          : null;
+
       if (s.introEnabled && s.introMode === "audio" && s.introAudioBlob) {
         const introPath = `intro/${project.id}.webm`;
         const { error: introUploadError } = await supabase.storage
@@ -222,9 +231,10 @@ export default function ProjectNew() {
           .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
         if (introUploadError) throw introUploadError;
         const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
+        finalIntroAudioUrl = introUrlData.publicUrl;
         const { error: introUpdateError } = await supabase
           .from("projects")
-          .update({ intro_audio_url: introUrlData.publicUrl } as never)
+          .update({ intro_audio_url: finalIntroAudioUrl } as never)
           .eq("id", project.id);
         if (introUpdateError) throw introUpdateError;
       }
@@ -236,11 +246,33 @@ export default function ProjectNew() {
           .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
         if (videoUploadError) throw videoUploadError;
         const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
+        finalIntroVideoUrl = videoUrlData.publicUrl;
         const { error: videoUpdateError } = await supabase
           .from("projects")
-          .update({ presentation_video_url: videoUrlData.publicUrl } as never)
+          .update({ presentation_video_url: finalIntroVideoUrl } as never)
           .eq("id", project.id);
         if (videoUpdateError) throw videoUpdateError;
+      }
+
+      if (s.saveIntroToLibrary && s.introEnabled) {
+        const introTextValue =
+          (s.introMode === "text" || s.introMode === "tts") ? s.introText.trim() : "";
+        const hasContent =
+          (!!introTextValue) ||
+          (s.introMode === "audio" && !!finalIntroAudioUrl) ||
+          (s.introMode === "video" && !!finalIntroVideoUrl);
+        if (hasContent) {
+          await supabase.from("intro_templates" as never).insert({
+            organization_id: organizationId,
+            created_by: user.id,
+            name: s.title,
+            type: s.introMode,
+            intro_text: introTextValue || null,
+            audio_url: s.introMode === "audio" ? finalIntroAudioUrl : null,
+            video_url: s.introMode === "video" ? finalIntroVideoUrl : null,
+            tts_voice_id: s.introMode === "tts" ? s.ttsVoiceId : null,
+          } as never);
+        }
       }
 
       const validQuestions = s.questions.filter(
