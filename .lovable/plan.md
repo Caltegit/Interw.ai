@@ -1,28 +1,30 @@
-# Ajouter une case "Ajouter à la bibliothèque" pour l'intro
+# Problème
 
-Reproduire le pattern déjà en place pour les questions, appliqué à l'intro d'un projet.
+Le lien candidat (`/session/:slug`) charge le projet via une requête sur la table `projects`. Les politiques de sécurité (RLS) actuelles autorisent :
 
-## Comportement
+- **Anonyme** : voir les projets dont `status = 'active'` → OK quand on n'est pas connecté.
+- **Connecté** : voir uniquement les projets de sa propre organisation (ou super admin).
 
-- Dans l'étape Intro du formulaire projet, afficher une case à cocher **"Ajouter à la bibliothèque"** sous le bloc de configuration de l'intro.
-- La case ne s'affiche que si l'intro est activée **et** qu'il y a du contenu (texte saisi, audio enregistré ou vidéo importée selon le mode).
-- Lors de la sauvegarde du projet, si la case est cochée, créer une entrée dans `intro_templates` avec :
-  - `organization_id` = org du projet
-  - `created_by` = user courant
-  - `name` = titre du projet
-  - `type` = mode d'intro (`text`, `tts`, `audio`, `video`)
-  - `intro_text`, `audio_url`, `video_url`, `tts_voice_id` selon le mode
-- Toast de confirmation discret en cas de succès, erreur non bloquante sinon (le projet reste sauvegardé).
+Conséquence : quand un utilisateur RH est connecté (ou en prise en main super admin, comme dans la capture où tu es connectée en tant que `marie@morning.fr`) et qu'il ouvre un lien candidat appartenant à **une autre organisation**, RLS renvoie 0 ligne → la page affiche « Ce lien est invalide ou le projet n'est plus actif ».
 
-## Fichiers modifiés
+Vérifié en base : le projet `directeur-domaine-chapelle-02b41d` existe, est `active`, mais appartient à une organisation différente de celle de marie.
 
-1. **`src/components/project/StepIntro.tsx`** — ajouter props `saveToLibrary: boolean` et `setSaveToLibrary` ; rendre la checkbox sous le bloc de config quand intro activée + contenu présent.
-2. **`src/components/project/ProjectForm.tsx`** — ajouter `saveIntroToLibrary` au state, le passer à `StepIntro`, l'inclure dans le payload onSubmit.
-3. **`src/pages/ProjectNew.tsx`** — après création projet, si flag coché, INSERT dans `intro_templates` avec les URLs uploadées (audio/vidéo) ou le texte.
-4. **`src/pages/ProjectEdit.tsx`** — même logique au save.
+# Correction
 
-## Notes techniques
+Ajouter une politique RLS sur `public.projects` pour le rôle `authenticated` qui reflète celle des anonymes : tout projet `active` reste lisible. Cela rend le lien candidat universel (un RH ou un admin peut le tester depuis son propre compte sans devoir se déconnecter), sans élargir les droits d'écriture.
 
-- Aucune migration : la table `intro_templates` existe déjà avec les bons champs et RLS.
-- Pour audio/vidéo : on utilise les URLs déjà uploadées dans le storage du projet (pas de re-upload séparé).
-- Après ajout réussi, on remet le flag à `false` pour éviter une double création au save suivant.
+## Détails techniques
+
+```sql
+CREATE POLICY "Authenticated can view active projects"
+ON public.projects
+FOR SELECT
+TO authenticated
+USING (status = 'active');
+```
+
+Aucune autre table touchée, aucun changement applicatif nécessaire. Les politiques d'écriture (update/delete) restent inchangées : seul un membre de l'organisation peut modifier le projet.
+
+# Vérification
+
+Après migration, rouvrir le lien `interw.ai/session/directeur-domaine-chapelle-02b41d` en étant connecté : la page candidat doit s'afficher normalement.
