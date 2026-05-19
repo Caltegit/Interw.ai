@@ -359,6 +359,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       aiQuestionTransitionsMode,
       aiQuestionTransitionsCustomText,
       audioAnalysisEnabled,
+      saveIntroToLibrary,
     });
   };
 
