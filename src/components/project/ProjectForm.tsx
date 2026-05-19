@@ -100,6 +100,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsMode: "auto" | "custom";
   aiQuestionTransitionsCustomText: string;
   audioAnalysisEnabled: boolean;
+  saveIntroToLibrary?: boolean;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
