@@ -528,9 +528,11 @@ export default function ProjectDetail() {
 
   const effectiveSort = { key: sortKey, dir: sortDir };
 
-  // Apply filters + sort to sessions (uniquement les sessions prêtes)
+  // Apply filters + sort to sessions
+  // On part de toutes les sessions visibles : les filtres liés au rapport (score, reco)
+  // ne s'appliquent que si l'utilisateur les active explicitement.
   const filteredSessions = (() => {
-    let list = readySessions.slice();
+    let list = visibleSessions.slice();
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -698,7 +700,7 @@ export default function ProjectDetail() {
       {visibleSessions.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
           {decisionOptions.map((d, idx) => {
-            const count = readySessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
+            const count = visibleSessions.filter((s) => (s.recruiter_decision ?? "none") === d.value).length;
             const active = visibleDecisions.has(d.value);
             return (
               <div key={d.value} className="flex items-center gap-1">
