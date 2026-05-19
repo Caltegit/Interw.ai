@@ -869,204 +869,261 @@ export default function InterviewDeviceTest() {
           </div>
         </div>
 
-        {/* Liste verticale des tests */}
-        <div className="space-y-2.5">
-          {/* Navigateur compatible */}
-          <TestCard
-            status={browserStatus}
-            title="Navigateur compatible"
-            icon={Globe}
-            fullWidth
-            forceExpanded={browserCompat.current.level !== "ok"}
-          >
-            {browserCompat.current.level === "ok" && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5" />
-                {browserCompat.current.browser}
-                {browserCompat.current.browserVersion ? ` ${browserCompat.current.browserVersion.split(".")[0]}` : ""}
-                {` sur ${browserCompat.current.os}`}
-              </p>
+        {/* Indicateur d'étape : « Étape X/Y — Nom » */}
+        {currentStep !== "recap" && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground animate-fade-in">
+            <span>
+              Étape <span className="font-semibold text-foreground tabular-nums">{stepNumber}</span>
+              <span> / {totalSteps}</span>
+              <span className="mx-2">·</span>
+              <span className="text-foreground">{stepLabels[currentStep]}</span>
+            </span>
+            {canSkipCurrent && stepStatus(currentStep) !== "ok" && (
+              <button
+                type="button"
+                onClick={goToNextStep}
+                className="underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Passer cette étape
+              </button>
             )}
-            {browserCompat.current.level === "warning" && browserCompat.current.reason && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">{browserCompat.current.reason}</p>
-            )}
-            {browserCompat.current.level === "blocked" && (
-              <div className="space-y-3">
-                <p className="text-xs text-destructive">{browserCompat.current.reason}</p>
-                <p className="text-xs text-muted-foreground">
-                  Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
-                  <strong>Chrome</strong> (Android et ordinateur).
-                </p>
-                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
-                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
-                </Button>
-              </div>
-            )}
-          </TestCard>
+          </div>
+        )}
 
-          {/* Micro */}
-          <TestCard
-            status={micStatus}
-            title="Micro et enregistrement"
-            icon={Mic}
-            fullWidth
-            forceExpanded={micStatus === "idle" || micStatus === "testing" || micStatus === "error" || micStatus === "warning"}
-          >
-          {micStatus === "idle" && (
-              <div className="space-y-3">
-                <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
-                  Cliquez puis lisez cette phrase à voix haute&nbsp;:
+        {/* Étape courante : une seule carte affichée à la fois */}
+        <div className="min-h-[180px]">
+          {currentStep === "browser" && (
+            <TestCard
+              key="step-browser"
+              status={browserStatus}
+              title="Navigateur compatible"
+              icon={Globe}
+              fullWidth
+              forceExpanded
+            >
+              {browserCompat.current.level === "ok" && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  {browserCompat.current.browser}
+                  {browserCompat.current.browserVersion ? ` ${browserCompat.current.browserVersion.split(".")[0]}` : ""}
+                  {` sur ${browserCompat.current.os}`}
                 </p>
-                <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-sm font-medium text-foreground italic text-center">
-                  « {MIC_TEST_PHRASE} »
+              )}
+              {browserCompat.current.level === "warning" && browserCompat.current.reason && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">{browserCompat.current.reason}</p>
+              )}
+              {browserCompat.current.level === "blocked" && (
+                <div className="space-y-3">
+                  <p className="text-xs text-destructive">{browserCompat.current.reason}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pour réaliser l'entretien, ouvrez ce lien dans <strong>Safari</strong> (iPhone) ou{" "}
+                    <strong>Chrome</strong> (Android et ordinateur).
+                  </p>
+                  <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                    {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                  </Button>
+                </div>
+              )}
+            </TestCard>
+          )}
+
+          {currentStep === "mic" && (
+            <TestCard
+              key="step-mic"
+              status={micStatus}
+              title="Micro et enregistrement"
+              icon={Mic}
+              fullWidth
+              forceExpanded
+            >
+              {micStatus === "idle" && (
+                <div className="space-y-3">
+                  <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                    Cliquez puis lisez cette phrase à voix haute&nbsp;:
+                  </p>
+                  <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                    « {MIC_TEST_PHRASE} »
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => testMicAndRecorder(selectedAudioId)}
+                    className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
+                  >
+                    <Mic className="h-4 w-4" /> Tester mon micro
+                  </button>
+                </div>
+              )}
+              {micStatus === "testing" && (
+                <div className="space-y-3">
+                  <p className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                    « {MIC_TEST_PHRASE} »
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                      Lisez la phrase à voix haute…
+                    </p>
+                    {micCountdown !== null && (
+                      <span className="text-xs font-mono tabular-nums text-primary">
+                        {micCountdown}s
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="w-full h-2 rounded-full overflow-hidden"
+                    style={{ background: "hsl(var(--l-fg) / 0.08)" }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-100"
+                      style={{ width: `${micLevel * 100}%`, background: "hsl(var(--l-accent))" }}
+                    />
+                  </div>
+                </div>
+              )}
+              {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}
+              {micStatus === "warning" && micWarning && (
+                <p className="text-xs" style={{ color: "hsl(38 92% 60%)" }}>{micWarning}</p>
+              )}
+              {recorderStatus === "error" && micStatus !== "error" && (
+                <p className="text-xs text-destructive flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5" /> L'enregistrement audio n'est pas pris en charge.
                 </p>
+              )}
+              {(micStatus === "error" || micStatus === "warning") && (
                 <button
                   type="button"
                   onClick={() => testMicAndRecorder(selectedAudioId)}
-                  className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
+                  className="candidate-btn-secondary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
                 >
-                  <Mic className="h-4 w-4" /> Tester mon micro
+                  <Mic className="h-4 w-4" /> Réessayer
                 </button>
-              </div>
-            )}
-            {micStatus === "testing" && (
-              <div className="space-y-3">
-                <p className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-foreground italic text-center">
-                  « {MIC_TEST_PHRASE} »
-                </p>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
-                    Lisez la phrase à voix haute…
-                  </p>
-                  {micCountdown !== null && (
-                    <span className="text-xs font-mono tabular-nums text-primary">
-                      {micCountdown}s
-                    </span>
-                  )}
+              )}
+              {devices.audio.length > 1 && (
+                <DeviceSelector
+                  devices={devices.audio}
+                  value={selectedAudioId}
+                  onChange={handleAudioDeviceChange}
+                  placeholder="Choisir un micro"
+                  disabled={micStatus === "testing"}
+                />
+              )}
+            </TestCard>
+          )}
+
+          {currentStep === "sound" && (
+            <TestCard
+              key="step-sound"
+              status={soundStatus}
+              title="Son"
+              icon={Volume2}
+              fullWidth
+              forceExpanded
+            >
+              {soundStatus === "idle" && !soundAwaitingConfirm && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Touchez le bouton et vérifiez que vous entendez bien un bip.</p>
+                  <Button size="sm" onClick={testSound} className="w-full">
+                    <Volume2 className="mr-2 h-4 w-4" /> Tester le son
+                  </Button>
                 </div>
-                <div
-                  className="w-full h-2 rounded-full overflow-hidden"
-                  style={{ background: "hsl(var(--l-fg) / 0.08)" }}
+              )}
+              {soundAwaitingConfirm && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-center">Avez-vous entendu le bip ?</p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => confirmSoundHeard(false)}>Non</Button>
+                    <Button size="sm" className="flex-1" onClick={() => confirmSoundHeard(true)}>Oui, j'ai entendu</Button>
+                  </div>
+                </div>
+              )}
+              {soundStatus === "error" && soundError && (
+                <div className="space-y-2">
+                  <p className="text-xs text-destructive">{soundError}</p>
+                  <Button variant="outline" size="sm" onClick={testSound} className="w-full">Réessayer</Button>
+                </div>
+              )}
+            </TestCard>
+          )}
+
+          {currentStep === "stt" && (
+            <TestCard
+              key="step-stt"
+              status={sttStatus}
+              title="Reconnaissance vocale"
+              icon={MessageSquare}
+              fullWidth
+              forceExpanded
+            >
+              {sttStatus === "error" && sttError && (
+                <div className="space-y-3">
+                  <p className="text-xs text-destructive">{sttError}</p>
+                  <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
+                    {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
+                  </Button>
+                </div>
+              )}
+            </TestCard>
+          )}
+
+          {currentStep === "network" && (
+            <TestCard
+              key="step-network"
+              status={networkStatusComputed}
+              title="Connexion"
+              icon={Wifi}
+              fullWidth
+              forceExpanded
+            >
+              {netStatus === "testing" && <p className="text-xs text-muted-foreground">Mesure du débit en cours…</p>}
+              {netStatus === "ok" && netQuality === "good" && (
+                <p
+                  className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"
+                  title={netKbps && netKbps > 0 ? `${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`}` : undefined}
                 >
-                  <div
-                    className="h-full rounded-full transition-all duration-100"
-                    style={{ width: `${micLevel * 100}%`, background: "hsl(var(--l-accent))" }}
-                  />
-                </div>
-              </div>
-            )}
-            {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}
-            {micStatus === "warning" && micWarning && (
-              <p className="text-xs" style={{ color: "hsl(38 92% 60%)" }}>{micWarning}</p>
-            )}
-            {recorderStatus === "error" && micStatus !== "error" && (
-              <p className="text-xs text-destructive flex items-center gap-1.5">
-                <AlertCircle className="h-3.5 w-3.5" /> L'enregistrement audio n'est pas pris en charge.
-              </p>
-            )}
-            {(micStatus === "error" || micStatus === "warning") && (
-              <button
-                type="button"
-                onClick={() => testMicAndRecorder(selectedAudioId)}
-                className="candidate-btn-secondary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
-              >
-                <Mic className="h-4 w-4" /> Réessayer
-              </button>
-            )}
-            {devices.audio.length > 1 && (
-              <DeviceSelector
-                devices={devices.audio}
-                value={selectedAudioId}
-                onChange={handleAudioDeviceChange}
-                placeholder="Choisir un micro"
-                disabled={micStatus === "testing"}
-              />
-            )}
-          </TestCard>
+                  <CheckCircle className="h-3.5 w-3.5" /> Connexion stable
+                </p>
+              )}
+              {netStatus === "ok" && netQuality === "limited" && netKbps !== null && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Connexion limitée — la session reste possible
+                  {netKbps > 0 && ` (${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})`}
+                </p>
+              )}
+              {networkBlocking && (
+                <p className="text-xs text-destructive">
+                  Connexion trop faible. Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.
+                </p>
+              )}
+              {(netStatus === "ok" || netStatus === "error") && netQuality !== "good" && (
+                <Button variant="ghost" size="sm" onClick={testNetwork} className="w-full">Refaire le test</Button>
+              )}
+            </TestCard>
+          )}
 
-          {/* Son */}
-          <TestCard
-            status={soundStatus}
-            title="Son"
-            icon={Volume2}
-            fullWidth
-            forceExpanded={soundAwaitingConfirm || soundStatus === "idle"}
-          >
-            {soundStatus === "idle" && !soundAwaitingConfirm && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Touchez le bouton et vérifiez que vous entendez bien un bip.</p>
-                <Button size="sm" onClick={testSound} className="w-full">
-                  <Volume2 className="mr-2 h-4 w-4" /> Tester le son
-                </Button>
+          {currentStep === "recap" && (
+            <div key="step-recap" className="space-y-3 animate-fade-in">
+              <div className="rounded-xl border bg-card p-4 space-y-2.5">
+                <p className="text-sm font-medium mb-2">Récapitulatif</p>
+                {([
+                  ["browser", browserStatus] as const,
+                  ["mic", micStatus] as const,
+                  ["sound", soundStatus] as const,
+                  ["stt", sttStatus] as const,
+                  ["network", networkStatusComputed] as const,
+                ]).map(([key, st]) => {
+                  const Icon = stepIcons[key as Step];
+                  return (
+                    <div key={key} className="flex items-center gap-3">
+                      <StatusIcon status={st} fallback={Icon} />
+                      <p className="flex-1 text-sm">{stepLabels[key as Step]}</p>
+                      <StatusBadge status={st} />
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {soundAwaitingConfirm && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-center">Avez-vous entendu le bip ?</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => confirmSoundHeard(false)}>Non</Button>
-                  <Button size="sm" className="flex-1" onClick={() => confirmSoundHeard(true)}>Oui, j'ai entendu</Button>
-                </div>
-              </div>
-            )}
-            {soundStatus === "error" && soundError && (
-              <div className="space-y-2">
-                <p className="text-xs text-destructive">{soundError}</p>
-                <Button variant="outline" size="sm" onClick={testSound} className="w-full">Réessayer</Button>
-              </div>
-            )}
-          </TestCard>
-
-          {/* Reconnaissance vocale */}
-          <TestCard
-            status={sttStatus}
-            title="Reconnaissance vocale"
-            icon={MessageSquare}
-            fullWidth
-            forceExpanded={sttStatus === "error"}
-          >
-            {sttStatus === "error" && sttError && (
-              <div className="space-y-3">
-                <p className="text-xs text-destructive">{sttError}</p>
-                <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
-                  {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
-                </Button>
-              </div>
-            )}
-          </TestCard>
-
-          {/* Réseau */}
-          <TestCard
-            status={networkStatusComputed}
-            title="Connexion"
-            icon={Wifi}
-            fullWidth
-          >
-            {netStatus === "testing" && <p className="text-xs text-muted-foreground">Mesure du débit en cours…</p>}
-            {netStatus === "ok" && netQuality === "good" && (
-              <p
-                className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5"
-                title={netKbps && netKbps > 0 ? `${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`}` : undefined}
-              >
-                <CheckCircle className="h-3.5 w-3.5" /> Connexion stable
-              </p>
-            )}
-            {netStatus === "ok" && netQuality === "limited" && netKbps !== null && (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Connexion limitée — la session reste possible
-                {netKbps > 0 && ` (${netKbps >= 1000 ? `${(netKbps / 1000).toFixed(1)} Mb/s` : `${netKbps} kb/s`})`}
-              </p>
-            )}
-            {networkBlocking && (
-              <p className="text-xs text-destructive">
-                Connexion trop faible. Rapprochez-vous de votre Wi-Fi ou passez en 4G, puis refaites le test.
-              </p>
-            )}
-            {(netStatus === "ok" || netStatus === "error") && netQuality !== "good" && (
-              <Button variant="ghost" size="sm" onClick={testNetwork} className="w-full">Refaire le test</Button>
-            )}
-          </TestCard>
+            </div>
+          )}
         </div>
+
 
         {/* Message pré-session */}
         {preSessionMessage && (
