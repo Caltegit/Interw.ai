@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,9 @@ interface StepIntroProps {
   ttsVoiceId: string;
   avatarPreview: string | null;
   aiPersonaName: string;
+
+  saveToLibrary: boolean;
+  setSaveToLibrary: (v: boolean) => void;
 }
 
 
@@ -50,6 +54,8 @@ export function StepIntro({
   ttsVoiceId,
   avatarPreview,
   aiPersonaName,
+  saveToLibrary,
+  setSaveToLibrary,
 }: StepIntroProps) {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -247,6 +253,23 @@ export function StepIntro({
               />
             )}
           </div>
+
+          {(() => {
+            const hasContent =
+              ((introMode === "text" || introMode === "tts") && introText.trim().length > 0) ||
+              (introMode === "audio" && !!introAudioPreviewUrl) ||
+              (introMode === "video" && !!introVideoPreviewUrl);
+            if (!hasContent) return null;
+            return (
+              <label className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm cursor-pointer">
+                <Checkbox
+                  checked={saveToLibrary}
+                  onCheckedChange={(v) => setSaveToLibrary(v === true)}
+                />
+                <span>Ajouter à la bibliothèque</span>
+              </label>
+            );
+          })()}
         </>
       )}
     </div>

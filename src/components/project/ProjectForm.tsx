@@ -100,6 +100,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsMode: "auto" | "custom";
   aiQuestionTransitionsCustomText: string;
   audioAnalysisEnabled: boolean;
+  saveIntroToLibrary?: boolean;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -304,6 +305,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     initial.aiQuestionTransitionsCustomText,
   );
   const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
+  const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
@@ -357,6 +359,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       aiQuestionTransitionsMode,
       aiQuestionTransitionsCustomText,
       audioAnalysisEnabled,
+      saveIntroToLibrary,
     });
   };
 
@@ -902,6 +905,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               ttsVoiceId={ttsVoiceId}
               avatarPreview={avatarPreview}
               aiPersonaName={aiPersonaName}
+              saveToLibrary={saveIntroToLibrary}
+              setSaveToLibrary={setSaveIntroToLibrary}
             />
           )}
 
