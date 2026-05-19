@@ -160,7 +160,7 @@ export default function Projects() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyCandidateLink(project.slug)}
+                          onClick={() => copyCandidateLink({ id: project.id, slug: project.slug })}
                           aria-label="Copier le lien candidat"
                         >
                           <Link2 className="h-4 w-4" />
