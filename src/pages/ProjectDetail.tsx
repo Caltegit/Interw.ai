@@ -528,9 +528,11 @@ export default function ProjectDetail() {
 
   const effectiveSort = { key: sortKey, dir: sortDir };
 
-  // Apply filters + sort to sessions (uniquement les sessions prêtes)
+  // Apply filters + sort to sessions
+  // On part de toutes les sessions visibles : les filtres liés au rapport (score, reco)
+  // ne s'appliquent que si l'utilisateur les active explicitement.
   const filteredSessions = (() => {
-    let list = readySessions.slice();
+    let list = visibleSessions.slice();
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
