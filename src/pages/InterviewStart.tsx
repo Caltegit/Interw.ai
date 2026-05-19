@@ -2825,24 +2825,30 @@ export default function InterviewStart() {
       }
       if (skipBlock !== currentBlockIdRef.current) return;
 
-      const transition =
-        nMediaType === "written"
+      const transitionsEnabled =
+        (project as { ai_question_transitions_enabled?: boolean })?.ai_question_transitions_enabled ?? true;
+
+      const transition = !transitionsEnabled
+        ? (nMediaType === "written" ? nextQ.content : "")
+        : nMediaType === "written"
           ? `Passons à la question suivante : ${nextQ.content}`
           : `Passons à la question suivante. ${nMediaType === "video" ? "Regardez" : "Écoutez"} bien.`;
 
-      setMessages((prev) => {
-        const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaType === "written" ? null : nMediaUrl }];
-        messagesRef.current = updated;
-        return updated;
-      });
-      if (session?.id) {
-        try {
-          await persistMessage(session.id, "ai", transition);
-        } catch {
-          // non-bloquant
+      if (transition) {
+        setMessages((prev) => {
+          const updated = [...prev, { role: "ai", content: transition, mediaType: nMediaType, mediaUrl: nMediaType === "written" ? null : nMediaUrl }];
+          messagesRef.current = updated;
+          return updated;
+        });
+        if (session?.id) {
+          try {
+            await persistMessage(session.id, "ai", transition);
+          } catch {
+            // non-bloquant
+          }
         }
+        setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
       }
-      setAiMessages((prev) => [...prev, { role: "assistant" as const, content: transition }]);
 
       setCurrentQuestionIndex((prev) => prev + 1);
       if (session?.id) {
@@ -2853,8 +2859,9 @@ export default function InterviewStart() {
       }
 
       // 5. Speak transition + auto-play next question media (or start listening for written)
-      await speak(transition);
+      if (transition) await speak(transition);
       if (skipBlock !== currentBlockIdRef.current) return;
+
       if (isPausedRef.current) return;
       if (nMediaType !== "written") {
         setIsSpeaking(true);
