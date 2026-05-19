@@ -1,81 +1,85 @@
-## Problème
+## Constats
 
-Les tables `sessions`, `session_messages`, `projects`, `questions` exposent leurs données sans restriction :
+- Les données ne sont pas perdues : j’ai vérifié en base, **ALBO a 205 sessions** et **Morning en a 3**.
+- Ce n’est donc **pas** un problème de suppression de sessions.
+- Le point le plus suspect est l’interface : dans `ProjectDetail.tsx`, la liste affichée est construite à partir de `readySessions`, donc **uniquement les sessions terminées avec rapport**.
+- Concrètement, le code charge bien `sessions`, mais l’affichage final fait ensuite :
 
-- `sessions` : politiques anon ET authenticated en `USING (true)` → **n'importe quel utilisateur connecté voit toutes les sessions de tous les comptes**. C'est ce qui permet à `c+m@bap.fr` de voir les sessions du super admin.
-- `session_messages` : `Anon can view session messages` en `USING (true)`.
-- `projects` : `Anon can view projects` et `Authenticated can view active projects` en `USING (status = 'active')` → tous les projets actifs visibles par tous.
-- `questions` : `Anon can view questions` accessible dès que le projet parent est actif.
+```text
+sessions -> readySessions (completed + report)
+         -> filteredSessions = readySessions.slice()
+         -> rendu de la table/cartes
+```
 
-Le flux candidat est anonyme (pas de login) et identifié par le `token` présent dans l'URL `/session/:slug/start/:token`. Le code frontend interroge déjà les tables avec `.eq("token", token)`. RLS ne peut pas vérifier qu'un filtre est présent dans la requête → il faut **passer par des RPC `SECURITY DEFINER` token-gated** pour le flux candidat, et fermer l'accès anon direct.
+- Si les rapports ne remontent pas, ou si l’utilisateur attend de voir aussi les sessions en cours / en attente, la page peut donner l’impression que **tout a disparu**.
+- Revenir en arrière sur la migration RLS n’est **pas** la bonne option à ce stade : on réintroduirait la fuite de données entre organisations alors que les sessions existent toujours.
 
-## Correction
+## Plan de correction
 
-### 1. Fermer les politiques trop ouvertes
+### 1. Vérifier précisément le flux d’affichage côté RH
+- Contrôler la route exacte utilisée quand vous ouvrez “les sessions”.
+- Vérifier si le vide vient :
+  - de la page **liste des projets**,
+  - de la page **détail d’un projet**,
+  - ou d’une **vue super admin d’organisation**.
+- Relever les réponses réelles des requêtes `sessions` et `reports` dans l’interface pour confirmer si les sessions sont chargées mais ensuite filtrées à l’écran.
 
-Sur `sessions`, `session_messages`, `projects`, `questions` :
-- Supprimer toutes les politiques `USING (true)` ou `USING (status='active')` pour `anon` et `authenticated`.
-- Conserver / s'assurer que les politiques org-scoped restent (membres de l'organisation propriétaire + super admin).
-- Pour `projects` : garder une lecture anon **uniquement** sur la page publique `/p/:slugPublic` via `project_public_pages.enabled = true` (déjà gérée séparément) ; la lecture anon directe de `projects` est supprimée.
+### 2. Corriger la logique d’affichage dans `ProjectDetail.tsx`
+- Remplacer la source d’affichage actuelle basée sur `readySessions` par une base plus cohérente : **toutes les sessions visibles** du projet.
+- Garder les sessions “prêtes avec rapport” comme un **sous-ensemble**, pas comme la liste principale.
+- Afficher clairement les états attendus :
+  - session en attente,
+  - session terminée sans rapport,
+  - session prête avec rapport,
+  - session annulée.
+- Éviter qu’une absence de rapport rende la page visuellement vide.
 
-Effet : `c+m@bap.fr` ne verra plus que les sessions/projets de son organisation Morning.
+### 3. Séparer données visibles et filtres métier
+- Conserver les filtres score / recommandation seulement pour les sessions qui ont un rapport.
+- Empêcher qu’un filtre “rapport requis” soit appliqué implicitement à toute la page.
+- Adapter le compteur pour qu’il reflète la réalité :
+  - total sessions visibles,
+  - dont prêtes,
+  - dont en traitement si nécessaire.
 
-### 2. RPC `SECURITY DEFINER` pour le flux candidat anonyme
+### 4. Vérifier les autres écrans impactés par la même hypothèse
+- Contrôler `Dashboard` et les autres pages qui croisent `sessions` + `reports`.
+- Vérifier la page super admin d’organisation pour s’assurer qu’elle ne donne pas l’impression qu’une organisation n’a aucune activité alors que ses projets ont bien des sessions.
+- Corriger uniquement les écrans réellement touchés, sans élargir le périmètre.
 
-Créer un jeu de fonctions exposées en `anon` qui exigent le `token` :
+### 5. Valider avant toute conclusion
+- Tester avec `c@bap.fr`.
+- Vérifier au moins un projet ALBO avec beaucoup de sessions et un projet Morning avec peu de sessions.
+- Confirmer après correction :
+  - les sessions sont à nouveau visibles,
+  - la sécurisation entre organisations reste intacte,
+  - aucune régression sur la vue détail d’une session.
 
-- `candidate_get_session(_token text)` → renvoie la session (sans champs sensibles RH : `recruiter_note`, `recruiter_decision*`, `assigned_to`).
-- `candidate_get_project_bundle(_token text)` → renvoie le projet + ses questions + critères, à condition que `_token` corresponde à une session valide du projet.
-- `candidate_update_session(_token text, _patch jsonb)` → autorise uniquement la mise à jour de colonnes "candidat" listées en dur (`status`, `started_at`, `completed_at`, `last_question_index`, `last_activity_at`, `consent_*`, `video_viewed_at`, `audio_recording_url`, `video_recording_url`, `duration_seconds`, `cancelled_at`, `candidate_*`). Refuse `recruiter_*`, `assigned_to`, `project_id`, `token`.
-- `candidate_insert_message(_token text, _role text, _content text, _metadata jsonb)` → insertion contrôlée dans `session_messages`.
-- `candidate_get_messages(_token text)` → lecture des messages de la session.
+## Ce que je recommande
 
-Chaque fonction commence par : `SELECT id INTO _sid FROM sessions WHERE token = _token` et lève `RAISE EXCEPTION` si introuvable. `search_path = public`, `SECURITY DEFINER`, `GRANT EXECUTE TO anon, authenticated`.
-
-### 3. Adapter le code frontend candidat
-
-Remplacer dans `InterviewLanding.tsx`, `InterviewDeviceTest.tsx`, `InterviewStart.tsx`, `InterviewComplete.tsx`, `InterviewPrivacy.tsx` :
-
-- `supabase.from("sessions").select(...).eq("token", token)` → `supabase.rpc("candidate_get_session", { _token: token })`.
-- `supabase.from("sessions").update(patch).eq("id", sid)` → `supabase.rpc("candidate_update_session", { _token, _patch: patch })`.
-- Lecture projet/questions → `candidate_get_project_bundle`.
-- `session_messages` insert/select → RPC dédiés.
-
-Côté RH (pages protégées), aucun changement : les requêtes passent par les politiques `authenticated` org-scoped déjà en place.
-
-### 4. Vérifier `reports` et `transcripts`
-
-- `reports` : déjà correctement org-scoped pour `authenticated`. Lecture anon via `report_shares` OK (token de partage).
-- `transcripts` : déjà org-scoped. Pas de lecture anon directe nécessaire (le candidat n'y accède jamais).
-
-### 5. Tests de non-régression
-
-- E2E `candidate-journey.spec.ts` : doit continuer à passer (landing → device test → start).
-- Manuel : se connecter en tant que `c+m@bap.fr`, vérifier que seules les sessions Morning apparaissent.
-- Manuel : ouvrir un lien candidat en navigation privée, vérifier que l'entretien se déroule normalement.
+- **Ne pas revenir en arrière** globalement.
+- Corriger d’abord **la logique d’affichage** qui semble masquer les sessions côté organisation.
+- Ensuite seulement, si les requêtes elles-mêmes renvoient vide dans le navigateur, on ajustera la RLS de façon ciblée.
 
 ## Détails techniques
 
+**Fichier principal suspect :**
+- `src/pages/ProjectDetail.tsx`
+
+**Point précis à corriger :**
 ```text
-Tables touchées (RLS) :
-  sessions          : DROP 4 policies anon/auth open ; conserve org-scoped
-  session_messages  : DROP anon select/insert open  ; conserve org-scoped
-  projects          : DROP anon + auth active-status open
-  questions         : DROP anon open
-
-Fonctions créées (public, SECURITY DEFINER, search_path=public) :
-  candidate_get_session(_token text) returns sessions
-  candidate_get_project_bundle(_token text) returns jsonb
-  candidate_update_session(_token text, _patch jsonb) returns void
-  candidate_get_messages(_token text) returns setof session_messages
-  candidate_insert_message(_token, _role, _content, _metadata) returns uuid
-
-Whitelist update colonnes candidat (anti-escalation):
-  status, started_at, completed_at, last_question_index,
-  last_activity_at, consent_given_at, consent_accepted_at,
-  video_viewed_at, audio_recording_url, video_recording_url,
-  duration_seconds, cancelled_at, candidate_name, candidate_email,
-  candidate_linkedin_url, candidate_cv_url, candidate_cv_filename
+isReady = session completed + report exists
+readySessions = sessions.filter(isReady)
+filteredSessions = readySessions.slice()
 ```
 
-Edge functions (`finalize-session`, `transcribe-session`, etc.) utilisent la `service_role` key → non impactées par le changement de RLS.
+**Direction proposée :**
+```text
+baseSessions = sessions visibles
+filteredSessions = baseSessions + filtres compatibles avec leur état
+readySessions = uniquement pour stats / badges / raccourcis
+```
+
+**Objectif :**
+- ne plus confondre “session visible” et “session prête avec rapport”.
+- conserver la sécurité RLS sans réouvrir l’accès inter-organisations.
