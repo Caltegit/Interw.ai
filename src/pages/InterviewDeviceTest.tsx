@@ -698,6 +698,74 @@ export default function InterviewDeviceTest() {
   const progressTests: Status[] = [browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
   const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
 
+  // ================== STEP MACHINE ==================
+  // Ordre des étapes : on saute STT sauf s'il est en erreur (alors étape bloquante).
+  const stepOrder: Step[] = useMemo(() => {
+    const base: Step[] = ["browser", "mic", "sound", "network", "recap"];
+    if (sttStatus === "error") {
+      // Intercaler STT juste avant le récap pour bloquer si la reco vocale a échoué.
+      const i = base.indexOf("network");
+      return [...base.slice(0, i + 1), "stt", ...base.slice(i + 1)];
+    }
+    return base;
+  }, [sttStatus]);
+
+  const stepStatus = (s: Step): Status => {
+    switch (s) {
+      case "browser": return browserStatus;
+      case "mic": return micStatus;
+      case "sound": return soundStatus;
+      case "stt": return sttStatus;
+      case "network": return networkStatusComputed;
+      case "recap": return "idle";
+    }
+  };
+
+  const goToNextStep = useCallback(() => {
+    const i = stepOrder.indexOf(currentStep);
+    if (i >= 0 && i < stepOrder.length - 1) setCurrentStep(stepOrder[i + 1]);
+  }, [currentStep, stepOrder]);
+
+  // Auto-avance : dès que l'étape courante passe en « ok », on enchaîne après 800 ms.
+  useEffect(() => {
+    if (stepAdvanceTimer.current) {
+      clearTimeout(stepAdvanceTimer.current);
+      stepAdvanceTimer.current = null;
+    }
+    if (currentStep === "recap") return;
+    const st = stepStatus(currentStep);
+    if (st === "ok") {
+      stepAdvanceTimer.current = setTimeout(() => {
+        goToNextStep();
+      }, 800);
+    }
+    return () => {
+      if (stepAdvanceTimer.current) {
+        clearTimeout(stepAdvanceTimer.current);
+        stepAdvanceTimer.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed]);
+
+  const stepIndex = stepOrder.indexOf(currentStep);
+  const totalSteps = stepOrder.length - 1; // hors récap
+  const stepNumber = Math.min(stepIndex + 1, totalSteps);
+  const stepLabels: Record<Step, string> = {
+    browser: "Navigateur",
+    mic: "Micro",
+    sound: "Son",
+    stt: "Reconnaissance vocale",
+    network: "Connexion",
+    recap: "Récapitulatif",
+  };
+  const stepIcons: Record<Step, React.ComponentType<{ className?: string }>> = {
+    browser: Globe, mic: Mic, sound: Volume2, stt: MessageSquare, network: Wifi, recap: CheckCircle,
+  };
+  // L'étape micro/son/réseau peut être passée (best-effort) si elle est en erreur.
+  const canSkipCurrent = currentStep === "mic" || currentStep === "sound" || currentStep === "network";
+
+
   return (
     <CandidateLayout>
       <div className="w-full max-w-2xl space-y-5 pb-28 sm:pb-8">
