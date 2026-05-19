@@ -57,7 +57,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
           <CardDescription>
-            {mode === "forgot" ? "Recevez votre lien de connexion" : "LOGIN"}
+            {mode === "forgot" ? "Recevez un lien de connexion" : "LOGIN"}
           </CardDescription>
         </CardHeader>
         <CardContent>
