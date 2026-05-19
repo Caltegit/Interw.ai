@@ -54,6 +54,8 @@ export function StepIntro({
   ttsVoiceId,
   avatarPreview,
   aiPersonaName,
+  saveToLibrary,
+  setSaveToLibrary,
 }: StepIntroProps) {
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
