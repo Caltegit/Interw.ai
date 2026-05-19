@@ -253,6 +253,23 @@ export function StepIntro({
               />
             )}
           </div>
+
+          {(() => {
+            const hasContent =
+              ((introMode === "text" || introMode === "tts") && introText.trim().length > 0) ||
+              (introMode === "audio" && !!introAudioPreviewUrl) ||
+              (introMode === "video" && !!introVideoPreviewUrl);
+            if (!hasContent) return null;
+            return (
+              <label className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-sm cursor-pointer">
+                <Checkbox
+                  checked={saveToLibrary}
+                  onCheckedChange={(v) => setSaveToLibrary(v === true)}
+                />
+                <span>Ajouter à la bibliothèque</span>
+              </label>
+            );
+          })()}
         </>
       )}
     </div>
