@@ -57,7 +57,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
           <CardDescription>
-            {mode === "forgot" ? "Recevoir un lien de connexion par email" : "Connexion à votre espace recruteur"}
+            {mode === "forgot" ? "Recevez votre lien de connexion" : "Connexion à votre espace recruteur"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -92,7 +92,7 @@ export default function Login() {
               {loading
                 ? "Chargement..."
                 : mode === "forgot"
-                  ? "Envoyer le lien"
+                  ? "​Envoyer"
                   : "Se connecter"}
             </Button>
             {mode === "forgot" && (
@@ -108,7 +108,7 @@ export default function Login() {
             )}
           </form>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            La création de compte se fait uniquement sur invitation.
+            {"\n"}
           </p>
         </CardContent>
       </Card>
