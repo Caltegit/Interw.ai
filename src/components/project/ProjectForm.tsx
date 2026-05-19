@@ -905,6 +905,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               ttsVoiceId={ttsVoiceId}
               avatarPreview={avatarPreview}
               aiPersonaName={aiPersonaName}
+              saveToLibrary={saveIntroToLibrary}
+              setSaveToLibrary={setSaveIntroToLibrary}
             />
           )}
 
