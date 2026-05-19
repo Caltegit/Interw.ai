@@ -109,6 +109,26 @@ Deno.serve(async (req) => {
       ownerUserId = invited.user!.id;
     }
 
+    // Attendre que le trigger handle_new_user ait inséré le profil (évite une race silencieuse).
+    let profileExists = false;
+    for (let i = 0; i < 8; i++) {
+      const { data: prof } = await admin.from("profiles").select("id").eq("user_id", ownerUserId).maybeSingle();
+      if (prof) { profileExists = true; break; }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    if (!profileExists) {
+      // Fallback : créer le profil nous-mêmes
+      const { error: profInsertErr } = await admin.from("profiles").insert({
+        user_id: ownerUserId,
+        email: ownerEmail,
+        full_name: fullName,
+      });
+      if (profInsertErr) {
+        console.error("profile fallback insert failed:", profInsertErr);
+        return json({ error: `Création du profil impossible : ${profInsertErr.message}` }, 500);
+      }
+    }
+
     // Création de l'organisation avec owner_id (déclenche le seed via trigger).
     const { data: org, error: orgErr } = await admin
       .from("organizations")
@@ -125,15 +145,34 @@ Deno.serve(async (req) => {
       .single();
     if (orgErr) throw orgErr;
 
-    // Rattachement profil + membership + rôle admin
-    await admin
-      .from("profiles")
-      .update({ organization_id: org.id, full_name: fullName })
-      .eq("user_id", ownerUserId);
+    // Helper de rollback si une étape suivante échoue
+    const rollback = async (reason: string, err: unknown) => {
+      console.error(`Rollback org ${org.id} : ${reason}`, err);
+      await admin.from("user_roles").delete().eq("user_id", ownerUserId).eq("organization_id", org.id);
+      await admin.from("organization_members").delete().eq("user_id", ownerUserId).eq("organization_id", org.id);
+      await admin.from("profiles").update({ organization_id: null }).eq("user_id", ownerUserId).eq("organization_id", org.id);
+      await admin.from("organizations").delete().eq("id", org.id);
+    };
 
-    await admin
+    // Rattachement profil (upsert pour gérer toutes les situations)
+    const { error: profErr } = await admin
+      .from("profiles")
+      .upsert(
+        { user_id: ownerUserId, email: ownerEmail, full_name: fullName, organization_id: org.id },
+        { onConflict: "user_id" },
+      );
+    if (profErr) {
+      await rollback("upsert profile", profErr);
+      return json({ error: `Rattachement profil impossible : ${profErr.message}` }, 500);
+    }
+
+    const { error: memErr } = await admin
       .from("organization_members")
       .upsert({ user_id: ownerUserId, organization_id: org.id }, { onConflict: "user_id,organization_id" });
+    if (memErr) {
+      await rollback("upsert membership", memErr);
+      return json({ error: `Création membership impossible : ${memErr.message}` }, 500);
+    }
 
     const { data: existingRole } = await admin
       .from("user_roles")
@@ -143,11 +182,15 @@ Deno.serve(async (req) => {
       .eq("role", "admin")
       .maybeSingle();
     if (!existingRole) {
-      await admin.from("user_roles").insert({
+      const { error: roleErr } = await admin.from("user_roles").insert({
         user_id: ownerUserId,
         role: "admin",
         organization_id: org.id,
       });
+      if (roleErr) {
+        await rollback("insert admin role", roleErr);
+        return json({ error: `Attribution du rôle admin impossible : ${roleErr.message}` }, 500);
+      }
     }
 
     return json({
