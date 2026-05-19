@@ -1179,28 +1179,42 @@ export default function InterviewDeviceTest() {
 
         {/* CTA sous les tests, centré */}
         <div ref={ctaRef} className="mt-8 flex flex-col items-center gap-3">
-          <Button
-            className={cn(
-              "h-14 px-10 text-lg font-semibold rounded-2xl transition-all",
-              canContinue
-                ? "bg-gradient-to-r from-primary to-fuchsia-500 text-primary-foreground shadow-xl shadow-primary/40 hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02]"
-                : "",
-            )}
-            disabled={!canContinue}
-            onClick={handleContinue}
-          >
-            {canContinue ? (
-              <><Sparkles className="mr-2 h-5 w-5" />C'est parti<ArrowRight className="ml-2 h-5 w-5" /></>
-            ) : (
-              <><ArrowRight className="mr-2 h-5 w-5" />Commencer la session</>
-            )}
-          </Button>
-          {showSkipPrimary && (
-            <Button onClick={requestContinueWithCheck} variant="outline" size="sm">
-              Continuer quand même
+          {currentStep !== "recap" ? (
+            <Button
+              variant="outline"
+              size="lg"
+              disabled={stepStatus(currentStep) !== "ok" && stepStatus(currentStep) !== "warning"}
+              onClick={goToNextStep}
+            >
+              Étape suivante <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
+          ) : (
+            <>
+              <Button
+                className={cn(
+                  "h-14 px-10 text-lg font-semibold rounded-2xl transition-all",
+                  canContinue
+                    ? "bg-gradient-to-r from-primary to-fuchsia-500 text-primary-foreground shadow-xl shadow-primary/40 hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02]"
+                    : "",
+                )}
+                disabled={!canContinue}
+                onClick={handleContinue}
+              >
+                {canContinue ? (
+                  <><Sparkles className="mr-2 h-5 w-5" />C'est parti<ArrowRight className="ml-2 h-5 w-5" /></>
+                ) : (
+                  <><ArrowRight className="mr-2 h-5 w-5" />Commencer la session</>
+                )}
+              </Button>
+              {showSkipPrimary && (
+                <Button onClick={requestContinueWithCheck} variant="outline" size="sm">
+                  Continuer quand même
+                </Button>
+              )}
+            </>
           )}
         </div>
+
       </div>
 
       {/* Confirmation explicite avant de contourner un micro défaillant */}
