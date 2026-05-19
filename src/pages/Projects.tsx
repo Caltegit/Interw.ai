@@ -40,13 +40,31 @@ export default function Projects() {
     [projects, page],
   );
 
-  const copyCandidateLink = (slug: string | null) => {
+  const copyCandidateLink = async (project: { id: string; slug: string | null }) => {
+    let slug = project.slug;
     if (!slug) {
-      toast({ title: "Lien indisponible", description: "Ce projet n'a pas de slug défini.", variant: "destructive" });
-      return;
+      // Slug normalement généré par le trigger DB ; on le récupère au cas où le cache est en retard
+      const { data, error } = await supabase
+        .from("projects")
+        .select("slug")
+        .eq("id", project.id)
+        .maybeSingle();
+      if (error || !data?.slug) {
+        logger.error("project_slug_missing", { projectId: project.id, error: error?.message });
+        toast({ title: "Lien indisponible", description: "Impossible de récupérer le lien candidat.", variant: "destructive" });
+        return;
+      }
+      slug = data.slug;
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projects(user.id) });
+      }
     }
-    navigator.clipboard.writeText(`${window.location.origin}/session/${slug}`);
-    toast({ title: "Lien candidat copié !" });
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/session/${slug}`);
+      toast({ title: "Lien candidat copié !" });
+    } catch {
+      toast({ title: "Copie impossible", description: "Votre navigateur a refusé l'accès au presse-papiers.", variant: "destructive" });
+    }
   };
 
   const handleArchive = async () => {
@@ -142,7 +160,7 @@ export default function Projects() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => copyCandidateLink(project.slug)}
+                          onClick={() => copyCandidateLink({ id: project.id, slug: project.slug })}
                           aria-label="Copier le lien candidat"
                         >
                           <Link2 className="h-4 w-4" />

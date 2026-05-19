@@ -1717,7 +1717,7 @@ export type Database = {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
       }
-      slugify: { Args: { _input: string }; Returns: string }
+      slugify: { Args: { input: string }; Returns: string }
       switch_active_organization: { Args: { _org_id: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
     }
