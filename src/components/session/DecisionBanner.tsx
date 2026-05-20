@@ -257,6 +257,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
                 onOpenCv={openCv}
+                onAddLinks={onEditLinks}
               />
             </div>
             {candidateEmail && (
@@ -276,6 +277,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
                 onOpenCv={openCv}
+                onAddLinks={onEditLinks}
               />
             </div>
             {candidateEmail && (
@@ -402,11 +404,13 @@ function CandidateLinkIcons({
   cvUrl,
   cvFilename,
   onOpenCv,
+  onAddLinks,
 }: {
   linkedinUrl?: string | null;
   cvUrl?: string | null;
   cvFilename?: string | null;
   onOpenCv: () => void;
+  onAddLinks?: () => void;
 }) {
   const hasLinkedin = !!linkedinUrl;
   const hasCv = !!cvUrl;
@@ -425,15 +429,24 @@ function CandidateLinkIcons({
               <Linkedin className="h-4 w-4" />
             </a>
           ) : (
-            <span
-              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
-              aria-label="LinkedIn non renseigné"
+            <button
+              type="button"
+              onClick={onAddLinks}
+              disabled={!onAddLinks}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-foreground/70 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+              aria-label="Ajouter le profil LinkedIn"
             >
               <Linkedin className="h-4 w-4" />
-            </span>
+            </button>
           )}
         </TooltipTrigger>
-        <TooltipContent>{hasLinkedin ? "Ouvrir le profil LinkedIn" : "LinkedIn non renseigné"}</TooltipContent>
+        <TooltipContent>
+          {hasLinkedin
+            ? "Ouvrir le profil LinkedIn"
+            : onAddLinks
+              ? "Ajouter le profil LinkedIn"
+              : "LinkedIn non renseigné"}
+        </TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -447,15 +460,24 @@ function CandidateLinkIcons({
               <FileText className="h-4 w-4" />
             </button>
           ) : (
-            <span
-              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40"
-              aria-label="CV non renseigné"
+            <button
+              type="button"
+              onClick={onAddLinks}
+              disabled={!onAddLinks}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-foreground/70 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+              aria-label="Ajouter le CV"
             >
               <FileText className="h-4 w-4" />
-            </span>
+            </button>
           )}
         </TooltipTrigger>
-        <TooltipContent>{hasCv ? (cvFilename ?? "Ouvrir le CV") : "CV non renseigné"}</TooltipContent>
+        <TooltipContent>
+          {hasCv
+            ? (cvFilename ?? "Ouvrir le CV")
+            : onAddLinks
+              ? "Ajouter le CV"
+              : "CV non renseigné"}
+        </TooltipContent>
       </Tooltip>
     </div>
   );
