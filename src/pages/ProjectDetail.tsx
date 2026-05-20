@@ -545,9 +545,15 @@ export default function ProjectDetail() {
   const readySessions = sessions.filter(isReady);
   const visibleSessions = sessions.filter((s) => s.status !== "cancelled");
   const completedSessions = readySessions;
-  const processingCount = sessions.filter(
-    (s) => s.status === "completed" && !reportsBySession[s.id],
-  ).length;
+  const processingSessions = sessions
+    .filter((s) => s.status === "completed" && !reportsBySession[s.id])
+    .map((s) => {
+      const completedMs = s.completed_at ? new Date(s.completed_at).getTime() : 0;
+      const ageMin = completedMs ? (Date.now() - completedMs) / 60_000 : 999;
+      return { ...s, _ageMin: ageMin, _state: ageMin < 10 ? "processing" : "failed" } as any;
+    })
+    .sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
+  const processingCount = processingSessions.length;
 
   const effectiveSort = { key: sortKey, dir: sortDir };
 
