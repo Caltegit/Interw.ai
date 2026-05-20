@@ -47,15 +47,29 @@ export default function SessionVideoExport() {
   const [progress, setProgress] = useState(0);
   const [statusLabel, setStatusLabel] = useState("Préparation…");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [filename, setFilename] = useState<string>("entretien.zip");
   const [candidateName, setCandidateName] = useState<string>("");
   const [fileCount, setFileCount] = useState(0);
+  const [failedSegments, setFailedSegments] = useState<string[]>([]);
+  const [attempt, setAttempt] = useState(0);
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!id || startedRef.current) return;
+    if (!id) return;
+    // Reset pour permettre les relances via "Réessayer"
     startedRef.current = true;
+    setPhase("loading");
+    setProgress(0);
+    setStatusLabel("Préparation…");
+    setErrorMsg(null);
+    setErrorCode(null);
+    setErrorDetails(null);
+    setDownloadUrl(null);
+    setFileCount(0);
+    setFailedSegments([]);
 
     let cancelled = false;
     const objectUrls: string[] = [];
@@ -178,6 +192,7 @@ export default function SessionVideoExport() {
             setDownloadUrl(url);
             setFilename(data.filename);
             setFileCount(data.fileCount);
+            setFailedSegments(data.failedSegments ?? []);
             setProgress(100);
             setPhase("ready");
             setStatusLabel("Archive prête.");
@@ -203,7 +218,9 @@ export default function SessionVideoExport() {
             worker?.terminate();
             worker = null;
           } else if (data.type === "error") {
-            setErrorMsg(`Une erreur est survenue : ${data.message}`);
+            setErrorMsg(data.message);
+            setErrorCode(data.code ?? "UNKNOWN");
+            setErrorDetails(data.details ?? null);
             setPhase("error");
             stopAudio?.();
             stopAudio = null;
@@ -216,6 +233,7 @@ export default function SessionVideoExport() {
         worker.onerror = (err) => {
           if (cancelled) return;
           setErrorMsg(`Erreur du worker : ${err.message}`);
+          setErrorCode("UNKNOWN");
           setPhase("error");
           stopAudio?.();
           stopAudio = null;
@@ -252,7 +270,12 @@ export default function SessionVideoExport() {
       releaseWakeLock();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [id]);
+  }, [id, attempt]);
+
+  const retry = () => {
+    startedRef.current = false;
+    setAttempt((n) => n + 1);
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -270,8 +293,28 @@ export default function SessionVideoExport() {
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4">
                 <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="text-sm text-destructive">{errorMsg}</div>
+                <div className="space-y-2 text-sm text-destructive">
+                  <div className="font-medium">
+                    {errorCode === "FFMPEG_LOAD_FAILED"
+                      ? "Conversion MP4 indisponible"
+                      : errorCode === "ALL_CONVERSIONS_FAILED"
+                        ? "Aucune vidéo n'a pu être convertie en MP4"
+                        : errorCode === "NON_MP4_IN_ZIP"
+                          ? "Archive bloquée : format non conforme"
+                          : "Une erreur est survenue"}
+                  </div>
+                  <div>{errorMsg}</div>
+                  {errorDetails && (
+                    <details className="text-xs opacity-80">
+                      <summary className="cursor-pointer">Détails techniques</summary>
+                      <pre className="mt-1 whitespace-pre-wrap break-all">{errorDetails}</pre>
+                    </details>
+                  )}
+                </div>
               </div>
+              <Button className="w-full" onClick={retry}>
+                Réessayer
+              </Button>
               <Button
                 variant="outline"
                 className="w-full"
@@ -306,6 +349,24 @@ export default function SessionVideoExport() {
                     Le téléchargement a démarré automatiquement. Sinon, utilisez
                     le bouton ci-dessous.
                   </p>
+                  {failedSegments.length > 0 && (
+                    <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+                      <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="font-medium">
+                          {failedSegments.length} segment{failedSegments.length > 1 ? "s" : ""} non converti{failedSegments.length > 1 ? "s" : ""} (exclu{failedSegments.length > 1 ? "s" : ""} de l'archive)
+                        </div>
+                        <ul className="text-xs text-muted-foreground list-disc pl-4">
+                          {failedSegments.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                        <Button size="sm" variant="outline" onClick={retry} className="mt-2">
+                          Réessayer la conversion
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <Button asChild className="w-full">
                     <a href={downloadUrl} download={filename}>
                       <Download className="mr-2 h-4 w-4" />

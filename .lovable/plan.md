@@ -1,61 +1,60 @@
-# Régénération + affichage des rapports en cours / à refaire
+## Lot 1 — Stopper la régression WebM immédiatement
 
-## 1) Régénérations lancées ✅
+Objectif : rendre **impossible** la livraison silencieuse d'un ZIP contenant du `.webm`. Si la conversion casse, l'utilisateur le voit, on ne fait pas semblant.
 
-J'ai lancé `finalize-session` pour les **7 sessions orphelines** du projet Domaine Chapelle qui ont du contenu exploitable (≥15 messages) :
+### Changements
 
-| Candidat | Session |
-|---|---|
-| **Anne CLERF** | `bdc211fc…` |
-| Estelle Bergmann | `cdfb9ff8…` |
-| Larry Sultan | `308b619b…` |
-| Laure Marchand | `b7148ca8…` |
-| D'emilia | `ce701c57…` |
-| Houssem | `b3d88c57…` |
-| Aurélie Prudhomme | `22508aaa…` |
+**1. Self-host de `ffmpeg-core` (plus de CDN)**
 
-Toutes ont répondu `202 processing`. La transcription + génération tourne en arrière-plan (~2-5 min).
+- Ajouter `vite-plugin-static-copy` aux devDeps.
+- Dans `vite.config.ts`, copier `node_modules/@ffmpeg/core/dist/esm/{ffmpeg-core.js,ffmpeg-core.wasm}` vers `public/ffmpeg/` au build.
+- Dans `videoExport.worker.ts`, charger depuis `/ffmpeg/` en priorité, garder les CDN comme fallback ultime (mais en mode dégradé qui ne masque plus l'échec, cf. point 3).
 
-**4 sessions ignorées** : Myriam Naud, Michael ROYER, Edouard Petard, Messara — n'ont **qu'1 seul message** côté base (entretien démarré puis abandonné, aucun contenu à analyser). Inutile de régénérer.
+**2. Vérification COOP/COEP au démarrage du worker**
 
-## 2) Vérification (étape 3 de ta demande)
+- Vérifier `self.crossOriginIsolated`. Si `false`, lever immédiatement une erreur typée `COOP_COEP_MISSING` avec message clair.
+- Dans `vite.config.ts`, verrouiller les en-têtes `Cross-Origin-Opener-Policy: same-origin` et `Cross-Origin-Embedder-Policy: require-corp` côté dev server + commentaire « NE PAS RETIRER : casse l'export MP4 ».
+- Vérifier (et corriger si absent) la config d'hébergement de production pour ces mêmes en-têtes.
 
-Après ~5 minutes, je requêterai la table `reports` pour confirmer la création des 7 lignes. Si certaines échouent, je consulterai les logs `generate-report` pour comprendre.
+**3. Suppression du fallback silencieux**
 
-## 3) Afficher les sessions « rapport en cours / à refaire »
+Dans `videoExport.worker.ts` :
+- Quand `convertToMp4` échoue pour un segment : **ne plus ajouter le `.webm` au ZIP**. À la place, enregistrer le segment dans une liste `conversionErrors` retournée au main thread.
+- Quand ffmpeg ne charge pas du tout : **ne pas produire de ZIP**. Retourner un message d'erreur typé.
+- Conserver le `looksLikeMp4(bytes)` après chaque conversion : si le buffer ne commence pas par `ftyp`, considérer ça comme un échec dur, pas un succès.
 
-### Comportement actuel
-Dans `ProjectDetail.tsx`, la liste filtre via `isReady = status === "completed" && hasReport`. Les sessions complétées sans rapport sont **complètement invisibles** (même `processingCount` est calculé mais jamais affiché).
+**4. UI fail-loud dans `SessionVideoExport.tsx`**
 
-### Changement proposé
-Ajouter un **bandeau compact** au-dessus des chips de sélection (avant ligne 697) qui liste les sessions complétées sans rapport, avec deux états :
+- Nouveaux états gérés : `coopMissing`, `ffmpegLoadFailed`, `partialFailure` (avec liste des segments échoués).
+- Si `coopMissing` ou `ffmpegLoadFailed` : écran rouge « Conversion MP4 indisponible » + bouton « Réessayer » + bouton « Signaler le problème » (réutiliser `report-interview-issue`).
+- Si `partialFailure` : écran orange listant les segments échoués, avec deux choix explicites :
+  - « Réessayer » (relance le worker complet)
+  - « Télécharger quand même les segments réussis (MP4 uniquement) » — jamais de WebM dans le ZIP.
+- Si succès complet : comportement actuel inchangé.
 
-- **« En cours »** (terminée il y a < 10 min) — pastille bleue, pas d'action
-- **« À refaire »** (terminée il y a ≥ 10 min, sans rapport) — pastille orange + bouton **« Régénérer »** par ligne
+**5. Garde-fou final dans le worker**
 
-Le bandeau est un `<Popover>` repliable :
-```
-⚙ 3 entretien(s) en traitement   [Voir]
-```
-Au clic, liste compacte :
-```
-• Anne CLERF       À refaire       [Régénérer]
-• Estelle Bergmann  En cours…
-…
-```
+Juste avant `zip.generateAsync`, parcourir `fileEntries` : si **un seul** nom ne se termine pas par `.mp4`, refuser de générer le ZIP et remonter une erreur. Double sécurité au cas où un chemin d'échappement aurait été oublié.
 
-### Détails techniques
+### Fichiers touchés
 
-- Nouveau state `regenerating: Set<string>` + handler `regenerateReport(sessionId)` qui appelle `supabase.functions.invoke("finalize-session", { body: { session_id } })`.
-- Toast de confirmation, refetch automatique après 30 s.
-- Sessions à 1 seul message exclues du bandeau (impossible à régénérer utilement).
-- Aucun changement DB ni RLS.
+- `vite.config.ts` — en-têtes COOP/COEP + `vite-plugin-static-copy`
+- `package.json` — ajout devDep `vite-plugin-static-copy`
+- `src/workers/videoExport.worker.ts` — load local, plus de fallback silencieux, garde-fou final
+- `src/pages/SessionVideoExport.tsx` — UI fail-loud + nouveaux états d'erreur
 
-### Fichier modifié
-- `src/pages/ProjectDetail.tsx` — ajout du state, du handler et du bandeau (~50 lignes).
+### Hors périmètre (Lot 2/3)
 
-## Hors périmètre (à traiter après)
+- Transcodage côté serveur (Cloudflare Stream / Mux) → Lot 2
+- Test E2E garde-fou format MP4 → Lot 3
 
-- **Bug de fond** : pourquoi `finalize-session` n'a-t-il pas généré le rapport lors de la complétion initiale ? À investiguer dans une étape suivante après avoir vérifié les logs des régénérations actuelles.
+### Vérification après implémentation
 
-Passe-moi en mode build et j'applique l'étape 3, puis je vérifie l'étape 2 dans la foulée.
+Avant de te rendre la main, je teste :
+1. Build passe sans erreur.
+2. Le dev server sert bien `/ffmpeg/ffmpeg-core.wasm` avec `Content-Type: application/wasm`.
+3. `crossOriginIsolated` est `true` dans l'onglet de l'app.
+4. Test manuel : ouvrir `SessionVideoExport` sur une session avec WebM, vérifier que le ZIP téléchargé contient **uniquement** des `.mp4` (signature `ftyp` au début de chaque fichier).
+5. Test de panne : simuler échec ffmpeg (couper le réseau pendant le chargement) → vérifier que l'UI affiche bien l'écran rouge, pas de ZIP produit.
+
+Approuve et j'enchaîne.
