@@ -116,7 +116,10 @@ async function convertToMp4(
 async function run(msg: StartMessage) {
   try {
     const { segments } = msg;
-    if (segments.length === 0) throw new Error("Aucun segment à traiter.");
+    if (segments.length === 0) {
+      post({ type: "error", code: "NO_SEGMENTS", message: "Aucun segment à traiter." });
+      return;
+    }
 
     post({ type: "status", label: "Téléchargement des segments…", phase: "downloading" });
 
@@ -183,25 +186,31 @@ async function run(msg: StartMessage) {
       }
     }
 
-    if (downloaded.length === 0) throw new Error("Aucun segment n'a pu être téléchargé.");
+    if (downloaded.length === 0) {
+      post({
+        type: "error",
+        code: "ALL_DOWNLOADS_FAILED",
+        message: "Aucun segment n'a pu être téléchargé.",
+      });
+      return;
+    }
 
     const zip = new JSZip();
     const fileEntries: { name: string; question: string }[] = [];
     const needsConvert = downloaded.some((d) => d.ext !== "mp4");
     let ffmpeg: FFmpeg | null = null;
-    let ffmpegLoadError: string | null = null;
     const ffmpegLogs: string[] = [];
 
     if (needsConvert) {
       post({ type: "status", label: "Préparation du convertisseur vidéo…", phase: "converting" });
-      const cdnBases = [
+      // Sources : local d'abord (self-hosted dans public/ffmpeg), CDN en dernier recours.
+      const bases = [
+        "/ffmpeg",
         "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
         "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
-        "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd",
-        "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd",
       ];
       const loadErrors: string[] = [];
-      for (const baseURL of cdnBases) {
+      for (const baseURL of bases) {
         try {
           const candidate = new FFmpeg();
           candidate.on("log", ({ message }) => {
@@ -216,16 +225,23 @@ async function run(msg: StartMessage) {
           ffmpeg = candidate;
           break;
         } catch (err) {
-          loadErrors.push(String((err as Error)?.message || err));
+          loadErrors.push(`${baseURL}: ${(err as Error)?.message || err}`);
         }
       }
       if (!ffmpeg) {
-        ffmpegLoadError = loadErrors.length > 0 ? loadErrors.join(" ; ") : "moteur indisponible";
+        post({
+          type: "error",
+          code: "FFMPEG_LOAD_FAILED",
+          message:
+            "Le convertisseur vidéo MP4 n'a pas pu être chargé. Vérifiez votre connexion puis réessayez.",
+          details: loadErrors.join(" | "),
+        });
+        return;
       }
     }
 
     let convertedCount = 0;
-    let conversionFailures = 0;
+    const failedSegments: string[] = [];
 
     for (let i = 0; i < downloaded.length; i++) {
       const d = downloaded[i];
@@ -234,11 +250,8 @@ async function run(msg: StartMessage) {
         zip.file(finalName, d.data);
         fileEntries.push({ name: finalName, question: d.question });
         convertedCount++;
-      } else if (!ffmpeg) {
-        const name = `${d.baseName}.${d.ext}`;
-        zip.file(name, d.data);
-        fileEntries.push({ name, question: d.question });
       } else {
+        // ffmpeg est garanti non-null ici (sinon on aurait return plus haut)
         post({
           type: "status",
           label: `Conversion en MP4 ${i + 1} sur ${downloaded.length}…`,
@@ -247,21 +260,42 @@ async function run(msg: StartMessage) {
         try {
           const inputName = `in-${i}.${d.ext}`;
           const outputName = `out-${i}.mp4`;
-          await ffmpeg.writeFile(inputName, d.data);
-          const outData = await convertToMp4(ffmpeg, inputName, outputName, ffmpegLogs);
+          await ffmpeg!.writeFile(inputName, d.data);
+          const outData = await convertToMp4(ffmpeg!, inputName, outputName, ffmpegLogs);
           zip.file(finalName, outData);
           fileEntries.push({ name: finalName, question: d.question });
           convertedCount++;
-          await ffmpeg.deleteFile(inputName).catch(() => {});
+          await ffmpeg!.deleteFile(inputName).catch(() => {});
         } catch (err) {
+          // Pas de fallback silencieux : on n'ajoute PAS le .webm au ZIP.
           console.warn("[worker] conversion failed", d.baseName, err);
-          conversionFailures++;
-          const name = `${d.baseName}.${d.ext}`;
-          zip.file(name, d.data);
-          fileEntries.push({ name, question: d.question });
+          failedSegments.push(d.baseName);
         }
       }
       post({ type: "progress", value: 60 + ((i + 1) / downloaded.length) * 25, label: "" });
+    }
+
+    if (convertedCount === 0) {
+      post({
+        type: "error",
+        code: "ALL_CONVERSIONS_FAILED",
+        message:
+          "Aucun segment n'a pu être converti en MP4. Réessayez ; si le problème persiste, signalez-le.",
+        details: ffmpegLogs.slice(-10).join(" | "),
+      });
+      return;
+    }
+
+    // Garde-fou final : refuser tout fichier non-MP4 dans le ZIP.
+    const nonMp4 = fileEntries.filter((f) => !f.name.toLowerCase().endsWith(".mp4"));
+    if (nonMp4.length > 0) {
+      post({
+        type: "error",
+        code: "NON_MP4_IN_ZIP",
+        message: `Erreur interne : ${nonMp4.length} fichier(s) non-MP4 détecté(s) avant l'archivage. Téléchargement annulé.`,
+        details: nonMp4.map((f) => f.name).join(", "),
+      });
+      return;
     }
 
     const safeName = sanitizeName(msg.candidateName, "candidat");
@@ -282,20 +316,16 @@ async function run(msg: StartMessage) {
     fileEntries.forEach((f) => readme.push(`  ${f.name} — ${f.question}`));
     if (missing.length > 0) {
       readme.push("");
-      readme.push("Segments indisponibles :");
+      readme.push("Segments non téléchargés :");
       missing.forEach((n) => readme.push(`  ${n}`));
     }
-    readme.push("");
-    const allMp4 = fileEntries.every((f) => f.name.toLowerCase().endsWith(".mp4"));
-    if (allMp4) {
-      readme.push("Format : MP4 (MPEG-4 Part 2 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge.");
-    } else {
-      readme.push(
-        `Format : ${convertedCount} fichier(s) en MP4, ${conversionFailures} fichier(s) restés en WebM.${
-          ffmpegLoadError ? ` Convertisseur indisponible (${ffmpegLoadError}).` : ""
-        }`,
-      );
+    if (failedSegments.length > 0) {
+      readme.push("");
+      readme.push("Segments non convertis en MP4 (exclus de l'archive) :");
+      failedSegments.forEach((n) => readme.push(`  ${n}`));
     }
+    readme.push("");
+    readme.push("Format : MP4 (MPEG-4 Part 2 / AAC). Lisible avec VLC, QuickTime, Chrome, Firefox, Edge.");
     zip.file("README.txt", readme.join("\n"));
 
     post({ type: "status", label: "Création de l'archive ZIP…", phase: "zipping" });
@@ -305,9 +335,19 @@ async function run(msg: StartMessage) {
 
     const filename = `entretien-${safeName}-${dateStr}.zip`;
     post({ type: "progress", value: 100, label: "" });
-    post({ type: "done", blob: zipBlob, filename, fileCount: fileEntries.length });
+    post({
+      type: "done",
+      blob: zipBlob,
+      filename,
+      fileCount: fileEntries.length,
+      failedSegments,
+    });
   } catch (err) {
-    post({ type: "error", message: (err as Error)?.message || String(err) });
+    post({
+      type: "error",
+      code: "UNKNOWN",
+      message: (err as Error)?.message || String(err),
+    });
   }
 }
 
