@@ -1398,6 +1398,7 @@ export type Database = {
           content_raw: string | null
           id: string
           is_follow_up: boolean
+          organization_id: string
           question_id: string | null
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
@@ -1414,6 +1415,7 @@ export type Database = {
           content_raw?: string | null
           id?: string
           is_follow_up?: boolean
+          organization_id: string
           question_id?: string | null
           role: Database["public"]["Enums"]["message_role"]
           session_id: string
@@ -1430,6 +1432,7 @@ export type Database = {
           content_raw?: string | null
           id?: string
           is_follow_up?: boolean
+          organization_id?: string
           question_id?: string | null
           role?: Database["public"]["Enums"]["message_role"]
           session_id?: string
@@ -1476,6 +1479,7 @@ export type Database = {
           last_activity_at: string | null
           last_candidate_email_key: string | null
           last_question_index: number
+          organization_id: string
           project_id: string
           recruiter_decision: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at: string | null
@@ -1506,6 +1510,7 @@ export type Database = {
           last_activity_at?: string | null
           last_candidate_email_key?: string | null
           last_question_index?: number
+          organization_id: string
           project_id: string
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
@@ -1536,6 +1541,7 @@ export type Database = {
           last_activity_at?: string | null
           last_candidate_email_key?: string | null
           last_question_index?: number
+          organization_id?: string
           project_id?: string
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
