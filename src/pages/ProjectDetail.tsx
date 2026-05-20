@@ -138,6 +138,29 @@ export default function ProjectDetail() {
   const [shareReportsOpen, setShareReportsOpen] = useState(false);
   const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
+
+  const regenerateReport = async (sessionId: string) => {
+    setRegenerating((p) => new Set(p).add(sessionId));
+    try {
+      const { error } = await supabase.functions.invoke("finalize-session", {
+        body: { session_id: sessionId },
+      });
+      if (error) throw error;
+      toast({ title: "Génération relancée", description: "Le rapport sera disponible dans quelques minutes." });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.project(id!) });
+      }, 30_000);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Régénération échouée", variant: "destructive" });
+    } finally {
+      setRegenerating((p) => {
+        const n = new Set(p);
+        n.delete(sessionId);
+        return n;
+      });
+    }
+  };
   const toggleSelect = (sid: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
