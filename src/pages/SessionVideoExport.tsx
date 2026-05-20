@@ -47,10 +47,14 @@ export default function SessionVideoExport() {
   const [progress, setProgress] = useState(0);
   const [statusLabel, setStatusLabel] = useState("Préparation…");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [filename, setFilename] = useState<string>("entretien.zip");
   const [candidateName, setCandidateName] = useState<string>("");
   const [fileCount, setFileCount] = useState(0);
+  const [failedSegments, setFailedSegments] = useState<string[]>([]);
+  const [attempt, setAttempt] = useState(0);
   const startedRef = useRef(false);
 
   useEffect(() => {
