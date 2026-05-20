@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2, Flag } from "lucide-react";
+import { Mic, MicOff, PhoneOff, User, Volume2, VolumeX, Eye, EyeOff, CheckCircle2, MousePointerClick, Pause, Play, Trash2, Send, Loader2, Flag, Clock } from "lucide-react";
 import QuestionMediaPlayer, { type QuestionMediaPlayerHandle } from "@/components/interview/QuestionMediaPlayer";
 import MicVolumeMeter from "@/components/interview/MicVolumeMeter";
 import { useToast } from "@/hooks/use-toast";
@@ -326,6 +326,7 @@ export default function InterviewStart() {
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
   const warnedNearLimitRef = useRef(false);
+  const autoSentRef = useRef(false);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
@@ -3178,25 +3179,29 @@ export default function InterviewStart() {
   useEffect(() => {
     setResponseElapsedSec(0);
     warnedNearLimitRef.current = false;
+    autoSentRef.current = false;
   }, [currentQuestionIndex]);
 
   // Auto-end answer when per-question timer expires.
   // Plafond dur 10 min (600 s) par réponse, quelle que soit la valeur en base.
-  // Avertissement à 8 min (480 s) : toast une seule fois par question.
+  // Avertissement à 30 s restantes.
   useEffect(() => {
     const q = questions[currentQuestionIndex];
     const configured = q?.max_response_seconds as number | null | undefined;
     const max = Math.min(configured && configured > 0 ? configured : 600, 600);
     if (!isListening || isPaused) return;
-    if (!warnedNearLimitRef.current && responseElapsedSec >= max - 120) {
+    const remaining = max - responseElapsedSec;
+    if (!warnedNearLimitRef.current && remaining <= 30 && remaining > 0) {
       warnedNearLimitRef.current = true;
       toast({
-        title: "Plus que 2 minutes",
-        description: "Votre réponse sera automatiquement envoyée à la fin du temps imparti.",
+        title: "30 secondes restantes",
+        description: "Votre réponse sera envoyée automatiquement à 0:00.",
       });
     }
-    if (responseElapsedSec >= max) {
+    if (remaining <= 0 && !autoSentRef.current) {
+      autoSentRef.current = true;
       console.log("[interview] per-question timer expired — auto-sending response");
+      toast({ title: "Temps écoulé", description: "Réponse envoyée automatiquement." });
       handleSendResponseRef.current?.();
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
@@ -3730,17 +3735,30 @@ export default function InterviewStart() {
                   const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
                   const configuredMax = currentQ?.max_response_seconds as number | null | undefined;
+                  const hasTimeLimit = Boolean(configuredMax && configuredMax > 0);
                   const maxSec = Math.min(configuredMax && configuredMax > 0 ? configuredMax : 600, 600);
-                  const mm = String(Math.floor(responseElapsedSec / 60)).padStart(2, "0");
-                  const ss = String(responseElapsedSec % 60).padStart(2, "0");
-                  const rmm = String(Math.floor(maxSec / 60)).padStart(2, "0");
-                  const rss = String(maxSec % 60).padStart(2, "0");
-                  const timerLabel = `${mm}:${ss} / ${rmm}:${rss}`;
                   const remaining = Math.max(0, maxSec - responseElapsedSec);
-                  const ratio = remaining / maxSec;
-                  let timerColorClass = "text-muted-foreground";
-                  if (ratio < 0.1) timerColorClass = "text-destructive font-semibold";
-                  else if (ratio < 0.2) timerColorClass = "text-warning";
+                  const rmm = String(Math.floor(remaining / 60)).padStart(2, "0");
+                  const rss = String(remaining % 60).padStart(2, "0");
+                  const remainingLabel = `${rmm}:${rss}`;
+                  const isCritical = hasTimeLimit && remaining <= 20;
+                  const isFinal = hasTimeLimit && remaining <= 10;
+                  const TimerBadge = hasTimeLimit ? (
+                    <div
+                      aria-live={isCritical ? "assertive" : "polite"}
+                      aria-label={`Temps restant : ${remaining} secondes`}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 tabular-nums transition-all ${
+                        isFinal
+                          ? "border-destructive/60 bg-destructive/20 text-destructive text-3xl sm:text-4xl font-black animate-pulse px-4 py-2"
+                          : isCritical
+                          ? "border-destructive/40 bg-destructive/15 text-destructive text-2xl sm:text-3xl font-bold animate-pulse"
+                          : "border-border bg-muted text-foreground text-base sm:text-lg font-bold"
+                      }`}
+                    >
+                      <Clock className={isFinal ? "h-6 w-6" : isCritical ? "h-5 w-5" : "h-4 w-4"} />
+                      {remainingLabel}
+                    </div>
+                  ) : null;
 
                   if (showBigCta) {
                     return (
@@ -3755,9 +3773,7 @@ export default function InterviewStart() {
                           <span className="text-sm sm:text-base font-semibold text-emerald-700 dark:text-emerald-300">
                             🎙️ À vous !
                           </span>
-                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
-                            {timerLabel}
-                          </span>
+                          {TimerBadge}
                         </div>
                         {currentQuestionIndex < 2 && (
                           <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-300/80">
@@ -3781,9 +3797,7 @@ export default function InterviewStart() {
                       >
                         <div className="flex items-center justify-center gap-3 py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
-                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
-                            {timerLabel}
-                          </span>
+                          {TimerBadge}
                         </div>
                         <div className="h-px" style={{ background: "hsl(var(--l-border))" }} />
                         <Button
