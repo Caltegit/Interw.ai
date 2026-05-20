@@ -192,6 +192,7 @@ export default function SessionVideoExport() {
             setDownloadUrl(url);
             setFilename(data.filename);
             setFileCount(data.fileCount);
+            setFailedSegments(data.failedSegments ?? []);
             setProgress(100);
             setPhase("ready");
             setStatusLabel("Archive prête.");
@@ -217,7 +218,9 @@ export default function SessionVideoExport() {
             worker?.terminate();
             worker = null;
           } else if (data.type === "error") {
-            setErrorMsg(`Une erreur est survenue : ${data.message}`);
+            setErrorMsg(data.message);
+            setErrorCode(data.code ?? "UNKNOWN");
+            setErrorDetails(data.details ?? null);
             setPhase("error");
             stopAudio?.();
             stopAudio = null;
@@ -230,6 +233,7 @@ export default function SessionVideoExport() {
         worker.onerror = (err) => {
           if (cancelled) return;
           setErrorMsg(`Erreur du worker : ${err.message}`);
+          setErrorCode("UNKNOWN");
           setPhase("error");
           stopAudio?.();
           stopAudio = null;
