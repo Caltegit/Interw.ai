@@ -26,8 +26,25 @@ interface StartMessage {
 type OutMessage =
   | { type: "progress"; value: number; label: string }
   | { type: "status"; label: string; phase: "downloading" | "converting" | "zipping" }
-  | { type: "done"; blob: Blob; filename: string; fileCount: number }
-  | { type: "error"; message: string };
+  | {
+      type: "done";
+      blob: Blob;
+      filename: string;
+      fileCount: number;
+      failedSegments: string[];
+    }
+  | {
+      type: "error";
+      message: string;
+      code:
+        | "NO_SEGMENTS"
+        | "ALL_DOWNLOADS_FAILED"
+        | "FFMPEG_LOAD_FAILED"
+        | "ALL_CONVERSIONS_FAILED"
+        | "NON_MP4_IN_ZIP"
+        | "UNKNOWN";
+      details?: string;
+    };
 
 function post(msg: OutMessage, transfer?: Transferable[]) {
   (self as unknown as Worker).postMessage(msg, transfer ?? []);
