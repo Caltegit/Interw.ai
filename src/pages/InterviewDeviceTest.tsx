@@ -937,46 +937,82 @@ export default function InterviewDeviceTest() {
               forceExpanded
             >
               {micStatus === "idle" && (
-                <div className="space-y-3">
-                  <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
+                <div className="space-y-4">
+                  <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.75)" }}>
                     Cliquez puis lisez cette phrase à voix haute&nbsp;:
                   </p>
-                  <p className="rounded-lg border border-dashed bg-muted/40 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                  <p className="rounded-lg border border-dashed bg-muted/40 px-4 py-4 text-lg md:text-xl font-medium text-foreground italic text-center leading-snug">
                     « {MIC_TEST_PHRASE} »
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => testMicAndRecorder(selectedAudioId)}
-                    className="candidate-btn-primary inline-flex items-center justify-center gap-2 w-full h-10 rounded-md text-sm font-medium transition-colors"
-                  >
-                    <Mic className="h-4 w-4" /> Tester mon micro
-                  </button>
+                  <div className="relative">
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-0 rounded-md bg-primary/30 animate-ping"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => testMicAndRecorder(selectedAudioId)}
+                      className="candidate-btn-primary relative inline-flex items-center justify-center gap-2 w-full h-12 rounded-md text-base font-semibold transition-colors"
+                    >
+                      <Mic className="h-5 w-5" /> Tester mon micro
+                    </button>
+                  </div>
                 </div>
               )}
               {micStatus === "testing" && (
-                <div className="space-y-3">
-                  <p className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2 text-sm font-medium text-foreground italic text-center">
+                <div className="space-y-4">
+                  <p className="rounded-lg border border-primary/40 bg-primary/5 px-4 py-4 text-lg md:text-xl font-medium text-foreground italic text-center leading-snug">
                     « {MIC_TEST_PHRASE} »
                   </p>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs" style={{ color: "hsl(var(--l-fg) / 0.65)" }}>
-                      Lisez la phrase à voix haute…
-                    </p>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-primary/10 px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <Mic className="h-5 w-5 text-primary animate-pulse" />
+                      <span className="text-base font-semibold text-primary">
+                        Parlez maintenant
+                      </span>
+                    </div>
                     {micCountdown !== null && (
-                      <span className="text-xs font-mono tabular-nums text-primary">
+                      <span className="text-base font-mono tabular-nums font-semibold text-primary">
                         {micCountdown}s
                       </span>
                     )}
                   </div>
-                  <div
-                    className="w-full h-2 rounded-full overflow-hidden"
-                    style={{ background: "hsl(var(--l-fg) / 0.08)" }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-all duration-100"
-                      style={{ width: `${micLevel * 100}%`, background: "hsl(var(--l-accent))" }}
-                    />
+                  {/* Vu-mètre segmenté */}
+                  <div className="flex items-end justify-between gap-1 h-10" aria-label="Niveau micro">
+                    {Array.from({ length: 16 }).map((_, i) => {
+                      const SEGMENTS = 16;
+                      const activeCount = Math.round(micLevel * SEGMENTS);
+                      const active = i < activeCount;
+                      const isHigh = i >= SEGMENTS - 4;
+                      const isMid = i >= SEGMENTS - 9 && i < SEGMENTS - 4;
+                      const h = 12 + (i / SEGMENTS) * 28;
+                      return (
+                        <span
+                          key={i}
+                          className={`flex-1 rounded-sm transition-colors duration-100 ${
+                            active
+                              ? isHigh
+                                ? "bg-success"
+                                : isMid
+                                  ? "bg-primary"
+                                  : "bg-primary/70"
+                              : "bg-muted"
+                          }`}
+                          style={{ height: `${h}px` }}
+                        />
+                      );
+                    })}
                   </div>
+                  <p
+                    className="text-sm text-center font-medium"
+                    style={{ color: "hsl(var(--l-fg) / 0.75)" }}
+                  >
+                    {micLevel >= 0.15
+                      ? "Parfait, continuez !"
+                      : micLevel >= 0.05
+                        ? "On vous entend, parlez un peu plus fort…"
+                        : "En attente de votre voix…"}
+                  </p>
                 </div>
               )}
               {micStatus === "error" && micError && <p className="text-xs text-destructive">{micError}</p>}

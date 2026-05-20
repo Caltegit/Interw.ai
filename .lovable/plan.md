@@ -1,56 +1,46 @@
-# Corriger la création d'organisation + propriétaire
+# Améliorer le test micro (étape « Micro et enregistrement »)
 
-## Problème
+Fichier concerné : `src/pages/InterviewDeviceTest.tsx`, bloc `currentStep === "mic"` (lignes ~930-1010). Aucune logique métier modifiée — uniquement la présentation pendant la phase `micStatus === "testing"` et l'état `idle`.
 
-Quand un super admin crée une orga avec son propriétaire d'un coup, l'attachement profil/membership/rôle échoue silencieusement à cause d'une race avec le trigger `handle_new_user`. Résultat : l'orga existe sans owner, et l'utilisateur invité n'a ni `organization_id`, ni membership, ni rôle admin.
+## Changements UI
 
-Cas observés en base :
-- **Thom** (orga sans owner) + `rpeninque@thomgroup.com` (orphelin)
-- **TEST ORGA** (orga sans owner) + `c+345@bap.fr` (orphelin)
+**1. Phrase à lire — plus grosse et lisible**
+- Passer la phrase de `text-sm` à `text-lg` (voire `text-xl` sur desktop), conserver l'italique et le cadre.
+- Ajouter un peu plus de padding vertical pour qu'elle respire.
 
-## Correctifs
+**2. Bouton « Tester mon micro » (état idle) qui attire l'œil**
+- Bouton plus grand (`h-12`, `text-base`) avec icône micro plus grosse.
+- Animation de pulsation discrète (`animate-pulse` sur un halo derrière le bouton) pour signaler que c'est l'action à faire.
 
-### 1. `supabase/functions/superadmin-create-org/index.ts`
+**3. Indicateur « Parlez maintenant » pendant le test**
+- Remplacer le petit texte « Lisez la phrase à voix haute… » par un bandeau visible :
+  - Icône micro qui pulse (rouge/primary)
+  - Texte « Parlez maintenant » en `text-base font-semibold`
+  - Compte à rebours à droite, plus grand (`text-sm` → `text-base font-mono`)
 
-Remplacer la séquence non sécurisée par :
+**4. Vu-mètre segmenté plus clair**
+- Remplacer la barre fine actuelle (2px de haut) par une jauge segmentée façon `MicLevelMeter` :
+  - 12 à 16 segments verticaux d'environ 24-32px de haut
+  - Couleur progressive : gris → primary → succès quand on parle assez fort
+  - Animation fluide qui réagit au volume capté (`micLevel` déjà disponible)
+- Ajouter sous la jauge un micro-texte d'état dynamique :
+  - « En attente de votre voix… » si `micLevel < 0.05`
+  - « Parfait, continuez ! » si `micLevel >= 0.15`
 
-- **Attendre que le profil existe** après `inviteUserByEmail` : petite boucle de retry (max ~5 essais, 200 ms) qui poll `profiles.user_id`. Si toujours absent, faire un `insert` direct dans `profiles` en fallback.
-- Passer `profiles.update` → **`upsert`** sur `user_id` avec `organization_id` + `full_name` + `email`.
-- Vérifier les erreurs de chaque appel (`update profile`, `upsert member`, `insert role`) et renvoyer un 500 explicite plutôt que de continuer.
-- Si l'`organizations.insert` réussit mais qu'une étape ultérieure échoue, **rollback manuel** : `organizations.delete` + log d'erreur, pour éviter de laisser une orga zombie.
+## Détails techniques
 
-### 2. `supabase/functions/superadmin-manage-user/index.ts` (action `create`)
-
-Même traitement :
-- Même boucle d'attente du profil après `inviteUserByEmail`.
-- `profiles.upsert` au lieu de `update`.
-- Vérifier les erreurs des inserts membership + rôle.
-- Si `role === 'admin'` et l'orga n'a pas d'owner, ne pas se contenter de l'écriture optimiste : vérifier le résultat.
-
-### 3. Migration de réparation (data fix)
-
-Pour chaque cas orphelin connu :
-
-```text
-Thom        → owner_id = rpeninque@thomgroup.com (af7aed7a-…)
-TEST ORGA   → owner_id = c+345@bap.fr
-```
-
-Actions SQL (via insert tool, pas migration de schéma) :
-- `UPDATE organizations SET owner_id = <user_id> WHERE id = <org_id>` pour les 2 orgas
-- `UPDATE profiles SET organization_id = <org_id> WHERE user_id = <user_id>`
-- `INSERT INTO organization_members (user_id, organization_id)` (ON CONFLICT DO NOTHING)
-- `INSERT INTO user_roles (user_id, role, organization_id) VALUES (…, 'admin', …)` (idempotent)
-
-Les 6 autres profils orphelins (`hello@alboteam.com`, `romainpeninque@yahoo.fr`, `c+1@bap.fr`, `c+3@bap.fr`, `cclemalte@gmail.com`, `e2e-test@interw.ai`) **ne sont pas concernés** par ce fix automatique — ils n'ont aucune orga associée temporellement. À traiter au cas par cas (sujet déjà ouvert : option (b) de la conversation précédente).
+- Réutiliser la valeur `micLevel` déjà mise à jour dans la boucle d'analyse (ligne 294) — pas de nouveau AudioContext.
+- Les segments se calculent : `Math.round(micLevel * SEGMENTS)`, identique au pattern de `src/components/project/MicLevelMeter.tsx`.
+- Conserver tous les seuils, callbacks et flux d'erreur existants (`micStatus`, `micError`, `micWarning`, `testMicAndRecorder`).
+- Aucun changement de tokens du design system : on utilise `--l-accent`, `--primary`, `--success` déjà en place.
 
 ## Hors périmètre
 
-- Pas de changement de schéma DB.
-- Pas de touche au flux d'invitation classique (`organization_invitations` / `send-invitation`) — celui-ci fonctionne déjà bien car il rattache au moment de l'acceptation.
-- Pas d'ajout de `sessions.created_by` (sujet séparé, option (a)).
+- Pas de changement aux étapes Caméra, Son, STT, Réseau.
+- Pas de changement à la logique de mesure (`measureMicLevel`, seuils `MIC_THRESHOLDS`).
+- Pas de modification de la phrase `MIC_TEST_PHRASE`.
 
-## Vérification après implémentation
+## Vérification
 
-1. Re-créer une orga test via super admin → vérifier en DB que `owner_id`, `profiles.organization_id`, `organization_members`, `user_roles` sont tous renseignés.
-2. Vérifier que les 2 cas réparés (Thom, TEST ORGA) ont bien leur owner et que `rpeninque@thomgroup.com` peut se connecter et voir l'orga Thom dans son sélecteur.
+- Visuel via le preview : étape micro en `idle` → bouton pulse. Au clic → bandeau « Parlez maintenant » + jauge segmentée réactive.
+- Vérifier que les états `error` et `warning` restent inchangés.
