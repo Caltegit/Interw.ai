@@ -434,7 +434,7 @@ export default function InterviewStart() {
         is_follow_up: options?.isFollowUp ?? false,
         video_segment_url: options?.videoSegmentUrl ?? null,
         audio_segment_url: options?.audioSegmentUrl ?? null,
-      });
+      } as never);
 
       if (error) {
         logger.error("interview_message_persist_failed", {
