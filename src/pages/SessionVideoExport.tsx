@@ -349,6 +349,24 @@ export default function SessionVideoExport() {
                     Le téléchargement a démarré automatiquement. Sinon, utilisez
                     le bouton ci-dessous.
                   </p>
+                  {failedSegments.length > 0 && (
+                    <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+                      <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <div className="font-medium">
+                          {failedSegments.length} segment{failedSegments.length > 1 ? "s" : ""} non converti{failedSegments.length > 1 ? "s" : ""} (exclu{failedSegments.length > 1 ? "s" : ""} de l'archive)
+                        </div>
+                        <ul className="text-xs text-muted-foreground list-disc pl-4">
+                          {failedSegments.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                        <Button size="sm" variant="outline" onClick={retry} className="mt-2">
+                          Réessayer la conversion
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <Button asChild className="w-full">
                     <a href={downloadUrl} download={filename}>
                       <Download className="mr-2 h-4 w-4" />
