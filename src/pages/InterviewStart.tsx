@@ -3735,17 +3735,30 @@ export default function InterviewStart() {
                   const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
                   const configuredMax = currentQ?.max_response_seconds as number | null | undefined;
+                  const hasTimeLimit = Boolean(configuredMax && configuredMax > 0);
                   const maxSec = Math.min(configuredMax && configuredMax > 0 ? configuredMax : 600, 600);
-                  const mm = String(Math.floor(responseElapsedSec / 60)).padStart(2, "0");
-                  const ss = String(responseElapsedSec % 60).padStart(2, "0");
-                  const rmm = String(Math.floor(maxSec / 60)).padStart(2, "0");
-                  const rss = String(maxSec % 60).padStart(2, "0");
-                  const timerLabel = `${mm}:${ss} / ${rmm}:${rss}`;
                   const remaining = Math.max(0, maxSec - responseElapsedSec);
-                  const ratio = remaining / maxSec;
-                  let timerColorClass = "text-muted-foreground";
-                  if (ratio < 0.1) timerColorClass = "text-destructive font-semibold";
-                  else if (ratio < 0.2) timerColorClass = "text-warning";
+                  const rmm = String(Math.floor(remaining / 60)).padStart(2, "0");
+                  const rss = String(remaining % 60).padStart(2, "0");
+                  const remainingLabel = `${rmm}:${rss}`;
+                  const isCritical = hasTimeLimit && remaining <= 20;
+                  const isFinal = hasTimeLimit && remaining <= 10;
+                  const TimerBadge = hasTimeLimit ? (
+                    <div
+                      aria-live={isCritical ? "assertive" : "polite"}
+                      aria-label={`Temps restant : ${remaining} secondes`}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 tabular-nums transition-all ${
+                        isFinal
+                          ? "border-destructive/60 bg-destructive/20 text-destructive text-3xl sm:text-4xl font-black animate-pulse px-4 py-2"
+                          : isCritical
+                          ? "border-destructive/40 bg-destructive/15 text-destructive text-2xl sm:text-3xl font-bold animate-pulse"
+                          : "border-border bg-muted text-foreground text-base sm:text-lg font-bold"
+                      }`}
+                    >
+                      <Clock className={isFinal ? "h-6 w-6" : isCritical ? "h-5 w-5" : "h-4 w-4"} />
+                      {remainingLabel}
+                    </div>
+                  ) : null;
 
                   if (showBigCta) {
                     return (
