@@ -3773,9 +3773,7 @@ export default function InterviewStart() {
                           <span className="text-sm sm:text-base font-semibold text-emerald-700 dark:text-emerald-300">
                             🎙️ À vous !
                           </span>
-                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
-                            {timerLabel}
-                          </span>
+                          {TimerBadge}
                         </div>
                         {currentQuestionIndex < 2 && (
                           <p className="mt-2 text-xs text-emerald-700/80 dark:text-emerald-300/80">
