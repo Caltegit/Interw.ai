@@ -138,6 +138,29 @@ export default function ProjectDetail() {
   const [shareReportsOpen, setShareReportsOpen] = useState(false);
   const [bulkDeleteStep, setBulkDeleteStep] = useState<0 | 1 | 2>(0);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [regenerating, setRegenerating] = useState<Set<string>>(new Set());
+
+  const regenerateReport = async (sessionId: string) => {
+    setRegenerating((p) => new Set(p).add(sessionId));
+    try {
+      const { error } = await supabase.functions.invoke("finalize-session", {
+        body: { session_id: sessionId },
+      });
+      if (error) throw error;
+      toast({ title: "Génération relancée", description: "Le rapport sera disponible dans quelques minutes." });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.project(id!) });
+      }, 30_000);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Régénération échouée", variant: "destructive" });
+    } finally {
+      setRegenerating((p) => {
+        const n = new Set(p);
+        n.delete(sessionId);
+        return n;
+      });
+    }
+  };
   const toggleSelect = (sid: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -522,9 +545,15 @@ export default function ProjectDetail() {
   const readySessions = sessions.filter(isReady);
   const visibleSessions = sessions.filter((s) => s.status !== "cancelled");
   const completedSessions = readySessions;
-  const processingCount = sessions.filter(
-    (s) => s.status === "completed" && !reportsBySession[s.id],
-  ).length;
+  const processingSessions = sessions
+    .filter((s) => s.status === "completed" && !reportsBySession[s.id])
+    .map((s) => {
+      const completedMs = s.completed_at ? new Date(s.completed_at).getTime() : 0;
+      const ageMin = completedMs ? (Date.now() - completedMs) / 60_000 : 999;
+      return { ...s, _ageMin: ageMin, _state: ageMin < 10 ? "processing" : "failed" } as any;
+    })
+    .sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
+  const processingCount = processingSessions.length;
 
   const effectiveSort = { key: sortKey, dir: sortDir };
 
@@ -693,6 +722,65 @@ export default function ProjectDetail() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Entretiens en traitement / à refaire */}
+      {processingCount > 0 && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 hover:bg-amber-100 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              <span>
+                {processingCount} entretien{processingCount > 1 ? "s" : ""} sans rapport
+              </span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 p-0" align="start">
+            <div className="border-b px-3 py-2 text-xs text-muted-foreground">
+              Sessions terminées dont le rapport n'a pas été généré.
+            </div>
+            <div className="max-h-80 overflow-auto">
+              {processingSessions.map((s: any) => {
+                const isProcessing = s._state === "processing";
+                const isBusy = regenerating.has(s.id);
+                return (
+                  <div key={s.id} className="flex items-center gap-2 border-b px-3 py-2 last:border-0">
+                    <Link
+                      to={`/sessions/${s.id}`}
+                      className="flex-1 min-w-0 truncate text-sm hover:underline"
+                    >
+                      {s.candidate_name || s.candidate_email || "Candidat"}
+                    </Link>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+                        isProcessing
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
+                          : "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                      }`}
+                    >
+                      {isProcessing ? "En cours" : "À refaire"}
+                    </span>
+                    {!isProcessing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-xs"
+                        disabled={isBusy}
+                        onClick={() => regenerateReport(s.id)}
+                      >
+                        {isBusy ? "…" : "Régénérer"}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Filtres rapides Sélection */}
       {visibleSessions.length > 0 && (
