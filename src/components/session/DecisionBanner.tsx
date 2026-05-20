@@ -277,6 +277,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
                 onOpenCv={openCv}
+                onAddLinks={onEditLinks}
               />
             </div>
             {candidateEmail && (
