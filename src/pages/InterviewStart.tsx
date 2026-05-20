@@ -3797,9 +3797,7 @@ export default function InterviewStart() {
                       >
                         <div className="flex items-center justify-center gap-3 py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
-                          <span className={`text-xs font-mono tabular-nums ${timerColorClass}`}>
-                            {timerLabel}
-                          </span>
+                          {TimerBadge}
                         </div>
                         <div className="h-px" style={{ background: "hsl(var(--l-border))" }} />
                         <Button
