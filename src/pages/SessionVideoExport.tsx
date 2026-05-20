@@ -58,8 +58,18 @@ export default function SessionVideoExport() {
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!id || startedRef.current) return;
+    if (!id) return;
+    // Reset pour permettre les relances via "Réessayer"
     startedRef.current = true;
+    setPhase("loading");
+    setProgress(0);
+    setStatusLabel("Préparation…");
+    setErrorMsg(null);
+    setErrorCode(null);
+    setErrorDetails(null);
+    setDownloadUrl(null);
+    setFileCount(0);
+    setFailedSegments([]);
 
     let cancelled = false;
     const objectUrls: string[] = [];
