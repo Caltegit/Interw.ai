@@ -95,6 +95,7 @@ export default function InterviewLanding() {
       .from("sessions")
       .insert({
         project_id: project.id,
+        organization_id: project.organization_id,
         candidate_name: trimmedName,
         candidate_email: trimmedEmail,
       })
