@@ -3179,25 +3179,29 @@ export default function InterviewStart() {
   useEffect(() => {
     setResponseElapsedSec(0);
     warnedNearLimitRef.current = false;
+    autoSentRef.current = false;
   }, [currentQuestionIndex]);
 
   // Auto-end answer when per-question timer expires.
   // Plafond dur 10 min (600 s) par réponse, quelle que soit la valeur en base.
-  // Avertissement à 8 min (480 s) : toast une seule fois par question.
+  // Avertissement à 30 s restantes.
   useEffect(() => {
     const q = questions[currentQuestionIndex];
     const configured = q?.max_response_seconds as number | null | undefined;
     const max = Math.min(configured && configured > 0 ? configured : 600, 600);
     if (!isListening || isPaused) return;
-    if (!warnedNearLimitRef.current && responseElapsedSec >= max - 120) {
+    const remaining = max - responseElapsedSec;
+    if (!warnedNearLimitRef.current && remaining <= 30 && remaining > 0) {
       warnedNearLimitRef.current = true;
       toast({
-        title: "Plus que 2 minutes",
-        description: "Votre réponse sera automatiquement envoyée à la fin du temps imparti.",
+        title: "30 secondes restantes",
+        description: "Votre réponse sera envoyée automatiquement à 0:00.",
       });
     }
-    if (responseElapsedSec >= max) {
+    if (remaining <= 0 && !autoSentRef.current) {
+      autoSentRef.current = true;
       console.log("[interview] per-question timer expired — auto-sending response");
+      toast({ title: "Temps écoulé", description: "Réponse envoyée automatiquement." });
       handleSendResponseRef.current?.();
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
