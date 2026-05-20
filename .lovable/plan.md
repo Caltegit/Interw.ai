@@ -1,60 +1,60 @@
-## Lot 1 — Stopper la régression WebM immédiatement
+## Objectif
 
-Objectif : rendre **impossible** la livraison silencieuse d'un ZIP contenant du `.webm`. Si la conversion casse, l'utilisateur le voit, on ne fait pas semblant.
+Côté candidat, rendre le temps imparti d'une question beaucoup plus visible, le faire grossir dans les 20 dernières secondes, et garantir que le bouton « Envoyer ma réponse » se déclenche automatiquement à 00:00.
 
-### Changements
+## État actuel (constaté dans `src/pages/InterviewStart.tsx`)
 
-**1. Self-host de `ffmpeg-core` (plus de CDN)**
+- Le timer existe déjà mais il est rendu en `text-xs font-mono` (très petit) à deux endroits du bandeau d'état (lignes 3758 et 3784).
+- Couleur passe en `text-warning` quand il reste < 20 % du temps, `text-destructive` quand < 10 %. Pas de changement de taille.
+- L'envoi automatique à expiration **est déjà implémenté** (ligne 3198-3201) via `handleSendResponseRef.current?.()`. À vérifier qu'il déclenche bien la même action que le clic manuel sur le bouton.
+- Toast d'avertissement actuel : « Plus que 2 minutes » à `max - 120 s`.
 
-- Ajouter `vite-plugin-static-copy` aux devDeps.
-- Dans `vite.config.ts`, copier `node_modules/@ffmpeg/core/dist/esm/{ffmpeg-core.js,ffmpeg-core.wasm}` vers `public/ffmpeg/` au build.
-- Dans `videoExport.worker.ts`, charger depuis `/ffmpeg/` en priorité, garder les CDN comme fallback ultime (mais en mode dégradé qui ne masque plus l'échec, cf. point 3).
+## Changements UI/UX
 
-**2. Vérification COOP/COEP au démarrage du worker**
+1. **Timer beaucoup plus visible en permanence**
+   - Format actuel `02:30 / 05:00` → simplifier en **temps restant uniquement** au format `MM:SS` (le candidat n'a pas besoin de calculer).
+   - Taille de base : passer de `text-xs` à `text-base sm:text-lg`, `font-bold tabular-nums`.
+   - Le placer dans un badge dédié (fond légèrement teinté, bord arrondi) à côté du micro/CTA, pas noyé dans le texte.
+   - Garder une icône horloge (`Clock` de lucide-react) à gauche du chiffre.
 
-- Vérifier `self.crossOriginIsolated`. Si `false`, lever immédiatement une erreur typée `COOP_COEP_MISSING` avec message clair.
-- Dans `vite.config.ts`, verrouiller les en-têtes `Cross-Origin-Opener-Policy: same-origin` et `Cross-Origin-Embedder-Policy: require-corp` côté dev server + commentaire « NE PAS RETIRER : casse l'export MP4 ».
-- Vérifier (et corriger si absent) la config d'hébergement de production pour ces mêmes en-têtes.
+2. **Palier visuel à 20 s** (la demande explicite)
+   - À `remaining ≤ 20 s` : taille bondit à `text-2xl sm:text-3xl`, couleur `text-destructive`, badge passe sur fond `bg-destructive/15` avec bord `border-destructive/40`, et léger `animate-pulse` (subtil, pas agressif).
+   - À `remaining ≤ 10 s` : ajouter en plus un compte à rebours sec (chiffre seul, `text-4xl sm:text-5xl font-black`, `tabular-nums`) pour bien marquer la fin imminente.
+   - Annonce accessibilité : `aria-live="polite"` sur le badge + `aria-live="assertive"` quand on bascule sous 20 s (une seule fois).
 
-**3. Suppression du fallback silencieux**
+3. **Seuils intermédiaires conservés**
+   - `> 20 s` : couleur neutre (`text-foreground`), taille standard.
+   - Pas de changement avant 20 s : on évite la sur-alerte (warning orange à 20 % du temps disparaît au profit du nouveau palier 20 s unique).
 
-Dans `videoExport.worker.ts` :
-- Quand `convertToMp4` échoue pour un segment : **ne plus ajouter le `.webm` au ZIP**. À la place, enregistrer le segment dans une liste `conversionErrors` retournée au main thread.
-- Quand ffmpeg ne charge pas du tout : **ne pas produire de ZIP**. Retourner un message d'erreur typé.
-- Conserver le `looksLikeMp4(bytes)` après chaque conversion : si le buffer ne commence pas par `ftyp`, considérer ça comme un échec dur, pas un succès.
+4. **Toast d'avertissement**
+   - Remplacer le toast « Plus que 2 minutes » par un toast unique à **30 s restantes** : « 30 secondes restantes — votre réponse sera envoyée automatiquement à 0:00 ». Plus pertinent que 2 min pour des réponses parfois courtes.
 
-**4. UI fail-loud dans `SessionVideoExport.tsx`**
+## Envoi automatique à expiration
 
-- Nouveaux états gérés : `coopMissing`, `ffmpegLoadFailed`, `partialFailure` (avec liste des segments échoués).
-- Si `coopMissing` ou `ffmpegLoadFailed` : écran rouge « Conversion MP4 indisponible » + bouton « Réessayer » + bouton « Signaler le problème » (réutiliser `report-interview-issue`).
-- Si `partialFailure` : écran orange listant les segments échoués, avec deux choix explicites :
-  - « Réessayer » (relance le worker complet)
-  - « Télécharger quand même les segments réussis (MP4 uniquement) » — jamais de WebM dans le ZIP.
-- Si succès complet : comportement actuel inchangé.
+Déjà en place (ligne 3198 de `InterviewStart.tsx`). À vérifier explicitement pendant l'implémentation :
 
-**5. Garde-fou final dans le worker**
+- À `remaining = 0`, on appelle bien `handleSendResponseRef.current?.()`, qui est la même fonction que celle bindée au clic du bouton « Envoyer ma réponse » (ligne 3789-3800).
+- Le toggle se fait une seule fois (le `useEffect` ne re-déclenche pas à chaque tick une fois envoyé : à protéger via un `ref` `autoSentRef` mis à `true` après l'appel, reset au changement de question).
+- Quand l'envoi auto se déclenche, afficher un petit toast informatif : « Temps écoulé — réponse envoyée ».
 
-Juste avant `zip.generateAsync`, parcourir `fileEntries` : si **un seul** nom ne se termine pas par `.mp4`, refuser de générer le ZIP et remonter une erreur. Double sécurité au cas où un chemin d'échappement aurait été oublié.
+## Fichiers touchés
 
-### Fichiers touchés
+- `src/pages/InterviewStart.tsx` (seul fichier modifié) :
+  - Bloc IIFE du bandeau d'état (~ lignes 3728-3810) : nouveau composant inline `<ResponseTimer />` ou refactor du badge timer.
+  - Ajout d'un `useRef autoSentRef` et garde dans le `useEffect` ligne 3186.
+  - Toast 30 s remplace toast 2 min.
 
-- `vite.config.ts` — en-têtes COOP/COEP + `vite-plugin-static-copy`
-- `package.json` — ajout devDep `vite-plugin-static-copy`
-- `src/workers/videoExport.worker.ts` — load local, plus de fallback silencieux, garde-fou final
-- `src/pages/SessionVideoExport.tsx` — UI fail-loud + nouveaux états d'erreur
+## Hors périmètre
 
-### Hors périmètre (Lot 2/3)
+- Pas de changement du timer max (toujours 10 min plafond, ou valeur `max_response_seconds` de la question).
+- Pas de changement de la logique de pause / auto-skip silence.
+- Pas de modif backend.
 
-- Transcodage côté serveur (Cloudflare Stream / Mux) → Lot 2
-- Test E2E garde-fou format MP4 → Lot 3
+## Vérification avant publication
 
-### Vérification après implémentation
+- Tester sur une question avec `max_response_seconds = 30` (pour valider rapidement le palier 20 s + l'envoi auto).
+- Tester sur une question sans limite configurée (fallback 600 s).
+- Vérifier que le clic manuel sur « Envoyer ma réponse » fonctionne toujours et que l'auto-envoi ne double-trigger pas si le candidat clique à 0:01.
+- Vérifier le rendu mobile (375 px) : le chiffre du compte à rebours ne casse pas le layout.
 
-Avant de te rendre la main, je teste :
-1. Build passe sans erreur.
-2. Le dev server sert bien `/ffmpeg/ffmpeg-core.wasm` avec `Content-Type: application/wasm`.
-3. `crossOriginIsolated` est `true` dans l'onglet de l'app.
-4. Test manuel : ouvrir `SessionVideoExport` sur une session avec WebM, vérifier que le ZIP téléchargé contient **uniquement** des `.mp4` (signature `ftyp` au début de chaque fichier).
-5. Test de panne : simuler échec ffmpeg (couper le réseau pendant le chargement) → vérifier que l'UI affiche bien l'écran rouge, pas de ZIP produit.
-
-Approuve et j'enchaîne.
+Valide et j'implémente.
