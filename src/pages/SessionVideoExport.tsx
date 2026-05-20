@@ -270,7 +270,12 @@ export default function SessionVideoExport() {
       releaseWakeLock();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [id]);
+  }, [id, attempt]);
+
+  const retry = () => {
+    startedRef.current = false;
+    setAttempt((n) => n + 1);
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
