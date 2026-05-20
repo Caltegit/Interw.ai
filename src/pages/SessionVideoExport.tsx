@@ -293,8 +293,28 @@ export default function SessionVideoExport() {
             <div className="space-y-4">
               <div className="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-4">
                 <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="text-sm text-destructive">{errorMsg}</div>
+                <div className="space-y-2 text-sm text-destructive">
+                  <div className="font-medium">
+                    {errorCode === "FFMPEG_LOAD_FAILED"
+                      ? "Conversion MP4 indisponible"
+                      : errorCode === "ALL_CONVERSIONS_FAILED"
+                        ? "Aucune vidéo n'a pu être convertie en MP4"
+                        : errorCode === "NON_MP4_IN_ZIP"
+                          ? "Archive bloquée : format non conforme"
+                          : "Une erreur est survenue"}
+                  </div>
+                  <div>{errorMsg}</div>
+                  {errorDetails && (
+                    <details className="text-xs opacity-80">
+                      <summary className="cursor-pointer">Détails techniques</summary>
+                      <pre className="mt-1 whitespace-pre-wrap break-all">{errorDetails}</pre>
+                    </details>
+                  )}
+                </div>
               </div>
+              <Button className="w-full" onClick={retry}>
+                Réessayer
+              </Button>
               <Button
                 variant="outline"
                 className="w-full"
