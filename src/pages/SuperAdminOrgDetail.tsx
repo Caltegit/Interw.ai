@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2, LogIn } from "lucide-react";
+import { ArrowLeft, Crown, ShieldCheck, Users, Briefcase, Pencil, Trash2, LogIn, Link2 } from "lucide-react";
 import { startImpersonation } from "@/lib/impersonation";
 import { CreateUserInOrgDialog } from "@/components/superadmin/CreateUserInOrgDialog";
 import { EditOrgDialog } from "@/components/superadmin/EditOrgDialog";
@@ -234,6 +234,27 @@ export default function SuperAdminOrgDetail() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Copier un lien de connexion (24h, usage unique)"
+                  onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke("superadmin-magic-link", {
+                        body: { email: m.email },
+                      });
+                      if (error) throw error;
+                      const link = (data as any)?.action_link;
+                      if (!link) throw new Error("Lien indisponible");
+                      await navigator.clipboard.writeText(link);
+                      toast({ title: "Lien copié", description: "Valable 24h, utilisable une seule fois." });
+                    } catch (e: any) {
+                      toast({ title: "Erreur", description: e?.message ?? "Impossible de générer le lien", variant: "destructive" });
+                    }
+                  }}
+                >
+                  <Link2 className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => setEditingUser(m)} title="Modifier">
                   <Pencil className="h-4 w-4" />
                 </Button>
