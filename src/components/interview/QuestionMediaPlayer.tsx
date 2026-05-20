@@ -364,20 +364,6 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
                 <div className="h-10 w-10 rounded-full bg-muted/40 flex items-center justify-center">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
-              ) : !hasFinished ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 rounded-full"
-                  style={{ background: "hsl(var(--l-accent) / 0.15)" }}
-                  onClick={togglePlay}
-                >
-                  {isPlaying ? (
-                    <Pause className="h-5 w-5" style={{ color: "hsl(var(--l-accent))" }} />
-                  ) : (
-                    <Play className="h-5 w-5 ml-0.5" style={{ color: "hsl(var(--l-accent))" }} />
-                  )}
-                </Button>
               ) : (
                 <div className="h-10 w-10 rounded-full bg-muted/40 flex items-center justify-center">
                   <Mic className="h-4 w-4 text-muted-foreground" />
