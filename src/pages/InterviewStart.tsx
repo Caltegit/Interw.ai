@@ -326,6 +326,7 @@ export default function InterviewStart() {
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
   const warnedNearLimitRef = useRef(false);
+  const autoSentRef = useRef(false);
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
