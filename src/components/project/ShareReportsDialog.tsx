@@ -254,6 +254,18 @@ export function ShareReportsDialog({
           </div>
         )}
 
+        <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning mt-0.5" />
+          <div className="space-y-1">
+            <p>Ces liens expirent automatiquement après 10 jours.</p>
+            <p>
+              Conformité RGPD : ne rendez jamais ces rapports publics. Partagez ce message
+              uniquement avec les personnes strictement nécessaires à la décision de recrutement
+              (équipe RH, manager). Les candidats n'ont pas consenti à une diffusion plus large.
+            </p>
+          </div>
+        </div>
+
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Fermer
