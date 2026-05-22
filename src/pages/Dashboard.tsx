@@ -23,7 +23,12 @@ import {
   LayoutTemplate,
   AlertTriangle,
   Coins,
+  FolderOpen,
+  Users2,
+  ArrowRight,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
 import { SessionStatusBadge } from "@/components/SessionStatusBadge";
 import { RecommendationBadge } from "@/components/RecommendationBadge";
 import {
