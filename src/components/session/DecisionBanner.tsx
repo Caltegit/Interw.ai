@@ -184,17 +184,10 @@ export function DecisionBanner(props: DecisionBannerProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
-                  {shareUrl ? (
-                    <DropdownMenuItem onClick={onCopyShare}>
-                      {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                      {copied ? "Lien copié" : "Copier le lien de partage"}
-                    </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem onClick={onShare} disabled={isShareLoading}>
-                      <Share2 className="mr-2 h-4 w-4" />
-                      {isShareLoading ? "Génération…" : "Créer un lien de partage"}
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={onShare}>
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Partager ce rapport
+                  </DropdownMenuItem>
                   {canDownloadVideos && (
                     <DropdownMenuItem onClick={onDownloadVideos}>
                       <Download className="mr-2 h-4 w-4" />
