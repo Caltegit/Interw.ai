@@ -1,18 +1,13 @@
-## Pourquoi c'est vide
+## Avertissement RGPD + expiration 10 jours sur "Partager les rapports"
 
-La requête dans `src/hooks/queries/useDashboardData.ts` trie sur `projects.updated_at`, colonne qui n'existe pas dans la table → la requête échoue silencieusement et `recentProjects` reste vide.
+Fichier : `src/components/project/ShareReportsDialog.tsx`
 
-## Correctif
+1. **Expiration 10 jours** sur les nouveaux liens créés ici, comme dans le dialog de partage individuel : ajouter `expires_at: new Date(Date.now() + 10 * 86400000).toISOString()` à l'insert ligne 86. Les liens existants restent inchangés.
 
-Dans `src/hooks/queries/useDashboardData.ts` :
+2. **Encadré d'avertissement** ajouté juste avant `<DialogFooter>` (après le bloc Message) :
+   - Style : `rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground` avec icône `AlertTriangle` (déjà dispo dans lucide-react).
+   - Contenu :
+     - « Ces liens expirent automatiquement après 10 jours. »
+     - « Conformité RGPD : ne rendez jamais ces rapports publics. Partagez ce message uniquement avec les personnes strictement nécessaires à la décision de recrutement (équipe RH, manager). Les candidats n'ont pas consenti à une diffusion plus large. »
 
-1. Remplacer le tri et le champ sélectionné par `created_at` (existe déjà).
-2. Mettre à jour le type `DashboardData.recentProjects` : `updated_at` → `created_at`.
-3. Stratégie d'affichage demandée :
-   - Récupérer les 10 derniers projets actifs (par `created_at` desc) avec `sessions(count)`.
-   - Garder en priorité ceux qui ont au moins 1 session, dans la limite de 3.
-   - Si moins de 3, compléter avec les plus récents sans session pour toujours afficher jusqu'à 3 cartes.
-
-4. Dans `src/pages/Dashboard.tsx` : remplacer l'usage de `updated_at` par `created_at` pour l'affichage de la date relative.
-
-Aucun changement SQL, aucune autre modification de l'UI.
+Aucune autre modification, aucune migration.
