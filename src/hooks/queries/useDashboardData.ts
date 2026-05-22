@@ -19,7 +19,7 @@ export interface DashboardData {
   recentSessions: any[];
   reportsBySession: Record<string, { score: number; recommendation: string | null }>;
   stalePending: any[];
-  recentProjects: { id: string; title: string; job_title: string | null; updated_at: string; sessionCount: number }[];
+  recentProjects: { id: string; title: string; job_title: string | null; created_at: string; sessionCount: number }[];
   credits: {
     unlimited: boolean;
     total: number | null;
@@ -93,20 +93,27 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
-  // 3 derniers projets actifs avec compte de sessions
+  // Derniers projets actifs : on priorise ceux qui ont au moins 1 session,
+  // puis on complète avec les plus récents pour toujours afficher jusqu'à 3 cartes.
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
-    .select("id, title, job_title, updated_at, sessions(count)")
+    .select("id, title, job_title, created_at, sessions(count)")
     .eq("status", "active")
-    .order("updated_at", { ascending: false })
-    .limit(3);
-  const recentProjects = (recentProjectsRaw ?? []).map((p: any) => ({
-    id: p.id,
-    title: p.title,
-    job_title: p.job_title ?? null,
-    updated_at: p.updated_at,
+    .order("created_at", { ascending: false })
+    .limit(10);
+  const mapped = (recentProjectsRaw ?? []).map((p: any) => ({
+    id: p.id as string,
+    title: p.title as string,
+    job_title: (p.job_title ?? null) as string | null,
+    created_at: p.created_at as string,
     sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
   }));
+  const withSessions = mapped.filter((p) => p.sessionCount > 0).slice(0, 3);
+  const withoutSessions = mapped.filter((p) => p.sessionCount === 0);
+  const recentProjects = [
+    ...withSessions,
+    ...withoutSessions.slice(0, Math.max(0, 3 - withSessions.length)),
+  ];
 
   const pendingCount = pendingAll?.length ?? 0;
   const staleList = (pendingAll ?? []).filter((s) => new Date(s.created_at) < since7);
