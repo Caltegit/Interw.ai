@@ -28,15 +28,20 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
   ]);
 
   let shareUrl: string | null = null;
+  let shareExpiresAt: string | null = null;
   if (rRes.data?.id) {
+    const nowIso = new Date().toISOString();
     const { data: shares } = await supabase
       .from("report_shares")
-      .select("share_token, is_active")
+      .select("share_token, is_active, expires_at")
       .eq("report_id", rRes.data.id)
       .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("created_at", { ascending: false })
       .limit(1);
     if (shares?.[0]) {
       shareUrl = `${window.location.origin}/shared-report/${shares[0].share_token}`;
+      shareExpiresAt = (shares[0] as any).expires_at ?? null;
     }
   }
 
