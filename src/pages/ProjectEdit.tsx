@@ -159,7 +159,7 @@ export default function ProjectEdit() {
         autoSkipSilence: project.auto_skip_silence ?? false,
         allowPause: (project as { allow_pause?: boolean }).allow_pause ?? false,
         allowSkipQuestion: (project as { allow_skip_question?: boolean }).allow_skip_question ?? true,
-        introFirstScreen: (project as { intro_first_screen?: boolean }).intro_first_screen ?? false,
+        introFirstScreen: (project as { intro_first_screen?: boolean }).intro_first_screen ?? true,
         completionMessage:
           (project as { completion_message?: string | null }).completion_message ?? DEFAULT_COMPLETION_MESSAGE,
         preSessionMessage:

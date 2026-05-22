@@ -1,13 +1,17 @@
-## Avertissement RGPD + expiration 10 jours sur "Partager les rapports"
+## Masquer le toggle « Mettre l'intro en premier écran »
 
-Fichier : `src/components/project/ShareReportsDialog.tsx`
+L'intro sera toujours affichée en premier écran par défaut (équivalent toggle ON).
 
-1. **Expiration 10 jours** sur les nouveaux liens créés ici, comme dans le dialog de partage individuel : ajouter `expires_at: new Date(Date.now() + 10 * 86400000).toISOString()` à l'insert ligne 86. Les liens existants restent inchangés.
+**Modifications :**
 
-2. **Encadré d'avertissement** ajouté juste avant `<DialogFooter>` (après le bloc Message) :
-   - Style : `rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground` avec icône `AlertTriangle` (déjà dispo dans lucide-react).
-   - Contenu :
-     - « Ces liens expirent automatiquement après 10 jours. »
-     - « Conformité RGPD : ne rendez jamais ces rapports publics. Partagez ce message uniquement avec les personnes strictement nécessaires à la décision de recrutement (équipe RH, manager). Les candidats n'ont pas consenti à une diffusion plus large. »
+1. `src/components/project/ProjectForm.tsx`
+   - Supprimer le bloc UI du toggle (lignes 720-728).
+   - Conserver l'état `introFirstScreen` interne pour ne pas casser la sauvegarde, mais l'initialiser/forcer à `true`.
 
-Aucune autre modification, aucune migration.
+2. `src/pages/ProjectNew.tsx`
+   - Passer `introFirstScreen: true` comme valeur initiale (au lieu de `false`).
+
+3. `src/pages/ProjectEdit.tsx`
+   - Garder la lecture depuis la BDD avec fallback `true` (`?? true`) pour les anciens projets.
+
+Aucune migration BDD. Le champ `intro_first_screen` continue d'être sauvegardé comme avant.

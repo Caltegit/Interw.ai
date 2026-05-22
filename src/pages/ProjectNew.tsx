@@ -74,7 +74,7 @@ const initialState: ProjectFormState = {
   autoSkipSilence: true,
   allowPause: false,
   allowSkipQuestion: true,
-  introFirstScreen: false,
+  introFirstScreen: true,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
   preSessionMessage: "Soyez naturel.le et souriez, vous êtes filmé.e !",
   aiIntroEnabled: true,
