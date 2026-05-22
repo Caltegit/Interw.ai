@@ -215,6 +215,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     reportsBySession,
     stalePending: staleList,
     recentProjects,
+    toProcess,
     credits: {
       unlimited: orgData?.session_credits_unlimited ?? true,
       total: orgData?.session_credits_total ?? null,
