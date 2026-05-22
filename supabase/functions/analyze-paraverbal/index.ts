@@ -120,8 +120,31 @@ function dim(description: string) {
   };
 }
 
+const MAX_ATTEMPTS = 3;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  let reportId: string | null = null;
+  let attempt = 1;
+
+  const writeStatus = async (patch: Record<string, unknown>) => {
+    if (!reportId) return;
+    await supabase
+      .from("reports")
+      .update({
+        paraverbal_analysis: {
+          attempt,
+          updated_at: new Date().toISOString(),
+          ...patch,
+        },
+      })
+      .eq("id", reportId);
+  };
 
   try {
     const { session_id, force } = await req.json();
@@ -140,10 +163,6 @@ serve(async (req) => {
       });
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-
     const { data: session } = await supabase
       .from("sessions")
       .select("id, candidate_name, project_id, projects(job_title, audio_analysis_enabled, questions(id, content, order_index))")
@@ -154,11 +173,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "session_not_found" }), { status: 404, headers: corsHeaders });
     }
     const project: any = session.projects;
-    if (!project?.audio_analysis_enabled) {
-      return new Response(JSON.stringify({ skipped: "audio_analysis_disabled" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const { data: report } = await supabase
       .from("reports")
@@ -169,11 +183,30 @@ serve(async (req) => {
     if (!report) {
       return new Response(JSON.stringify({ error: "no_report_yet" }), { status: 400, headers: corsHeaders });
     }
-    if (report.paraverbal_analysis && !force) {
+    reportId = report.id;
+    const existing = report.paraverbal_analysis as any;
+    if (existing?.profile && !force) {
       return new Response(JSON.stringify({ skipped: "already_analyzed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const prevAttempt = typeof existing?.attempt === "number" ? existing.attempt : 0;
+    attempt = prevAttempt + 1;
+    if (existing?.status === "failed" && prevAttempt >= MAX_ATTEMPTS && !force) {
+      return new Response(JSON.stringify({ skipped: "max_attempts" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!project?.audio_analysis_enabled) {
+      await writeStatus({ status: "skipped", reason: "audio_analysis_disabled" });
+      return new Response(JSON.stringify({ skipped: "audio_analysis_disabled" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    await writeStatus({ status: "running", started_at: new Date().toISOString() });
 
     const { data: messages } = await supabase
       .from("session_messages")
@@ -185,13 +218,13 @@ serve(async (req) => {
       (m: any) => m.role === "candidate" && (m.audio_segment_url || m.video_segment_url),
     );
     if (candidateMsgs.length === 0) {
+      await writeStatus({ status: "skipped", reason: "no_audio" });
       return new Response(JSON.stringify({ skipped: "no_audio" }), { headers: corsHeaders });
     }
 
     const questionsById = new Map<string, any>();
     (project.questions ?? []).forEach((q: any) => questionsById.set(q.id, q));
 
-    // On limite à 12 segments max pour cap latence/coût (≈ 12 réponses)
     const segments: Segment[] = candidateMsgs.slice(0, 12).map((m: any) => ({
       message_id: m.id,
       question_label: questionsById.get(m.question_id)?.content?.slice(0, 120) ?? "Question libre",
@@ -199,7 +232,6 @@ serve(async (req) => {
       audio_url: m.audio_segment_url || m.video_segment_url,
     }));
 
-    // Upload audio → Gemini Files API
     const parts: any[] = [];
     let uploaded = 0;
     for (const seg of segments) {
@@ -207,7 +239,6 @@ serve(async (req) => {
         const res = await fetch(seg.audio_url);
         if (!res.ok) continue;
         const blob = await res.blob();
-        // 24 Mo cap par segment
         if (blob.size > 24 * 1024 * 1024) continue;
         const file = await uploadToGemini(apiKey, blob, `seg-${seg.message_id}`);
         if (!file) continue;
@@ -221,6 +252,7 @@ serve(async (req) => {
 
     if (uploaded < 2) {
       console.warn("[paraverbal] not enough audio uploaded", uploaded);
+      await writeStatus({ status: "skipped", reason: "not_enough_audio" });
       return new Response(JSON.stringify({ skipped: "not_enough_audio" }), { headers: corsHeaders });
     }
 
@@ -245,7 +277,7 @@ Retourne le résultat via l'outil report_paraverbal.`;
     let geminiRes: Response | null = null;
     let lastStatus = 0;
     let lastTxt = "";
-    for (let attempt = 0; attempt < BACKOFFS_MS.length + 1; attempt++) {
+    for (let i = 0; i < BACKOFFS_MS.length + 1; i++) {
       geminiRes = await fetch(
         `${GEMINI_BASE}/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
         {
@@ -264,23 +296,18 @@ Retourne le résultat via l'outil report_paraverbal.`;
       if (geminiRes.ok) break;
       lastStatus = geminiRes.status;
       lastTxt = await geminiRes.text();
-      console.warn(`[paraverbal] gemini attempt ${attempt + 1} failed`, lastStatus, lastTxt.slice(0, 200));
-      if (!RETRY_STATUSES.has(geminiRes.status) || attempt === BACKOFFS_MS.length) break;
-      await new Promise((r) => setTimeout(r, BACKOFFS_MS[attempt]));
+      console.warn(`[paraverbal] gemini attempt ${i + 1} failed`, lastStatus, lastTxt.slice(0, 200));
+      if (!RETRY_STATUSES.has(geminiRes.status) || i === BACKOFFS_MS.length) break;
+      await new Promise((r) => setTimeout(r, BACKOFFS_MS[i]));
     }
 
     if (!geminiRes || !geminiRes.ok) {
       console.error("[paraverbal] gemini error final", lastStatus, lastTxt);
-      await supabase
-        .from("reports")
-        .update({
-          paraverbal_analysis: {
-            status: "failed",
-            error: `gemini_${lastStatus}`,
-            failed_at: new Date().toISOString(),
-          },
-        })
-        .eq("id", report.id);
+      await writeStatus({
+        status: "failed",
+        error: `gemini_${lastStatus}`,
+        failed_at: new Date().toISOString(),
+      });
       return new Response(JSON.stringify({ error: "gemini_failed", status: lastStatus }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -292,10 +319,17 @@ Retourne le résultat via l'outil report_paraverbal.`;
     const args = call?.args;
     if (!args?.paraverbal_profile) {
       console.warn("[paraverbal] no functionCall in response", JSON.stringify(data).slice(0, 500));
+      await writeStatus({
+        status: "failed",
+        error: "no_function_call",
+        failed_at: new Date().toISOString(),
+      });
       return new Response(JSON.stringify({ error: "no_function_call" }), { status: 502, headers: corsHeaders });
     }
 
     const payload = {
+      status: "ok",
+      attempt,
       profile: args.paraverbal_profile,
       summary: args.summary ?? null,
       segments_analyzed: uploaded,
@@ -313,9 +347,15 @@ Retourne le résultat via l'outil report_paraverbal.`;
     });
   } catch (e) {
     console.error("analyze-paraverbal error:", e);
+    await writeStatus({
+      status: "failed",
+      error: e instanceof Error ? e.message : "unknown",
+      failed_at: new Date().toISOString(),
+    });
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "unknown" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
+
