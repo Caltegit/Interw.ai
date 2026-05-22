@@ -723,8 +723,8 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Entretiens en traitement / à refaire */}
-      {processingCount > 0 && (
+      {/* Entretiens en traitement / à refaire — masqué pour l'instant */}
+      {false && processingCount > 0 && (
         <Popover>
           <PopoverTrigger asChild>
             <button
