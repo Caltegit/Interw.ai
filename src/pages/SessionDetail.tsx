@@ -87,6 +87,7 @@ export default function SessionDetail() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
