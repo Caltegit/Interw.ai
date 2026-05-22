@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Loader2, Mail } from "lucide-react";
+import { AlertTriangle, Copy, Loader2, Mail } from "lucide-react";
 
 export interface ShareReportRecipient {
   sessionId: string;
@@ -83,7 +83,11 @@ export function ShareReportsDialog({
           if (!token) {
             const { data: created } = await supabase
               .from("report_shares")
-              .insert({ report_id: r.reportId, created_by: user.id })
+              .insert({
+                report_id: r.reportId,
+                created_by: user.id,
+                expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+              })
               .select("share_token")
               .single();
             token = created?.share_token ?? null;
@@ -249,6 +253,18 @@ export function ShareReportsDialog({
             </div>
           </div>
         )}
+
+        <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-warning mt-0.5" />
+          <div className="space-y-1">
+            <p>Ces liens expirent automatiquement après 10 jours.</p>
+            <p>
+              Conformité RGPD : ne rendez jamais ces rapports publics. Partagez ce message
+              uniquement avec les personnes strictement nécessaires à la décision de recrutement
+              (équipe RH, manager). Les candidats n'ont pas consenti à une diffusion plus large.
+            </p>
+          </div>
+        </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
