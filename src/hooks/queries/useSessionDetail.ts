@@ -7,6 +7,7 @@ export interface SessionDetailData {
   report: any | null;
   messages: any[];
   shareUrl: string | null;
+  shareExpiresAt: string | null;
 }
 
 async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData> {
@@ -27,15 +28,20 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
   ]);
 
   let shareUrl: string | null = null;
+  let shareExpiresAt: string | null = null;
   if (rRes.data?.id) {
+    const nowIso = new Date().toISOString();
     const { data: shares } = await supabase
       .from("report_shares")
-      .select("share_token, is_active")
+      .select("share_token, is_active, expires_at")
       .eq("report_id", rRes.data.id)
       .eq("is_active", true)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("created_at", { ascending: false })
       .limit(1);
     if (shares?.[0]) {
       shareUrl = `${window.location.origin}/shared-report/${shares[0].share_token}`;
+      shareExpiresAt = (shares[0] as any).expires_at ?? null;
     }
   }
 
@@ -70,6 +76,7 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     report: rRes.data ?? null,
     messages: mRes.data ?? [],
     shareUrl,
+    shareExpiresAt,
   };
 }
 
@@ -103,13 +110,17 @@ export function useCreateReportShare(sessionId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ reportId, userId }: { reportId: string; userId: string }) => {
+      const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("report_shares")
-        .insert({ report_id: reportId, created_by: userId })
-        .select("share_token")
+        .insert({ report_id: reportId, created_by: userId, expires_at: expiresAt })
+        .select("share_token, expires_at")
         .single();
       if (error) throw error;
-      return `${window.location.origin}/shared-report/${data.share_token}`;
+      return {
+        url: `${window.location.origin}/shared-report/${data.share_token}`,
+        expiresAt: (data as any).expires_at as string,
+      };
     },
     onSuccess: () => {
       if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });

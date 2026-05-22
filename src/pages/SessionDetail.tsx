@@ -36,6 +36,7 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner } from "@/components/session/DecisionBanner";
 import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog";
+import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
@@ -72,6 +73,7 @@ export default function SessionDetail() {
   const report = data?.report ?? null;
   const messages = data?.messages ?? [];
   const shareUrl = data?.shareUrl ?? null;
+  const shareExpiresAt = data?.shareExpiresAt ?? null;
 
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const lastServerNoteRef = useRef<string | null>(null);
@@ -85,6 +87,7 @@ export default function SessionDetail() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -179,12 +182,14 @@ export default function SessionDetail() {
     return () => clearTimeout(t);
   }, [recruiterNotes, session?.id]);
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    setShareOpen(true);
+  };
+
+  const generateShareLink = async () => {
     if (!report?.id || !user) return;
     try {
-      const url = await createShare.mutateAsync({ reportId: report.id, userId: user.id });
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Lien de partage créé et copié." });
+      await createShare.mutateAsync({ reportId: report.id, userId: user.id });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
     }
@@ -378,6 +383,17 @@ export default function SessionDetail() {
         initialCvFilename={(session as any).candidate_cv_filename ?? null}
         onSaved={() => queryClient.invalidateQueries({ queryKey: queryKeys.session(id!) })}
       />
+
+      <ShareReportDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={shareUrl}
+        shareExpiresAt={shareExpiresAt}
+        isGenerating={createShare.isPending}
+        onGenerate={generateShareLink}
+      />
+
+
 
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
         <AlertDialogContent>
