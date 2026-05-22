@@ -110,13 +110,17 @@ export function useCreateReportShare(sessionId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ reportId, userId }: { reportId: string; userId: string }) => {
+      const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("report_shares")
-        .insert({ report_id: reportId, created_by: userId })
-        .select("share_token")
+        .insert({ report_id: reportId, created_by: userId, expires_at: expiresAt })
+        .select("share_token, expires_at")
         .single();
       if (error) throw error;
-      return `${window.location.origin}/shared-report/${data.share_token}`;
+      return {
+        url: `${window.location.origin}/shared-report/${data.share_token}`,
+        expiresAt: (data as any).expires_at as string,
+      };
     },
     onSuccess: () => {
       if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
