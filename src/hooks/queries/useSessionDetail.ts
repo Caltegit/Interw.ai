@@ -7,6 +7,7 @@ export interface SessionDetailData {
   report: any | null;
   messages: any[];
   shareUrl: string | null;
+  shareExpiresAt: string | null;
 }
 
 async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData> {
