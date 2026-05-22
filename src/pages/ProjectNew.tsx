@@ -72,7 +72,7 @@ const initialState: ProjectFormState = {
   recordVideo: false,
   status: "active",
   autoSkipSilence: true,
-  allowPause: false,
+  allowPause: true,
   allowSkipQuestion: true,
   introFirstScreen: true,
   completionMessage: DEFAULT_COMPLETION_MESSAGE,
