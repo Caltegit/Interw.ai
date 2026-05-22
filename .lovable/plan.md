@@ -1,67 +1,43 @@
-# Modifications du Dashboard
+# Partager le rapport : nouveau wording + popup avec lien et avertissements
 
-## 1. Masquer l'encart « Crédits de sessions »
-Dans `src/pages/Dashboard.tsx` (lignes 139–175), envelopper la `Card` dans `{false && (...)}` pour conserver le code et pouvoir le réactiver plus tard.
+## 1. Action dans le menu déroulant
+Fichier : `src/components/session/DecisionBanner.tsx`
 
-## 2. Nouvelle section : deux colonnes
+- Renommer l'entrée du menu en **« Partager ce rapport »** (qu'il y ait déjà un lien ou non — un seul libellé)
+- Picto : `Share2` (déjà importé)
+- Au clic : ouvre une boîte de dialogue (au lieu de copier directement). Supprimer les props `onCopyShare`, `copied`, `isShareLoading` qui ne servent plus côté menu.
 
-```text
-┌──────────────────────────────┐ ┌──────────────────────────────┐
-│ 📁 3 derniers projets actifs │ │ 👥 5 dernières sessions      │
-│                              │ │                              │
-│  • Dev Senior        12 cand │ │  Marie Dupont   [RDV]   2h   │
-│  • Product Manager    8 cand │ │  Paul Martin    [✓]    10min │
-│  • Designer UX        5 cand │ │  Léa Bernard    [RDV]   1j   │
-│                              │ │  Karim Saidi    [✓]     2j   │
-│         Voir tous →          │ │  Sophie Klein   [—]     3j   │
-└──────────────────────────────┘ └──────────────────────────────┘
-```
+## 2. Nouvelle boîte de dialogue de partage
+Nouveau composant `src/components/session/ShareReportDialog.tsx` utilisant `Dialog` (shadcn).
 
-### Colonne gauche — 3 derniers projets actifs
-- Source : table `projects`, filtrés sur statut actif (non archivé), triés par `updated_at desc`, limité à 3
-- Affichage par ligne : titre du projet + nombre de candidats/sessions
-- Clic ligne → `/projects/:id`
-- Lien « Voir tous les projets » → `/projects`
-- État vide : « Aucun projet actif »
+Contenu :
+- Titre : « Partager ce rapport »
+- Champ input en lecture seule contenant le lien + bouton **Copier** (icône `Copy` → `Check` 2 s après copie)
+- Si aucun lien n'existe encore : bouton **« Générer le lien »** qui appelle `createShare` puis affiche le champ
+- Date d'expiration affichée : « Lien valable jusqu'au JJ/MM/AAAA (10 jours) »
+- Bloc d'avertissement (style `bg-warning/10 border-warning/30`, icône `AlertTriangle`) :
+  > Ce lien expire automatiquement après 10 jours.
+  > Conformité RGPD : ne rendez jamais cette session publique. Ne partagez ce lien qu'avec les personnes strictement nécessaires à la décision de recrutement (équipe RH, manager). Le candidat n'a pas consenti à une diffusion plus large.
 
-### Colonne droite — 5 dernières sessions candidats
-- Source : `recentSessions` déjà fourni par `useDashboardData` (limiter à 5)
-- Affichage par ligne : nom du candidat, statut (badge), date relative (« il y a 2h »)
-- Clic ligne → `/sessions/:id` (uniquement si session complétée, sinon désactivé comme aujourd'hui)
-- Lien « Voir tout » → `/projects` ou liste sessions
-- État vide : « Aucune session pour le moment »
+Pilotage de l'ouverture : state local `shareOpen` dans `SessionDetail.tsx`, passé au `DecisionBanner` via une nouvelle prop `onShare` qui ouvre simplement le dialog. Le dialog reçoit `shareUrl`, `onGenerate`, `isGenerating`, `expiresAt`.
 
-### Données à récupérer
-- `recentSessions` : déjà disponible, OK.
-- Liste des 3 derniers projets actifs avec compte de sessions : à ajouter dans `useDashboardData` (`src/hooks/queries/useDashboardData.ts`). Requête `projects` triée par `updated_at desc` avec `count` sur sessions.
+## 3. Expiration 10 jours (back)
+Fichier : `src/hooks/queries/useSessionDetail.ts`
 
-## 3. Disposition globale après changement
+- Dans `useCreateReportShare`, ajouter à l'insert :
+  ```ts
+  expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+  ```
+- Dans `fetchSessionDetail`, ajouter `expires_at` à la liste sélectionnée et filtrer côté client `gt('expires_at', now)` (la RLS le fait déjà mais on a besoin de la date pour l'affichage)
+- Étendre `SessionDetailData.shareUrl` → ajouter `shareExpiresAt: string | null`
 
-```text
-[ En-tête + citation + Nouveau projet ]
+Aucune migration DB nécessaire : la colonne `expires_at` existe déjà et la RLS filtre déjà les liens expirés (`expires_at IS NULL OR expires_at > now()`).
 
-[ 3 derniers projets actifs ] [ 5 dernières sessions candidats ]
-
-[ KPI : Projets | Attente | Complétés 30j | Score moyen ]
-
-[ Alerte candidats inactifs si > 0 ]
-
-[ Meilleurs candidats (30j) ] [ Recommandations (30j) ]
-
-[ Tableau « Derniers sessions » existant — à conserver ou supprimer ? ]
-```
-
-> Question : le tableau « Derniers sessions » en bas devient redondant avec la nouvelle colonne droite. **Le supprime-t-on ou le garde-t-on ?**
-
-## 4. Autres suggestions (non implémentées sans validation)
-
-1. Mini-sparkline 30j dans la carte « Complétés (30j) »
-2. Carte « Projet le plus performant » (meilleur score moyen)
-3. Bouton « Reprendre » la dernière session consultée
-4. Bandeau onboarding si aucun projet
-5. Toggle « par recommandation / par projet » sur la répartition
+## 4. Liens existants sans expiration
+Les liens créés avant ce changement ont `expires_at = NULL` → restent valides indéfiniment (comportement actuel). On ne touche pas aux liens existants pour ne pas casser ceux déjà partagés. Tu veux qu'on leur applique aussi une expiration rétroactive (par exemple 10 jours à partir d'aujourd'hui) ? Dis-le-moi si oui.
 
 ## Détails techniques
-- Fichiers modifiés : `src/pages/Dashboard.tsx` + `src/hooks/queries/useDashboardData.ts`
-- Aucune migration DB
-- Réutilise `SessionStatusBadge`, `Card`, `date-fns` pour les dates relatives
+- Fichiers modifiés : `DecisionBanner.tsx`, `SessionDetail.tsx`, `useSessionDetail.ts`
+- Fichier créé : `components/session/ShareReportDialog.tsx`
+- Aucune migration SQL
+- Composants shadcn utilisés : `Dialog`, `Input`, `Button`, `Alert` (ou bloc custom avec `AlertTriangle`)
