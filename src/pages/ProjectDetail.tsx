@@ -652,8 +652,8 @@ export default function ProjectDetail() {
     return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
   };
 
-  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
-  const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
+  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
