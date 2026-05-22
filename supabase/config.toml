@@ -57,3 +57,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.purge-old-videos]
     verify_jwt = true
+
+  [functions.retry-missing-analyses]
+    verify_jwt = true

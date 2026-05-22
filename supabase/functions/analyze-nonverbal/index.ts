@@ -97,6 +97,8 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
   let reportId: string | null = null;
+  let attempt = 1;
+  const MAX_ATTEMPTS = 3;
 
   try {
     const { session_id, force } = await req.json();
@@ -157,12 +159,21 @@ serve(async (req) => {
       });
     }
 
+    const prevAttempt = typeof existing?.attempt === "number" ? existing.attempt : 0;
+    attempt = prevAttempt + 1;
+    if (existing?.status === "failed" && prevAttempt >= MAX_ATTEMPTS && !force) {
+      return new Response(JSON.stringify({ skipped: "max_attempts" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Marque "en cours"
     await supabase
       .from("reports")
       .update({
         nonverbal_analysis: {
           status: "running",
+          attempt,
           started_at: new Date().toISOString(),
         },
       })
@@ -180,7 +191,7 @@ serve(async (req) => {
     if (candidateMsgs.length === 0) {
       await supabase
         .from("reports")
-        .update({ nonverbal_analysis: { status: "skipped", reason: "no_video" } })
+        .update({ nonverbal_analysis: { status: "skipped", reason: "no_video", attempt } })
         .eq("id", report.id);
       return new Response(JSON.stringify({ skipped: "no_video" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -240,7 +251,7 @@ serve(async (req) => {
         .from("reports")
         .update({
           nonverbal_analysis: {
-            status: "skipped",
+            status: "skipped", attempt,
             reason: "not_enough_video",
             failed_at: new Date().toISOString(),
           },
@@ -298,7 +309,7 @@ Retourne le résultat via l'outil report_nonverbal.`;
         .from("reports")
         .update({
           nonverbal_analysis: {
-            status,
+            status, attempt,
             error: `gateway_${gatewayRes.status}`,
             failed_at: new Date().toISOString(),
           },
@@ -331,7 +342,7 @@ Retourne le résultat via l'outil report_nonverbal.`;
         .from("reports")
         .update({
           nonverbal_analysis: {
-            status: "failed",
+            status: "failed", attempt,
             error: "no_tool_call",
             failed_at: new Date().toISOString(),
           },
@@ -350,7 +361,7 @@ Retourne le résultat via l'outil report_nonverbal.`;
       segments_analyzed: uploaded,
       generated_at: new Date().toISOString(),
       model: MODEL,
-      status: "ok",
+      status: "ok", attempt,
     };
 
     await supabase
@@ -369,7 +380,7 @@ Retourne le résultat via l'outil report_nonverbal.`;
         .from("reports")
         .update({
           nonverbal_analysis: {
-            status: "failed",
+            status: "failed", attempt,
             error: e instanceof Error ? e.message : "unknown",
             failed_at: new Date().toISOString(),
           },
