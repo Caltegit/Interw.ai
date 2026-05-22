@@ -73,6 +73,7 @@ export default function SessionDetail() {
   const report = data?.report ?? null;
   const messages = data?.messages ?? [];
   const shareUrl = data?.shareUrl ?? null;
+  const shareExpiresAt = data?.shareExpiresAt ?? null;
 
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const lastServerNoteRef = useRef<string | null>(null);
