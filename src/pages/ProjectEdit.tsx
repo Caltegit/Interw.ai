@@ -157,7 +157,7 @@ export default function ProjectEdit() {
         recordVideo: project.record_video,
         status: project.status as "draft" | "active" | "archived",
         autoSkipSilence: project.auto_skip_silence ?? false,
-        allowPause: (project as { allow_pause?: boolean }).allow_pause ?? false,
+        allowPause: (project as { allow_pause?: boolean }).allow_pause ?? true,
         allowSkipQuestion: (project as { allow_skip_question?: boolean }).allow_skip_question ?? true,
         introFirstScreen: (project as { intro_first_screen?: boolean }).intro_first_screen ?? true,
         completionMessage:
