@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Loader2, Mail } from "lucide-react";
+import { AlertTriangle, Copy, Loader2, Mail } from "lucide-react";
 
 export interface ShareReportRecipient {
   sessionId: string;
