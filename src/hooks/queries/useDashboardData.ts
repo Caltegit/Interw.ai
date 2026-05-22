@@ -19,7 +19,7 @@ export interface DashboardData {
   recentSessions: any[];
   reportsBySession: Record<string, { score: number; recommendation: string | null }>;
   stalePending: any[];
-  recentProjects: { id: string; title: string; job_title: string | null; updated_at: string; sessionCount: number }[];
+  recentProjects: { id: string; title: string; job_title: string | null; created_at: string; sessionCount: number }[];
   credits: {
     unlimited: boolean;
     total: number | null;
