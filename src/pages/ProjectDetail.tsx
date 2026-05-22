@@ -1248,8 +1248,27 @@ export default function ProjectDetail() {
               </div>
               )}
 
-              {filteredSessions.length > PAGE_SIZE && (
+              {filteredSessions.length > 10 && (
                 <div className="flex items-center justify-between text-sm pt-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(v) => {
+                        setPageSize(Number(v));
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-[80px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-muted-foreground">par page</span>
+                  </div>
                   <span className="text-muted-foreground">
                     Page {page + 1} / {totalSessionsPages}
                   </span>
