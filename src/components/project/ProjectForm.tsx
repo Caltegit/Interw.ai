@@ -717,15 +717,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Mettre l'intro en premier écran</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche l'intro candidat (si elle existe) avant le formulaire d'inscription.
-                    </p>
-                  </div>
-                  <Switch checked={introFirstScreen} onCheckedChange={setIntroFirstScreen} />
-                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
