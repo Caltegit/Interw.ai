@@ -159,12 +159,21 @@ serve(async (req) => {
       });
     }
 
+    const prevAttempt = typeof existing?.attempt === "number" ? existing.attempt : 0;
+    attempt = prevAttempt + 1;
+    if (existing?.status === "failed" && prevAttempt >= MAX_ATTEMPTS && !force) {
+      return new Response(JSON.stringify({ skipped: "max_attempts" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Marque "en cours"
     await supabase
       .from("reports")
       .update({
         nonverbal_analysis: {
           status: "running",
+          attempt,
           started_at: new Date().toISOString(),
         },
       })
