@@ -182,12 +182,14 @@ export default function SessionDetail() {
     return () => clearTimeout(t);
   }, [recruiterNotes, session?.id]);
 
-  const handleShare = async () => {
+  const handleShare = () => {
+    setShareOpen(true);
+  };
+
+  const generateShareLink = async () => {
     if (!report?.id || !user) return;
     try {
-      const url = await createShare.mutateAsync({ reportId: report.id, userId: user.id });
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Lien de partage créé et copié." });
+      await createShare.mutateAsync({ reportId: report.id, userId: user.id });
     } catch (e: any) {
       toast({ title: "Erreur", description: e.message, variant: "destructive" });
     }
