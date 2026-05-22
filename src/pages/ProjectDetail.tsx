@@ -451,6 +451,7 @@ export default function ProjectDetail() {
         "-copy-" +
         Date.now().toString(36);
 
+      const p = project as any;
       const { data: newProject, error } = await supabase
         .from("projects")
         .insert({
@@ -467,51 +468,89 @@ export default function ProjectDetail() {
           status: "active" as never,
           slug,
           avatar_image_url: project.avatar_image_url,
-          intro_audio_url: project.intro_audio_url,
-        })
+          auto_skip_silence: p.auto_skip_silence ?? true,
+          allow_pause: p.allow_pause ?? true,
+          allow_skip_question: p.allow_skip_question ?? true,
+          intro_first_screen: p.intro_first_screen ?? true,
+          audio_analysis_enabled: p.audio_analysis_enabled ?? true,
+          completion_message: p.completion_message ?? null,
+          pre_session_message: p.pre_session_message ?? null,
+          tts_provider: p.tts_provider ?? "browser",
+          tts_voice_id: p.tts_voice_id ?? null,
+          tts_voice_gender: p.tts_voice_gender ?? "female",
+          intro_enabled: p.intro_enabled ?? false,
+          intro_mode: p.intro_mode ?? null,
+          intro_text: p.intro_text ?? null,
+          intro_audio_url: p.intro_audio_url ?? null,
+          presentation_video_url: p.presentation_video_url ?? null,
+          ai_intro_enabled: p.ai_intro_enabled ?? true,
+          ai_intro_mode: p.ai_intro_mode ?? "auto",
+          ai_intro_custom_text: p.ai_intro_custom_text ?? null,
+          ai_question_transitions_enabled: p.ai_question_transitions_enabled ?? true,
+          ai_question_transitions_mode: p.ai_question_transitions_mode ?? "auto",
+          ai_question_transitions_custom_text: p.ai_question_transitions_custom_text ?? null,
+        } as never)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Duplicate questions (réindexation propre + recopie complète des champs)
+      // Critères d'abord, pour récupérer le mapping ancien → nouveau ID
+      const criteriaIdMap = new Map<string, string>();
+      if (criteria.length > 0) {
+        const { data: insertedCriteria, error: critErr } = await supabase
+          .from("evaluation_criteria")
+          .insert(
+            criteria.map((c) => ({
+              project_id: newProject.id,
+              order_index: c.order_index,
+              label: c.label,
+              description: c.description,
+              weight: c.weight,
+              scoring_scale: c.scoring_scale,
+              anchors: c.anchors,
+              applies_to: c.applies_to,
+            })),
+          )
+          .select();
+        if (critErr) throw critErr;
+        if (insertedCriteria) {
+          criteria.forEach((c, i) => {
+            const newId = insertedCriteria[i]?.id;
+            if (newId) criteriaIdMap.set(c.id, newId);
+          });
+        }
+      }
+
+      // Questions avec remapping des scoring_criteria_ids
       if (questions.length > 0) {
         await supabase.from("questions").insert(
-          questions.map((q, idx) => ({
-            project_id: newProject.id,
-            order_index: idx,
-            title: (q as any).title || q.content.slice(0, 60),
-            content: q.content,
-            type: q.type,
-            follow_up_enabled: q.follow_up_enabled,
-            max_follow_ups: q.max_follow_ups,
-            audio_url: (q as any).audio_url ?? null,
-            video_url: (q as any).video_url ?? null,
-            hint_text: (q as any).hint_text ?? null,
-            relance_level: (q as any).relance_level ?? "medium",
-            max_response_seconds: (q as any).max_response_seconds ?? null,
-            scoring_criteria_ids: (q as any).scoring_criteria_ids ?? null,
-          })),
+          questions.map((q, idx) => {
+            const oldIds = (q as any).scoring_criteria_ids as string[] | null | undefined;
+            const remapped = oldIds
+              ?.map((id) => criteriaIdMap.get(id))
+              .filter((v): v is string => !!v);
+            return {
+              project_id: newProject.id,
+              order_index: idx,
+              title: (q as any).title || q.content.slice(0, 60),
+              content: q.content,
+              type: q.type,
+              follow_up_enabled: q.follow_up_enabled,
+              max_follow_ups: q.max_follow_ups,
+              audio_url: (q as any).audio_url ?? null,
+              video_url: (q as any).video_url ?? null,
+              hint_text: (q as any).hint_text ?? null,
+              relance_level: (q as any).relance_level ?? "medium",
+              max_response_seconds: (q as any).max_response_seconds ?? null,
+              avatar_image_url: (q as any).avatar_image_url ?? null,
+              scoring_criteria_ids: remapped && remapped.length > 0 ? remapped : null,
+            };
+          }),
         );
       }
 
-      // Duplicate criteria
-      if (criteria.length > 0) {
-        await supabase.from("evaluation_criteria").insert(
-          criteria.map((c) => ({
-            project_id: newProject.id,
-            order_index: c.order_index,
-            label: c.label,
-            description: c.description,
-            weight: c.weight,
-            scoring_scale: c.scoring_scale,
-            anchors: c.anchors,
-            applies_to: c.applies_to,
-          })),
-        );
-      }
-
-      toast({ title: "Projet dupliqué !", description: "Le nouveau projet a été créé en brouillon." });
+      toast({ title: "Projet dupliqué !", description: "Le nouveau projet a été créé." });
       navigate(`/projects/${newProject.id}`);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
