@@ -199,7 +199,7 @@ export default function ProjectDetail() {
 
   // Pagination des sessions filtrées
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 50;
+  const [pageSize, setPageSize] = useState(25);
 
   // Visibilité des sélections (chips au-dessus des sessions)
   const DECISION_KEYS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress", "accepted"] as const;
