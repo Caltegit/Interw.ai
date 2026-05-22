@@ -20,6 +20,7 @@ export interface DashboardData {
   reportsBySession: Record<string, { score: number; recommendation: string | null }>;
   stalePending: any[];
   recentProjects: { id: string; title: string; job_title: string | null; created_at: string; sessionCount: number }[];
+  toProcess: { session_id: string; candidate_name: string | null; project_title: string; generated_at: string; overall_score: number; recommendation: string | null }[];
   credits: {
     unlimited: boolean;
     total: number | null;
@@ -115,6 +116,40 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     ...withoutSessions.slice(0, Math.max(0, 3 - withSessions.length)),
   ];
 
+  // Candidats "à traiter" : sessions complétées dans des projets actifs de l'org,
+  // avec un rapport généré, et sans décision recruteur (null ou "none").
+  let toProcess: DashboardData["toProcess"] = [];
+  if (orgId) {
+    const { data: toProcessRaw } = await supabase
+      .from("sessions")
+      .select(
+        "id, candidate_name, recruiter_decision, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
+      )
+      .eq("status", "completed")
+      .eq("projects.status", "active")
+      .eq("projects.organization_id", orgId)
+      .or("recruiter_decision.is.null,recruiter_decision.eq.none")
+      .order("generated_at", { ascending: false, foreignTable: "reports" })
+      .limit(20);
+    toProcess = (toProcessRaw ?? [])
+      .map((s: any) => {
+        const rep = Array.isArray(s.reports) ? s.reports[0] : s.reports;
+        const proj = Array.isArray(s.projects) ? s.projects[0] : s.projects;
+        if (!rep) return null;
+        return {
+          session_id: s.id as string,
+          candidate_name: s.candidate_name ?? null,
+          project_title: proj?.title ?? "",
+          generated_at: rep.generated_at as string,
+          overall_score: Math.round(Number(rep.overall_score ?? 0)),
+          recommendation: rep.recommendation ?? null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x)
+      .sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime())
+      .slice(0, 7);
+  }
+
   const pendingCount = pendingAll?.length ?? 0;
   const staleList = (pendingAll ?? []).filter((s) => new Date(s.created_at) < since7);
 
@@ -180,6 +215,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     reportsBySession,
     stalePending: staleList,
     recentProjects,
+    toProcess,
     credits: {
       unlimited: orgData?.session_credits_unlimited ?? true,
       total: orgData?.session_credits_total ?? null,

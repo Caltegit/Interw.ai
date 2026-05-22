@@ -109,6 +109,7 @@ export default function Dashboard() {
   const reportsBySession = data?.reportsBySession ?? {};
   const credits = data?.credits ?? { unlimited: true, total: null as number | null, used: 0 };
   const recentProjects = data?.recentProjects ?? [];
+  const toProcess = data?.toProcess ?? [];
   const last5Sessions = recentSessions.slice(0, 5);
   const creditsPct =
     !credits.unlimited && credits.total && credits.total > 0
@@ -427,33 +428,39 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base text-left">
-              <BarChart3 className="h-4 w-4 text-primary" />
-              Recommandations (30j)
+              <Users className="h-4 w-4 text-primary" />
+              Candidats à traiter
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {totalReco === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune recommandation sur la période.</p>
+            {toProcess.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun candidat à traiter.</p>
             ) : (
-              <ul className="space-y-3">
-                {RECO_ORDER.map((key) => {
-                  const count = recoDistribution[key] ?? 0;
-                  const pct = totalReco > 0 ? (count / totalReco) * 100 : 0;
-                  return (
-                    <li key={key} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">{RECO_LABELS[key]}</span>
-                        <span className="font-medium">{count}</span>
+              <ul className="space-y-2">
+                {toProcess.map((c) => (
+                  <li key={c.session_id}>
+                    <Link
+                      to={`/sessions/${c.session_id}`}
+                      className="flex items-center justify-between gap-3 rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{c.candidate_name || "Candidat"}</div>
+                        <div className="text-xs text-muted-foreground truncate">{c.project_title}</div>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={cn("h-full transition-all", RECO_COLORS[key])}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={cn(
+                            "rounded-md border px-2 py-0.5 text-xs font-semibold",
+                            scoreColor(c.overall_score),
+                          )}
+                        >
+                          {c.overall_score}%
+                        </span>
+                        <RecommendationBadge recommendation={c.recommendation} />
                       </div>
-                    </li>
-                  );
-                })}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             )}
           </CardContent>
