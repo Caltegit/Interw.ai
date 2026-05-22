@@ -384,6 +384,17 @@ export default function SessionDetail() {
         onSaved={() => queryClient.invalidateQueries({ queryKey: queryKeys.session(id!) })}
       />
 
+      <ShareReportDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={shareUrl}
+        shareExpiresAt={shareExpiresAt}
+        isGenerating={createShare.isPending}
+        onGenerate={generateShareLink}
+      />
+
+
+
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
