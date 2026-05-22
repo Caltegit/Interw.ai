@@ -188,10 +188,16 @@ export function DecisionBanner(props: DecisionBannerProps) {
                     <Share2 className="mr-2 h-4 w-4" />
                     Partager ce rapport
                   </DropdownMenuItem>
-                  {canDownloadVideos && (
-                    <DropdownMenuItem onClick={onDownloadVideos}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Télécharger les vidéos
+                  {onEmail && (
+                    <DropdownMenuItem onClick={onEmail}>
+                      <Mail className="mr-2 h-4 w-4" />
+                      Envoyer un e-mail
+                    </DropdownMenuItem>
+                  )}
+                  {onEditLinks && (
+                    <DropdownMenuItem onClick={onEditLinks}>
+                      <UserCog className="mr-2 h-4 w-4" />
+                      Ajouter LinkedIn / CV
                     </DropdownMenuItem>
                   )}
                   {onRegenerate && (
@@ -207,27 +213,23 @@ export function DecisionBanner(props: DecisionBannerProps) {
                       </DropdownMenuItem>
                     </>
                   )}
-                  {(onEmail || onEditLinks || onDelete) && <DropdownMenuSeparator />}
-                  {onEmail && (
-                    <DropdownMenuItem onClick={onEmail}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Envoyer un e-mail
-                    </DropdownMenuItem>
-                  )}
-                  {onEditLinks && (
-                    <DropdownMenuItem onClick={onEditLinks}>
-                      <UserCog className="mr-2 h-4 w-4" />
-                      Ajouter LinkedIn / CV
+                  {canDownloadVideos && (
+                    <DropdownMenuItem onClick={onDownloadVideos}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Télécharger les vidéos
                     </DropdownMenuItem>
                   )}
                   {onDelete && (
-                    <DropdownMenuItem
-                      onClick={onDelete}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Supprimer
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={onDelete}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Supprimer
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
