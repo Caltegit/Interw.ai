@@ -619,7 +619,7 @@ export default function ProjectDetail() {
     { value: "rejected", label: "Non", dot: "bg-destructive", text: "text-destructive" },
     { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
     { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
-    { value: "in_progress", label: "En cours", dot: "bg-info", text: "text-info" },
+    { value: "in_progress", label: "RDV", dot: "bg-info", text: "text-info" },
     { value: "accepted", label: "Oui", dot: "bg-success-strong", text: "text-success-strong" },
   ];
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
@@ -761,7 +761,7 @@ export default function ProjectDetail() {
                           : "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
                       }`}
                     >
-                      {isProcessing ? "En cours" : "À refaire"}
+                      {isProcessing ? "RDV" : "À refaire"}
                     </span>
                     {!isProcessing && (
                       <Button
