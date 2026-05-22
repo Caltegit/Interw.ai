@@ -97,6 +97,8 @@ serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
   let reportId: string | null = null;
+  let attempt = 1;
+  const MAX_ATTEMPTS = 3;
 
   try {
     const { session_id, force } = await req.json();
