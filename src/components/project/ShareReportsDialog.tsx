@@ -83,7 +83,11 @@ export function ShareReportsDialog({
           if (!token) {
             const { data: created } = await supabase
               .from("report_shares")
-              .insert({ report_id: r.reportId, created_by: user.id })
+              .insert({
+                report_id: r.reportId,
+                created_by: user.id,
+                expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+              })
               .select("share_token")
               .single();
             token = created?.share_token ?? null;
