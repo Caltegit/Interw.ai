@@ -192,7 +192,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
     rejected: { label: "Non", className: "bg-destructive text-destructive-foreground border-destructive hover:bg-destructive/90" },
     second_opinion: { label: "À discuter", className: "bg-warning text-warning-foreground border-warning hover:bg-warning/90" },
     shortlisted: { label: "Retenu", className: "bg-success text-success-foreground border-success hover:bg-success/90" },
-    in_progress: { label: "En cours", className: "bg-info text-info-foreground border-info hover:bg-info/90" },
+    in_progress: { label: "RDV", className: "bg-info text-info-foreground border-info hover:bg-info/90" },
     accepted: { label: "Oui", className: "bg-success-strong text-success-strong-foreground border-success-strong hover:bg-success-strong/90" },
   };
 
@@ -409,7 +409,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                       <SelectItem value="rejected">Non</SelectItem>
                       <SelectItem value="second_opinion">À discuter</SelectItem>
                       <SelectItem value="shortlisted">Retenu</SelectItem>
-                      <SelectItem value="in_progress">En cours</SelectItem>
+                      <SelectItem value="in_progress">RDV</SelectItem>
                       <SelectItem value="accepted">Oui</SelectItem>
                     </SelectContent>
                   </Select>

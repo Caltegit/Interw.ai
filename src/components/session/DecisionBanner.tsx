@@ -83,7 +83,7 @@ const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }>
   rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
-  in_progress: { label: "En cours", tone: "bg-info text-info-foreground" },
+  in_progress: { label: "RDV", tone: "bg-info text-info-foreground" },
   accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" },
 };
 
@@ -322,7 +322,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 disabled={isDecisionPending}
                 tone="info"
                 icon={Clock}
-                label="En cours"
+                label="RDV"
                 tooltip={decision === "in_progress" ? authorTooltip : null}
               />
               <DecisionButton

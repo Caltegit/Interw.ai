@@ -8,7 +8,7 @@ const CONFIG: Record<FeedbackStatus, { label: string; className: string }> = {
     className: "bg-success/15 text-success border-success/30",
   },
   in_progress: {
-    label: "En cours",
+    label: "RDV",
     className: "bg-warning/15 text-warning border-warning/30",
   },
   archived: {
