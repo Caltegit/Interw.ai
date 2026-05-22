@@ -143,43 +143,137 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Crédits de sessions */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Coins className="h-4 w-4 text-primary" />
-            Crédits de sessions
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {credits.unlimited ? (
-            <div>
-              <div className="text-2xl font-bold">Illimité</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {credits.used} session{credits.used > 1 ? "s" : ""} réalisée{credits.used > 1 ? "s" : ""}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <div className="text-2xl font-bold">
-                {credits.used} <span className="text-base font-normal text-muted-foreground">/ {credits.total ?? 0} sessions utilisées</span>
-              </div>
-              <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className={cn("h-full transition-all", creditsBarColor)}
-                  style={{ width: `${creditsPct}%` }}
-                />
-              </div>
-              {creditsPct >= 100 && (
-                <p className="text-xs text-destructive mt-2 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Quota atteint — pensez à augmenter votre plafond
+      {/* Crédits de sessions — masqué pour l'instant */}
+      {false && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Coins className="h-4 w-4 text-primary" />
+              Crédits de sessions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {credits.unlimited ? (
+              <div>
+                <div className="text-2xl font-bold">Illimité</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {credits.used} session{credits.used > 1 ? "s" : ""} réalisée{credits.used > 1 ? "s" : ""}
                 </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            ) : (
+              <div>
+                <div className="text-2xl font-bold">
+                  {credits.used} <span className="text-base font-normal text-muted-foreground">/ {credits.total ?? 0} sessions utilisées</span>
+                </div>
+                <div className="mt-2 h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={cn("h-full transition-all", creditsBarColor)}
+                    style={{ width: `${creditsPct}%` }}
+                  />
+                </div>
+                {creditsPct >= 100 && (
+                  <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Quota atteint — pensez à augmenter votre plafond
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Raccourcis : projets actifs + sessions récentes */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FolderOpen className="h-4 w-4 text-primary" />
+              Derniers projets actifs
+            </CardTitle>
+            <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+              <Link to="/projects">
+                Voir tous <ArrowRight className="h-3 w-3" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {recentProjects.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun projet actif.</p>
+            ) : (
+              <ul className="space-y-1">
+                {recentProjects.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      to={`/projects/${p.id}`}
+                      className="flex items-center justify-between gap-3 rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{p.title}</div>
+                        {p.job_title && (
+                          <div className="text-xs text-muted-foreground truncate">{p.job_title}</div>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {p.sessionCount} candidat{p.sessionCount > 1 ? "s" : ""}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users2 className="h-4 w-4 text-primary" />
+              Dernières sessions candidats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {last5Sessions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucune session pour le moment.</p>
+            ) : (
+              <ul className="space-y-1">
+                {last5Sessions.map((s: any) => {
+                  const isCompleted = s.status === "completed";
+                  const content = (
+                    <div className="flex items-center justify-between gap-3 rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{s.candidate_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {s.projects?.title}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <SessionStatusBadge status={s.status} />
+                        <span className="text-xs text-muted-foreground hidden sm:inline">
+                          {formatDistanceToNow(new Date(s.created_at), {
+                            addSuffix: true,
+                            locale: fr,
+                          }).replace("environ ", "")}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                  return (
+                    <li key={s.id}>
+                      {isCompleted ? (
+                        <Link to={`/sessions/${s.id}`}>{content}</Link>
+                      ) : (
+                        <div className="cursor-default opacity-90">{content}</div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
 
       {/* KPI */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
