@@ -76,6 +76,7 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     report: rRes.data ?? null,
     messages: mRes.data ?? [],
     shareUrl,
+    shareExpiresAt,
   };
 }
 
