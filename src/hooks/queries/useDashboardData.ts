@@ -19,6 +19,7 @@ export interface DashboardData {
   recentSessions: any[];
   reportsBySession: Record<string, { score: number; recommendation: string | null }>;
   stalePending: any[];
+  recentProjects: { id: string; title: string; job_title: string | null; updated_at: string; sessionCount: number }[];
   credits: {
     unlimited: boolean;
     total: number | null;
@@ -92,6 +93,21 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
+  // 3 derniers projets actifs avec compte de sessions
+  const { data: recentProjectsRaw } = await supabase
+    .from("projects")
+    .select("id, title, job_title, updated_at, sessions(count)")
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(3);
+  const recentProjects = (recentProjectsRaw ?? []).map((p: any) => ({
+    id: p.id,
+    title: p.title,
+    job_title: p.job_title ?? null,
+    updated_at: p.updated_at,
+    sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
+  }));
+
   const pendingCount = pendingAll?.length ?? 0;
   const staleList = (pendingAll ?? []).filter((s) => new Date(s.created_at) < since7);
 
@@ -156,6 +172,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     recentSessions: sessions ?? [],
     reportsBySession,
     stalePending: staleList,
+    recentProjects,
     credits: {
       unlimited: orgData?.session_credits_unlimited ?? true,
       total: orgData?.session_credits_total ?? null,
