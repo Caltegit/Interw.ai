@@ -199,7 +199,7 @@ export default function ProjectDetail() {
 
   // Pagination des sessions filtrées
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 50;
+  const [pageSize, setPageSize] = useState(25);
 
   // Visibilité des sélections (chips au-dessus des sessions)
   const DECISION_KEYS = ["none", "rejected", "second_opinion", "shortlisted", "in_progress", "accepted"] as const;
@@ -652,8 +652,8 @@ export default function ProjectDetail() {
     return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
   };
 
-  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / PAGE_SIZE));
-  const pagedSessions = filteredSessions.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
+  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
@@ -1248,8 +1248,27 @@ export default function ProjectDetail() {
               </div>
               )}
 
-              {filteredSessions.length > PAGE_SIZE && (
+              {filteredSessions.length > 10 && (
                 <div className="flex items-center justify-between text-sm pt-2">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={String(pageSize)}
+                      onValueChange={(v) => {
+                        setPageSize(Number(v));
+                        setPage(0);
+                      }}
+                    >
+                      <SelectTrigger className="h-8 w-[80px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[10, 25, 50, 100].map((n) => (
+                          <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-muted-foreground">par page</span>
+                  </div>
                   <span className="text-muted-foreground">
                     Page {page + 1} / {totalSessionsPages}
                   </span>
