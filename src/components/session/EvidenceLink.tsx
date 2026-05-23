@@ -19,7 +19,10 @@ function truncate(text: string, max: number) {
 }
 
 function formatSeconds(s: number) {
-  return `${s.toFixed(2)}s`;
+  const total = Math.max(0, Math.round(s));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 /**
@@ -57,8 +60,11 @@ export function EvidenceLink({
           </Button>
         )}
         {hasMarker && (
-          <span className="shrink-0 not-italic font-medium tabular-nums text-primary">
-            Q{questionNumber} {formatSeconds(startSeconds!)}
+          <span
+            className="shrink-0 not-italic font-medium tabular-nums text-primary"
+            title="Moment dans la réponse à cette question"
+          >
+            Q{questionNumber} · {formatSeconds(startSeconds!)}
           </span>
         )}
         <span className="truncate">« {shortQuote} »</span>
