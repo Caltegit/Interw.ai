@@ -966,6 +966,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         final_score: finalOverallScore,
         method: "hybrid_v1",
       },
+      timestamps_algo_version: 2,
     };
 
     // Filet de sécurité : garantir un personality_profile complet
