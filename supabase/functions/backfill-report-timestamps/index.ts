@@ -152,6 +152,7 @@ serve(async (req) => {
         soft_skills: softSkills,
         red_flags: redFlags,
         paraverbal_analysis: para,
+        question_evaluations: qEvals,
       })
       .eq("id", report.id);
 
