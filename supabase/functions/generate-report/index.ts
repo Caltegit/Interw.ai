@@ -928,6 +928,15 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       para.dimensions.forEach((d: any) => fixEntry(d, "evidence_message_id", "evidence_start_seconds", "evidence_quote"));
     }
 
+    // question_evaluations : chaque entrée a key_quote + evidence_message_id
+    Object.values(questionEvals).forEach((entry: any) => {
+      if (!entry || typeof entry !== "object") return;
+      entry.evidence_start_seconds = resolveStart(
+        entry.evidence_message_id,
+        entry.key_quote,
+      );
+    });
+
     // Note hybride : moyenne note IA globale + score critères pondéré
     const aiOverallScore = Math.min(Math.max(Number(parsed.overall_score) || 0, 0), 100);
     const finalOverallScore =
@@ -957,6 +966,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         final_score: finalOverallScore,
         method: "hybrid_v1",
       },
+      timestamps_algo_version: 2,
     };
 
     // Filet de sécurité : garantir un personality_profile complet

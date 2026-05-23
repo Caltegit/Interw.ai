@@ -56,17 +56,28 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     decisionByName = prof?.full_name || prof?.email || null;
   }
 
-  // Backfill auto des `start_seconds` manquants (rapports anciens).
-  const fitBreakdown = (rRes.data?.stats as any)?.fit_breakdown;
-  if (rRes.data?.id && Array.isArray(fitBreakdown) && fitBreakdown.length > 0) {
-    const needsBackfill = fitBreakdown.some(
-      (e: any) => e?.message_id && (typeof e?.start_seconds !== "number" || e.start_seconds <= 0),
-    );
-    if (needsBackfill) {
-      // Fire-and-forget : on ne bloque pas l'affichage. La requête
-      // sera rafraîchie au prochain refetch (refetchInterval 5s).
+  // Backfill auto des `start_seconds`. Deux cas :
+  // 1) Le rapport n'a pas encore été passé par la version 2 de l'algorithme
+  //    → on relance en mode `force` pour appliquer la règle simple uniforme.
+  // 2) Sinon, on relance uniquement si des entrées avec citation n'ont pas
+  //    encore de timestamp valide.
+  if (rRes.data?.id) {
+    const stats = (rRes.data.stats ?? {}) as Record<string, any>;
+    const algoVersion = Number(stats.timestamps_algo_version) || 0;
+    const fitBreakdown = stats.fit_breakdown;
+    const needsBackfill =
+      Array.isArray(fitBreakdown) &&
+      fitBreakdown.some(
+        (e: any) =>
+          e?.message_id && (typeof e?.start_seconds !== "number" || e.start_seconds <= 0),
+      );
+    if (algoVersion < 2 || needsBackfill) {
+      // Fire-and-forget : on ne bloque pas l'affichage. La requête sera
+      // rafraîchie au prochain refetch (refetchInterval 5s).
       supabase.functions
-        .invoke("backfill-report-timestamps", { body: { session_id: sessionId } })
+        .invoke("backfill-report-timestamps", {
+          body: { session_id: sessionId, force: algoVersion < 2 },
+        })
         .catch(() => {});
     }
   }

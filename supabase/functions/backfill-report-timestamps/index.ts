@@ -128,7 +128,25 @@ serve(async (req) => {
       );
     }
 
+    // question_evaluations : clé_quote + evidence_message_id
+    const qEvals = report.question_evaluations as any;
+    if (qEvals && typeof qEvals === "object") {
+      for (const k of Object.keys(qEvals)) {
+        fixEntry(qEvals[k], {
+          msgKey: "evidence_message_id",
+          tsKey: "evidence_start_seconds",
+          quoteKey: "key_quote",
+        });
+      }
+    }
+
+    // Marqueur de version : permet à l'UI de ne déclencher qu'une seule fois
+    // le recalcul en mode `force` après un changement d'algorithme.
+    stats.timestamps_algo_version = 2;
+
     if (touched === 0) {
+      // On enregistre quand même le marqueur si seul lui a changé.
+      await supabase.from("reports").update({ stats }).eq("id", report.id);
       return json({ ok: true, touched: 0, message: "Aucune mise à jour nécessaire" });
     }
 
@@ -140,6 +158,7 @@ serve(async (req) => {
         soft_skills: softSkills,
         red_flags: redFlags,
         paraverbal_analysis: para,
+        question_evaluations: qEvals,
       })
       .eq("id", report.id);
 
