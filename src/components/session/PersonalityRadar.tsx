@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Brain, ChevronDown, ChevronUp, Play } from "lucide-react";
+import { Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { MomentJumpButton } from "./MomentJumpButton";
 
 interface Evidence {
   quote?: string;
@@ -49,9 +50,10 @@ interface Props {
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
   /** Moyenne du projet (Big Five) à superposer en marqueur. */
   projectAverages?: Partial<Record<keyof Profile, number>>;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
-export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Props) {
+export function PersonalityRadar({ profile, onGoToMessage, projectAverages, questionNumberByMessageId }: Props) {
   const [showLow, setShowLow] = useState(false);
 
   if (!profile) return null;
@@ -118,21 +120,16 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages }: Pr
               {trait!.evidences && trait!.evidences.length > 0 && (
                 <div className="mt-1 space-y-1">
                   {trait!.evidences.slice(0, 2).map((ev, idx) => (
-                    <div key={idx} className="flex items-start gap-1">
-                      <blockquote className="flex-1 border-l-2 border-primary/40 pl-2 text-[11px] italic text-muted-foreground">
+                    <div key={idx}>
+                      <blockquote className="border-l-2 border-primary/40 pl-2 text-[11px] italic text-muted-foreground">
                         « {ev.quote} »
                       </blockquote>
-                      {ev.message_id && onGoToMessage && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-primary"
-                          onClick={() => onGoToMessage(ev.message_id!, ev.start_seconds)}
-                          title="Voir le moment"
-                        >
-                          <Play className="h-3 w-3" />
-                        </Button>
-                      )}
+                      <MomentJumpButton
+                        messageId={ev.message_id}
+                        startSeconds={ev.start_seconds}
+                        questionNumber={ev.message_id ? questionNumberByMessageId?.[ev.message_id] : undefined}
+                        onGoToMessage={onGoToMessage}
+                      />
                     </div>
                   ))}
                 </div>

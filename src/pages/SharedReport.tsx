@@ -143,6 +143,24 @@ export default function SharedReport() {
       });
   }, [candidateVideos, project]);
 
+  const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
+    const projectQuestions = ((project?.questions as any[]) ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const orderById = new Map<string, number>();
+    projectQuestions.forEach((q: any, i: number) => {
+      if (q?.id) orderById.set(q.id, i + 1);
+    });
+    const map: Record<string, number> = {};
+    for (const m of messages as any[]) {
+      if (m?.id && m?.question_id) {
+        const n = orderById.get(m.question_id);
+        if (typeof n === "number") map[m.id] = n;
+      }
+    }
+    return map;
+  }, [messages, project]);
+
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
@@ -342,10 +360,12 @@ export default function SharedReport() {
                     profile={report.personality_profile}
                     onGoToMessage={goToMessage}
                     projectAverages={projectAverages?.bigFive}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
                   <SoftSkillsCard
                     skills={report.soft_skills as any}
                     onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
                 </>
               ) : (
@@ -362,6 +382,7 @@ export default function SharedReport() {
                 <ParaverbalProfileCard
                   analysis={(report as any).paraverbal_analysis}
                   onGoToMessage={goToMessage}
+                  questionNumberByMessageId={questionNumberByMessageId}
                 />
               ) : (
                 <Card>
@@ -377,6 +398,7 @@ export default function SharedReport() {
                 <NonverbalProfileCard
                   analysis={(report as any).nonverbal_analysis}
                   onGoToMessage={goToMessage}
+                  questionNumberByMessageId={questionNumberByMessageId}
                 />
               ) : (
                 <Card>

@@ -1,31 +1,43 @@
-## Problème identifié
-Sur **Aline**, le repère affiché n’est pas absurde côté calcul, mais il est **trompeur visuellement**.
+## Objectif
+Uniformiser l'UI des liens « moment » dans les cartes **Big Five**, **Communication orale** et **Attitude/langage corporel**, pour matcher exactement le rapport IA : petit bouton play + repère **`Qn · m:ss`**.
 
-- **`Q8`** vient du fait que le projet contient bien une 8e question dans l’ordre courant.
-- **`120.30s`** n’est **pas** un temps global de l’entretien : c’est un temps **dans la réponse vidéo de cette question**.
-- Pour la citation visible (`Je dirais que j'ai plutôt un management participatif...`), la réponse source dure environ **180,2 s** et la citation tombe vers les **2/3** du texte, donc le calcul actuel donne logiquement **120,3 s**.
+## Constat actuel
+- `PersonalityRadar` : icône play seule (sans repère Qn · m:ss).
+- `ParaverbalProfileCard` : lien texte « Écouter l'extrait » (pas de play, pas de repère).
+- `NonverbalProfileCard` : lien texte « Voir le moment » dans les dimensions ET dans les points d'attention (pas de play, pas de repère).
 
-Autrement dit : **le calcul semble suivre la règle demandée**, mais **l’affichage donne l’impression d’un bug** parce qu’on ne comprend pas assez clairement ce que représente ce temps.
+## Plan
 
-## Ce que je vais corriger
-1. **Rendre le repère lisible**
-   - remplacer l’affichage brut `120.30s` par un format clair type **`2:00`**
-   - garder le préfixe question, mais sans ambiguïté visuelle
+1. **Créer un petit composant réutilisable** `src/components/session/MomentJumpButton.tsx`
+   - rend : `[▶] Q{n} · {m:ss}` (même style que `EvidenceLink` : `text-primary`, tabular-nums)
+   - props : `messageId`, `startSeconds?`, `questionNumber?`, `onGoToMessage`
+   - tooltip : « Moment dans la réponse à cette question »
+   - format secondes : `m:ss` (réutilise la même logique que `EvidenceLink`)
 
-2. **Clarifier que le temps est relatif à la réponse**
-   - ajuster le libellé/infobulle pour indiquer que le repère correspond au **moment dans la réponse à la question**, pas au chrono global de l’entretien
+2. **`PersonalityRadar.tsx`**
+   - ajouter prop `questionNumberByMessageId?: Record<string, number>`
+   - remplacer le `<Button>` play actuel par `<MomentJumpButton>`
 
-3. **Vérifier le saut vidéo**
-   - contrôler que le clic lance bien le bon clip et se place au bon endroit pour ce cas précis d’Aline
-   - si besoin, réduire l’écart introduit par la marge de lecture avant le moment
+3. **`ParaverbalProfileCard.tsx`**
+   - étendre l'interface `ParaverbalDim` : ajouter `evidence_start_seconds?: number` et `evidence_quote?: string` (déjà présents en base via `backfill-report-timestamps`)
+   - ajouter prop `questionNumberByMessageId?: Record<string, number>`
+   - remplacer le lien « Écouter l'extrait » par `<MomentJumpButton>`
 
-4. **Sécuriser le numéro de question**
-   - vérifier le mapping quand plusieurs questions ont un `order_index` identique, pour éviter les numéros surprenants
+4. **`NonverbalProfileCard.tsx`**
+   - étendre `NonverbalDim` : `evidence_start_seconds?: number`
+   - étendre `MicroTension` : `start_seconds?: number`
+   - ajouter prop `questionNumberByMessageId?: Record<string, number>`
+   - remplacer les liens « Voir le moment » (dimensions ET points d'attention) par `<MomentJumpButton>`
 
-## Détail technique
-- Frontend ciblé : `src/components/session/EvidenceLink.tsx`, `src/pages/SessionDetail.tsx`, éventuellement `src/components/session/SessionVideoNavigator.tsx`
-- Vérification logique : repère calculé à partir de `resolve-start-seconds.ts`
-- Pas de changement backend prévu tant que le calcul lui-même reste cohérent avec la méthode mot → pourcentage → durée
+5. **Câblage**
+   - `SessionDetail.tsx` et `SharedReport.tsx` : passer `questionNumberByMessageId` (déjà calculé dans `SessionDetail`, à reproduire dans `SharedReport`) aux 3 cartes.
 
-## Résultat attendu
-Le recruteur doit lire immédiatement quelque chose comme **`Q8 2:00`** et comprendre que c’est **le moment dans la réponse à cette question**, avec un clic qui arrive visiblement au bon passage.
+## Hors scope
+- Aucun changement backend.
+- Le calcul des `evidence_start_seconds` est déjà fait par `generate-report` et `backfill-report-timestamps` : on ne touche pas à la logique.
+- Aucun changement du lecteur vidéo lui-même.
+
+## Vérification
+- Ouvrir une session avec données présentes dans chacune des 3 cartes.
+- Vérifier visuellement que chaque ligne affiche bien `[▶] Qn · m:ss` au même style que le rapport IA.
+- Cliquer un repère → le lecteur saute au bon clip et au bon moment.
