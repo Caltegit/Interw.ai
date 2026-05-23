@@ -55,7 +55,7 @@ export function EvidenceLink({
 
   return (
     <div className={compact ? "mt-1" : "mt-2"}>
-      <blockquote className="flex items-center gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
+      <blockquote className="flex items-start gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
         {canJump && hasMarker ? (
           <button
             type="button"
@@ -78,7 +78,7 @@ export function EvidenceLink({
             <Play className="h-3 w-3 fill-current" />
           </button>
         ) : null}
-        <span className="truncate">« {shortQuote} »</span>
+        <span className="min-w-0 leading-snug">« {shortQuote} »</span>
       </blockquote>
     </div>
   );
