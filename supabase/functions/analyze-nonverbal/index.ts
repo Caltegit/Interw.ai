@@ -235,16 +235,19 @@ serve(async (req) => {
       },
     ];
     let uploaded = 0;
+    const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
         const res = await fetch(seg.video_url);
         if (!res.ok) {
           console.warn("[nonverbal] fetch segment failed", res.status, seg.message_id);
+          skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });
           continue;
         }
         const blob = await res.blob();
         if (blob.size > MAX_BYTES_PER_SEGMENT) {
           console.warn("[nonverbal] segment too large", seg.message_id, blob.size);
+          skippedSegments.push({ message_id: seg.message_id, reason: "too_large", details: `${Math.round(blob.size / 1024 / 1024)} Mo` });
           continue;
         }
         const buf = new Uint8Array(await blob.arrayBuffer());
@@ -261,6 +264,7 @@ serve(async (req) => {
         uploaded += 1;
       } catch (e) {
         console.warn("[nonverbal] segment skipped", e);
+        skippedSegments.push({ message_id: seg.message_id, reason: "exception", details: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -271,11 +275,12 @@ serve(async (req) => {
           nonverbal_analysis: {
             status: "skipped", attempt,
             reason: "not_enough_video",
+            skipped_segments: skippedSegments,
             failed_at: new Date().toISOString(),
           },
         })
         .eq("id", report.id);
-      return new Response(JSON.stringify({ skipped: "not_enough_video" }), {
+      return new Response(JSON.stringify({ skipped: "not_enough_video", skipped_segments: skippedSegments }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
