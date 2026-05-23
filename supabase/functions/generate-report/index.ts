@@ -1021,7 +1021,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     const personalityProfile = buildFallbackPersonalityProfile(incomingProfile);
 
     // Save report
-    const { data: insertedReport, error: reportError } = await supabase.from("reports").insert({
+    const { data: insertedReport, error: reportError } = await supabase.from("reports").upsert({
       session_id,
       executive_summary: parsed.executive_summary || "",
       executive_summary_short: parsed.verdict_headline || parsed.executive_summary_short || null,
@@ -1039,7 +1039,8 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       followup_questions: parsed.followup_questions || null,
       highlight_clips: highlightClips,
       stats,
-    }).select("id").single();
+      generated_at: new Date().toISOString(),
+    }, { onConflict: "session_id" }).select("id").single();
 
     if (reportError) {
       console.error("Report insert error:", reportError);
