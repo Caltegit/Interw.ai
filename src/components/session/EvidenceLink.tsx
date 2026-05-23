@@ -49,7 +49,7 @@ export function EvidenceLink({
 }: EvidenceLinkProps) {
   if (!quote) return null;
   const canJump = !!(messageId && onGoToMessage);
-  const shortQuote = truncate(quote, MAX_QUOTE_CHARS);
+  const shortQuote = truncate(quote);
   const hasMarker =
     typeof questionNumber === "number" && typeof startSeconds === "number" && startSeconds >= 0;
 
