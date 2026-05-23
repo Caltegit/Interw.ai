@@ -340,202 +340,110 @@ Champs secondaires (toujours produits, format inchangé) :
 - soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
 - highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_report",
-              description: "Produit le rapport de décision structuré",
-              parameters: {
-                type: "object",
-                properties: {
-                  // ===== Nouveaux champs orientés décision =====
-                  verdict_headline: {
-                    type: "string",
-                    description: "Une phrase de manager, max 100 caractères",
-                  },
-                  decision_drivers: {
-                    type: "array",
-                    description: "2 à 4 raisons clés derrière la recommandation",
-                    items: {
-                      type: "object",
-                      properties: {
-                        label: { type: "string", description: "Max 80 caractères" },
-                        sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
-                        quote: { type: "string" },
-                        message_id: { type: "string" },
-                        start_seconds: { type: "number" },
-                      },
-                      required: ["label", "sentiment"],
-                    },
-                  },
-                  fit_breakdown: {
-                    type: "array",
-                    description: "Une entrée par critère du poste",
-                    items: {
-                      type: "object",
-                      properties: {
-                        criterion: { type: "string", description: "Label exact du critère" },
-                        score: { type: "number", minimum: 0, maximum: 100 },
-                        level: { type: "string", enum: ["excellent", "solid", "partial", "gap"] },
-                        statement: { type: "string", description: "1 phrase concrète" },
-                        quote: { type: "string" },
-                        message_id: { type: "string" },
-                        start_seconds: { type: "number" },
-                      },
-                      required: ["criterion", "score", "statement"],
-                    },
-                  },
-                  signals: {
-                    type: "array",
-                    description: "Signaux à creuser, fusion red_flags + followup_questions",
-                    items: {
-                      type: "object",
-                      properties: {
-                        label: { type: "string" },
-                        description: { type: "string" },
-                        severity: { type: "string", enum: ["low", "medium", "high"] },
-                        quote: { type: "string" },
-                        message_id: { type: "string" },
-                        start_seconds: { type: "number" },
-                        suggested_question: {
-                          type: "string",
-                          description: "Question précise à poser en entretien physique",
-                        },
-                      },
-                      required: ["label", "severity"],
-                    },
-                  },
-                  communication_profile: {
-                    type: "object",
-                    properties: {
-                      clarity: dimensionSchema(),
-                      structure: dimensionSchema(),
-                      concision: dimensionSchema(),
-                      posture: dimensionSchema(),
-                      energy: dimensionSchema(),
-                    },
-                  },
-                  // ===== Champs conservés (legacy) =====
-                  executive_summary: { type: "string" },
-                  overall_score: { type: "number", minimum: 0, maximum: 100 },
-                  overall_grade: { type: "string", enum: ["A", "B", "C", "D", "E"] },
-                  recommendation: { type: "string", enum: ["strong_yes", "yes", "maybe", "no"] },
-                  question_evaluations: {
-                    type: "object",
-                    additionalProperties: {
-                      type: "object",
-                      properties: {
-                        question: { type: "string" },
-                        score: { type: "number", minimum: 0, maximum: 10 },
-                        summary: { type: "string", description: "1 phrase qui résume la réponse" },
-                        comment: { type: "string" },
-                        key_quote: { type: "string" },
-                        evidence_message_id: { type: "string" },
-                        evidence_start_seconds: { type: "number" },
-                        depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
-                        had_followup: { type: "boolean" },
-                        followup_helped: { type: "boolean" },
-                      },
-                    },
-                  },
-                  personality_profile: personalityProfileSchema(),
-                  soft_skills: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        skill: { type: "string" },
-                        score: { type: "number", minimum: 0, maximum: 10 },
-                        quote: { type: "string" },
-                        evidence_message_id: { type: "string" },
-                        evidence_start_seconds: { type: "number" },
-                      },
-                      required: ["skill", "quote"],
-                    },
-                  },
-                  highlights: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        question_index: { type: "integer" },
-                        kind: { type: "string", enum: ["force", "personnalite", "vigilance"] },
-                        label: { type: "string" },
-                        why: { type: "string" },
-                        start_seconds: { type: "number" },
-                        end_seconds: { type: "number" },
-                      },
-                      required: ["question_index", "kind", "label", "start_seconds", "end_seconds"],
-                    },
-                  },
-                },
-                required: [
-                  "verdict_headline",
-                  "decision_drivers",
-                  "fit_breakdown",
-                  "executive_summary",
-                  "overall_score",
-                  "recommendation",
-                  "question_evaluations",
-                  "communication_profile",
-                  "personality_profile",
-                ],
-              },
+    // Construit le body commun (tools/messages) — on ne change que le modèle entre les essais.
+    const buildBody = (model: string) => ({
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "generate_report",
+            description: "Produit le rapport de décision structuré",
+            parameters: {
+              type: "object",
+              properties: {
+// ... keep existing code (tool parameters schema)
+              ],
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_report" } },
-      }),
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "generate_report" } },
     });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requêtes IA atteinte. Réessayez dans quelques instants." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Retry/fallback :
+    //  - tentative 1 : gemini-2.5-pro
+    //  - tentative 2 : gemini-2.5-pro (parfois 502 transitoire côté provider)
+    //  - tentative 3 : fallback gemini-2.5-flash (plus rapide, supporte le tool calling)
+    const attempts: Array<{ model: string; label: string }> = [
+      { model: "google/gemini-2.5-pro", label: "pro-1" },
+      { model: "google/gemini-2.5-pro", label: "pro-2" },
+      { model: "google/gemini-2.5-flash", label: "flash-fallback" },
+    ];
+
+    let parsed: any = null;
+    let lastFailure: { status: number; reason: string; detail: string } | null = null;
+
+    for (const attempt of attempts) {
+      try {
+        const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(buildBody(attempt.model)),
         });
+
+        if (!aiResponse.ok) {
+          const errText = await aiResponse.text();
+          console.error(`[generate-report] AI ${attempt.label} HTTP ${aiResponse.status}:`, errText.slice(0, 500));
+          // 429 / 402 : pas de retry, on remonte tout de suite.
+          if (aiResponse.status === 429) {
+            return new Response(JSON.stringify({ error: "Limite de requêtes IA atteinte. Réessayez dans quelques instants." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (aiResponse.status === 402) {
+            return new Response(JSON.stringify({ error: "Crédits IA épuisés. Rechargez l'espace de travail." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          lastFailure = { status: aiResponse.status, reason: "http_error", detail: errText.slice(0, 200) };
+          continue; // 5xx → retry
+        }
+
+        const aiData = await aiResponse.json();
+        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+        const argsStr = toolCall?.function?.arguments;
+
+        if (!argsStr) {
+          // Cas typique : HTTP 200 avec `error` inline (provider_unavailable / upstream timeout)
+          // ou réponse vide après reasoning. On retry.
+          const inlineErr = aiData.choices?.[0]?.error;
+          const reason = inlineErr?.metadata?.error_type || inlineErr?.message || "no_tool_call";
+          console.error(`[generate-report] AI ${attempt.label} no tool_call. reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
+          lastFailure = { status: 502, reason: "no_tool_call", detail: String(reason) };
+          continue;
+        }
+
+        parsed = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
+        console.log(`[generate-report] AI ${attempt.label} OK`);
+        break;
+      } catch (e) {
+        console.error(`[generate-report] AI ${attempt.label} exception:`, e);
+        lastFailure = { status: 500, reason: "exception", detail: e instanceof Error ? e.message : String(e) };
+        continue;
       }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Crédits IA épuisés. Rechargez l'espace de travail." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "AI evaluation failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
-    const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    let parsed: any;
-    try {
-      const argsStr = toolCall?.function?.arguments;
-      if (!argsStr) throw new Error("No tool call returned");
-      parsed = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
-    } catch (e) {
-      console.error("Failed to parse AI tool arguments:", e, JSON.stringify(aiData));
-      return new Response(JSON.stringify({ error: "Invalid AI report format" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!parsed) {
+      return new Response(
+        JSON.stringify({
+          error: "AI evaluation failed after retries",
+          detail: lastFailure?.detail ?? "unknown",
+          reason: lastFailure?.reason ?? "unknown",
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
 
     // ============================================================
     // NOUVEAU : fit_breakdown — mappé sur les critères réels du projet
