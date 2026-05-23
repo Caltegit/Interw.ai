@@ -111,16 +111,13 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
             <ul className="space-y-1.5">
               {tensions.map((t, i) => (
                 <li key={i} className="text-xs text-muted-foreground">
-                  <span>{t.description}</span>
-                  {onGoToMessage && t.message_id && (
-                    <button
-                      type="button"
-                      onClick={() => onGoToMessage(t.message_id)}
-                      className="ml-2 text-primary hover:underline"
-                    >
-                      Voir le moment
-                    </button>
-                  )}
+                  <div>{t.description}</div>
+                  <MomentJumpButton
+                    messageId={t.message_id}
+                    startSeconds={t.start_seconds}
+                    questionNumber={t.message_id ? questionNumberByMessageId?.[t.message_id] : undefined}
+                    onGoToMessage={onGoToMessage}
+                  />
                 </li>
               ))}
             </ul>
