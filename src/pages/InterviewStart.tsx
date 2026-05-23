@@ -1482,8 +1482,17 @@ export default function InterviewStart() {
           preferredAudio = localStorage.getItem("interview.preferredAudioDeviceId");
           preferredVideo = localStorage.getItem("interview.preferredVideoDeviceId");
         } catch { /* ignore */ }
+        // Contraintes vidéo : 640x480 @ 24 fps suffisent largement pour l'analyse
+        // non-verbale et limitent le poids des segments envoyés à l'IA.
+        const videoBase: MediaTrackConstraints = {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 24, max: 30 },
+        };
         const constraints: MediaStreamConstraints = {
-          video: preferredVideo ? { deviceId: { exact: preferredVideo } } : true,
+          video: preferredVideo
+            ? { ...videoBase, deviceId: { exact: preferredVideo } }
+            : videoBase,
           audio: preferredAudio ? { deviceId: { exact: preferredAudio } } : true,
         };
         let stream: MediaStream;
@@ -1491,7 +1500,7 @@ export default function InterviewStart() {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch {
           // Fallback : si le device préféré n'est plus disponible, on retombe sur le défaut système
-          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: true });
         }
         streamRef.current = stream;
       }
@@ -1566,7 +1575,7 @@ export default function InterviewStart() {
       chunkMimeRef.current = mimeType ?? "video/webm";
       const options: MediaRecorderOptions = {
         ...(mimeType ? { mimeType } : {}),
-        videoBitsPerSecond: 800_000,
+        videoBitsPerSecond: 500_000,
         audioBitsPerSecond: 64_000,
       };
       const recorder = new MediaRecorder(streamRef.current, options);

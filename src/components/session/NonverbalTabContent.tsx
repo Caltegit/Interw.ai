@@ -22,8 +22,15 @@ const STATUS_LABELS: Record<string, string> = {
   rate_limited: "Trop de requêtes vers l'IA. Réessayez dans quelques minutes.",
   no_credits:
     "Crédits IA épuisés. Ajoutez des crédits dans Workspace → Usage pour relancer l'analyse.",
-  failed: "L'analyse corporelle a échoué. Réessayez ci-dessous.",
-  skipped: "Analyse corporelle non disponible pour cette session.",
+  failed: "L'analyse corporelle a échoué.",
+};
+
+const REASON_LABELS: Record<string, string> = {
+  no_video: "Aucun segment vidéo trouvé pour cette session.",
+  not_enough_video:
+    "Les segments vidéo étaient trop volumineux ou indisponibles. Vous pouvez relancer l'analyse.",
+  video_not_recorded:
+    "L'enregistrement vidéo n'était pas activé pour ce projet.",
 };
 
 export function NonverbalTabContent({ analysis, sessionId, onGoToMessage }: Props) {
@@ -36,8 +43,17 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage }: Prop
   }
 
   const status = (analysis as any)?.status as string | undefined;
+  const reason = (analysis as any)?.reason as string | undefined;
+  const errorDetail = (analysis as any)?.error as string | undefined;
   const isRunning = status === "running";
-  const canRetry = !isRunning && status !== "skipped";
+  // Bouton toujours visible sauf quand l'enregistrement n'a jamais été activé
+  // (rien à relancer) ou quand une analyse est déjà en cours.
+  const canRetry = !isRunning && reason !== "video_not_recorded";
+
+  const message =
+    (reason && REASON_LABELS[reason]) ||
+    (status && STATUS_LABELS[status]) ||
+    "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien.";
 
   const handleRetry = async () => {
     setRetrying(true);
@@ -65,11 +81,7 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage }: Prop
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
         {isRunning && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-        <p>
-          {status
-            ? STATUS_LABELS[status] ?? "Analyse corporelle non disponible."
-            : "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien."}
-        </p>
+        <p>{message}</p>
         {canRetry && (
           <Button
             variant="outline"
@@ -84,6 +96,9 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage }: Prop
             )}
             Relancer l'analyse
           </Button>
+        )}
+        {status === "failed" && errorDetail && (
+          <p className="text-xs text-muted-foreground/70">Détail : {errorDetail}</p>
         )}
       </CardContent>
     </Card>
