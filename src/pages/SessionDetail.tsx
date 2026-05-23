@@ -602,6 +602,7 @@ export default function SessionDetail() {
                   analysis={(report as any).paraverbal_analysis}
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
+                  transcriptsByMessageId={transcriptsByMessageId}
                 />
               ) : (
                 <Card>
@@ -672,6 +673,7 @@ export default function SessionDetail() {
                 sessionId={id!}
                 onGoToMessage={goToMessage}
                 questionNumberByMessageId={questionNumberByMessageId}
+                transcriptsByMessageId={transcriptsByMessageId}
               />
             </TabsContent>
 
