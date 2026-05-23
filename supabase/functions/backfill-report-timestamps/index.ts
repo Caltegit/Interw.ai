@@ -140,7 +140,13 @@ serve(async (req) => {
       }
     }
 
+    // Marqueur de version : permet à l'UI de ne déclencher qu'une seule fois
+    // le recalcul en mode `force` après un changement d'algorithme.
+    stats.timestamps_algo_version = 2;
+
     if (touched === 0) {
+      // On enregistre quand même le marqueur si seul lui a changé.
+      await supabase.from("reports").update({ stats }).eq("id", report.id);
       return json({ ok: true, touched: 0, message: "Aucune mise à jour nécessaire" });
     }
 
