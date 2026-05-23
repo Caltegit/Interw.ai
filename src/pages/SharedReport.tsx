@@ -161,6 +161,14 @@ export default function SharedReport() {
     return map;
   }, [messages, project]);
 
+  const transcriptsByMessageId = useMemo<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const m of messages as any[]) {
+      if (m?.id && typeof m?.content === "string") map[m.id] = m.content;
+    }
+    return map;
+  }, [messages]);
+
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
