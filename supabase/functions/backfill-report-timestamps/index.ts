@@ -128,6 +128,18 @@ serve(async (req) => {
       );
     }
 
+    // question_evaluations : clé_quote + evidence_message_id
+    const qEvals = report.question_evaluations as any;
+    if (qEvals && typeof qEvals === "object") {
+      for (const k of Object.keys(qEvals)) {
+        fixEntry(qEvals[k], {
+          msgKey: "evidence_message_id",
+          tsKey: "evidence_start_seconds",
+          quoteKey: "key_quote",
+        });
+      }
+    }
+
     if (touched === 0) {
       return json({ ok: true, touched: 0, message: "Aucune mise à jour nécessaire" });
     }
