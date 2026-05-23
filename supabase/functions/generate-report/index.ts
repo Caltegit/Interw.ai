@@ -99,7 +99,7 @@ serve(async (req) => {
   }
 
   try {
-    const { session_id } = await req.json();
+    const { session_id, force: forceRegenerate } = await req.json();
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id is required" }), {
         status: 400,
