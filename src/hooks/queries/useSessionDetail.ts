@@ -172,17 +172,19 @@ export function useRegenerateReport(sessionId: string | undefined) {
   return useMutation({
     mutationFn: async () => {
       if (!sessionId) throw new Error("Session manquante");
-      // Supprime l'ancien rapport pour permettre la régénération
-      const { error: delErr } = await supabase
-        .from("reports")
-        .delete()
-        .eq("session_id", sessionId);
-      if (delErr) throw delErr;
+      // On garde l'ancien rapport jusqu'au succès de la regénération
+      // (upsert côté edge function). Si l'IA échoue, l'utilisateur ne se
+      // retrouve pas avec un écran vide.
       const { error } = await supabase.functions.invoke("generate-report", {
-        body: { session_id: sessionId },
+        body: { session_id: sessionId, force: true },
       });
       if (error) throw error;
     },
+    onSuccess: () => {
+      if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
+    },
+  });
+}
     onSuccess: () => {
       if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
     },
