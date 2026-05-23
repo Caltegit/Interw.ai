@@ -356,7 +356,135 @@ Champs secondaires (toujours produits, format inchangé) :
             parameters: {
               type: "object",
               properties: {
-// ... keep existing code (tool parameters schema)
+                verdict_headline: {
+                  type: "string",
+                  description: "Une phrase de manager, max 100 caractères",
+                },
+                decision_drivers: {
+                  type: "array",
+                  description: "2 à 4 raisons clés derrière la recommandation",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: { type: "string", description: "Max 80 caractères" },
+                      sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+                      quote: { type: "string" },
+                      message_id: { type: "string" },
+                      start_seconds: { type: "number" },
+                    },
+                    required: ["label", "sentiment"],
+                  },
+                },
+                fit_breakdown: {
+                  type: "array",
+                  description: "Une entrée par critère du poste",
+                  items: {
+                    type: "object",
+                    properties: {
+                      criterion: { type: "string", description: "Label exact du critère" },
+                      score: { type: "number", minimum: 0, maximum: 100 },
+                      level: { type: "string", enum: ["excellent", "solid", "partial", "gap"] },
+                      statement: { type: "string", description: "1 phrase concrète" },
+                      quote: { type: "string" },
+                      message_id: { type: "string" },
+                      start_seconds: { type: "number" },
+                    },
+                    required: ["criterion", "score", "statement"],
+                  },
+                },
+                signals: {
+                  type: "array",
+                  description: "Signaux à creuser, fusion red_flags + followup_questions",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: { type: "string" },
+                      description: { type: "string" },
+                      severity: { type: "string", enum: ["low", "medium", "high"] },
+                      quote: { type: "string" },
+                      message_id: { type: "string" },
+                      start_seconds: { type: "number" },
+                      suggested_question: {
+                        type: "string",
+                        description: "Question précise à poser en entretien physique",
+                      },
+                    },
+                    required: ["label", "severity"],
+                  },
+                },
+                communication_profile: {
+                  type: "object",
+                  properties: {
+                    clarity: dimensionSchema(),
+                    structure: dimensionSchema(),
+                    concision: dimensionSchema(),
+                    posture: dimensionSchema(),
+                    energy: dimensionSchema(),
+                  },
+                },
+                executive_summary: { type: "string" },
+                overall_score: { type: "number", minimum: 0, maximum: 100 },
+                overall_grade: { type: "string", enum: ["A", "B", "C", "D", "E"] },
+                recommendation: { type: "string", enum: ["strong_yes", "yes", "maybe", "no"] },
+                question_evaluations: {
+                  type: "object",
+                  additionalProperties: {
+                    type: "object",
+                    properties: {
+                      question: { type: "string" },
+                      score: { type: "number", minimum: 0, maximum: 10 },
+                      summary: { type: "string", description: "1 phrase qui résume la réponse" },
+                      comment: { type: "string" },
+                      key_quote: { type: "string" },
+                      evidence_message_id: { type: "string" },
+                      evidence_start_seconds: { type: "number" },
+                      depth_level: { type: "string", enum: ["surface", "concret", "expert"] },
+                      had_followup: { type: "boolean" },
+                      followup_helped: { type: "boolean" },
+                    },
+                  },
+                },
+                personality_profile: personalityProfileSchema(),
+                soft_skills: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      skill: { type: "string" },
+                      score: { type: "number", minimum: 0, maximum: 10 },
+                      quote: { type: "string" },
+                      evidence_message_id: { type: "string" },
+                      evidence_start_seconds: { type: "number" },
+                    },
+                    required: ["skill", "quote"],
+                  },
+                },
+                highlights: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      question_index: { type: "integer" },
+                      kind: { type: "string", enum: ["force", "personnalite", "vigilance"] },
+                      label: { type: "string" },
+                      why: { type: "string" },
+                      start_seconds: { type: "number" },
+                      end_seconds: { type: "number" },
+                    },
+                    required: ["question_index", "kind", "label", "start_seconds", "end_seconds"],
+                  },
+                },
+              },
+              required: [
+                "verdict_headline",
+                "decision_drivers",
+                "fit_breakdown",
+                "executive_summary",
+                "overall_score",
+                "recommendation",
+                "question_evaluations",
+                "communication_profile",
+                "personality_profile",
               ],
             },
           },
