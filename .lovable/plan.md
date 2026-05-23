@@ -1,22 +1,31 @@
-## Objectif
-Garantir que le rapport déjà affiché reste visible pendant toute la durée d'une régénération, même si une requête intermédiaire renvoie temporairement `null`.
+## Problème identifié
+Sur **Aline**, le repère affiché n’est pas absurde côté calcul, mais il est **trompeur visuellement**.
 
-## Diagnostic
-Côté backend, `generate-report` n'efface plus l'ancien rapport (upsert) et `useRegenerateReport` ne le supprime plus non plus. Pourtant l'utilisateur voit le rapport disparaître. Le risque restant est côté UI : `useSessionDetail` rafraîchit toutes les 5 s et un `report` momentanément `null` (refetch incomplet, erreur réseau ponctuelle, état pendant l'upsert d'une autre fonction d'analyse) fait basculer la page sur la carte « Rapport non encore généré ».
+- **`Q8`** vient du fait que le projet contient bien une 8e question dans l’ordre courant.
+- **`120.30s`** n’est **pas** un temps global de l’entretien : c’est un temps **dans la réponse vidéo de cette question**.
+- Pour la citation visible (`Je dirais que j'ai plutôt un management participatif...`), la réponse source dure environ **180,2 s** et la citation tombe vers les **2/3** du texte, donc le calcul actuel donne logiquement **120,3 s**.
 
-## Ce que je vais faire
-1. Dans `SessionDetail`, mémoriser le dernier rapport non vide vu pour la session courante.
-2. Tant que la régénération est en cours **ou** tant que la requête est en cours de rafraîchissement, afficher ce dernier rapport plutôt que l'écran vide.
-3. Ajouter un repère visuel discret « Régénération en cours… » au-dessus des cartes pendant `regenerate.isPending`, pour que l'utilisateur sache que ce qu'il voit est l'ancien rapport.
-4. Mettre à jour le cache et la mémoire locale dès que le nouveau rapport arrive afin que l'affichage bascule sans flash.
+Autrement dit : **le calcul semble suivre la règle demandée**, mais **l’affichage donne l’impression d’un bug** parce qu’on ne comprend pas assez clairement ce que représente ce temps.
 
-## Détails techniques
-- Fichier modifié : `src/pages/SessionDetail.tsx`.
-- Utiliser un `useRef` + `useEffect` pour conserver le dernier `report` non nul lié au `sessionId` courant ; réinitialiser quand le `sessionId` change.
-- Calculer `displayReport = data?.report ?? lastReportRef.current` et l'utiliser dans tous les rendus déjà conditionnés sur `report`.
-- Le bandeau « Régénération en cours… » s'appuie sur `regenerate.isPending`, en réutilisant les tokens existants (couleur primary, fond léger).
+## Ce que je vais corriger
+1. **Rendre le repère lisible**
+   - remplacer l’affichage brut `120.30s` par un format clair type **`2:00`**
+   - garder le préfixe question, mais sans ambiguïté visuelle
 
-## Périmètre
-- Aucun changement côté edge functions ni base de données.
-- Aucune modification des cartes existantes.
-- Comportement inchangé quand il n'y a aucun rapport (premier passage) : on continue d'afficher la carte « Rapport non encore généré ».
+2. **Clarifier que le temps est relatif à la réponse**
+   - ajuster le libellé/infobulle pour indiquer que le repère correspond au **moment dans la réponse à la question**, pas au chrono global de l’entretien
+
+3. **Vérifier le saut vidéo**
+   - contrôler que le clic lance bien le bon clip et se place au bon endroit pour ce cas précis d’Aline
+   - si besoin, réduire l’écart introduit par la marge de lecture avant le moment
+
+4. **Sécuriser le numéro de question**
+   - vérifier le mapping quand plusieurs questions ont un `order_index` identique, pour éviter les numéros surprenants
+
+## Détail technique
+- Frontend ciblé : `src/components/session/EvidenceLink.tsx`, `src/pages/SessionDetail.tsx`, éventuellement `src/components/session/SessionVideoNavigator.tsx`
+- Vérification logique : repère calculé à partir de `resolve-start-seconds.ts`
+- Pas de changement backend prévu tant que le calcul lui-même reste cohérent avec la méthode mot → pourcentage → durée
+
+## Résultat attendu
+Le recruteur doit lire immédiatement quelque chose comme **`Q8 2:00`** et comprendre que c’est **le moment dans la réponse à cette question**, avec un clic qui arrive visiblement au bon passage.
