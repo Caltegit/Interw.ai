@@ -579,6 +579,7 @@ export default function SessionDetail() {
                     profile={report.personality_profile}
                     onGoToMessage={goToMessage}
                     projectAverages={projectAverages?.bigFive}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
                   <SoftSkillsCard
                     skills={report.soft_skills as any}
@@ -600,6 +601,7 @@ export default function SessionDetail() {
                 <ParaverbalProfileCard
                   analysis={(report as any).paraverbal_analysis}
                   onGoToMessage={goToMessage}
+                  questionNumberByMessageId={questionNumberByMessageId}
                 />
               ) : (
                 <Card>
@@ -669,6 +671,7 @@ export default function SessionDetail() {
                 analysis={(report as any)?.nonverbal_analysis}
                 sessionId={id!}
                 onGoToMessage={goToMessage}
+                questionNumberByMessageId={questionNumberByMessageId}
               />
             </TabsContent>
 

@@ -15,6 +15,7 @@ interface Props {
   analysis?: NonverbalAnalysis | null;
   sessionId: string;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -33,13 +34,19 @@ const REASON_LABELS: Record<string, string> = {
     "L'enregistrement vidéo n'était pas activé pour ce projet.",
 };
 
-export function NonverbalTabContent({ analysis, sessionId, onGoToMessage }: Props) {
+export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
 
   if (analysis?.profile) {
-    return <NonverbalProfileCard analysis={analysis} onGoToMessage={onGoToMessage} />;
+    return (
+      <NonverbalProfileCard
+        analysis={analysis}
+        onGoToMessage={onGoToMessage}
+        questionNumberByMessageId={questionNumberByMessageId}
+      />
+    );
   }
 
   const status = (analysis as any)?.status as string | undefined;
