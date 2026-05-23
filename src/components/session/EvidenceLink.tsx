@@ -47,26 +47,28 @@ export function EvidenceLink({
   return (
     <div className={compact ? "mt-1" : "mt-2"}>
       <blockquote className="flex items-center gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
-        {canJump && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 shrink-0 text-primary hover:text-primary"
+        {canJump && hasMarker ? (
+          <button
+            type="button"
+            onClick={() => onGoToMessage!(messageId!, startSeconds ?? undefined)}
+            title="Moment dans la réponse à cette question"
+            aria-label="Voir le moment dans la vidéo"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 not-italic font-medium text-primary tabular-nums transition-colors hover:bg-primary/10 hover:border-primary/50"
+          >
+            <Play className="h-3 w-3 fill-current" />
+            Q{questionNumber} · {formatSeconds(startSeconds!)}
+          </button>
+        ) : canJump ? (
+          <button
+            type="button"
             onClick={() => onGoToMessage!(messageId!, startSeconds ?? undefined)}
             title="Voir le moment dans la vidéo"
             aria-label="Voir le moment dans la vidéo"
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 hover:border-primary/50"
           >
-            <Play className="h-3 w-3" />
-          </Button>
-        )}
-        {hasMarker && (
-          <span
-            className="shrink-0 not-italic font-medium tabular-nums text-primary"
-            title="Moment dans la réponse à cette question"
-          >
-            Q{questionNumber} · {formatSeconds(startSeconds!)}
-          </span>
-        )}
+            <Play className="h-3 w-3 fill-current" />
+          </button>
+        ) : null}
         <span className="truncate">« {shortQuote} »</span>
       </blockquote>
     </div>

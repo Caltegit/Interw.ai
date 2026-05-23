@@ -34,11 +34,11 @@ export function MomentJumpButton({
       onClick={() => onGoToMessage(messageId, hasTime ? startSeconds! : undefined)}
       title="Moment dans la réponse à cette question"
       className={
-        "mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline tabular-nums " +
+        "mt-1 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary tabular-nums transition-colors hover:bg-primary/10 hover:border-primary/50 " +
         (className ?? "")
       }
     >
-      <Play className="h-3 w-3" />
+      <Play className="h-3 w-3 fill-current" />
       {typeof questionNumber === "number" ? `Q${questionNumber}` : "Voir"}
       {hasTime ? ` · ${formatSeconds(startSeconds!)}` : ""}
     </button>
