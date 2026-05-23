@@ -26,6 +26,7 @@ interface Props {
   }> | null;
   legacyFollowups?: Array<{ question: string; rationale?: string }> | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
 const sevTone: Record<string, string> = {
@@ -39,7 +40,7 @@ const sevLabel: Record<string, string> = {
   high: "Important",
 };
 
-export function SignalsCard({ signals, legacyRedFlags, legacyFollowups, onGoToMessage }: Props) {
+export function SignalsCard({ signals, legacyRedFlags, legacyFollowups, onGoToMessage, questionNumberByMessageId }: Props) {
   let list: Signal[] = [];
   if (signals && signals.length > 0) {
     list = signals;
@@ -94,6 +95,7 @@ export function SignalsCard({ signals, legacyRedFlags, legacyFollowups, onGoToMe
                 quote={s.quote}
                 messageId={s.message_id}
                 startSeconds={s.start_seconds}
+                questionNumber={s.message_id ? questionNumberByMessageId?.[s.message_id] : undefined}
                 onGoToMessage={onGoToMessage}
                 compact
               />

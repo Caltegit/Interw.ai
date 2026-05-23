@@ -5,6 +5,7 @@ interface EvidenceLinkProps {
   quote?: string | null;
   messageId?: string | null;
   startSeconds?: number | null;
+  questionNumber?: number | null;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
   compact?: boolean;
 }
@@ -17,14 +18,28 @@ function truncate(text: string, max: number) {
   return clean.slice(0, max).trimEnd() + "…";
 }
 
+function formatSeconds(s: number) {
+  return `${s.toFixed(2)}s`;
+}
+
 /**
  * Affiche une citation du candidat avec, si possible, un bouton play en tête
- * de phrase pour aller au moment exact dans la vidéo.
+ * de phrase pour aller au moment exact dans la vidéo, accompagné du repère
+ * "Qn t.ss" (numéro de question + position dans la réponse).
  */
-export function EvidenceLink({ quote, messageId, startSeconds, onGoToMessage, compact = false }: EvidenceLinkProps) {
+export function EvidenceLink({
+  quote,
+  messageId,
+  startSeconds,
+  questionNumber,
+  onGoToMessage,
+  compact = false,
+}: EvidenceLinkProps) {
   if (!quote) return null;
   const canJump = !!(messageId && onGoToMessage);
   const shortQuote = truncate(quote, MAX_QUOTE_CHARS);
+  const hasMarker =
+    typeof questionNumber === "number" && typeof startSeconds === "number" && startSeconds >= 0;
 
   return (
     <div className={compact ? "mt-1" : "mt-2"}>
@@ -40,6 +55,11 @@ export function EvidenceLink({ quote, messageId, startSeconds, onGoToMessage, co
           >
             <Play className="h-3 w-3" />
           </Button>
+        )}
+        {hasMarker && (
+          <span className="shrink-0 not-italic font-medium tabular-nums text-primary">
+            Q{questionNumber} {formatSeconds(startSeconds!)}
+          </span>
         )}
         <span className="truncate">« {shortQuote} »</span>
       </blockquote>

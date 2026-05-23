@@ -22,6 +22,7 @@ export interface CommunicationProfile {
 interface Props {
   profile?: CommunicationProfile | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
 const groups = [
@@ -53,7 +54,7 @@ function scoreColor(score?: number) {
   return "bg-destructive";
 }
 
-export function CommunicationProfileCard({ profile, onGoToMessage }: Props) {
+export function CommunicationProfileCard({ profile, onGoToMessage, questionNumberByMessageId }: Props) {
   if (!profile) return null;
   const hasAny = Object.values(profile).some((d) => d && typeof d.score === "number");
   if (!hasAny) return null;
@@ -97,6 +98,7 @@ export function CommunicationProfileCard({ profile, onGoToMessage }: Props) {
                       quote={dim!.quote}
                       messageId={dim!.message_id}
                       startSeconds={dim!.start_seconds}
+                      questionNumber={dim!.message_id ? questionNumberByMessageId?.[dim!.message_id] : undefined}
                       onGoToMessage={onGoToMessage}
                       compact
                     />

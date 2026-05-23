@@ -19,6 +19,7 @@ interface Props {
   // Fallback ancien format : criteria_scores { id: { label, score, max, comment } }
   legacyCriteriaScores?: Record<string, { label?: string; score: number; max: number; comment?: string }> | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
 const levelLabel: Record<string, string> = {
@@ -52,7 +53,7 @@ function barColor(level?: FitItem["level"]) {
   }
 }
 
-export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage }: Props) {
+export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage, questionNumberByMessageId }: Props) {
   let list: FitItem[] = [];
   if (items && items.length > 0) {
     list = items.map((it) => ({ ...it, level: it.level ?? inferLevel(it.score) }));
@@ -105,6 +106,7 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage }:
                 quote={item.quote}
                 messageId={item.message_id}
                 startSeconds={item.start_seconds}
+                questionNumber={item.message_id ? questionNumberByMessageId?.[item.message_id] : undefined}
                 onGoToMessage={onGoToMessage}
                 compact
               />

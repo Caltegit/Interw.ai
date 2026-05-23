@@ -17,6 +17,7 @@ interface Props {
   strengths?: string[] | null;
   weaknesses?: string[] | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
 const sentimentMap = {
@@ -25,7 +26,7 @@ const sentimentMap = {
   neutral: { icon: Minus, tone: "border-muted bg-muted/30", iconColor: "text-muted-foreground" },
 } as const;
 
-export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMessage }: Props) {
+export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMessage, questionNumberByMessageId }: Props) {
   // Fallback : reconstruire des drivers à partir des anciens champs
   let list: DecisionDriver[] = [];
   if (drivers && drivers.length > 0) {
@@ -62,6 +63,7 @@ export function DecisionDriversCard({ drivers, strengths, weaknesses, onGoToMess
                 quote={d.quote}
                 messageId={d.message_id}
                 startSeconds={d.start_seconds}
+                questionNumber={d.message_id ? questionNumberByMessageId?.[d.message_id] : undefined}
                 onGoToMessage={onGoToMessage}
                 compact
               />

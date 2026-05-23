@@ -242,6 +242,26 @@ export default function SessionDetail() {
       });
   }, [candidateVideos, session]);
 
+  // Mapping messageId → numéro de question (Q1, Q2…) pour l'affichage des
+  // repères "Qn t.ss" à côté de chaque citation.
+  const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
+    const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const orderById = new Map<string, number>();
+    projectQuestions.forEach((q: any, i: number) => {
+      if (q?.id) orderById.set(q.id, i + 1);
+    });
+    const map: Record<string, number> = {};
+    for (const m of messages as any[]) {
+      if (m?.id && m?.question_id) {
+        const n = orderById.get(m.question_id);
+        if (typeof n === "number") map[m.id] = n;
+      }
+    }
+    return map;
+  }, [messages, session]);
+
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
@@ -484,6 +504,7 @@ export default function SessionDetail() {
                     items={stats.fit_breakdown}
                     legacyCriteriaScores={criteriaScores as any}
                     onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
 
                   <SignalsCard
@@ -491,11 +512,13 @@ export default function SessionDetail() {
                     legacyRedFlags={report.red_flags as any}
                     legacyFollowups={report.followup_questions as any}
                     onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
 
                   <CommunicationProfileCard
                     profile={stats.communication_profile}
                     onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
 
                   {projectAverages && projectAverages.count >= 3 && (
@@ -542,6 +565,7 @@ export default function SessionDetail() {
                   <SoftSkillsCard
                     skills={report.soft_skills as any}
                     onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
                   />
                 </>
               ) : (
