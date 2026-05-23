@@ -15,7 +15,7 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
 
 const MAX_SEGMENTS = 2;
-const MAX_BYTES_PER_SEGMENT = 4 * 1024 * 1024; // 4 Mo (limite mémoire edge ~256 Mo)
+const MAX_BYTES_PER_SEGMENT = 15 * 1024 * 1024; // 15 Mo (Gemini accepte largement plus, edge ~256 Mo de RAM)
 
 type Segment = {
   message_id: string;
