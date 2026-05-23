@@ -42,6 +42,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const [durationSec, setDurationSec] = useState<number | null>(null);
   // Position en secondes à appliquer au prochain chargement de clip (0 par défaut).
   const pendingSeekRef = useRef<number>(0);
+  // Empêche les doubles attaches de timeupdate (inline onLoadedMetadata + effet).
+  const fixingDurationRef = useRef(false);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -111,8 +113,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   };
 
   // Applique le seek en attente, en bornant à la durée connue.
+  // Idempotent : ne fait rien si pendingSeekRef est déjà consommé (=0).
+  // Évite que deux invocations concurrentes (inline onLoadedMetadata + effet)
+  // ne fassent retomber currentTime à 0.
   const applyPendingSeek = (v: HTMLVideoElement, duration: number) => {
-    const target = Math.max(0, Math.min(pendingSeekRef.current, Math.max(0, duration - 0.1)));
+    const pending = pendingSeekRef.current;
+    if (pending <= 0) return;
+    const target = Math.max(0, Math.min(pending, Math.max(0, duration - 0.1)));
     try {
       v.currentTime = target;
     } catch {
@@ -121,13 +128,17 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     pendingSeekRef.current = 0;
   };
 
-  // Répare la durée pour les WebM MediaRecorder (duration = Infinity)
+  // Répare la durée pour les WebM MediaRecorder (duration = Infinity).
+  // Protégé contre les doubles invocations dans le même cycle de chargement.
   const fixDuration = () => {
     const v = videoRef.current;
     if (!v) return;
     if (v.duration === Infinity) {
+      if (fixingDurationRef.current) return;
+      fixingDurationRef.current = true;
       const onTime = () => {
         v.removeEventListener("timeupdate", onTime);
+        fixingDurationRef.current = false;
         const real = v.duration;
         applyPendingSeek(v, Number.isFinite(real) ? real : 0);
         if (Number.isFinite(real)) setDurationSec(real);
@@ -149,6 +160,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const v = videoRef.current;
     if (!v) return;
     setDurationSec(null);
+    fixingDurationRef.current = false;
     const apply = () => {
       try {
         v.playbackRate = rateRef.current;
