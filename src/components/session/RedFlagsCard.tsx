@@ -26,9 +26,10 @@ const severityClass: Record<string, string> = {
 interface Props {
   flags?: RedFlag[] | null;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
+  questionNumberByMessageId?: Record<string, number>;
 }
 
-export function RedFlagsCard({ flags, onGoToMessage }: Props) {
+export function RedFlagsCard({ flags, onGoToMessage, questionNumberByMessageId }: Props) {
   if (!flags || flags.length === 0) return null;
   return (
     <Card>
@@ -52,6 +53,7 @@ export function RedFlagsCard({ flags, onGoToMessage }: Props) {
               <EvidenceLink
                 quote={f.evidence}
                 messageId={f.evidence_message_id}
+                questionNumber={f.evidence_message_id ? questionNumberByMessageId?.[f.evidence_message_id] : undefined}
                 onGoToMessage={onGoToMessage}
                 compact
               />
