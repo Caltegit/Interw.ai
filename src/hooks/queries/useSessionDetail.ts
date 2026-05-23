@@ -185,8 +185,4 @@ export function useRegenerateReport(sessionId: string | undefined) {
     },
   });
 }
-    onSuccess: () => {
-      if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
-    },
-  });
-}
+
