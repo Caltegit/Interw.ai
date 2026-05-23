@@ -266,11 +266,14 @@ serve(async (req) => {
     }
 
     // Check if report already exists for this session
-    const { data: existingReport } = await supabase.from("reports").select("id").eq("session_id", session_id).maybeSingle();
-    if (existingReport) {
-      return new Response(JSON.stringify({ success: true, message: "Report already exists" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Check if report already exists for this session (skip si force=true → regénération)
+    if (!forceRegenerate) {
+      const { data: existingReport } = await supabase.from("reports").select("id").eq("session_id", session_id).maybeSingle();
+      if (existingReport) {
+        return new Response(JSON.stringify({ success: true, message: "Report already exists" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Build criteria description for AI
