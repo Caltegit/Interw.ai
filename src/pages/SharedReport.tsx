@@ -391,6 +391,7 @@ export default function SharedReport() {
                   analysis={(report as any).paraverbal_analysis}
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
+                  transcriptsByMessageId={transcriptsByMessageId}
                 />
               ) : (
                 <Card>
@@ -407,6 +408,7 @@ export default function SharedReport() {
                   analysis={(report as any).nonverbal_analysis}
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
+                  transcriptsByMessageId={transcriptsByMessageId}
                 />
               ) : (
                 <Card>
