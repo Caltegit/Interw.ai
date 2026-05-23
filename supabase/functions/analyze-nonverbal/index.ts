@@ -133,6 +133,24 @@ serve(async (req) => {
     }
     const project: any = session.projects;
     if (!project?.record_video) {
+      // On persiste le statut pour que l'UI ait une raison stable (pas juste un retour HTTP).
+      const { data: existingReport } = await supabase
+        .from("reports")
+        .select("id")
+        .eq("session_id", session_id)
+        .maybeSingle();
+      if (existingReport) {
+        await supabase
+          .from("reports")
+          .update({
+            nonverbal_analysis: {
+              status: "skipped",
+              reason: "video_not_recorded",
+              failed_at: new Date().toISOString(),
+            },
+          })
+          .eq("id", existingReport.id);
+      }
       return new Response(
         JSON.stringify({ skipped: "video_not_recorded" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
