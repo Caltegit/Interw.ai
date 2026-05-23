@@ -70,7 +70,19 @@ export default function SessionDetail() {
   const { toast } = useToast();
   const { data, isLoading } = useSessionDetail(id);
   const session = data?.session ?? null;
-  const report = data?.report ?? null;
+  const incomingReport = data?.report ?? null;
+  // Conserve le dernier rapport non nul pour éviter qu'il disparaisse pendant
+  // une régénération ou un refetch ponctuel renvoyant null.
+  const lastReportRef = useRef<typeof incomingReport>(null);
+  const lastReportSessionIdRef = useRef<string | undefined>(undefined);
+  if (lastReportSessionIdRef.current !== id) {
+    lastReportSessionIdRef.current = id;
+    lastReportRef.current = null;
+  }
+  if (incomingReport) {
+    lastReportRef.current = incomingReport;
+  }
+  const report = incomingReport ?? lastReportRef.current;
   const messages = data?.messages ?? [];
   const shareUrl = data?.shareUrl ?? null;
   const shareExpiresAt = data?.shareExpiresAt ?? null;
@@ -498,6 +510,12 @@ export default function SessionDetail() {
             </div>
 
             <TabsContent value="decision" className="mt-4 space-y-4">
+              {regenerate.isPending && report && (
+                <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Régénération en cours — affichage du rapport précédent.
+                </div>
+              )}
               {report ? (
                 <>
                   <FitBreakdownCard

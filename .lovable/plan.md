@@ -1,39 +1,22 @@
 ## Objectif
-Rendre le lien de lecture plus clair et plus fiable en affichant `Qn t.ss` à côté du picto play, tout en appliquant strictement une seule méthode de calcul du moment.
+Garantir que le rapport déjà affiché reste visible pendant toute la durée d'une régénération, même si une requête intermédiaire renvoie temporairement `null`.
+
+## Diagnostic
+Côté backend, `generate-report` n'efface plus l'ancien rapport (upsert) et `useRegenerateReport` ne le supprime plus non plus. Pourtant l'utilisateur voit le rapport disparaître. Le risque restant est côté UI : `useSessionDetail` rafraîchit toutes les 5 s et un `report` momentanément `null` (refetch incomplet, erreur réseau ponctuelle, état pendant l'upsert d'une autre fonction d'analyse) fait basculer la page sur la carte « Rapport non encore généré ».
 
 ## Ce que je vais faire
-1. **Verrouiller la méthode de calcul unique**
-   - Conserver uniquement la règle proportionnelle dans le résolveur partagé :
-     - durée de la réponse vidéo = 100 %
-     - nombre total de mots transcrits = base de répartition
-     - position du premier mot de la citation = pourcentage
-     - temps = durée × pourcentage
-   - Vérifier que cette même règle est utilisée à la génération du rapport et au recalcul des anciens rapports.
-
-2. **Afficher `Q3 2.12s` dans l’interface**
-   - Enrichir le composant `EvidenceLink` pour montrer, juste après le bouton play, un libellé compact du type `Q3 2.12s`.
-   - Garder la citation tronquée à 20 caractères avec `…` comme demandé.
-
-3. **Fournir à l’UI le numéro de question correspondant**
-   - Faire remonter dans la page de détail un mapping `messageId -> numéro de question` à partir des messages et des questions du projet.
-   - Passer cette info aux cartes qui affichent `EvidenceLink`, sans changer leur contenu métier.
-
-4. **Valider le calcul et le format d’affichage**
-   - Ajouter/adapter des tests sur le résolveur pour confirmer la formule proportionnelle.
-   - Vérifier en aperçu que le libellé reste sur une ligne et que le clic play continue d’ouvrir le bon clip.
+1. Dans `SessionDetail`, mémoriser le dernier rapport non vide vu pour la session courante.
+2. Tant que la régénération est en cours **ou** tant que la requête est en cours de rafraîchissement, afficher ce dernier rapport plutôt que l'écran vide.
+3. Ajouter un repère visuel discret « Régénération en cours… » au-dessus des cartes pendant `regenerate.isPending`, pour que l'utilisateur sache que ce qu'il voit est l'ancien rapport.
+4. Mettre à jour le cache et la mémoire locale dès que le nouveau rapport arrive afin que l'affichage bascule sans flash.
 
 ## Détails techniques
-- **Fichiers visés**
-  - `supabase/functions/_shared/resolve-start-seconds.ts`
-  - `supabase/functions/_shared/resolve-start-seconds_test.ts`
-  - `src/components/session/EvidenceLink.tsx`
-  - `src/pages/SessionDetail.tsx`
-  - cartes qui consomment `EvidenceLink` si besoin de props supplémentaires
-- **Format UI**
-  - `Q{numéro} {secondes}s`
-  - secondes affichées avec 2 décimales
-  - exemple : `Q3 2.12s`
-- **Périmètre**
-  - pas de changement de logique vidéo côté lecteur
-  - pas de nouveau texte explicatif
-  - pas d’autre méthode de calcul que celle que tu as décrite
+- Fichier modifié : `src/pages/SessionDetail.tsx`.
+- Utiliser un `useRef` + `useEffect` pour conserver le dernier `report` non nul lié au `sessionId` courant ; réinitialiser quand le `sessionId` change.
+- Calculer `displayReport = data?.report ?? lastReportRef.current` et l'utiliser dans tous les rendus déjà conditionnés sur `report`.
+- Le bandeau « Régénération en cours… » s'appuie sur `regenerate.isPending`, en réutilisant les tokens existants (couleur primary, fond léger).
+
+## Périmètre
+- Aucun changement côté edge functions ni base de données.
+- Aucune modification des cartes existantes.
+- Comportement inchangé quand il n'y a aucun rapport (premier passage) : on continue d'afficher la carte « Rapport non encore généré ».
