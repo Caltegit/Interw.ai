@@ -10,12 +10,21 @@ interface EvidenceLinkProps {
   compact?: boolean;
 }
 
-const MAX_QUOTE_CHARS = 20;
+const MIN_WORDS = 10;
+const MAX_CHARS = 140;
 
-function truncate(text: string, max: number) {
-  const clean = text.trim();
-  if (clean.length <= max) return clean;
-  return clean.slice(0, max).trimEnd() + "…";
+function truncate(text: string) {
+  const clean = text.trim().replace(/\s+/g, " ");
+  const words = clean.split(" ");
+  if (words.length <= MIN_WORDS) return clean;
+  // Au moins MIN_WORDS mots, puis on étend jusqu'à MAX_CHARS si possible.
+  let out = words.slice(0, MIN_WORDS).join(" ");
+  for (let i = MIN_WORDS; i < words.length; i++) {
+    const next = out + " " + words[i];
+    if (next.length > MAX_CHARS) break;
+    out = next;
+  }
+  return out.replace(/[,;:.!?]+$/, "") + "…";
 }
 
 function formatSeconds(s: number) {
