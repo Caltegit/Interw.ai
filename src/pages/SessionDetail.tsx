@@ -70,7 +70,19 @@ export default function SessionDetail() {
   const { toast } = useToast();
   const { data, isLoading } = useSessionDetail(id);
   const session = data?.session ?? null;
-  const report = data?.report ?? null;
+  const incomingReport = data?.report ?? null;
+  // Conserve le dernier rapport non nul pour éviter qu'il disparaisse pendant
+  // une régénération ou un refetch ponctuel renvoyant null.
+  const lastReportRef = useRef<typeof incomingReport>(null);
+  const lastReportSessionIdRef = useRef<string | undefined>(undefined);
+  if (lastReportSessionIdRef.current !== id) {
+    lastReportSessionIdRef.current = id;
+    lastReportRef.current = null;
+  }
+  if (incomingReport) {
+    lastReportRef.current = incomingReport;
+  }
+  const report = incomingReport ?? lastReportRef.current;
   const messages = data?.messages ?? [];
   const shareUrl = data?.shareUrl ?? null;
   const shareExpiresAt = data?.shareExpiresAt ?? null;
