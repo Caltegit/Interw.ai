@@ -510,6 +510,12 @@ export default function SessionDetail() {
             </div>
 
             <TabsContent value="decision" className="mt-4 space-y-4">
+              {regenerate.isPending && report && (
+                <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Régénération en cours — affichage du rapport précédent.
+                </div>
+              )}
               {report ? (
                 <>
                   <FitBreakdownCard
