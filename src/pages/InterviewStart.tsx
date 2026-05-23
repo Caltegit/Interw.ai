@@ -1575,7 +1575,7 @@ export default function InterviewStart() {
       chunkMimeRef.current = mimeType ?? "video/webm";
       const options: MediaRecorderOptions = {
         ...(mimeType ? { mimeType } : {}),
-        videoBitsPerSecond: 800_000,
+        videoBitsPerSecond: 500_000,
         audioBitsPerSecond: 64_000,
       };
       const recorder = new MediaRecorder(streamRef.current, options);
