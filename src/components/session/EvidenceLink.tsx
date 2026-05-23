@@ -10,12 +10,21 @@ interface EvidenceLinkProps {
   compact?: boolean;
 }
 
-const MAX_QUOTE_CHARS = 20;
+const MIN_WORDS = 10;
+const MAX_CHARS = 140;
 
-function truncate(text: string, max: number) {
-  const clean = text.trim();
-  if (clean.length <= max) return clean;
-  return clean.slice(0, max).trimEnd() + "…";
+function truncate(text: string) {
+  const clean = text.trim().replace(/\s+/g, " ");
+  const words = clean.split(" ");
+  if (words.length <= MIN_WORDS) return clean;
+  // Au moins MIN_WORDS mots, puis on étend jusqu'à MAX_CHARS si possible.
+  let out = words.slice(0, MIN_WORDS).join(" ");
+  for (let i = MIN_WORDS; i < words.length; i++) {
+    const next = out + " " + words[i];
+    if (next.length > MAX_CHARS) break;
+    out = next;
+  }
+  return out.replace(/[,;:.!?]+$/, "") + "…";
 }
 
 function formatSeconds(s: number) {
@@ -40,13 +49,13 @@ export function EvidenceLink({
 }: EvidenceLinkProps) {
   if (!quote) return null;
   const canJump = !!(messageId && onGoToMessage);
-  const shortQuote = truncate(quote, MAX_QUOTE_CHARS);
+  const shortQuote = truncate(quote);
   const hasMarker =
     typeof questionNumber === "number" && typeof startSeconds === "number" && startSeconds >= 0;
 
   return (
     <div className={compact ? "mt-1" : "mt-2"}>
-      <blockquote className="flex items-center gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
+      <blockquote className="flex items-start gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
         {canJump && hasMarker ? (
           <button
             type="button"
@@ -69,7 +78,7 @@ export function EvidenceLink({
             <Play className="h-3 w-3 fill-current" />
           </button>
         ) : null}
-        <span className="truncate">« {shortQuote} »</span>
+        <span className="min-w-0 leading-snug">« {shortQuote} »</span>
       </blockquote>
     </div>
   );
