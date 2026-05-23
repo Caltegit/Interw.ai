@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Brain, ChevronDown, ChevronUp } from "lucide-react";
-import { MomentJumpButton } from "./MomentJumpButton";
+import { EvidenceLink } from "./EvidenceLink";
 
 interface Evidence {
   quote?: string;
@@ -120,17 +120,15 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
               {trait!.evidences && trait!.evidences.length > 0 && (
                 <div className="mt-1 space-y-1">
                   {trait!.evidences.slice(0, 2).map((ev, idx) => (
-                    <div key={idx}>
-                      <blockquote className="border-l-2 border-primary/40 pl-2 text-[11px] italic text-muted-foreground">
-                        « {ev.quote} »
-                      </blockquote>
-                      <MomentJumpButton
-                        messageId={ev.message_id}
-                        startSeconds={ev.start_seconds}
-                        questionNumber={ev.message_id ? questionNumberByMessageId?.[ev.message_id] : undefined}
-                        onGoToMessage={onGoToMessage}
-                      />
-                    </div>
+                    <EvidenceLink
+                      key={idx}
+                      quote={ev.quote}
+                      messageId={ev.message_id}
+                      startSeconds={ev.start_seconds}
+                      questionNumber={ev.message_id ? questionNumberByMessageId?.[ev.message_id] : undefined}
+                      onGoToMessage={onGoToMessage}
+                      compact
+                    />
                   ))}
                 </div>
               )}

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MomentJumpButton } from "./MomentJumpButton";
+import { EvidenceLink } from "./EvidenceLink";
 
 interface NonverbalDim {
   score?: number;
@@ -50,9 +50,10 @@ interface Props {
   analysis?: NonverbalAnalysis | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
+  transcriptsByMessageId?: Record<string, string>;
 }
 
-export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId }: Props) {
+export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId }: Props) {
   if (!analysis?.profile) return null;
   const profile = analysis.profile;
   const dims = DIMENSIONS.filter((d) => {
@@ -92,11 +93,13 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
                 {dim.comment && (
                   <p className="mt-1 text-xs leading-snug text-muted-foreground">{dim.comment}</p>
                 )}
-                <MomentJumpButton
+                <EvidenceLink
+                  quote={dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined}
                   messageId={dim.evidence_message_id}
                   startSeconds={dim.evidence_start_seconds}
                   questionNumber={dim.evidence_message_id ? questionNumberByMessageId?.[dim.evidence_message_id] : undefined}
                   onGoToMessage={onGoToMessage}
+                  compact
                 />
               </div>
             );
@@ -110,13 +113,14 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
             </div>
             <ul className="space-y-1.5">
               {tensions.map((t, i) => (
-                <li key={i} className="text-xs text-muted-foreground">
-                  <div>{t.description}</div>
-                  <MomentJumpButton
+                <li key={i}>
+                  <EvidenceLink
+                    quote={t.description}
                     messageId={t.message_id}
                     startSeconds={t.start_seconds}
                     questionNumber={t.message_id ? questionNumberByMessageId?.[t.message_id] : undefined}
                     onGoToMessage={onGoToMessage}
+                    compact
                   />
                 </li>
               ))}

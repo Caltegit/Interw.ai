@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MomentJumpButton } from "./MomentJumpButton";
+import { EvidenceLink } from "./EvidenceLink";
 
 interface ParaverbalDim {
   score?: number;
@@ -47,9 +47,10 @@ interface Props {
   analysis?: ParaverbalAnalysis | null;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
+  transcriptsByMessageId?: Record<string, string>;
 }
 
-export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId }: Props) {
+export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId }: Props) {
   if (!analysis?.profile) return null;
   const profile = analysis.profile;
   const dims = DIMENSIONS.filter((d) => {
@@ -87,11 +88,13 @@ export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberB
                 {dim.comment && (
                   <p className="mt-1 text-xs leading-snug text-muted-foreground">{dim.comment}</p>
                 )}
-                <MomentJumpButton
+                <EvidenceLink
+                  quote={dim.evidence_quote || (dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined)}
                   messageId={dim.evidence_message_id}
                   startSeconds={dim.evidence_start_seconds}
                   questionNumber={dim.evidence_message_id ? questionNumberByMessageId?.[dim.evidence_message_id] : undefined}
                   onGoToMessage={onGoToMessage}
+                  compact
                 />
               </div>
             );
