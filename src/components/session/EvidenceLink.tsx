@@ -50,27 +50,27 @@ export function EvidenceLink({
   if (!quote) return null;
   const canJump = !!(messageId && onGoToMessage);
   const shortQuote = truncate(quote);
-  const hasMarker =
-    typeof questionNumber === "number" && typeof startSeconds === "number" && startSeconds >= 0;
+  const hasQuestion = typeof questionNumber === "number";
+  const hasTime = typeof startSeconds === "number" && startSeconds >= 0;
 
   return (
     <div className={compact ? "mt-1" : "mt-2"}>
       <blockquote className="flex items-start gap-2 border-l-2 border-primary/40 pl-3 text-xs italic text-muted-foreground">
-        {canJump && hasMarker ? (
+        {canJump && hasQuestion ? (
           <button
             type="button"
-            onClick={() => onGoToMessage!(messageId!, startSeconds ?? undefined)}
+            onClick={() => onGoToMessage!(messageId!, hasTime ? startSeconds! : undefined)}
             title="Moment dans la réponse à cette question"
             aria-label="Voir le moment dans la vidéo"
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 not-italic font-medium text-primary tabular-nums transition-colors hover:bg-primary/10 hover:border-primary/50"
           >
             <Play className="h-3 w-3 fill-current" />
-            Q{questionNumber} · {formatSeconds(startSeconds!)}
+            Q{questionNumber}{hasTime ? ` · ${formatSeconds(startSeconds!)}` : ""}
           </button>
         ) : canJump ? (
           <button
             type="button"
-            onClick={() => onGoToMessage!(messageId!, startSeconds ?? undefined)}
+            onClick={() => onGoToMessage!(messageId!, hasTime ? startSeconds! : undefined)}
             title="Voir le moment dans la vidéo"
             aria-label="Voir le moment dans la vidéo"
             className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 hover:border-primary/50"
