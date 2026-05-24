@@ -29,6 +29,8 @@ import {
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
 import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
+import DeviceSelector from "@/components/interview/DeviceSelector";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
