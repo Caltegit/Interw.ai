@@ -8,7 +8,7 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
-  ClipboardList,
+  
   Library,
   ShieldCheck,
   Sparkles,
