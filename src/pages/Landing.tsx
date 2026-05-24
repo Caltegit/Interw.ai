@@ -756,7 +756,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
             >
-              Demander une démo <ArrowRight className="h-4 w-4" />
+              Plannifier une démo <ArrowRight className="h-4 w-4" />
             </button>
             <Link
               to="/login"
