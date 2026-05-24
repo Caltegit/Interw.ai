@@ -222,7 +222,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
             >
-              Commencer gratuitement
+              Plannifier une démo
             </button>
           </div>
         </div>
@@ -253,7 +253,7 @@ export default function Landing() {
                   onClick={openDemo}
                   className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
                 >
-                  Commencer gratuitement — 20 entretiens offerts
+                  Plannifier une démo — 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-3 text-xs" style={{ color: "hsl(0 0% 50%)" }}>
@@ -566,7 +566,7 @@ export default function Landing() {
                 priceSuffix: "",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
                 features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
-                cta: "Commencer gratuitement",
+                cta: "Plannifier une démo",
                 ctaNote: "Aucune carte requise",
                 highlight: false,
               },
@@ -756,7 +756,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
             >
-              Demander une démo <ArrowRight className="h-4 w-4" />
+              Plannifier une démo <ArrowRight className="h-4 w-4" />
             </button>
             <Link
               to="/login"
