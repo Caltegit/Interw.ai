@@ -585,12 +585,12 @@ export default function Landing() {
                 highlight: false,
               },
               {
-                name: "Pro",
-                price: "49 €",
+                name: "Startup",
+                price: "99 €",
                 priceSuffix: "/ mois",
                 desc: "Pour les équipes qui recrutent régulièrement et veulent un processus structuré, équitable et reproductible.",
                 features: [
-                  "200 crédits / mois (~75 entretiens)",
+                  "200 crédits / mois (50 entretiens inclus)",
                   "Bibliothèque de questions partagée",
                   "Modèles d'entretien réutilisables",
                   "Support prioritaire",
