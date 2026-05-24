@@ -206,7 +206,7 @@ export default function Landing() {
             <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
-            <a href="#features" className="transition-colors hover:text-foreground">Fonctionnalités</a>
+            <Link to="/produit" className="transition-colors hover:text-foreground">Produit</Link>
             <a href="#how" className="transition-colors hover:text-foreground">Fonctionnement</a>
             <a href="#pricing" className="transition-colors hover:text-foreground">Tarifs</a>
             <a href="#faq" className="transition-colors hover:text-foreground">Questions</a>
