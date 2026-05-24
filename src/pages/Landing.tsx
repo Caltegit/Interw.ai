@@ -239,9 +239,9 @@ export default function Landing() {
           <div className="grid items-center gap-12 md:grid-cols-[55%_45%]">
             {/* Left column */}
             <div>
-              <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl">
-                <span className="landing-gradient-text mx-0 px-0 text-6xl">
-                  Évaluez les candidats<br />pas leur CV.
+              <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl text-left">
+                <span className="landing-gradient-text mx-0 px-0 text-5xl">
+                  Évaluez les candidats,<br />pas leur CV.
                 </span>
               </h1>
               <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
