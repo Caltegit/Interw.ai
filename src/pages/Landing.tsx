@@ -566,7 +566,7 @@ export default function Landing() {
                 priceSuffix: "",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
                 features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
-                cta: "Commencer gratuitement",
+                cta: "Plannifier une démo",
                 ctaNote: "Aucune carte requise",
                 highlight: false,
               },
