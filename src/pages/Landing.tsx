@@ -240,7 +240,7 @@ export default function Landing() {
             {/* Left column */}
             <div>
               <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl">
-                <span className="landing-gradient-text">
+                <span className="landing-gradient-text mx-0 px-0 text-6xl">
                   Évaluez les candidats<br />pas leur CV.
                 </span>
               </h1>
