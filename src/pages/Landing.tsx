@@ -257,7 +257,7 @@ export default function Landing() {
                   onClick={openDemo}
                   className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
                 >
-                  Commencer gratuitement — 20 entretiens offerts →
+                  Commencer gratuitement — 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-3 text-xs" style={{ color: "hsl(230 8% 52%)" }}>
