@@ -330,6 +330,12 @@ export default function InterviewStart() {
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
+  // Origine de la pause courante (affichage différencié de l'overlay).
+  const [pauseReason, setPauseReason] = useState<"manual" | "auto-silence" | "auto-network">("manual");
+  // Liste des micros détectés (utile sur l'écran de pause auto-silence).
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [currentAudioDeviceId, setCurrentAudioDeviceId] = useState<string | null>(null);
+  const [switchingDevice, setSwitchingDevice] = useState(false);
   const pausedDuringQuestionRef = useRef(false);
   // Snapshot of the presentation at pause-time, used by resumeInterview
   // (currentPresentationRef may be null by the time resume runs because TTS
