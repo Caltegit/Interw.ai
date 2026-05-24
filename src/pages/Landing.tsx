@@ -241,7 +241,7 @@ export default function Landing() {
             <div>
               <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl">
                 <span className="landing-gradient-text">
-                  Évaluez des candidats,<br />pas leur CV.
+                  Évaluez des candidats, pas leur CV.
                 </span>
               </h1>
               <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
