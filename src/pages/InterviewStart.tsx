@@ -4288,7 +4288,11 @@ export default function InterviewStart() {
           <p
             className="mb-4 text-sm font-medium uppercase tracking-widest candidate-gradient-text"
           >
-            {networkPauseActive ? "Connexion instable" : "En pause"}
+            {networkPauseActive
+              ? "Connexion instable"
+              : pauseReason === "auto-silence"
+                ? "Micro inactif"
+                : "En pause"}
           </p>
           {networkPauseActive ? (
             <>
@@ -4316,7 +4320,68 @@ export default function InterviewStart() {
                 Reprendre maintenant
               </Button>
             </>
+          ) : pauseReason === "auto-silence" ? (
+            <div className="w-full max-w-md px-6">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "hsl(var(--l-accent) / 0.15)" }}>
+                <MicOff className="h-7 w-7" style={{ color: "hsl(var(--l-accent))" }} />
+              </div>
+              <h2 className="text-center text-lg font-semibold candidate-gradient-text">
+                Nous ne vous entendons plus
+              </h2>
+              <p className="mt-2 text-center text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Si vous parliez bien, c'est probablement votre micro. Trois choses à vérifier :
+              </p>
+              <ol className="mt-4 space-y-2 text-sm" style={{ color: "hsl(var(--l-fg) / 0.85)" }}>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>1.</span>
+                  <span>Cliquez sur l'icône <strong>cadenas</strong> dans la barre d'adresse du navigateur et vérifiez que le micro est autorisé.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>2.</span>
+                  <span>Vérifiez que votre micro système n'est pas coupé (touche dédiée du clavier, casque branché).</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>3.</span>
+                  <span>Essayez un autre micro ci-dessous, si disponible.</span>
+                </li>
+              </ol>
+
+              {audioInputs.length >= 2 && (
+                <div className="mt-4">
+                  <p className="mb-1 text-xs font-medium" style={{ color: "hsl(var(--l-fg) / 0.6)" }}>
+                    Changer de micro
+                  </p>
+                  <DeviceSelector
+                    devices={audioInputs}
+                    value={currentAudioDeviceId}
+                    onChange={(id) => { void switchAudioDevice(id); }}
+                    placeholder="Choisir un micro"
+                    disabled={switchingDevice}
+                  />
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-col gap-2">
+                <Button
+                  onClick={resumeInterview}
+                  className="candidate-btn-primary w-full"
+                  disabled={switchingDevice}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Reprendre l'entretien
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowReportDialog(true)}
+                  className="w-full"
+                >
+                  <Flag className="h-4 w-4 mr-2" />
+                  Signaler un problème
+                </Button>
+              </div>
+            </div>
           ) : (
+
             <>
               <Button
                 onClick={resumeInterview}
