@@ -222,7 +222,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
             >
-              Commencer gratuitement
+              Plannifier une démo
             </button>
           </div>
         </div>
