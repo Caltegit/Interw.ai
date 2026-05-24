@@ -334,7 +334,7 @@ export default function Landing() {
                     >
                       {s.n}
                     </div>
-                    <h3 className="mt-5 text-lg font-semibold text-foreground">{s.title}</h3>
+                    <h3 className="mt-5 font-semibold text-foreground text-2xl">{s.title}</h3>
                     <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(230 8% 38%)" }}>
                       {s.desc}
                     </p>
