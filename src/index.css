@@ -119,19 +119,21 @@
   }
 }
 
-/* ============ Landing page (Linear-inspired dark) ============ */
+/* ============ Landing page (light, friendly SaaS) ============ */
 .landing-root {
-  --l-bg: 0 0% 4%;
-  --l-bg-elev: 0 0% 7%;
-  --l-fg: 0 0% 98%;
-  --l-fg-dim: 0 0% 60%;
-  --l-fg-dimmer: 0 0% 40%;
-  --l-border: 0 0% 12%;
-  --l-border-strong: 0 0% 24%;
-  --l-accent: 262 83% 58%;
-  --l-accent-2: 262 83% 68%;
-  --l-success: 142 71% 45%;
-  --l-danger: 0 65% 30%;
+  --l-bg: 0 0% 100%;
+  --l-bg-soft: 240 20% 98%;
+  --l-bg-elev: 240 25% 97%;
+  --l-fg: 240 24% 8%;
+  --l-fg-dim: 230 8% 38%;
+  --l-fg-dimmer: 230 8% 55%;
+  --l-border: 230 16% 92%;
+  --l-border-strong: 230 14% 84%;
+  --l-accent: 243 75% 60%;
+  --l-accent-strong: 243 78% 54%;
+  --l-accent-soft: 243 100% 96%;
+  --l-success: 152 60% 40%;
+  --l-danger: 0 70% 50%;
 
   background: hsl(var(--l-bg));
   color: hsl(var(--l-fg));
@@ -144,114 +146,105 @@
 .landing-root h2,
 .landing-root h3 {
   letter-spacing: -0.03em;
-  font-weight: 600;
+  font-weight: 700;
+  color: hsl(var(--l-fg));
 }
 
-.landing-grain {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.03;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
+.landing-grain { display: none; }
 
 .landing-bg-grid {
   background-image:
-    linear-gradient(hsl(var(--l-border) / 0.6) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--l-border) / 0.6) 1px, transparent 1px);
+    linear-gradient(hsl(var(--l-border) / 0.9) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(var(--l-border) / 0.9) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 60% 50% at 50% 0%, #000 30%, transparent 80%);
 }
 
 .landing-hero-glow {
   background:
-    radial-gradient(ellipse 50% 40% at 80% 30%, hsl(var(--l-accent) / 0.22), transparent 65%),
-    radial-gradient(ellipse 40% 40% at 20% 60%, hsl(var(--l-accent) / 0.10), transparent 65%);
+    radial-gradient(ellipse 55% 45% at 80% 25%, hsl(var(--l-accent) / 0.14), transparent 65%),
+    radial-gradient(ellipse 45% 40% at 15% 65%, hsl(var(--l-accent) / 0.08), transparent 65%);
 }
 
 .landing-final-glow {
-  background:
-    radial-gradient(ellipse 60% 60% at 50% 50%, hsl(var(--l-accent) / 0.08), transparent 70%);
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, hsl(var(--l-accent) / 0.08), transparent 70%);
 }
 
 .landing-gradient-text {
-  background: linear-gradient(180deg, hsl(var(--l-fg)) 0%, hsl(var(--l-fg) / 0.7) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: hsl(var(--l-fg));
+  -webkit-text-fill-color: hsl(var(--l-fg));
+  background: none;
 }
 
-.landing-accent-text {
-  color: hsl(var(--l-accent));
-}
+.landing-accent-text { color: hsl(var(--l-accent)); }
 
 .landing-card {
-  background: hsl(0 0% 6.7%);
+  background: hsl(0 0% 100%);
   border: 1px solid hsl(var(--l-border));
-  border-radius: 14px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  border-radius: 16px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px hsl(240 10% 10% / 0.04);
 }
 .landing-card-hover:hover {
   border-color: hsl(var(--l-border-strong));
   transform: translateY(-2px);
+  box-shadow: 0 12px 28px -16px hsl(240 20% 20% / 0.18);
 }
 
-.landing-divider {
-  border-color: hsl(var(--l-border));
-}
+.landing-divider { border-color: hsl(var(--l-border)); }
 
 .landing-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: hsl(262 83% 12%);
-  color: hsl(var(--l-accent-2));
+  background: hsl(var(--l-accent-soft));
+  color: hsl(var(--l-accent-strong));
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 5px 12px;
   border-radius: 999px;
-  border: 1px solid hsl(var(--l-accent) / 0.25);
+  border: 1px solid hsl(var(--l-accent) / 0.18);
 }
 
 .landing-btn-primary {
   background: hsl(var(--l-accent));
   color: #fff;
   transition: all 0.2s ease;
-  border-radius: 8px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 .landing-btn-primary:hover {
-  background: hsl(262 83% 52%);
+  background: hsl(var(--l-accent-strong));
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.7);
+  box-shadow: 0 10px 24px -10px hsl(var(--l-accent) / 0.55);
 }
 
 .landing-btn-white {
+  background: hsl(var(--l-accent));
+  color: #fff;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.landing-btn-white:hover {
+  background: hsl(var(--l-accent-strong));
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -12px hsl(var(--l-accent) / 0.55);
+}
+
+.landing-btn-ghost {
   background: #fff;
-  color: #0a0a0a;
+  color: hsl(var(--l-fg));
+  border: 1px solid hsl(var(--l-border-strong));
   transition: all 0.2s ease;
   border-radius: 10px;
   font-weight: 600;
 }
-.landing-btn-white:hover {
-  background: hsl(0 0% 92%);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 30px -8px hsl(var(--l-accent) / 0.6);
-}
-
-.landing-btn-ghost {
-  background: transparent;
-  color: hsl(var(--l-fg));
-  border: 1px solid hsl(var(--l-border-strong));
-  transition: all 0.2s ease;
-  border-radius: 8px;
-}
 .landing-btn-ghost:hover {
-  background: hsl(var(--l-bg-elev));
-  border-color: hsl(var(--l-fg) / 0.4);
+  background: hsl(var(--l-bg-soft));
+  border-color: hsl(var(--l-fg) / 0.3);
 }
 
 @keyframes landing-fade-up {
@@ -264,10 +257,11 @@
 .landing-delay-3 { animation-delay: 0.3s; }
 
 @keyframes landing-pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--l-accent) / 0.4), 0 20px 60px -20px hsl(var(--l-accent) / 0.5); }
-  50% { box-shadow: 0 0 0 8px hsl(var(--l-accent) / 0), 0 20px 60px -20px hsl(var(--l-accent) / 0.7); }
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--l-accent) / 0.35), 0 20px 50px -20px hsl(var(--l-accent) / 0.35); }
+  50% { box-shadow: 0 0 0 8px hsl(var(--l-accent) / 0), 0 20px 60px -20px hsl(var(--l-accent) / 0.55); }
 }
 .landing-pulse-glow { animation: landing-pulse-glow 3s ease-in-out infinite; }
+
 
 /* ============ Candidate pages — Dark Premium (Linear-inspired) ============ */
 .candidate-layout {
