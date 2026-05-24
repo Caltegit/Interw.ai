@@ -242,7 +242,7 @@ export default function Landing() {
                 </span>
               </h1>
               <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(0 0% 80%)" }}>
-                Vos questions. Vos critères. Une analyse IA qui décrypte chaque réponse — pour ne jamais passer à côté du bon profil.
+                Faites passer vos entretiens en vidéo asynchrone.<br />L'IA évalue chaque candidat selon vos critères.
               </p>
               <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
                 Vous définissez les questions et les critères. Le candidat passe l'entretien à son rythme. interw.ai analyse chaque réponse et vous livre un rapport détaillé — quel que soit le parcours du candidat.
