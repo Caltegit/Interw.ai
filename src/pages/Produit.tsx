@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import { ArrowRight, Sparkles, FolderKanban, FileText, Library, Scale, CheckCircle2 } from "lucide-react";
@@ -126,7 +126,6 @@ export default function Produit() {
   };
 
   if (loading) return null;
-  if (session) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="landing-root min-h-screen">
