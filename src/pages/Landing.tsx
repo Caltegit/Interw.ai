@@ -461,11 +461,6 @@ export default function Landing() {
                 desc: "Construisez et sauvegardez votre propre méthode d'évaluation. Réutilisez-la sur tous vos recrutements. Votre expertise ne repart jamais de zéro.",
               },
               {
-                icon: Video,
-                title: "Revoyez chaque moment clé",
-                desc: "Revoyez n'importe quel passage de l'entretien. Partagez les extraits qui comptent avec vos collègues ou managers — sans reformuler ce que vous avez entendu.",
-              },
-              {
                 icon: ShieldCheck,
                 title: "RGPD natif",
                 desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable.",
