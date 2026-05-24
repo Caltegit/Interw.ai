@@ -225,7 +225,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
             >
-              Planifier une démo
+              Commencez
             </button>
           </div>
         </div>
@@ -257,7 +257,7 @@ export default function Landing() {
                   onClick={openDemo}
                   className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
                 >
-                  Planifier une démo &gt;&gt;&gt; 20 entretiens offerts
+                  Commencezsd &gt;&gt;&gt; 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-3 text-xs" style={{ color: "hsl(230 8% 52%)" }}>
