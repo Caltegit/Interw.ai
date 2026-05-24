@@ -1,105 +1,154 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
-import candidateView from "@/assets/landing-candidate-view.jpg";
 import {
   ArrowRight,
   Brain,
-  CalendarClock,
   Check,
   CheckCircle2,
   ChevronDown,
-  ClipboardList,
-  Clock,
-  LineChart,
+  
   Library,
-  Quote,
   ShieldCheck,
   Sparkles,
-  Star,
-  Play,
-  Volume2,
+  Scale,
   Video,
+  FileText,
   X,
+  Star,
 } from "lucide-react";
 
-function HeroProductMock() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [showVideo, setShowVideo] = useState(false);
-  const [hasUnmuted, setHasUnmuted] = useState(false);
-  const [ended, setEnded] = useState(false);
-  const startedRef = useRef(false);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.4) {
-          if (!startedRef.current) {
-            startedRef.current = true;
-            setShowVideo(true);
-          }
-          videoRef.current?.play().catch(() => {});
-        } else if (startedRef.current) {
-          videoRef.current?.pause();
-        }
-      },
-      { threshold: [0, 0.4, 0.6] },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const enableSound = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = false;
-    v.volume = 1;
-    setHasUnmuted(true);
-    v.play().catch(() => {});
-  };
+/* ---------------- Hero mock report card ---------------- */
+function HeroReportMock() {
+  const score = 87;
+  const circumference = 2 * Math.PI * 40; // r=40
+  const offset = circumference - (score / 100) * circumference;
 
   return (
     <div
-      ref={containerRef}
-      className="relative aspect-video overflow-hidden rounded-lg"
-      style={{ border: "1px solid hsl(var(--l-border))" }}
+      className="landing-fade-up landing-delay-2 relative mx-auto w-full max-w-md"
+      style={{ transform: "rotate(-2deg)" }}
     >
-      <img
-        src={candidateView}
-        alt="Aperçu de la vue candidat pendant un entretien Interw.ai"
-        loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
-        style={{ opacity: showVideo ? 0 : 1 }}
+      {/* Floating accent shadow */}
+      <div
+        className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
+        style={{ background: "radial-gradient(ellipse at center, hsl(262 83% 58% / 0.25), transparent 70%)" }}
       />
-      <video
-        ref={videoRef}
-        src="/demo-interwai-20s.mp4"
-        poster={candidateView}
-        muted
-        playsInline
-        preload="metadata"
-        controls={ended}
-        onEnded={() => setEnded(true)}
-        className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
-        style={{ opacity: showVideo ? 1 : 0 }}
-      />
-      <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 text-[11px] backdrop-blur-md">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> En direct
+      <div
+        className="relative overflow-hidden rounded-2xl"
+        style={{
+          background: "hsl(0 0% 10%)",
+          border: "1px solid hsl(0 0% 16%)",
+          boxShadow: "0 30px 80px -20px hsl(262 83% 58% / 0.35), 0 0 0 1px hsl(0 0% 100% / 0.02) inset",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 border-b p-5" style={{ borderColor: "hsl(0 0% 16%)" }}>
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white"
+            style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+          >
+            MD
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-white">Marie D.</div>
+            <div className="truncate text-xs" style={{ color: "hsl(0 0% 55%)" }}>
+              Chargée de projet · 24 mai 2026
+            </div>
+          </div>
+          <div
+            className="rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider"
+            style={{ background: "hsl(262 83% 18%)", color: "hsl(262 83% 78%)" }}
+          >
+            Rapport IA
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="space-y-5 p-6">
+          {/* Score */}
+          <div className="flex items-center gap-5">
+            <div className="relative h-24 w-24 shrink-0">
+              <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(0 0% 16%)" strokeWidth="8" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="none"
+                  stroke="hsl(262 83% 58%)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-white">{score}</span>
+                <span className="text-[10px]" style={{ color: "hsl(0 0% 55%)" }}>/ 100</span>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-wider" style={{ color: "hsl(0 0% 50%)" }}>
+                Score global
+              </div>
+              <div className="mt-1 text-base font-semibold text-white">Excellent profil</div>
+              <div className="mt-1 text-xs leading-snug" style={{ color: "hsl(0 0% 60%)" }}>
+                Aligné avec vos critères clés.
+              </div>
+            </div>
+          </div>
+
+          {/* Bars */}
+          <div className="space-y-3">
+            {[
+              { c: "Communication", v: 90 },
+              { c: "Motivation", v: 85 },
+              { c: "Adaptabilité", v: 80 },
+            ].map((c) => (
+              <div key={c.c} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white/90">{c.c}</span>
+                  <span className="font-mono" style={{ color: "hsl(262 83% 75%)" }}>{c.v}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "hsl(0 0% 14%)" }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${c.v}%`,
+                      background: "linear-gradient(90deg, hsl(262 83% 58%), hsl(280 80% 65%))",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Recommendation badge */}
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
+            style={{
+              background: "hsl(142 71% 12%)",
+              border: "1px solid hsl(142 71% 25%)",
+              color: "hsl(142 71% 70%)",
+            }}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="font-medium">Profil recommandé</span>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+/* ---------------- Page ---------------- */
 export default function Landing() {
   const { session, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [scrolled, setScrolled] = useState(false);
 
   const openDemo = (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -107,8 +156,9 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    document.title = "Interw.ai — Sessions vidéo IA pour le recrutement";
-    const desc = "Interw.ai automatise vos entretiens de présélection : sessions vidéo conversationnelles menées par une IA, notation objective et rapports détaillés.";
+    document.title = "Interw.ai — Évaluez les candidats, pas leur CV";
+    const desc =
+      "Vos questions, vos critères, votre processus. interw.ai analyse les réponses de chaque candidat et vous livre un rapport détaillé — pour recruter plus vite, plus équitablement, sans rater le bon profil.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -118,132 +168,303 @@ export default function Landing() {
     m.setAttribute("content", desc);
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   if (loading) return null;
   if (session) return <Navigate to="/dashboard" replace />;
 
   return (
     <div className="landing-root min-h-screen">
-      {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md" style={{ background: "hsl(var(--l-bg) / 0.7)", borderBottom: "1px solid hsl(var(--l-border))" }}>
+      <div className="landing-grain" aria-hidden />
+
+      {/* ============ NAVBAR ============ */}
+      <header
+        className="sticky top-0 z-50 transition-all duration-200"
+        style={{
+          backdropFilter: scrolled ? "blur(12px)" : "none",
+          WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
+          background: scrolled ? "hsl(0 0% 4% / 0.75)" : "hsl(0 0% 4%)",
+          borderBottom: `1px solid hsl(0 0% ${scrolled ? "12%" : "10%"})`,
+        }}
+      >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
+            <div
+              className="flex h-7 w-7 items-center justify-center rounded-md"
+              style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+            >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
           </Link>
-          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            <a href="#features" className="hover:text-white transition-colors">Fonctionnalités</a>
-            <a href="#how" className="hover:text-white transition-colors">Fonctionnement</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Tarifs</a>
-            <a href="#faq" className="hover:text-white transition-colors">Questions</a>
+          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(0 0% 60%)" }}>
+            <a href="#features" className="transition-colors hover:text-white">Fonctionnalités</a>
+            <a href="#how" className="transition-colors hover:text-white">Fonctionnement</a>
+            <a href="#pricing" className="transition-colors hover:text-white">Tarifs</a>
+            <a href="#faq" className="transition-colors hover:text-white">Questions</a>
           </nav>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm hover:text-white transition-colors" style={{ color: "hsl(var(--l-fg-dim))" }}>
+            <Link
+              to="/login"
+              className="text-sm transition-colors hover:text-white"
+              style={{ color: "hsl(0 0% 60%)" }}
+            >
               Se connecter
             </Link>
-            <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-9 items-center gap-1.5 rounded-md px-3.5 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-3.5 w-3.5" />
+            <span className="hidden h-5 w-px md:block" style={{ background: "hsl(0 0% 16%)" }} />
+            <button
+              type="button"
+              onClick={openDemo}
+              className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
+            >
+              Commencer gratuitement
             </button>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
+      {/* ============ HERO ============ */}
+      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 4%)" }}>
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
-        <div className="mx-auto max-w-6xl px-6 pt-12 pb-14 text-center md:pt-16 md:pb-18">
-          {/* Badge removed */}
-          <h1 className="landing-fade-up landing-delay-1 mx-auto mt-6 max-w-4xl text-5xl font-semibold leading-[1.05] md:text-7xl">
-            <span className="landing-gradient-text">Évaluez les candidats,<br />pas leur CV.</span>
-          </h1>
-          <div className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg font-medium">
-            Fini les entretiens inutiles<br />Gardez votre temps pour les meilleurs profils
-          </div>
-          <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            L'outil vous épaule pour mener les premiers entretiens, évalue chaque candidat selon vos critères et vous livre un rapport clair et détaillé.
-          </p>
-          <div className="landing-fade-up landing-delay-3 mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-4 w-4" />
-            </button>
-            <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium">
-              Se connecter
-            </Link>
-          </div>
-          <div className="landing-fade-up landing-delay-3 mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> RGPD</span>
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> EU Cloud</span>
-            <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} /> 10min Setup</span>
-          </div>
+        <div className="mx-auto max-w-6xl px-6 pt-16 pb-24 md:pt-24 md:pb-28">
+          <div className="grid items-center gap-12 md:grid-cols-[55%_45%]">
+            {/* Left column */}
+            <div>
+              <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl">
+                <span className="landing-gradient-text">
+                  Évaluez les candidats,<br />pas leur CV.
+                </span>
+              </h1>
+              <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(0 0% 80%)" }}>
+                Vos questions. Vos critères. Une analyse IA qui décrypte chaque réponse — pour ne jamais passer à côté du bon profil.
+              </p>
+              <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
+                Vous définissez les questions et les critères. Le candidat passe l'entretien à son rythme. interw.ai analyse chaque réponse et vous livre un rapport détaillé — quel que soit le parcours du candidat.
+              </p>
+              <div className="landing-fade-up landing-delay-3 mt-8">
+                <button
+                  type="button"
+                  onClick={openDemo}
+                  className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+                >
+                  Commencer gratuitement — 20 entretiens offerts
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+                <p className="mt-3 text-xs" style={{ color: "hsl(0 0% 50%)" }}>
+                  Sans carte bancaire · Sans engagement · Setup en 10 min
+                </p>
+              </div>
+            </div>
 
-          {/* Mock product card */}
-          <div className="landing-fade-up landing-delay-3 mx-auto mt-20 max-w-4xl">
-            <div className="landing-card overflow-hidden text-left shadow-2xl">
-              <div className="flex items-center gap-1.5 border-b px-4 py-3 landing-divider">
-                <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
-                <span className="ml-3 text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>Session en cours...</span>
-              </div>
-              <div className="grid gap-6 p-6 md:grid-cols-[1fr_280px]">
-                <HeroProductMock />
-                <div className="space-y-3">
-                  <div className="text-xs uppercase tracking-wider font-semibold" style={{ color: "hsl(var(--l-fg-dim))" }}>QUESTION 2 / 5</div>
-                  <p className="text-sm leading-relaxed">
-                    « Pouvez-vous me décrire un projet où vous avez dû gérer un conflit dans votre équipe ? »
-                  </p>
-                  <div className="space-y-2 pt-3">
-                    {[
-                      { c: "Communication", v: "8.5" },
-                      { c: "Leadership", v: "7.2" },
-                      { c: "Esprit d'équipe", v: "9.0" },
-                    ].map((c) => (
-                      <div key={c.c} className="flex items-center justify-between rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-bg-elev))", border: "1px solid hsl(var(--l-border))" }}>
-                        <span>{c.c}</span>
-                        <span className="font-mono" style={{ color: "hsl(var(--l-accent))" }}>{c.v}/10</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {/* Right column — mock report */}
+            <div className="mt-4 md:mt-0">
+              <HeroReportMock />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why */}
-      <section id="why" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
-          <div className="grid gap-12 md:grid-cols-2 md:items-center">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-                Le constat
+      {/* ============ SOCIAL PROOF BAR ============ */}
+      <section style={{ background: "hsl(0 0% 6%)", borderTop: "1px solid hsl(0 0% 10%)", borderBottom: "1px solid hsl(0 0% 10%)" }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-6 py-3 text-center text-[13px] md:text-sm" style={{ color: "hsl(0 0% 55%)" }}>
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(262 83% 70%)" }} />
+            Déjà utilisé par plus de 200 recruteurs
+          </span>
+          <span style={{ color: "hsl(0 0% 20%)" }}>·</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-flex" style={{ color: "hsl(45 95% 60%)" }}>
+              {[0,1,2,3,4].map(i => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
+            </span>
+            <span className="ml-1">4,8/5</span>
+          </span>
+          <span style={{ color: "hsl(0 0% 20%)" }}>·</span>
+          <span className="hidden sm:inline">Données hébergées en Europe</span>
+        </div>
+      </section>
+
+      {/* ============ FEATURES ============ */}
+      <section id="features" className="relative" style={{ background: "hsl(0 0% 5.1%)" }}>
+        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="landing-pill">Fonctionnalités</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+              Ne ratez plus le bon candidat.
+            </h2>
+            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(0 0% 60%)" }}>
+              Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
+            </p>
+          </div>
+
+          {/* Big card #1 — Vous gardez le contrôle */}
+          <div
+            className="mt-14 overflow-hidden rounded-2xl p-10"
+            style={{
+              background: "linear-gradient(135deg, hsl(262 60% 12%), hsl(262 50% 8%))",
+              border: "1px solid hsl(262 70% 30%)",
+            }}
+          >
+            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="max-w-2xl">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
+                  style={{ background: "hsl(262 83% 58%)" }}
+                >
+                  Vous gardez le contrôle
+                </span>
+                <h3 className="mt-4 text-2xl font-semibold text-white md:text-3xl">
+                  Vos questions, votre processus
+                </h3>
+                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(0 0% 80%)" }}>
+                  Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement — la technologie s'adapte à votre méthode, pas l'inverse.
+                </p>
               </div>
-              <h2 className="mt-3 text-3xl md:text-4xl">
-                <span className="landing-gradient-text">La présélection vous coûte des heures.</span>
-              </h2>
-              <p className="mt-5 text-base leading-relaxed" style={{ color: "hsl(var(--l-fg-dim))" }}>
-                Vos recruteurs passent en moyenne 23 minutes par candidat en entretien téléphonique de présélection.
-                Pour 50 candidatures, cela représente près d'une semaine entière par poste.
-                Et les biais inconscients restent difficiles à éviter.
-              </p>
-              <div className="mt-6 inline-flex items-center gap-2 rounded-md px-3 py-2 text-xs" style={{ background: "hsl(var(--l-accent) / 0.1)", color: "hsl(var(--l-fg))", border: "1px solid hsl(var(--l-accent) / 0.3)" }}>
-                <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(var(--l-accent))" }} />
-                Avec Interw.ai, vous utilisez votre temps pour échanger avec les meilleurs profils.
+              <div
+                className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
+                style={{ background: "hsl(262 83% 58% / 0.15)", border: "1px solid hsl(262 83% 58% / 0.3)" }}
+              >
+                <Sparkles className="h-12 w-12" style={{ color: "hsl(262 83% 75%)" }} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+          </div>
+
+          {/* Big card #2 — Équité */}
+          <div
+            className="mt-6 overflow-hidden rounded-2xl p-10"
+            style={{
+              background: "linear-gradient(135deg, hsl(142 50% 10%), hsl(142 40% 7%))",
+              border: "1px solid hsl(142 50% 22%)",
+            }}
+          >
+            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
+              <div className="max-w-2xl">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
+                  style={{ background: "hsl(142 71% 38%)" }}
+                >
+                  Équité &amp; inclusion
+                </span>
+                <h3 className="mt-4 text-2xl font-semibold text-white md:text-3xl">
+                  Un recrutement vraiment équitable
+                </h3>
+                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(0 0% 80%)" }}>
+                  Peu importe le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. interw.ai donne une vraie chance à ceux que les CV écartent trop vite. Recruter mieux, c'est aussi recruter plus justement.
+                </p>
+              </div>
+              <div
+                className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
+                style={{ background: "hsl(142 71% 38% / 0.15)", border: "1px solid hsl(142 71% 38% / 0.3)" }}
+              >
+                <Scale className="h-12 w-12" style={{ color: "hsl(142 71% 70%)" }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Standard cards grid */}
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            {[
+              {
+                icon: Brain,
+                title: "Analyse IA des réponses",
+                desc: "Une fois l'entretien terminé, l'IA analyse chaque réponse selon vos critères. Même grille pour tous. Zéro biais, zéro fatigue, zéro oubli.",
+              },
+              {
+                icon: FileText,
+                title: "Rapports prêts à partager",
+                desc: "Un portrait complet de chaque candidat : score, points forts, zones d'attention, recommandation. Prêt à partager avec vos managers en un clic — sans passer des heures à rédiger vos notes.",
+              },
+              {
+                icon: Library,
+                title: "Votre méthode, capitalisée",
+                desc: "Construisez et sauvegardez votre propre méthode d'évaluation. Réutilisez-la sur tous vos recrutements. Votre expertise ne repart jamais de zéro.",
+              },
+              {
+                icon: Video,
+                title: "Revoyez chaque moment clé",
+                desc: "Revoyez n'importe quel passage de l'entretien. Partagez les extraits qui comptent avec vos collègues ou managers — sans reformuler ce que vous avez entendu.",
+              },
+              {
+                icon: ShieldCheck,
+                title: "RGPD natif",
+                desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable.",
+              },
+            ].map((f) => (
+              <div key={f.title} className="landing-card landing-card-hover p-6">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-lg"
+                  style={{ background: "hsl(262 83% 58% / 0.15)", color: "hsl(262 83% 75%)" }}
+                >
+                  <f.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-white">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ HOW ============ */}
+      <section id="how" style={{ background: "hsl(0 0% 6.7%)" }}>
+        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="landing-pill">Fonctionnement</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+              Trois étapes. Aucune installation.<br />Vos premiers rapports en moins d'une heure.
+            </h2>
+          </div>
+
+          <div className="relative mt-16">
+            {/* Connector dashed line (desktop) */}
+            <div
+              className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
+              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(262 83% 58% / 0.4)" }}
+            />
+            <div className="relative grid gap-6 md:grid-cols-3">
               {[
-                { k: "10×", v: "plus rapide qu'un entretien téléphonique" },
-                { k: "100 %", v: "des candidats évalués sur les mêmes critères" },
-                { k: "24/7", v: "vos candidats passent l'entretien quand ils veulent" },
-                { k: "0", v: "biais lié à la fatigue du recruteur" },
+                {
+                  n: "01",
+                  title: "Créez votre projet",
+                  desc: "Vous définissez le poste, choisissez vos questions et fixez vos critères d'évaluation. C'est votre méthode. Moins de 10 minutes pour tout paramétrer.",
+                },
+                {
+                  n: "02",
+                  title: "Envoyez le lien",
+                  desc: "Vos candidats reçoivent un lien unique. Ils répondent quand ils veulent, depuis n'importe où. Pas de coordination à gérer. Pas de créneau à caler. Tout le monde peut candidater — sans barrière.",
+                },
+                {
+                  n: "03",
+                  title: "Recevez les rapports",
+                  desc: "L'IA analyse chaque réponse selon vos critères et génère un rapport complet : score, portrait du candidat, recommandation. Ce qui vous prenait des heures se lit en quelques minutes.",
+                },
               ].map((s) => (
-                <div key={s.k} className="landing-card p-5">
-                  <div className="text-3xl font-semibold landing-accent-text">{s.k}</div>
-                  <div className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{s.v}</div>
+                <div key={s.n} className="landing-card relative overflow-hidden p-7">
+                  <div
+                    className="pointer-events-none absolute right-3 top-0 select-none text-[80px] font-bold leading-none"
+                    style={{ color: "hsl(262 83% 58% / 0.2)" }}
+                  >
+                    {s.n}
+                  </div>
+                  <div className="relative">
+                    <div
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                      style={{ background: "hsl(262 83% 58%)" }}
+                    >
+                      {s.n}
+                    </div>
+                    <h3 className="mt-5 text-lg font-semibold text-white">{s.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
+                      {s.desc}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -251,150 +472,72 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Tutoriel — création d'une session */}
-      <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-20">
-          <p className="text-center text-xs uppercase tracking-wider" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            {"\n"}
-          </p>
+      {/* ============ COMPARATIF ============ */}
+      <section style={{ background: "hsl(0 0% 4%)" }}>
+        <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="landing-pill">Comparatif</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+              Avec la présélection traditionnelle, combien de bons candidats passez-vous à côté ?
+            </h2>
+          </div>
+
           <div
-            className="mt-8 overflow-hidden rounded-lg"
-            style={{ background: "hsl(var(--l-bg-elev) / 0.5)", border: "1px solid hsl(var(--l-border))" }}
+            className="mt-14 overflow-hidden rounded-2xl"
+            style={{ border: "1px solid hsl(0 0% 14%)" }}
           >
-            <TutoVideo />
-          </div>
-        </div>
-      </section>
-
-      {/* Témoignage */}
-      <section className="border-t landing-divider">
-        <div className="mx-auto max-w-4xl px-6 py-20">
-          <div className="landing-card relative p-8 md:p-12">
-            <Quote className="absolute right-6 top-6 h-10 w-10" style={{ color: "hsl(var(--l-accent) / 0.25)" }} />
-            <div className="flex items-center gap-1" style={{ color: "hsl(var(--l-accent))" }}>
-              {[0, 1, 2, 3, 4].map((i) => <Star key={i} className="h-4 w-4 fill-current" />)}
-            </div>
-            <p className="mt-5 text-xl leading-relaxed md:text-2xl">
-              « On reçoit plus de 100 candidatures par offre. Interw.ai fait la présélection en une nuit
-              et nous remet un classement clair. On gagne deux jours par recrutement. »
-            </p>
-            <div className="mt-6 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
-                CM
+            <div className="grid grid-cols-[1.2fr_1fr_1fr] text-sm">
+              <div className="p-5 font-medium" style={{ background: "hsl(0 0% 7%)" }}>&nbsp;</div>
+              <div
+                className="p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
+                style={{ background: "hsl(0 0% 7%)", color: "hsl(0 0% 55%)" }}
+              >
+                Téléphone / Visio
               </div>
-              <div>
-                <div className="text-sm font-medium">Claire M.</div>
-                <div className="text-xs" style={{ color: "hsl(var(--l-fg-dim))" }}>Responsable recrutement · cabinet de conseil</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section id="features" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Fonctionnalités
-            </div>
-            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
-              Tout ce qu'il faut pour recruter mieux.
-            </h2>
-            <p className="mt-4 text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
-              Une suite complète, pensée pour les équipes RH modernes.
-            </p>
-          </div>
-
-          <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: Brain, title: "Entretien IA conversationnel", desc: "L'IA mène l'entretien, pose des questions de relance pertinentes et adapte son ton à chaque candidat." },
-              { icon: LineChart, title: "Notation automatique", desc: "Chaque réponse est notée selon vos critères d'évaluation. Transparente, objective, reproductible." },
-              { icon: ClipboardList, title: "Rapports détaillés", desc: "Synthèse, points forts, axes d'amélioration, recommandation. Prêt à partager avec vos managers." },
-              { icon: Library, title: "Bibliothèque de questions", desc: "Réutilisez vos meilleures questions et critères entre projets. Capitalisez sur votre expertise." },
-              { icon: Video, title: "Enregistrement vidéo", desc: "Revoyez les moments clés grâce aux transcriptions horodatées. Partagez les extraits importants." },
-              { icon: ShieldCheck, title: "RGPD natif", desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable." },
-            ].map((f) => (
-              <div key={f.title} className="landing-card p-6 transition-transform hover:-translate-y-1">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md" style={{ background: "hsl(var(--l-accent) / 0.15)", color: "hsl(var(--l-accent))" }}>
-                  <f.icon className="h-4 w-4" />
-                </div>
-                <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(var(--l-fg-dim))" }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How */}
-      <section id="how" className="border-t landing-divider">
-        <div className="mx-auto max-w-6xl px-6 py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Fonctionnement
-            </div>
-            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
-              Trois étapes. Aucune installation.
-            </h2>
-          </div>
-
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {[
-              { n: "01", icon: ClipboardList, title: "Créez votre projet", desc: "Définissez le poste, les questions et les critères d'évaluation. Quelques minutes suffisent." },
-              { n: "02", icon: CalendarClock, title: "Envoyez le lien", desc: "Vos candidats reçoivent un lien unique. Ils passent l'entretien depuis leur navigateur, à leur rythme." },
-              { n: "03", icon: CheckCircle2, title: "Recevez les rapports", desc: "Une note globale, une recommandation et tous les détails. Décidez en quelques minutes." },
-            ].map((s) => (
-              <div key={s.n} className="landing-card relative p-6">
-                <div className="text-xs font-mono" style={{ color: "hsl(var(--l-fg-dim))" }}>{s.n}</div>
-                <div className="mt-4 flex h-9 w-9 items-center justify-center rounded-md" style={{ background: "hsl(var(--l-accent) / 0.15)", color: "hsl(var(--l-accent))" }}>
-                  <s.icon className="h-4 w-4" />
-                </div>
-                <h3 className="mt-4 text-base font-semibold">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(var(--l-fg-dim))" }}>{s.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Comparatif */}
-      <section className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Comparatif
-            </div>
-            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
-              Présélection traditionnelle ou Interw.ai ?
-            </h2>
-          </div>
-
-          <div className="mt-12 overflow-hidden rounded-2xl" style={{ border: "1px solid hsl(var(--l-border))" }}>
-            <div className="grid grid-cols-3 text-sm">
-              <div className="p-4 font-medium" style={{ background: "hsl(var(--l-bg-elev))" }}> </div>
-              <div className="p-4 text-center font-medium" style={{ background: "hsl(var(--l-bg-elev))", color: "hsl(var(--l-fg-dim))" }}>
-                Téléphone / visio
-              </div>
-              <div className="p-4 text-center font-semibold" style={{ background: "hsl(var(--l-accent) / 0.12)" }}>
-                Interw.ai
+              <div
+                className="relative p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
+                style={{ background: "hsl(262 60% 14%)", color: "hsl(262 83% 80%)" }}
+              >
+                <span>Interw.ai</span>
+                <span
+                  className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-white"
+                  style={{ background: "hsl(142 71% 38%)" }}
+                >
+                  <Check className="h-3 w-3" /> Recommandé
+                </span>
               </div>
             </div>
             {[
-              { l: "Temps par candidat", a: "20-30 minutes", b: "0 minute pour vous" },
-              { l: "Disponibilité", a: "Heures de bureau", b: "24/7" },
-              { l: "Critères d'évaluation", a: "Variables", b: "Identiques pour tous" },
-              { l: "Biais inconscients", a: "Présents", b: "Réduits" },
-              { l: "Rapport partageable", a: "À rédiger", b: "Généré automatiquement" },
-              { l: "Coût marginal", a: "Élevé", b: "Faible" },
-            ].map((row, idx) => (
-              <div key={row.l} className="grid grid-cols-3 text-sm" style={{ borderTop: "1px solid hsl(var(--l-border))", background: idx % 2 === 1 ? "hsl(var(--l-bg-elev) / 0.4)" : "transparent" }}>
-                <div className="p-4">{row.l}</div>
-                <div className="flex items-center justify-center gap-2 p-4 text-center" style={{ color: "hsl(var(--l-fg-dim))" }}>
-                  <X className="h-4 w-4 text-red-400/70" /> {row.a}
+              ["Temps par candidat", "20–30 minutes", "0 minute pour vous"],
+              ["Disponibilité", "Heures de bureau", "24h/24, 7j/7"],
+              ["Critères d'évaluation", "Variables", "Identiques pour tous"],
+              ["Biais inconscients", "Présents", "Réduits"],
+              ["Contrôle du processus", "Dépend du recruteur", "100% défini par vous"],
+              ["Équité entre candidats", "Variable", "Identique pour tous"],
+              ["Profils atypiques", "Souvent écartés", "Toujours évalués"],
+              ["Temps d'analyse / candidat", "20–30 min de notes", "Quelques minutes"],
+            ].map(([l, a, b], idx) => (
+              <div
+                key={l}
+                className="grid grid-cols-[1.2fr_1fr_1fr] text-sm"
+                style={{
+                  borderTop: "1px solid hsl(0 0% 12%)",
+                  background: idx % 2 === 1 ? "hsl(0 0% 5.5%)" : "transparent",
+                }}
+              >
+                <div className="p-5 font-medium text-white/90">{l}</div>
+                <div
+                  className="flex items-center justify-center gap-2 p-5 text-center"
+                  style={{ color: "hsl(0 0% 36%)" }}
+                >
+                  <X className="h-4 w-4" style={{ color: "hsl(0 50% 35%)" }} />
+                  <span className="line-through decoration-1">{a}</span>
                 </div>
-                <div className="flex items-center justify-center gap-2 p-4 text-center">
-                  <Check className="h-4 w-4" style={{ color: "hsl(var(--l-accent))" }} /> {row.b}
+                <div
+                  className="flex items-center justify-center gap-2 p-5 text-center font-semibold text-white"
+                  style={{ background: "hsl(262 60% 8%)" }}
+                >
+                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(262 83% 70%)" }} /> {b}
                 </div>
               </div>
             ))}
@@ -402,124 +545,133 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="border-t landing-divider">
-        <div className="mx-auto max-w-5xl px-6 py-20">
+      {/* ============ PRICING ============ */}
+      <section id="pricing" style={{ background: "hsl(0 0% 5.5%)" }}>
+        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Tarifs
-            </div>
-            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
+            <span className="landing-pill">Tarifs</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
               Une formule simple, adaptée à votre volume.
             </h2>
-            <p className="mt-4 text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
-              Sans engagement. Payez uniquement ce que vous utilisez, ou passez en illimité.
+            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(0 0% 60%)" }}>
+              Sans engagement. Commencez gratuitement, payez à l'usage, passez en illimité quand vous êtes prêt.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
+          <div className="mt-16 grid gap-6 md:grid-cols-3">
             {[
               {
                 name: "Freemium",
-                price: "2 €",
-                priceSuffix: "/ entretien",
-                desc: "Idéal pour démarrer ou pour les recrutements ponctuels.",
-                features: [
-                  "20 entretiens gratuits offerts",
-                  "Projets illimités",
-                  "Rapports IA détaillés",
-                  "Ensuite 2 € par entretien",
-                ],
+                price: "0 €",
+                priceSuffix: "",
+                desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
+                features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
                 cta: "Commencer gratuitement",
+                ctaNote: "Aucune carte requise",
                 highlight: false,
               },
               {
                 name: "Pro",
                 price: "49 €",
                 priceSuffix: "/ mois",
-                desc: "Pour les recruteurs qui interviewent chaque semaine.",
+                desc: "Pour les équipes qui recrutent régulièrement et veulent un processus structuré, équitable et reproductible.",
                 features: [
-                  "200 crédits par mois (environ 75 entretiens)",
-                  "Bibliothèque de questions et critères partagée",
+                  "200 crédits / mois (~75 entretiens)",
+                  "Bibliothèque de questions partagée",
                   "Modèles d'entretien réutilisables",
                   "Support prioritaire",
                 ],
                 cta: "Démarrer l'essai",
+                ctaNote: "Annulable à tout moment",
                 highlight: true,
               },
               {
                 name: "Entreprise",
                 price: "Sur mesure",
                 priceSuffix: "",
-                desc: "Pour les organisations à fort volume ou aux exigences spécifiques.",
-                features: [
-                  "Volume négocié et tarif dégressif",
-                  "SSO, rôles avancés, multi-équipes",
-                  "Personnalisation IA et voix sur mesure",
-                  "DPA, engagement RGPD, accompagnement dédié",
-                ],
+                desc: "Pour les organisations qui recrutent à grande échelle, avec des exigences RH spécifiques et des besoins de personnalisation avancés.",
+                features: ["Volume négocié", "SSO, rôles avancés, multi-équipes", "IA et voix personnalisées", "DPA + accompagnement dédié"],
                 cta: "Nous contacter",
+                ctaNote: "Devis sous 24h",
                 highlight: false,
               },
             ].map((p) => (
               <div
                 key={p.name}
-                className="landing-card relative p-6"
-                style={p.highlight ? { borderColor: "hsl(var(--l-accent) / 0.6)", boxShadow: "0 20px 60px -20px hsl(var(--l-accent) / 0.4)" } : undefined}
+                className={`relative rounded-2xl p-7 ${p.highlight ? "landing-pulse-glow" : ""}`}
+                style={
+                  p.highlight
+                    ? {
+                        background: "hsl(262 50% 8%)",
+                        border: "2px solid hsl(262 83% 58%)",
+                      }
+                    : {
+                        background: "hsl(0 0% 6.7%)",
+                        border: "1px solid hsl(0 0% 14%)",
+                      }
+                }
               >
                 {p.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-medium text-white" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
+                    style={{ background: "hsl(262 83% 58%)" }}
+                  >
                     Le plus choisi
                   </div>
                 )}
-                <h3 className="text-lg font-semibold">{p.name}</h3>
-                <div className="mt-3 flex items-baseline gap-1.5">
-                  <span className="text-3xl font-semibold landing-gradient-text">{p.price}</span>
+                <h3 className="text-lg font-semibold text-white">{p.name}</h3>
+                <div className="mt-4 flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-white">{p.price}</span>
                   {p.priceSuffix && (
-                    <span className="text-sm font-normal" style={{ color: "hsl(var(--l-fg-dim))" }}>
+                    <span className="text-sm" style={{ color: "hsl(0 0% 55%)" }}>
                       {p.priceSuffix}
                     </span>
                   )}
                 </div>
-                <p className="mt-2 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>{p.desc}</p>
-                <ul className="mt-5 space-y-2 text-sm">
+                <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
+                  {p.desc}
+                </p>
+                <ul className="mt-6 space-y-2.5 text-sm">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(var(--l-accent))" }} />
-                      <span style={{ color: "hsl(var(--l-fg-dim))" }}>{f}</span>
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(262 83% 70%)" }} />
+                      <span style={{ color: "hsl(0 0% 75%)" }}>{f}</span>
                     </li>
                   ))}
                 </ul>
                 <button
                   type="button"
                   onClick={openDemo}
-                  className={`mt-6 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-medium ${p.highlight ? "landing-btn-primary" : "landing-btn-ghost"}`}
+                  className={`mt-7 inline-flex h-11 w-full items-center justify-center gap-2 px-4 text-sm font-semibold ${
+                    p.highlight ? "landing-btn-primary" : "landing-btn-ghost"
+                  }`}
                 >
                   {p.cta} <ArrowRight className="h-3.5 w-3.5" />
                 </button>
+                <p className="mt-3 text-center text-xs" style={{ color: "hsl(0 0% 40%)" }}>
+                  {p.ctaNote}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="border-t landing-divider">
-        <div className="mx-auto max-w-3xl px-6 py-20">
+      {/* ============ FAQ ============ */}
+      <section id="faq" style={{ background: "hsl(0 0% 4%)" }}>
+        <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
           <div className="text-center">
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(var(--l-accent))" }}>
-              Questions fréquentes
-            </div>
-            <h2 className="mt-3 text-3xl md:text-4xl landing-gradient-text">
+            <span className="landing-pill">Questions fréquentes</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
               Tout ce que vous voulez savoir.
             </h2>
           </div>
 
-          <div className="mt-12 space-y-3">
+          <div className="mt-14 space-y-3">
             {[
               {
-                q: "Comment l'IA évalue-t-elle un candidat ?",
-                a: "Vous définissez vos propres critères (compétences, comportements, motivations). L'IA analyse chaque réponse et attribue une note motivée pour chaque critère, en se basant uniquement sur le contenu de l'entretien.",
+                q: "Comment l'IA analyse-t-elle les réponses ?",
+                a: "Vous définissez vos critères (compétences, comportements, motivations). Une fois l'entretien terminé, l'IA analyse chaque réponse en fonction de ces critères et attribue une note motivée. L'évaluation porte uniquement sur ce que le candidat a dit — pas sur son nom, son école ou son parcours.",
               },
               {
                 q: "Mes candidats acceptent-ils ce format ?",
@@ -534,181 +686,130 @@ export default function Landing() {
                 a: "Une dizaine de minutes. Vous créez votre projet, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
               },
               {
-                q: "L'IA remplace-t-elle l'entretien humain ?",
-                a: "Non. Interw.ai automatise la présélection pour vous faire gagner du temps. La décision d'embauche et l'entretien final restent toujours menés par un recruteur.",
+                q: "L'IA remplace-t-elle le recruteur ?",
+                a: "Non. interw.ai ne conduit pas l'entretien à votre place — c'est vous qui définissez les questions et les critères. L'IA intervient après, pour analyser les réponses et rédiger les rapports. Vous gardez le contrôle total. L'IA vous fait gagner le temps que vous passiez à décortiquer chaque entretien manuellement.",
               },
               {
                 q: "Puis-je personnaliser la voix et le ton de l'IA ?",
                 a: "Oui. Vous choisissez la voix, la langue et le ton. Vous pouvez aussi ajouter une vidéo de présentation au début de l'entretien.",
               },
-            ].map((item, i) => (
-              <div key={item.q} className="landing-card overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium"
+              {
+                q: "interw.ai favorise-t-il vraiment l'égalité des chances ?",
+                a: "Oui. Chaque candidat répond aux mêmes questions, évalué selon les mêmes critères, avec la même grille de notation. Les biais liés au CV, à l'école, au prénom ou à l'apparence n'ont plus d'impact sur la présélection. C'est une façon concrète de recruter plus équitablement — sans effort supplémentaire de votre part.",
+              },
+            ].map((item, i) => {
+              const isOpen = openFaq === i;
+              return (
+                <div
+                  key={item.q}
+                  className="overflow-hidden rounded-xl transition-colors"
+                  style={{
+                    background: isOpen ? "hsl(0 0% 6.7%)" : "hsl(0 0% 5%)",
+                    border: "1px solid hsl(0 0% 12%)",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isOpen) e.currentTarget.style.background = "hsl(0 0% 6.7%)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isOpen) e.currentTarget.style.background = "hsl(0 0% 5%)";
+                  }}
                 >
-                  <span>{item.q}</span>
-                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openFaq === i ? "rotate-180" : ""}`} style={{ color: "hsl(var(--l-fg-dim))" }} />
-                </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-5 text-sm leading-relaxed animate-fade-in" style={{ color: "hsl(var(--l-fg-dim))" }}>
-                    {item.a}
-                  </div>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(isOpen ? null : i)}
+                    className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium text-white md:text-base"
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+                      style={{ color: "hsl(262 83% 70%)" }}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div
+                      className="animate-fade-in px-5 pb-5 text-sm leading-relaxed"
+                      style={{ color: "hsl(0 0% 65%)" }}
+                    >
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ FINAL CTA ============ */}
+      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 4%)" }}>
+        <div className="landing-final-glow absolute inset-0 -z-10" />
+        <div className="mx-auto max-w-4xl px-6 py-28 text-center md:py-32">
+          <h2 className="text-3xl font-semibold md:text-5xl landing-gradient-text">
+            Et si votre prochain meilleur recrutement était déjà dans votre liste de candidats ?
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(0 0% 65%)" }}>
+            En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de travail — sans la remplacer. Et comment il vous fait gagner plusieurs heures par recrutement.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={openDemo}
+              className="landing-btn-primary inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+            >
+              Demander une démo <ArrowRight className="h-4 w-4" />
+            </button>
+            <Link
+              to="/login"
+              className="landing-btn-ghost inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+            >
+              Se connecter
+            </Link>
+          </div>
+          <div
+            className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px]"
+            style={{ color: "hsl(0 0% 45%)" }}
+          >
+            {["RGPD", "Hébergement EU", "Sans engagement", "Setup en 10 min"].map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" style={{ color: "hsl(262 83% 70%)" }} />
+                {t}
+              </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="border-t landing-divider">
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center">
-          <h2 className="text-4xl font-semibold md:text-5xl landing-gradient-text">
-            Prêt à transformer vos entretiens ?
-          </h2>
-          <p className="mx-auto mt-5 max-w-xl text-base" style={{ color: "hsl(var(--l-fg-dim))" }}>
-            Réservez une démonstration de 20 minutes. On vous montre comment Interw.ai s'intègre à votre processus.
-          </p>
-          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button type="button" onClick={openDemo} className="landing-btn-primary inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
-              Demander une démo <ArrowRight className="h-4 w-4" />
-            </button>
-            <Link to="/login" className="landing-btn-ghost inline-flex h-11 items-center gap-2 rounded-md px-6 text-sm font-medium">
-              Se connecter
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t landing-divider">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row" style={{ color: "hsl(var(--l-fg-dim))" }}>
+      {/* ============ FOOTER ============ */}
+      <footer style={{ background: "hsl(0 0% 3%)", borderTop: "1px solid hsl(0 0% 10%)" }}>
+        <div
+          className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row"
+          style={{ color: "hsl(0 0% 45%)" }}
+        >
           <div className="flex items-center gap-2">
-            <div className="flex h-5 w-5 items-center justify-center rounded" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
+            <div
+              className="flex h-5 w-5 items-center justify-center rounded"
+              style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+            >
               <Sparkles className="h-3 w-3 text-white" />
             </div>
             <span>© {new Date().getFullYear()} Interw.ai — Tous droits réservés</span>
           </div>
           <div className="flex items-center gap-5">
-            <button type="button" onClick={openDemo} className="hover:text-white transition-colors bg-transparent border-0 p-0 cursor-pointer" style={{ color: "inherit", font: "inherit" }}>Contact</button>
-            <Link to="/legal" className="hover:text-white transition-colors">Mentions légales</Link>
-            <Link to="/privacy" className="hover:text-white transition-colors">Confidentialité</Link>
+            <button
+              type="button"
+              onClick={openDemo}
+              className="cursor-pointer border-0 bg-transparent p-0 transition-colors hover:text-white"
+              style={{ color: "inherit", font: "inherit" }}
+            >
+              Contact
+            </button>
+            <Link to="/legal" className="transition-colors hover:text-white">Mentions légales</Link>
+            <Link to="/privacy" className="transition-colors hover:text-white">Confidentialité</Link>
           </div>
         </div>
       </footer>
 
       <DemoRequestDialog open={demoOpen} onOpenChange={setDemoOpen} />
-    </div>
-  );
-}
-
-function TutoVideo() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [started, setStarted] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-
-  const startPlayback = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = true;
-    v.play()
-      .then(() => setStarted(true))
-      .catch(() => {
-        /* autoplay refusé : le bouton Play reste affiché */
-      });
-  };
-
-  const handleManualPlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = false;
-    setIsMuted(false);
-    v.play()
-      .then(() => setStarted(true))
-      .catch(() => {});
-  };
-
-  const handleUnmute = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.muted = false;
-    setIsMuted(false);
-  };
-
-  // Autoplay muet quand la vidéo entre dans le viewport, pause quand elle en sort.
-  useEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const v = videoRef.current;
-          if (!v) return;
-          if (entry.isIntersecting) {
-            if (v.paused) startPlayback();
-          } else if (!v.paused) {
-            v.pause();
-          }
-        });
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative aspect-video w-full">
-      <video
-        ref={videoRef}
-        src="https://qxszgsxdktnwqabsdfvw.supabase.co/storage/v1/object/public/tutorials/tutoriel-creation-session.mp4"
-        poster="/tuto-poster.png"
-        controls={started}
-        muted
-        playsInline
-        preload="metadata"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      {!started && (
-        <button
-          type="button"
-          onClick={handleManualPlay}
-          aria-label="Lire la vidéo"
-          className="absolute inset-0 flex items-center justify-center group cursor-pointer"
-          style={{ background: "hsl(0 0% 0% / 0.25)" }}
-        >
-          <span
-            className="flex h-24 w-24 items-center justify-center rounded-full shadow-2xl transition-transform duration-200 group-hover:scale-110"
-            style={{
-              background: "hsl(0 0% 100% / 0.95)",
-              boxShadow: "0 20px 60px -10px hsl(var(--l-accent) / 0.6)",
-            }}
-          >
-            <Play
-              className="h-10 w-10 translate-x-0.5"
-              style={{ color: "hsl(var(--l-accent))", fill: "hsl(var(--l-accent))" }}
-            />
-          </span>
-        </button>
-      )}
-      {started && isMuted && (
-        <button
-          type="button"
-          onClick={handleUnmute}
-          className="absolute right-4 top-4 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition-transform hover:scale-105"
-          style={{
-            background: "hsl(0 0% 100% / 0.95)",
-            color: "hsl(var(--l-accent))",
-            boxShadow: "0 10px 30px -10px hsl(var(--l-accent) / 0.6)",
-          }}
-        >
-          <Volume2 className="h-4 w-4" />
-          Activer le son
-        </button>
-      )}
     </div>
   );
 }
