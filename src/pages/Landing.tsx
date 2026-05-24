@@ -47,7 +47,7 @@ function HeroReportMock() {
         }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b p-5" style={{ borderColor: "hsl(230 14% 88%)" }}>
+        <div className="items-center border-b p-5 flex flex-row gap-[12px] mx-0 text-left" style={{ borderColor: "hsl(230 14% 88%)" }}>
           <div
             className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white"
             style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
@@ -225,7 +225,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
             >
-              Plannifier une démo
+              Planifier une démo
             </button>
           </div>
         </div>
@@ -241,15 +241,14 @@ export default function Landing() {
             <div>
               <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl">
                 <span className="landing-gradient-text">
-                  Évaluez les candidats,<br />pas leur CV.
+                  Évaluez des candidats,<br />pas leur CV.
                 </span>
               </h1>
               <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
                 Faites passer vos entretiens en vidéo asynchrone.<br />L'IA évalue chaque candidat selon vos critères.
               </p>
               <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
-                Vous définissez les questions et les critères et le candidat passe l'entretien quand il veut.<br />
-                Notre IA délivre un rapport détaillé.<br />
+                Vous définissez les questions et les critères et le candidat passe l'entretien quand il veut. Notre IA délivre un rapport détaillé.<br />
                 Vous donnez une chance à tous, vous sélectionnez les meilleurs.
               </p>
               <div className="landing-fade-up landing-delay-3 mt-8">
@@ -258,7 +257,7 @@ export default function Landing() {
                   onClick={openDemo}
                   className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
                 >
-                  Plannifier une démo — 20 entretiens offerts
+                  Planifier une démo &gt;&gt;&gt; 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
                 <p className="mt-3 text-xs" style={{ color: "hsl(230 8% 52%)" }}>
@@ -586,7 +585,7 @@ export default function Landing() {
                 priceSuffix: "",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
                 features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
-                cta: "Plannifier une démo",
+                cta: "Planifier une démo",
                 ctaNote: "Aucune carte requise",
                 highlight: false,
               },
@@ -776,7 +775,7 @@ export default function Landing() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
             >
-              Plannifier une démo <ArrowRight className="h-4 w-4" />
+              Planifier une démo <ArrowRight className="h-4 w-4" />
             </button>
             <Link
               to="/login"
