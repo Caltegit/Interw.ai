@@ -36,33 +36,33 @@ function HeroReportMock() {
       {/* Floating accent shadow */}
       <div
         className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
-        style={{ background: "radial-gradient(ellipse at center, hsl(262 83% 58% / 0.25), transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse at center, hsl(243 75% 60% / 0.18), transparent 70%)" }}
       />
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: "hsl(0 0% 10%)",
-          border: "1px solid hsl(0 0% 16%)",
-          boxShadow: "0 30px 80px -20px hsl(262 83% 58% / 0.35), 0 0 0 1px hsl(0 0% 100% / 0.02) inset",
+          background: "#ffffff",
+          border: "1px solid hsl(230 16% 92%)",
+          boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.22), 0 1px 2px hsl(240 10% 10% / 0.04)",
         }}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b p-5" style={{ borderColor: "hsl(0 0% 16%)" }}>
+        <div className="flex items-center gap-3 border-b p-5" style={{ borderColor: "hsl(230 14% 88%)" }}>
           <div
             className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+            style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
           >
             MD
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-white">Marie D.</div>
-            <div className="truncate text-xs" style={{ color: "hsl(0 0% 55%)" }}>
+            <div className="text-sm font-semibold text-foreground">Marie D.</div>
+            <div className="truncate text-xs" style={{ color: "hsl(230 8% 46%)" }}>
               Chargée de projet · 24 mai 2026
             </div>
           </div>
           <div
             className="rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider"
-            style={{ background: "hsl(262 83% 18%)", color: "hsl(262 83% 78%)" }}
+            style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}
           >
             Rapport IA
           </div>
@@ -74,13 +74,13 @@ function HeroReportMock() {
           <div className="flex items-center gap-5">
             <div className="relative h-24 w-24 shrink-0">
               <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(0 0% 16%)" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(230 16% 92%)" strokeWidth="8" />
                 <circle
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
-                  stroke="hsl(262 83% 58%)"
+                  stroke="hsl(243 75% 60%)"
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
@@ -88,16 +88,16 @@ function HeroReportMock() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-white">{score}</span>
-                <span className="text-[10px]" style={{ color: "hsl(0 0% 55%)" }}>/ 100</span>
+                <span className="text-2xl font-bold text-foreground">{score}</span>
+                <span className="text-[10px]" style={{ color: "hsl(230 8% 46%)" }}>/ 100</span>
               </div>
             </div>
             <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider" style={{ color: "hsl(0 0% 50%)" }}>
+              <div className="text-xs uppercase tracking-wider" style={{ color: "hsl(230 8% 52%)" }}>
                 Score global
               </div>
-              <div className="mt-1 text-base font-semibold text-white">Excellent profil</div>
-              <div className="mt-1 text-xs leading-snug" style={{ color: "hsl(0 0% 60%)" }}>
+              <div className="mt-1 text-base font-semibold text-foreground">Excellent profil</div>
+              <div className="mt-1 text-xs leading-snug" style={{ color: "hsl(230 8% 42%)" }}>
                 Aligné avec vos critères clés.
               </div>
             </div>
@@ -113,14 +113,14 @@ function HeroReportMock() {
               <div key={c.c} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white/90">{c.c}</span>
-                  <span className="font-mono" style={{ color: "hsl(262 83% 75%)" }}>{c.v}%</span>
+                  <span className="font-mono" style={{ color: "hsl(243 75% 60%)" }}>{c.v}%</span>
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "hsl(0 0% 14%)" }}>
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "hsl(230 14% 88%)" }}>
                   <div
                     className="h-full rounded-full"
                     style={{
                       width: `${c.v}%`,
-                      background: "linear-gradient(90deg, hsl(262 83% 58%), hsl(280 80% 65%))",
+                      background: "linear-gradient(90deg, hsl(243 75% 60%), hsl(280 80% 65%))",
                     }}
                   />
                 </div>
@@ -132,9 +132,9 @@ function HeroReportMock() {
           <div
             className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
             style={{
-              background: "hsl(142 71% 12%)",
-              border: "1px solid hsl(142 71% 25%)",
-              color: "hsl(142 71% 70%)",
+              background: "hsl(152 70% 95%)",
+              border: "1px solid hsl(152 55% 80%)",
+              color: "hsl(152 60% 38%)",
             }}
           >
             <CheckCircle2 className="h-4 w-4" />
@@ -191,35 +191,35 @@ export default function Landing() {
         style={{
           backdropFilter: scrolled ? "blur(12px)" : "none",
           WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
-          background: scrolled ? "hsl(0 0% 4% / 0.75)" : "hsl(0 0% 4%)",
-          borderBottom: `1px solid hsl(0 0% ${scrolled ? "12%" : "10%"})`,
+          background: scrolled ? "hsl(0 0% 100% / 0.8)" : "hsl(0 0% 100%)",
+          borderBottom: `1px solid hsl(230 16% ${scrolled ? "88%" : "94%"})`,
         }}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
             >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
           </Link>
-          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(0 0% 60%)" }}>
-            <a href="#features" className="transition-colors hover:text-white">Fonctionnalités</a>
-            <a href="#how" className="transition-colors hover:text-white">Fonctionnement</a>
-            <a href="#pricing" className="transition-colors hover:text-white">Tarifs</a>
-            <a href="#faq" className="transition-colors hover:text-white">Questions</a>
+          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
+            <a href="#features" className="transition-colors hover:text-foreground">Fonctionnalités</a>
+            <a href="#how" className="transition-colors hover:text-foreground">Fonctionnement</a>
+            <a href="#pricing" className="transition-colors hover:text-foreground">Tarifs</a>
+            <a href="#faq" className="transition-colors hover:text-foreground">Questions</a>
           </nav>
           <div className="flex items-center gap-3">
             <Link
               to="/login"
-              className="text-sm transition-colors hover:text-white"
-              style={{ color: "hsl(0 0% 60%)" }}
+              className="text-sm transition-colors hover:text-foreground"
+              style={{ color: "hsl(230 8% 42%)" }}
             >
               Se connecter
             </Link>
-            <span className="hidden h-5 w-px md:block" style={{ background: "hsl(0 0% 16%)" }} />
+            <span className="hidden h-5 w-px md:block" style={{ background: "hsl(230 14% 88%)" }} />
             <button
               type="button"
               onClick={openDemo}
@@ -232,7 +232,7 @@ export default function Landing() {
       </header>
 
       {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 4%)" }}>
+      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 100%)" }}>
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-6xl px-6 pt-16 pb-24 md:pt-24 md:pb-28">
@@ -244,10 +244,10 @@ export default function Landing() {
                   Évaluez les candidats,<br />pas leur CV.
                 </span>
               </h1>
-              <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(0 0% 80%)" }}>
+              <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
                 Faites passer vos entretiens en vidéo asynchrone.<br />L'IA évalue chaque candidat selon vos critères.
               </p>
-              <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
+              <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
                 Vous définissez les questions et les critères. Le candidat passe l'entretien à son rythme. interw.ai analyse chaque réponse et vous livre un rapport détaillé — quel que soit le parcours du candidat.
               </p>
               <div className="landing-fade-up landing-delay-3 mt-8">
@@ -259,7 +259,7 @@ export default function Landing() {
                   Plannifier une démo — 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
-                <p className="mt-3 text-xs" style={{ color: "hsl(0 0% 50%)" }}>
+                <p className="mt-3 text-xs" style={{ color: "hsl(230 8% 52%)" }}>
                   Sans carte bancaire · Sans engagement · Setup en 10 min
                 </p>
               </div>
@@ -274,7 +274,7 @@ export default function Landing() {
       </section>
 
       {/* ============ HOW ============ */}
-      <section id="how" style={{ background: "hsl(0 0% 6.7%)" }}>
+      <section id="how" style={{ background: "hsl(240 25% 97%)" }}>
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Fonctionnement</span>
@@ -286,7 +286,7 @@ export default function Landing() {
           <div className="relative mt-16">
             <div
               className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
-              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(262 83% 58% / 0.4)" }}
+              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(243 75% 60% / 0.4)" }}
             />
             <div className="relative grid gap-6 md:grid-cols-3">
               {[
@@ -310,7 +310,7 @@ export default function Landing() {
                 },
               ].map((s) => (
                 <div key={s.n} className="landing-card relative overflow-hidden">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: "hsl(0 0% 8%)" }}>
+                  <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: "hsl(240 25% 95%)" }}>
                     <img
                       src={s.img}
                       alt={s.title}
@@ -321,7 +321,7 @@ export default function Landing() {
                     />
                     <div
                       className="pointer-events-none absolute right-3 top-1 select-none text-[64px] font-bold leading-none"
-                      style={{ color: "hsl(0 0% 100% / 0.85)", textShadow: "0 2px 12px hsl(262 83% 30% / 0.6)" }}
+                      style={{ color: "hsl(0 0% 100%)", textShadow: "0 2px 10px hsl(243 75% 30% / 0.55)" }}
                     >
                       {s.n}
                     </div>
@@ -329,12 +329,12 @@ export default function Landing() {
                   <div className="p-7">
                     <div
                       className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ background: "hsl(262 83% 58%)" }}
+                      style={{ background: "hsl(243 75% 60%)" }}
                     >
                       {s.n}
                     </div>
-                    <h3 className="mt-5 text-lg font-semibold text-white">{s.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
+                    <h3 className="mt-5 text-lg font-semibold text-foreground">{s.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(230 8% 38%)" }}>
                       {s.desc}
                     </p>
                   </div>
@@ -346,33 +346,33 @@ export default function Landing() {
       </section>
 
       {/* ============ SOCIAL PROOF BAR ============ */}
-      <section style={{ background: "hsl(0 0% 6%)", borderTop: "1px solid hsl(0 0% 10%)", borderBottom: "1px solid hsl(0 0% 10%)" }}>
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-6 py-3 text-center text-[13px] md:text-sm" style={{ color: "hsl(0 0% 55%)" }}>
+      <section style={{ background: "hsl(240 20% 98%)", borderTop: "1px solid hsl(230 16% 92%)", borderBottom: "1px solid hsl(230 16% 92%)" }}>
+        <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-6 py-3 text-center text-[13px] md:text-sm" style={{ color: "hsl(230 8% 46%)" }}>
           <span className="inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(262 83% 70%)" }} />
+            <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 60%)" }} />
             Déjà utilisé par plus de 200 recruteurs
           </span>
-          <span style={{ color: "hsl(0 0% 20%)" }}>·</span>
+          <span style={{ color: "hsl(230 14% 84%)" }}>·</span>
           <span className="inline-flex items-center gap-1">
             <span className="inline-flex" style={{ color: "hsl(45 95% 60%)" }}>
               {[0,1,2,3,4].map(i => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
             </span>
             <span className="ml-1">4,8/5</span>
           </span>
-          <span style={{ color: "hsl(0 0% 20%)" }}>·</span>
+          <span style={{ color: "hsl(230 14% 84%)" }}>·</span>
           <span className="hidden sm:inline">Données hébergées en Europe</span>
         </div>
       </section>
 
       {/* ============ FEATURES ============ */}
-      <section id="features" className="relative" style={{ background: "hsl(0 0% 5.1%)" }}>
+      <section id="features" className="relative" style={{ background: "hsl(240 20% 98%)" }}>
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">Fonctionnalités</span>
             <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
               Ne ratez plus le bon candidat.
             </h2>
-            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(0 0% 60%)" }}>
+            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
             </p>
           </div>
@@ -381,30 +381,30 @@ export default function Landing() {
           <div
             className="mt-14 overflow-hidden rounded-2xl p-10"
             style={{
-              background: "linear-gradient(135deg, hsl(262 60% 12%), hsl(262 50% 8%))",
-              border: "1px solid hsl(262 70% 30%)",
+              background: "linear-gradient(135deg, hsl(243 100% 96%), hsl(243 100% 97%))",
+              border: "1px solid hsl(243 75% 60% / 0.25)",
             }}
           >
             <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
               <div className="max-w-2xl">
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
-                  style={{ background: "hsl(262 83% 58%)" }}
+                  style={{ background: "hsl(243 75% 60%)" }}
                 >
                   Vous gardez le contrôle
                 </span>
-                <h3 className="mt-4 text-2xl font-semibold text-white md:text-3xl">
+                <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
                   Vos questions, votre processus
                 </h3>
-                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(0 0% 80%)" }}>
+                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
                   Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement — la technologie s'adapte à votre méthode, pas l'inverse.
                 </p>
               </div>
               <div
                 className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
-                style={{ background: "hsl(262 83% 58% / 0.15)", border: "1px solid hsl(262 83% 58% / 0.3)" }}
+                style={{ background: "hsl(243 75% 60% / 0.12)", border: "1px solid hsl(243 75% 60% / 0.25)" }}
               >
-                <Sparkles className="h-12 w-12" style={{ color: "hsl(262 83% 75%)" }} />
+                <Sparkles className="h-12 w-12" style={{ color: "hsl(243 75% 60%)" }} />
               </div>
             </div>
           </div>
@@ -413,8 +413,8 @@ export default function Landing() {
           <div
             className="mt-6 overflow-hidden rounded-2xl p-10"
             style={{
-              background: "linear-gradient(135deg, hsl(142 50% 10%), hsl(142 40% 7%))",
-              border: "1px solid hsl(142 50% 22%)",
+              background: "linear-gradient(135deg, hsl(152 70% 96%), hsl(152 70% 97%))",
+              border: "1px solid hsl(152 55% 82%)",
             }}
           >
             <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
@@ -425,10 +425,10 @@ export default function Landing() {
                 >
                   Équité &amp; inclusion
                 </span>
-                <h3 className="mt-4 text-2xl font-semibold text-white md:text-3xl">
+                <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
                   Un recrutement vraiment équitable
                 </h3>
-                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(0 0% 80%)" }}>
+                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
                   Peu importe le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. interw.ai donne une vraie chance à ceux que les CV écartent trop vite. Recruter mieux, c'est aussi recruter plus justement.
                 </p>
               </div>
@@ -436,7 +436,7 @@ export default function Landing() {
                 className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
                 style={{ background: "hsl(142 71% 38% / 0.15)", border: "1px solid hsl(142 71% 38% / 0.3)" }}
               >
-                <Scale className="h-12 w-12" style={{ color: "hsl(142 71% 70%)" }} />
+                <Scale className="h-12 w-12" style={{ color: "hsl(152 60% 38%)" }} />
               </div>
             </div>
           </div>
@@ -473,12 +473,12 @@ export default function Landing() {
               <div key={f.title} className="landing-card landing-card-hover p-6">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-lg"
-                  style={{ background: "hsl(262 83% 58% / 0.15)", color: "hsl(262 83% 75%)" }}
+                  style={{ background: "hsl(243 75% 60% / 0.12)", color: "hsl(243 75% 60%)" }}
                 >
                   <f.icon className="h-5 w-5" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-white">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">{f.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(230 8% 38%)" }}>
                   {f.desc}
                 </p>
               </div>
@@ -491,7 +491,7 @@ export default function Landing() {
 
 
       {/* ============ COMPARATIF ============ */}
-      <section style={{ background: "hsl(0 0% 4%)" }}>
+      <section style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Comparatif</span>
@@ -502,19 +502,19 @@ export default function Landing() {
 
           <div
             className="mt-14 overflow-hidden rounded-2xl"
-            style={{ border: "1px solid hsl(0 0% 14%)" }}
+            style={{ border: "1px solid hsl(230 14% 88%)" }}
           >
             <div className="grid grid-cols-[1.2fr_1fr_1fr] text-sm">
-              <div className="p-5 font-medium" style={{ background: "hsl(0 0% 7%)" }}>&nbsp;</div>
+              <div className="p-5 font-medium" style={{ background: "hsl(240 25% 96%)" }}>&nbsp;</div>
               <div
                 className="p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
-                style={{ background: "hsl(0 0% 7%)", color: "hsl(0 0% 55%)" }}
+                style={{ background: "hsl(240 25% 96%)", color: "hsl(230 8% 46%)" }}
               >
                 Téléphone / Visio
               </div>
               <div
                 className="relative p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
-                style={{ background: "hsl(262 60% 14%)", color: "hsl(262 83% 80%)" }}
+                style={{ background: "hsl(243 100% 96%)", color: "hsl(243 78% 54%)" }}
               >
                 <span>Interw.ai</span>
                 <span
@@ -539,23 +539,23 @@ export default function Landing() {
                 key={l}
                 className="grid grid-cols-[1.2fr_1fr_1fr] text-sm"
                 style={{
-                  borderTop: "1px solid hsl(0 0% 12%)",
-                  background: idx % 2 === 1 ? "hsl(0 0% 5.5%)" : "transparent",
+                  borderTop: "1px solid hsl(230 16% 92%)",
+                  background: idx % 2 === 1 ? "hsl(240 25% 97%)" : "transparent",
                 }}
               >
-                <div className="p-5 font-medium text-white/90">{l}</div>
+                <div className="p-5 font-medium text-foreground/90">{l}</div>
                 <div
                   className="flex items-center justify-center gap-2 p-5 text-center"
-                  style={{ color: "hsl(0 0% 36%)" }}
+                  style={{ color: "hsl(230 8% 60%)" }}
                 >
-                  <X className="h-4 w-4" style={{ color: "hsl(0 50% 35%)" }} />
+                  <X className="h-4 w-4" style={{ color: "hsl(0 70% 55%)" }} />
                   <span className="line-through decoration-1">{a}</span>
                 </div>
                 <div
-                  className="flex items-center justify-center gap-2 p-5 text-center font-semibold text-white"
-                  style={{ background: "hsl(262 60% 8%)" }}
+                  className="flex items-center justify-center gap-2 p-5 text-center font-semibold text-foreground"
+                  style={{ background: "hsl(243 100% 97%)" }}
                 >
-                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(262 83% 70%)" }} /> {b}
+                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(243 75% 60%)" }} /> {b}
                 </div>
               </div>
             ))}
@@ -564,14 +564,14 @@ export default function Landing() {
       </section>
 
       {/* ============ PRICING ============ */}
-      <section id="pricing" style={{ background: "hsl(0 0% 5.5%)" }}>
+      <section id="pricing" style={{ background: "hsl(240 25% 97%)" }}>
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">Tarifs</span>
             <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
               Une formule simple, adaptée à votre volume.
             </h2>
-            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(0 0% 60%)" }}>
+            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Sans engagement. Commencez gratuitement, payez à l'usage, passez en illimité quand vous êtes prêt.
             </p>
           </div>
@@ -620,40 +620,40 @@ export default function Landing() {
                 style={
                   p.highlight
                     ? {
-                        background: "hsl(262 50% 8%)",
-                        border: "2px solid hsl(262 83% 58%)",
+                        background: "hsl(243 100% 97%)",
+                        border: "2px solid hsl(243 75% 60%)",
                       }
                     : {
-                        background: "hsl(0 0% 6.7%)",
-                        border: "1px solid hsl(0 0% 14%)",
+                        background: "hsl(240 25% 97%)",
+                        border: "1px solid hsl(230 14% 88%)",
                       }
                 }
               >
                 {p.highlight && (
                   <div
                     className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-                    style={{ background: "hsl(262 83% 58%)" }}
+                    style={{ background: "hsl(243 75% 60%)" }}
                   >
                     Le plus choisi
                   </div>
                 )}
-                <h3 className="text-lg font-semibold text-white">{p.name}</h3>
+                <h3 className="text-lg font-semibold text-foreground">{p.name}</h3>
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-5xl font-bold text-white">{p.price}</span>
+                  <span className="text-5xl font-bold text-foreground">{p.price}</span>
                   {p.priceSuffix && (
-                    <span className="text-sm" style={{ color: "hsl(0 0% 55%)" }}>
+                    <span className="text-sm" style={{ color: "hsl(230 8% 46%)" }}>
                       {p.priceSuffix}
                     </span>
                   )}
                 </div>
-                <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 60%)" }}>
+                <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
                   {p.desc}
                 </p>
                 <ul className="mt-6 space-y-2.5 text-sm">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(262 83% 70%)" }} />
-                      <span style={{ color: "hsl(0 0% 75%)" }}>{f}</span>
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
+                      <span style={{ color: "hsl(230 10% 28%)" }}>{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -666,7 +666,7 @@ export default function Landing() {
                 >
                   {p.cta} <ArrowRight className="h-3.5 w-3.5" />
                 </button>
-                <p className="mt-3 text-center text-xs" style={{ color: "hsl(0 0% 40%)" }}>
+                <p className="mt-3 text-center text-xs" style={{ color: "hsl(230 8% 58%)" }}>
                   {p.ctaNote}
                 </p>
               </div>
@@ -676,7 +676,7 @@ export default function Landing() {
       </section>
 
       {/* ============ FAQ ============ */}
-      <section id="faq" style={{ background: "hsl(0 0% 4%)" }}>
+      <section id="faq" style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
           <div className="text-center">
             <span className="landing-pill">Questions fréquentes</span>
@@ -722,31 +722,31 @@ export default function Landing() {
                   key={item.q}
                   className="overflow-hidden rounded-xl transition-colors"
                   style={{
-                    background: isOpen ? "hsl(0 0% 6.7%)" : "hsl(0 0% 5%)",
-                    border: "1px solid hsl(0 0% 12%)",
+                    background: isOpen ? "hsl(240 25% 97%)" : "hsl(240 20% 98%)",
+                    border: "1px solid hsl(230 16% 92%)",
                   }}
                   onMouseEnter={(e) => {
-                    if (!isOpen) e.currentTarget.style.background = "hsl(0 0% 6.7%)";
+                    if (!isOpen) e.currentTarget.style.background = "hsl(240 25% 97%)";
                   }}
                   onMouseLeave={(e) => {
-                    if (!isOpen) e.currentTarget.style.background = "hsl(0 0% 5%)";
+                    if (!isOpen) e.currentTarget.style.background = "hsl(240 20% 98%)";
                   }}
                 >
                   <button
                     type="button"
                     onClick={() => setOpenFaq(isOpen ? null : i)}
-                    className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium text-white md:text-base"
+                    className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium text-foreground md:text-base"
                   >
                     <span>{item.q}</span>
                     <ChevronDown
                       className={`h-4 w-4 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-                      style={{ color: "hsl(262 83% 70%)" }}
+                      style={{ color: "hsl(243 75% 60%)" }}
                     />
                   </button>
                   {isOpen && (
                     <div
                       className="animate-fade-in px-5 pb-5 text-sm leading-relaxed"
-                      style={{ color: "hsl(0 0% 65%)" }}
+                      style={{ color: "hsl(230 8% 38%)" }}
                     >
                       {item.a}
                     </div>
@@ -759,13 +759,13 @@ export default function Landing() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 4%)" }}>
+      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 100%)" }}>
         <div className="landing-final-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-4xl px-6 py-28 text-center md:py-32">
           <h2 className="text-3xl font-semibold md:text-5xl landing-gradient-text">
             Et si votre prochain meilleur recrutement était déjà dans votre liste de candidats ?
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(0 0% 65%)" }}>
+          <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(230 8% 38%)" }}>
             En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de travail — sans la remplacer. Et comment il vous fait gagner plusieurs heures par recrutement.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -785,11 +785,11 @@ export default function Landing() {
           </div>
           <div
             className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px]"
-            style={{ color: "hsl(0 0% 45%)" }}
+            style={{ color: "hsl(230 8% 55%)" }}
           >
             {["RGPD", "Hébergement EU", "Sans engagement", "Setup en 10 min"].map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5" style={{ color: "hsl(262 83% 70%)" }} />
+                <Check className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 60%)" }} />
                 {t}
               </span>
             ))}
@@ -798,15 +798,15 @@ export default function Landing() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer style={{ background: "hsl(0 0% 3%)", borderTop: "1px solid hsl(0 0% 10%)" }}>
+      <footer style={{ background: "hsl(240 20% 98%)", borderTop: "1px solid hsl(230 16% 92%)" }}>
         <div
           className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row"
-          style={{ color: "hsl(0 0% 45%)" }}
+          style={{ color: "hsl(230 8% 55%)" }}
         >
           <div className="flex items-center gap-2">
             <div
               className="flex h-5 w-5 items-center justify-center rounded"
-              style={{ background: "linear-gradient(135deg, hsl(262 83% 58%), hsl(290 70% 60%))" }}
+              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
             >
               <Sparkles className="h-3 w-3 text-white" />
             </div>
@@ -816,13 +816,13 @@ export default function Landing() {
             <button
               type="button"
               onClick={openDemo}
-              className="cursor-pointer border-0 bg-transparent p-0 transition-colors hover:text-white"
+              className="cursor-pointer border-0 bg-transparent p-0 transition-colors hover:text-foreground"
               style={{ color: "inherit", font: "inherit" }}
             >
               Contact
             </button>
-            <Link to="/legal" className="transition-colors hover:text-white">Mentions légales</Link>
-            <Link to="/privacy" className="transition-colors hover:text-white">Confidentialité</Link>
+            <Link to="/legal" className="transition-colors hover:text-foreground">Mentions légales</Link>
+            <Link to="/privacy" className="transition-colors hover:text-foreground">Confidentialité</Link>
           </div>
         </div>
       </footer>
