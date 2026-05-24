@@ -178,6 +178,11 @@
 
 .landing-accent-text { color: hsl(var(--l-accent)); }
 
+/* Force readable colors inside landing-root regardless of global theme */
+.landing-root .text-foreground { color: hsl(var(--l-fg)) !important; }
+.landing-root .text-foreground\/90 { color: hsl(var(--l-fg) / 0.9) !important; }
+.landing-root .hover\:text-foreground:hover { color: hsl(var(--l-fg)) !important; }
+
 .landing-card {
   background: hsl(0 0% 100%);
   border: 1px solid hsl(var(--l-border));
