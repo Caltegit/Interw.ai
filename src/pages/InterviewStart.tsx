@@ -1540,6 +1540,45 @@ export default function InterviewStart() {
     }
   }, [toast, reattachAllSelfViews, session?.id]);
 
+  // Change le micro à chaud (utilisé depuis l'écran d'aide « auto-silence »).
+  // On stoppe les tracks audio actuels et on rebranche un nouveau MediaStream
+  // qui combine la vidéo existante + l'audio du nouveau périphérique.
+  const switchAudioDevice = useCallback(async (deviceId: string) => {
+    if (!deviceId) return;
+    setSwitchingDevice(true);
+    try {
+      setStoredDeviceId("audio", deviceId);
+      const newAudio = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: deviceId } },
+      });
+      const existing = streamRef.current;
+      // Stop des anciennes pistes audio uniquement (on garde la vidéo).
+      existing?.getAudioTracks().forEach((t) => {
+        try { existing.removeTrack(t); } catch { /* ignore */ }
+        try { t.stop(); } catch { /* ignore */ }
+      });
+      newAudio.getAudioTracks().forEach((t) => {
+        try { existing?.addTrack(t); } catch { /* ignore */ }
+      });
+      setCurrentAudioDeviceId(deviceId);
+      toast({ title: "Micro changé", description: "Cliquez sur Reprendre pour continuer." });
+    } catch (err) {
+      logger.warn("interview_switch_audio_device_failed", {
+        sessionId: session?.id ?? null,
+        deviceId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast({
+        title: "Changement impossible",
+        description: "Impossible d'utiliser ce micro. Essayez-en un autre.",
+        variant: "destructive",
+      });
+    } finally {
+      setSwitchingDevice(false);
+    }
+  }, [toast, session?.id]);
+
+
   // Start a per-question video recorder (uses same stream)
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
   const uploadChunk = useCallback(
