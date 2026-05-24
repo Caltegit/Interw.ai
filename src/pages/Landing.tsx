@@ -759,10 +759,10 @@ export default function Landing() {
         <div className="landing-final-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-4xl px-6 py-28 text-center md:py-32">
           <h2 className="text-3xl font-semibold md:text-5xl landing-gradient-text">
-            Et si votre prochain meilleur recrutement était déjà dans votre liste de candidats ?
+            Et si votre prochain recrutement était celui dont le CV ne vous aurait pas marqué ?
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(230 8% 38%)" }}>
-            En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de travail — sans la remplacer. Et comment il vous fait gagner plusieurs heures par recrutement.
+            En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de recrutement, sans la remplacer.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button
