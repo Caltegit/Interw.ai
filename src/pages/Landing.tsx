@@ -759,7 +759,7 @@ export default function Landing() {
         <div className="landing-final-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-4xl px-6 py-28 text-center md:py-32">
           <h2 className="text-3xl font-semibold md:text-5xl landing-gradient-text">
-            Et si votre prochain recrutement était celui dont le CV ne vous aurait pas marqué ?
+            Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(230 8% 38%)" }}>
             En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de recrutement, sans la remplacer.
