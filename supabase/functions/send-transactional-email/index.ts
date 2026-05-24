@@ -83,7 +83,20 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (!isInternalCall) {
+  // Templates qui peuvent être appelés sans authentification depuis les pages publiques.
+  // Garder cette liste minimale — ces modèles doivent avoir un destinataire `to` fixe
+  // pour éviter une utilisation en relais ouvert.
+  const PUBLIC_TEMPLATES = new Set(['demo-request'])
+  let peekedTemplateName: string | undefined
+  try {
+    const peek = await req.clone().json()
+    peekedTemplateName = peek?.templateName || peek?.template_name
+  } catch {
+    // ignoré — le parsing échouera plus bas si nécessaire
+  }
+  const isPublicTemplate = !!peekedTemplateName && PUBLIC_TEMPLATES.has(peekedTemplateName)
+
+  if (!isInternalCall && !isPublicTemplate) {
     if (!bearer) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
