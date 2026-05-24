@@ -1,38 +1,51 @@
-## Plan
+## Objectif
 
-**1. Déplacer la section "Fonctionnement"**
+Quand la session est mise en pause automatiquement pour silence prolongé (20 s sans transcription), arrêter de dire seulement *« Reprenez dans 2 minutes »* et **guider le candidat sur la piste micro**.
 
-Ordre actuel : Hero → Social proof bar ("Déjà utilisé par 200+ recruteurs…") → Features → Fonctionnement → Comparatif…
+## Ce qu'on change
 
-Nouvel ordre : Hero → **Fonctionnement** → Social proof bar → Features → Comparatif…
+### 1. Message de la pause auto-silence — `InterviewStart.tsx` (~lignes 547-559)
 
-Déplacer le bloc `<section id="how">` (lignes 415-473 de `src/pages/Landing.tsx`) juste après le Hero, avant la "social proof bar".
+Remplacer le `toast` actuel par une **modale dédiée** non bloquante (Dialog shadcn), qui s'ouvre uniquement quand `pauseSource === "auto-silence"`.
 
-**2. Générer 3 images illustratives**
+Contenu :
+- **Titre** : *« Nous ne vous entendons plus »*
+- **Sous-titre** : *« Si vous parliez bien, c'est probablement votre micro. »*
+- **3 vérifications rapides** (liste avec icônes) :
+  1. Vérifier l'icône cadenas du navigateur — le micro doit être autorisé.
+  2. Vérifier que le micro système n'est pas coupé (touche dédiée du clavier, prise jack).
+  3. Essayer un autre micro ci-dessous.
+- **`DeviceSelector`** (composant déjà existant) listant les `audioinput` détectés. À la sélection :
+  - met à jour `interview.preferredAudioDeviceId`,
+  - relance `startVideoStream()` (qui réutilise le device préféré).
+- **Boutons** :
+  - *« Reprendre l'entretien »* (primary) → ferme la modale + `resumeInterview()`.
+  - *« Signaler un problème »* (ghost) → ouvre le dialog `report-interview-issue` déjà câblé.
 
-Via `imagegen--generate_image` (preset `standard`, ratio 4:3, sauvegarde dans `src/assets/`) :
+La TTS d'annonce actuelle (*« Je vais mettre la session en pause »*) reste, on n'y touche pas.
 
-- `step-01-setup.jpg` — Étape 01 « Créez votre projet » : mockup d'interface de configuration d'entretien (questions + critères), style 3D doux, dark background, accent violet #7c3aed.
-- `step-02-link.jpg` — Étape 02 « Envoyez le lien » : illustration d'un candidat sur laptop/smartphone avec caméra activée recevant un lien d'entretien vidéo, même style.
-- `step-03-report.jpg` — Étape 03 « Recevez les rapports » : mockup de rapport d'évaluation avec score circulaire et barres de compétences, même style.
+### 2. Adapter `pauseInterviewRef.current?.("auto-silence")`
 
-Style commun : minimaliste, dark `#0a0a0a`, accents violet, pas de texte lisible (évite artefacts), cohérent avec la palette de la landing.
+Le state `pauseSource` existe déjà (type `PauseSource`). On l'utilise pour conditionner l'affichage : la modale ne s'ouvre que pour `auto-silence`, pas pour `manual` ou `auto-network`.
 
-**3. Intégrer les images dans chaque carte d'étape**
+### 3. Nouveau composant
 
-Dans la map des 3 étapes (lignes 432-447) :
-- Ajouter un champ `img` à chaque objet.
-- Afficher l'image en haut de la carte (`<img>` `aspect-[4/3]` `object-cover`, bord supérieur arrondi, sans padding latéral en haut).
-- Restructurer la carte : image full-bleed en haut, puis contenu (badge numéroté + titre + description) avec padding.
-- Conserver le grand numéro filigrane et le titre.
+`src/components/interview/MicSilencePauseDialog.tsx` — Dialog shadcn + `DeviceSelector` + les 3 conseils. Props : `open`, `onResume`, `onReport`, `currentDeviceId`, `onDeviceChange`, `audioDevices`.
 
-**4. Vérification**
+### 4. Logger
 
-- Reload preview, vérifier le nouvel ordre des sections.
-- Vérifier que les 3 images se chargent et que la grille reste alignée (desktop + mobile).
-- Vérifier que l'ancre `#how` (lien navbar) fonctionne toujours.
+À l'ouverture de la modale, `logger.warn("interview_silence_pause_shown", { sessionId, questionIndex })` pour mesurer la fréquence.
 
-### Fichiers touchés
+## Ce qu'on ne touche pas
 
-- `src/pages/Landing.tsx` (déplacement de section + intégration des `<img>` + imports d'assets)
-- `src/assets/step-01-setup.jpg`, `step-02-link.jpg`, `step-03-report.jpg` (nouveaux)
+- Les timings (6 s / 12 s / 20 s / 2 min) — déjà bien calibrés.
+- La logique de reset basée sur `liveTranscript`.
+- Le watchdog STT existant.
+- L'auto-arrêt après 2 min sans reprise.
+
+## Test après implémentation
+
+1. Lancer une session candidat en local, débrancher/couper le micro système avant la 1ʳᵉ question.
+2. Vérifier qu'au bout de 20 s la modale apparaît avec la liste des micros détectés.
+3. Sélectionner un autre micro → vérifier que le stream est relancé sur le bon device.
+4. Cliquer « Reprendre » → vérifier que la session repart normalement.

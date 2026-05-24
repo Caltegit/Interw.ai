@@ -29,6 +29,8 @@ import {
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
 import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
+import DeviceSelector from "@/components/interview/DeviceSelector";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
 // principale au sein du geste utilisateur initial (clé sur iOS Safari).
@@ -330,6 +332,12 @@ export default function InterviewStart() {
   const [showSelfView, setShowSelfView] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
+  // Origine de la pause courante (affichage différencié de l'overlay).
+  const [pauseReason, setPauseReason] = useState<"manual" | "auto-silence" | "auto-network">("manual");
+  // Liste des micros détectés (utile sur l'écran de pause auto-silence).
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [currentAudioDeviceId, setCurrentAudioDeviceId] = useState<string | null>(null);
+  const [switchingDevice, setSwitchingDevice] = useState(false);
   const pausedDuringQuestionRef = useRef(false);
   // Snapshot of the presentation at pause-time, used by resumeInterview
   // (currentPresentationRef may be null by the time resume runs because TTS
@@ -544,9 +552,21 @@ export default function InterviewStart() {
     silenceAutoPauseTimerRef.current = setTimeout(() => {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
-      toast({
-        title: "Session mise en pause",
-        description: "Reprenez dans les 2 minutes pour continuer.",
+      setPauseReason("auto-silence");
+      // Rafraîchit la liste des micros pour l'écran d'aide.
+      listInputDevices()
+        .then(({ audio }) => {
+          setAudioInputs(audio);
+          try {
+            const stored = localStorage.getItem(PREFERRED_AUDIO_KEY);
+            const active = streamRef.current?.getAudioTracks?.()[0]?.getSettings?.().deviceId;
+            setCurrentAudioDeviceId(active || stored || null);
+          } catch { /* ignore */ }
+        })
+        .catch(() => { /* ignore */ });
+      logger.warn("interview_silence_pause_shown", {
+        sessionId: session?.id ?? null,
+        questionIndex: currentQuestionIndex,
       });
       // IMPORTANT : on déclenche pauseInterview AVANT le TTS d'annonce, pour que
       // le snapshot capture la vraie présentation en cours (la question), pas le
@@ -555,9 +575,9 @@ export default function InterviewStart() {
       armEndWarningRef.current?.();
       // L'annonce vocale arrive juste après — speak() utilise sa propre instance
       // et ne perturbe pas le snapshot déjà figé par pauseInterview.
-      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
+      speakRef.current?.("Nous ne captons plus votre voix. Je mets la session en pause — vérifiez votre micro puis cliquez sur Reprendre.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
-  }, [toast, clearSilenceTier, clearEndCountdown]);
+  }, [toast, clearSilenceTier, clearEndCountdown, session?.id, currentQuestionIndex]);
 
   // Arme l'avertissement de fin + le compte à rebours d'arrêt forcé,
   // déclenchés depuis l'état de pause automatique.
@@ -1219,6 +1239,7 @@ export default function InterviewStart() {
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
   // `source` permet de tracer l'origine (clic utilisateur vs silence prolongé).
   const pauseInterview = useCallback((source: PauseSource = "manual") => {
+    setPauseReason(source);
     isPausedRef.current = true;
     // "Pendant la question" = il y a une présentation en cours (TTS ou média)
     const duringQuestion = currentPresentationRef.current !== null;
@@ -1518,6 +1539,45 @@ export default function InterviewStart() {
       });
     }
   }, [toast, reattachAllSelfViews, session?.id]);
+
+  // Change le micro à chaud (utilisé depuis l'écran d'aide « auto-silence »).
+  // On stoppe les tracks audio actuels et on rebranche un nouveau MediaStream
+  // qui combine la vidéo existante + l'audio du nouveau périphérique.
+  const switchAudioDevice = useCallback(async (deviceId: string) => {
+    if (!deviceId) return;
+    setSwitchingDevice(true);
+    try {
+      setStoredDeviceId("audio", deviceId);
+      const newAudio = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: deviceId } },
+      });
+      const existing = streamRef.current;
+      // Stop des anciennes pistes audio uniquement (on garde la vidéo).
+      existing?.getAudioTracks().forEach((t) => {
+        try { existing.removeTrack(t); } catch { /* ignore */ }
+        try { t.stop(); } catch { /* ignore */ }
+      });
+      newAudio.getAudioTracks().forEach((t) => {
+        try { existing?.addTrack(t); } catch { /* ignore */ }
+      });
+      setCurrentAudioDeviceId(deviceId);
+      toast({ title: "Micro changé", description: "Cliquez sur Reprendre pour continuer." });
+    } catch (err) {
+      logger.warn("interview_switch_audio_device_failed", {
+        sessionId: session?.id ?? null,
+        deviceId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast({
+        title: "Changement impossible",
+        description: "Impossible d'utiliser ce micro. Essayez-en un autre.",
+        variant: "destructive",
+      });
+    } finally {
+      setSwitchingDevice(false);
+    }
+  }, [toast, session?.id]);
+
 
   // Start a per-question video recorder (uses same stream)
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
@@ -4228,7 +4288,11 @@ export default function InterviewStart() {
           <p
             className="mb-4 text-sm font-medium uppercase tracking-widest candidate-gradient-text"
           >
-            {networkPauseActive ? "Connexion instable" : "En pause"}
+            {networkPauseActive
+              ? "Connexion instable"
+              : pauseReason === "auto-silence"
+                ? "Micro inactif"
+                : "En pause"}
           </p>
           {networkPauseActive ? (
             <>
@@ -4256,7 +4320,68 @@ export default function InterviewStart() {
                 Reprendre maintenant
               </Button>
             </>
+          ) : pauseReason === "auto-silence" ? (
+            <div className="w-full max-w-md px-6">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "hsl(var(--l-accent) / 0.15)" }}>
+                <MicOff className="h-7 w-7" style={{ color: "hsl(var(--l-accent))" }} />
+              </div>
+              <h2 className="text-center text-lg font-semibold candidate-gradient-text">
+                Nous ne vous entendons plus
+              </h2>
+              <p className="mt-2 text-center text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
+                Si vous parliez bien, c'est probablement votre micro. Trois choses à vérifier :
+              </p>
+              <ol className="mt-4 space-y-2 text-sm" style={{ color: "hsl(var(--l-fg) / 0.85)" }}>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>1.</span>
+                  <span>Cliquez sur l'icône <strong>cadenas</strong> dans la barre d'adresse du navigateur et vérifiez que le micro est autorisé.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>2.</span>
+                  <span>Vérifiez que votre micro système n'est pas coupé (touche dédiée du clavier, casque branché).</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold" style={{ color: "hsl(var(--l-accent))" }}>3.</span>
+                  <span>Essayez un autre micro ci-dessous, si disponible.</span>
+                </li>
+              </ol>
+
+              {audioInputs.length >= 2 && (
+                <div className="mt-4">
+                  <p className="mb-1 text-xs font-medium" style={{ color: "hsl(var(--l-fg) / 0.6)" }}>
+                    Changer de micro
+                  </p>
+                  <DeviceSelector
+                    devices={audioInputs}
+                    value={currentAudioDeviceId}
+                    onChange={(id) => { void switchAudioDevice(id); }}
+                    placeholder="Choisir un micro"
+                    disabled={switchingDevice}
+                  />
+                </div>
+              )}
+
+              <div className="mt-6 flex flex-col gap-2">
+                <Button
+                  onClick={resumeInterview}
+                  className="candidate-btn-primary w-full"
+                  disabled={switchingDevice}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Reprendre l'entretien
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowReportDialog(true)}
+                  className="w-full"
+                >
+                  <Flag className="h-4 w-4 mr-2" />
+                  Signaler un problème
+                </Button>
+              </div>
+            </div>
           ) : (
+
             <>
               <Button
                 onClick={resumeInterview}
