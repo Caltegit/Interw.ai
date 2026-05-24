@@ -575,9 +575,9 @@ export default function Landing() {
           <div className="mt-16 grid gap-6 md:grid-cols-3">
             {[
               {
-                name: "Freemium",
-                price: "0 €",
-                priceSuffix: "",
+                name: "Pay As You Go",
+                price: "3 €",
+                priceSuffix: "/ entretien",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
                 features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
                 cta: "Planifier une démo",
