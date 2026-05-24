@@ -492,7 +492,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Comparatif</span>
             <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
-              Avec la présélection traditionnelle, combien de bons candidats passez-vous à côté ?
+              Avec la présélection traditionnelle, vous n'avez pas le temps d'évaluer tout le potentiel de certains candidats.
             </h2>
           </div>
 
