@@ -36,14 +36,14 @@ function HeroReportMock() {
       {/* Floating accent shadow */}
       <div
         className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
-        style={{ background: "radial-gradient(ellipse at center, hsl(262 83% 58% / 0.25), transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse at center, hsl(243 75% 60% / 0.18), transparent 70%)" }}
       />
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: "hsl(230 16% 92%)",
-          border: "1px solid hsl(230 14% 88%)",
-          boxShadow: "0 30px 80px -20px hsl(262 83% 58% / 0.35), 0 0 0 1px hsl(230 16% 92%) inset",
+          background: "#ffffff",
+          border: "1px solid hsl(230 16% 92%)",
+          boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.22), 0 1px 2px hsl(240 10% 10% / 0.04)",
         }}
       >
         {/* Header */}
@@ -74,7 +74,7 @@ function HeroReportMock() {
           <div className="flex items-center gap-5">
             <div className="relative h-24 w-24 shrink-0">
               <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(230 14% 88%)" strokeWidth="8" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(230 16% 92%)" strokeWidth="8" />
                 <circle
                   cx="50"
                   cy="50"
@@ -192,7 +192,7 @@ export default function Landing() {
           backdropFilter: scrolled ? "blur(12px)" : "none",
           WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
           background: scrolled ? "hsl(0 0% 100% / 0.8)" : "hsl(0 0% 100%)",
-          borderBottom: `1px solid hsl(0 0% ${scrolled ? "12%" : "10%"})`,
+          borderBottom: `1px solid hsl(230 16% ${scrolled ? "88%" : "94%"})`,
         }}
       >
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -286,7 +286,7 @@ export default function Landing() {
           <div className="relative mt-16">
             <div
               className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
-              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(262 83% 58% / 0.4)" }}
+              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(243 75% 60% / 0.4)" }}
             />
             <div className="relative grid gap-6 md:grid-cols-3">
               {[
@@ -321,7 +321,7 @@ export default function Landing() {
                     />
                     <div
                       className="pointer-events-none absolute right-3 top-1 select-none text-[64px] font-bold leading-none"
-                      style={{ color: "hsl(0 0% 100% / 0.85)", textShadow: "0 2px 12px hsl(262 83% 30% / 0.6)" }}
+                      style={{ color: "hsl(0 0% 100%)", textShadow: "0 2px 10px hsl(243 75% 30% / 0.55)" }}
                     >
                       {s.n}
                     </div>
@@ -402,7 +402,7 @@ export default function Landing() {
               </div>
               <div
                 className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
-                style={{ background: "hsl(262 83% 58% / 0.15)", border: "1px solid hsl(262 83% 58% / 0.3)" }}
+                style={{ background: "hsl(243 75% 60% / 0.12)", border: "1px solid hsl(243 75% 60% / 0.25)" }}
               >
                 <Sparkles className="h-12 w-12" style={{ color: "hsl(243 75% 60%)" }} />
               </div>
@@ -473,7 +473,7 @@ export default function Landing() {
               <div key={f.title} className="landing-card landing-card-hover p-6">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-lg"
-                  style={{ background: "hsl(262 83% 58% / 0.15)", color: "hsl(243 75% 60%)" }}
+                  style={{ background: "hsl(243 75% 60% / 0.12)", color: "hsl(243 75% 60%)" }}
                 >
                   <f.icon className="h-5 w-5" />
                 </div>
