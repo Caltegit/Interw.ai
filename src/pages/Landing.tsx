@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
+import step01Img from "@/assets/step-01-setup.jpg";
+import step02Img from "@/assets/step-02-link.jpg";
+import step03Img from "@/assets/step-03-report.jpg";
 import {
   ArrowRight,
   Brain,
@@ -270,6 +273,78 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ============ HOW ============ */}
+      <section id="how" style={{ background: "hsl(0 0% 6.7%)" }}>
+        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="landing-pill">Fonctionnement</span>
+            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+              Trois étapes. Aucune installation.<br />Vos premiers rapports en moins d'une heure.
+            </h2>
+          </div>
+
+          <div className="relative mt-16">
+            <div
+              className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
+              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(262 83% 58% / 0.4)" }}
+            />
+            <div className="relative grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  n: "01",
+                  img: step01Img,
+                  title: "Créez votre projet",
+                  desc: "Vous définissez le poste, choisissez vos questions et fixez vos critères d'évaluation. C'est votre méthode. Moins de 10 minutes pour tout paramétrer.",
+                },
+                {
+                  n: "02",
+                  img: step02Img,
+                  title: "Envoyez le lien",
+                  desc: "Vos candidats reçoivent un lien unique. Ils répondent quand ils veulent, depuis n'importe où. Pas de coordination à gérer. Pas de créneau à caler. Tout le monde peut candidater — sans barrière.",
+                },
+                {
+                  n: "03",
+                  img: step03Img,
+                  title: "Recevez les rapports",
+                  desc: "L'IA analyse chaque réponse selon vos critères et génère un rapport complet : score, portrait du candidat, recommandation. Ce qui vous prenait des heures se lit en quelques minutes.",
+                },
+              ].map((s) => (
+                <div key={s.n} className="landing-card relative overflow-hidden">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: "hsl(0 0% 8%)" }}>
+                    <img
+                      src={s.img}
+                      alt={s.title}
+                      loading="lazy"
+                      width={1024}
+                      height={768}
+                      className="h-full w-full object-cover"
+                    />
+                    <div
+                      className="pointer-events-none absolute right-3 top-1 select-none text-[64px] font-bold leading-none"
+                      style={{ color: "hsl(0 0% 100% / 0.85)", textShadow: "0 2px 12px hsl(262 83% 30% / 0.6)" }}
+                    >
+                      {s.n}
+                    </div>
+                  </div>
+                  <div className="p-7">
+                    <div
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                      style={{ background: "hsl(262 83% 58%)" }}
+                    >
+                      {s.n}
+                    </div>
+                    <h3 className="mt-5 text-lg font-semibold text-white">{s.title}</h3>
+                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
+                      {s.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ============ SOCIAL PROOF BAR ============ */}
       <section style={{ background: "hsl(0 0% 6%)", borderTop: "1px solid hsl(0 0% 10%)", borderBottom: "1px solid hsl(0 0% 10%)" }}>
         <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-6 py-3 text-center text-[13px] md:text-sm" style={{ color: "hsl(0 0% 55%)" }}>
@@ -412,65 +487,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ HOW ============ */}
-      <section id="how" style={{ background: "hsl(0 0% 6.7%)" }}>
-        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="landing-pill">Fonctionnement</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
-              Trois étapes. Aucune installation.<br />Vos premiers rapports en moins d'une heure.
-            </h2>
-          </div>
 
-          <div className="relative mt-16">
-            {/* Connector dashed line (desktop) */}
-            <div
-              className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
-              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(262 83% 58% / 0.4)" }}
-            />
-            <div className="relative grid gap-6 md:grid-cols-3">
-              {[
-                {
-                  n: "01",
-                  title: "Créez votre projet",
-                  desc: "Vous définissez le poste, choisissez vos questions et fixez vos critères d'évaluation. C'est votre méthode. Moins de 10 minutes pour tout paramétrer.",
-                },
-                {
-                  n: "02",
-                  title: "Envoyez le lien",
-                  desc: "Vos candidats reçoivent un lien unique. Ils répondent quand ils veulent, depuis n'importe où. Pas de coordination à gérer. Pas de créneau à caler. Tout le monde peut candidater — sans barrière.",
-                },
-                {
-                  n: "03",
-                  title: "Recevez les rapports",
-                  desc: "L'IA analyse chaque réponse selon vos critères et génère un rapport complet : score, portrait du candidat, recommandation. Ce qui vous prenait des heures se lit en quelques minutes.",
-                },
-              ].map((s) => (
-                <div key={s.n} className="landing-card relative overflow-hidden p-7">
-                  <div
-                    className="pointer-events-none absolute right-3 top-0 select-none text-[80px] font-bold leading-none"
-                    style={{ color: "hsl(262 83% 58% / 0.2)" }}
-                  >
-                    {s.n}
-                  </div>
-                  <div className="relative">
-                    <div
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ background: "hsl(262 83% 58%)" }}
-                    >
-                      {s.n}
-                    </div>
-                    <h3 className="mt-5 text-lg font-semibold text-white">{s.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(0 0% 65%)" }}>
-                      {s.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* ============ COMPARATIF ============ */}
       <section style={{ background: "hsl(0 0% 4%)" }}>
