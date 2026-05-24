@@ -248,7 +248,9 @@ export default function Landing() {
                 Faites passer vos entretiens en vidéo asynchrone.<br />L'IA évalue chaque candidat selon vos critères.
               </p>
               <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
-                Vous définissez les questions et les critères. Le candidat passe l'entretien à son rythme. interw.ai analyse chaque réponse et vous livre un rapport détaillé — quel que soit le parcours du candidat.
+                Vous définissez les questions et les critères et le candidat passe l'entretien quand il veut.<br />
+                Notre IA délivre un rapport détaillé.<br />
+                Vous donnez une chance à tous, vous sélectionnez les meilleurs.
               </p>
               <div className="landing-fade-up landing-delay-3 mt-8">
                 <button
