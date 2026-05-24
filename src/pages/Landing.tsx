@@ -590,7 +590,7 @@ export default function Landing() {
                 priceSuffix: "/ mois",
                 desc: "Pour les équipes qui recrutent régulièrement et veulent un processus structuré, équitable et reproductible.",
                 features: [
-                  "200 crédits / mois (50 entretiens inclus)",
+                  "50 entretiens inclus",
                   "Bibliothèque de questions partagée",
                   "Modèles d'entretien réutilisables",
                   "Support prioritaire",
