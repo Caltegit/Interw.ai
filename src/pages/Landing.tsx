@@ -369,7 +369,7 @@ export default function Landing() {
       <section id="features" className="relative" style={{ background: "hsl(240 20% 98%)" }}>
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">Fonctionnalités</span>
+            <span className="landing-pill">AVANTAGES</span>
             <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
               Ne ratez plus le bon candidat.
             </h2>
