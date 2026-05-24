@@ -552,9 +552,21 @@ export default function InterviewStart() {
     silenceAutoPauseTimerRef.current = setTimeout(() => {
       if (isPausedRef.current || autoEndTriggeredRef.current) return;
       autoPausedRef.current = true;
-      toast({
-        title: "Session mise en pause",
-        description: "Reprenez dans les 2 minutes pour continuer.",
+      setPauseReason("auto-silence");
+      // Rafraîchit la liste des micros pour l'écran d'aide.
+      listInputDevices()
+        .then(({ audio }) => {
+          setAudioInputs(audio);
+          try {
+            const stored = localStorage.getItem(PREFERRED_AUDIO_KEY);
+            const active = streamRef.current?.getAudioTracks?.()[0]?.getSettings?.().deviceId;
+            setCurrentAudioDeviceId(active || stored || null);
+          } catch { /* ignore */ }
+        })
+        .catch(() => { /* ignore */ });
+      logger.warn("interview_silence_pause_shown", {
+        sessionId: session?.id ?? null,
+        questionIndex: currentQuestionIndex,
       });
       // IMPORTANT : on déclenche pauseInterview AVANT le TTS d'annonce, pour que
       // le snapshot capture la vraie présentation en cours (la question), pas le
@@ -563,9 +575,9 @@ export default function InterviewStart() {
       armEndWarningRef.current?.();
       // L'annonce vocale arrive juste après — speak() utilise sa propre instance
       // et ne perturbe pas le snapshot déjà figé par pauseInterview.
-      speakRef.current?.("Je vais mettre la session en pause. Cliquez sur Reprendre quand vous êtes prêt.").catch(() => {});
+      speakRef.current?.("Nous ne captons plus votre voix. Je mets la session en pause — vérifiez votre micro puis cliquez sur Reprendre.").catch(() => {});
     }, SILENCE_AUTOPAUSE_MS);
-  }, [toast, clearSilenceTier, clearEndCountdown]);
+  }, [toast, clearSilenceTier, clearEndCountdown, session?.id, currentQuestionIndex]);
 
   // Arme l'avertissement de fin + le compte à rebours d'arrêt forcé,
   // déclenchés depuis l'état de pause automatique.
