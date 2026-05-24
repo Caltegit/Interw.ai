@@ -233,8 +233,8 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col gap-3 p-5">
+        <DialogHeader className="space-y-1">
           <DialogTitle>Envoyer un email aux candidats sélectionnés</DialogTitle>
           <DialogDescription>
             {validRecipients.length} destinataire(s)
@@ -243,45 +243,43 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label>Nom de l'expéditeur</Label>
-            <Input
-              value={fromName}
-              onChange={(e) => setFromName(e.target.value.slice(0, 60))}
-              placeholder="Votre nom"
-              maxLength={60}
-            />
-            <p className="text-xs text-muted-foreground">
-              Affiché dans la boîte de réception : « {fromName.trim() || "—"} &lt;noreply@interw.ai&gt; ».
-            </p>
-          </div>
-
-          <div className="space-y-1">
-            <Label>Modèle</Label>
-            <Select
-              value={selectedKey}
-              onValueChange={(v) => {
-                if (
-                  dirty &&
-                  !confirm("Vos modifications seront perdues. Continuer ?")
-                ) {
-                  return;
-                }
-                setSelectedKey(v);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((t) => (
-                  <SelectItem key={t.key} value={t.key}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-3 overflow-y-auto pr-1 -mr-1 flex-1 min-h-0">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label>Nom de l'expéditeur</Label>
+              <Input
+                value={fromName}
+                onChange={(e) => setFromName(e.target.value.slice(0, 60))}
+                placeholder="Votre nom"
+                maxLength={60}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Modèle</Label>
+              <Select
+                value={selectedKey}
+                onValueChange={(v) => {
+                  if (
+                    dirty &&
+                    !confirm("Vos modifications seront perdues. Continuer ?")
+                  ) {
+                    return;
+                  }
+                  setSelectedKey(v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((t) => (
+                    <SelectItem key={t.key} value={t.key}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-1">
@@ -295,41 +293,44 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
             />
           </div>
 
-          <div className="space-y-2 rounded-md border p-3">
-            <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between rounded-md border px-3 py-2">
+            <div className="flex flex-col">
               <Label htmlFor="bulk-allow-reply" className="cursor-pointer">
                 Autoriser une réponse
               </Label>
-              <Switch
-                id="bulk-allow-reply"
-                checked={allowReply}
-                onCheckedChange={setAllowReply}
-              />
+              {allowReply && (
+                <Input
+                  type="email"
+                  placeholder="prenom.nom@exemple.com"
+                  value={replyTo}
+                  onChange={(e) => setReplyTo(e.target.value)}
+                  className="mt-2 h-8"
+                />
+              )}
             </div>
-            {allowReply && (
-              <Input
-                type="email"
-                placeholder="prenom.nom@exemple.com"
-                value={replyTo}
-                onChange={(e) => setReplyTo(e.target.value)}
-              />
-            )}
+            <Switch
+              id="bulk-allow-reply"
+              checked={allowReply}
+              onCheckedChange={setAllowReply}
+            />
           </div>
 
           <div className="space-y-1">
-            <Label>Message</Label>
-            <p className="text-xs text-muted-foreground">
-              Utilisez {"{firstName}"} pour insérer le prénom du candidat.
-            </p>
+            <div className="flex items-center justify-between">
+              <Label>Message</Label>
+              <span className="text-xs text-muted-foreground">
+                {"{firstName}"} = prénom du candidat
+              </span>
+            </div>
             <Textarea
               value={body}
               onChange={(e) => {
                 setBody(e.target.value);
                 setDirty(true);
               }}
-              rows={10}
+              rows={7}
             />
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-1">
               <Checkbox
                 id="bulk-save-default"
                 checked={saveAsDefault}
@@ -342,7 +343,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Annuler
           </Button>
