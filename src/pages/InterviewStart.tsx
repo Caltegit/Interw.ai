@@ -1239,6 +1239,7 @@ export default function InterviewStart() {
   // Pause: freeze STT, TTS, recorder, all timers — snapshot elapsed time
   // `source` permet de tracer l'origine (clic utilisateur vs silence prolongé).
   const pauseInterview = useCallback((source: PauseSource = "manual") => {
+    setPauseReason(source);
     isPausedRef.current = true;
     // "Pendant la question" = il y a une présentation en cours (TTS ou média)
     const duringQuestion = currentPresentationRef.current !== null;
