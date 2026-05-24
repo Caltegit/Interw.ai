@@ -280,7 +280,7 @@ export default function Landing() {
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Fonctionnement</span>
             <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
-              Trois étapes. Aucune installation.<br />
+              Trois étapes. Aucune installation.
             </h2>
           </div>
 
