@@ -49,7 +49,7 @@ function HeroReportMock() {
         {/* Header */}
         <div className="flex items-center gap-3 border-b p-5" style={{ borderColor: "hsl(230 14% 88%)" }}>
           <div
-            className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white"
             style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
           >
             MD
@@ -201,7 +201,7 @@ export default function Landing() {
               className="flex h-7 w-7 items-center justify-center rounded-md"
               style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
             >
-              <Sparkles className="h-4 w-4 text-foreground" />
+              <Sparkles className="h-4 w-4 text-white" />
             </div>
             <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
           </Link>
@@ -328,7 +328,7 @@ export default function Landing() {
                   </div>
                   <div className="p-7">
                     <div
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-foreground"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
                       style={{ background: "hsl(243 75% 60%)" }}
                     >
                       {s.n}
@@ -388,7 +388,7 @@ export default function Landing() {
             <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
               <div className="max-w-2xl">
                 <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
                   style={{ background: "hsl(243 75% 60%)" }}
                 >
                   Vous gardez le contrôle
@@ -420,7 +420,7 @@ export default function Landing() {
             <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
               <div className="max-w-2xl">
                 <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
                   style={{ background: "hsl(142 71% 38%)" }}
                 >
                   Équité &amp; inclusion
@@ -518,7 +518,7 @@ export default function Landing() {
               >
                 <span>Interw.ai</span>
                 <span
-                  className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-foreground"
+                  className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-white"
                   style={{ background: "hsl(142 71% 38%)" }}
                 >
                   <Check className="h-3 w-3" /> Recommandé
@@ -631,7 +631,7 @@ export default function Landing() {
               >
                 {p.highlight && (
                   <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-foreground"
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
                     style={{ background: "hsl(243 75% 60%)" }}
                   >
                     Le plus choisi
@@ -808,7 +808,7 @@ export default function Landing() {
               className="flex h-5 w-5 items-center justify-center rounded"
               style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
             >
-              <Sparkles className="h-3 w-3 text-foreground" />
+              <Sparkles className="h-3 w-3 text-white" />
             </div>
             <span>© {new Date().getFullYear()} Interw.ai — Tous droits réservés</span>
           </div>
