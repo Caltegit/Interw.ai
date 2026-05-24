@@ -255,12 +255,12 @@ export default function Landing() {
                 <button
                   type="button"
                   onClick={openDemo}
-                  className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+                  className="landing-btn-white inline-flex h-12 items-center gap-2 text-sm font-semibold text-center px-[60px] mx-[60px] my-[5px]"
                 >
                   Commencer gratuitement — 20 entretiens offerts
                   <ArrowRight className="h-4 w-4" />
                 </button>
-                <p className="mt-3 text-xs" style={{ color: "hsl(230 8% 52%)" }}>
+                <p className="mt-3 text-xs text-center" style={{ color: "hsl(230 8% 52%)" }}>
                   Sans carte bancaire · Sans engagement · Setup en 10 min
                 </p>
               </div>
