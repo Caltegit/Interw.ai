@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
-import { ArrowRight, Sparkles, FolderKanban, FileText, Library, Scale, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Sparkles, FolderKanban, FileText, Library, Scale, Activity } from "lucide-react";
 
 import shotDashboard from "@/assets/product-dashboard.png";
 import shotProjects from "@/assets/product-projects.png";
@@ -23,10 +23,10 @@ type Block = {
 const BLOCKS: Block[] = [
   {
     pill: "Tableau de bord",
-    title: "Pilotez tout votre recrutement en un coup d'œil",
-    desc: "Tous vos projets, vos candidats les plus prometteurs et vos décisions en attente — réunis sur un seul écran. Vous savez immédiatement où concentrer votre attention.",
+    title: "Pilotez en un coup d'œil",
+    desc: "Tous vos projets, vos candidats les plus prometteurs et vos décisions en attente sont réunis sur un seul écran. ",
     bullets: [
-      "Projets actifs, sessions complétées et score moyen en temps réel",
+      "Projets actifs, sessions complétées et score moyen",
       "Meilleurs candidats des 30 derniers jours mis en avant",
       "Candidats à traiter pour ne perdre aucun profil",
     ],
@@ -36,11 +36,10 @@ const BLOCKS: Block[] = [
   {
     pill: "Projets",
     title: "Un projet par poste, vos questions, vos critères",
-    desc: "Créez un projet en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien — les candidats répondent quand ils veulent.",
+    desc: "Créez un projet en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
     bullets: [
-      "Lien candidat unique, partageable partout",
+      "Lien candidat unique, partageable par email ou RS",
       "Suivi de l'avancement par projet et par candidat",
-      "Archivage et duplication pour réutiliser vos process",
     ],
     img: shotProjects,
     icon: <FolderKanban className="h-4 w-4" />,
@@ -185,8 +184,8 @@ export default function Produit() {
             </span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
-            Entretiens vidéo asynchrones, rapports IA détaillés, bibliothèques réutilisables.
-            Une plateforme pensée pour les équipes qui veulent évaluer des candidats — pas leur CV.
+            Entretiens vidéo asynchrones, rapports détaillés, bibliothèques réutilisables.
+            Une plateforme pensée pour les équipes qui veulent évaluer des candidats, pas leur CV.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-8 flex flex-wrap justify-center gap-3">
             <button
@@ -235,7 +234,7 @@ export default function Produit() {
                   <ul className="mt-6 space-y-3">
                     {b.bullets.map((bl) => (
                       <li key={bl} className="flex items-start gap-3 text-sm md:text-base" style={{ color: "hsl(230 10% 25%)" }}>
-                        <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
+                        <Activity className="h-5 w-5 mt-0.5 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
                         <span>{bl}</span>
                       </li>
                     ))}
