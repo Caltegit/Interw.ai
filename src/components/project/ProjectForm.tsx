@@ -689,7 +689,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
               <Collapsible className="space-y-2">
                 <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
+                  <Button variant="outline" className="w-full justify-between group">
                     <span>Fonctionnalités avancées</span>
                     <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </Button>
