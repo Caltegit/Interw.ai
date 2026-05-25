@@ -310,7 +310,7 @@ export default function Landing() {
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
             <Link to="/produit" className="transition-colors hover:text-foreground">Produit</Link>
-            <a href="#how" className="transition-colors hover:text-foreground">Fonctionnement</a>
+            <a href="#features" className="transition-colors hover:text-foreground">Fonctionnement</a>
             <a href="#pricing" className="transition-colors hover:text-foreground">Tarifs</a>
             <a href="#faq" className="transition-colors hover:text-foreground">Questions</a>
           </nav>
@@ -398,77 +398,6 @@ export default function Landing() {
       </section>
 
 
-      {/* ============ HOW ============ */}
-      <section id="how" style={{ background: "hsl(240 25% 97%)" }}>
-        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="landing-pill">Fonctionnement</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
-              Trois étapes. Aucune installation.
-            </h2>
-          </div>
-
-          <div className="relative mt-16">
-            <div
-              className="absolute left-[16.67%] right-[16.67%] top-12 hidden border-t md:block"
-              style={{ borderTopWidth: 1, borderStyle: "dashed", borderColor: "hsl(243 75% 60% / 0.4)" }}
-            />
-            <div className="relative grid gap-6 md:grid-cols-3">
-              {[
-                {
-                  n: "01",
-                  img: step01Img,
-                  title: "Créez votre projet",
-                  desc: "Vous définissez le poste, choisissez vos questions et fixez vos critères d'évaluation. C'est votre méthode. Moins de 10 minutes pour tout paramétrer.",
-                },
-                {
-                  n: "02",
-                  img: step02Img,
-                  title: "Envoyez le lien",
-                  desc: "Vos candidats reçoivent un lien unique. Ils répondent quand ils veulent, depuis n'importe où. Pas de coordination à gérer. Pas de créneau à caler. Tout le monde peut candidater — sans barrière.",
-                },
-                {
-                  n: "03",
-                  img: step03Img,
-                  title: "Recevez les rapports",
-                  desc: "L'IA analyse chaque réponse selon vos critères et génère un rapport complet : score, portrait du candidat, recommandation. Ce qui vous prenait des heures se lit en quelques minutes.",
-                },
-              ].map((s) => (
-                <div key={s.n} className="landing-card relative overflow-hidden">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden" style={{ background: "hsl(240 25% 95%)" }}>
-                    <img
-                      src={s.img}
-                      alt={s.title}
-                      loading="lazy"
-                      width={1024}
-                      height={768}
-                      className="h-full w-full object-cover"
-                    />
-                    <div
-                      className="pointer-events-none absolute right-3 top-1 select-none text-[64px] font-bold leading-none"
-                      style={{ color: "hsl(0 0% 100%)", textShadow: "0 2px 10px hsl(243 75% 30% / 0.55)" }}
-                    >
-                      {s.n}
-                    </div>
-                  </div>
-                  <div className="p-7">
-                    <div
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                      style={{ background: "hsl(243 75% 60%)" }}
-                    >
-                      {s.n}
-                    </div>
-                    <h3 className="mt-5 font-semibold text-foreground text-2xl">{s.title}</h3>
-                    <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(230 8% 38%)" }}>
-                      {s.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ============ SOCIAL PROOF BAR ============ */}
       <section style={{ background: "hsl(240 20% 98%)", borderTop: "1px solid hsl(230 16% 92%)", borderBottom: "1px solid hsl(230 16% 92%)" }}>
