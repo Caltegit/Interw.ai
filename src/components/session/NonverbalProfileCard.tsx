@@ -51,9 +51,21 @@ interface Props {
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
   transcriptsByMessageId?: Record<string, string>;
+  /**
+   * Résout le `message_id` d'une evidence vers le `message_id` du clip
+   * vidéo de la même question. Permet au bouton « Voir » d'ouvrir le
+   * bon clip dans le lecteur, qui ne référence que les messages vidéo.
+   */
+  resolveVideoMessageId?: (messageId: string) => string | undefined;
 }
 
-export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId }: Props) {
+export function NonverbalProfileCard({
+  analysis,
+  onGoToMessage,
+  questionNumberByMessageId,
+  transcriptsByMessageId,
+  resolveVideoMessageId,
+}: Props) {
   if (!analysis?.profile) return null;
   const profile = analysis.profile;
   const dims = DIMENSIONS.filter((d) => {
@@ -63,6 +75,9 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
   if (dims.length === 0) return null;
 
   const tensions = (analysis.micro_tensions ?? []).filter((t) => t?.description);
+
+  const resolve = (id?: string | null) =>
+    id ? (resolveVideoMessageId?.(id) ?? undefined) : undefined;
 
   return (
     <Card>
@@ -78,6 +93,7 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
         <div className="space-y-2.5">
           {dims.map(({ key, label }) => {
             const dim = profile[key]!;
+            const videoMessageId = resolve(dim.evidence_message_id);
             return (
               <div key={key}>
                 <div className="flex items-center justify-between text-sm">
@@ -95,10 +111,10 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
                 )}
                 <EvidenceLink
                   quote={dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined}
-                  messageId={dim.evidence_message_id}
-                  startSeconds={dim.evidence_start_seconds}
-                  questionNumber={dim.evidence_message_id ? questionNumberByMessageId?.[dim.evidence_message_id] : undefined}
-                  onGoToMessage={onGoToMessage}
+                  messageId={videoMessageId}
+                  startSeconds={undefined}
+                  questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
+                  onGoToMessage={videoMessageId ? onGoToMessage : undefined}
                   compact
                 />
               </div>
@@ -112,18 +128,21 @@ export function NonverbalProfileCard({ analysis, onGoToMessage, questionNumberBy
               <AlertCircle className="h-3.5 w-3.5" /> Points d'attention
             </div>
             <ul className="space-y-1.5">
-              {tensions.map((t, i) => (
-                <li key={i}>
-                  <EvidenceLink
-                    quote={t.description}
-                    messageId={t.message_id}
-                    startSeconds={t.start_seconds}
-                    questionNumber={t.message_id ? questionNumberByMessageId?.[t.message_id] : undefined}
-                    onGoToMessage={onGoToMessage}
-                    compact
-                  />
-                </li>
-              ))}
+              {tensions.map((t, i) => {
+                const videoMessageId = resolve(t.message_id);
+                return (
+                  <li key={i}>
+                    <EvidenceLink
+                      quote={t.description}
+                      messageId={videoMessageId}
+                      startSeconds={undefined}
+                      questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
+                      onGoToMessage={videoMessageId ? onGoToMessage : undefined}
+                      compact
+                    />
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
