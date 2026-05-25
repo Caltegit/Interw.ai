@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
         if (!alreadyMember) {
           await admin.from("organization_members").insert({ user_id: existingId, organization_id });
         }
-        const targetRole = role || "member";
+        const targetRole = role || "recruiter";
         const { data: existingRole } = await admin
           .from("user_roles")
           .select("id")
