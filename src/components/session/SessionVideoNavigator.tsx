@@ -140,7 +140,21 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         v.removeEventListener("timeupdate", onTime);
         fixingDurationRef.current = false;
         const real = v.duration;
-        applyPendingSeek(v, Number.isFinite(real) ? real : 0);
+        const safeDur = Number.isFinite(real) ? real : 0;
+        // Après le scrub à 1e9 pour forcer la détection de la durée, la tête
+        // de lecture est collée à la fin. On la repositionne explicitement
+        // avant tout play(), sinon la vidéo se termine immédiatement et
+        // `onEnded` enchaîne au clip suivant (effet « ça saute »).
+        const pending = pendingSeekRef.current;
+        const target = pending > 0
+          ? Math.max(0, Math.min(pending, Math.max(0, safeDur - 0.1)))
+          : 0;
+        try {
+          v.currentTime = target;
+        } catch {
+          /* noop */
+        }
+        pendingSeekRef.current = 0;
         if (Number.isFinite(real)) setDurationSec(real);
         if (shouldAutoPlay) safePlay();
       };
