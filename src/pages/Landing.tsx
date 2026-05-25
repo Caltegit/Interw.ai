@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import candidateMan from "@/assets/hero-candidate-video-man.jpg";
+import shortlistAvatar1 from "@/assets/avatars/woman-1.jpg";
+import shortlistAvatar2 from "@/assets/avatars/man-1.jpg";
+import shortlistAvatar3 from "@/assets/avatars/woman-2.jpg";
 import {
   ArrowRight,
   Brain,
