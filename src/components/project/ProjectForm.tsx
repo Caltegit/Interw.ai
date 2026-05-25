@@ -529,15 +529,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
-              <Collapsible className="space-y-2">
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between group">
-                    <span>Fonctionnalités avancées</span>
-                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">Durée maximale : 30 min</Label>
                   <p className="text-xs text-muted-foreground">
