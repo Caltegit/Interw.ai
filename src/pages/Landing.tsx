@@ -146,12 +146,8 @@ function ProjectCreationCard() {
           <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Questions</div>
           <div className="mt-1 space-y-1">
             <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>1</span>
-              Parlez-moi d'un projet dont vous êtes fier.
-            </div>
-            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>2</span>
-              Comment gérez-vous un désaccord technique ?
+              Comment gérez-vous un désaccord ?
             </div>
           </div>
         </div>
@@ -196,9 +192,9 @@ function InterviewLiveCard() {
 
 function CandidatesShortlistCard() {
   const candidates = [
-    { initials: "MD", photo: shortlistAvatar1, name: "Marie D.", score: 92, label: "Recommandé", tone: "good" as const },
-    { initials: "TL", photo: shortlistAvatar2, name: "Thomas L.", score: 78, label: "À considérer", tone: "mid" as const },
-    { initials: "SR", photo: shortlistAvatar3, name: "Sofia R.", score: 64, label: "Réserve", tone: "low" as const },
+    { initials: "MD", photo: shortlistAvatar1, name: "Marie D. - 24:20", score: 92, label: "Recommandé", tone: "good" as const },
+    { initials: "TL", photo: shortlistAvatar2, name: "Thomas L. - 26:12", score: 78, label: "À considérer", tone: "mid" as const },
+    { initials: "SR", photo: shortlistAvatar3, name: "Sofia R. - 14:55", score: 64, label: "Réserve", tone: "low" as const },
   ];
   const toneColors = {
     good: { bg: "hsl(152 70% 95%)", fg: "hsl(152 60% 38%)", ring: "hsl(152 60% 45%)" },
@@ -372,7 +368,7 @@ export default function Landing() {
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <p className="mt-3 text-xs text-center" style={{ color: "hsl(230 8% 52%)" }}>
-                  Sans carte bancaire · Sans engagement · Setup en 10 min
+                  Sans CB · Sans engagement · Setup en 10 min
                 </p>
               </div>
             </div>
@@ -389,9 +385,9 @@ export default function Landing() {
       <section style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-6xl px-6 pb-24">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">À quoi ça ressemble</span>
-            <h2 className="mt-5 text-3xl font-semibold md:text-4xl">
-              De l'entretien vidéo au rapport, en trois temps.
+            <span className="landing-pill">EN 3 ETAPES SIMPLES</span>
+            <h2 className="mt-5 text-3xl font-semibold md:text-2xl">
+              Rencontrez les meilleurs candidats.
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -428,8 +424,8 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">AVANTAGES</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
-              Ne ratez plus le bon candidat.
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
+              Rencontrez les meilleurs candidats.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
@@ -549,7 +545,7 @@ export default function Landing() {
         <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Comparatif</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
               Avec la présélection traditionnelle, vous n'avez pas le temps d'évaluer tout le potentiel de certains candidats.
             </h2>
           </div>
@@ -622,7 +618,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">Tarifs</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
               Une formule simple, adaptée à votre volume.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
@@ -734,7 +730,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
           <div className="text-center">
             <span className="landing-pill">Questions fréquentes</span>
-            <h2 className="mt-5 text-3xl md:text-5xl landing-gradient-text">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
               Tout ce que vous voulez savoir.
             </h2>
           </div>
