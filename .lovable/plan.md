@@ -1,20 +1,44 @@
-## Ce qu'il va se passer concrètement
+# Supprimer le flash de la première question au démarrage de session
 
-Quand tu cliques sur **« Approuver le plan »** (bouton bleu en bas), voici ce que tu verras dans l'ordre dans le chat :
+## Le problème
 
-### Étape 1 — Génération des 3 photos (1-2 min)
-Je lance 3 générations d'image en parallèle à partir de ta photo originale. Tu verras 3 lignes "Génération d'image…" qui se complètent. Chaque variante :
-- Le garçon est en train de parler (bouche entrouverte, expression vivante).
-- Visage recentré, front entier visible, marge équilibrée en haut.
-- Même décor (plante floue, bibliothèque), même chemise grise, même ambiance lumineuse.
-- Variations subtiles entre les 3 : sourire plus marqué / bouche plus ouverte / expression plus posée.
+Après le clic sur « Lancer la session », le candidat voit pendant ~1,5 s l'écran de la première question, puis l'overlay de préparation, puis revient à la première question. C'est visuellement chaotique.
 
-### Étape 2 — Choix visuel cliquable
-Une fois les 3 images générées, je t'envoie un **bloc de question avec les 3 vignettes côte à côte directement dans le chat**. Tu cliques simplement sur celle que tu préfères (comme quand tu choisis une palette de couleurs). Pas besoin de chercher les fichiers — tout est dans le message.
+## La cause
 
-### Étape 3 — Intégration
-Dès que tu cliques sur ton choix, je remplace automatiquement la photo dans l'étape 3 de la home (`src/pages/Landing.tsx`). Je supprime les 2 autres pour ne pas alourdir le projet. Tu vois le résultat dans le preview à droite.
+Dans `src/pages/InterviewStart.tsx`, la fonction `beginInterview()` :
 
----
+1. ligne 2002 — `setReadyToStart(true)` → l'UI principale (avec la Q1) devient affichable
+2. lignes 2010 → 2049 — trois `await` successifs (fullscreen, getUserMedia, mesure micro **1 500 ms hardcodés**)
+3. ligne 2113 — `setBootActive(true)` → l'overlay `InterviewBootProgress` s'affiche enfin
 
-**Pour lancer tout ça : clique sur "Approuver le plan" ci-dessous.**
+Entre les étapes 1 et 3, React a le temps de peindre l'écran d'entretien (Q1 visible). L'overlay arrive ensuite par dessus, donnant le « flash » puis le « retour » à la Q1.
+
+## La solution
+
+Activer l'overlay de préparation **dans le même tick** que `setReadyToStart(true)`, avant tout `await`. L'ordre des opérations asynchrones (audio unlock iOS, fullscreen, getUserMedia, mesure micro) ne change pas — seul l'ordre des `setState` change.
+
+### Changements (1 seul fichier)
+
+**`src/pages/InterviewStart.tsx` — fonction `beginInterview()` (lignes 1948–2113)**
+
+- Juste après `setReadyToStart(true)` (ligne 2002), ajouter immédiatement :
+  - `setBootSteps(initialSteps)` (la liste initiale d'étapes existe déjà plus bas)
+  - `setBootPercent(0)`
+  - `setBootActive(true)`
+- Supprimer la duplication de ces 3 lignes aujourd'hui en 2111–2113 (déplacées en amont).
+- Conserver à l'identique : l'unlock audio iOS synchrone, `requestFullscreen()`, `startVideoStream()`, `measureMicLevel(1500ms)`, l'update Supabase, et tout ce qui suit l'overlay (progression, complétion des étapes, `setBootActive(false)`, démarrage de la Q1).
+
+### Pourquoi c'est sûr
+
+- Aucune logique métier n'est modifiée : l'ordre des `await` et tous les effets de bord (audio unlock, fullscreen, médias, micro, Supabase, heartbeat, démarrage Q1) restent strictement identiques.
+- L'overlay `InterviewBootProgress` est déjà conçu pour rester monté jusqu'à `setBootActive(false)` en fin de préparation — on ne fait qu'avancer son apparition.
+- `readyToStart` reste à `true` au même moment, donc le geste utilisateur iOS continue de débloquer l'audio dans le bon callstack.
+- Aucun changement sur `InterviewLanding`, `InterviewDeviceTest`, `InterviewComplete`, ni sur le flux de questions suivantes.
+
+## Vérification
+
+Après l'implémentation, je testerai en preview :
+1. Démarrage d'une session candidat de bout en bout : on doit passer directement de « Lancer la session » à l'écran de préparation, sans voir la Q1.
+2. Fin de préparation : la Q1 doit s'afficher normalement, l'IA doit parler, le chrono démarrer.
+3. Passage à la Q2 puis fin d'entretien : comportement inchangé.
