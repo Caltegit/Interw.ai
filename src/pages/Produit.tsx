@@ -60,7 +60,7 @@ const BLOCKS: Block[] = [
   {
     pill: "Rapport IA",
     title: "Un rapport détaillé pour chaque candidat",
-    desc: "Pour chaque entretien, l'IA produit un score d'adéquation, une analyse critère par critère et des verbatims sourcés depuis les réponses. Vous prenez une décision éclairée en quelques minutes.",
+    desc: "l'IA transcrit et analyse l'entretien en fonction des critères que vous avez définis. Puis une analyse orale et visuelle du candidat est produite, ainsi qu'un score Big Five (personnalité).",
     bullets: [
       "Score Fit Poste et synthèse en une phrase",
       "Évaluation critère par critère avec niveau (Excellent, Partiel, Manquant)",
