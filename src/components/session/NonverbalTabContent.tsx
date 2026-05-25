@@ -17,6 +17,7 @@ interface Props {
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
   transcriptsByMessageId?: Record<string, string>;
+  resolveVideoMessageId?: (messageId: string) => string | undefined;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -35,7 +36,7 @@ const REASON_LABELS: Record<string, string> = {
     "L'enregistrement vidéo n'était pas activé pour ce projet.",
 };
 
-export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId }: Props) {
+export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
@@ -47,9 +48,11 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questi
         onGoToMessage={onGoToMessage}
         questionNumberByMessageId={questionNumberByMessageId}
         transcriptsByMessageId={transcriptsByMessageId}
+        resolveVideoMessageId={resolveVideoMessageId}
       />
     );
   }
+
 
   const status = (analysis as any)?.status as string | undefined;
   const reason = (analysis as any)?.reason as string | undefined;

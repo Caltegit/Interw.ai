@@ -1,33 +1,38 @@
-## Diagnostic
+## Problème
 
-Le composant `SessionVideoNavigator` (utilisé dans `SessionDetail` et `SharedReport`) contient un bug dans la fonction `fixDuration` qui répare la durée des vidéos WebM enregistrées par MediaRecorder (les enregistrements de session ont `duration = Infinity` tant qu'on ne les a pas scrubbés).
+Dans les cartes **Oral** (paraverbal) et **Attitude** (nonverbal), les boutons "Voir" présents à côté de chaque dimension ne fonctionnent pas correctement :
 
-Séquence actuelle quand on passe de Q1 à Q2 :
+- L'analyse IA ne renvoie pas de timestamp précis (pas de `evidence_start_seconds`), seulement un `evidence_message_id`.
+- Pour le paraverbal, le `message_id` cible parfois un segment audio seul → `SessionVideoNavigator` ne le trouve pas dans `sessionClips` (filtré sur `video_segment_url`) → toast "Extrait vidéo indisponible".
+- Quand ça passe, la vidéo saute au début du clip mais sans repère utile.
 
-1. `goTo` → nouveau clip monté (à cause de `key={current.url}` sur `<video>`).
-2. L'effet de chargement détecte `duration = Infinity` → appelle `fixDuration`.
-3. `fixDuration` force `v.currentTime = 1e9` pour que le navigateur calcule la vraie durée.
-4. Le listener `timeupdate` se déclenche, lit la vraie durée, puis appelle `applyPendingSeek(v, real)`.
-5. **Bug :** `applyPendingSeek` retourne immédiatement si `pendingSeekRef.current <= 0` (cas normal d'un Next/Select sans seek explicite). Le `currentTime` reste donc collé à la fin de la vidéo.
-6. `safePlay()` est appelé → la vidéo joue depuis la fin → événement `ended` immédiat → `handleEnded` enchaîne au clip suivant. D'où la sensation que « ça saute ».
+## Solution retenue
 
-Cela n'apparaît pas dans la vue carte (`SessionVideoThumb`) car celle-ci ne fait pas de changement de clip ni de réparation de durée.
+Garder les boutons mais les faire pointer vers **le début du clip vidéo de la question concernée**, en utilisant un mapping fiable `message_id (audio ou vidéo) → message_id du clip vidéo de la même question`.
 
-## Correctif
+## Changements
 
-Dans `src/components/session/SessionVideoNavigator.tsx`, dans le handler `onTime` de `fixDuration` :
+### 1. `src/pages/SessionDetail.tsx` et `src/pages/SharedReport.tsx`
 
-- Toujours repositionner explicitement `currentTime` avant le `safePlay()` :
-  - Si un `pendingSeekRef` > 0 existe, l'appliquer (comportement actuel via `applyPendingSeek`).
-  - Sinon, forcer `currentTime = 0`.
+- Construire un mapping `audioOrVideoMessageId → videoMessageId` basé sur le `question_id` partagé : pour tout message candidat (audio ou vidéo), retrouver le message candidat vidéo de la même `question_id`.
+- Passer ce mapping aux cartes `ParaverbalProfileCard` et `NonverbalProfileCard` via une nouvelle prop `resolveVideoMessageId`.
 
-Concrètement : appeler `applyPendingSeek` puis, si rien n'a été appliqué (pending était 0), remettre `v.currentTime = 0`. Plus simple : après lecture de la vraie durée, faire `v.currentTime = Math.max(0, Math.min(pendingSeekRef.current, real - 0.1))` et reset de `pendingSeekRef`.
+### 2. `src/components/session/ParaverbalProfileCard.tsx` et `NonverbalProfileCard.tsx`
 
-Aucun changement de logique ailleurs n'est nécessaire ; la fonction `applyPendingSeek` peut être adaptée ou contournée localement dans `fixDuration` pour garantir un reset systématique.
+- Accepter la prop `resolveVideoMessageId?: (id: string) => string | undefined`.
+- Avant de passer `messageId` à `EvidenceLink`, le résoudre via cette fonction.
+- Forcer `startSeconds={undefined}` (on saute au début de la question — pas de timestamp précis).
+
+### 3. `src/components/session/EvidenceLink.tsx`
+
+Aucun changement nécessaire : le rendu "Q3" sans timestamp est déjà géré (`hasTime` est `false` quand `startSeconds` est `undefined`).
+
+## Détails techniques
+
+- Si aucune correspondance vidéo n'existe pour la question (cas rare : entretien audio seul), on cache simplement le bouton "Voir" en passant `messageId={undefined}` plutôt que d'afficher un toast d'erreur.
+- Pas de changement backend : aucune régénération de rapport nécessaire, le fix est purement côté affichage.
 
 ## Vérification
 
-Après modification, tester dans la preview sur la session indiquée :
-1. Ouvrir le rapport et utiliser « Suivant » de Q1 vers Q2 → la Q2 doit démarrer au début, pas sauter.
-2. Tester aussi le sélecteur de question et le retour Précédent.
-3. Vérifier qu'un appel `playMessage(messageId, startSeconds)` (clic sur un timestamp depuis le rapport) seek toujours correctement à `startSeconds - marge`.
+- Ouvrir une session avec analyse paraverbale et nonverbale.
+- Cliquer sur les boutons "Q*n*" des cartes Oral et Attitude → la bonne question doit se charger dans le lecteur vidéo en bas, sans toast d'erreur et sans glitch de lecture.
