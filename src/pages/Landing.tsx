@@ -59,7 +59,7 @@ function HeroInterviewMock() {
           <img
             src={candidateWoman}
             alt="Candidate en entretien vidéo"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover my-0"
           />
           {/* Subtle vignette for readability of overlays */}
           <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 5% / 0.25) 0%, transparent 30%, transparent 55%, hsl(230 20% 5% / 0.55) 100%)" }} />
