@@ -355,6 +355,24 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ============ PRODUCT MOMENTS ============ */}
+      <section style={{ background: "hsl(0 0% 100%)" }}>
+        <div className="mx-auto max-w-6xl px-6 pb-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="landing-pill">À quoi ça ressemble</span>
+            <h2 className="mt-5 text-3xl font-semibold md:text-4xl">
+              De l'entretien vidéo au rapport, en trois temps.
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <InterviewLiveCard />
+            <TranscriptAnalysisCard />
+            <ReportSummaryCard />
+          </div>
+        </div>
+      </section>
+
+
       {/* ============ HOW ============ */}
       <section id="how" style={{ background: "hsl(240 25% 97%)" }}>
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
