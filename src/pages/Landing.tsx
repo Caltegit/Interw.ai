@@ -390,9 +390,9 @@ export default function Landing() {
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <ProjectCreationCard />
             <InterviewLiveCard />
-            <TranscriptAnalysisCard />
-            <ReportSummaryCard />
+            <CandidatesShortlistCard />
           </div>
         </div>
       </section>
