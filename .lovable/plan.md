@@ -1,51 +1,21 @@
-## Objectif
+## Bug : création de membre impossible — enum `app_role` invalide
 
-Quand la session est mise en pause automatiquement pour silence prolongé (20 s sans transcription), arrêter de dire seulement *« Reprenez dans 2 minutes »* et **guider le candidat sur la piste micro**.
+### Problème
+L'enum Postgres `app_role` contient les valeurs `{admin, recruiter, viewer, super_admin}`.  
+Or le front (`CreateUserInOrgDialog`) et la fonction Edge (`superadmin-manage-user`) envoient le rôle `"member"`, qui n'existe pas dans l'enum. Postgres renvoie donc :
 
-## Ce qu'on change
+> `invalid input value for enum app_role: "member"`
 
-### 1. Message de la pause auto-silence — `InterviewStart.tsx` (~lignes 547-559)
+### Fichiers à corriger
 
-Remplacer le `toast` actuel par une **modale dédiée** non bloquante (Dialog shadcn), qui s'ouvre uniquement quand `pauseSource === "auto-silence"`.
+1. **`src/components/superadmin/CreateUserInOrgDialog.tsx`** (ligne 37)
+   - Remplacer `role: "member"` par `role: "recruiter"`
 
-Contenu :
-- **Titre** : *« Nous ne vous entendons plus »*
-- **Sous-titre** : *« Si vous parliez bien, c'est probablement votre micro. »*
-- **3 vérifications rapides** (liste avec icônes) :
-  1. Vérifier l'icône cadenas du navigateur — le micro doit être autorisé.
-  2. Vérifier que le micro système n'est pas coupé (touche dédiée du clavier, prise jack).
-  3. Essayer un autre micro ci-dessous.
-- **`DeviceSelector`** (composant déjà existant) listant les `audioinput` détectés. À la sélection :
-  - met à jour `interview.preferredAudioDeviceId`,
-  - relance `startVideoStream()` (qui réutilise le device préféré).
-- **Boutons** :
-  - *« Reprendre l'entretien »* (primary) → ferme la modale + `resumeInterview()`.
-  - *« Signaler un problème »* (ghost) → ouvre le dialog `report-interview-issue` déjà câblé.
+2. **`supabase/functions/superadmin-manage-user/index.ts`** (ligne 88)
+   - Remplacer `const targetRole = role || "member";` par `const targetRole = role || "recruiter";`
 
-La TTS d'annonce actuelle (*« Je vais mettre la session en pause »*) reste, on n'y touche pas.
+### Pourquoi "recruiter"
+C'est le rôle standard d'un collaborateur RH dans l'organisation. Si besoin d'un rôle plus restrictif (lecture seule), il faudra passer explicitement `"viewer"`.
 
-### 2. Adapter `pauseInterviewRef.current?.("auto-silence")`
-
-Le state `pauseSource` existe déjà (type `PauseSource`). On l'utilise pour conditionner l'affichage : la modale ne s'ouvre que pour `auto-silence`, pas pour `manual` ou `auto-network`.
-
-### 3. Nouveau composant
-
-`src/components/interview/MicSilencePauseDialog.tsx` — Dialog shadcn + `DeviceSelector` + les 3 conseils. Props : `open`, `onResume`, `onReport`, `currentDeviceId`, `onDeviceChange`, `audioDevices`.
-
-### 4. Logger
-
-À l'ouverture de la modale, `logger.warn("interview_silence_pause_shown", { sessionId, questionIndex })` pour mesurer la fréquence.
-
-## Ce qu'on ne touche pas
-
-- Les timings (6 s / 12 s / 20 s / 2 min) — déjà bien calibrés.
-- La logique de reset basée sur `liveTranscript`.
-- Le watchdog STT existant.
-- L'auto-arrêt après 2 min sans reprise.
-
-## Test après implémentation
-
-1. Lancer une session candidat en local, débrancher/couper le micro système avant la 1ʳᵉ question.
-2. Vérifier qu'au bout de 20 s la modale apparaît avec la liste des micros détectés.
-3. Sélectionner un autre micro → vérifier que le stream est relancé sur le bon device.
-4. Cliquer « Reprendre » → vérifier que la session repart normalement.
+### Vérification
+Déployer la fonction Edge modifiée, puis tenter de créer un utilisateur depuis le panneau Super Admin pour confirmer la disparition de l'erreur.
