@@ -46,24 +46,46 @@ interface FollowupQuestion {
   rationale?: string
 }
 
+interface RedFlag {
+  description?: string
+  quote?: string
+  severity?: string
+}
+
+interface DecisionDriver {
+  label?: string
+  description?: string
+  impact?: string
+}
+
+interface SoftSkill {
+  label?: string
+  score?: number
+  comment?: string
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
+  candidateLinkedinUrl?: string | null
   jobTitle?: string
   projectTitle?: string
   overallScore?: number
   overallGrade?: string | null
   recommendation?: string | null
+  verdictHeadline?: string | null
   executiveSummary?: string
   executiveSummaryShort?: string | null
   personalityProfile?: PersonalityProfile | null
   followupQuestions?: FollowupQuestion[] | null
   strengths?: string[]
   areasForImprovement?: string[]
+  redFlags?: RedFlag[] | null
+  decisionDrivers?: DecisionDriver[] | null
+  softSkills?: SoftSkill[] | null
   criteriaScores?: Record<string, CriteriaScore>
   questionEvaluations?: Record<string, QuestionEval>
   reportUrl?: string
-  highlightsUrl?: string | null
   stats?: SessionStats
 }
 
