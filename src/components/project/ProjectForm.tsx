@@ -687,7 +687,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span>Fonctionnalités avancées</span>
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div>
                   <Label>Durée maximale (minutes) : {maxDuration}</Label>
                   <input
