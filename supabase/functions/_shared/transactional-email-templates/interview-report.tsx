@@ -46,24 +46,46 @@ interface FollowupQuestion {
   rationale?: string
 }
 
+interface RedFlag {
+  description?: string
+  quote?: string
+  severity?: string
+}
+
+interface DecisionDriver {
+  label?: string
+  description?: string
+  impact?: string
+}
+
+interface SoftSkill {
+  label?: string
+  score?: number
+  comment?: string
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
+  candidateLinkedinUrl?: string | null
   jobTitle?: string
   projectTitle?: string
   overallScore?: number
   overallGrade?: string | null
   recommendation?: string | null
+  verdictHeadline?: string | null
   executiveSummary?: string
   executiveSummaryShort?: string | null
   personalityProfile?: PersonalityProfile | null
   followupQuestions?: FollowupQuestion[] | null
   strengths?: string[]
   areasForImprovement?: string[]
+  redFlags?: RedFlag[] | null
+  decisionDrivers?: DecisionDriver[] | null
+  softSkills?: SoftSkill[] | null
   criteriaScores?: Record<string, CriteriaScore>
   questionEvaluations?: Record<string, QuestionEval>
   reportUrl?: string
-  highlightsUrl?: string | null
   stats?: SessionStats
 }
 
@@ -95,21 +117,25 @@ const formatDuration = (s?: number) => {
 const InterviewReportEmail = ({
   candidateName = 'Candidat',
   candidateEmail,
+  candidateLinkedinUrl = null,
   jobTitle = '',
   projectTitle = '',
   overallScore = 0,
   overallGrade,
   recommendation,
+  verdictHeadline = null,
   executiveSummary = '',
   executiveSummaryShort = null,
   personalityProfile = null,
   followupQuestions = null,
   strengths = [],
   areasForImprovement = [],
+  redFlags = null,
+  decisionDrivers = null,
+  softSkills = null,
   criteriaScores = {},
   questionEvaluations = {},
   reportUrl = '#',
-  highlightsUrl = null,
   stats = {},
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
@@ -139,13 +165,24 @@ const InterviewReportEmail = ({
             </Text>
           ) : null}
 
+          {candidateLinkedinUrl ? (
+            <Text style={muted}>
+              LinkedIn : <a href={candidateLinkedinUrl} style={link}>{candidateLinkedinUrl}</a>
+            </Text>
+          ) : null}
+
           <Section style={scoreBox}>
             <Text style={scoreLabel}>Score global</Text>
             <Text style={scoreValue}>{overallScore}/100{overallGrade ? ` · ${overallGrade}` : ''}</Text>
             <Text style={recoText}>{recommendationLabel(recommendation)}</Text>
           </Section>
 
-          {executiveSummaryShort ? (
+          {verdictHeadline ? (
+            <Section style={shortSummaryBox}>
+              <Text style={shortSummaryLabel}>🎯 Verdict</Text>
+              <Text style={shortSummaryText}>{verdictHeadline}</Text>
+            </Section>
+          ) : executiveSummaryShort ? (
             <Section style={shortSummaryBox}>
               <Text style={shortSummaryLabel}>🎯 Résumé en 30 secondes</Text>
               <Text style={shortSummaryText}>{executiveSummaryShort}</Text>
@@ -163,20 +200,32 @@ const InterviewReportEmail = ({
             </Text>
             {typeof stats.best_question_idx === 'number' && stats.best_question_score ? (
               <Text style={statRow}>
-                <strong>🏆 Top moment :</strong> Question {stats.best_question_idx + 1} (score {stats.best_question_score}/10)
+                <strong>🏆 Meilleur moment :</strong> Question {stats.best_question_idx + 1} (score {stats.best_question_score}/10)
               </Text>
             ) : null}
           </Section>
 
-          {highlightsUrl ? (
-            <Button href={highlightsUrl} style={primaryButton}>▶ Voir le best-of (1 min)</Button>
-          ) : null}
-          <Button href={reportUrl} style={secondaryButton}>Voir le rapport complet</Button>
+          <Button href={reportUrl} style={primaryButton}>Voir le rapport complet</Button>
 
           <Hr style={hr} />
 
           <Heading as="h2" style={h2}>Résumé exécutif</Heading>
           <Text style={text}>{executiveSummary || '—'}</Text>
+
+          {decisionDrivers && decisionDrivers.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🧭 Facteurs de décision</Heading>
+              {decisionDrivers.map((d, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>
+                    {d.label || `Facteur ${i + 1}`}
+                    {d.impact ? <span style={muted}> · {d.impact}</span> : null}
+                  </Text>
+                  {d.description ? <Text style={cardText}>{d.description}</Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
 
           {strengths.length > 0 && (
             <>
@@ -195,6 +244,37 @@ const InterviewReportEmail = ({
               ))}
             </>
           )}
+
+          {redFlags && redFlags.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🚩 Points de vigilance</Heading>
+              {redFlags.map((rf, i) => (
+                <Section key={i} style={redFlagCard}>
+                  <Text style={cardTitle}>
+                    {rf.description || `Vigilance ${i + 1}`}
+                    {rf.severity ? <span style={muted}> · {rf.severity}</span> : null}
+                  </Text>
+                  {rf.quote ? <Text style={cardText}><em>« {rf.quote} »</em></Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
+
+          {softSkills && softSkills.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🤝 Compétences comportementales</Heading>
+              {softSkills.map((s, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>
+                    {s.label || `Compétence ${i + 1}`}
+                    {typeof s.score === 'number' ? <> — <strong>{s.score}/10</strong></> : null}
+                  </Text>
+                  {s.comment ? <Text style={cardText}>{s.comment}</Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
+
 
           {personalityEntries.length > 0 && (
             <>
@@ -308,7 +388,19 @@ export const template = {
       best_question_score: 9,
     },
     reportUrl: 'https://interw.ai/sessions/abc',
-    highlightsUrl: 'https://interw.ai/highlights/abc',
+    candidateLinkedinUrl: 'https://www.linkedin.com/in/jane-doe',
+    verdictHeadline: 'Profil solide à rencontrer en priorité.',
+    decisionDrivers: [
+      { label: 'Communication', description: 'Discours clair et structuré tout au long de l\'entretien.', impact: 'Positif' },
+      { label: 'Expérience produit', description: 'Manque d\'exemples concrets sur le scope produit attendu.', impact: 'À valider' },
+    ],
+    redFlags: [
+      { description: 'Manque de précision sur la gestion d\'équipe', severity: 'Modéré', quote: 'Je n\'ai pas eu de management direct dans mon dernier poste.' },
+    ],
+    softSkills: [
+      { label: 'Esprit d\'équipe', score: 8, comment: 'Mentionne plusieurs collaborations réussies.' },
+      { label: 'Autonomie', score: 7, comment: 'A piloté plusieurs projets en parallèle.' },
+    ],
   },
 } satisfies TemplateEntry
 
@@ -363,6 +455,13 @@ const secondaryButton = {
 }
 const card = {
   border: '1px solid #e5e7eb',
+  borderRadius: '6px',
+  padding: '12px',
+  margin: '0 0 8px',
+}
+const redFlagCard = {
+  border: '1px solid #FECACA',
+  backgroundColor: '#FEF2F2',
   borderRadius: '6px',
   padding: '12px',
   margin: '0 0 8px',

@@ -1077,51 +1077,28 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         const normalizedEmail = recruiterEmail.toLowerCase();
         const reportUrl = `https://interw.ai/sessions/${session_id}`;
 
-        // Auto-create a public share token so highlights + shared report links work from the email
-        let highlightsUrl: string | null = null;
-        try {
-          if (insertedReport?.id) {
-            const { data: existingShare } = await supabase
-              .from("report_shares")
-              .select("share_token")
-              .eq("report_id", insertedReport.id)
-              .eq("is_active", true)
-              .maybeSingle();
-            let shareToken = existingShare?.share_token ?? null;
-            if (!shareToken) {
-              const { data: newShare } = await supabase
-                .from("report_shares")
-                .insert({ report_id: insertedReport.id, created_by: project.created_by })
-                .select("share_token")
-                .single();
-              shareToken = newShare?.share_token ?? null;
-            }
-            if (shareToken && highlightClips.length > 0) {
-              highlightsUrl = `https://interw.ai/highlights/${shareToken}`;
-            }
-          }
-        } catch (e) {
-          console.warn("Could not create share token for highlights:", e);
-        }
-
         const templateData = {
           candidateName: session.candidate_name,
           candidateEmail: session.candidate_email,
+          candidateLinkedinUrl: session.candidate_linkedin_url || null,
           jobTitle: project.job_title,
           projectTitle: project.title,
           overallScore: finalOverallScore,
           overallGrade: parsed.overall_grade || null,
           recommendation: parsed.recommendation || null,
+          verdictHeadline: parsed.verdict_headline || null,
           executiveSummary: parsed.executive_summary || "",
           executiveSummaryShort: parsed.executive_summary_short || null,
           personalityProfile,
           followupQuestions: parsed.followup_questions || null,
           strengths: parsed.strengths || [],
           areasForImprovement: parsed.areas_for_improvement || [],
+          redFlags: Array.isArray(parsed.red_flags) ? parsed.red_flags : null,
+          decisionDrivers: Array.isArray(parsed.decision_drivers) ? parsed.decision_drivers : null,
+          softSkills: Array.isArray(parsed.soft_skills) ? parsed.soft_skills : null,
           criteriaScores,
           questionEvaluations: questionEvals,
           reportUrl,
-          highlightsUrl,
           stats: {
             duration_seconds: stats.duration_seconds,
             exchanges_count: stats.exchanges_count,
@@ -1130,6 +1107,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
             best_question_score: bestQuestionScore,
           },
         };
+
 
         // 1. Suppression check
         const { data: suppressed } = await supabase
