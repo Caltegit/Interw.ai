@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
-import step01Img from "@/assets/step-01-setup.jpg";
-import step02Img from "@/assets/step-02-link.jpg";
-import step03Img from "@/assets/step-03-report.jpg";
 import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import candidateMan from "@/assets/hero-candidate-video-man.jpg";
 import {
@@ -13,7 +10,6 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
-  
   Library,
   ShieldCheck,
   Sparkles,
