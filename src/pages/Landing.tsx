@@ -21,6 +21,7 @@ import {
   FileText,
   X,
   Star,
+  Play,
 } from "lucide-react";
 
 /* ---------------- Hero mock: live video interview ---------------- */
