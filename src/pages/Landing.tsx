@@ -4,9 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import candidateMan from "@/assets/hero-candidate-video-man.jpg";
-import shortlistAvatar1 from "@/assets/avatars/woman-1.jpg";
-import shortlistAvatar2 from "@/assets/avatars/man-1.jpg";
-import shortlistAvatar3 from "@/assets/avatars/woman-2.jpg";
+import shortlistAvatar1 from "@/assets/candidates/candidate-woman-1.jpg";
+import shortlistAvatar2 from "@/assets/candidates/candidate-man-1.jpg";
+import shortlistAvatar3 from "@/assets/candidates/candidate-woman-2.jpg";
 import {
   ArrowRight,
   Brain,
@@ -225,9 +225,9 @@ function CandidatesShortlistCard() {
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
               <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted" style={{ border: "1px solid hsl(230 14% 88%)" }}>
                 <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/30 backdrop-blur-sm ring-1 ring-white/50">
-                    <Play className="h-2.5 w-2.5 fill-white text-white" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/30">
+                    <Play className="h-2.5 w-2.5 fill-white text-white/90" />
                   </div>
                 </div>
               </div>
