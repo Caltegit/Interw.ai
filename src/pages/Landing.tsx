@@ -135,11 +135,8 @@ function InterviewLiveCard() {
         </p>
       </div>
       <div className="relative mx-5 mb-5 aspect-[16/9] overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
-            MD
-          </div>
-        </div>
+        <img src={candidateWoman} alt="Candidate en entretien vidéo" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 8% / 0.15) 0%, transparent 40%, hsl(230 20% 8% / 0.55) 100%)" }} />
         <div className="absolute left-2 top-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
           <span className="h-1 w-1 animate-pulse rounded-full bg-white" /> REC
         </div>
