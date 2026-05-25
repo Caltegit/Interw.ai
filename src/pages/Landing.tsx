@@ -123,12 +123,57 @@ function HeroInterviewMock() {
 }
 
 /* ---------------- Small product cards (3 moments) ---------------- */
+function ProjectCreationCard() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+      <div className="p-5">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+          <FileText className="h-3.5 w-3.5" /> Étape 1 · Création de l'entretien
+        </div>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez votre entretien</h3>
+        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
+          Poste, questions et critères d'évaluation, en quelques minutes.
+        </p>
+      </div>
+      <div className="mx-5 mb-5 space-y-2.5 rounded-xl p-4" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Intitulé du poste</div>
+          <div className="mt-1 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-medium text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+            Développeur Full-Stack
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Questions</div>
+          <div className="mt-1 space-y-1">
+            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>1</span>
+              Parlez-moi d'un projet dont vous êtes fier.
+            </div>
+            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>2</span>
+              Comment gérez-vous un désaccord technique ?
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Critères</div>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Technique</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Communication</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Autonomie</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InterviewLiveCard() {
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <Video className="h-3.5 w-3.5" /> Étape 1 · L'entretien
+          <Video className="h-3.5 w-3.5" /> Étape 2 · L'entretien candidat
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien vidéo</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
@@ -149,78 +194,59 @@ function InterviewLiveCard() {
   );
 }
 
-function TranscriptAnalysisCard() {
+function CandidatesShortlistCard() {
+  const candidates = [
+    { initials: "MD", name: "Marie D.", score: 92, label: "Recommandé", tone: "good" as const },
+    { initials: "TL", name: "Thomas L.", score: 78, label: "À considérer", tone: "mid" as const },
+    { initials: "SR", name: "Sofia R.", score: 64, label: "Réserve", tone: "low" as const },
+  ];
+  const toneColors = {
+    good: { bg: "hsl(152 70% 95%)", fg: "hsl(152 60% 38%)", ring: "hsl(152 60% 45%)" },
+    mid: { bg: "hsl(38 100% 94%)", fg: "hsl(32 80% 42%)", ring: "hsl(32 90% 55%)" },
+    low: { bg: "hsl(230 14% 94%)", fg: "hsl(230 10% 40%)", ring: "hsl(230 14% 70%)" },
+  };
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <Brain className="h-3.5 w-3.5" /> Étape 2 · L'analyse
+          <Brain className="h-3.5 w-3.5" /> Étape 3 · Le rapport IA
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">L'IA transcrit et analyse</h3>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Comparez vos candidats en un coup d'œil</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Chaque réponse est transcrite, puis évaluée selon vos critères métier.
+          Score global, recommandation et points clés. Vous choisissez qui rencontrer.
         </p>
       </div>
       <div className="mx-5 mb-5 space-y-2 rounded-xl p-3" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
-        <div className="flex gap-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
-            MD
-          </div>
-          <p className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] leading-snug text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-            « J'ai piloté la refonte de notre outil interne, livrée en 4 mois… »
-          </p>
-        </div>
-        <div className="ml-7 flex flex-wrap gap-1.5">
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
-            ✓ Exemple concret
-          </span>
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
-            ✓ Résultat mesurable
-          </span>
-          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>
-            Communication 90/100
-          </span>
-        </div>
+        {candidates.map((c) => {
+          const colors = toneColors[c.tone];
+          const circumference = 2 * Math.PI * 14;
+          const offset = circumference - (c.score / 100) * circumference;
+          return (
+            <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
+                {c.initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
+                <div className="mt-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: colors.bg, color: colors.fg }}>
+                  {c.label}
+                </div>
+              </div>
+              <div className="relative h-9 w-9 shrink-0">
+                <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(230 16% 90%)" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke={colors.ring} strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-foreground">{c.score}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function ReportSummaryCard() {
-  const score = 87;
-  const circumference = 2 * Math.PI * 28;
-  const offset = circumference - (score / 100) * circumference;
-  return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
-      <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <FileText className="h-3.5 w-3.5" /> Étape 3 · Le rapport
-        </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Un rapport prêt à décider</h3>
-        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Score global, points forts, recommandation. Lisible en 2 minutes.
-        </p>
-      </div>
-      <div className="mx-5 mb-5 rounded-xl p-4" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
-        <div className="flex items-center gap-3">
-          <div className="relative h-16 w-16 shrink-0">
-            <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
-              <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(230 16% 88%)" strokeWidth="5" />
-              <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(243 75% 60%)" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-base font-bold text-foreground">{score}</div>
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-foreground">Excellent profil</div>
-            <div className="mt-1 flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
-              <CheckCircle2 className="h-3 w-3" /> Profil recommandé
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 /* ---------------- Page ---------------- */
@@ -364,9 +390,9 @@ export default function Landing() {
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
+            <ProjectCreationCard />
             <InterviewLiveCard />
-            <TranscriptAnalysisCard />
-            <ReportSummaryCard />
+            <CandidatesShortlistCard />
           </div>
         </div>
       </section>
