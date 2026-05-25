@@ -5,6 +5,7 @@ import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import step01Img from "@/assets/step-01-setup.jpg";
 import step02Img from "@/assets/step-02-link.jpg";
 import step03Img from "@/assets/step-03-report.jpg";
+import candidateWoman from "@/assets/avatars/woman-2.jpg";
 import {
   ArrowRight,
   Brain,
@@ -55,12 +56,12 @@ function HeroInterviewMock() {
         <div className="relative aspect-[16/10]" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
           {/* Candidate "video" */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="flex h-28 w-28 items-center justify-center rounded-full text-2xl font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))", boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)" }}
-            >
-              MD
-            </div>
+            <img
+              src={candidateWoman}
+              alt="Candidate en entretien"
+              className="h-32 w-32 rounded-full object-cover"
+              style={{ boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)", border: "3px solid hsl(243 75% 60% / 0.5)" }}
+            />
           </div>
 
           {/* REC indicator */}
@@ -85,7 +86,7 @@ function HeroInterviewMock() {
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(230 8% 65%)" }}>
-                  Question 2 / 5 · posée par l'IA
+                  Question 2 / 5
                 </div>
                 <div className="mt-0.5 text-sm font-medium text-white">
                   Décrivez un projet dont vous êtes particulièrement fier.
