@@ -870,6 +870,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   onSave={setAiQuestionTransitionsCustomText}
                 />
               </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
 
