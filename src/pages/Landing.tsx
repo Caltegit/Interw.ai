@@ -255,10 +255,13 @@ export default function Landing() {
                 <button
                   type="button"
                   onClick={openDemo}
-                  className="landing-btn-white inline-flex h-12 items-center gap-2 text-sm font-semibold text-center px-[60px] mx-[60px] my-[5px]"
+                  className="landing-btn-white group inline-flex items-center gap-3 rounded-xl px-8 py-3.5 text-center font-semibold shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/30"
                 >
-                  Commencer gratuitement — 20 entretiens offerts
-                  <ArrowRight className="h-4 w-4" />
+                  <span className="flex flex-col leading-tight">
+                    <span className="text-base">Commencer gratuitement</span>
+                    <span className="text-xs font-medium opacity-80">20 entretiens offerts</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <p className="mt-3 text-xs text-center" style={{ color: "hsl(230 8% 52%)" }}>
                   Sans carte bancaire · Sans engagement · Setup en 10 min
