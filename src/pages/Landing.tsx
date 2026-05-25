@@ -22,18 +22,13 @@ import {
   Star,
 } from "lucide-react";
 
-/* ---------------- Hero mock report card ---------------- */
-function HeroReportMock() {
-  const score = 87;
-  const circumference = 2 * Math.PI * 40; // r=40
-  const offset = circumference - (score / 100) * circumference;
-
+/* ---------------- Hero mock: live video interview ---------------- */
+function HeroInterviewMock() {
   return (
     <div
       className="landing-fade-up landing-delay-2 relative mx-auto w-full max-w-md"
       style={{ transform: "rotate(-2deg)" }}
     >
-      {/* Floating accent shadow */}
       <div
         className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
         style={{ background: "radial-gradient(ellipse at center, hsl(243 75% 60% / 0.18), transparent 70%)" }}
@@ -41,110 +36,193 @@ function HeroReportMock() {
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
-          background: "#ffffff",
+          background: "#0f1020",
           border: "1px solid hsl(230 16% 92%)",
-          boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.22), 0 1px 2px hsl(240 10% 10% / 0.04)",
+          boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.25), 0 1px 2px hsl(240 10% 10% / 0.04)",
         }}
       >
-        {/* Header */}
-        <div className="items-center border-b p-5 flex flex-row gap-[12px] mx-0 text-left" style={{ borderColor: "hsl(230 14% 88%)" }}>
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold text-white"
-            style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
-          >
-            MD
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-foreground">Marie D.</div>
-            <div className="truncate text-xs" style={{ color: "hsl(230 8% 46%)" }}>
-              Chargée de projet · 24 mai 2026
-            </div>
-          </div>
-          <div
-            className="rounded-md px-2 py-1 text-[10px] font-medium uppercase tracking-wider"
-            style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}
-          >
-            Rapport IA
+        {/* Browser top bar */}
+        <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ background: "#1a1b2e", borderBottom: "1px solid hsl(230 20% 20%)" }}>
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ff5f57" }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#febc2e" }} />
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28c840" }} />
+          <div className="ml-3 flex-1 truncate rounded px-2 py-0.5 text-[10px]" style={{ background: "hsl(230 20% 14%)", color: "hsl(230 8% 65%)" }}>
+            interw.ai/entretien/marie-d
           </div>
         </div>
 
-        {/* Body */}
-        <div className="space-y-5 p-6">
-          {/* Score */}
-          <div className="flex items-center gap-5">
-            <div className="relative h-24 w-24 shrink-0">
-              <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(230 16% 92%)" strokeWidth="8" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  stroke="hsl(243 75% 60%)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={offset}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-foreground">{score}</span>
-                <span className="text-[10px]" style={{ color: "hsl(230 8% 46%)" }}>/ 100</span>
-              </div>
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-wider" style={{ color: "hsl(230 8% 52%)" }}>
-                Score global
-              </div>
-              <div className="mt-1 text-base font-semibold text-foreground">Excellent profil</div>
-              <div className="mt-1 text-xs leading-snug" style={{ color: "hsl(230 8% 42%)" }}>
-                Aligné avec vos critères clés.
-              </div>
+        {/* Video stage */}
+        <div className="relative aspect-[16/10]" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
+          {/* Candidate "video" */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="flex h-28 w-28 items-center justify-center rounded-full text-2xl font-semibold text-white"
+              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))", boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)" }}
+            >
+              MD
             </div>
           </div>
 
-          {/* Bars */}
-          <div className="space-y-3">
-            {[
-              { c: "Communication", v: 90 },
-              { c: "Motivation", v: 85 },
-              { c: "Adaptabilité", v: 80 },
-            ].map((c) => (
-              <div key={c.c} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/90">{c.c}</span>
-                  <span className="font-mono" style={{ color: "hsl(243 75% 60%)" }}>{c.v}%</span>
+          {/* REC indicator */}
+          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+            REC
+          </div>
+
+          {/* Timer */}
+          <div className="absolute right-3 top-3 rounded-md px-2 py-1 font-mono text-[10px] text-white" style={{ background: "hsl(230 20% 10% / 0.7)" }}>
+            01:24
+          </div>
+
+          {/* AI question overlay */}
+          <div className="absolute inset-x-3 bottom-3 rounded-lg p-3" style={{ background: "hsl(230 20% 10% / 0.85)", backdropFilter: "blur(8px)" }}>
+            <div className="flex items-start gap-2.5">
+              <div
+                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+                style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
+              >
+                <Sparkles className="h-3 w-3 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(230 8% 65%)" }}>
+                  Question 2 / 5 · posée par l'IA
                 </div>
-                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: "hsl(230 14% 88%)" }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${c.v}%`,
-                      background: "linear-gradient(90deg, hsl(243 75% 60%), hsl(280 80% 65%))",
-                    }}
-                  />
+                <div className="mt-0.5 text-sm font-medium text-white">
+                  Décrivez un projet dont vous êtes particulièrement fier.
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer controls */}
+        <div className="flex items-center justify-between px-4 py-3" style={{ background: "#16172a", borderTop: "1px solid hsl(230 20% 20%)" }}>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: "hsl(243 75% 60% / 0.2)" }}>
+              <Video className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 70%)" }} />
+            </div>
+            <div className="text-[11px]" style={{ color: "hsl(230 8% 70%)" }}>
+              Entretien en cours · Marie D.
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {[60, 100, 80, 120, 70, 90, 50].map((h, i) => (
+              <span
+                key={i}
+                className="w-0.5 rounded-full"
+                style={{ height: `${h / 10}px`, background: "hsl(243 75% 60%)" }}
+              />
             ))}
-          </div>
-
-          {/* Recommendation badge */}
-          <div
-            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm"
-            style={{
-              background: "hsl(152 70% 95%)",
-              border: "1px solid hsl(152 55% 80%)",
-              color: "hsl(152 60% 38%)",
-            }}
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="font-medium">Profil recommandé</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+/* ---------------- Small product cards (3 moments) ---------------- */
+function InterviewLiveCard() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+      <div className="p-5">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+          <Video className="h-3.5 w-3.5" /> Étape 1 · L'entretien
+        </div>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien vidéo</h3>
+        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
+          L'IA pose vos questions à l'oral. Le candidat répond face caméra, à son rythme.
+        </p>
+      </div>
+      <div className="relative mx-5 mb-5 aspect-[16/9] overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
+            MD
+          </div>
+        </div>
+        <div className="absolute left-2 top-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
+          <span className="h-1 w-1 animate-pulse rounded-full bg-white" /> REC
+        </div>
+        <div className="absolute inset-x-2 bottom-2 rounded px-2 py-1.5 text-[11px] text-white" style={{ background: "hsl(230 20% 10% / 0.85)" }}>
+          « Décrivez un projet dont vous êtes fier. »
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TranscriptAnalysisCard() {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+      <div className="p-5">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+          <Brain className="h-3.5 w-3.5" /> Étape 2 · L'analyse
+        </div>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">L'IA transcrit et analyse</h3>
+        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
+          Chaque réponse est transcrite, puis évaluée selon vos critères métier.
+        </p>
+      </div>
+      <div className="mx-5 mb-5 space-y-2 rounded-xl p-3" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
+        <div className="flex gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
+            MD
+          </div>
+          <p className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] leading-snug text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+            « J'ai piloté la refonte de notre outil interne, livrée en 4 mois… »
+          </p>
+        </div>
+        <div className="ml-7 flex flex-wrap gap-1.5">
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
+            ✓ Exemple concret
+          </span>
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
+            ✓ Résultat mesurable
+          </span>
+          <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>
+            Communication 90/100
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReportSummaryCard() {
+  const score = 87;
+  const circumference = 2 * Math.PI * 28;
+  const offset = circumference - (score / 100) * circumference;
+  return (
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+      <div className="p-5">
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+          <FileText className="h-3.5 w-3.5" /> Étape 3 · Le rapport
+        </div>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Un rapport prêt à décider</h3>
+        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
+          Score global, points forts, recommandation. Lisible en 2 minutes.
+        </p>
+      </div>
+      <div className="mx-5 mb-5 rounded-xl p-4" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
+        <div className="flex items-center gap-3">
+          <div className="relative h-16 w-16 shrink-0">
+            <svg viewBox="0 0 64 64" className="h-full w-full -rotate-90">
+              <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(230 16% 88%)" strokeWidth="5" />
+              <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(243 75% 60%)" strokeWidth="5" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-base font-bold text-foreground">{score}</div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold text-foreground">Excellent profil</div>
+            <div className="mt-1 flex items-center gap-1.5 rounded px-2 py-1 text-[11px] font-medium" style={{ background: "hsl(152 70% 95%)", color: "hsl(152 60% 38%)" }}>
+              <CheckCircle2 className="h-3 w-3" /> Profil recommandé
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ---------------- Page ---------------- */
 export default function Landing() {
