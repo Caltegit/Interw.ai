@@ -165,13 +165,13 @@ export default function ProjectEdit() {
         preSessionMessage:
           (project as { pre_session_message?: string | null }).pre_session_message ?? "Soyez naturel.le et souriez, vous êtes filmé.e !",
         aiIntroEnabled:
-          (project as { ai_intro_enabled?: boolean }).ai_intro_enabled ?? true,
+          (project as { ai_intro_enabled?: boolean }).ai_intro_enabled ?? false,
         aiIntroMode:
           ((project as { ai_intro_mode?: string }).ai_intro_mode as "auto" | "custom") ?? "auto",
         aiIntroCustomText:
           (project as { ai_intro_custom_text?: string | null }).ai_intro_custom_text ?? "",
         aiQuestionTransitionsEnabled:
-          (project as { ai_question_transitions_enabled?: boolean }).ai_question_transitions_enabled ?? true,
+          (project as { ai_question_transitions_enabled?: boolean }).ai_question_transitions_enabled ?? false,
         aiQuestionTransitionsMode:
           ((project as { ai_question_transitions_mode?: string }).ai_question_transitions_mode as
             | "auto"

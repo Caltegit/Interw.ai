@@ -18,7 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
@@ -686,7 +687,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between group">
+                    <span>Fonctionnalités avancées</span>
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div>
                   <Label>Durée maximale (minutes) : {maxDuration}</Label>
                   <input
@@ -794,57 +803,42 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   )}
                 </div>
                 <div className="space-y-3">
-                  <div>
-                    <Label>Transitions entre questions</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Phrase prononcée par l'IA entre deux questions.
-                    </p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <Label>Transitions entre questions</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Phrase prononcée par l'IA entre deux questions.
+                      </p>
+                    </div>
+                    <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
                   </div>
-                  <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                    <RadioGroup
-                      value={
-                        !aiQuestionTransitionsEnabled ? "none" : aiQuestionTransitionsMode
-                      }
-                      onValueChange={(v) => {
-                        if (v === "none") {
-                          setAiQuestionTransitionsEnabled(false);
-                        } else {
-                          setAiQuestionTransitionsEnabled(true);
-                          setAiQuestionTransitionsMode(v as "auto" | "custom");
-                        }
-                      }}
-                      className="gap-1.5"
-                    >
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Laisser l'IA s'adapter au contexte des réponses
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Utiliser un texte fixe
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="none" id={`ai-trans-none-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-none-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Pas de transition
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                    {aiQuestionTransitionsEnabled && aiQuestionTransitionsMode === "custom" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setTransitionsCustomizerOpen(true)}
+                  {aiQuestionTransitionsEnabled && (
+                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                      <RadioGroup
+                        value={aiQuestionTransitionsMode}
+                        onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
+                        className="gap-1.5"
                       >
-                        Modifier le texte
-                      </Button>
-                    )}
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Laisser l'IA s'adapter au contexte des réponses
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Utiliser un texte fixe
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      {aiQuestionTransitionsMode === "custom" && (
+                        <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
+                          Modifier le texte
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <AiTextCustomizerDialog
@@ -876,6 +870,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   onSave={setAiQuestionTransitionsCustomText}
                 />
               </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
 
