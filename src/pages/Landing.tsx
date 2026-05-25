@@ -146,6 +146,10 @@ function ProjectCreationCard() {
           <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Questions</div>
           <div className="mt-1 space-y-1">
             <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>1</span>
+              Parlez-moi de votre parcours.
+            </div>
+            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>2</span>
               Comment gérez-vous un désaccord ?
             </div>
@@ -219,13 +223,8 @@ function CandidatesShortlistCard() {
           const offset = circumference - (c.score / 100) * circumference;
           return (
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted" style={{ border: "1px solid hsl(230 14% 88%)" }}>
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-white" style={{ boxShadow: "0 2px 6px -2px hsl(230 20% 20% / 0.25)" }}>
                 <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/30">
-                    <Play className="h-2.5 w-2.5 fill-white text-white/90" />
-                  </div>
-                </div>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
