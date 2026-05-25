@@ -48,9 +48,22 @@ interface Props {
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
   transcriptsByMessageId?: Record<string, string>;
+  /**
+   * L'analyse paraverbale peut s'appuyer sur un segment audio seul.
+   * Pour que le bouton « Voir » ouvre le clip vidéo de la même question,
+   * on résout le message_id vers le message vidéo équivalent (même
+   * `question_id`). Retourne `undefined` si aucune vidéo n'existe.
+   */
+  resolveVideoMessageId?: (messageId: string) => string | undefined;
 }
 
-export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId }: Props) {
+export function ParaverbalProfileCard({
+  analysis,
+  onGoToMessage,
+  questionNumberByMessageId,
+  transcriptsByMessageId,
+  resolveVideoMessageId,
+}: Props) {
   if (!analysis?.profile) return null;
   const profile = analysis.profile;
   const dims = DIMENSIONS.filter((d) => {
@@ -73,6 +86,9 @@ export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberB
         <div className="space-y-2.5">
           {dims.map(({ key, label }) => {
             const dim = profile[key]!;
+            const videoMessageId = dim.evidence_message_id
+              ? resolveVideoMessageId?.(dim.evidence_message_id)
+              : undefined;
             return (
               <div key={key}>
                 <div className="flex items-center justify-between text-sm">
@@ -90,10 +106,10 @@ export function ParaverbalProfileCard({ analysis, onGoToMessage, questionNumberB
                 )}
                 <EvidenceLink
                   quote={dim.evidence_quote || (dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined)}
-                  messageId={dim.evidence_message_id}
-                  startSeconds={dim.evidence_start_seconds}
-                  questionNumber={dim.evidence_message_id ? questionNumberByMessageId?.[dim.evidence_message_id] : undefined}
-                  onGoToMessage={onGoToMessage}
+                  messageId={videoMessageId}
+                  startSeconds={undefined}
+                  questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
+                  onGoToMessage={videoMessageId ? onGoToMessage : undefined}
                   compact
                 />
               </div>
