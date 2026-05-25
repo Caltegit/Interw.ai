@@ -223,13 +223,8 @@ function CandidatesShortlistCard() {
           const offset = circumference - (c.score / 100) * circumference;
           return (
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted" style={{ border: "1px solid hsl(230 14% 88%)" }}>
+              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-white" style={{ boxShadow: "0 2px 6px -2px hsl(230 20% 20% / 0.25)" }}>
                 <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-1 ring-white/30">
-                    <Play className="h-2.5 w-2.5 fill-white text-white/90" />
-                  </div>
-                </div>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
