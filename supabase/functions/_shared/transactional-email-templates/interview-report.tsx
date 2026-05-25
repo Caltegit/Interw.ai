@@ -165,13 +165,24 @@ const InterviewReportEmail = ({
             </Text>
           ) : null}
 
+          {candidateLinkedinUrl ? (
+            <Text style={muted}>
+              LinkedIn : <a href={candidateLinkedinUrl} style={link}>{candidateLinkedinUrl}</a>
+            </Text>
+          ) : null}
+
           <Section style={scoreBox}>
             <Text style={scoreLabel}>Score global</Text>
             <Text style={scoreValue}>{overallScore}/100{overallGrade ? ` · ${overallGrade}` : ''}</Text>
             <Text style={recoText}>{recommendationLabel(recommendation)}</Text>
           </Section>
 
-          {executiveSummaryShort ? (
+          {verdictHeadline ? (
+            <Section style={shortSummaryBox}>
+              <Text style={shortSummaryLabel}>🎯 Verdict</Text>
+              <Text style={shortSummaryText}>{verdictHeadline}</Text>
+            </Section>
+          ) : executiveSummaryShort ? (
             <Section style={shortSummaryBox}>
               <Text style={shortSummaryLabel}>🎯 Résumé en 30 secondes</Text>
               <Text style={shortSummaryText}>{executiveSummaryShort}</Text>
@@ -189,20 +200,32 @@ const InterviewReportEmail = ({
             </Text>
             {typeof stats.best_question_idx === 'number' && stats.best_question_score ? (
               <Text style={statRow}>
-                <strong>🏆 Top moment :</strong> Question {stats.best_question_idx + 1} (score {stats.best_question_score}/10)
+                <strong>🏆 Meilleur moment :</strong> Question {stats.best_question_idx + 1} (score {stats.best_question_score}/10)
               </Text>
             ) : null}
           </Section>
 
-          {highlightsUrl ? (
-            <Button href={highlightsUrl} style={primaryButton}>▶ Voir le best-of (1 min)</Button>
-          ) : null}
-          <Button href={reportUrl} style={secondaryButton}>Voir le rapport complet</Button>
+          <Button href={reportUrl} style={primaryButton}>Voir le rapport complet</Button>
 
           <Hr style={hr} />
 
           <Heading as="h2" style={h2}>Résumé exécutif</Heading>
           <Text style={text}>{executiveSummary || '—'}</Text>
+
+          {decisionDrivers && decisionDrivers.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🧭 Facteurs de décision</Heading>
+              {decisionDrivers.map((d, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>
+                    {d.label || `Facteur ${i + 1}`}
+                    {d.impact ? <span style={muted}> · {d.impact}</span> : null}
+                  </Text>
+                  {d.description ? <Text style={cardText}>{d.description}</Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
 
           {strengths.length > 0 && (
             <>
@@ -221,6 +244,37 @@ const InterviewReportEmail = ({
               ))}
             </>
           )}
+
+          {redFlags && redFlags.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🚩 Points de vigilance</Heading>
+              {redFlags.map((rf, i) => (
+                <Section key={i} style={redFlagCard}>
+                  <Text style={cardTitle}>
+                    {rf.description || `Vigilance ${i + 1}`}
+                    {rf.severity ? <span style={muted}> · {rf.severity}</span> : null}
+                  </Text>
+                  {rf.quote ? <Text style={cardText}><em>« {rf.quote} »</em></Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
+
+          {softSkills && softSkills.length > 0 && (
+            <>
+              <Heading as="h2" style={h2}>🤝 Compétences comportementales</Heading>
+              {softSkills.map((s, i) => (
+                <Section key={i} style={card}>
+                  <Text style={cardTitle}>
+                    {s.label || `Compétence ${i + 1}`}
+                    {typeof s.score === 'number' ? <> — <strong>{s.score}/10</strong></> : null}
+                  </Text>
+                  {s.comment ? <Text style={cardText}>{s.comment}</Text> : null}
+                </Section>
+              ))}
+            </>
+          )}
+
 
           {personalityEntries.length > 0 && (
             <>
