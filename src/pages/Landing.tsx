@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import candidateWoman from "@/assets/hero-candidate-video.jpg";
-import candidateMan from "@/assets/hero-candidate-video-man.jpg";
+import candidateMan from "@/assets/hero-candidate-man-v1.jpg";
 import shortlistAvatar1 from "@/assets/candidates/candidate-woman-1.jpg";
 import shortlistAvatar2 from "@/assets/candidates/candidate-man-1.jpg";
 import shortlistAvatar3 from "@/assets/candidates/candidate-woman-2.jpg";
