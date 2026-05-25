@@ -516,7 +516,7 @@ export default function Landing() {
               {
                 icon: ShieldCheck,
                 title: "RGPD natif",
-                desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable.",
+                desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable. Suppression automatique par action du candidat. ",
               },
             ].map((f) => (
               <div key={f.title} className="landing-card landing-card-hover p-6">
