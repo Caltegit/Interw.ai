@@ -59,7 +59,7 @@ function HeroInterviewMock() {
           <img
             src={candidateWoman}
             alt="Candidate en entretien vidéo"
-            className="absolute inset-0 h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover my-0"
           />
           {/* Subtle vignette for readability of overlays */}
           <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 5% / 0.25) 0%, transparent 30%, transparent 55%, hsl(230 20% 5% / 0.55) 100%)" }} />
@@ -181,8 +181,8 @@ function InterviewLiveCard() {
         </p>
       </div>
       <div className="relative mx-5 mb-5 aspect-[16/9] overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
-        <img src={candidateMan} alt="Candidat en entretien vidéo" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 8% / 0.15) 0%, transparent 40%, hsl(230 20% 8% / 0.55) 100%)" }} />
+        <img src={candidateMan} alt="Candidat en entretien vidéo" className="absolute inset-0 h-full w-full object-cover my-0" />
+        <div className="absolute inset-0 my-[55px] border-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 8% / 0.15) 0%, transparent 40%, hsl(230 20% 8% / 0.55) 100%)" }} />
         <div className="absolute left-2 top-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
           <span className="h-1 w-1 animate-pulse rounded-full bg-white" /> REC
         </div>
@@ -224,7 +224,7 @@ function CandidatesShortlistCard() {
           return (
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
               <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-white" style={{ boxShadow: "0 2px 6px -2px hsl(230 20% 20% / 0.25)" }}>
-                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
+                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover my-0" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
@@ -448,10 +448,10 @@ export default function Landing() {
                   Vous gardez le contrôle
                 </span>
                 <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Vos questions, votre processus
+                  Vos questions, votre méthode
                 </h3>
                 <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
-                  Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement — la technologie s'adapte à votre méthode, pas l'inverse.
+                  Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement, l'outil s'adapte à votre méthode, pas l'inverse.
                 </p>
               </div>
               <div
@@ -480,10 +480,10 @@ export default function Landing() {
                   Équité &amp; inclusion
                 </span>
                 <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Un recrutement vraiment équitable
+                  Un recrutement plus équitable
                 </h3>
                 <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
-                  Peu importe le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. interw.ai donne une vraie chance à ceux que les CV écartent trop vite. Recruter mieux, c'est aussi recruter plus justement.
+                  Peu importe le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. Vous donnez une vraie chance à ceux dont le CV aurait été vite écarté.&nbsp;
                 </p>
               </div>
               <div
