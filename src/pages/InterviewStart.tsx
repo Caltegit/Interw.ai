@@ -2126,7 +2126,10 @@ export default function InterviewStart() {
     //   3) Préparation du média de la 1ère question (ou rien si question texte)
     //   4) Buffer 300 ms de stabilisation
     const usesEleven = project?.tts_provider === "elevenlabs";
-    const initialSteps: BootStep[] = [
+    // NB : l'overlay et les étapes ont déjà été activés tout en haut de
+    // beginInterview() pour éviter le flash de la Q1. On rafraîchit ici le
+    // libellé de l'étape « media » au cas où questions[0] aurait évolué.
+    setBootSteps([
       { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
       { key: "network", label: "Test de la connexion", status: "pending" },
       {
@@ -2137,10 +2140,8 @@ export default function InterviewStart() {
         status: "pending",
       },
       { key: "buffer", label: "Mise en mémoire tampon", status: "pending" },
-    ];
-    setBootSteps(initialSteps);
-    setBootPercent(0);
-    setBootActive(true);
+    ]);
+
 
     const updateStep = (key: string, status: BootStepStatus) => {
       setBootSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
