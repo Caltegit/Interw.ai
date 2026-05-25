@@ -128,11 +128,11 @@ function ProjectCreationCard() {
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <FileText className="h-3.5 w-3.5" /> Étape 1 · Création de l'entretien
+          <FileText className="h-3.5 w-3.5" /> ÉTAPE 1 · CRÉATION
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez votre entretien</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Poste, questions et critères d'évaluation, en quelques minutes.
+          Poste, questions et critères d'évaluation.
         </p>
       </div>
       <div className="mx-5 mb-5 space-y-2.5 rounded-xl p-4" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
@@ -173,11 +173,11 @@ function InterviewLiveCard() {
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <Video className="h-3.5 w-3.5" /> Étape 2 · L'entretien candidat
+          <Video className="h-3.5 w-3.5" /> ÉTAPE 2 · L'ENTRETIEN
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien vidéo</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          L'IA pose vos questions à l'oral. Le candidat répond face caméra, à son rythme.
+          Le candidat répond face caméra, à son rythme.
         </p>
       </div>
       <div className="relative mx-5 mb-5 aspect-[16/9] overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
@@ -209,11 +209,11 @@ function CandidatesShortlistCard() {
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <Brain className="h-3.5 w-3.5" /> Étape 3 · Le rapport IA
+          <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Comparez vos candidats en un coup d'œil</h3>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Comparez vos candidats </h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Score global, recommandation et points clés. Vous choisissez qui rencontrer.
+          Et choisissez qui vous sélectionnez...
         </p>
       </div>
       <div className="mx-5 mb-5 space-y-2 rounded-xl p-3" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
