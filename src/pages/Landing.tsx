@@ -139,7 +139,7 @@ function ProjectCreationCard() {
         <div>
           <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Intitulé du poste</div>
           <div className="mt-1 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-medium text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-            Développeur Full-Stack
+            Office manager
           </div>
         </div>
         <div>
