@@ -130,7 +130,7 @@ function ProjectCreationCard() {
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
           <FileText className="h-3.5 w-3.5" /> ÉTAPE 1 · CRÉATION
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez votre entretien</h3>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez l'entretien</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
           Poste, questions et critères d'évaluation.
         </p>
@@ -205,7 +205,7 @@ function CandidatesShortlistCard() {
     <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
       <div className="p-5">
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
-          <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT
+          <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT IA
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Comparez vos candidats </h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
@@ -386,7 +386,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 pb-24">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">EN 3 ETAPES SIMPLES</span>
-            <h2 className="mt-5 text-3xl font-semibold md:text-2xl">
+            <h2 className="mt-5 text-3xl font-semibold md:text-5xl">
               Gagnez du temps tout en gardant la main.
             </h2>
           </div>
