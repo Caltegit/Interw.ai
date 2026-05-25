@@ -351,8 +351,9 @@ export default function Landing() {
                 Faites passer un entretien vidéo à chaque candidat. Automatiquement.
               </p>
               <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
-                Vous définissez les questions et les critères et le candidat passe l'entretien quand il veut. Notre IA délivre un rapport détaillé.<br />
-                Vous donnez une chance à tous, vous sélectionnez les meilleurs.
+                90% des CV et lettres de motivation sont rédigés par ChatGPT.<br />
+                Quand l'IA uniformise tout, l'entretien vidéo devient votre meilleur filtre.<br />
+                Reprenez la main et sélectionnez les meilleurs profils.
               </p>
               <div className="landing-fade-up landing-delay-3 mt-8 text-center">
                 <button
