@@ -2001,6 +2001,36 @@ export default function InterviewStart() {
 
     setReadyToStart(true);
 
+    // Active immédiatement l'overlay de préparation pour masquer l'UI d'entretien
+    // (sinon la Q1 « flashe » pendant ~1,5 s à cause des awaits qui suivent —
+    // fullscreen, getUserMedia, mesure micro). Les étapes seront mises à jour
+    // plus bas avec le label précis de la 1ʳᵉ question.
+    {
+      const q0Early = questions[0];
+      const earlyMediaType: "written" | "audio" | "video" = q0Early?.video_url
+        ? "video"
+        : q0Early?.audio_url
+          ? "audio"
+          : "written";
+      const earlyMediaUrl = q0Early?.video_url || q0Early?.audio_url || null;
+      setBootSteps([
+        { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
+        { key: "network", label: "Test de la connexion", status: "pending" },
+        {
+          key: "media",
+          label: earlyMediaUrl
+            ? `Chargement de la 1ʳᵉ question (${earlyMediaType === "video" ? "vidéo" : "audio"})`
+            : "Chargement de la 1ʳᵉ question",
+          status: "pending",
+        },
+        { key: "buffer", label: "Mise en mémoire tampon", status: "pending" },
+      ]);
+      setBootPercent(0);
+      setBootActive(true);
+    }
+
+
+
     // Mode « salle d'examen » — plein écran (desktop uniquement)
     isMobileLikeRef.current =
       typeof navigator !== "undefined" &&
@@ -2096,7 +2126,10 @@ export default function InterviewStart() {
     //   3) Préparation du média de la 1ère question (ou rien si question texte)
     //   4) Buffer 300 ms de stabilisation
     const usesEleven = project?.tts_provider === "elevenlabs";
-    const initialSteps: BootStep[] = [
+    // NB : l'overlay et les étapes ont déjà été activés tout en haut de
+    // beginInterview() pour éviter le flash de la Q1. On rafraîchit ici le
+    // libellé de l'étape « media » au cas où questions[0] aurait évolué.
+    setBootSteps([
       { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
       { key: "network", label: "Test de la connexion", status: "pending" },
       {
@@ -2107,10 +2140,8 @@ export default function InterviewStart() {
         status: "pending",
       },
       { key: "buffer", label: "Mise en mémoire tampon", status: "pending" },
-    ];
-    setBootSteps(initialSteps);
-    setBootPercent(0);
-    setBootActive(true);
+    ]);
+
 
     const updateStep = (key: string, status: BootStepStatus) => {
       setBootSteps((prev) => prev.map((s) => (s.key === key ? { ...s, status } : s)));
