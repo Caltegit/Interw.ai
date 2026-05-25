@@ -5,7 +5,7 @@ import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import step01Img from "@/assets/step-01-setup.jpg";
 import step02Img from "@/assets/step-02-link.jpg";
 import step03Img from "@/assets/step-03-report.jpg";
-import candidateWoman from "@/assets/avatars/woman-2.jpg";
+import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import {
   ArrowRight,
   Brain,
