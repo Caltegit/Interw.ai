@@ -795,57 +795,42 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   )}
                 </div>
                 <div className="space-y-3">
-                  <div>
-                    <Label>Transitions entre questions</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Phrase prononcée par l'IA entre deux questions.
-                    </p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <Label>Transitions entre questions</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Phrase prononcée par l'IA entre deux questions.
+                      </p>
+                    </div>
+                    <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
                   </div>
-                  <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                    <RadioGroup
-                      value={
-                        !aiQuestionTransitionsEnabled ? "none" : aiQuestionTransitionsMode
-                      }
-                      onValueChange={(v) => {
-                        if (v === "none") {
-                          setAiQuestionTransitionsEnabled(false);
-                        } else {
-                          setAiQuestionTransitionsEnabled(true);
-                          setAiQuestionTransitionsMode(v as "auto" | "custom");
-                        }
-                      }}
-                      className="gap-1.5"
-                    >
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Laisser l'IA s'adapter au contexte des réponses
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Utiliser un texte fixe
-                        </Label>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <RadioGroupItem value="none" id={`ai-trans-none-${idSuffix}`} />
-                        <Label htmlFor={`ai-trans-none-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                          Pas de transition
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                    {aiQuestionTransitionsEnabled && aiQuestionTransitionsMode === "custom" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setTransitionsCustomizerOpen(true)}
+                  {aiQuestionTransitionsEnabled && (
+                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                      <RadioGroup
+                        value={aiQuestionTransitionsMode}
+                        onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
+                        className="gap-1.5"
                       >
-                        Modifier le texte
-                      </Button>
-                    )}
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Laisser l'IA s'adapter au contexte des réponses
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
+                          <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                            Utiliser un texte fixe
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                      {aiQuestionTransitionsMode === "custom" && (
+                        <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
+                          Modifier le texte
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <AiTextCustomizerDialog
