@@ -425,7 +425,7 @@ export default function Landing() {
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">AVANTAGES</span>
             <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
-              Rencontrez les meilleurs candidats.
+              Gagnez du temps tout en gardant la main
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
