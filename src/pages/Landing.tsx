@@ -387,7 +387,7 @@ export default function Landing() {
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">EN 3 ETAPES SIMPLES</span>
             <h2 className="mt-5 text-3xl font-semibold md:text-5xl">
-              Rencontrez les meilleurs Profils
+              Gagnez du temps tout en gardant la main
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -424,8 +424,8 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">AVANTAGES</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
-              Rencontrez les meilleurs Profils
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
+              Gagnez du temps tout en gardant la main
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
@@ -545,7 +545,7 @@ export default function Landing() {
         <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Comparatif</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
               Avec la présélection traditionnelle, vous n'avez pas le temps d'évaluer tout le potentiel de certains candidats.
             </h2>
           </div>
@@ -618,7 +618,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">Tarifs</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
               Une formule simple, adaptée à votre volume.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
@@ -730,7 +730,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
           <div className="text-center">
             <span className="landing-pill">Questions fréquentes</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-base">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
               Tout ce que vous voulez savoir.
             </h2>
           </div>
