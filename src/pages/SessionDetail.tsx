@@ -226,6 +226,34 @@ export default function SessionDetail() {
     return map;
   }, [messages]);
 
+  // Mapping `message_id (audio/vidéo) → message_id du clip vidéo` partageant la
+  // même `question_id`. Permet aux boutons « Voir » des analyses paraverbale
+  // et nonverbale (qui peuvent référencer un segment audio seul) d'ouvrir
+  // le clip vidéo correspondant dans le lecteur de session.
+  const videoMessageIdByMessageId = useMemo(() => {
+    const videoIdByQuestionId = new Map<string, string>();
+    for (const m of messages as any[]) {
+      if (m?.role === "candidate" && m?.video_segment_url && m?.question_id) {
+        if (!videoIdByQuestionId.has(m.question_id)) {
+          videoIdByQuestionId.set(m.question_id, m.id);
+        }
+      }
+    }
+    const map: Record<string, string> = {};
+    for (const m of messages as any[]) {
+      if (m?.role === "candidate" && m?.question_id) {
+        const v = videoIdByQuestionId.get(m.question_id);
+        if (v) map[m.id] = v;
+      }
+    }
+    return map;
+  }, [messages]);
+  const resolveVideoMessageId = useCallback(
+    (id: string) => videoMessageIdByMessageId[id],
+    [videoMessageIdByMessageId],
+  );
+
+
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
     const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
       .slice()
