@@ -388,7 +388,19 @@ export const template = {
       best_question_score: 9,
     },
     reportUrl: 'https://interw.ai/sessions/abc',
-    highlightsUrl: 'https://interw.ai/highlights/abc',
+    candidateLinkedinUrl: 'https://www.linkedin.com/in/jane-doe',
+    verdictHeadline: 'Profil solide à rencontrer en priorité.',
+    decisionDrivers: [
+      { label: 'Communication', description: 'Discours clair et structuré tout au long de l\'entretien.', impact: 'Positif' },
+      { label: 'Expérience produit', description: 'Manque d\'exemples concrets sur le scope produit attendu.', impact: 'À valider' },
+    ],
+    redFlags: [
+      { description: 'Manque de précision sur la gestion d\'équipe', severity: 'Modéré', quote: 'Je n\'ai pas eu de management direct dans mon dernier poste.' },
+    ],
+    softSkills: [
+      { label: 'Esprit d\'équipe', score: 8, comment: 'Mentionne plusieurs collaborations réussies.' },
+      { label: 'Autonomie', score: 7, comment: 'A piloté plusieurs projets en parallèle.' },
+    ],
   },
 } satisfies TemplateEntry
 
