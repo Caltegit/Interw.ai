@@ -224,7 +224,7 @@ function CandidatesShortlistCard() {
           return (
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
               <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-white" style={{ boxShadow: "0 2px 6px -2px hsl(230 20% 20% / 0.25)" }}>
-                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
+                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover my-0" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
