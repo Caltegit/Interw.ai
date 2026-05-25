@@ -56,12 +56,12 @@ function HeroInterviewMock() {
         <div className="relative aspect-[16/10]" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
           {/* Candidate "video" */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="flex h-28 w-28 items-center justify-center rounded-full text-2xl font-semibold text-white"
-              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))", boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)" }}
-            >
-              MD
-            </div>
+            <img
+              src={candidateWoman}
+              alt="Candidate en entretien"
+              className="h-32 w-32 rounded-full object-cover"
+              style={{ boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)", border: "3px solid hsl(243 75% 60% / 0.5)" }}
+            />
           </div>
 
           {/* REC indicator */}
