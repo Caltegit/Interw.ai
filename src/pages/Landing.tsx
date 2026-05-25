@@ -349,7 +349,7 @@ export default function Landing() {
 
             {/* Right column — mock report */}
             <div className="mt-4 md:mt-0">
-              <HeroReportMock />
+              <HeroInterviewMock />
             </div>
           </div>
         </div>
