@@ -387,7 +387,7 @@ export default function Landing() {
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">EN 3 ETAPES SIMPLES</span>
             <h2 className="mt-5 text-3xl font-semibold md:text-5xl">
-              Gagnez du temps tout en gardant la main
+              Rencontrez les meilleurs candidats.
             </h2>
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -425,7 +425,7 @@ export default function Landing() {
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">AVANTAGES</span>
             <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
-              Gagnez du temps tout en gardant la main
+              Rencontrez les meilleurs candidats.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
               Vous gardez le contrôle. L'IA fait le travail d'analyse. Chaque candidat a enfin une vraie chance d'être entendu.
