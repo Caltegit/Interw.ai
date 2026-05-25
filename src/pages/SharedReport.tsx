@@ -169,6 +169,29 @@ export default function SharedReport() {
     return map;
   }, [messages]);
 
+  // Voir commentaire dans SessionDetail.tsx — mapping audio/vidéo → vidéo de
+  // la même question pour les boutons « Voir » des analyses para/non-verbales.
+  const videoMessageIdByMessageId = useMemo(() => {
+    const videoIdByQuestionId = new Map<string, string>();
+    for (const m of messages as any[]) {
+      if (m?.role === "candidate" && m?.video_segment_url && m?.question_id) {
+        if (!videoIdByQuestionId.has(m.question_id)) {
+          videoIdByQuestionId.set(m.question_id, m.id);
+        }
+      }
+    }
+    const map: Record<string, string> = {};
+    for (const m of messages as any[]) {
+      if (m?.role === "candidate" && m?.question_id) {
+        const v = videoIdByQuestionId.get(m.question_id);
+        if (v) map[m.id] = v;
+      }
+    }
+    return map;
+  }, [messages]);
+  const resolveVideoMessageId = (id: string) => videoMessageIdByMessageId[id];
+
+
   const stats = (report?.stats as Record<string, any>) ?? {};
   const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
