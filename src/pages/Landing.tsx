@@ -251,7 +251,7 @@ export default function Landing() {
                 Vous définissez les questions et les critères et le candidat passe l'entretien quand il veut. Notre IA délivre un rapport détaillé.<br />
                 Vous donnez une chance à tous, vous sélectionnez les meilleurs.
               </p>
-              <div className="landing-fade-up landing-delay-3 mt-8">
+              <div className="landing-fade-up landing-delay-3 mt-8 text-center">
                 <button
                   type="button"
                   onClick={openDemo}
