@@ -704,7 +704,9 @@ export default function SessionDetail() {
                 onGoToMessage={goToMessage}
                 questionNumberByMessageId={questionNumberByMessageId}
                 transcriptsByMessageId={transcriptsByMessageId}
+                resolveVideoMessageId={resolveVideoMessageId}
               />
+
             </TabsContent>
 
           </Tabs>
