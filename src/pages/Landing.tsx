@@ -5,7 +5,7 @@ import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import step01Img from "@/assets/step-01-setup.jpg";
 import step02Img from "@/assets/step-02-link.jpg";
 import step03Img from "@/assets/step-03-report.jpg";
-import candidateWoman from "@/assets/avatars/woman-2.jpg";
+import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import {
   ArrowRight,
   Brain,
@@ -53,16 +53,16 @@ function HeroInterviewMock() {
         </div>
 
         {/* Video stage */}
-        <div className="relative aspect-[16/10]" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
-          {/* Candidate "video" */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <img
-              src={candidateWoman}
-              alt="Candidate en entretien"
-              className="h-32 w-32 rounded-full object-cover"
-              style={{ boxShadow: "0 10px 40px hsl(243 75% 60% / 0.4)", border: "3px solid hsl(243 75% 60% / 0.5)" }}
-            />
-          </div>
+        <div className="relative aspect-[16/10] overflow-hidden">
+          {/* Candidate video feed */}
+          <img
+            src={candidateWoman}
+            alt="Candidate en entretien vidéo"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          {/* Subtle vignette for readability of overlays */}
+          <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 5% / 0.25) 0%, transparent 30%, transparent 55%, hsl(230 20% 5% / 0.55) 100%)" }} />
+
 
           {/* REC indicator */}
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
