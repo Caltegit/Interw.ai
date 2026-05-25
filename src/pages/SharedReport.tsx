@@ -434,7 +434,9 @@ export default function SharedReport() {
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
                   transcriptsByMessageId={transcriptsByMessageId}
+                  resolveVideoMessageId={resolveVideoMessageId}
                 />
+
               ) : (
                 <Card>
                   <CardContent className="py-8 text-center text-sm text-muted-foreground">
