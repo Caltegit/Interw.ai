@@ -459,6 +459,13 @@ const card = {
   padding: '12px',
   margin: '0 0 8px',
 }
+const redFlagCard = {
+  border: '1px solid #FECACA',
+  backgroundColor: '#FEF2F2',
+  borderRadius: '6px',
+  padding: '12px',
+  margin: '0 0 8px',
+}
 const cardTitle = { fontSize: '14px', color: '#111827', margin: '0 0 4px', fontWeight: 'bold' as const }
 const cardText = { fontSize: '13px', color: '#4b5563', lineHeight: '1.5', margin: '4px 0 0' }
 const hr = { borderColor: '#e5e7eb', margin: '24px 0' }
