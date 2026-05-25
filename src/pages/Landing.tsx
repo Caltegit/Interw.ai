@@ -86,7 +86,7 @@ function HeroInterviewMock() {
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(230 8% 65%)" }}>
-                  Question 2 / 5 · posée par l'IA
+                  Question 2 / 5
                 </div>
                 <div className="mt-0.5 text-sm font-medium text-white">
                   Décrivez un projet dont vous êtes particulièrement fier.
