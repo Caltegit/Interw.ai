@@ -385,7 +385,7 @@ export default function Landing() {
       <section style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-6xl px-6 pb-24">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">EN 3 ETAPES SIMPLES</span>
+            <span className="landing-pill">3 ETAPES SIMPLES</span>
             <h2 className="mt-5 text-3xl font-semibold md:text-5xl">
               Laissez une chance à tous,<br />rencontrez les meilleurs.
             </h2>
