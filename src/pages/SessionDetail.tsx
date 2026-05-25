@@ -631,7 +631,9 @@ export default function SessionDetail() {
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
                   transcriptsByMessageId={transcriptsByMessageId}
+                  resolveVideoMessageId={resolveVideoMessageId}
                 />
+
               ) : (
                 <Card>
                   <CardContent className="space-y-4 py-8 text-center">
