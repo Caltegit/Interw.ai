@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import candidateWoman from "@/assets/hero-candidate-video.jpg";
 import candidateMan from "@/assets/hero-candidate-video-man.jpg";
+import shortlistAvatar1 from "@/assets/avatars/woman-1.jpg";
+import shortlistAvatar2 from "@/assets/avatars/man-1.jpg";
+import shortlistAvatar3 from "@/assets/avatars/woman-2.jpg";
 import {
   ArrowRight,
   Brain,
@@ -18,6 +21,7 @@ import {
   FileText,
   X,
   Star,
+  Play,
 } from "lucide-react";
 
 /* ---------------- Hero mock: live video interview ---------------- */
@@ -192,9 +196,9 @@ function InterviewLiveCard() {
 
 function CandidatesShortlistCard() {
   const candidates = [
-    { initials: "MD", name: "Marie D.", score: 92, label: "Recommandé", tone: "good" as const },
-    { initials: "TL", name: "Thomas L.", score: 78, label: "À considérer", tone: "mid" as const },
-    { initials: "SR", name: "Sofia R.", score: 64, label: "Réserve", tone: "low" as const },
+    { initials: "MD", photo: shortlistAvatar1, name: "Marie D.", score: 92, label: "Recommandé", tone: "good" as const },
+    { initials: "TL", photo: shortlistAvatar2, name: "Thomas L.", score: 78, label: "À considérer", tone: "mid" as const },
+    { initials: "SR", photo: shortlistAvatar3, name: "Sofia R.", score: 64, label: "Réserve", tone: "low" as const },
   ];
   const toneColors = {
     good: { bg: "hsl(152 70% 95%)", fg: "hsl(152 60% 38%)", ring: "hsl(152 60% 45%)" },
@@ -219,8 +223,13 @@ function CandidatesShortlistCard() {
           const offset = circumference - (c.score / 100) * circumference;
           return (
             <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}>
-                {c.initials}
+              <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded-md bg-muted" style={{ border: "1px solid hsl(230 14% 88%)" }}>
+                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/30 backdrop-blur-sm ring-1 ring-white/50">
+                    <Play className="h-2.5 w-2.5 fill-white text-white" />
+                  </div>
+                </div>
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
