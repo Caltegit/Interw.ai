@@ -501,12 +501,12 @@ export default function Landing() {
               {
                 icon: Brain,
                 title: "Analyse IA des réponses",
-                desc: "Une fois l'entretien terminé, l'IA analyse chaque réponse selon vos critères. Même grille pour tous. Zéro biais, zéro fatigue, zéro oubli.",
+                desc: "Une fois l'entretien terminé, l'IA transcrit et analyse chaque réponse selon vos critères. Même grille pour tous. Zéro biais, zéro fatigue, zéro oubli. Vous pouvez alors comparer et mieux choisir les profils adaptés.",
               },
               {
                 icon: FileText,
                 title: "Rapports prêts à partager",
-                desc: "Un portrait complet de chaque candidat : score, points forts, zones d'attention, recommandation. Prêt à partager avec vos managers en un clic — sans passer des heures à rédiger vos notes.",
+                desc: "Un portrait complet de chaque candidat : score, points forts, zones d'attention, recommandation. Prêt à partager avec vos collaborateurs. Sans passer des heures à rédiger vos notes.",
               },
               {
                 icon: Library,
