@@ -624,7 +624,7 @@ export default function Landing() {
                 name: "Startup",
                 price: "99 €",
                 priceSuffix: "/ mois",
-                desc: "Pour les équipes qui recrutent régulièrement et veulent un processus structuré, équitable et reproductible.",
+                desc: "Pour les équipes qui recrutent régulièrement et veulent un suivi personnalisé.",
                 features: [
                   "50 entretiens inclus",
                   "Bibliothèque de questions partagée",
