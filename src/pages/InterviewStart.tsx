@@ -3624,6 +3624,7 @@ export default function InterviewStart() {
           </div>
         </div>
       )}
+      {!bootActive && (
       <div className="mx-auto w-full max-w-7xl px-2 sm:px-4 flex flex-col min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:overflow-hidden">
         {/* Indicateur de sauvegarde affiché en pastille discrète bas-droite (RecordingStatusBadge). */}
 
@@ -4151,6 +4152,8 @@ export default function InterviewStart() {
           </div>
         )}
       </div>
+      )}
+
 
       <Dialog open={showEndDialog} onOpenChange={(o) => !cancelling && setShowEndDialog(o)}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
