@@ -179,6 +179,7 @@ export default function ProjectNew() {
           allow_skip_question: s.allowSkipQuestion,
           intro_first_screen: s.introFirstScreen,
           audio_analysis_enabled: s.audioAnalysisEnabled,
+          show_question_timer: s.showQuestionTimer,
           slug,
           avatar_image_url: avatarUrl,
           intro_enabled: s.introEnabled,
