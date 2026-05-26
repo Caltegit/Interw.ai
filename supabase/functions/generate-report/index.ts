@@ -1051,6 +1051,12 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     }
 
     // Send email to assigned user (fallback: project creator, then org owner)
+    // L'email est envoyé APRÈS les analyses orale + non-verbale pour pouvoir
+    // inclure leur synthèse.
+    const sendReportEmail = async (
+      paraverbalAnalysis: any | null,
+      nonverbalAnalysis: any | null,
+    ) => {
     try {
       let recipientUserId: string | null = session.assigned_to ?? project.created_by ?? null;
       if (!recipientUserId && project.organization_id) {
