@@ -216,23 +216,37 @@ export default function InterviewLanding() {
     setMediaFinished(true);
   };
 
-  // Démarrage automatique de la vidéo d'intro dès qu'elle est affichée.
+  // Démarrage automatique de l'intro dès qu'elle est affichée (vidéo, audio, ou TTS).
   // Important : on garde le son. Si l'autoplay sonore est bloqué par le
   // navigateur, on N'AUTORISE PAS de bascule en muet — l'utilisateur cliquera
-  // sur le bouton "Regarder la vidéo" qui constitue un geste utilisateur valide.
+  // sur le bouton "Lire" qui constitue un geste utilisateur valide.
+  const autoPlayAttemptedRef = useRef(false);
   useEffect(() => {
-    if (!showIntroMedia || introMediaType !== "video") return;
+    if (!showIntroMedia) return;
     if (mediaPlaying || mediaFinished) return;
-    const v = introVideoRef.current;
-    if (!v) return;
-    v.muted = false;
-    v.volume = 1;
-    v.play()
-      .then(() => setMediaPlaying(true))
-      .catch(() => {
-        // Autoplay sonore bloqué : on laisse le bouton Play visible.
+    if (autoPlayAttemptedRef.current) return;
+
+    if (introMediaType === "video") {
+      const v = introVideoRef.current;
+      if (!v) return;
+      autoPlayAttemptedRef.current = true;
+      v.muted = false;
+      v.volume = 1;
+      v.play()
+        .then(() => setMediaPlaying(true))
+        .catch(() => {
+          // Autoplay sonore bloqué : on laisse le bouton Play visible.
+          autoPlayAttemptedRef.current = false;
+        });
+    } else if (introMediaType === "audio" || introMediaType === "tts") {
+      autoPlayAttemptedRef.current = true;
+      // handlePlayMedia gère son propre fallback (bouton visible si bloqué).
+      handlePlayMedia().catch(() => {
+        autoPlayAttemptedRef.current = false;
       });
+    }
   }, [showIntroMedia, introMediaType, mediaPlaying, mediaFinished]);
+
 
   const stopAllIntroMedia = () => {
     try {
