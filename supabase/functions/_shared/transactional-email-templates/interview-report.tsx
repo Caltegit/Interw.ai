@@ -64,6 +64,18 @@ interface SoftSkill {
   comment?: string
 }
 
+interface ParaverbalAnalysis {
+  status?: string
+  profile?: Record<string, { score?: number } | undefined>
+  summary?: string | null
+}
+
+interface NonverbalAnalysis {
+  status?: string
+  profile?: Record<string, { score?: number } | undefined>
+  summary?: string | null
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
@@ -85,6 +97,8 @@ interface InterviewReportProps {
   softSkills?: SoftSkill[] | null
   criteriaScores?: Record<string, CriteriaScore>
   questionEvaluations?: Record<string, QuestionEval>
+  paraverbalAnalysis?: ParaverbalAnalysis | null
+  nonverbalAnalysis?: NonverbalAnalysis | null
   reportUrl?: string
   stats?: SessionStats
 }
