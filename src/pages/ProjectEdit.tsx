@@ -180,6 +180,8 @@ export default function ProjectEdit() {
           (project as { ai_question_transitions_custom_text?: string | null })
             .ai_question_transitions_custom_text ?? "",
         audioAnalysisEnabled: true,
+        showQuestionTimer:
+          (project as { show_question_timer?: boolean }).show_question_timer ?? true,
       });
 
       setLoading(false);
