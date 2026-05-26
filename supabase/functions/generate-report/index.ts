@@ -1104,6 +1104,8 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
           softSkills: Array.isArray(parsed.soft_skills) ? parsed.soft_skills : null,
           criteriaScores,
           questionEvaluations: questionEvals,
+          paraverbalAnalysis,
+          nonverbalAnalysis,
           reportUrl,
           stats: {
             duration_seconds: stats.duration_seconds,
