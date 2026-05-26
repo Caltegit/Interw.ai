@@ -352,8 +352,8 @@ export default function Landing() {
               </p>
               <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
                 90% des CV et lettres de motivation sont rédigés par ChatGPT.<br />
-                Quand l'IA uniformise tout, l'entretien vidéo devient le seul filtre fiable.<br />
-                Reprenez la main et sélectionnez les meilleurs profils.
+                Quand l'IA uniformise tout, l'entretien vidéo devient le seul filtre fiable<br />
+                pour sélectionner les meilleurs profils.
               </p>
               <div className="landing-fade-up landing-delay-3 mt-8 text-center">
                 <button
