@@ -64,6 +64,18 @@ interface SoftSkill {
   comment?: string
 }
 
+interface ParaverbalAnalysis {
+  status?: string
+  profile?: Record<string, { score?: number } | undefined>
+  summary?: string | null
+}
+
+interface NonverbalAnalysis {
+  status?: string
+  profile?: Record<string, { score?: number } | undefined>
+  summary?: string | null
+}
+
 interface InterviewReportProps {
   candidateName?: string
   candidateEmail?: string
@@ -85,6 +97,8 @@ interface InterviewReportProps {
   softSkills?: SoftSkill[] | null
   criteriaScores?: Record<string, CriteriaScore>
   questionEvaluations?: Record<string, QuestionEval>
+  paraverbalAnalysis?: ParaverbalAnalysis | null
+  nonverbalAnalysis?: NonverbalAnalysis | null
   reportUrl?: string
   stats?: SessionStats
 }
@@ -135,16 +149,31 @@ const InterviewReportEmail = ({
   softSkills = null,
   criteriaScores = {},
   questionEvaluations = {},
+  paraverbalAnalysis = null,
+  nonverbalAnalysis = null,
   reportUrl = '#',
   stats = {},
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
-  const questionList = Object.values(questionEvaluations)
   const personalityEntries = personalityProfile
     ? (Object.keys(BIG_FIVE_LABELS) as Array<keyof PersonalityProfile>)
         .map((k) => ({ key: k, label: BIG_FIVE_LABELS[k], trait: personalityProfile[k] }))
         .filter((e) => e.trait && typeof e.trait.score === 'number')
     : []
+
+  const avgFromProfile = (profile?: Record<string, { score?: number } | undefined>) => {
+    if (!profile) return null
+    const scores = Object.values(profile)
+      .map((d) => (d && typeof d.score === 'number' ? d.score : null))
+      .filter((s): s is number => s !== null)
+    if (scores.length === 0) return null
+    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+  }
+
+  const paraverbalOk = paraverbalAnalysis && paraverbalAnalysis.status === 'ok'
+  const nonverbalOk = nonverbalAnalysis && nonverbalAnalysis.status === 'ok'
+  const paraverbalScore = paraverbalOk ? avgFromProfile(paraverbalAnalysis!.profile) : null
+  const nonverbalScore = nonverbalOk ? avgFromProfile(nonverbalAnalysis!.profile) : null
 
   return (
     <Html lang="fr" dir="ltr">
@@ -296,6 +325,38 @@ const InterviewReportEmail = ({
             </>
           )}
 
+          {(paraverbalOk || nonverbalOk) && (
+            <>
+              {paraverbalOk && (
+                <>
+                  <Heading as="h2" style={h2}>🎙️ Communication orale</Heading>
+                  <Section style={card}>
+                    {paraverbalScore !== null ? (
+                      <Text style={cardTitle}>Score global — <strong>{paraverbalScore}/10</strong></Text>
+                    ) : null}
+                    {paraverbalAnalysis?.summary ? (
+                      <Text style={cardText}>{paraverbalAnalysis.summary}</Text>
+                    ) : null}
+                  </Section>
+                </>
+              )}
+
+              {nonverbalOk && (
+                <>
+                  <Heading as="h2" style={h2}>🧍 Attitude et langage corporel</Heading>
+                  <Section style={card}>
+                    {nonverbalScore !== null ? (
+                      <Text style={cardTitle}>Score global — <strong>{nonverbalScore}/10</strong></Text>
+                    ) : null}
+                    {nonverbalAnalysis?.summary ? (
+                      <Text style={cardText}>{nonverbalAnalysis.summary}</Text>
+                    ) : null}
+                  </Section>
+                </>
+              )}
+            </>
+          )}
+
           {followupQuestions && followupQuestions.length > 0 && (
             <>
               <Heading as="h2" style={h2}>❓ Questions à creuser en entretien</Heading>
@@ -315,19 +376,6 @@ const InterviewReportEmail = ({
                 <Section key={i} style={card}>
                   <Text style={cardTitle}>{c.label} — <strong>{c.score}/{c.max}</strong></Text>
                   {c.comment ? <Text style={cardText}>{c.comment}</Text> : null}
-                </Section>
-              ))}
-            </>
-          )}
-
-          {questionList.length > 0 && (
-            <>
-              <Heading as="h2" style={h2}>Évaluation par question</Heading>
-              {questionList.map((q, i) => (
-                <Section key={i} style={card}>
-                  <Text style={cardTitle}>Q{i + 1} — Score {q.score}/10</Text>
-                  <Text style={cardText}><em>{q.question}</em></Text>
-                  {q.comment ? <Text style={cardText}>{q.comment}</Text> : null}
                 </Section>
               ))}
             </>
@@ -376,9 +424,27 @@ export const template = {
       a: { label: 'Communication', score: 8, max: 10, comment: 'Très claire et structurée.' },
       b: { label: 'Compétences techniques', score: 7, max: 10, comment: 'Bonne base, à confirmer en pratique.' },
     },
-    questionEvaluations: {
-      '0': { question: 'Présentez-vous', score: 9, comment: 'Présentation très structurée.' },
-      '1': { question: 'Pourquoi notre entreprise ?', score: 7, comment: 'Motivation correcte mais générique.' },
+    paraverbalAnalysis: {
+      status: 'ok',
+      profile: {
+        fluency: { score: 8 },
+        hesitation: { score: 7 },
+        intonation: { score: 7 },
+        energy: { score: 8 },
+        vocal_confidence: { score: 8 },
+        vocal_stress: { score: 9 },
+      },
+      summary: 'Voix posée et fluide, débit régulier, ton engagé sans sur-jouer.',
+    },
+    nonverbalAnalysis: {
+      status: 'ok',
+      profile: {
+        eye_contact: { score: 8 },
+        posture: { score: 7 },
+        gestures: { score: 7 },
+        facial_expressivity: { score: 8 },
+      },
+      summary: 'Contact visuel soutenu, posture ouverte, expressions naturelles et congruentes.',
     },
     stats: {
       duration_seconds: 754,
