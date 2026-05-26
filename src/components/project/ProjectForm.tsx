@@ -307,6 +307,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     initial.aiQuestionTransitionsCustomText,
   );
   const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
+  const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
