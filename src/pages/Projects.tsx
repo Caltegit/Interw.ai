@@ -126,6 +126,7 @@ export default function Projects() {
                   <TableHead>Titre</TableHead>
                   <TableHead className="text-center">Sessions</TableHead>
                   <TableHead className="hidden sm:table-cell">Depuis</TableHead>
+                  <TableHead className="hidden md:table-cell">Créé par</TableHead>
                   <TableHead className="text-center">Lien candidat</TableHead>
                   <TableHead className="text-center">Modifier</TableHead>
                   <TableHead className="text-center">Archiver</TableHead>
@@ -155,6 +156,9 @@ export default function Projects() {
                           if (days === 1) return "1 jour";
                           return `${days} jours`;
                         })()}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                        {project.created_by_name || "—"}
                       </TableCell>
                       <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                         <Button
