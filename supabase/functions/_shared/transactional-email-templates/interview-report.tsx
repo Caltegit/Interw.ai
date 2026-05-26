@@ -149,16 +149,31 @@ const InterviewReportEmail = ({
   softSkills = null,
   criteriaScores = {},
   questionEvaluations = {},
+  paraverbalAnalysis = null,
+  nonverbalAnalysis = null,
   reportUrl = '#',
   stats = {},
 }: InterviewReportProps) => {
   const criteriaList = Object.values(criteriaScores)
-  const questionList = Object.values(questionEvaluations)
   const personalityEntries = personalityProfile
     ? (Object.keys(BIG_FIVE_LABELS) as Array<keyof PersonalityProfile>)
         .map((k) => ({ key: k, label: BIG_FIVE_LABELS[k], trait: personalityProfile[k] }))
         .filter((e) => e.trait && typeof e.trait.score === 'number')
     : []
+
+  const avgFromProfile = (profile?: Record<string, { score?: number } | undefined>) => {
+    if (!profile) return null
+    const scores = Object.values(profile)
+      .map((d) => (d && typeof d.score === 'number' ? d.score : null))
+      .filter((s): s is number => s !== null)
+    if (scores.length === 0) return null
+    return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+  }
+
+  const paraverbalOk = paraverbalAnalysis && paraverbalAnalysis.status === 'ok'
+  const nonverbalOk = nonverbalAnalysis && nonverbalAnalysis.status === 'ok'
+  const paraverbalScore = paraverbalOk ? avgFromProfile(paraverbalAnalysis!.profile) : null
+  const nonverbalScore = nonverbalOk ? avgFromProfile(nonverbalAnalysis!.profile) : null
 
   return (
     <Html lang="fr" dir="ltr">
