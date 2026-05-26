@@ -279,3 +279,46 @@ export function StepIntro({
     </div>
   );
 }
+
+function VideoScriptHelper() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  const autoResize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center justify-between w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Support de lecture
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2">
+        <Textarea
+          ref={ref}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            autoResize();
+          }}
+          onFocus={autoResize}
+          placeholder="Collez ici le texte à lire pendant l'enregistrement…"
+          className="resize-none overflow-hidden min-h-[80px]"
+        />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
