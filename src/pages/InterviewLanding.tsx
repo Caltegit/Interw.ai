@@ -462,7 +462,7 @@ export default function InterviewLanding() {
           <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #d4a574, #c4955e, #d4a574)" }} />
           <CardContent className="pt-8 pb-8 space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">Votre nom *</Label>
+              <Label htmlFor="name" className="text-sm font-medium">Votre prénom/nom *</Label>
               <Input
                 id="name"
                 placeholder="Prénom Nom"
