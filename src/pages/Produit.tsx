@@ -180,7 +180,7 @@ export default function Produit() {
           <span className="landing-pill">Produit</span>
           <h1 className="landing-fade-up landing-delay-1 mt-5 text-4xl font-semibold leading-[1.05] md:text-6xl">
             <span className="landing-gradient-text">
-              Tout ce qu'il faut pour recruter mieux, en moins de temps.
+              Un outil pour recruter mieux, plus vite, et tout en laissant une chance à tous.
             </span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
