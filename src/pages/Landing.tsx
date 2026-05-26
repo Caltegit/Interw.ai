@@ -400,24 +400,6 @@ export default function Landing() {
 
 
 
-      {/* ============ SOCIAL PROOF BAR ============ */}
-      <section style={{ background: "hsl(240 20% 98%)", borderTop: "1px solid hsl(230 16% 92%)", borderBottom: "1px solid hsl(230 16% 92%)" }}>
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-6 py-3 text-center text-[13px] md:text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          <span className="inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 60%)" }} />
-            Déjà utilisé par plus de 200 recruteurs
-          </span>
-          <span style={{ color: "hsl(230 14% 84%)" }}>·</span>
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-flex" style={{ color: "hsl(45 95% 60%)" }}>
-              {[0,1,2,3,4].map(i => <Star key={i} className="h-3.5 w-3.5 fill-current" />)}
-            </span>
-            <span className="ml-1">4,8/5</span>
-          </span>
-          <span style={{ color: "hsl(230 14% 84%)" }}>·</span>
-          <span className="hidden sm:inline">Données hébergées en Europe</span>
-        </div>
-      </section>
 
       {/* ============ FEATURES ============ */}
       <section id="features" className="relative" style={{ background: "hsl(240 20% 98%)" }}>
