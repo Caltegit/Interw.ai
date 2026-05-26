@@ -217,7 +217,7 @@ export default function Produit() {
                 key={b.pill}
                 className={`grid items-center gap-10 md:gap-16 md:grid-cols-2 ${reverse ? "md:[&>div:first-child]:order-2" : ""}`}
               >
-                <div>
+                <div className="self-center">
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
                     style={{ background: "hsl(243 75% 60%)" }}
@@ -225,16 +225,16 @@ export default function Produit() {
                     {b.icon}
                     {b.pill}
                   </span>
-                  <h2 className="mt-4 text-2xl font-semibold text-foreground md:text-4xl leading-tight">
+                  <h2 className="mt-3 text-2xl font-semibold text-foreground md:text-3xl leading-tight">
                     {b.title}
                   </h2>
-                  <p className="mt-4 text-base md:text-lg leading-relaxed" style={{ color: "hsl(230 10% 30%)" }}>
+                  <p className="mt-3 text-sm md:text-base leading-relaxed" style={{ color: "hsl(230 10% 30%)" }}>
                     {b.desc}
                   </p>
-                  <ul className="mt-6 space-y-3">
+                  <ul className="mt-4 space-y-2">
                     {b.bullets.map((bl) => (
-                      <li key={bl} className="flex items-start gap-3 text-sm md:text-base" style={{ color: "hsl(230 10% 25%)" }}>
-                        <Activity className="h-5 w-5 mt-0.5 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
+                      <li key={bl} className="flex items-start gap-2.5 text-sm" style={{ color: "hsl(230 10% 25%)" }}>
+                        <Activity className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
                         <span>{bl}</span>
                       </li>
                     ))}
