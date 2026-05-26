@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS show_question_timer boolean NOT NULL DEFAULT true;
