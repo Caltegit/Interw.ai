@@ -4152,6 +4152,8 @@ export default function InterviewStart() {
           </div>
         )}
       </div>
+      )}
+
 
       <Dialog open={showEndDialog} onOpenChange={(o) => !cancelling && setShowEndDialog(o)}>
         <DialogContent className="max-w-md w-[calc(100vw-2rem)]">
