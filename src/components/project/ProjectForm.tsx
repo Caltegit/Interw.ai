@@ -101,6 +101,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsMode: "auto" | "custom";
   aiQuestionTransitionsCustomText: string;
   audioAnalysisEnabled: boolean;
+  showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
 }
 
