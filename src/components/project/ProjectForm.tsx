@@ -729,6 +729,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                   <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
                 </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Afficher le timer sur les questions</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Si désactivé, le candidat voit uniquement une indication du temps imparti (ex. « Répondez en 1 min »). Le décompte réapparaît automatiquement dans les 20 dernières secondes.
+                    </p>
+                  </div>
+                  <Switch checked={showQuestionTimer} onCheckedChange={setShowQuestionTimer} />
+                </div>
                 <div>
                   <Label>Statut</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
