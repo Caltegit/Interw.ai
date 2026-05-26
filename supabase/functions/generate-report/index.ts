@@ -1229,11 +1229,12 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     } catch (e) {
       console.error("Email enqueue threw:", e);
     }
+    }; // fin de sendReportEmail
 
-    // Analyse para-verbale (audio) en arrière-plan, systématique.
-    // EdgeRuntime.waitUntil garantit que le fetch part même après le return.
-    try {
-      const paraverbalPromise = fetch(`${SUPABASE_URL}/functions/v1/analyze-paraverbal`, {
+    // Déclenche les analyses orale + non-verbale en parallèle, puis envoie
+    // l'email recruteur une fois les deux terminées (succès ou échec).
+    const triggerAnalysis = (fn: "analyze-paraverbal" | "analyze-nonverbal") =>
+      fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1241,36 +1242,36 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         },
         body: JSON.stringify({ session_id, force: true }),
       })
-        .then((r) => console.log("analyze-paraverbal triggered:", r.status))
-        .catch((e) => console.warn("analyze-paraverbal trigger failed:", e));
-      // @ts-ignore - EdgeRuntime est fourni par Supabase Edge Runtime
-      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(paraverbalPromise);
-      }
-    } catch (e) {
-      console.warn("analyze-paraverbal trigger threw:", e);
-    }
+        .then((r) => {
+          console.log(`${fn} triggered:`, r.status);
+          return r;
+        })
+        .catch((e) => {
+          console.warn(`${fn} trigger failed:`, e);
+          return null;
+        });
 
-    // Analyse non-verbale (vidéo) en arrière-plan, systématique.
-    try {
-      const nonverbalPromise = fetch(`${SUPABASE_URL}/functions/v1/analyze-nonverbal`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({ session_id, force: true }),
-      })
-        .then((r) => console.log("analyze-nonverbal triggered:", r.status))
-        .catch((e) => console.warn("analyze-nonverbal trigger failed:", e));
-      // @ts-ignore - EdgeRuntime fourni par Supabase Edge Runtime
-      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
-        // @ts-ignore
-        EdgeRuntime.waitUntil(nonverbalPromise);
-      }
-    } catch (e) {
-      console.warn("analyze-nonverbal trigger threw:", e);
+    const paraverbalPromise = triggerAnalysis("analyze-paraverbal");
+    const nonverbalPromise = triggerAnalysis("analyze-nonverbal");
+
+    const emailTask = (async () => {
+      await Promise.allSettled([paraverbalPromise, nonverbalPromise]);
+      // Récupère les analyses fraîchement écrites par les fonctions appelées.
+      const { data: updatedReport } = await supabase
+        .from("reports")
+        .select("paraverbal_analysis, nonverbal_analysis")
+        .eq("session_id", session_id)
+        .maybeSingle();
+      await sendReportEmail(
+        (updatedReport as any)?.paraverbal_analysis ?? null,
+        (updatedReport as any)?.nonverbal_analysis ?? null,
+      );
+    })();
+
+    // @ts-ignore - EdgeRuntime fourni par Supabase Edge Runtime
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(emailTask);
     }
 
     return new Response(JSON.stringify({ success: true }), {
