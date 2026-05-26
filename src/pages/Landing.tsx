@@ -339,7 +339,7 @@ export default function Landing() {
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-6xl px-6 pt-16 pb-24 md:pt-24 md:pb-28">
-          <div className="grid items-center gap-12 md:grid-cols-[55%_45%]">
+          <div className="grid items-center gap-8 md:grid-cols-[55%_45%]">
             {/* Left column */}
             <div>
               <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl text-left">
