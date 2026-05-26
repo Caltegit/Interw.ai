@@ -180,6 +180,8 @@ export default function ProjectEdit() {
           (project as { ai_question_transitions_custom_text?: string | null })
             .ai_question_transitions_custom_text ?? "",
         audioAnalysisEnabled: true,
+        showQuestionTimer:
+          (project as { show_question_timer?: boolean }).show_question_timer ?? true,
       });
 
       setLoading(false);
@@ -270,6 +272,7 @@ export default function ProjectEdit() {
           ai_question_transitions_mode: s.aiQuestionTransitionsMode,
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
           audio_analysis_enabled: s.audioAnalysisEnabled,
+          show_question_timer: s.showQuestionTimer,
         } as never)
         .eq("id", id);
 

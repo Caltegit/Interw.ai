@@ -101,6 +101,7 @@ export interface ProjectFormState {
   aiQuestionTransitionsMode: "auto" | "custom";
   aiQuestionTransitionsCustomText: string;
   audioAnalysisEnabled: boolean;
+  showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
 }
 
@@ -306,6 +307,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     initial.aiQuestionTransitionsCustomText,
   );
   const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
+  const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
@@ -360,6 +362,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       aiQuestionTransitionsMode,
       aiQuestionTransitionsCustomText,
       audioAnalysisEnabled,
+      showQuestionTimer,
       saveIntroToLibrary,
     });
   };
@@ -725,6 +728,15 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </p>
                   </div>
                   <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label>Afficher le timer sur les questions</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Si désactivé, le candidat voit uniquement une indication du temps imparti (ex. « Répondez en 1 min »). Le décompte réapparaît automatiquement dans les 20 dernières secondes.
+                    </p>
+                  </div>
+                  <Switch checked={showQuestionTimer} onCheckedChange={setShowQuestionTimer} />
                 </div>
                 <div>
                   <Label>Statut</Label>

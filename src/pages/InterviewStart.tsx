@@ -3844,21 +3844,41 @@ export default function InterviewStart() {
                   const remainingLabel = `${rmm}:${rss}`;
                   const isCritical = hasTimeLimit && remaining <= 20;
                   const isFinal = hasTimeLimit && remaining <= 10;
+                  const showTimerSetting = (project as { show_question_timer?: boolean })?.show_question_timer ?? true;
+                  // Indication statique « Répondez en … » quand le timer est masqué.
+                  const staticTimeLabel = (() => {
+                    if (!configuredMax || configuredMax <= 0) return "";
+                    if (configuredMax < 60) return `Répondez en ${configuredMax} s`;
+                    const m = Math.floor(configuredMax / 60);
+                    const s = configuredMax % 60;
+                    if (s === 0) return `Répondez en ${m} min`;
+                    return `Répondez en ${m} min ${s}`;
+                  })();
+                  // Dans les 20 dernières secondes, on réaffiche toujours le décompte
+                  // (cf. spécification : reprend son service comme actuellement).
+                  const showCountdown = showTimerSetting || isCritical;
                   const TimerBadge = hasTimeLimit ? (
-                    <div
-                      aria-live={isCritical ? "assertive" : "polite"}
-                      aria-label={`Temps restant : ${remaining} secondes`}
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 tabular-nums transition-all ${
-                        isFinal
-                          ? "border-destructive/60 bg-destructive/20 text-destructive text-3xl sm:text-4xl font-black animate-pulse px-4 py-2"
-                          : isCritical
-                          ? "border-destructive/40 bg-destructive/15 text-destructive text-2xl sm:text-3xl font-bold animate-pulse"
-                          : "border-border bg-muted text-foreground text-base sm:text-lg font-bold"
-                      }`}
-                    >
-                      <Clock className={isFinal ? "h-6 w-6" : isCritical ? "h-5 w-5" : "h-4 w-4"} />
-                      {remainingLabel}
-                    </div>
+                    showCountdown ? (
+                      <div
+                        aria-live={isCritical ? "assertive" : "polite"}
+                        aria-label={`Temps restant : ${remaining} secondes`}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 tabular-nums transition-all ${
+                          isFinal
+                            ? "border-destructive/60 bg-destructive/20 text-destructive text-3xl sm:text-4xl font-black animate-pulse px-4 py-2"
+                            : isCritical
+                            ? "border-destructive/40 bg-destructive/15 text-destructive text-2xl sm:text-3xl font-bold animate-pulse"
+                            : "border-border bg-muted text-foreground text-base sm:text-lg font-bold"
+                        }`}
+                      >
+                        <Clock className={isFinal ? "h-6 w-6" : isCritical ? "h-5 w-5" : "h-4 w-4"} />
+                        {remainingLabel}
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        {staticTimeLabel}
+                      </div>
+                    )
                   ) : null;
 
                   if (showBigCta) {
