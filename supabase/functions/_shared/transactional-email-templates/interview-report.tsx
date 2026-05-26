@@ -325,6 +325,38 @@ const InterviewReportEmail = ({
             </>
           )}
 
+          {(paraverbalOk || nonverbalOk) && (
+            <>
+              {paraverbalOk && (
+                <>
+                  <Heading as="h2" style={h2}>🎙️ Communication orale</Heading>
+                  <Section style={card}>
+                    {paraverbalScore !== null ? (
+                      <Text style={cardTitle}>Score global — <strong>{paraverbalScore}/10</strong></Text>
+                    ) : null}
+                    {paraverbalAnalysis?.summary ? (
+                      <Text style={cardText}>{paraverbalAnalysis.summary}</Text>
+                    ) : null}
+                  </Section>
+                </>
+              )}
+
+              {nonverbalOk && (
+                <>
+                  <Heading as="h2" style={h2}>🧍 Attitude et langage corporel</Heading>
+                  <Section style={card}>
+                    {nonverbalScore !== null ? (
+                      <Text style={cardTitle}>Score global — <strong>{nonverbalScore}/10</strong></Text>
+                    ) : null}
+                    {nonverbalAnalysis?.summary ? (
+                      <Text style={cardText}>{nonverbalAnalysis.summary}</Text>
+                    ) : null}
+                  </Section>
+                </>
+              )}
+            </>
+          )}
+
           {followupQuestions && followupQuestions.length > 0 && (
             <>
               <Heading as="h2" style={h2}>❓ Questions à creuser en entretien</Heading>
@@ -344,19 +376,6 @@ const InterviewReportEmail = ({
                 <Section key={i} style={card}>
                   <Text style={cardTitle}>{c.label} — <strong>{c.score}/{c.max}</strong></Text>
                   {c.comment ? <Text style={cardText}>{c.comment}</Text> : null}
-                </Section>
-              ))}
-            </>
-          )}
-
-          {questionList.length > 0 && (
-            <>
-              <Heading as="h2" style={h2}>Évaluation par question</Heading>
-              {questionList.map((q, i) => (
-                <Section key={i} style={card}>
-                  <Text style={cardTitle}>Q{i + 1} — Score {q.score}/10</Text>
-                  <Text style={cardText}><em>{q.question}</em></Text>
-                  {q.comment ? <Text style={cardText}>{q.comment}</Text> : null}
                 </Section>
               ))}
             </>
