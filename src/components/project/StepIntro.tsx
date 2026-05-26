@@ -234,24 +234,27 @@ export function StepIntro({
             )}
 
             {introMode === "video" && (
-              <MediaRecorderField
-                type="video"
-                label="Vidéo de présentation"
-                description="Enregistrez ou importez une vidéo qui sera montrée au candidat avant la session."
-                existingUrl={introVideoPreviewUrl}
-                onMediaReady={(blob, previewUrl) => {
-                  const file =
-                    blob instanceof File
-                      ? blob
-                      : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
-                  setIntroVideoFile(file);
-                  setIntroVideoPreviewUrl(previewUrl);
-                }}
-                onClear={() => {
-                  setIntroVideoFile(null);
-                  setIntroVideoPreviewUrl(null);
-                }}
-              />
+              <div className="space-y-3">
+                <VideoScriptHelper />
+                <MediaRecorderField
+                  type="video"
+                  label="Vidéo de présentation"
+                  description="Enregistrez ou importez une vidéo qui sera montrée au candidat avant la session."
+                  existingUrl={introVideoPreviewUrl}
+                  onMediaReady={(blob, previewUrl) => {
+                    const file =
+                      blob instanceof File
+                        ? blob
+                        : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
+                    setIntroVideoFile(file);
+                    setIntroVideoPreviewUrl(previewUrl);
+                  }}
+                  onClear={() => {
+                    setIntroVideoFile(null);
+                    setIntroVideoPreviewUrl(null);
+                  }}
+                />
+              </div>
             )}
           </div>
 
