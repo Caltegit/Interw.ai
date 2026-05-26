@@ -424,9 +424,27 @@ export const template = {
       a: { label: 'Communication', score: 8, max: 10, comment: 'Très claire et structurée.' },
       b: { label: 'Compétences techniques', score: 7, max: 10, comment: 'Bonne base, à confirmer en pratique.' },
     },
-    questionEvaluations: {
-      '0': { question: 'Présentez-vous', score: 9, comment: 'Présentation très structurée.' },
-      '1': { question: 'Pourquoi notre entreprise ?', score: 7, comment: 'Motivation correcte mais générique.' },
+    paraverbalAnalysis: {
+      status: 'ok',
+      profile: {
+        fluency: { score: 8 },
+        hesitation: { score: 7 },
+        intonation: { score: 7 },
+        energy: { score: 8 },
+        vocal_confidence: { score: 8 },
+        vocal_stress: { score: 9 },
+      },
+      summary: 'Voix posée et fluide, débit régulier, ton engagé sans sur-jouer.',
+    },
+    nonverbalAnalysis: {
+      status: 'ok',
+      profile: {
+        eye_contact: { score: 8 },
+        posture: { score: 7 },
+        gestures: { score: 7 },
+        facial_expressivity: { score: 8 },
+      },
+      summary: 'Contact visuel soutenu, posture ouverte, expressions naturelles et congruentes.',
     },
     stats: {
       duration_seconds: 754,
