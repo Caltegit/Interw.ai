@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, Loader2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Play, Pause, Loader2, ChevronDown, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MediaRecorderField } from "@/components/media/MediaRecorderField";
@@ -233,24 +234,27 @@ export function StepIntro({
             )}
 
             {introMode === "video" && (
-              <MediaRecorderField
-                type="video"
-                label="Vidéo de présentation"
-                description="Enregistrez ou importez une vidéo qui sera montrée au candidat avant la session."
-                existingUrl={introVideoPreviewUrl}
-                onMediaReady={(blob, previewUrl) => {
-                  const file =
-                    blob instanceof File
-                      ? blob
-                      : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
-                  setIntroVideoFile(file);
-                  setIntroVideoPreviewUrl(previewUrl);
-                }}
-                onClear={() => {
-                  setIntroVideoFile(null);
-                  setIntroVideoPreviewUrl(null);
-                }}
-              />
+              <div className="space-y-3">
+                <VideoScriptHelper />
+                <MediaRecorderField
+                  type="video"
+                  label="Vidéo de présentation"
+                  description="Enregistrez ou importez une vidéo qui sera montrée au candidat avant la session."
+                  existingUrl={introVideoPreviewUrl}
+                  onMediaReady={(blob, previewUrl) => {
+                    const file =
+                      blob instanceof File
+                        ? blob
+                        : new File([blob], "intro-video.webm", { type: blob.type || "video/webm" });
+                    setIntroVideoFile(file);
+                    setIntroVideoPreviewUrl(previewUrl);
+                  }}
+                  onClear={() => {
+                    setIntroVideoFile(null);
+                    setIntroVideoPreviewUrl(null);
+                  }}
+                />
+              </div>
             )}
           </div>
 
@@ -273,5 +277,48 @@ export function StepIntro({
         </>
       )}
     </div>
+  );
+}
+
+function VideoScriptHelper() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  const autoResize = () => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center justify-between w-full rounded-md border border-border bg-muted/30 px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Support de lecture
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2">
+        <Textarea
+          ref={ref}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            autoResize();
+          }}
+          onFocus={autoResize}
+          placeholder="Collez ici le texte à lire pendant l'enregistrement…"
+          className="resize-none overflow-hidden min-h-[80px]"
+        />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
