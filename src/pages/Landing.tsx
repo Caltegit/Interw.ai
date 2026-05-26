@@ -406,7 +406,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">AVANTAGES</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-4xl">
               Gagnez du temps tout en gardant la main.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
@@ -431,7 +431,7 @@ export default function Landing() {
                   Vous gardez le contrôle
                 </span>
                 <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Vos questions, votre méthode
+                  Vos questions, vos critères, votre méthode.
                 </h3>
                 <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
                   Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement, l'outil s'adapte à votre méthode, pas l'inverse.
@@ -463,10 +463,10 @@ export default function Landing() {
                   Équité &amp; inclusion
                 </span>
                 <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Un recrutement plus équitable
+                  Un recrutement plus équitable.
                 </h3>
                 <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
-                  Peu importe le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. Vous donnez une vraie chance à ceux dont le CV aurait été vite écarté.&nbsp;
+                  Peu importe le CV, le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. Vous donnez une vraie chance à ceux dont le CV aurait été écarté peut être trop vite.
                 </p>
               </div>
               <div
@@ -527,7 +527,7 @@ export default function Landing() {
         <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <span className="landing-pill">Comparatif</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-4xl">
               Avec la présélection traditionnelle, vous n'avez pas le temps d'évaluer tout le potentiel de certains candidats.
             </h2>
           </div>
@@ -600,7 +600,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
           <div className="mx-auto max-w-2xl text-center">
             <span className="landing-pill">Tarifs</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-4xl">
               Une formule simple, adaptée à votre volume.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
@@ -712,7 +712,7 @@ export default function Landing() {
         <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
           <div className="text-center">
             <span className="landing-pill">Questions fréquentes</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-3xl">
+            <h2 className="mt-5 text-3xl landing-gradient-text md:text-4xl">
               Tout ce que vous voulez savoir.
             </h2>
           </div>
