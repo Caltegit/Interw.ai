@@ -310,14 +310,11 @@ function VideoScriptHelper() {
         <Textarea
           ref={ref}
           value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-            autoResize();
-          }}
-          onFocus={autoResize}
+          onChange={(e) => setText(e.target.value)}
           placeholder="Collez ici le texte à lire pendant l'enregistrement…"
-          className="resize-none overflow-hidden min-h-[80px]"
+          className="resize-y overflow-auto min-h-[80px] max-h-[600px]"
         />
+
       </CollapsibleContent>
     </Collapsible>
   );
