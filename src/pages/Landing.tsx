@@ -410,7 +410,7 @@ export default function Landing() {
               Gagnez du temps tout en gardant la main.
             </h2>
             <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
-              Vous gardez le contrôle. L'IA fait le travail d'analyse a posteriori. Chaque candidat a enfin une vraie chance d'être entendu.
+              GARDEZ LE CONTRÔLE. L'IA fait le travail d'analyse a posteriori. Chaque candidat a enfin une vraie chance d'être entendu.
             </p>
           </div>
 
@@ -428,7 +428,7 @@ export default function Landing() {
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
                   style={{ background: "hsl(243 75% 60%)" }}
                 >
-                  Vous gardez le contrôle
+                  GARDEZ LE CONTRÔLE
                 </span>
                 <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
                   Vos questions, vos critères, votre méthode.
