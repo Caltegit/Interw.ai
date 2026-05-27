@@ -1,38 +1,60 @@
-## Contexte
-Ajouter une option toggle "Afficher le timer sur les questions" dans les fonctionnalités avancées de la création/modification de projet. Quand désactivée, le candidat voit une indication statique du temps imparti (ex: "Réponse en 1 min") au lieu du décompte en temps réel. Le décompte reprend automatiquement dès qu'il reste 20 secondes ou moins.
+# Fiabiliser l'analyse orale des rapports
 
-## Étapes techniques
+## Objectif
 
-### 1. Migration base de données
-- Ajouter la colonne `show_question_timer` (boolean, DEFAULT true) à la table `projects`.
-- Cette colonne contrôle l'affichage du timer pendant la session candidat.
+Supprimer la cause principale des analyses orales manquantes (rate-limit Gemini free tier) et rattraper automatiquement les rapports qui échouent quand même.
 
-### 2. Formulaire de projet (`ProjectForm.tsx`)
-- Ajouter `showQuestionTimer: boolean` dans l'interface `ProjectFormState`.
-- Ajouter un état local `showQuestionTimer` initialisé depuis `initial.showQuestionTimer`.
-- Ajouter un toggle Switch dans la section "Fonctionnalités avancées" (step 0), sous "Autoriser le candidat à passer une question".
-- Libellé : "Afficher le timer sur les questions" avec description "Quand désactivé, le candidat voit seulement une indication statique du temps imparti. Le décompte reprend automatiquement à 20 secondes restantes."
-- Inclure `showQuestionTimer` dans l'objet transmis à `handleSubmit`.
+## Étape 1 — Migrer `analyze-paraverbal` vers la passerelle Lovable AI
 
-### 3. Création de projet (`ProjectNew.tsx`)
-- Ajouter `showQuestionTimer: true` dans l'`initialState` par défaut.
-- Insérer `show_question_timer: s.showQuestionTimer` lors de la création du projet dans la base.
+Remplacer les appels directs à `GEMINI_API_KEY` par la passerelle Lovable AI, qui n'a pas la même limite de 100 req/min.
 
-### 4. Modification de projet (`ProjectEdit.tsx`)
-- Lire `(project as { show_question_timer?: boolean }).show_question_timer ?? true` lors du chargement et l'assigner à `showQuestionTimer` dans l'état initial.
-- Inclure `show_question_timer: s.showQuestionTimer` dans l'objet de mise à jour envoyé à Supabase.
+**Changements dans `supabase/functions/analyze-paraverbal/index.ts` :**
 
-### 5. Session d'entretien (`InterviewStart.tsx`)
-- Lire la valeur `show_question_timer` depuis le projet chargé.
-- Modifier le rendu du `TimerBadge` (ligne ~3847) :
-  - Si `showQuestionTimer` est **true** → comportement actuel (badge avec décompte `mm:ss` qui pulse quand critique/final).
-  - Si `showQuestionTimer` est **false** et `remaining > 20` → afficher un badge statique avec le texte "Réponse en Xm" (ou "Xs" si moins d'une minute) dans le même style visuel (bordure, fond muted, etc.) mais sans chiffre de décompte. Pas de `aria-live` ni d'animation pulse.
-  - Si `showQuestionTimer` est **false** et `remaining <= 20` → reprendre l'affichage normal du décompte (avec pulse critique/final exactement comme actuellement).
-- Le texte statique sera calculé à partir de `configuredMax` (ex: 60s → "Réponse en 1 min", 120s → "Réponse en 2 min", 90s → "Réponse en 1 min 30").
+- Supprimer `uploadToGemini()` et toute la logique Files API (`fileUri`).
+- Remplacer par un encodage **audio inline base64** dans le payload (pattern déjà utilisé dans `analyze-nonverbal`).
+- Remplacer l'appel `fetch("generativelanguage.googleapis.com/.../generateContent")` par un appel OpenAI-compatible vers `https://ai.gateway.lovable.dev/v1/chat/completions` avec header `Lovable-API-Key: $LOVABLE_API_KEY`.
+- Convertir le `TOOL_SCHEMA` (format Gemini `functionDeclarations`) en format OpenAI `tools: [{ type: "function", function: {...} }]` avec `tool_choice` forcé sur `report_paraverbal`.
+- Garder le modèle `google/gemini-2.5-flash` (supporté par la passerelle, gratuit).
+- Garder la logique : `MAX_ATTEMPTS=3`, retries 2s→5s→12s, statuts `running`/`ok`/`failed`/`skipped`, plafond 12 segments, ignore segments > 24 Mo, minimum 2 segments analysés.
+- Gérer explicitement `429` (rate limit) et `402` (crédits) → `status: failed` avec `error: "rate_limit"` ou `"no_credits"` (au lieu de `gemini_429`).
 
-## Fichiers modifiés
-- `supabase/migration` (ajout colonne)
-- `src/components/project/ProjectForm.tsx`
-- `src/pages/ProjectNew.tsx`
-- `src/pages/ProjectEdit.tsx`
-- `src/pages/InterviewStart.tsx`
+**Impact attendu :** les 36 `gemini_429` des 14 derniers jours disparaissent. Restent uniquement les vrais cas `not_enough_audio` (7 cas) et `audio_analysis_disabled`.
+
+## Étape 2 — Activer le cron de rattrapage
+
+La fonction `retry-missing-analyses` existe déjà et est correcte. Elle n'est juste jamais appelée.
+
+**Migration SQL** (extension `pg_cron` déjà active sur Lovable Cloud) :
+
+```sql
+SELECT cron.schedule(
+  'retry-missing-analyses-every-15min',
+  '*/15 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://qxszgsxdktnwqabsdfvw.supabase.co/functions/v1/retry-missing-analyses',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true)
+    ),
+    body := '{}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
+Le service role key sera lue depuis un setting Postgres (à configurer dans la migration via `ALTER DATABASE`, ou via Vault). Approche alternative plus simple : stocker la clé dans `vault.secrets` et la lire via `vault.read_secret('service_role_key')`.
+
+**Comportement :** toutes les 15 min, la fonction scanne les rapports des 7 derniers jours, détecte ceux dont `paraverbal_analysis` ou `nonverbal_analysis` est `null`, `failed`, ou `running` depuis plus de 10 min, et rappelle `analyze-paraverbal` / `analyze-nonverbal` avec `force: true`. Plafond 20 relances par exécution, max 3 tentatives par rapport (respecté côté analyze-*).
+
+## Étape 3 — Validation
+
+1. Déployer `analyze-paraverbal` et appeler manuellement avec `curl_edge_functions` sur une session récente ayant `paraverbal_analysis.status = "failed"` et `error = "gemini_429"` → vérifier que le rapport passe à `status: "ok"` avec un `profile` rempli.
+2. Vérifier les logs de `analyze-paraverbal` : plus aucun `gemini_429`.
+3. Déclencher manuellement `retry-missing-analyses` → vérifier le `{ retried: N, jobs: [...] }` retourné et la mise à jour des rapports concernés dans les minutes qui suivent.
+4. Vérifier que le cron `retry-missing-analyses-every-15min` apparaît dans `cron.job` et que `cron.job_run_details` montre des exécutions réussies au bout de 15-30 min.
+
+## Hors scope (à proposer plus tard)
+
+- Option 3 : `record_video=true` par défaut sur les nouveaux projets.
+- Option 4 : script one-shot de rattrapage des anciens rapports NULL (> 7 jours, donc hors fenêtre du cron).
