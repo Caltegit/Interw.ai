@@ -414,7 +414,7 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Big card #1 — Vous gardez le contrôle */}
+          {/* Big card #1 — GARDEZ LE CONTRÔLE */}
           <div
             className="mt-14 overflow-hidden rounded-2xl p-10"
             style={{
