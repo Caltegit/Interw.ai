@@ -1,57 +1,72 @@
-# Destinataires des rapports à l'étape 5
 
 ## Objectif
 
-À l'étape 5 (« Publier ») de création/édition d'un projet, permettre de choisir parmi les membres de l'organisation qui recevra l'email de rapport après chaque entretien. Sélection multiple via dropdown avec cases à cocher.
+Quand un entretien est majoritairement silencieux (micro coupé / inaudible), ne pas afficher une note trompeuse mais signaler clairement le problème dans le rapport.
 
-## Comportement attendu
+## Règle de déclenchement
 
-- Liste tous les membres de l'organisation (depuis `profiles` filtrés par `organization_id`).
-- Par défaut à la création : le créateur du projet est pré-coché.
-- À l'édition : on charge la sélection enregistrée.
-- Aucun destinataire coché → comportement actuel inchangé (fallback : créateur du projet, puis owner de l'organisation).
-- Chaque membre coché reçoit l'email de rapport pour chaque entretien finalisé du projet.
+Un entretien est marqué **« Audio défaillant »** si :
+- **plus de 80 %** des segments de réponses candidat sont silencieux/inaudibles,
+- OU le `peak_rms` moyen pondéré < 0.05,
+- OU plus de 80 % des transcriptions candidat sont vides ou < 5 caractères.
 
-## Étape 1 — Stockage
+(Le 3ᵉ critère permet de couvrir les sessions passées qui n'auront pas les métriques RMS — on se base alors sur la transcription.)
 
-Migration : ajouter `report_recipient_user_ids uuid[] NOT NULL DEFAULT '{}'` sur `public.projects`.
-Aucun changement RLS (déjà couvert par les policies projet).
+## Ce qui change dans l'app
 
-## Étape 2 — UI étape 5
+### 1. Métriques pendant l'entretien (léger)
+- Nouveau module `src/lib/audioQualityWatcher.ts` : échantillonne le RMS via `AnalyserNode` pendant chaque réponse candidat (réutilise les seuils de `src/lib/micLevel.ts`).
+- À la fin de chaque réponse, agrège `{ peak_rms, active_ratio, silence_ms, duration_ms, track_muted_events }` et le stocke dans `session_messages.audio_quality` (jsonb, nouvelle colonne).
+- Intégration dans `src/pages/InterviewStart.tsx` uniquement — **aucun bandeau temps réel** (le système existant 6 s / 12 s / 20 s suffit, comme discuté).
 
-Dans `src/components/project/ProjectForm.tsx`, ajouter sous le récapitulatif un bloc « Destinataires des rapports » :
+### 2. Verdict côté serveur (`generate-report`)
+- Dans `supabase/functions/generate-report/index.ts`, calcule un `audio_health` agrégé :
+  ```json
+  {
+    "verdict": "ok" | "degraded" | "failed",
+    "silent_ratio": 0.87,
+    "affected_questions": [{ "message_id": "...", "question_number": 2 }],
+    "reason": "silent_ratio > 0.8"
+  }
+  ```
+- Stocké dans `reports.audio_health` (jsonb, nouvelle colonne).
+- Si `verdict === "failed"`, le rapport est généré quand même mais avec un flag.
 
-- Composant inline réutilisant `Popover` + `Command` (shadcn) ou simplement un `DropdownMenu` avec `Checkbox` par membre.
-- Chargement des membres au montage du composant via `supabase.from("profiles").select("user_id, full_name, email").eq("organization_id", profile.organization_id)`.
-- Affichage du trigger : « 3 destinataires sélectionnés » ou les 2 premiers noms + « +N ».
-- État local `recipientUserIds: string[]` ajouté à `initial`, propagé via `onSubmit`.
-- Petite mention sous le champ : « Ces personnes recevront l'email de rapport après chaque entretien. »
+### 3. Affichage rapport (le cœur de la demande)
+Dans `src/pages/SessionDetail.tsx` et `src/pages/SharedReport.tsx` :
 
-## Étape 3 — Sauvegarde
+**Quand `audio_health.verdict === "failed"` :**
+- **Bandeau rouge en haut** (au-dessus du `DecisionBanner`) :
+  > 🔇 **Problème audio détecté** — 87 % de l'entretien est silencieux ou inaudible. Le micro du candidat était probablement coupé ou défectueux. Les notes ci-dessous ne sont pas fiables.
+- **Remplacement de la note** : dans le `DecisionBanner` et tous les badges (`FitScoreBadge`, `BigFiveBadge`, `ParaverbalBadge`, `NonverbalBadge`), afficher un **picto `MicOff` rouge** à la place du score, avec tooltip « Audio défaillant — note non calculée ».
+- Les onglets « Big Five / Orale / Attitude » affichent le même état vide qu'aujourd'hui (analyses non disponibles).
+- L'onglet « Réponses » reste accessible : sur chaque `QuestionAnswerRow` dont le segment est silencieux, badge « 🔇 Inaudible » à côté du numéro de question.
 
-- `ProjectForm` : ajouter `recipientUserIds` dans la prop `initial`, l'inclure dans le payload `onSubmit`.
-- `src/pages/ProjectNew.tsx` : défaut `recipientUserIds: [user.id]`, mappé à `report_recipient_user_ids` à l'INSERT.
-- `src/pages/ProjectEdit.tsx` : charger depuis `project.report_recipient_user_ids`, sauvegarder à l'UPDATE.
+**Quand `audio_health.verdict === "degraded"` (entre 30 % et 80 % silencieux) :**
+- Bandeau orange plus discret (« Qualité audio partielle — certaines réponses sont inaudibles »), liste les questions concernées, mais on garde les notes affichées.
 
-## Étape 4 — Envoi
+### 4. Backfill sessions passées
+Edge function `recompute-audio-health` (admin uniquement) qui recalcule `audio_health` pour les rapports existants à partir des transcriptions (`session_messages.content`), sans avoir besoin du RMS. Permet de flagger la session `36192d01-…` rétroactivement.
 
-Dans `supabase/functions/generate-report/index.ts`, modifier `sendReportEmail` :
+## Détails techniques
 
-- Récupérer `project.report_recipient_user_ids`.
-- Si non vide → charger les emails correspondants depuis `profiles` (filtrés par `organization_id` pour sécurité) et envoyer un email par destinataire (boucle, chacun avec son `messageId`, son `unsubscribe_token` et son log).
-- Si vide → conserver la logique actuelle (assigned_to → created_by → owner org).
-- Respecter la suppression : continuer à filtrer les emails présents dans `suppressed_emails`.
-- Idempotency key par destinataire : `report-${session_id}-${userId}` pour éviter les doublons en cas de retry.
+**Migration :**
+```sql
+ALTER TABLE public.session_messages ADD COLUMN audio_quality jsonb;
+ALTER TABLE public.reports ADD COLUMN audio_health jsonb;
+```
 
-## Étape 5 — Validation
+**Fichiers touchés :**
+- `src/lib/audioQualityWatcher.ts` (nouveau)
+- `src/pages/InterviewStart.tsx` (intégration watcher)
+- `supabase/functions/transcribe-session/index.ts` (calcul verdict par segment)
+- `supabase/functions/generate-report/index.ts` (agrégation `audio_health`)
+- `supabase/functions/recompute-audio-health/index.ts` (nouveau, backfill)
+- `src/pages/SessionDetail.tsx` + `src/pages/SharedReport.tsx` (bandeau + remplacement notes)
+- `src/components/session/DecisionBanner.tsx` (prop `audioFailed` → picto rouge)
+- `src/components/session/FitScoreBadge.tsx`, `BigFiveBadge.tsx`, `ParaverbalBadge.tsx`, `NonverbalBadge.tsx` (état « MicOff rouge »)
 
-1. Créer un nouveau projet, cocher 2 membres → vérifier en base que `report_recipient_user_ids` contient bien les 2 ids.
-2. Éditer le projet, décocher un membre → vérifier la mise à jour.
-3. Déclencher `generate-report` sur une session test → vérifier dans `email_send_log` qu'il y a 2 entrées `pending` puis `sent` avec les bons destinataires.
-4. Vider la sélection → vérifier que le fallback créateur fonctionne toujours.
-
-## Hors scope
-
-- Notification par autre canal (Slack, webhook).
-- Personnalisation du contenu par destinataire.
-- Préférences individuelles de fréquence/digest.
+**Hors scope :**
+- Bandeau temps réel pendant l'entretien (déjà couvert par le système 6/12/20 s existant).
+- Détection bruit/écho/larsen.
+- Réajustement automatique des notes IA.
