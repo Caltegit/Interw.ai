@@ -99,6 +99,12 @@ export default function ProjectNew() {
   const [formInitial, setFormInitial] = useState<ProjectFormState>(initialState);
   const [templateLoading, setTemplateLoading] = useState(!!templateId);
 
+  // Pré-coche le créateur du projet comme destinataire par défaut
+  useEffect(() => {
+    if (!user) return;
+    setFormInitial((s) => (s.reportRecipientUserIds.length === 0 ? { ...s, reportRecipientUserIds: [user.id] } : s));
+  }, [user]);
+
   useEffect(() => {
     if (!templateId) return;
     let cancelled = false;
