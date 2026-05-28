@@ -504,6 +504,11 @@ export default function InterviewStart() {
   const [bootPercent, setBootPercent] = useState(0);
   const [bootActive, setBootActive] = useState(false);
 
+  // ── Garde micro bloquante au démarrage (warmup) ──
+  const [micBlockOpen, setMicBlockOpen] = useState(false);
+  const [micBlockRetrying, setMicBlockRetrying] = useState(false);
+  const micBlockResolveRef = useRef<((retry: boolean) => void) | null>(null);
+
   // ── Overlay de chargement entre deux questions ──
   const [questionLoading, setQuestionLoading] = useState<{
     label: string;
