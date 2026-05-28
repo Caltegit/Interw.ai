@@ -683,7 +683,7 @@ export default function InterviewDeviceTest() {
 
   const canContinue =
     !browserBlocking &&
-    (micStatus === "ok" || micStatus === "warning") &&
+    micStatus === "ok" &&
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
@@ -701,10 +701,11 @@ export default function InterviewDeviceTest() {
     }
   }, [canContinue, currentStep]);
 
+  // Plus de bouton « Continuer quand même » dès lors que le micro échoue : on
+  // ne propose un contournement que pour son/réseau (jamais pour le micro).
   const showSkipPrimary =
-    !canContinue && !browserBlocking && sttStatus !== "error" && (
-      micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
-      (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
+    !canContinue && !browserBlocking && sttStatus !== "error" && micStatus === "ok" && (
+      camRetries >= 2 || soundRetries >= 2
     );
 
   // (L'écran 100% bloquant a été remplacé par la carte « Navigateur » dans la liste des tests.)
