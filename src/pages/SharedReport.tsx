@@ -24,6 +24,7 @@ import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
+import { AudioHealthBanner, isAudioFailed, type AudioHealth } from "@/components/session/AudioHealthBanner";
 
 const formatDuration = (seconds?: number | null) => {
   if (!seconds || seconds <= 0) return undefined;
