@@ -1009,6 +1009,77 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4" />
+                    Destinataires des rapports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Ces personnes recevront l'email de rapport après chaque entretien.
+                  </p>
+                  <Popover open={recipientsOpen} onOpenChange={setRecipientsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        <span>
+                          {reportRecipientUserIds.length === 0
+                            ? "Aucun destinataire sélectionné"
+                            : reportRecipientUserIds.length === 1
+                              ? orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.full_name ||
+                                orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.email ||
+                                "1 destinataire"
+                              : `${reportRecipientUserIds.length} destinataires sélectionnés`}
+                        </span>
+                        <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <div className="max-h-72 overflow-auto p-1">
+                        {orgMembers.length === 0 ? (
+                          <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
+                        ) : (
+                          orgMembers.map((m) => {
+                            const checked = reportRecipientUserIds.includes(m.user_id);
+                            return (
+                              <label
+                                key={m.user_id}
+                                className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 hover:bg-accent"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    setReportRecipientUserIds((prev) =>
+                                      v
+                                        ? [...prev, m.user_id]
+                                        : prev.filter((id) => id !== m.user_id),
+                                    );
+                                  }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">
+                                    {m.full_name || m.email}
+                                  </p>
+                                  {m.full_name && (
+                                    <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {reportRecipientUserIds.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Par défaut, le créateur du projet recevra les rapports.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
         </CardContent>
