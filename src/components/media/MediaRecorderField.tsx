@@ -35,20 +35,29 @@ const ACCEPT_AUDIO = "audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/x-m4a,.mp3
 const ACCEPT_VIDEO = "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov";
 
 const PREFS_KEY = "media-recorder-prefs:v1";
+const DEFAULT_BLUR = 12;
+const MIN_BLUR = 4;
+const MAX_BLUR = 24;
 
 interface RecorderPrefs {
   blur: boolean;
   logo: boolean;
+  blurAmount: number;
 }
 
 function loadPrefs(): RecorderPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (!raw) return { blur: false, logo: false };
+    if (!raw) return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
     const p = JSON.parse(raw);
-    return { blur: !!p.blur, logo: !!p.logo };
+    const amount = typeof p.blurAmount === "number" ? p.blurAmount : DEFAULT_BLUR;
+    return {
+      blur: !!p.blur,
+      logo: !!p.logo,
+      blurAmount: Math.min(MAX_BLUR, Math.max(MIN_BLUR, amount)),
+    };
   } catch {
-    return { blur: false, logo: false };
+    return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
   }
 }
 
