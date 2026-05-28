@@ -329,17 +329,34 @@ export default function InterviewDeviceTest() {
       const peakOk = measurement.peak >= MIC_THRESHOLDS.TEST_PEAK_MIN;
       const activeOk = measurement.activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN;
 
-      if (!peakOk && !activeOk) {
-        // Échec franc : rien d'audible → erreur, pas warning. Bloque la suite.
-        setMicStatus("error");
-        setMicError("Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.");
-        setMicRetries((n) => n + 1);
-      } else if (!activeOk) {
-        // Voix détectée par à-coups : on prévient mais on n'érige pas en blocage.
-        setMicStatus("warning");
-        setMicWarning("Votre voix paraît faible. Rapprochez-vous du micro et relancez si besoin.");
-      } else {
+      if (peakOk && activeOk) {
         setMicStatus("ok");
+        // Persiste la validation pour la garde au démarrage de session.
+        try {
+          const usedDeviceId = audioTrack.getSettings?.().deviceId ?? deviceId ?? null;
+          if (token) {
+            sessionStorage.setItem(
+              `mic-test-validated:${token}`,
+              JSON.stringify({
+                deviceId: usedDeviceId,
+                validatedAt: Date.now(),
+                peak: measurement.peak,
+                activeMs: measurement.activeMs,
+              }),
+            );
+          }
+        } catch { /* ignore */ }
+      } else {
+        // Toute mesure insuffisante (silence, voix trop faible, à-coups) bloque
+        // le passage. Plus de contournement : c'est la cause N°1 d'entretiens
+        // muets qui aboutissent à un rapport inexploitable.
+        setMicStatus("error");
+        setMicError(
+          peakOk
+            ? "Votre voix est trop faible. Rapprochez-vous du micro et relancez le test."
+            : "Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.",
+        );
+        setMicRetries((n) => n + 1);
       }
       await refreshDevices();
     } catch (err) {
