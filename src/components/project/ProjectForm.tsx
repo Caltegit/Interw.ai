@@ -244,6 +244,27 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     return () => { cancelled = true; };
   }, [user]);
 
+  // Charge les membres de l'organisation pour le sélecteur de destinataires
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const orgId = prof?.organization_id;
+      if (!orgId) return;
+      const { data: members } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .eq("organization_id", orgId)
+        .order("full_name");
+      if (!cancelled && members) setOrgMembers(members);
+    })();
+    return () => { cancelled = true; };
+
   const handleCloneClick = () => {
     if (existingClonedVoice) {
       setConfirmReplaceOpen(true);
