@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ALTER COLUMN record_video SET DEFAULT true;
