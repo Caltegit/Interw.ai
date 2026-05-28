@@ -87,9 +87,16 @@ serve(async (req) => {
     }
     // Pour la non-verbale : on autorise aussi quand record_video=false mais des segments vidéo existent
     // (cas historiques où la captation a eu lieu malgré le flag projet à false).
-    const nonverbalEnabled =
-      project.record_video || sessionsWithVideo.has((r as any).session_id);
-    if (needsRetry((r as any).nonverbal_analysis, nonverbalEnabled)) {
+    const hasVideo = sessionsWithVideo.has((r as any).session_id);
+    const nonverbalEnabled = project.record_video || hasVideo;
+    const nonverbalState = (r as any).nonverbal_analysis;
+    // Cas spécial : skipped "video_not_recorded" mais on a en fait des segments → on relance.
+    const isReclaimable =
+      hasVideo &&
+      nonverbalState?.status === "skipped" &&
+      nonverbalState?.reason === "video_not_recorded" &&
+      (typeof nonverbalState?.attempt === "number" ? nonverbalState.attempt : 0) < MAX_ATTEMPTS;
+    if (isReclaimable || needsRetry(nonverbalState, nonverbalEnabled)) {
       toRetry.push({ session_id: (r as any).session_id, fn: "analyze-nonverbal" });
     }
     if (toRetry.length >= MAX_PER_RUN) break;
