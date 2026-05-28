@@ -133,28 +133,42 @@ serve(async (req) => {
     }
     const project: any = session.projects;
     if (!project?.record_video) {
-      // On persiste le statut pour que l'UI ait une raison stable (pas juste un retour HTTP).
-      const { data: existingReport } = await supabase
-        .from("reports")
-        .select("id")
-        .eq("session_id", session_id)
-        .maybeSingle();
-      if (existingReport) {
-        await supabase
-          .from("reports")
-          .update({
-            nonverbal_analysis: {
-              status: "skipped",
-              reason: "video_not_recorded",
-              failed_at: new Date().toISOString(),
-            },
-          })
-          .eq("id", existingReport.id);
+      // En mode force, on autorise quand même si des segments vidéo existent réellement
+      // (cas des projets où record_video=false mais le candidat a quand même envoyé de la vidéo).
+      let hasRealSegments = false;
+      if (force) {
+        const { count } = await supabase
+          .from("session_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", session_id)
+          .eq("role", "candidate")
+          .not("video_segment_url", "is", null);
+        hasRealSegments = (count ?? 0) > 0;
       }
-      return new Response(
-        JSON.stringify({ skipped: "video_not_recorded" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (!hasRealSegments) {
+        // On persiste le statut pour que l'UI ait une raison stable (pas juste un retour HTTP).
+        const { data: existingReport } = await supabase
+          .from("reports")
+          .select("id")
+          .eq("session_id", session_id)
+          .maybeSingle();
+        if (existingReport) {
+          await supabase
+            .from("reports")
+            .update({
+              nonverbal_analysis: {
+                status: "skipped",
+                reason: "video_not_recorded",
+                failed_at: new Date().toISOString(),
+              },
+            })
+            .eq("id", existingReport.id);
+        }
+        return new Response(
+          JSON.stringify({ skipped: "video_not_recorded" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const { data: report } = await supabase
