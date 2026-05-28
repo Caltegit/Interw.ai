@@ -4510,6 +4510,22 @@ export default function InterviewStart() {
           )}
         </div>
       )}
+
+      <MicBlockingDialog
+        open={micBlockOpen}
+        retrying={micBlockRetrying}
+        onRetry={() => {
+          micBlockResolveRef.current?.(true);
+        }}
+        onRedoTest={() => {
+          micBlockResolveRef.current?.(false);
+          try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+          if (token) {
+            try { sessionStorage.removeItem(`mic-test-validated:${token}`); } catch { /* ignore */ }
+          }
+          navigate(`/interview/${slug}/test/${token}`);
+        }}
+      />
     </CandidateLayout>
   );
 }
