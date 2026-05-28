@@ -19,6 +19,8 @@ export interface ComposerOptions {
   mirrorPreview: boolean;
   /** Intensité du flou d'arrière-plan en pixels (par défaut 12). */
   blurPx?: number;
+  /** Facteur d'échelle appliqué au logo (1 = taille par défaut). */
+  logoScale?: number;
 }
 
 const TARGET_WIDTH = 1280;
