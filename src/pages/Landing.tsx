@@ -175,7 +175,7 @@ function InterviewLiveCard() {
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
           <Video className="h-3.5 w-3.5" /> ÉTAPE 2 · L'ENTRETIEN
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien vidéo</h3>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
           Le candidat répond face caméra, à son rythme.
         </p>
@@ -211,7 +211,7 @@ function CandidatesShortlistCard() {
         <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
           <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT IA
         </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Comparez vos candidats </h3>
+        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous comparez les profils</h3>
         <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
           Et choisissez qui vous sélectionnez...
         </p>
