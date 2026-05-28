@@ -98,6 +98,7 @@ export function MediaRecorderField({
   const initialPrefs = loadPrefs();
   const [blurEnabled, setBlurEnabled] = useState(initialPrefs.blur);
   const [logoEnabled, setLogoEnabled] = useState(initialPrefs.logo);
+  const [blurAmount, setBlurAmount] = useState(initialPrefs.blurAmount);
   const blurSupported = useState(() => (type === "video" ? isBlurSupported() : true))[0];
 
   const composerActive = type === "video" && (blurEnabled || logoEnabled);
@@ -118,8 +119,8 @@ export function MediaRecorderField({
   }, [existingUrl]);
 
   useEffect(() => {
-    savePrefs({ blur: blurEnabled, logo: logoEnabled });
-  }, [blurEnabled, logoEnabled]);
+    savePrefs({ blur: blurEnabled, logo: logoEnabled, blurAmount });
+  }, [blurEnabled, logoEnabled, blurAmount]);
 
   const destroyComposer = useCallback(() => {
     if (composerRef.current) {
