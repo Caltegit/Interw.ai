@@ -1,47 +1,57 @@
-# Rattraper l'attitude vidéo + activer la captation par défaut
+# Destinataires des rapports à l'étape 5
 
 ## Objectif
 
-1. Rattraper les rapports où l'attitude est `skipped: video_not_recorded` alors que des segments vidéo existent réellement.
-2. Activer la captation vidéo par défaut sur les nouveaux projets pour éviter le problème à la source.
+À l'étape 5 (« Publier ») de création/édition d'un projet, permettre de choisir parmi les membres de l'organisation qui recevra l'email de rapport après chaque entretien. Sélection multiple via dropdown avec cases à cocher.
 
-## Étape A — Mode "force" qui ignore `record_video` si des segments existent
+## Comportement attendu
 
-**Dans `supabase/functions/analyze-nonverbal/index.ts` :**
+- Liste tous les membres de l'organisation (depuis `profiles` filtrés par `organization_id`).
+- Par défaut à la création : le créateur du projet est pré-coché.
+- À l'édition : on charge la sélection enregistrée.
+- Aucun destinataire coché → comportement actuel inchangé (fallback : créateur du projet, puis owner de l'organisation).
+- Chaque membre coché reçoit l'email de rapport pour chaque entretien finalisé du projet.
 
-- Quand `force: true` est passé dans le body, NE PAS court-circuiter sur `!project?.record_video`.
-- À la place, vérifier d'abord s'il existe au moins un `session_messages.video_segment_url` non null pour la session.
-  - Si oui → continuer l'analyse normalement (le flag projet est ignoré).
-  - Si non → garder le comportement actuel (`skipped: video_not_recorded`).
-- Sans `force`, le comportement reste identique à aujourd'hui (respect strict de `record_video`).
+## Étape 1 — Stockage
 
-**Dans `supabase/functions/retry-missing-analyses/index.ts` :**
+Migration : ajouter `report_recipient_user_ids uuid[] NOT NULL DEFAULT '{}'` sur `public.projects`.
+Aucun changement RLS (déjà couvert par les policies projet).
 
-- Adapter la fonction `needsRetry` pour la branche non-verbale : ne plus exclure les rapports quand `project.record_video = false` SI :
-  - le rapport est `skipped` avec `reason: video_not_recorded` (ou simplement n'a pas de `profile`),
-  - ET la session a au moins un `video_segment_url` non null.
-- Pour éviter une requête par rapport, faire un seul `select` agrégé : compter les segments vidéo par session sur la fenêtre des 7 derniers jours, puis matcher en mémoire.
-- Garder la limite `MAX_PER_RUN = 20` et le plafond 3 tentatives.
+## Étape 2 — UI étape 5
 
-**Résultat attendu :** le rapport `9f99d7f6-…` (10 segments vidéo, `record_video=false`) sera relancé au prochain cron et analysé.
+Dans `src/components/project/ProjectForm.tsx`, ajouter sous le récapitulatif un bloc « Destinataires des rapports » :
 
-## Étape B — `record_video = true` par défaut sur les nouveaux projets
+- Composant inline réutilisant `Popover` + `Command` (shadcn) ou simplement un `DropdownMenu` avec `Checkbox` par membre.
+- Chargement des membres au montage du composant via `supabase.from("profiles").select("user_id, full_name, email").eq("organization_id", profile.organization_id)`.
+- Affichage du trigger : « 3 destinataires sélectionnés » ou les 2 premiers noms + « +N ».
+- État local `recipientUserIds: string[]` ajouté à `initial`, propagé via `onSubmit`.
+- Petite mention sous le champ : « Ces personnes recevront l'email de rapport après chaque entretien. »
 
-Deux endroits à aligner :
+## Étape 3 — Sauvegarde
 
-1. **Migration SQL** : `ALTER TABLE public.projects ALTER COLUMN record_video SET DEFAULT true;`
-   - Ne touche PAS aux projets existants (uniquement le défaut pour les futurs `INSERT` qui n'envoient pas la valeur).
-2. **Côté front** : dans `src/components/project/ProjectForm.tsx` (et tout autre endroit où un nouveau projet est créé), vérifier que la valeur initiale du toggle "Enregistrer la vidéo" est bien `true` à la création.
-   - Lors d'une édition de projet existant, on respecte la valeur stockée (pas de modification).
+- `ProjectForm` : ajouter `recipientUserIds` dans la prop `initial`, l'inclure dans le payload `onSubmit`.
+- `src/pages/ProjectNew.tsx` : défaut `recipientUserIds: [user.id]`, mappé à `report_recipient_user_ids` à l'INSERT.
+- `src/pages/ProjectEdit.tsx` : charger depuis `project.report_recipient_user_ids`, sauvegarder à l'UPDATE.
 
-## Étape C — Validation
+## Étape 4 — Envoi
 
-1. Déployer `analyze-nonverbal` et appeler manuellement avec `force: true` sur la session `9f99d7f6-c450-4d8e-8290-bfcb5c1f59df` → vérifier que `nonverbal_analysis.status` passe à `ok` avec un `profile` rempli.
-2. Déclencher manuellement `retry-missing-analyses` → vérifier qu'il prend en compte les rapports `skipped: video_not_recorded` ayant des segments vidéo.
-3. Créer un nouveau projet via l'UI → vérifier que `record_video` vaut `true` par défaut dans la base.
-4. Compter combien de rapports historiques vont être rattrapés (requête sur les 7 derniers jours).
+Dans `supabase/functions/generate-report/index.ts`, modifier `sendReportEmail` :
+
+- Récupérer `project.report_recipient_user_ids`.
+- Si non vide → charger les emails correspondants depuis `profiles` (filtrés par `organization_id` pour sécurité) et envoyer un email par destinataire (boucle, chacun avec son `messageId`, son `unsubscribe_token` et son log).
+- Si vide → conserver la logique actuelle (assigned_to → created_by → owner org).
+- Respecter la suppression : continuer à filtrer les emails présents dans `suppressed_emails`.
+- Idempotency key par destinataire : `report-${session_id}-${userId}` pour éviter les doublons en cas de retry.
+
+## Étape 5 — Validation
+
+1. Créer un nouveau projet, cocher 2 membres → vérifier en base que `report_recipient_user_ids` contient bien les 2 ids.
+2. Éditer le projet, décocher un membre → vérifier la mise à jour.
+3. Déclencher `generate-report` sur une session test → vérifier dans `email_send_log` qu'il y a 2 entrées `pending` puis `sent` avec les bons destinataires.
+4. Vider la sélection → vérifier que le fallback créateur fonctionne toujours.
 
 ## Hors scope
 
-- Rapports antérieurs à la fenêtre de 7 jours (nécessiterait un script one-shot dédié).
-- Rapports sans aucun segment vidéo en base (rien à analyser).
+- Notification par autre canal (Slack, webhook).
+- Personnalisation du contenu par destinataire.
+- Préférences individuelles de fréquence/digest.
