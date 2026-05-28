@@ -257,6 +257,7 @@ export function MediaRecorderField({
             showLogo: logoEnabled,
             mirrorPreview: true,
             blurPx: blurAmount,
+            logoScale: logoSize / 100,
           });
           composerRef.current = comp;
           await comp.init(logoEnabled ? orgLogoUrl : null);
