@@ -2,9 +2,24 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, Video, Square, Play, Pause, Upload, RotateCcw, Trash2, Circle } from "lucide-react";
+import {
+  Mic,
+  Video,
+  Square,
+  Play,
+  Pause,
+  Upload,
+  RotateCcw,
+  Trash2,
+  Circle,
+  Sparkles,
+  Image as ImageIcon,
+} from "lucide-react";
 import { MicLevelMeter } from "@/components/project/MicLevelMeter";
+import { useCurrentOrgLogo } from "@/hooks/useCurrentOrgLogo";
+import { VideoComposer, isBlurSupported } from "@/lib/videoComposer";
 
 interface MediaRecorderFieldProps {
   type: "audio" | "video";
@@ -18,6 +33,32 @@ interface MediaRecorderFieldProps {
 
 const ACCEPT_AUDIO = "audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/x-m4a,.mp3,.m4a,.wav,.webm";
 const ACCEPT_VIDEO = "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov";
+
+const PREFS_KEY = "media-recorder-prefs:v1";
+
+interface RecorderPrefs {
+  blur: boolean;
+  logo: boolean;
+}
+
+function loadPrefs(): RecorderPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return { blur: false, logo: false };
+    const p = JSON.parse(raw);
+    return { blur: !!p.blur, logo: !!p.logo };
+  } catch {
+    return { blur: false, logo: false };
+  }
+}
+
+function savePrefs(p: RecorderPrefs) {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+  } catch {
+    /* noop */
+  }
+}
 
 function formatTime(s: number) {
   if (!isFinite(s) || s < 0) return "0:00";
@@ -36,6 +77,7 @@ export function MediaRecorderField({
   description,
 }: MediaRecorderFieldProps) {
   const { toast } = useToast();
+  const orgLogoUrl = useCurrentOrgLogo();
   const [previewUrl, setPreviewUrl] = useState<string | null>(existingUrl);
   const [duration, setDuration] = useState(0);
   const [recording, setRecording] = useState(false);
@@ -44,10 +86,19 @@ export function MediaRecorderField({
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
 
+  const initialPrefs = loadPrefs();
+  const [blurEnabled, setBlurEnabled] = useState(initialPrefs.blur);
+  const [logoEnabled, setLogoEnabled] = useState(initialPrefs.logo);
+  const blurSupported = useState(() => (type === "video" ? isBlurSupported() : true))[0];
+
+  const composerActive = type === "video" && (blurEnabled || logoEnabled);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<VideoComposer | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playbackVideoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -57,13 +108,28 @@ export function MediaRecorderField({
     setPreviewUrl(existingUrl);
   }, [existingUrl]);
 
+  useEffect(() => {
+    savePrefs({ blur: blurEnabled, logo: logoEnabled });
+  }, [blurEnabled, logoEnabled]);
+
+  const destroyComposer = useCallback(() => {
+    if (composerRef.current) {
+      composerRef.current.destroy();
+      composerRef.current = null;
+    }
+    if (canvasContainerRef.current) {
+      canvasContainerRef.current.innerHTML = "";
+    }
+  }, []);
+
   const stopAllTracks = useCallback(() => {
+    destroyComposer();
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     setActiveStream(null);
     setCameraReady(false);
     if (previewVideoRef.current) previewVideoRef.current.srcObject = null;
-  }, []);
+  }, [destroyComposer]);
 
   const initCamera = useCallback(async () => {
     if (type !== "video" || streamRef.current) return;
@@ -93,20 +159,51 @@ export function MediaRecorderField({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type, previewUrl, recording]);
 
-  // Branche le flux à l'élément vidéo si nécessaire
+  // Branche le flux brut à l'élément vidéo quand le composer n'est pas actif
   useEffect(() => {
-    if (type === "video" && previewVideoRef.current && streamRef.current) {
+    if (type !== "video" || !streamRef.current) return;
+    if (!composerActive && previewVideoRef.current) {
       previewVideoRef.current.srcObject = streamRef.current;
       previewVideoRef.current.play().catch(() => {});
     }
-  }, [recording, type, cameraReady, previewUrl]);
+  }, [recording, type, cameraReady, previewUrl, composerActive]);
+
+  // Création / destruction du composer selon les toggles
+  useEffect(() => {
+    if (type !== "video" || !streamRef.current || !cameraReady) return;
+
+    if (composerActive && !composerRef.current) {
+      const comp = new VideoComposer(streamRef.current, {
+        blurBackground: blurEnabled,
+        showLogo: logoEnabled,
+        mirrorPreview: true,
+      });
+      composerRef.current = comp;
+      void comp.init(logoEnabled ? orgLogoUrl : null).then(() => {
+        if (composerRef.current !== comp) return;
+        if (canvasContainerRef.current) {
+          canvasContainerRef.current.innerHTML = "";
+          const canvas = comp.getPreviewCanvas();
+          canvas.className = "w-full h-full object-cover";
+          canvasContainerRef.current.appendChild(canvas);
+        }
+      });
+    } else if (!composerActive && composerRef.current) {
+      destroyComposer();
+    } else if (composerRef.current) {
+      composerRef.current.setOptions({ blurBackground: blurEnabled, showLogo: logoEnabled });
+      void composerRef.current.setLogoUrl(logoEnabled ? orgLogoUrl : null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composerActive, blurEnabled, logoEnabled, cameraReady, orgLogoUrl]);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
+      destroyComposer();
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, []);
+  }, [destroyComposer]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -116,15 +213,36 @@ export function MediaRecorderField({
         streamRef.current = stream;
         setActiveStream(stream);
         setCameraReady(true);
-        if (type === "video" && previewVideoRef.current) {
+        if (type === "video" && previewVideoRef.current && !composerActive) {
           previewVideoRef.current.srcObject = stream;
           previewVideoRef.current.play().catch(() => {});
         }
       }
 
-      const stream = streamRef.current!;
+      // Sélectionne le stream à enregistrer (composite si options actives)
+      let recordStream: MediaStream = streamRef.current!;
+      if (type === "video" && composerActive) {
+        // Attend l'initialisation du composer si besoin
+        if (!composerRef.current) {
+          const comp = new VideoComposer(streamRef.current!, {
+            blurBackground: blurEnabled,
+            showLogo: logoEnabled,
+            mirrorPreview: true,
+          });
+          composerRef.current = comp;
+          await comp.init(logoEnabled ? orgLogoUrl : null);
+          if (canvasContainerRef.current) {
+            canvasContainerRef.current.innerHTML = "";
+            const canvas = comp.getPreviewCanvas();
+            canvas.className = "w-full h-full object-cover";
+            canvasContainerRef.current.appendChild(canvas);
+          }
+        }
+        recordStream = composerRef.current!.getOutputStream();
+      }
+
       const mimeType = type === "audio" ? "audio/webm" : "video/webm";
-      const mr = new MediaRecorder(stream, { mimeType });
+      const mr = new MediaRecorder(recordStream, { mimeType });
       mediaRecorderRef.current = mr;
       chunksRef.current = [];
 
@@ -160,7 +278,7 @@ export function MediaRecorderField({
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type, maxDurationSec, onMediaReady, stopAllTracks, toast]);
+  }, [type, maxDurationSec, onMediaReady, stopAllTracks, toast, composerActive, blurEnabled, logoEnabled, orgLogoUrl]);
 
   const stopRecording = useCallback(() => {
     setRecording(false);
@@ -247,6 +365,53 @@ export function MediaRecorderField({
     </div>
   ) : null;
 
+  const VideoOptions = type === "video" && !previewUrl ? (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border bg-background/60 px-3 py-2 text-xs">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+        <Label htmlFor="blur-toggle" className="cursor-pointer text-xs font-normal">
+          Flouter l'arrière-plan
+        </Label>
+        <Switch
+          id="blur-toggle"
+          checked={blurEnabled}
+          disabled={!blurSupported}
+          onCheckedChange={(v) => {
+            if (!blurSupported && v) {
+              toast({
+                title: "Non supporté",
+                description: "Votre navigateur ne supporte pas le flou en temps réel.",
+                variant: "destructive",
+              });
+              return;
+            }
+            setBlurEnabled(v);
+          }}
+        />
+        {!blurSupported && (
+          <span className="text-[10px] text-muted-foreground">(non supporté)</span>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        <Label htmlFor="logo-toggle" className="cursor-pointer text-xs font-normal">
+          Afficher mon logo
+        </Label>
+        <Switch
+          id="logo-toggle"
+          checked={logoEnabled && !!orgLogoUrl}
+          disabled={!orgLogoUrl}
+          onCheckedChange={(v) => setLogoEnabled(v)}
+        />
+        {!orgLogoUrl && (
+          <a href="/settings" className="text-[10px] text-primary hover:underline">
+            Ajouter un logo
+          </a>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   // --- Phase preview caméra + enregistrement (vidéo) ---
   if (type === "video" && !previewUrl) {
     const containerTone = recording ? "border-destructive/30 bg-destructive/5" : "border bg-muted/30";
@@ -256,13 +421,23 @@ export function MediaRecorderField({
         <div className={`space-y-3 rounded-lg p-3 ${containerTone}`}>
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
+              {/* Aperçu brut (caché si composer actif) */}
               <video
                 ref={previewVideoRef}
                 muted
                 autoPlay
                 playsInline
                 className="w-full rounded-md border bg-black aspect-video object-cover"
-                style={{ transform: "scaleX(-1)" }}
+                style={{
+                  transform: "scaleX(-1)",
+                  display: composerActive ? "none" : "block",
+                }}
+              />
+              {/* Aperçu composé (canvas injecté) */}
+              <div
+                ref={canvasContainerRef}
+                className="w-full rounded-md border bg-black aspect-video overflow-hidden"
+                style={{ display: composerActive ? "block" : "none" }}
               />
               {!cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-md text-xs text-white/80">
@@ -298,6 +473,8 @@ export function MediaRecorderField({
               </p>
             </div>
           </div>
+
+          {VideoOptions}
 
           {recording && (
             <>
