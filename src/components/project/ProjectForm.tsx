@@ -264,6 +264,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       if (!cancelled && members) setOrgMembers(members);
     })();
     return () => { cancelled = true; };
+  }, [user]);
+
+
 
   const handleCloneClick = () => {
     if (existingClonedVoice) {
