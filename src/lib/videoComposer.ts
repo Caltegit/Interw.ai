@@ -17,12 +17,14 @@ export interface ComposerOptions {
   showLogo: boolean;
   /** Si true, applique un miroir (uniquement visuel, sur l'aperçu canvas). */
   mirrorPreview: boolean;
+  /** Intensité du flou d'arrière-plan en pixels (par défaut 12). */
+  blurPx?: number;
 }
 
 const TARGET_WIDTH = 1280;
 const TARGET_HEIGHT = 720;
 const TARGET_FPS = 30;
-const BLUR_PX = 12;
+const DEFAULT_BLUR_PX = 12;
 const LOGO_HEIGHT_RATIO = 0.1; // 10% de la hauteur
 const LOGO_PADDING = 24;
 

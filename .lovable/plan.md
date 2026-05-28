@@ -1,76 +1,24 @@
-## Objectif
+### Objectif
+Ajouter un curseur sous le toggle « Flouter l'arrière-plan » pour régler l'intensité du flou (4 px → 24 px, défaut 12 px) dans le composant d'enregistrement vidéo côté recruteur.
 
-Permettre au recruteur, lors de l'enregistrement d'une vidéo (intro de session ou question au format vidéo), d'activer :
+### Fichiers modifiés
 
-1. **Flou d'arrière-plan** (style visio)
-2. **Incrustation du logo** en haut à gauche
+**1. `src/lib/videoComposer.ts`**
+- Transformer la constante `BLUR_PX = 12` en une propriété optionnelle `blurPx` dans `ComposerOptions`.
+- Le `renderFrame` utilise `this.options.blurPx ?? 12` pour le `ctx.filter`.
+- `setOptions()` accepte `blurPx` et le répercute immédiatement.
 
-Les deux options sont **appliquées au flux pendant l'enregistrement** : la vidéo finale stockée contient déjà le flou et le logo (rien à recomposer côté lecture/candidat).
+**2. `src/components/media/MediaRecorderField.tsx`**
+- Étendre l'interface `RecorderPrefs` avec `blurAmount?: number` (défaut 12).
+- Ajouter un state `blurAmount` initialisé depuis `localStorage`.
+- Persister `blurAmount` dans `localStorage` quand il change.
+- Passer `blurAmount` au `VideoComposer` (constructeur + `setOptions`).
+- Sous le toggle « Flouter l'arrière-plan », afficher conditionnellement une ligne avec :
+  - Un label « Flou » avec la valeur actuelle en pixels.
+  - Un `<input type="range" min="4" max="24" step="2">` stylisé Tailwind (fond de la piste avec la couleur `--primary`, thumb arrondi).
+  - Le curseur est masqué si `!blurEnabled`.
 
-Périmètre : uniquement le composant `src/components/media/MediaRecorderField.tsx` (utilisé par l'intro de session et par les questions vidéo côté recruteur). Aucune modification côté candidat.
-
-## UX
-
-Sous l'aperçu caméra, deux contrôles compacts :
-
-- Toggle **« Flouter l'arrière-plan »**
-- Toggle **« Afficher mon logo »** (désactivé si l'organisation n'a pas de `logo_url`, avec petit lien « Ajouter un logo » vers Paramètres)
-
-Les deux toggles sont activables avant **ou** pendant l'enregistrement (effet appliqué en direct sur l'aperçu et le flux enregistré). Les préférences sont mémorisées dans `localStorage` (`media-recorder-prefs`).
-
-Si l'import d'un fichier vidéo est utilisé à la place de l'enregistrement, les toggles n'ont aucun effet (le fichier importé est utilisé tel quel).
-
-## Implémentation technique
-
-### Pipeline de composition
-
-Au lieu d'enregistrer directement `stream` :
-
-```text
-camera stream ──► <video> caché ──► segmentation (MediaPipe) ──┐
-                                                                ├─► <canvas> ─► canvas.captureStream() ─► MediaRecorder
-                                logo <img> ───────────────────┘
-```
-
-- Un `<canvas>` (1280×720) est dessiné dans une boucle `requestAnimationFrame`.
-- À chaque frame : si flou activé, on utilise le masque de segmentation pour dessiner le sujet net + le fond flouté (via `ctx.filter = "blur(12px)"` sur la version fond). Si flou désactivé, on dessine la frame brute.
-- Si logo activé, on dessine `logoImg` en haut-gauche (padding 24px, hauteur ~10% du canvas, ratio préservé).
-- L'audio track originale est ajoutée au stream du canvas : `new MediaStream([...canvas.captureStream(30).getVideoTracks(), ...stream.getAudioTracks()])`.
-- `MediaRecorder` enregistre ce stream composite. Tout le reste (timer, stop, blob, preview) reste identique.
-
-L'aperçu visible (`previewVideoRef`) bascule pour afficher le `<canvas>` quand au moins une option est active, sinon affiche le flux brut comme aujourd'hui.
-
-### Segmentation
-
-Utilisation de **`@mediapipe/tasks-vision`** (`ImageSegmenter` avec le modèle `selfie_segmenter.tflite`). Modèle chargé une seule fois, depuis le CDN MediaPipe officiel. Si le chargement échoue ou si `OffscreenCanvas`/WebGL n'est pas dispo :
-
-- Le toggle « Flouter l'arrière-plan » devient indisponible avec tooltip « Non supporté par votre navigateur ».
-- Le logo seul reste possible (ne nécessite pas de segmentation).
-
-Le miroir (`transform: scaleX(-1)`) actuel est conservé : on applique le flip directement dans le canvas (`ctx.scale(-1, 1)`) pour l'aperçu ; mais **on enregistre non-miroité** (comportement standard des outils visio — le miroir n'est qu'un confort d'aperçu).
-
-### Logo
-
-Le composant reçoit une nouvelle prop optionnelle `logoUrl?: string | null`. Les deux points d'appel (intro de session et questions vidéo) la passent depuis `useOrganization().logo_url`. Le logo est chargé une seule fois en `HTMLImageElement` avec `crossOrigin = "anonymous"` (le bucket Supabase est public).
-
-### Performance / sécurité
-
-- Boucle de rendu limitée à 30 FPS.
-- `captureStream(30)`, codec WebM/VP8 (déjà utilisé).
-- Tous les `ImageSegmenter`, canvas et `requestAnimationFrame` sont arrêtés/libérés dans `stopAllTracks` et au `unmount`.
-- Pas de changement DB ni d'edge function.
-
-## Fichiers modifiés
-
-- `src/components/media/MediaRecorderField.tsx` — pipeline canvas, deux toggles, prop `logoUrl`.
-- `src/components/project/StepIntro.tsx` — passe `logoUrl={org.logo_url}` au `MediaRecorderField`.
-- `src/components/QuestionFormDialog.tsx` — idem pour les questions de type vidéo.
-- `src/pages/IntroLibrary.tsx` — idem.
-- **Nouveau** : `src/lib/videoComposer.ts` — petite classe encapsulant init MediaPipe + boucle render + cleanup, pour garder `MediaRecorderField` lisible.
-- `package.json` — ajout `@mediapipe/tasks-vision`.
-
-## Hors périmètre
-
-- Aucune modification côté enregistrement candidat (`InterviewStart.tsx`).
-- Pas de stockage des préférences en base (juste `localStorage`).
-- Pas d'éditeur de position/taille du logo (position fixe : haut-gauche, hauteur ~10% — comme dans le brief).
+### Hors périmètre
+- Aucun changement côté candidat (`InterviewStart.tsx`).
+- Pas de slider pour le logo (hauteur/taille fixes).
+- Pas de changement base de données.
