@@ -368,6 +368,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       audioAnalysisEnabled,
       showQuestionTimer,
       saveIntroToLibrary,
+      reportRecipientUserIds,
     });
   };
 
