@@ -21,12 +21,26 @@ export function computeParaverbalAverage(analysis?: ParaverbalAnalysis | null): 
   return Math.round(Math.max(0, Math.min(100, avg)));
 }
 
+import { MicOff } from "lucide-react";
+
 interface Props {
   analysis?: ParaverbalAnalysis | null;
   size?: number;
+  audioFailed?: boolean;
 }
 
-export function ParaverbalBadge({ analysis, size = 24 }: Props) {
+export function ParaverbalBadge({ analysis, size = 24, audioFailed }: Props) {
+  if (audioFailed) {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive"
+        style={{ width: size, height: size }}
+        title="Audio défaillant — note non calculée"
+      >
+        <MicOff style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
   const value = computeParaverbalAverage(analysis);
   const colorClass =
     value === null

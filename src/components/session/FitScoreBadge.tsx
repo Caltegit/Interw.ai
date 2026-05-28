@@ -1,9 +1,23 @@
+import { MicOff } from "lucide-react";
+
 interface Props {
   score?: number | null;
   size?: number;
+  audioFailed?: boolean;
 }
 
-export function FitScoreBadge({ score, size = 22 }: Props) {
+export function FitScoreBadge({ score, size = 22, audioFailed }: Props) {
+  if (audioFailed) {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive"
+        style={{ width: size, height: size }}
+        title="Audio défaillant — note non calculée"
+      >
+        <MicOff style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
   const value =
     typeof score === "number" && !Number.isNaN(score)
       ? Math.round(Math.max(0, Math.min(100, score)))
