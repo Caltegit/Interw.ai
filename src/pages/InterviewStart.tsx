@@ -4523,7 +4523,7 @@ export default function InterviewStart() {
           if (token) {
             try { sessionStorage.removeItem(`mic-test-validated:${token}`); } catch { /* ignore */ }
           }
-          navigate(`/interview/${slug}/test/${token}`);
+          navigate(`/session/${slug}/test/${token}`);
         }}
       />
     </CandidateLayout>
