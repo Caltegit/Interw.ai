@@ -69,7 +69,7 @@ const initialState: ProjectFormState = {
   ],
   maxDuration: 30,
   recordAudio: true,
-  recordVideo: false,
+  recordVideo: true,
   status: "active",
   autoSkipSilence: true,
   allowPause: true,
