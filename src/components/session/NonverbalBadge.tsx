@@ -13,12 +13,26 @@ export function computeNonverbalAverage(analysis?: NonverbalAnalysis | null): nu
   return Math.round(Math.max(0, Math.min(100, avg)));
 }
 
+import { MicOff } from "lucide-react";
+
 interface Props {
   analysis?: NonverbalAnalysis | null;
   size?: number;
+  audioFailed?: boolean;
 }
 
-export function NonverbalBadge({ analysis, size = 24 }: Props) {
+export function NonverbalBadge({ analysis, size = 24, audioFailed }: Props) {
+  if (audioFailed) {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive"
+        style={{ width: size, height: size }}
+        title="Audio défaillant — note non calculée"
+      >
+        <MicOff style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
   const value = computeNonverbalAverage(analysis);
   const colorClass =
     value === null

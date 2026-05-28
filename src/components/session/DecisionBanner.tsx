@@ -28,6 +28,7 @@ import {
   Linkedin,
   FileText,
   UserCog,
+  MicOff,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ interface DecisionBannerProps {
   cvUrl?: string | null;
   cvFilename?: string | null;
   onEditLinks?: () => void;
+  audioFailed?: boolean;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
@@ -128,6 +130,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     cvUrl,
     cvFilename,
     onEditLinks,
+    audioFailed,
   } = props;
 
   const openCv = async () => {
@@ -234,15 +237,29 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            <div className="flex w-full flex-col items-center justify-center rounded-xl border bg-muted/40 px-2 py-1.5">
-              <span className={cn("text-2xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
-                {fitScore !== null ? fitScore : "—"}
-              </span>
-              <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-                Fit poste
-              </span>
-            </div>
-            {reco && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
+            {audioFailed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex w-full flex-col items-center justify-center rounded-xl border border-destructive/40 bg-destructive/10 px-2 py-1.5">
+                    <MicOff className="h-7 w-7 text-destructive" />
+                    <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-destructive">
+                      Audio KO
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Audio défaillant — note non calculée</TooltipContent>
+              </Tooltip>
+            ) : (
+              <div className="flex w-full flex-col items-center justify-center rounded-xl border bg-muted/40 px-2 py-1.5">
+                <span className={cn("text-2xl font-bold leading-none tabular-nums", fitColor(fitScore))}>
+                  {fitScore !== null ? fitScore : "—"}
+                </span>
+                <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Fit poste
+                </span>
+              </div>
+            )}
+            {reco && !audioFailed && <Badge className={cn(reco.tone, "w-full justify-center px-1.5 py-0.5 text-[10px] hover:bg-inherit")}>{reco.label}</Badge>}
           </div>
           <div className="lg:hidden min-w-0">
             <div className="flex items-center gap-2 min-w-0">

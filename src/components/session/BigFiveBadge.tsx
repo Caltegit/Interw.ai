@@ -23,12 +23,26 @@ export function computeBigFiveAverage(profile?: Profile | null): number | null {
   return Math.round(Math.max(0, Math.min(100, avg)));
 }
 
+import { MicOff } from "lucide-react";
+
 interface Props {
   profile?: Profile | null;
   size?: number;
+  audioFailed?: boolean;
 }
 
-export function BigFiveBadge({ profile, size = 24 }: Props) {
+export function BigFiveBadge({ profile, size = 24, audioFailed }: Props) {
+  if (audioFailed) {
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/15 text-destructive"
+        style={{ width: size, height: size }}
+        title="Audio défaillant — note non calculée"
+      >
+        <MicOff style={{ width: size * 0.55, height: size * 0.55 }} />
+      </span>
+    );
+  }
   const value = computeBigFiveAverage(profile);
   const colorClass =
     value === null

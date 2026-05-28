@@ -1020,6 +1020,56 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     }
     const personalityProfile = buildFallbackPersonalityProfile(incomingProfile);
 
+    // ============================================================
+    // Audio health : verdict global sur la qualité audio de la session.
+    // Un message candidat est considéré "silencieux" si :
+    //   - sa transcription fait < 5 caractères significatifs, OU
+    //   - son audio_quality.peak_rms (si capturé côté client) est < 0.05
+    // failed   : > 80 % des réponses silencieuses → notes non fiables
+    // degraded : > 30 % silencieuses → notes partielles
+    // ok       : sinon
+    // ============================================================
+    const sortedQs = [...questions].sort(
+      (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0),
+    );
+    const questionNumberById = new Map<string, number>();
+    sortedQs.forEach((q: any, i: number) => questionNumberById.set(q.id, i + 1));
+
+    const mainCandidate = candidateMessages.filter((m: any) => !m.is_follow_up);
+    const evaluatedCandidate = mainCandidate.length > 0 ? mainCandidate : candidateMessages;
+
+    const silentItems: Array<{ message_id: string; question_number?: number }> = [];
+    for (const m of evaluatedCandidate) {
+      const txt = (m.content ?? "").trim();
+      const aq = m.audio_quality && typeof m.audio_quality === "object" ? m.audio_quality : null;
+      const peakRms = aq && typeof aq.peak_rms === "number" ? aq.peak_rms : null;
+      const silentByText = txt.length < 5;
+      const silentByRms = peakRms !== null && peakRms < 0.05;
+      if (silentByText || silentByRms) {
+        silentItems.push({
+          message_id: m.id,
+          question_number: m.question_id ? questionNumberById.get(m.question_id) : undefined,
+        });
+      }
+    }
+    const total = evaluatedCandidate.length;
+    const silentRatio = total > 0 ? silentItems.length / total : 0;
+    const audioVerdict: "ok" | "degraded" | "failed" =
+      total === 0 ? "ok" : silentRatio > 0.8 ? "failed" : silentRatio > 0.3 ? "degraded" : "ok";
+    const audioHealth = {
+      verdict: audioVerdict,
+      silent_ratio: Math.round(silentRatio * 100) / 100,
+      total_segments: total,
+      silent_segments: silentItems.length,
+      affected_questions: silentItems,
+      reason:
+        audioVerdict === "failed"
+          ? "silent_ratio > 0.8"
+          : audioVerdict === "degraded"
+          ? "silent_ratio > 0.3"
+          : null,
+    };
+
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").upsert({
       session_id,
@@ -1039,6 +1089,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       followup_questions: parsed.followup_questions || null,
       highlight_clips: highlightClips,
       stats,
+      audio_health: audioHealth,
       generated_at: new Date().toISOString(),
     }, { onConflict: "session_id" }).select("id").single();
 

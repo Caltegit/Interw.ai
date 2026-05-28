@@ -1221,6 +1221,7 @@ export type Database = {
       reports: {
         Row: {
           areas_for_improvement: string[] | null
+          audio_health: Json | null
           coherence: Json | null
           criteria_scores: Json | null
           executive_summary: string
@@ -1253,6 +1254,7 @@ export type Database = {
         }
         Insert: {
           areas_for_improvement?: string[] | null
+          audio_health?: Json | null
           coherence?: Json | null
           criteria_scores?: Json | null
           executive_summary?: string
@@ -1285,6 +1287,7 @@ export type Database = {
         }
         Update: {
           areas_for_improvement?: string[] | null
+          audio_health?: Json | null
           coherence?: Json | null
           criteria_scores?: Json | null
           executive_summary?: string
@@ -1399,6 +1402,7 @@ export type Database = {
       }
       session_messages: {
         Row: {
+          audio_quality: Json | null
           audio_segment_url: string | null
           content: string
           content_raw: string | null
@@ -1416,6 +1420,7 @@ export type Database = {
           video_segment_url: string | null
         }
         Insert: {
+          audio_quality?: Json | null
           audio_segment_url?: string | null
           content: string
           content_raw?: string | null
@@ -1433,6 +1438,7 @@ export type Database = {
           video_segment_url?: string | null
         }
         Update: {
+          audio_quality?: Json | null
           audio_segment_url?: string | null
           content?: string
           content_raw?: string | null
