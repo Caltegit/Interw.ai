@@ -3976,7 +3976,7 @@ export default function InterviewStart() {
                         </div>
                         <div className="h-px" style={{ background: "hsl(var(--l-border))" }} />
                         <Button
-                          className={`w-full h-16 px-6 text-lg sm:text-xl font-semibold rounded-2xl transition-all ${
+                          className={`w-full h-[4.8rem] px-6 text-lg sm:text-xl font-semibold rounded-2xl transition-all ${
                             hasVoice
                               ? "candidate-btn-primary hover:scale-[1.02] animate-pulse"
                               : ""
@@ -3998,7 +3998,10 @@ export default function InterviewStart() {
                               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                                 <CheckCircle2 className="!h-5 !w-5" />
                               </span>
-                              Ma réponse est terminée
+                              <span className="flex flex-col items-start leading-tight">
+                                <span>Ma réponse</span>
+                                <span>est terminée</span>
+                              </span>
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-2">
