@@ -1282,24 +1282,15 @@ export default function InterviewDeviceTest() {
               Votre micro n'a pas été détecté. Sans son, vos réponses ne pourront pas être analysées et la session risque d'échouer.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter>
             <Button
-              variant="outline"
               onClick={() => {
                 setShowSkipConfirm(false);
                 void testMicAndRecorder(selectedAudioId);
               }}
+              className="w-full"
             >
               Refaire le test
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setShowSkipConfirm(false);
-                handleContinue();
-              }}
-            >
-              Je continue quand même
             </Button>
           </DialogFooter>
         </DialogContent>
