@@ -42,8 +42,8 @@ async function loadSegmenter(): Promise<ImageSegmenter | null> {
           delegate: "GPU",
         },
         runningMode: "VIDEO",
-        outputCategoryMask: true,
-        outputConfidenceMasks: false,
+        outputCategoryMask: false,
+        outputConfidenceMasks: true,
       });
       return seg;
     } catch (err) {
