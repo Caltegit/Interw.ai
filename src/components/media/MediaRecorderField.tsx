@@ -382,49 +382,71 @@ export function MediaRecorderField({
   ) : null;
 
   const VideoOptions = type === "video" && !previewUrl ? (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border bg-background/60 px-3 py-2 text-xs">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-        <Label htmlFor="blur-toggle" className="cursor-pointer text-xs font-normal">
-          Flouter l'arrière-plan
-        </Label>
-        <Switch
-          id="blur-toggle"
-          checked={blurEnabled}
-          disabled={!blurSupported}
-          onCheckedChange={(v) => {
-            if (!blurSupported && v) {
-              toast({
-                title: "Non supporté",
-                description: "Votre navigateur ne supporte pas le flou en temps réel.",
-                variant: "destructive",
-              });
-              return;
-            }
-            setBlurEnabled(v);
-          }}
-        />
-        {!blurSupported && (
-          <span className="text-[10px] text-muted-foreground">(non supporté)</span>
-        )}
+    <div className="space-y-2 rounded-md border bg-background/60 px-3 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
+          <Label htmlFor="blur-toggle" className="cursor-pointer text-xs font-normal">
+            Flouter l'arrière-plan
+          </Label>
+          <Switch
+            id="blur-toggle"
+            checked={blurEnabled}
+            disabled={!blurSupported}
+            onCheckedChange={(v) => {
+              if (!blurSupported && v) {
+                toast({
+                  title: "Non supporté",
+                  description: "Votre navigateur ne supporte pas le flou en temps réel.",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setBlurEnabled(v);
+            }}
+          />
+          {!blurSupported && (
+            <span className="text-[10px] text-muted-foreground">(non supporté)</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <Label htmlFor="logo-toggle" className="cursor-pointer text-xs font-normal">
+            Afficher mon logo
+          </Label>
+          <Switch
+            id="logo-toggle"
+            checked={logoEnabled && !!orgLogoUrl}
+            disabled={!orgLogoUrl}
+            onCheckedChange={(v) => setLogoEnabled(v)}
+          />
+          {!orgLogoUrl && (
+            <a href="/settings" className="text-[10px] text-primary hover:underline">
+              Ajouter un logo
+            </a>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-        <Label htmlFor="logo-toggle" className="cursor-pointer text-xs font-normal">
-          Afficher mon logo
-        </Label>
-        <Switch
-          id="logo-toggle"
-          checked={logoEnabled && !!orgLogoUrl}
-          disabled={!orgLogoUrl}
-          onCheckedChange={(v) => setLogoEnabled(v)}
-        />
-        {!orgLogoUrl && (
-          <a href="/settings" className="text-[10px] text-primary hover:underline">
-            Ajouter un logo
-          </a>
-        )}
-      </div>
+      {blurEnabled && blurSupported && (
+        <div className="flex items-center gap-3 pl-6">
+          <Label htmlFor="blur-amount" className="text-[11px] font-normal text-muted-foreground">
+            Intensité
+          </Label>
+          <input
+            id="blur-amount"
+            type="range"
+            min={MIN_BLUR}
+            max={MAX_BLUR}
+            step={2}
+            value={blurAmount}
+            onChange={(e) => setBlurAmount(Number(e.target.value))}
+            className="h-1.5 flex-1 max-w-[180px] cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+          />
+          <span className="w-10 text-right text-[11px] tabular-nums text-muted-foreground">
+            {blurAmount} px
+          </span>
+        </div>
+      )}
     </div>
   ) : null;
 
