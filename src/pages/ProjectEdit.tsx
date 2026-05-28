@@ -182,6 +182,8 @@ export default function ProjectEdit() {
         audioAnalysisEnabled: true,
         showQuestionTimer:
           (project as { show_question_timer?: boolean }).show_question_timer ?? true,
+        reportRecipientUserIds:
+          (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
       });
 
       setLoading(false);
@@ -273,6 +275,7 @@ export default function ProjectEdit() {
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
           audio_analysis_enabled: s.audioAnalysisEnabled,
           show_question_timer: s.showQuestionTimer,
+          report_recipient_user_ids: s.reportRecipientUserIds,
         } as never)
         .eq("id", id);
 

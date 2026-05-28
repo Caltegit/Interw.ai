@@ -85,6 +85,7 @@ const initialState: ProjectFormState = {
   aiQuestionTransitionsCustomText: "",
   audioAnalysisEnabled: true,
   showQuestionTimer: true,
+  reportRecipientUserIds: [],
 };
 
 export default function ProjectNew() {
@@ -97,6 +98,12 @@ export default function ProjectNew() {
   const [saving, setSaving] = useState(false);
   const [formInitial, setFormInitial] = useState<ProjectFormState>(initialState);
   const [templateLoading, setTemplateLoading] = useState(!!templateId);
+
+  // Pré-coche le créateur du projet comme destinataire par défaut
+  useEffect(() => {
+    if (!user) return;
+    setFormInitial((s) => (s.reportRecipientUserIds.length === 0 ? { ...s, reportRecipientUserIds: [user.id] } : s));
+  }, [user]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -211,6 +218,7 @@ export default function ProjectNew() {
           ai_question_transitions_enabled: s.aiQuestionTransitionsEnabled,
           ai_question_transitions_mode: s.aiQuestionTransitionsMode,
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
+          report_recipient_user_ids: s.reportRecipientUserIds,
         } as never)
         .select()
         .single();

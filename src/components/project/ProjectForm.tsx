@@ -19,7 +19,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
@@ -103,6 +105,7 @@ export interface ProjectFormState {
   audioAnalysisEnabled: boolean;
   showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
+  reportRecipientUserIds: string[];
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -241,6 +244,30 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     return () => { cancelled = true; };
   }, [user]);
 
+  // Charge les membres de l'organisation pour le sélecteur de destinataires
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const orgId = prof?.organization_id;
+      if (!orgId) return;
+      const { data: members } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .eq("organization_id", orgId)
+        .order("full_name");
+      if (!cancelled && members) setOrgMembers(members);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
+
+
   const handleCloneClick = () => {
     if (existingClonedVoice) {
       setConfirmReplaceOpen(true);
@@ -309,6 +336,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
   const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
+  const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
+  const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
@@ -364,6 +394,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       audioAnalysisEnabled,
       showQuestionTimer,
       saveIntroToLibrary,
+      reportRecipientUserIds,
     });
   };
 
@@ -976,6 +1007,77 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                               ? "Vidéo ✓"
                               : "Vidéo — non définie"}
                   </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4" />
+                    Destinataires des rapports
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Ces personnes recevront l'email de rapport après chaque entretien.
+                  </p>
+                  <Popover open={recipientsOpen} onOpenChange={setRecipientsOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between" type="button">
+                        <span>
+                          {reportRecipientUserIds.length === 0
+                            ? "Aucun destinataire sélectionné"
+                            : reportRecipientUserIds.length === 1
+                              ? orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.full_name ||
+                                orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.email ||
+                                "1 destinataire"
+                              : `${reportRecipientUserIds.length} destinataires sélectionnés`}
+                        </span>
+                        <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <div className="max-h-72 overflow-auto p-1">
+                        {orgMembers.length === 0 ? (
+                          <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
+                        ) : (
+                          orgMembers.map((m) => {
+                            const checked = reportRecipientUserIds.includes(m.user_id);
+                            return (
+                              <label
+                                key={m.user_id}
+                                className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 hover:bg-accent"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    setReportRecipientUserIds((prev) =>
+                                      v
+                                        ? [...prev, m.user_id]
+                                        : prev.filter((id) => id !== m.user_id),
+                                    );
+                                  }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium">
+                                    {m.full_name || m.email}
+                                  </p>
+                                  {m.full_name && (
+                                    <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {reportRecipientUserIds.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Par défaut, le créateur du projet recevra les rapports.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>

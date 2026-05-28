@@ -946,6 +946,7 @@ export type Database = {
           presentation_video_url: string | null
           record_audio: boolean
           record_video: boolean
+          report_recipient_user_ids: string[]
           show_question_timer: boolean
           slug: string | null
           status: Database["public"]["Enums"]["project_status"]
@@ -986,6 +987,7 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
+          report_recipient_user_ids?: string[]
           show_question_timer?: boolean
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
@@ -1026,6 +1028,7 @@ export type Database = {
           presentation_video_url?: string | null
           record_audio?: boolean
           record_video?: boolean
+          report_recipient_user_ids?: string[]
           show_question_timer?: boolean
           slug?: string | null
           status?: Database["public"]["Enums"]["project_status"]
