@@ -182,6 +182,8 @@ export default function ProjectEdit() {
         audioAnalysisEnabled: true,
         showQuestionTimer:
           (project as { show_question_timer?: boolean }).show_question_timer ?? true,
+        reportRecipientUserIds:
+          (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
       });
 
       setLoading(false);
