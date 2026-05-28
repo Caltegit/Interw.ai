@@ -287,8 +287,12 @@ export default function SharedReport() {
       ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
       : null;
 
+  const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
+  const audioFailed = isAudioFailed(audioHealth);
+
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
+      <AudioHealthBanner health={audioHealth} />
       <DecisionBanner
         readOnly
         candidateName={session.candidate_name}
@@ -303,6 +307,7 @@ export default function SharedReport() {
         rankLabel={rankLabel}
         decision={"none" as RecruiterDecision}
         onDecisionChange={() => {}}
+        audioFailed={audioFailed}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_459px]">
@@ -312,22 +317,22 @@ export default function SharedReport() {
               <TabsTrigger value="decision" className="gap-1">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Reco IA</span>
-                <FitScoreBadge score={fitScore} size={22} />
+                <FitScoreBadge score={fitScore} size={22} audioFailed={audioFailed} />
               </TabsTrigger>
               <TabsTrigger value="bigfive" className="gap-1">
                 <Brain className="h-4 w-4" />
                 <span className="hidden sm:inline">Big Five</span>
-                <BigFiveBadge profile={report?.personality_profile} size={22} />
+                <BigFiveBadge profile={report?.personality_profile} size={22} audioFailed={audioFailed} />
               </TabsTrigger>
               <TabsTrigger value="voice" className="gap-1">
                 <Mic className="h-4 w-4" />
                 <span className="hidden sm:inline">Orale</span>
-                <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} />
+                <ParaverbalBadge analysis={report?.paraverbal_analysis} size={22} audioFailed={audioFailed} />
               </TabsTrigger>
               <TabsTrigger value="attitude" className="gap-1">
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">Attitude</span>
-                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} />
+                <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={22} audioFailed={audioFailed} />
               </TabsTrigger>
               <TabsTrigger value="answers" className="gap-1">
                 <Play className="h-4 w-4" /> <span className="hidden sm:inline">Réponses</span>
