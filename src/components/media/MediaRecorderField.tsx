@@ -38,26 +38,36 @@ const PREFS_KEY = "media-recorder-prefs:v1";
 const DEFAULT_BLUR = 12;
 const MIN_BLUR = 4;
 const MAX_BLUR = 24;
+const DEFAULT_LOGO_SIZE = 100;
+const MIN_LOGO_SIZE = 50;
+const MAX_LOGO_SIZE = 200;
 
 interface RecorderPrefs {
   blur: boolean;
   logo: boolean;
   blurAmount: number;
+  logoSize: number;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
 }
 
 function loadPrefs(): RecorderPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (!raw) return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
+    if (!raw) return { blur: false, logo: false, blurAmount: DEFAULT_BLUR, logoSize: DEFAULT_LOGO_SIZE };
     const p = JSON.parse(raw);
     const amount = typeof p.blurAmount === "number" ? p.blurAmount : DEFAULT_BLUR;
+    const size = typeof p.logoSize === "number" ? p.logoSize : DEFAULT_LOGO_SIZE;
     return {
       blur: !!p.blur,
       logo: !!p.logo,
-      blurAmount: Math.min(MAX_BLUR, Math.max(MIN_BLUR, amount)),
+      blurAmount: clamp(amount, MIN_BLUR, MAX_BLUR),
+      logoSize: clamp(size, MIN_LOGO_SIZE, MAX_LOGO_SIZE),
     };
   } catch {
-    return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
+    return { blur: false, logo: false, blurAmount: DEFAULT_BLUR, logoSize: DEFAULT_LOGO_SIZE };
   }
 }
 
@@ -99,6 +109,7 @@ export function MediaRecorderField({
   const [blurEnabled, setBlurEnabled] = useState(initialPrefs.blur);
   const [logoEnabled, setLogoEnabled] = useState(initialPrefs.logo);
   const [blurAmount, setBlurAmount] = useState(initialPrefs.blurAmount);
+  const [logoSize, setLogoSize] = useState(initialPrefs.logoSize);
   const blurSupported = useState(() => (type === "video" ? isBlurSupported() : true))[0];
 
   const composerActive = type === "video" && (blurEnabled || logoEnabled);
@@ -119,8 +130,8 @@ export function MediaRecorderField({
   }, [existingUrl]);
 
   useEffect(() => {
-    savePrefs({ blur: blurEnabled, logo: logoEnabled, blurAmount });
-  }, [blurEnabled, logoEnabled, blurAmount]);
+    savePrefs({ blur: blurEnabled, logo: logoEnabled, blurAmount, logoSize });
+  }, [blurEnabled, logoEnabled, blurAmount, logoSize]);
 
   const destroyComposer = useCallback(() => {
     if (composerRef.current) {
@@ -188,6 +199,7 @@ export function MediaRecorderField({
         showLogo: logoEnabled,
         mirrorPreview: true,
         blurPx: blurAmount,
+        logoScale: logoSize / 100,
       });
       composerRef.current = comp;
       void comp.init(logoEnabled ? orgLogoUrl : null).then(() => {
@@ -206,11 +218,12 @@ export function MediaRecorderField({
         blurBackground: blurEnabled,
         showLogo: logoEnabled,
         blurPx: blurAmount,
+        logoScale: logoSize / 100,
       });
       void composerRef.current.setLogoUrl(logoEnabled ? orgLogoUrl : null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composerActive, blurEnabled, logoEnabled, blurAmount, cameraReady, orgLogoUrl]);
+  }, [composerActive, blurEnabled, logoEnabled, blurAmount, logoSize, cameraReady, orgLogoUrl]);
 
   useEffect(() => {
     return () => {
@@ -244,6 +257,7 @@ export function MediaRecorderField({
             showLogo: logoEnabled,
             mirrorPreview: true,
             blurPx: blurAmount,
+            logoScale: logoSize / 100,
           });
           composerRef.current = comp;
           await comp.init(logoEnabled ? orgLogoUrl : null);
@@ -381,12 +395,17 @@ export function MediaRecorderField({
     </div>
   ) : null;
 
+  const sliderClass =
+    "h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary";
+  const showLogoSlider = logoEnabled && !!orgLogoUrl;
+
   const VideoOptions = type === "video" && !previewUrl ? (
-    <div className="space-y-2 rounded-md border bg-background/60 px-3 py-2 text-xs">
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-          <Label htmlFor="blur-toggle" className="cursor-pointer text-xs font-normal">
+    <div className="space-y-2.5 rounded-md border bg-background/60 px-3 py-2.5 text-xs">
+      {/* Ligne 1 : flou */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-center gap-2 sm:w-56">
+          <Sparkles className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <Label htmlFor="blur-toggle" className="flex-1 cursor-pointer text-xs font-normal">
             Flouter l'arrière-plan
           </Label>
           <Switch
@@ -405,13 +424,38 @@ export function MediaRecorderField({
               setBlurEnabled(v);
             }}
           />
-          {!blurSupported && (
-            <span className="text-[10px] text-muted-foreground">(non supporté)</span>
-          )}
         </div>
-        <div className="flex items-center gap-2">
-          <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
-          <Label htmlFor="logo-toggle" className="cursor-pointer text-xs font-normal">
+        <div className="flex flex-1 items-center gap-3 sm:pl-3">
+          {blurEnabled && blurSupported ? (
+            <>
+              <Label htmlFor="blur-amount" className="text-[11px] font-normal text-muted-foreground">
+                Intensité
+              </Label>
+              <input
+                id="blur-amount"
+                type="range"
+                min={MIN_BLUR}
+                max={MAX_BLUR}
+                step={2}
+                value={blurAmount}
+                onChange={(e) => setBlurAmount(Number(e.target.value))}
+                className={sliderClass}
+              />
+              <span className="w-12 text-right text-[11px] tabular-nums text-muted-foreground">
+                {blurAmount} px
+              </span>
+            </>
+          ) : !blurSupported ? (
+            <span className="text-[10px] text-muted-foreground">Non supporté par ce navigateur</span>
+          ) : null}
+        </div>
+      </div>
+
+      {/* Ligne 2 : logo */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-center gap-2 sm:w-56">
+          <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <Label htmlFor="logo-toggle" className="flex-1 cursor-pointer text-xs font-normal">
             Afficher mon logo
           </Label>
           <Switch
@@ -420,33 +464,34 @@ export function MediaRecorderField({
             disabled={!orgLogoUrl}
             onCheckedChange={(v) => setLogoEnabled(v)}
           />
-          {!orgLogoUrl && (
-            <a href="/settings" className="text-[10px] text-primary hover:underline">
+        </div>
+        <div className="flex flex-1 items-center gap-3 sm:pl-3">
+          {showLogoSlider ? (
+            <>
+              <Label htmlFor="logo-size" className="text-[11px] font-normal text-muted-foreground">
+                Taille
+              </Label>
+              <input
+                id="logo-size"
+                type="range"
+                min={MIN_LOGO_SIZE}
+                max={MAX_LOGO_SIZE}
+                step={10}
+                value={logoSize}
+                onChange={(e) => setLogoSize(Number(e.target.value))}
+                className={sliderClass}
+              />
+              <span className="w-12 text-right text-[11px] tabular-nums text-muted-foreground">
+                {logoSize} %
+              </span>
+            </>
+          ) : !orgLogoUrl ? (
+            <a href="/settings" className="text-[11px] text-primary hover:underline">
               Ajouter un logo
             </a>
-          )}
+          ) : null}
         </div>
       </div>
-      {blurEnabled && blurSupported && (
-        <div className="flex items-center gap-3 pl-6">
-          <Label htmlFor="blur-amount" className="text-[11px] font-normal text-muted-foreground">
-            Intensité
-          </Label>
-          <input
-            id="blur-amount"
-            type="range"
-            min={MIN_BLUR}
-            max={MAX_BLUR}
-            step={2}
-            value={blurAmount}
-            onChange={(e) => setBlurAmount(Number(e.target.value))}
-            className="h-1.5 flex-1 max-w-[180px] cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-          />
-          <span className="w-10 text-right text-[11px] tabular-nums text-muted-foreground">
-            {blurAmount} px
-          </span>
-        </div>
-      )}
     </div>
   ) : null;
 

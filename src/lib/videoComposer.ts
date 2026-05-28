@@ -19,6 +19,8 @@ export interface ComposerOptions {
   mirrorPreview: boolean;
   /** Intensité du flou d'arrière-plan en pixels (par défaut 12). */
   blurPx?: number;
+  /** Facteur d'échelle appliqué au logo (1 = taille par défaut). */
+  logoScale?: number;
 }
 
 const TARGET_WIDTH = 1280;
@@ -281,7 +283,8 @@ export class VideoComposer {
 
     // Logo en haut à gauche (jamais miroité)
     if (this.options.showLogo && this.logoImg) {
-      const logoH = Math.round(h * LOGO_HEIGHT_RATIO);
+      const scale = Math.max(0.1, this.options.logoScale ?? 1);
+      const logoH = Math.round(h * LOGO_HEIGHT_RATIO * scale);
       const ratio = this.logoImg.width / this.logoImg.height || 1;
       const logoW = Math.round(logoH * ratio);
       ctx.drawImage(this.logoImg, LOGO_PADDING, LOGO_PADDING, logoW, logoH);
