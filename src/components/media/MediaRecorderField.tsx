@@ -130,8 +130,8 @@ export function MediaRecorderField({
   }, [existingUrl]);
 
   useEffect(() => {
-    savePrefs({ blur: blurEnabled, logo: logoEnabled, blurAmount });
-  }, [blurEnabled, logoEnabled, blurAmount]);
+    savePrefs({ blur: blurEnabled, logo: logoEnabled, blurAmount, logoSize });
+  }, [blurEnabled, logoEnabled, blurAmount, logoSize]);
 
   const destroyComposer = useCallback(() => {
     if (composerRef.current) {
