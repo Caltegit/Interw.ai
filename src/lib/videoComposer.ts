@@ -215,20 +215,36 @@ export class VideoComposer {
       ctx.drawImage(v, sx, sy, sw, sh, -BLUR_PX, -BLUR_PX, w + 2 * BLUR_PX, h + 2 * BLUR_PX);
       ctx.filter = "none";
 
-      // 2) Segmente sur la frame source
+      // 2) Segmente sur la frame source (confidence mask = proba foreground)
       try {
         const result: ImageSegmenterResult = this.segmenter.segmentForVideo(v, now);
-        const mask = result.categoryMask;
+        const masks = result.confidenceMasks;
+        const mask = masks && masks.length > 0 ? masks[masks.length - 1] : null;
         if (mask) {
-          const data = mask.getAsUint8Array();
+          const data = mask.getAsFloat32Array();
           const mw = mask.width;
           const mh = mask.height;
-          // Construis un masque alpha : pixel sujet = opaque, fond = transparent
+          // Détermine la convention en mesurant la zone centrale (probablement sujet) :
+          // si la moyenne y est faible, c'est que cette valeur représente le background → on inverse.
+          let centerSum = 0;
+          let centerCount = 0;
+          const cx0 = Math.floor(mw * 0.4);
+          const cx1 = Math.floor(mw * 0.6);
+          const cy0 = Math.floor(mh * 0.4);
+          const cy1 = Math.floor(mh * 0.6);
+          for (let y = cy0; y < cy1; y++) {
+            for (let x = cx0; x < cx1; x++) {
+              centerSum += data[y * mw + x];
+              centerCount++;
+            }
+          }
+          const centerAvg = centerCount > 0 ? centerSum / centerCount : 0.5;
+          const invert = centerAvg < 0.5;
           const imgData = this.maskCtx.createImageData(mw, mh);
           for (let i = 0; i < data.length; i++) {
-            const v = data[i];
-            // selfie_segmenter (categoryMask) : 0 = background, 255 = sujet
-            const alpha = v === 0 ? 0 : 255;
+            const p = invert ? 1 - data[i] : data[i];
+            // Seuil doux : >0.5 = sujet net, sinon fond flou
+            const alpha = p > 0.5 ? 255 : 0;
             imgData.data[i * 4] = 255;
             imgData.data[i * 4 + 1] = 255;
             imgData.data[i * 4 + 2] = 255;
