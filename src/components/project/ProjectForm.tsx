@@ -103,6 +103,7 @@ export interface ProjectFormState {
   audioAnalysisEnabled: boolean;
   showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
+  reportRecipientUserIds: string[];
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
