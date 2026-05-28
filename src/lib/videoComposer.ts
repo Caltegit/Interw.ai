@@ -212,9 +212,10 @@ export class VideoComposer {
     }
 
     if (this.options.blurBackground && this.segmenter) {
+      const blurPx = Math.max(0, this.options.blurPx ?? DEFAULT_BLUR_PX);
       // 1) Dessine le fond flouté plein cadre
-      ctx.filter = `blur(${BLUR_PX}px)`;
-      ctx.drawImage(v, sx, sy, sw, sh, -BLUR_PX, -BLUR_PX, w + 2 * BLUR_PX, h + 2 * BLUR_PX);
+      ctx.filter = `blur(${blurPx}px)`;
+      ctx.drawImage(v, sx, sy, sw, sh, -blurPx, -blurPx, w + 2 * blurPx, h + 2 * blurPx);
       ctx.filter = "none";
 
       // 2) Segmente sur la frame source (confidence mask = proba foreground)
