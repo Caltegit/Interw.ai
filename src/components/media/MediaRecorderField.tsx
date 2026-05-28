@@ -38,26 +38,36 @@ const PREFS_KEY = "media-recorder-prefs:v1";
 const DEFAULT_BLUR = 12;
 const MIN_BLUR = 4;
 const MAX_BLUR = 24;
+const DEFAULT_LOGO_SIZE = 100;
+const MIN_LOGO_SIZE = 50;
+const MAX_LOGO_SIZE = 200;
 
 interface RecorderPrefs {
   blur: boolean;
   logo: boolean;
   blurAmount: number;
+  logoSize: number;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
 }
 
 function loadPrefs(): RecorderPrefs {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (!raw) return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
+    if (!raw) return { blur: false, logo: false, blurAmount: DEFAULT_BLUR, logoSize: DEFAULT_LOGO_SIZE };
     const p = JSON.parse(raw);
     const amount = typeof p.blurAmount === "number" ? p.blurAmount : DEFAULT_BLUR;
+    const size = typeof p.logoSize === "number" ? p.logoSize : DEFAULT_LOGO_SIZE;
     return {
       blur: !!p.blur,
       logo: !!p.logo,
-      blurAmount: Math.min(MAX_BLUR, Math.max(MIN_BLUR, amount)),
+      blurAmount: clamp(amount, MIN_BLUR, MAX_BLUR),
+      logoSize: clamp(size, MIN_LOGO_SIZE, MAX_LOGO_SIZE),
     };
   } catch {
-    return { blur: false, logo: false, blurAmount: DEFAULT_BLUR };
+    return { blur: false, logo: false, blurAmount: DEFAULT_BLUR, logoSize: DEFAULT_LOGO_SIZE };
   }
 }
 
