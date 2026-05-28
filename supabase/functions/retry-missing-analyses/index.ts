@@ -65,6 +65,19 @@ serve(async (req) => {
     return false; // skipped, ok, etc.
   };
 
+  // Précharge les session_id ayant au moins un segment vidéo candidat sur la fenêtre.
+  const sessionIds = (rows ?? []).map((r: any) => r.session_id);
+  const sessionsWithVideo = new Set<string>();
+  if (sessionIds.length > 0) {
+    const { data: vidRows } = await supabase
+      .from("session_messages")
+      .select("session_id")
+      .in("session_id", sessionIds)
+      .eq("role", "candidate")
+      .not("video_segment_url", "is", null);
+    (vidRows ?? []).forEach((m: any) => sessionsWithVideo.add(m.session_id));
+  }
+
   const toRetry: Array<{ session_id: string; fn: string }> = [];
   for (const r of rows ?? []) {
     const project: any = (r as any).sessions?.projects;
@@ -72,7 +85,11 @@ serve(async (req) => {
     if (needsRetry((r as any).paraverbal_analysis, project.audio_analysis_enabled)) {
       toRetry.push({ session_id: (r as any).session_id, fn: "analyze-paraverbal" });
     }
-    if (needsRetry((r as any).nonverbal_analysis, project.record_video)) {
+    // Pour la non-verbale : on autorise aussi quand record_video=false mais des segments vidéo existent
+    // (cas historiques où la captation a eu lieu malgré le flag projet à false).
+    const nonverbalEnabled =
+      project.record_video || sessionsWithVideo.has((r as any).session_id);
+    if (needsRetry((r as any).nonverbal_analysis, nonverbalEnabled)) {
       toRetry.push({ session_id: (r as any).session_id, fn: "analyze-nonverbal" });
     }
     if (toRetry.length >= MAX_PER_RUN) break;
