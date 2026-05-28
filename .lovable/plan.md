@@ -1,34 +1,40 @@
-### Objectif
-Réagencer les options vidéo en deux lignes (une par option), avec le curseur d'intensité à droite du toggle « Flouter l'arrière-plan », et ajouter une option « Taille du logo » avec son propre curseur à droite du toggle « Afficher mon logo ».
+### Problème
 
-### Mise en page cible
+Le flou d'arrière-plan découpe mal les cheveux : le contour est dur, dentelé, et des mèches disparaissent. Cela vient de deux choix dans `src/lib/videoComposer.ts` :
 
-```text
-✨  Flouter l'arrière-plan   [●—]      Intensité  [——●———]  12 px
-🖼️  Afficher mon logo        [●—]      Taille     [——●———]  100 %
-```
+1. Le masque est **binaire** (seuil à 0.5 → alpha 0 ou 255), ce qui crée un bord net et "escalier".
+2. Le modèle utilisé est `selfie_segmenter` (rapide, mais peu précis sur les cheveux). MediaPipe propose `selfie_multiclass_256x256.tflite` qui sépare explicitement *hair / body-skin / face-skin / background* et donne des bords beaucoup plus fins.
 
-- Chaque option occupe une ligne complète.
-- Le curseur n'apparaît que lorsque le toggle correspondant est activé (sinon l'espace reste vide pour conserver l'alignement).
-- Sur mobile (sm:), si trop étroit, le curseur passe sous le toggle.
+### Solution
 
-### Fichiers modifiés
+**1. Passer au modèle multi-classes "selfie multiclass"**
+- Remplacer l'URL du modèle par `selfie_multiclass_256x256.tflite`.
+- Activer `outputCategoryMask: true` ET `outputConfidenceMasks: true`.
+- Considérer comme "premier plan" toutes les classes ≠ background (0) : hair, body-skin, face-skin, clothes, accessories. → les cheveux sont enfin inclus de façon nette.
 
-**1. `src/lib/videoComposer.ts`**
-- Ajouter `logoScale?: number` dans `ComposerOptions` (défaut 1).
-- Remplacer la constante fixe par un calcul : `logoH = h * LOGO_HEIGHT_RATIO * (options.logoScale ?? 1)`.
-- `setOptions()` propage `logoScale`.
+**2. Masque à alpha doux (feathering) au lieu d'un seuil dur**
+- Construire le masque à partir de la **probabilité** (0–1) plutôt que d'un seuil booléen :
+  - alpha = clamp((p − 0.35) / (0.65 − 0.35)) × 255 → transition douce sur ~30 % de plage.
+- Appliquer un léger **flou gaussien sur le masque lui-même** (`maskCtx.filter = "blur(2px)"` lors du `drawImage` du masque sur la frame finale) pour lisser les contours de cheveux fins.
 
-**2. `src/components/media/MediaRecorderField.tsx`**
-- Étendre `RecorderPrefs` avec `logoSize: number` (défaut 100, plage 50 → 200, pas 10) ; chargement/sauvegarde dans `localStorage`.
-- Ajouter le state `logoSize`, l'inclure dans le `useEffect` de persistance et dans la création/mise à jour du `VideoComposer` (`logoScale: logoSize / 100`).
-- Refondre le bloc `VideoOptions` :
-  - Conteneur `space-y-2`, chaque option dans une `div` flex avec `justify-between`.
-  - Partie gauche : icône + label + switch (groupés dans un flex avec largeur min fixe pour aligner les curseurs).
-  - Partie droite : curseur + valeur (rendu conditionnel, sinon un placeholder transparent pour garder la hauteur).
-- Le curseur d'intensité reste `min=4 max=24 step=2` ; le curseur de taille `min=50 max=200 step=10`, suffixe `%`.
-- Le curseur « Taille » est masqué (ou désactivé) si pas de logo dispo ou si le toggle est off.
+**3. Upscaler le masque proprement**
+- Le masque MediaPipe fait 256×256. Le redimensionner en 1280×720 avec `imageSmoothingEnabled = true` et `imageSmoothingQuality = "high"` (au lieu du défaut) avant le composite — réduit l'effet escalier.
+
+**4. Garder un fallback**
+- Si le modèle multi-classes échoue à charger (réseau, GPU), retomber automatiquement sur l'ancien `selfie_segmenter`. Le flou continue de fonctionner.
+
+### Détails techniques (`src/lib/videoComposer.ts`)
+
+- `loadSegmenter()` : nouvelle URL + `outputCategoryMask: true`. Try/catch interne pour fallback.
+- `renderFrame()` :
+  - Récupérer `result.categoryMask` (Uint8) ; foreground = pixel ≠ 0.
+  - Si on a aussi un `confidenceMask`, l'utiliser pour le feathering ; sinon utiliser la category mask seule.
+  - Remplacer la boucle qui écrit `alpha = p > 0.5 ? 255 : 0` par la rampe douce ci-dessus.
+  - Activer `imageSmoothingQuality = "high"` sur le contexte temporaire avant le composite.
+  - Ajouter un `filter = "blur(2px)"` au moment de `tctx.drawImage(this.maskCanvas, ...)` puis le réinitialiser.
 
 ### Hors périmètre
-- Pas de changement côté candidat ni en base de données.
-- Pas de modification du logo lui-même (toujours en haut à gauche, padding inchangé).
+
+- Pas de nouveau réglage UI (le slider d'intensité existant reste tel quel).
+- Pas de changement côté candidat ni en base.
+- Pas de WebGL custom : on reste sur l'API Canvas 2D.

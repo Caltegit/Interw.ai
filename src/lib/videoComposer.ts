@@ -30,7 +30,13 @@ const DEFAULT_BLUR_PX = 12;
 const LOGO_HEIGHT_RATIO = 0.1; // 10% de la hauteur
 const LOGO_PADDING = 24;
 
+const MULTICLASS_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite";
+const SELFIE_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite";
+
 let segmenterPromise: Promise<ImageSegmenter | null> | null = null;
+let segmenterIsMulticlass = false;
 
 async function loadSegmenter(): Promise<ImageSegmenter | null> {
   if (segmenterPromise) return segmenterPromise;
@@ -39,16 +45,33 @@ async function loadSegmenter(): Promise<ImageSegmenter | null> {
       const vision = await FilesetResolver.forVisionTasks(
         "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm",
       );
+      // Tentative 1 : modèle multi-classes (cheveux/peau/vêtements séparés) → contours plus fins
+      try {
+        const seg = await ImageSegmenter.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: MULTICLASS_MODEL_URL,
+            delegate: "GPU",
+          },
+          runningMode: "VIDEO",
+          outputCategoryMask: true,
+          outputConfidenceMasks: true,
+        });
+        segmenterIsMulticlass = true;
+        return seg;
+      } catch (err) {
+        console.warn("[videoComposer] multiclass segmenter failed, falling back", err);
+      }
+      // Fallback : selfie segmenter classique
       const seg = await ImageSegmenter.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath:
-            "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+          modelAssetPath: SELFIE_MODEL_URL,
           delegate: "GPU",
         },
         runningMode: "VIDEO",
         outputCategoryMask: false,
         outputConfidenceMasks: true,
       });
+      segmenterIsMulticlass = false;
       return seg;
     } catch (err) {
       console.warn("[videoComposer] segmenter init failed", err);
