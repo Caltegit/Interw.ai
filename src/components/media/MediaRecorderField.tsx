@@ -109,6 +109,7 @@ export function MediaRecorderField({
   const [blurEnabled, setBlurEnabled] = useState(initialPrefs.blur);
   const [logoEnabled, setLogoEnabled] = useState(initialPrefs.logo);
   const [blurAmount, setBlurAmount] = useState(initialPrefs.blurAmount);
+  const [logoSize, setLogoSize] = useState(initialPrefs.logoSize);
   const blurSupported = useState(() => (type === "video" ? isBlurSupported() : true))[0];
 
   const composerActive = type === "video" && (blurEnabled || logoEnabled);
