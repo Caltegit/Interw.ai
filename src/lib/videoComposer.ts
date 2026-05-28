@@ -227,8 +227,8 @@ export class VideoComposer {
           const imgData = this.maskCtx.createImageData(mw, mh);
           for (let i = 0; i < data.length; i++) {
             const v = data[i];
-            // selfie_segmenter : 0 = background, autres = sujet
-            const alpha = v === 0 ? 0 : 255;
+            // selfie_segmenter (categoryMask) : 0 = sujet, autres = fond
+            const alpha = v === 0 ? 255 : 0;
             imgData.data[i * 4] = 255;
             imgData.data[i * 4 + 1] = 255;
             imgData.data[i * 4 + 2] = 255;
