@@ -21,6 +21,7 @@ import NetworkQualityIndicator from "@/components/interview/NetworkQualityIndica
 import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
+import MicBlockingDialog from "@/components/interview/MicBlockingDialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCachedTtsBlob,
@@ -503,6 +504,11 @@ export default function InterviewStart() {
   const [bootSteps, setBootSteps] = useState<BootStep[]>([]);
   const [bootPercent, setBootPercent] = useState(0);
   const [bootActive, setBootActive] = useState(false);
+
+  // ── Garde micro bloquante au démarrage (warmup) ──
+  const [micBlockOpen, setMicBlockOpen] = useState(false);
+  const [micBlockRetrying, setMicBlockRetrying] = useState(false);
+  const micBlockResolveRef = useRef<((retry: boolean) => void) | null>(null);
 
   // ── Overlay de chargement entre deux questions ──
   const [questionLoading, setQuestionLoading] = useState<{
@@ -2070,28 +2076,76 @@ export default function InterviewStart() {
     // Start camera stream
     await startVideoStream();
 
-    // Garde anti-silence : on mesure 1.5 s de signal micro avant la 1ʳᵉ question.
-    // Si rien (piste muted + RMS plat), on prévient le candidat — non bloquant
-    // pour ne pas créer un cul-de-sac, mais visible pour qu'il agisse.
-    try {
-      const s = streamRef.current;
-      if (s) {
-        const m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
-        if (m.ok && m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX && m.muted) {
-          toast({
-            title: "Aucun son détecté",
-            description: "Vérifiez que votre micro est branché et non coupé.",
-            variant: "destructive",
-          });
-          logger.error("interview_mic_warmup_silent", {
-            sessionId: session?.id ?? null,
-            peak: m.peak,
-            activeMs: m.activeMs,
-            muted: m.muted,
-          });
+    // Garde anti-silence bloquante : on mesure 1.5 s de signal micro avant la
+    // 1ʳᵉ question. Si rien (piste muted OU pic plat), on bloque le démarrage
+    // tant que le candidat n'a pas un micro fonctionnel — pas d'entretien muet.
+    {
+      let blocked = false;
+      // Boucle : on remesure tant que le candidat appuie sur « Réessayer ».
+      // « Refaire le test technique » navigue ailleurs et démonte le composant.
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const s = streamRef.current;
+        let m: Awaited<ReturnType<typeof measureMicLevel>> | null = null;
+        if (s) {
+          try {
+            m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
+          } catch {
+            m = null;
+          }
         }
+        const failed =
+          !s ||
+          !m ||
+          !m.ok ||
+          m.muted ||
+          m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX;
+
+        if (!failed) {
+          if (blocked) {
+            // Le candidat est revenu en état OK : on ferme la modale et on continue.
+            setMicBlockOpen(false);
+            setMicBlockRetrying(false);
+          }
+          break;
+        }
+
+        blocked = true;
+        logger.error("interview_mic_warmup_silent", {
+          sessionId: session?.id ?? null,
+          peak: m?.peak ?? null,
+          activeMs: m?.activeMs ?? null,
+          muted: m?.muted ?? null,
+          ok: m?.ok ?? false,
+        });
+
+        // On masque l'overlay de boot tant que la modale est visible.
+        setBootActive(false);
+        setMicBlockRetrying(false);
+        setMicBlockOpen(true);
+
+        // Attend l'action utilisateur. true = réessayer ; false = abandon (la
+        // dialog redirige vers le test technique, le composant sera démonté).
+        const retry = await new Promise<boolean>((resolve) => {
+          micBlockResolveRef.current = resolve;
+        });
+        micBlockResolveRef.current = null;
+
+        if (!retry) {
+          // L'utilisateur a choisi de refaire le test technique → on quitte
+          // beginInterview sans démarrer l'entretien.
+          setMicBlockOpen(false);
+          return;
+        }
+
+        // Réessayer : on relance la mesure (boucle).
+        setMicBlockRetrying(true);
+        // Réactive le boot overlay pour le prochain affichage si la mesure réussit.
+        setBootActive(true);
       }
-    } catch { /* non bloquant */ }
+    }
+
+
 
     // Start auto-end timers
     interviewStartTimeRef.current = Date.now();
@@ -4456,6 +4510,22 @@ export default function InterviewStart() {
           )}
         </div>
       )}
+
+      <MicBlockingDialog
+        open={micBlockOpen}
+        retrying={micBlockRetrying}
+        onRetry={() => {
+          micBlockResolveRef.current?.(true);
+        }}
+        onRedoTest={() => {
+          micBlockResolveRef.current?.(false);
+          try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+          if (token) {
+            try { sessionStorage.removeItem(`mic-test-validated:${token}`); } catch { /* ignore */ }
+          }
+          navigate(`/session/${slug}/test/${token}`);
+        }}
+      />
     </CandidateLayout>
   );
 }

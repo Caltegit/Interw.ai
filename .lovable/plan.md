@@ -1,72 +1,62 @@
-
 ## Objectif
 
-Quand un entretien est majoritairement silencieux (micro coupé / inaudible), ne pas afficher une note trompeuse mais signaler clairement le problème dans le rapport.
+Empêcher qu'un entretien démarre sans micro fonctionnel, sans ajouter de surveillance pendant l'entretien (zéro risque de faux positif en cours de session).
 
-## Règle de déclenchement
+Couverture estimée : ~95 % des cas (mauvais micro par défaut, mute hardware, permissions, casque mal branché) + les cas où le candidat change de device entre le test et le start (détecté au warmup).
 
-Un entretien est marqué **« Audio défaillant »** si :
-- **plus de 80 %** des segments de réponses candidat sont silencieux/inaudibles,
-- OU le `peak_rms` moyen pondéré < 0.05,
-- OU plus de 80 % des transcriptions candidat sont vides ou < 5 caractères.
+Non couvert volontairement : débranchement physique ou coupure système **pendant** l'entretien (sera traité plus tard si nécessaire, après observation des cas réels).
 
-(Le 3ᵉ critère permet de couvrir les sessions passées qui n'auront pas les métriques RMS — on se base alors sur la transcription.)
+## Ce qui change
 
-## Ce qui change dans l'app
+### 1. Test technique réellement bloquant (`src/pages/InterviewDeviceTest.tsx`)
 
-### 1. Métriques pendant l'entretien (léger)
-- Nouveau module `src/lib/audioQualityWatcher.ts` : échantillonne le RMS via `AnalyserNode` pendant chaque réponse candidat (réutilise les seuils de `src/lib/micLevel.ts`).
-- À la fin de chaque réponse, agrège `{ peak_rms, active_ratio, silence_ms, duration_ms, track_muted_events }` et le stocke dans `session_messages.audio_quality` (jsonb, nouvelle colonne).
-- Intégration dans `src/pages/InterviewStart.tsx` uniquement — **aucun bandeau temps réel** (le système existant 6 s / 12 s / 20 s suffit, comme discuté).
+Aujourd'hui le test mesure le micro mais on peut passer outre. On rend le passage obligatoire :
 
-### 2. Verdict côté serveur (`generate-report`)
-- Dans `supabase/functions/generate-report/index.ts`, calcule un `audio_health` agrégé :
+- Le bouton **« Continuer »** reste désactivé tant que la mesure n'a pas validé `peak >= MIC_THRESHOLDS.TEST_PEAK_MIN` (0.10) **et** `activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN` (800 ms).
+- Si la mesure échoue : message clair (« On ne vous a pas entendu. Vérifiez que le bon micro est sélectionné, parlez plus fort, puis relancez le test. ») + bouton **« Refaire le test »**. Pas de contournement.
+- À la validation, on persiste dans `sessionStorage` sous la clé `mic-test-validated:${sessionId}` :
   ```json
-  {
-    "verdict": "ok" | "degraded" | "failed",
-    "silent_ratio": 0.87,
-    "affected_questions": [{ "message_id": "...", "question_number": 2 }],
-    "reason": "silent_ratio > 0.8"
-  }
+  { "deviceId": "<deviceId>", "validatedAt": <timestamp>, "peak": 0.21, "activeMs": 1340 }
   ```
-- Stocké dans `reports.audio_health` (jsonb, nouvelle colonne).
-- Si `verdict === "failed"`, le rapport est généré quand même mais avec un flag.
 
-### 3. Affichage rapport (le cœur de la demande)
-Dans `src/pages/SessionDetail.tsx` et `src/pages/SharedReport.tsx` :
+### 2. Warmup bloquant à l'entrée d'entretien (`src/pages/InterviewStart.tsx`)
 
-**Quand `audio_health.verdict === "failed"` :**
-- **Bandeau rouge en haut** (au-dessus du `DecisionBanner`) :
-  > 🔇 **Problème audio détecté** — 87 % de l'entretien est silencieux ou inaudible. Le micro du candidat était probablement coupé ou défectueux. Les notes ci-dessous ne sont pas fiables.
-- **Remplacement de la note** : dans le `DecisionBanner` et tous les badges (`FitScoreBadge`, `BigFiveBadge`, `ParaverbalBadge`, `NonverbalBadge`), afficher un **picto `MicOff` rouge** à la place du score, avec tooltip « Audio défaillant — note non calculée ».
-- Les onglets « Big Five / Orale / Attitude » affichent le même état vide qu'aujourd'hui (analyses non disponibles).
-- L'onglet « Réponses » reste accessible : sur chaque `QuestionAnswerRow` dont le segment est silencieux, badge « 🔇 Inaudible » à côté du numéro de question.
+Au moment où le stream micro est acquis (avant la 1ère question), on fait une mesure courte de **1,5 s** via `measureMicLevel()` déjà existant.
 
-**Quand `audio_health.verdict === "degraded"` (entre 30 % et 80 % silencieux) :**
-- Bandeau orange plus discret (« Qualité audio partielle — certaines réponses sont inaudibles »), liste les questions concernées, mais on garde les notes affichées.
+Deux contrôles séquentiels :
 
-### 4. Backfill sessions passées
-Edge function `recompute-audio-health` (admin uniquement) qui recalcule `audio_health` pour les rapports existants à partir des transcriptions (`session_messages.content`), sans avoir besoin du RMS. Permet de flagger la session `36192d01-…` rétroactivement.
+**a. Vérification du device** : on compare `streamRef.current.getAudioTracks()[0].getSettings().deviceId` au `deviceId` stocké dans `sessionStorage`. S'ils diffèrent → on n'échoue pas tout de suite, on continue la mesure (le candidat a peut-être délibérément changé de micro et celui-ci fonctionne).
+
+**b. Vérification du niveau** : si `peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX` (0.01) OU `track.muted === true` → on bloque le démarrage.
+
+En cas de blocage, on affiche un nouveau composant `MicBlockingDialog` (modal plein écran, non-dismissible) :
+
+- Titre : **« Micro non détecté »**
+- Texte : explique que le micro semble coupé ou inaudible, propose de vérifier le sélecteur système / le casque.
+- Sélecteur de micro (réutilise `DeviceSelector`) pour basculer sans quitter l'écran.
+- Bouton **« Refaire le test technique »** → redirige vers `/interview/:slug/test` en effaçant la validation `sessionStorage`.
+- Bouton **« Réessayer »** → relance le warmup.
+
+Le stream existant est conservé (pas de re-`getUserMedia` si le candidat ne change pas de device), pour éviter les race conditions avec le MediaRecorder.
+
+### 3. Aucun listener pendant l'entretien
+
+On ne touche **pas** au reste de `InterviewStart.tsx`. Pas de `track.onmute`, pas de `devicechange`, pas de circuit breaker. La détection a posteriori dans le rapport (lot précédent déjà livré) reste le filet de sécurité pour les rares cas qui passent entre les mailles.
 
 ## Détails techniques
 
-**Migration :**
-```sql
-ALTER TABLE public.session_messages ADD COLUMN audio_quality jsonb;
-ALTER TABLE public.reports ADD COLUMN audio_health jsonb;
-```
+**Fichiers modifiés :**
+- `src/pages/InterviewDeviceTest.tsx` — désactiver le bouton tant que le seuil n'est pas atteint, persister la validation.
+- `src/pages/InterviewStart.tsx` — appel `measureMicLevel(stream, 1500)` après acquisition du stream, avant le démarrage de la 1ère question. Affichage conditionnel du dialog.
+- `src/components/interview/MicBlockingDialog.tsx` — **nouveau**, basé sur le `Dialog` shadcn existant.
 
-**Fichiers touchés :**
-- `src/lib/audioQualityWatcher.ts` (nouveau)
-- `src/pages/InterviewStart.tsx` (intégration watcher)
-- `supabase/functions/transcribe-session/index.ts` (calcul verdict par segment)
-- `supabase/functions/generate-report/index.ts` (agrégation `audio_health`)
-- `supabase/functions/recompute-audio-health/index.ts` (nouveau, backfill)
-- `src/pages/SessionDetail.tsx` + `src/pages/SharedReport.tsx` (bandeau + remplacement notes)
-- `src/components/session/DecisionBanner.tsx` (prop `audioFailed` → picto rouge)
-- `src/components/session/FitScoreBadge.tsx`, `BigFiveBadge.tsx`, `ParaverbalBadge.tsx`, `NonverbalBadge.tsx` (état « MicOff rouge »)
+**Fichiers non modifiés :** `src/lib/micLevel.ts` (les seuils existent déjà), pas de migration BDD, pas d'edge function.
 
-**Hors scope :**
-- Bandeau temps réel pendant l'entretien (déjà couvert par le système 6/12/20 s existant).
-- Détection bruit/écho/larsen.
-- Réajustement automatique des notes IA.
+**Tests :**
+- Le test E2E `candidate-journey.spec.ts` continuera de passer car Playwright utilise `--use-fake-device-for-media-stream` qui génère un signal audible (au-dessus des seuils).
+- Ajout possible d'un test ciblé pour vérifier que le dialog s'affiche quand on force `peak = 0`, mais optionnel.
+
+## Hors scope
+
+- Détection des coupures pendant l'entretien (option B/C discutées plus tôt).
+- Nouvelle UI sur l'écran de test (on garde le visuel existant, on ajoute juste l'état désactivé et le message d'échec).

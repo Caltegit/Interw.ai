@@ -329,17 +329,34 @@ export default function InterviewDeviceTest() {
       const peakOk = measurement.peak >= MIC_THRESHOLDS.TEST_PEAK_MIN;
       const activeOk = measurement.activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN;
 
-      if (!peakOk && !activeOk) {
-        // Échec franc : rien d'audible → erreur, pas warning. Bloque la suite.
-        setMicStatus("error");
-        setMicError("Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.");
-        setMicRetries((n) => n + 1);
-      } else if (!activeOk) {
-        // Voix détectée par à-coups : on prévient mais on n'érige pas en blocage.
-        setMicStatus("warning");
-        setMicWarning("Votre voix paraît faible. Rapprochez-vous du micro et relancez si besoin.");
-      } else {
+      if (peakOk && activeOk) {
         setMicStatus("ok");
+        // Persiste la validation pour la garde au démarrage de session.
+        try {
+          const usedDeviceId = audioTrack.getSettings?.().deviceId ?? deviceId ?? null;
+          if (token) {
+            sessionStorage.setItem(
+              `mic-test-validated:${token}`,
+              JSON.stringify({
+                deviceId: usedDeviceId,
+                validatedAt: Date.now(),
+                peak: measurement.peak,
+                activeMs: measurement.activeMs,
+              }),
+            );
+          }
+        } catch { /* ignore */ }
+      } else {
+        // Toute mesure insuffisante (silence, voix trop faible, à-coups) bloque
+        // le passage. Plus de contournement : c'est la cause N°1 d'entretiens
+        // muets qui aboutissent à un rapport inexploitable.
+        setMicStatus("error");
+        setMicError(
+          peakOk
+            ? "Votre voix est trop faible. Rapprochez-vous du micro et relancez le test."
+            : "Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.",
+        );
+        setMicRetries((n) => n + 1);
       }
       await refreshDevices();
     } catch (err) {
@@ -666,7 +683,7 @@ export default function InterviewDeviceTest() {
 
   const canContinue =
     !browserBlocking &&
-    (micStatus === "ok" || micStatus === "warning") &&
+    micStatus === "ok" &&
     camStatus === "ok" &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
@@ -684,10 +701,11 @@ export default function InterviewDeviceTest() {
     }
   }, [canContinue, currentStep]);
 
+  // Plus de bouton « Continuer quand même » dès lors que le micro échoue : on
+  // ne propose un contournement que pour son/réseau (jamais pour le micro).
   const showSkipPrimary =
-    !canContinue && !browserBlocking && sttStatus !== "error" && (
-      micRetries >= 2 || camRetries >= 2 || soundRetries >= 2 ||
-      (micStatus === "warning" && camStatus === "ok" && soundStatus === "ok" && recorderStatus === "ok")
+    !canContinue && !browserBlocking && sttStatus !== "error" && micStatus === "ok" && (
+      camRetries >= 2 || soundRetries >= 2
     );
 
   // (L'écran 100% bloquant a été remplacé par la carte « Navigateur » dans la liste des tests.)
@@ -777,13 +795,15 @@ export default function InterviewDeviceTest() {
               <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
-              <button
-                type="button"
-                onClick={requestContinueWithCheck}
-                className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-              >
-                Passer
-              </button>
+              {micStatus === "ok" && (
+                <button
+                  type="button"
+                  onClick={requestContinueWithCheck}
+                  className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  Passer
+                </button>
+              )}
               <span className="text-xs font-medium text-muted-foreground tabular-nums">
                 {progressVerified}/{progressTests.length}
               </span>
@@ -1262,24 +1282,15 @@ export default function InterviewDeviceTest() {
               Votre micro n'a pas été détecté. Sans son, vos réponses ne pourront pas être analysées et la session risque d'échouer.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter>
             <Button
-              variant="outline"
               onClick={() => {
                 setShowSkipConfirm(false);
                 void testMicAndRecorder(selectedAudioId);
               }}
+              className="w-full"
             >
               Refaire le test
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setShowSkipConfirm(false);
-                handleContinue();
-              }}
-            >
-              Je continue quand même
             </Button>
           </DialogFooter>
         </DialogContent>
