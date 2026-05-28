@@ -310,6 +310,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [audioAnalysisEnabled, setAudioAnalysisEnabled] = useState(initial.audioAnalysisEnabled);
   const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
+  const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
+  const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
