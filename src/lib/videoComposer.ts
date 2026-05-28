@@ -17,12 +17,14 @@ export interface ComposerOptions {
   showLogo: boolean;
   /** Si true, applique un miroir (uniquement visuel, sur l'aperçu canvas). */
   mirrorPreview: boolean;
+  /** Intensité du flou d'arrière-plan en pixels (par défaut 12). */
+  blurPx?: number;
 }
 
 const TARGET_WIDTH = 1280;
 const TARGET_HEIGHT = 720;
 const TARGET_FPS = 30;
-const BLUR_PX = 12;
+const DEFAULT_BLUR_PX = 12;
 const LOGO_HEIGHT_RATIO = 0.1; // 10% de la hauteur
 const LOGO_PADDING = 24;
 
@@ -210,9 +212,10 @@ export class VideoComposer {
     }
 
     if (this.options.blurBackground && this.segmenter) {
+      const blurPx = Math.max(0, this.options.blurPx ?? DEFAULT_BLUR_PX);
       // 1) Dessine le fond flouté plein cadre
-      ctx.filter = `blur(${BLUR_PX}px)`;
-      ctx.drawImage(v, sx, sy, sw, sh, -BLUR_PX, -BLUR_PX, w + 2 * BLUR_PX, h + 2 * BLUR_PX);
+      ctx.filter = `blur(${blurPx}px)`;
+      ctx.drawImage(v, sx, sy, sw, sh, -blurPx, -blurPx, w + 2 * blurPx, h + 2 * blurPx);
       ctx.filter = "none";
 
       // 2) Segmente sur la frame source (confidence mask = proba foreground)
