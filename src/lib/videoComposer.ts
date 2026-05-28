@@ -243,56 +243,93 @@ export class VideoComposer {
       ctx.drawImage(v, sx, sy, sw, sh, -blurPx, -blurPx, w + 2 * blurPx, h + 2 * blurPx);
       ctx.filter = "none";
 
-      // 2) Segmente sur la frame source (confidence mask = proba foreground)
+      // 2) Segmente sur la frame source
       try {
         const result: ImageSegmenterResult = this.segmenter.segmentForVideo(v, now);
-        const masks = result.confidenceMasks;
-        const mask = masks && masks.length > 0 ? masks[masks.length - 1] : null;
-        if (mask) {
+        const confMasks = result.confidenceMasks;
+        const catMask = result.categoryMask;
+
+        // Détermine la taille du masque et construit un tableau de probabilité [0..1]
+        let mw = 0;
+        let mh = 0;
+        let probs: Float32Array | null = null;
+
+        if (segmenterIsMulticlass && catMask) {
+          // Multi-classes : 0 = background, autres = premier plan (cheveux, peau, vêtements…)
+          mw = catMask.width;
+          mh = catMask.height;
+          const cat = catMask.getAsUint8Array();
+          probs = new Float32Array(cat.length);
+          // Base : 1 si classe != 0, sinon 0
+          for (let i = 0; i < cat.length; i++) probs[i] = cat[i] === 0 ? 0 : 1;
+          // Affinage : si on a aussi des confidence masks, on combine pour adoucir les bords
+          if (confMasks && confMasks.length > 0) {
+            // Le premier mask (index 0) est généralement le background ; on prend 1 - p_bg
+            const bg = confMasks[0];
+            if (bg.width === mw && bg.height === mh) {
+              const bgData = bg.getAsFloat32Array();
+              for (let i = 0; i < probs.length; i++) {
+                const fg = 1 - bgData[i];
+                // Moyenne entre la décision catégorielle et la proba foreground
+                probs[i] = (probs[i] + fg) * 0.5;
+              }
+            }
+          }
+        } else if (confMasks && confMasks.length > 0) {
+          const mask = confMasks[confMasks.length - 1];
+          mw = mask.width;
+          mh = mask.height;
           const data = mask.getAsFloat32Array();
-          const mw = mask.width;
-          const mh = mask.height;
-          // Détermine la convention en mesurant la zone centrale (probablement sujet) :
-          // si la moyenne y est faible, c'est que cette valeur représente le background → on inverse.
-          let centerSum = 0;
-          let centerCount = 0;
-          const cx0 = Math.floor(mw * 0.4);
-          const cx1 = Math.floor(mw * 0.6);
-          const cy0 = Math.floor(mh * 0.4);
-          const cy1 = Math.floor(mh * 0.6);
+          // Détecte si la convention est inversée (centre = sujet)
+          let centerSum = 0, centerCount = 0;
+          const cx0 = Math.floor(mw * 0.4), cx1 = Math.floor(mw * 0.6);
+          const cy0 = Math.floor(mh * 0.4), cy1 = Math.floor(mh * 0.6);
           for (let y = cy0; y < cy1; y++) {
             for (let x = cx0; x < cx1; x++) {
               centerSum += data[y * mw + x];
               centerCount++;
             }
           }
-          const centerAvg = centerCount > 0 ? centerSum / centerCount : 0.5;
-          const invert = centerAvg < 0.5;
+          const invert = (centerCount > 0 ? centerSum / centerCount : 0.5) < 0.5;
+          probs = new Float32Array(data.length);
+          for (let i = 0; i < data.length; i++) probs[i] = invert ? 1 - data[i] : data[i];
+        }
+
+        if (probs && mw > 0 && mh > 0) {
+          // Rampe douce (feathering) : alpha = clamp((p - 0.35) / 0.30)
           const imgData = this.maskCtx.createImageData(mw, mh);
-          for (let i = 0; i < data.length; i++) {
-            const p = invert ? 1 - data[i] : data[i];
-            // Seuil doux : >0.5 = sujet net, sinon fond flou
-            const alpha = p > 0.5 ? 255 : 0;
+          const LO = 0.35;
+          const HI = 0.65;
+          const RANGE = HI - LO;
+          for (let i = 0; i < probs.length; i++) {
+            const t = (probs[i] - LO) / RANGE;
+            const a = t < 0 ? 0 : t > 1 ? 1 : t;
             imgData.data[i * 4] = 255;
             imgData.data[i * 4 + 1] = 255;
             imgData.data[i * 4 + 2] = 255;
-            imgData.data[i * 4 + 3] = alpha;
+            imgData.data[i * 4 + 3] = Math.round(a * 255);
           }
           this.maskCanvas.width = mw;
           this.maskCanvas.height = mh;
           this.maskCtx.putImageData(imgData, 0, 0);
 
-          // 3) Dessine le sujet net : drawImage(video) puis composite avec le masque
+          // 3) Dessine le sujet net puis applique le masque (avec lissage haute qualité)
           const tmpCanvas = document.createElement("canvas");
           tmpCanvas.width = w;
           tmpCanvas.height = h;
           const tctx = tmpCanvas.getContext("2d")!;
+          tctx.imageSmoothingEnabled = true;
+          tctx.imageSmoothingQuality = "high";
           tctx.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
           tctx.globalCompositeOperation = "destination-in";
+          // Léger flou du masque pour adoucir les contours fins (cheveux)
+          tctx.filter = "blur(2px)";
           tctx.drawImage(this.maskCanvas, 0, 0, w, h);
+          tctx.filter = "none";
           ctx.drawImage(tmpCanvas, 0, 0);
-          mask.close();
         }
+        if (catMask) catMask.close();
+        if (confMasks) confMasks.forEach((m) => m.close());
       } catch (err) {
         // Sur erreur de segmentation, on tombe juste sur le fond flouté.
         console.warn("[videoComposer] segment frame failed", err);
