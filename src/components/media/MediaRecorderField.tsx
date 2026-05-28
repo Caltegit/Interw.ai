@@ -199,6 +199,7 @@ export function MediaRecorderField({
         showLogo: logoEnabled,
         mirrorPreview: true,
         blurPx: blurAmount,
+        logoScale: logoSize / 100,
       });
       composerRef.current = comp;
       void comp.init(logoEnabled ? orgLogoUrl : null).then(() => {
@@ -217,11 +218,12 @@ export function MediaRecorderField({
         blurBackground: blurEnabled,
         showLogo: logoEnabled,
         blurPx: blurAmount,
+        logoScale: logoSize / 100,
       });
       void composerRef.current.setLogoUrl(logoEnabled ? orgLogoUrl : null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composerActive, blurEnabled, logoEnabled, blurAmount, cameraReady, orgLogoUrl]);
+  }, [composerActive, blurEnabled, logoEnabled, blurAmount, logoSize, cameraReady, orgLogoUrl]);
 
   useEffect(() => {
     return () => {
