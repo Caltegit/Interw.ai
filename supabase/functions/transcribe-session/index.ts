@@ -170,6 +170,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Mode démo : aucune transcription.
+    const { data: demoCheck } = await admin
+      .from("sessions")
+      .select("is_demo")
+      .eq("id", session_id)
+      .maybeSingle();
+    if ((demoCheck as any)?.is_demo) {
+      return new Response(
+        JSON.stringify({ ok: true, skipped: "demo_session" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: msgs, error: msgsErr } = await admin
       .from("session_messages")
       .select("id, content, content_raw, video_segment_url, audio_segment_url, transcription_status")

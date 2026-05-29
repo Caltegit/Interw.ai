@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X, UserCog, Check, Link as LinkIcon } from "lucide-react";
+import { Copy, CopyPlus, Pencil, Trash2, ArrowUpDown, MoreHorizontal, SlidersHorizontal, ChevronDown, ChevronRight, AlertTriangle, LayoutGrid, Rows3, Mail, Columns3, Share2, Globe, X, UserCog, Check, Link as LinkIcon, PlayCircle } from "lucide-react";
 import { SessionCard } from "@/components/project/SessionCard";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { ShareReportsDialog } from "@/components/project/ShareReportsDialog";
@@ -239,6 +239,7 @@ export default function ProjectDetail() {
         .from("sessions")
         .select("id, candidate_name, candidate_email, status, token, created_at, project_id, assigned_to, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note, video_recording_url, thumbnail_url, last_candidate_email_key")
         .eq("project_id", id)
+        .eq("is_demo", false)
         .order("created_at", { ascending: false });
       if (cancelled) return;
       const sessionsList = sList ?? [];
@@ -699,6 +700,13 @@ export default function ProjectDetail() {
           <Badge variant={project.status === "active" ? "default" : "secondary"}>{statusLabel}</Badge>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
+          {project.slug && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={`/session/${project.slug}/demo`} target="_blank" rel="noopener noreferrer">
+                <PlayCircle className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Démo</span>
+              </a>
+            </Button>
+          )}
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={copyProjectLink}>
               <LinkIcon className="mr-1 h-4 w-4" /> <span className="sr-only sm:not-sr-only">Partager le lien</span>

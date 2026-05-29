@@ -131,6 +131,14 @@ serve(async (req) => {
     const project = session.projects as any;
     let messages = messagesRes.data ?? [];
 
+    // Mode démo : on ne génère ni transcription ni rapport.
+    if ((session as any).is_demo) {
+      return new Response(
+        JSON.stringify({ ok: true, skipped: "demo_session" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Garde-fou : si la session ne contient aucun enregistrement vidéo/audio
     // côté candidat, on ne peut rien transcrire ni évaluer.
     const hasAnyRecording = messages.some(

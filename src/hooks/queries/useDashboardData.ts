@@ -64,12 +64,14 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       .select(
         "id, candidate_name, candidate_email, status, created_at, project_id, projects!inner(title, job_title)",
       )
+      .eq("is_demo", false)
       .order("created_at", { ascending: false })
       .limit(10),
     supabase
       .from("sessions")
       .select("id, candidate_name, candidate_email, created_at, project_id, projects!inner(title)")
       .eq("status", "pending")
+      .eq("is_demo", false)
       .order("created_at", { ascending: true }),
     supabase
       .from("reports")
@@ -90,6 +92,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
           .from("sessions")
           .select("id, projects!inner(organization_id)", { count: "exact", head: true })
           .eq("status", "completed")
+          .eq("is_demo", false)
           .eq("projects.organization_id", orgId)
       : Promise.resolve({ count: 0 }),
   ]);
@@ -126,6 +129,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
         "id, candidate_name, recruiter_decision, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
       )
       .eq("status", "completed")
+      .eq("is_demo", false)
       .eq("projects.status", "active")
       .eq("projects.organization_id", orgId)
       .or("recruiter_decision.is.null,recruiter_decision.eq.none")

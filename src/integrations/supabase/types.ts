@@ -1488,6 +1488,7 @@ export type Database = {
           created_at: string
           duration_seconds: number | null
           id: string
+          is_demo: boolean
           last_activity_at: string | null
           last_candidate_email_key: string | null
           last_question_index: number
@@ -1519,6 +1520,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number | null
           id?: string
+          is_demo?: boolean
           last_activity_at?: string | null
           last_candidate_email_key?: string | null
           last_question_index?: number
@@ -1550,6 +1552,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number | null
           id?: string
+          is_demo?: boolean
           last_activity_at?: string | null
           last_candidate_email_key?: string | null
           last_question_index?: number

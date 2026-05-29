@@ -56,6 +56,8 @@ import MagicLink from "./pages/MagicLink";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
+import InterviewDemoLanding from "./pages/InterviewDemoLanding";
+import InterviewDemoEnd from "./pages/InterviewDemoEnd";
 import InterviewComplete from "./pages/InterviewComplete";
 import InterviewCancelled from "./pages/InterviewCancelled";
 import InterviewPrivacy from "./pages/InterviewPrivacy";
@@ -96,6 +98,8 @@ const App = () => (
 
             {/* Session candidat — routes actuelles */}
             <Route path="/session/:slug" element={<InterviewLanding />} />
+            <Route path="/session/:slug/demo" element={<InterviewDemoLanding />} />
+            <Route path="/session/:slug/demo/end" element={<InterviewDemoEnd />} />
             <Route path="/session/:slug/test/:token" element={<InterviewDeviceTest />} />
             <Route path="/session/:slug/start/:token" element={<InterviewStart />} />
             <Route path="/session/:slug/complete/:token" element={<InterviewComplete />} />

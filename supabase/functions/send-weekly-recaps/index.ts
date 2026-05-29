@@ -83,6 +83,7 @@ async function processProject(
     )
     .eq("project_id", project.id)
     .eq("status", "completed")
+    .eq("is_demo", false)
     .gte("completed_at", sinceIso)
     .order("completed_at", { ascending: false });
   if (wErr) {
@@ -98,7 +99,8 @@ async function processProject(
     .from("sessions")
     .select("id, reports(overall_score, recommendation)")
     .eq("project_id", project.id)
-    .eq("status", "completed");
+    .eq("status", "completed")
+    .eq("is_demo", false);
 
   const candidates = weekSessions.map((s: any) => {
     const r = Array.isArray(s.reports) ? s.reports[0] : s.reports;

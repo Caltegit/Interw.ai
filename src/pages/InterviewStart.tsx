@@ -264,6 +264,9 @@ export default function InterviewStart() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
+  const isDemo = !!session?.is_demo;
+  const isDemoRef = useRef(false);
+  useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
@@ -436,6 +439,8 @@ export default function InterviewStart() {
       content: string,
       options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
+      // Mode démo : on n'écrit aucun message en base.
+      if (isDemoRef.current) return;
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
         role,
@@ -1436,6 +1441,11 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
+  // En mode démo, on pré-coche le consentement (pas d'écran RGPD).
+  useEffect(() => {
+    if (session?.is_demo) setConsentChecked(true);
+  }, [session?.is_demo]);
+
   // Restaure les messages depuis session_messages et redémarre la session à la bonne question
   const handleResumeInterview = useCallback(async () => {
     if (!resumePrompt || !session?.id) return;
@@ -1589,6 +1599,8 @@ export default function InterviewStart() {
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
   const uploadChunk = useCallback(
     async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
+      // Mode démo : aucun upload, aucun enregistrement persisté.
+      if (isDemoRef.current) return null;
       const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.webm`;
       const backoffs = [500, 1500, 4000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
@@ -1725,6 +1737,18 @@ export default function InterviewStart() {
     ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
       const audioRecorder = questionAudioRecorderRef.current;
+      // Mode démo : on stoppe les recorders proprement mais aucun upload.
+      if (isDemoRef.current) {
+        try { if (recorder && recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
+        try { if (audioRecorder && audioRecorder.state !== "inactive") audioRecorder.stop(); } catch { /* ignore */ }
+        questionRecorderRef.current = null;
+        questionAudioRecorderRef.current = null;
+        questionVideoChunksRef.current = [];
+        questionAudioChunksRef.current = [];
+        uploadedChunkPathsRef.current = [];
+        setIsRecordingActive(false);
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
+      }
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
@@ -1969,7 +1993,7 @@ export default function InterviewStart() {
     }
 
     // Traçabilité légale du consentement (best-effort, non bloquant)
-    if (token && !session.consent_accepted_at) {
+    if (token && !session.consent_accepted_at && !isDemoRef.current) {
       supabase
         .from("sessions")
         .update({ consent_accepted_at: new Date().toISOString() })
@@ -3068,6 +3092,22 @@ export default function InterviewStart() {
     const questionIndex = currentQuestionIndex;
     const startedAt = interviewStartTimeRef.current;
 
+    // Mode démo : pas d'écran "complete", pas de transcription, pas de rapport.
+    // On stoppe les flux media puis on redirige vers l'écran final démo.
+    if (isDemoRef.current) {
+      try {
+        if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+          questionRecorderRef.current.stop();
+        }
+        if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state !== "inactive") {
+          questionAudioRecorderRef.current.stop();
+        }
+      } catch { /* ignore */ }
+      try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+      navigate(`/session/${slug}/demo/end`);
+      return;
+    }
+
     // Redirect IMMEDIATELY — finalize in background.
     // The Complete page will display a "Recording in progress…" state until
     // sessions.status === 'completed', then auto-switch to the final screen.
@@ -3544,11 +3584,16 @@ export default function InterviewStart() {
               </div>
             </div>
             <div className="space-y-3">
-              <h1 className="text-xl font-bold candidate-gradient-text">Prêt à démarrer ?</h1>
+              <h1 className="text-xl font-bold candidate-gradient-text">
+                {isDemo ? "Démo — prêt à démarrer ?" : "Prêt à démarrer ?"}
+              </h1>
               <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
-                {project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !"}
+                {isDemo
+                  ? "Aucune donnée ne sera enregistrée."
+                  : (project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !")}
               </p>
             </div>
+            {!isDemo && (
             <label
               className="flex items-start gap-3 text-sm cursor-pointer select-none rounded-md p-3"
               style={{
@@ -3588,6 +3633,7 @@ export default function InterviewStart() {
                 .
               </span>
             </label>
+            )}
             <Button
               size="lg"
               className="candidate-btn-primary w-full h-16 text-xl"
