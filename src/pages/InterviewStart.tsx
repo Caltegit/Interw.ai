@@ -1437,6 +1437,11 @@ export default function InterviewStart() {
     load();
   }, [token, slug, navigate]);
 
+  // En mode démo, on pré-coche le consentement (pas d'écran RGPD).
+  useEffect(() => {
+    if (session?.is_demo) setConsentChecked(true);
+  }, [session?.is_demo]);
+
   // Restaure les messages depuis session_messages et redémarre la session à la bonne question
   const handleResumeInterview = useCallback(async () => {
     if (!resumePrompt || !session?.id) return;
