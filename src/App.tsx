@@ -98,6 +98,8 @@ const App = () => (
 
             {/* Session candidat — routes actuelles */}
             <Route path="/session/:slug" element={<InterviewLanding />} />
+            <Route path="/session/:slug/demo" element={<InterviewDemoLanding />} />
+            <Route path="/session/:slug/demo/end" element={<InterviewDemoEnd />} />
             <Route path="/session/:slug/test/:token" element={<InterviewDeviceTest />} />
             <Route path="/session/:slug/start/:token" element={<InterviewStart />} />
             <Route path="/session/:slug/complete/:token" element={<InterviewComplete />} />
