@@ -77,6 +77,7 @@ export function ShareReportsDialog({
             .select("share_token")
             .eq("report_id", r.reportId)
             .eq("is_active", true)
+            .is("viewed_at", null)
             .limit(1)
             .maybeSingle();
           let token = existing?.share_token ?? null;
