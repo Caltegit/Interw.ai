@@ -3578,6 +3578,13 @@ export default function InterviewStart() {
   // Show "ready to start" screen — user must click to enable TTS on mobile
   if (!readyToStart) {
     const dataReady = !!session && !!project && questions.length > 0;
+    if (session?.is_demo) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      );
+    }
     return (
       <CandidateLayout>
         <Card className="max-w-md w-full text-center" data-testid="interview-start-screen">
