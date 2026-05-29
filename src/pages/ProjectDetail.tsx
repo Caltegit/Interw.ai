@@ -210,7 +210,7 @@ export default function ProjectDetail() {
       const raw = localStorage.getItem(`projectDecisionVisibility:${id}`);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+        if (Array.isArray(parsed)) return new Set(parsed);
       }
     } catch {
       /* ignore */
@@ -621,7 +621,7 @@ export default function ProjectDetail() {
     const searchActive = search.trim().length > 0;
     if (!searchActive && decisionFilter !== "all")
       list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
-    if (!searchActive && visibleDecisions.size > 0) {
+    if (!searchActive) {
       list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
     }
     if (recoFilter !== "all")
@@ -978,8 +978,10 @@ export default function ProjectDetail() {
                     />
                   ))}
                   {pagedSessions.length === 0 && (
-                    <p className="col-span-full text-sm text-muted-foreground">
-                      Aucun candidat ne correspond aux filtres.
+                    <p className="col-span-full text-sm text-muted-foreground text-center py-8">
+                      {visibleDecisions.size === 0 && !search.trim()
+                        ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
+                        : "Aucun candidat ne correspond aux filtres."}
                     </p>
                   )}
                 </div>
@@ -1237,6 +1239,13 @@ export default function ProjectDetail() {
                     })}
                   </tbody>
                 </table>
+                {pagedSessions.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {visibleDecisions.size === 0 && !search.trim()
+                      ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
+                      : "Aucun candidat ne correspond aux filtres."}
+                  </p>
+                )}
               </div>
                 {selectedIds.size > 0 && (
                   <div className="pt-2">
