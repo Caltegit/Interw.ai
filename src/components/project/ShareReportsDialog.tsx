@@ -86,7 +86,7 @@ export function ShareReportsDialog({
               .insert({
                 report_id: r.reportId,
                 created_by: user.id,
-                expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+                expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
               })
               .select("share_token")
               .single();
