@@ -437,6 +437,8 @@ export default function InterviewStart() {
       content: string,
       options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean },
     ) => {
+      // Mode démo : on n'écrit aucun message en base.
+      if (isDemoRef.current) return;
       const { error } = await supabase.from("session_messages").insert({
         session_id: sessionId,
         role,
