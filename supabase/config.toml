@@ -64,3 +64,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.send-weekly-recaps]
     verify_jwt = true
 
+
+  [functions.consume-report-share]
+    verify_jwt = false
