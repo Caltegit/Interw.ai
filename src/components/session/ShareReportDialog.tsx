@@ -17,10 +17,12 @@ interface ShareReportDialogProps {
 function formatExpiry(iso: string | null) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
+    return new Date(iso).toLocaleString("fr-FR", {
       day: "2-digit",
       month: "long",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return null;
