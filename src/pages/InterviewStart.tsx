@@ -3608,7 +3608,7 @@ export default function InterviewStart() {
                     "linear-gradient(135deg, hsl(var(--l-accent) / 0.2), hsl(var(--l-accent-2) / 0.2))",
                 }}
               >
-                <Mic className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+                <Video className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
               </div>
             </div>
             <div className="space-y-3">
