@@ -129,6 +129,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
         "id, candidate_name, recruiter_decision, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
       )
       .eq("status", "completed")
+      .eq("is_demo", false)
       .eq("projects.status", "active")
       .eq("projects.organization_id", orgId)
       .or("recruiter_decision.is.null,recruiter_decision.eq.none")
