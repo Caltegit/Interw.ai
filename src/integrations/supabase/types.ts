@@ -954,6 +954,7 @@ export type Database = {
           tts_provider: string
           tts_voice_gender: string
           tts_voice_id: string | null
+          visible_to_user_ids: string[]
         }
         Insert: {
           ai_intro_custom_text?: string | null
@@ -995,6 +996,7 @@ export type Database = {
           tts_provider?: string
           tts_voice_gender?: string
           tts_voice_id?: string | null
+          visible_to_user_ids?: string[]
         }
         Update: {
           ai_intro_custom_text?: string | null
@@ -1036,6 +1038,7 @@ export type Database = {
           tts_provider?: string
           tts_voice_gender?: string
           tts_voice_id?: string | null
+          visible_to_user_ids?: string[]
         }
         Relationships: [
           {

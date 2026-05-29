@@ -23,6 +23,7 @@ export default function ProjectEdit() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [initial, setInitial] = useState<ProjectFormState | null>(null);
+  const [creatorUserId, setCreatorUserId] = useState<string | undefined>(undefined);
   const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,6 +130,8 @@ export default function ProjectEdit() {
             ];
 
       setExistingAvatarUrl(project.avatar_image_url);
+      setCreatorUserId((project as { created_by?: string }).created_by);
+
 
       setInitial({
         title: project.title,
@@ -184,6 +187,8 @@ export default function ProjectEdit() {
           (project as { show_question_timer?: boolean }).show_question_timer ?? true,
         reportRecipientUserIds:
           (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
+        visibleToUserIds:
+          (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
       });
 
       setLoading(false);
@@ -276,6 +281,7 @@ export default function ProjectEdit() {
           audio_analysis_enabled: s.audioAnalysisEnabled,
           show_question_timer: s.showQuestionTimer,
           report_recipient_user_ids: s.reportRecipientUserIds,
+          visible_to_user_ids: s.visibleToUserIds,
         } as never)
         .eq("id", id);
 
@@ -566,6 +572,7 @@ export default function ProjectEdit() {
     <ProjectForm
       mode="edit"
       initial={initial}
+      creatorUserId={creatorUserId}
       onSubmit={handleSave}
       saving={saving}
       header={

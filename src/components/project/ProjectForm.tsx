@@ -106,6 +106,7 @@ export interface ProjectFormState {
   showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
   reportRecipientUserIds: string[];
+  visibleToUserIds: string[];
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -152,9 +153,10 @@ export interface ProjectFormProps {
   saving: boolean;
   header: React.ReactNode;
   submitLabel: { idle: string; busy: string };
+  creatorUserId?: string;
 }
 
-export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel }: ProjectFormProps) {
+export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel, creatorUserId }: ProjectFormProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -256,6 +258,12 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         .maybeSingle();
       const orgId = prof?.organization_id;
       if (!orgId) return;
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("owner_id")
+        .eq("id", orgId)
+        .maybeSingle();
+      if (!cancelled) setOrgOwnerId(org?.owner_id ?? null);
       const { data: members } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
@@ -337,8 +345,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
+  const [visibleToUserIds, setVisibleToUserIds] = useState<string[]>(initial.visibleToUserIds ?? []);
   const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
+  const [orgOwnerId, setOrgOwnerId] = useState<string | null>(null);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
@@ -395,6 +406,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       showQuestionTimer,
       saveIntroToLibrary,
       reportRecipientUserIds,
+      visibleToUserIds,
     });
   };
 
@@ -1096,6 +1108,84 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </p>
                   )}
 
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4" />
+                    Visibilité du projet
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Choisissez qui peut voir ce projet. Le créateur et le propriétaire de l'organisation y ont toujours accès.
+                  </p>
+                  {(() => {
+                    const creatorId = creatorUserId ?? user?.id ?? null;
+                    const alwaysIds = new Set<string>();
+                    if (creatorId) alwaysIds.add(creatorId);
+                    if (orgOwnerId) alwaysIds.add(orgOwnerId);
+                    const extraCount = visibleToUserIds.filter((id) => !alwaysIds.has(id)).length;
+                    const totalCount = alwaysIds.size + extraCount;
+                    return (
+                      <Popover open={visibilityOpen} onOpenChange={setVisibilityOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-between" type="button">
+                            <span>
+                              {extraCount === 0
+                                ? `${totalCount} personne${totalCount > 1 ? "s" : ""} (créateur et propriétaire)`
+                                : `${totalCount} personnes peuvent voir ce projet`}
+                            </span>
+                            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <div className="max-h-72 overflow-auto p-1">
+                            {orgMembers.length === 0 ? (
+                              <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
+                            ) : (
+                              orgMembers.map((m) => {
+                                const always = alwaysIds.has(m.user_id);
+                                const checked = always || visibleToUserIds.includes(m.user_id);
+                                return (
+                                  <label
+                                    key={m.user_id}
+                                    className={`flex items-center gap-3 rounded-sm px-2 py-2 ${always ? "opacity-70" : "cursor-pointer hover:bg-accent"}`}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={always}
+                                      onCheckedChange={(v) => {
+                                        if (always) return;
+                                        setVisibleToUserIds((prev) =>
+                                          v
+                                            ? [...prev, m.user_id]
+                                            : prev.filter((id) => id !== m.user_id),
+                                        );
+                                      }}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium">
+                                        {m.full_name || m.email}
+                                        {always && (
+                                          <span className="ml-2 text-xs text-muted-foreground">(toujours)</span>
+                                        )}
+                                      </p>
+                                      {m.full_name && (
+                                        <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                                      )}
+                                    </div>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>
