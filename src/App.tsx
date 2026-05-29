@@ -56,6 +56,8 @@ import MagicLink from "./pages/MagicLink";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
+import InterviewDemoLanding from "./pages/InterviewDemoLanding";
+import InterviewDemoEnd from "./pages/InterviewDemoEnd";
 import InterviewComplete from "./pages/InterviewComplete";
 import InterviewCancelled from "./pages/InterviewCancelled";
 import InterviewPrivacy from "./pages/InterviewPrivacy";
