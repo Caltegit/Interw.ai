@@ -3584,9 +3584,13 @@ export default function InterviewStart() {
               </div>
             </div>
             <div className="space-y-3">
-              <h1 className="text-xl font-bold candidate-gradient-text">Prêt à démarrer ?</h1>
+              <h1 className="text-xl font-bold candidate-gradient-text">
+                {isDemo ? "Démo — prêt à démarrer ?" : "Prêt à démarrer ?"}
+              </h1>
               <p className="text-sm" style={{ color: "hsl(var(--l-fg) / 0.7)" }}>
-                {project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !"}
+                {isDemo
+                  ? "Aucune donnée ne sera enregistrée."
+                  : (project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !")}
               </p>
             </div>
             <label
