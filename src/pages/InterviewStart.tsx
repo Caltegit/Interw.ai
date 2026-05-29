@@ -1599,6 +1599,8 @@ export default function InterviewStart() {
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
   const uploadChunk = useCallback(
     async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
+      // Mode démo : aucun upload, aucun enregistrement persisté.
+      if (isDemoRef.current) return null;
       const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.webm`;
       const backoffs = [500, 1500, 4000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
