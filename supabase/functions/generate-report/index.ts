@@ -1109,35 +1109,21 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       nonverbalAnalysis: any | null,
     ) => {
     try {
-      // Détermine la liste des destinataires.
-      // Priorité : report_recipient_user_ids configurés sur le projet.
-      // Fallback : assigned_to → created_by → owner de l'organisation.
+      // Liste des destinataires explicitement configurée sur le projet.
+      // Une liste vide = opt-out volontaire de toute l'équipe → aucun envoi.
       const configuredIds: string[] = Array.isArray(
         (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids,
       )
         ? ((project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids as string[])
         : [];
 
-      let recipientUserIds: string[] = [];
-      if (configuredIds.length > 0) {
-        recipientUserIds = configuredIds;
-      } else {
-        let fallbackId: string | null = session.assigned_to ?? project.created_by ?? null;
-        if (!fallbackId && project.organization_id) {
-          const { data: orgRow } = await supabase
-            .from("organizations")
-            .select("owner_id")
-            .eq("id", project.organization_id)
-            .maybeSingle();
-          fallbackId = orgRow?.owner_id ?? null;
-        }
-        if (fallbackId) recipientUserIds = [fallbackId];
-      }
+      const recipientUserIds: string[] = configuredIds;
 
       if (recipientUserIds.length === 0) {
-        console.warn("No recipient user ids for project", project.id);
+        console.log("Report email skipped: no recipients configured for project", project.id);
         return;
       }
+
 
       // Récupère les emails (filtre par organisation pour sécurité).
       const { data: recipientProfiles } = await supabase

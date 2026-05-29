@@ -1074,10 +1074,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </PopoverContent>
                   </Popover>
                   {reportRecipientUserIds.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Par défaut, le créateur du projet recevra les rapports.
+                    <p className="text-xs text-destructive">
+                      Aucun destinataire : personne ne recevra le rapport après chaque entretien.
                     </p>
                   )}
+
                 </CardContent>
               </Card>
             </div>
