@@ -1737,6 +1737,18 @@ export default function InterviewStart() {
     ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
       const audioRecorder = questionAudioRecorderRef.current;
+      // Mode démo : on stoppe les recorders proprement mais aucun upload.
+      if (isDemoRef.current) {
+        try { if (recorder && recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
+        try { if (audioRecorder && audioRecorder.state !== "inactive") audioRecorder.stop(); } catch { /* ignore */ }
+        questionRecorderRef.current = null;
+        questionAudioRecorderRef.current = null;
+        questionVideoChunksRef.current = [];
+        questionAudioChunksRef.current = [];
+        uploadedChunkPathsRef.current = [];
+        setIsRecordingActive(false);
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
+      }
       if (!recorder || recorder.state === "inactive") {
         setIsRecordingActive(false);
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
