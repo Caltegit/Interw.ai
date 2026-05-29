@@ -210,7 +210,7 @@ export default function ProjectDetail() {
       const raw = localStorage.getItem(`projectDecisionVisibility:${id}`);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+        if (Array.isArray(parsed)) return new Set(parsed);
       }
     } catch {
       /* ignore */
