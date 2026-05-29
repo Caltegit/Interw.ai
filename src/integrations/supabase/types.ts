@@ -1189,6 +1189,7 @@ export type Database = {
           is_active: boolean
           report_id: string
           share_token: string
+          viewed_at: string | null
         }
         Insert: {
           created_at?: string
@@ -1198,6 +1199,7 @@ export type Database = {
           is_active?: boolean
           report_id: string
           share_token?: string
+          viewed_at?: string | null
         }
         Update: {
           created_at?: string
@@ -1207,6 +1209,7 @@ export type Database = {
           is_active?: boolean
           report_id?: string
           share_token?: string
+          viewed_at?: string | null
         }
         Relationships: [
           {
