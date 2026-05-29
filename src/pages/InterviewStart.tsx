@@ -1993,7 +1993,7 @@ export default function InterviewStart() {
     }
 
     // Traçabilité légale du consentement (best-effort, non bloquant)
-    if (token && !session.consent_accepted_at) {
+    if (token && !session.consent_accepted_at && !isDemoRef.current) {
       supabase
         .from("sessions")
         .update({ consent_accepted_at: new Date().toISOString() })
