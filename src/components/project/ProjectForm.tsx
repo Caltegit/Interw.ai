@@ -106,6 +106,7 @@ export interface ProjectFormState {
   showQuestionTimer: boolean;
   saveIntroToLibrary?: boolean;
   reportRecipientUserIds: string[];
+  visibleToUserIds: string[];
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -337,8 +338,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [showQuestionTimer, setShowQuestionTimer] = useState(initial.showQuestionTimer);
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
+  const [visibleToUserIds, setVisibleToUserIds] = useState<string[]>(initial.visibleToUserIds ?? []);
   const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
+  const [orgOwnerId, setOrgOwnerId] = useState<string | null>(null);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
+  const [visibilityOpen, setVisibilityOpen] = useState(false);
   const [introCustomizerOpen, setIntroCustomizerOpen] = useState(false);
   const [transitionsCustomizerOpen, setTransitionsCustomizerOpen] = useState(false);
 
@@ -395,6 +399,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       showQuestionTimer,
       saveIntroToLibrary,
       reportRecipientUserIds,
+      visibleToUserIds,
     });
   };
 
