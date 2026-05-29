@@ -15,6 +15,7 @@ import { template as emailFailureAlert } from './email-failure-alert.tsx'
 import { template as interviewIssueReport } from './interview-issue-report.tsx'
 import { template as bulkCandidateMessage } from './bulk-candidate-message.tsx'
 import { template as candidateThankYou } from './candidate-thank-you.tsx'
+import { template as weeklyProjectRecap } from './weekly-project-recap.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'interview-report': interviewReport,
@@ -23,4 +24,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'interview-issue-report': interviewIssueReport,
   'bulk-candidate-message': bulkCandidateMessage,
   'candidate-thank-you': candidateThankYou,
+  'weekly-project-recap': weeklyProjectRecap,
 }
