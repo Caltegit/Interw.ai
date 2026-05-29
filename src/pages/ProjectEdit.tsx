@@ -23,6 +23,7 @@ export default function ProjectEdit() {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const [initial, setInitial] = useState<ProjectFormState | null>(null);
+  const [creatorUserId, setCreatorUserId] = useState<string | undefined>(undefined);
   const [existingAvatarUrl, setExistingAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -129,6 +130,8 @@ export default function ProjectEdit() {
             ];
 
       setExistingAvatarUrl(project.avatar_image_url);
+      setCreatorUserId((project as { created_by?: string }).created_by);
+
 
       setInitial({
         title: project.title,
@@ -569,6 +572,7 @@ export default function ProjectEdit() {
     <ProjectForm
       mode="edit"
       initial={initial}
+      creatorUserId={creatorUserId}
       onSubmit={handleSave}
       saving={saving}
       header={
