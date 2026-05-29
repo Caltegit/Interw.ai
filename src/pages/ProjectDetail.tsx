@@ -978,8 +978,10 @@ export default function ProjectDetail() {
                     />
                   ))}
                   {pagedSessions.length === 0 && (
-                    <p className="col-span-full text-sm text-muted-foreground">
-                      Aucun candidat ne correspond aux filtres.
+                    <p className="col-span-full text-sm text-muted-foreground text-center py-8">
+                      {visibleDecisions.size === 0 && !search.trim()
+                        ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
+                        : "Aucun candidat ne correspond aux filtres."}
                     </p>
                   )}
                 </div>
