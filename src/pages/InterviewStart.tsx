@@ -3092,6 +3092,22 @@ export default function InterviewStart() {
     const questionIndex = currentQuestionIndex;
     const startedAt = interviewStartTimeRef.current;
 
+    // Mode démo : pas d'écran "complete", pas de transcription, pas de rapport.
+    // On stoppe les flux media puis on redirige vers l'écran final démo.
+    if (isDemoRef.current) {
+      try {
+        if (questionRecorderRef.current && questionRecorderRef.current.state !== "inactive") {
+          questionRecorderRef.current.stop();
+        }
+        if (questionAudioRecorderRef.current && questionAudioRecorderRef.current.state !== "inactive") {
+          questionAudioRecorderRef.current.stop();
+        }
+      } catch { /* ignore */ }
+      try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
+      navigate(`/session/${slug}/demo/end`);
+      return;
+    }
+
     // Redirect IMMEDIATELY — finalize in background.
     // The Complete page will display a "Recording in progress…" state until
     // sessions.status === 'completed', then auto-switch to the final screen.
