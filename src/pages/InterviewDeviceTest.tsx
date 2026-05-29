@@ -795,15 +795,13 @@ export default function InterviewDeviceTest() {
               <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
-              {micStatus === "ok" && (
-                <button
-                  type="button"
-                  onClick={requestContinueWithCheck}
-                  className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-                >
-                  Passer
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={requestContinueWithCheck}
+                className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                Passer
+              </button>
               <span className="text-xs font-medium text-muted-foreground tabular-nums">
                 {progressVerified}/{progressTests.length}
               </span>
