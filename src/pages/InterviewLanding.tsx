@@ -448,12 +448,12 @@ export default function InterviewLanding() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4 animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
             <Mic className="h-7 w-7" style={{ color: "#d4a574" }} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Nouvelle session pour
-          </h1>
-          <p className="text-lg font-semibold" style={{ color: "#d4a574" }}>
-            {project?.job_title}
+          <p className="text-base font-medium tracking-tight" style={{ color: "rgba(245, 240, 232, 0.7)" }}>
+            Nouvelle session
           </p>
+          <h1 className="text-3xl font-bold" style={{ color: "#d4a574" }}>
+            {project?.job_title}
+          </h1>
         </div>
 
 
