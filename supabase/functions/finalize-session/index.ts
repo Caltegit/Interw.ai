@@ -67,11 +67,15 @@ async function processSession(sessionId: string) {
   // Vérifie que la session est bien terminée.
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, status")
+    .select("id, status, is_demo")
     .eq("id", sessionId)
     .maybeSingle();
   if (!session || session.status !== "completed") {
     console.log("finalize-session: session not completed, skipping", sessionId);
+    return;
+  }
+  if ((session as any).is_demo) {
+    console.log("finalize-session: demo session, skipping", sessionId);
     return;
   }
 
