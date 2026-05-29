@@ -77,6 +77,7 @@ export function ShareReportsDialog({
             .select("share_token")
             .eq("report_id", r.reportId)
             .eq("is_active", true)
+            .is("viewed_at", null)
             .limit(1)
             .maybeSingle();
           let token = existing?.share_token ?? null;
@@ -86,7 +87,7 @@ export function ShareReportsDialog({
               .insert({
                 report_id: r.reportId,
                 created_by: user.id,
-                expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+                expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
               })
               .select("share_token")
               .single();
@@ -257,7 +258,8 @@ export function ShareReportsDialog({
         <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground">
           <AlertTriangle className="h-4 w-4 shrink-0 text-warning mt-0.5" />
           <div className="space-y-1">
-            <p>Ces liens expirent automatiquement après 10 jours.</p>
+            <p>Ces liens expirent automatiquement après 48 h.</p>
+            <p>Chaque lien est à usage unique : il devient invalide dès la première ouverture.</p>
             <p>
               Conformité RGPD : ne rendez jamais ces rapports publics. Partagez ce message
               uniquement avec les personnes strictement nécessaires à la décision de recrutement

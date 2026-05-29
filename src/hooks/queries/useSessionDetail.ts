@@ -33,9 +33,10 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     const nowIso = new Date().toISOString();
     const { data: shares } = await supabase
       .from("report_shares")
-      .select("share_token, is_active, expires_at")
+      .select("share_token, is_active, expires_at, viewed_at")
       .eq("report_id", rRes.data.id)
       .eq("is_active", true)
+      .is("viewed_at", null)
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -121,7 +122,7 @@ export function useCreateReportShare(sessionId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ reportId, userId }: { reportId: string; userId: string }) => {
-      const expiresAt = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from("report_shares")
         .insert({ report_id: reportId, created_by: userId, expires_at: expiresAt })

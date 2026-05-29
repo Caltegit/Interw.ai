@@ -47,57 +47,19 @@ export default function SharedReport() {
     if (!token) return;
 
     const loadReport = async () => {
-      const { data: share, error: shareError } = await supabase
-        .from("report_shares")
-        .select("report_id, is_active, expires_at")
-        .eq("share_token", token)
-        .single();
+      const { data, error: fnError } = await supabase.functions.invoke("consume-report-share", {
+        body: { token },
+      });
 
-      if (shareError || !share) {
-        setError("Lien de partage introuvable ou expiré.");
-        setLoading(false);
-        return;
-      }
-      if (!share.is_active) {
-        setError("Ce lien de partage a été désactivé.");
-        setLoading(false);
-        return;
-      }
-      if (share.expires_at && new Date(share.expires_at) < new Date()) {
-        setError("Ce lien de partage a expiré.");
+      if (fnError || !data || (data as any).error) {
+        setError((data as any)?.error ?? "Lien de partage introuvable ou expiré.");
         setLoading(false);
         return;
       }
 
-      const { data: reportData } = await supabase
-        .from("reports")
-        .select("*")
-        .eq("id", share.report_id)
-        .single();
-
-      if (!reportData) {
-        setError("Rapport introuvable.");
-        setLoading(false);
-        return;
-      }
-
-      const { data: sessionData } = await supabase
-        .from("sessions")
-        .select(
-          "id, candidate_name, candidate_email, created_at, duration_seconds, video_recording_url, project_id, projects(id, title, job_title, ai_persona_name, questions(id, content, order_index))",
-        )
-        .eq("id", reportData.session_id)
-        .single();
-
-      const { data: msgs } = await supabase
-        .from("session_messages")
-        .select("id, role, content, timestamp, video_segment_url, audio_segment_url, question_id, is_follow_up, transcription_status")
-        .eq("session_id", reportData.session_id)
-        .order("timestamp");
-
-      setReport(reportData);
-      setSession(sessionData);
-      setMessages(msgs ?? []);
+      setReport((data as any).report);
+      setSession((data as any).session);
+      setMessages((data as any).messages ?? []);
       setLoading(false);
     };
 

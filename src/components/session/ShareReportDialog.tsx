@@ -17,10 +17,12 @@ interface ShareReportDialogProps {
 function formatExpiry(iso: string | null) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
+    return new Date(iso).toLocaleString("fr-FR", {
       day: "2-digit",
       month: "long",
       year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return null;
@@ -72,7 +74,7 @@ export function ShareReportDialog({
             </div>
             {expiryLabel && (
               <p className="text-xs text-muted-foreground">
-                Lien valable jusqu'au <strong>{expiryLabel}</strong> (10 jours).
+                Lien valable jusqu'au <strong>{expiryLabel}</strong> (48 h).
               </p>
             )}
           </div>
@@ -89,8 +91,13 @@ export function ShareReportDialog({
           <div className="flex items-start gap-2 text-warning-foreground">
             <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-foreground">Validité limitée à 10 jours</p>
-              <p className="text-muted-foreground">Le lien expirera automatiquement passé ce délai.</p>
+              <p className="font-medium text-foreground">Validité limitée à 48 h</p>
+              <p className="text-muted-foreground">
+                Le lien expirera automatiquement passé ce délai.
+              </p>
+              <p className="text-muted-foreground mt-1">
+                Lien à usage unique : il devient invalide dès la première ouverture.
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-2 text-warning-foreground border-t border-warning/20 pt-2">
