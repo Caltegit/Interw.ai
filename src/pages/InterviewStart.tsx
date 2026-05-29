@@ -2083,13 +2083,16 @@ export default function InterviewStart() {
     isMobileLikeRef.current =
       typeof navigator !== "undefined" &&
       /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-    if (!isMobileLikeRef.current) {
+    if (!isMobileLikeRef.current && !session?.is_demo) {
       try {
         await document.documentElement.requestFullscreen?.();
       } catch {
         // Le navigateur a refusé : on continue sans, le bandeau de rappel restera caché.
       }
     }
+    // En mode démo, le plein écran est demandé sur le clic « Démarrer la démo »
+    // de la page précédente (geste utilisateur valide). Si l'utilisateur l'a
+    // refusé, le bandeau FullscreenPrompt prendra le relais.
 
     // Bloque le retour arrière du navigateur pendant la session
     try {
