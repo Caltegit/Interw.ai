@@ -86,6 +86,7 @@ const initialState: ProjectFormState = {
   audioAnalysisEnabled: true,
   showQuestionTimer: true,
   reportRecipientUserIds: [],
+  visibleToUserIds: [],
 };
 
 export default function ProjectNew() {
@@ -219,6 +220,7 @@ export default function ProjectNew() {
           ai_question_transitions_mode: s.aiQuestionTransitionsMode,
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
           report_recipient_user_ids: s.reportRecipientUserIds,
+          visible_to_user_ids: s.visibleToUserIds,
         } as never)
         .select()
         .single();

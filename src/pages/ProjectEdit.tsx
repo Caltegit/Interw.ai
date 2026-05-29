@@ -184,6 +184,8 @@ export default function ProjectEdit() {
           (project as { show_question_timer?: boolean }).show_question_timer ?? true,
         reportRecipientUserIds:
           (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
+        visibleToUserIds:
+          (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
       });
 
       setLoading(false);
@@ -276,6 +278,7 @@ export default function ProjectEdit() {
           audio_analysis_enabled: s.audioAnalysisEnabled,
           show_question_timer: s.showQuestionTimer,
           report_recipient_user_ids: s.reportRecipientUserIds,
+          visible_to_user_ids: s.visibleToUserIds,
         } as never)
         .eq("id", id);
 
