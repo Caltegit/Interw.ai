@@ -264,6 +264,7 @@ export default function InterviewStart() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
+  const isDemo = !!session?.is_demo;
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
