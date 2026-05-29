@@ -257,6 +257,12 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         .maybeSingle();
       const orgId = prof?.organization_id;
       if (!orgId) return;
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("owner_id")
+        .eq("id", orgId)
+        .maybeSingle();
+      if (!cancelled) setOrgOwnerId(org?.owner_id ?? null);
       const { data: members } = await supabase
         .from("profiles")
         .select("user_id, full_name, email")
