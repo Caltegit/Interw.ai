@@ -265,6 +265,8 @@ export default function InterviewStart() {
   const { toast } = useToast();
   const [session, setSession] = useState<any>(null);
   const isDemo = !!session?.is_demo;
+  const isDemoRef = useRef(false);
+  useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
