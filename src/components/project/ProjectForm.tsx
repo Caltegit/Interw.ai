@@ -153,9 +153,10 @@ export interface ProjectFormProps {
   saving: boolean;
   header: React.ReactNode;
   submitLabel: { idle: string; busy: string };
+  creatorUserId?: string;
 }
 
-export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel }: ProjectFormProps) {
+export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel, creatorUserId }: ProjectFormProps) {
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
