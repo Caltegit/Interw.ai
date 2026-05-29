@@ -3593,6 +3593,7 @@ export default function InterviewStart() {
                   : (project?.pre_session_message?.trim() || "Soyez naturel·le et souriez, vous êtes filmé·e !")}
               </p>
             </div>
+            {!isDemo && (
             <label
               className="flex items-start gap-3 text-sm cursor-pointer select-none rounded-md p-3"
               style={{
