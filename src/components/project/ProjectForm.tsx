@@ -522,26 +522,43 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       )}
 
       <div className="flex items-center gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s} className="flex items-center gap-2">
-            <button
-              onClick={() => (isEdit || i < step) && setStep(i)}
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                i === step
-                  ? "bg-primary text-primary-foreground"
-                  : isEdit || i < step
-                    ? "cursor-pointer bg-primary/20 text-primary hover:bg-primary/30"
-                    : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {i + 1}
-            </button>
-            <span className={`hidden text-sm sm:inline ${i === step ? "font-medium" : "text-muted-foreground"}`}>
-              {s}
-            </span>
-            {i < STEPS.length - 1 && <div className="h-px w-4 bg-border sm:w-8" />}
-          </div>
-        ))}
+        {STEPS.map((s, i) => {
+          const clickable = isEdit || i < step;
+          const onClick = () => clickable && setStep(i);
+          return (
+            <div key={s} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClick}
+                disabled={!clickable && i !== step}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                  i === step
+                    ? "bg-primary text-primary-foreground"
+                    : clickable
+                      ? "cursor-pointer bg-primary/20 text-primary hover:bg-primary/30"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {i + 1}
+              </button>
+              <button
+                type="button"
+                onClick={onClick}
+                disabled={!clickable && i !== step}
+                className={`hidden text-sm sm:inline transition-colors ${
+                  i === step
+                    ? "font-medium"
+                    : clickable
+                      ? "cursor-pointer text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground cursor-default"
+                }`}
+              >
+                {s}
+              </button>
+              {i < STEPS.length - 1 && <div className="h-px w-4 bg-border sm:w-8" />}
+            </div>
+          );
+        })}
       </div>
 
       {navButtons}
