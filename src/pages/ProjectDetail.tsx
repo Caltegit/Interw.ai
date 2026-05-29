@@ -1239,6 +1239,13 @@ export default function ProjectDetail() {
                     })}
                   </tbody>
                 </table>
+                {pagedSessions.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    {visibleDecisions.size === 0 && !search.trim()
+                      ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
+                      : "Aucun candidat ne correspond aux filtres."}
+                  </p>
+                )}
               </div>
                 {selectedIds.size > 0 && (
                   <div className="pt-2">
