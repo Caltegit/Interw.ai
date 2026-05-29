@@ -1446,6 +1446,24 @@ export default function InterviewStart() {
     if (session?.is_demo) setConsentChecked(true);
   }, [session?.is_demo]);
 
+  // En mode démo, on démarre automatiquement la session dès que tout est prêt
+  // pour éviter l'écran intermédiaire "Prêt à démarrer ?".
+  const demoAutoStartedRef = useRef(false);
+  useEffect(() => {
+    if (
+      !demoAutoStartedRef.current &&
+      session?.is_demo &&
+      !readyToStart &&
+      !resumePrompt &&
+      !!project &&
+      questions.length > 0
+    ) {
+      demoAutoStartedRef.current = true;
+      void beginInterview();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.is_demo, readyToStart, resumePrompt, project, questions.length]);
+
   // Restaure les messages depuis session_messages et redémarre la session à la bonne question
   const handleResumeInterview = useCallback(async () => {
     if (!resumePrompt || !session?.id) return;
