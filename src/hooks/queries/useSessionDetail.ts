@@ -33,9 +33,10 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     const nowIso = new Date().toISOString();
     const { data: shares } = await supabase
       .from("report_shares")
-      .select("share_token, is_active, expires_at")
+      .select("share_token, is_active, expires_at, viewed_at")
       .eq("report_id", rRes.data.id)
       .eq("is_active", true)
+      .is("viewed_at", null)
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
       .order("created_at", { ascending: false })
       .limit(1);
