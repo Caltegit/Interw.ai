@@ -621,7 +621,7 @@ export default function ProjectDetail() {
     const searchActive = search.trim().length > 0;
     if (!searchActive && decisionFilter !== "all")
       list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
-    if (!searchActive && visibleDecisions.size > 0) {
+    if (!searchActive) {
       list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
     }
     if (recoFilter !== "all")
