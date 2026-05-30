@@ -324,13 +324,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               <RotateCw className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5">
+          <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
             {[1, 1.5, 2].map((r) => (
               <button
                 key={r}
                 type="button"
                 onClick={() => setRate(r)}
-                className={`pointer-events-auto inline-flex h-7 w-9 items-center justify-center rounded-full text-xs font-medium transition-opacity ${
+                className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
                   rate === r
                     ? "bg-white text-black opacity-100"
                     : "bg-black/50 text-white opacity-80 hover:opacity-100"
