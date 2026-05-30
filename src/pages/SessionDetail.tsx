@@ -477,8 +477,8 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:288px]" : "gap-6 [--video-col:367px]"}`}>
-        <div className="order-2 flex flex-col gap-4 min-w-0 lg:order-1 lg:col-span-2">
+      <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
+        <div className="flex flex-col gap-4 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
               {(() => {
@@ -736,21 +736,19 @@ export default function SessionDetail() {
         </div>
 
         {report && (
-          <div className="order-3 lg:col-span-2">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Notes recruteur</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder="Ajoutez vos observations…"
-                  value={recruiterNotes}
-                  onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                  className="min-h-[180px] resize-y"
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Notes recruteur</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Ajoutez vos observations…"
+                value={recruiterNotes}
+                onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
+                className="min-h-[180px] resize-y"
+              />
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
