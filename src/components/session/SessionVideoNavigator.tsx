@@ -384,18 +384,18 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           </div>
         )}
 
-        <div className="grid grid-cols-3 items-center">
+        <div className={cn("grid items-center", compact ? "grid-cols-[auto_1fr_auto] gap-1" : "grid-cols-3")}>
           <div className="justify-self-start">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className={cn("h-6 text-xs", compact ? "px-1" : "px-2")}
               onClick={prev}
               disabled={index === 0}
             >
-              <ChevronLeft className="mr-1 h-3 w-3" />
-              Préc.
+              <ChevronLeft className={cn("h-3 w-3", compact ? "" : "mr-1")} />
+              {!compact && "Préc."}
             </Button>
           </div>
           <div className="justify-self-center">
@@ -430,12 +430,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               type="button"
               variant="outline"
               size="sm"
-              className="h-6 px-2 text-xs"
+              className={cn("h-6 text-xs", compact ? "px-1" : "px-2")}
               onClick={next}
               disabled={index === clips.length - 1}
             >
-              Suiv.
-              <ChevronRight className="ml-1 h-3 w-3" />
+              {!compact && "Suiv."}
+              <ChevronRight className={cn("h-3 w-3", compact ? "" : "ml-1")} />
             </Button>
           </div>
         </div>
