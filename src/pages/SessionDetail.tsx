@@ -527,10 +527,7 @@ export default function SessionDetail() {
                 Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
             {isPinned && (
               <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
-                <div className="mx-auto flex max-w-screen-2xl justify-center px-4 py-2">
-                  <div ref={setPinnedHost} className="w-[198px]" />
-                </div>
-                <div className="border-t bg-background/95 px-4 pb-2 pt-1">
+                <div className="px-4 py-2">
                   <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="decision" className="gap-1">
                       <FileText className="h-4 w-4" />
@@ -558,6 +555,12 @@ export default function SessionDetail() {
                     </TabsTrigger>
                   </TabsList>
                 </div>
+              </div>
+            )}
+
+            {isPinned && (
+              <div className="fixed right-4 top-[68px] z-40">
+                <div ref={setPinnedHost} className="w-[220px] overflow-hidden rounded-lg border bg-background shadow-lg" />
               </div>
             )}
 
