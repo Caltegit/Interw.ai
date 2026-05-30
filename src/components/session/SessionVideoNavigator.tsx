@@ -326,58 +326,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Select
-            value={String(index)}
-            onValueChange={(v) => goTo(Number(v), true)}
-          >
-            <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
-              <SelectValue>
-                Q {index + 1} / {clips.length}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent className="max-w-[22rem]">
-              {clips.map((c, i) => (
-                <SelectItem key={i} value={String(i)}>
-                  <span className="flex items-center gap-2">
-                    <span className="font-medium">Q{i + 1}</span>
-                    <span className="truncate text-muted-foreground">— {c.questionText}</span>
-                    {c.isFollowUp && (
-                      <Badge variant="outline" className="ml-1 text-[10px]">
-                        Relance
-                      </Badge>
-                    )}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-2">
-            {current.isFollowUp && (
-              <Badge variant="outline" className="text-xs">
-                Relance
-              </Badge>
-            )}
-            {durationSec ? (
-              <span className="text-sm font-semibold tabular-nums">
-                {formatMinutes(durationSec)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={prev}
-            disabled={index === 0}
-          >
-            <ChevronLeft className="mr-1 h-3 w-3" />
-            Préc.
-          </Button>
+        <div className="flex items-center justify-center gap-2">
+          {current.isFollowUp && (
+            <Badge variant="outline" className="text-xs">
+              Relance
+            </Badge>
+          )}
           <div className="flex items-center gap-1">
             {[1, 1.5, 2].map((r) => (
               <Button
@@ -392,17 +346,67 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </Button>
             ))}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-6 px-2 text-xs"
-            onClick={next}
-            disabled={index === clips.length - 1}
-          >
-            Suiv.
-            <ChevronRight className="ml-1 h-3 w-3" />
-          </Button>
+          {durationSec ? (
+            <span className="text-sm font-semibold tabular-nums">
+              {formatMinutes(durationSec)}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-3 items-center">
+          <div className="justify-self-start">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={prev}
+              disabled={index === 0}
+            >
+              <ChevronLeft className="mr-1 h-3 w-3" />
+              Préc.
+            </Button>
+          </div>
+          <div className="justify-self-center">
+            <Select
+              value={String(index)}
+              onValueChange={(v) => goTo(Number(v), true)}
+            >
+              <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
+                <SelectValue>
+                  Q {index + 1} / {clips.length}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-w-[22rem]">
+                {clips.map((c, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium">Q{i + 1}</span>
+                      <span className="truncate text-muted-foreground">— {c.questionText}</span>
+                      {c.isFollowUp && (
+                        <Badge variant="outline" className="ml-1 text-[10px]">
+                          Relance
+                        </Badge>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="justify-self-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={next}
+              disabled={index === clips.length - 1}
+            >
+              Suiv.
+              <ChevronRight className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
         </div>
 
 
