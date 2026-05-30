@@ -368,14 +368,6 @@ export function DecisionBanner(props: DecisionBannerProps) {
     </Card>
   );
 }
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function _DecisionBannerEnd() {
-  return (
-    <Card>
-      <div></div>
-    </Card>
-  );
-}
 
 function DecisionButton({
   active,
