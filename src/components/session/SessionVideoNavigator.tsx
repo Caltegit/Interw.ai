@@ -3,8 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
 
 export interface SessionVideoClip {
   url: string;
