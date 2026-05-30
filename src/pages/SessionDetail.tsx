@@ -527,21 +527,8 @@ export default function SessionDetail() {
                 Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
             {isPinned && (
               <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
-                <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    {report?.recommendation && recoConfig[report.recommendation] && (
-                      <Badge className={cn(recoConfig[report.recommendation].tone, "shrink-0 text-[11px]")}>
-                        {recoConfig[report.recommendation].label}
-                      </Badge>
-                    )}
-                    <span className="truncate text-sm font-semibold">
-                      {session.candidate_name}
-                    </span>
-                    <Badge className={cn(decisionConfig[decision].tone, "shrink-0 text-[11px]")}>
-                      {decisionConfig[decision].label}
-                    </Badge>
-                  </div>
-                  <div ref={setPinnedHost} className="shrink-0 w-[180px]" />
+                <div className="mx-auto flex max-w-screen-2xl justify-center px-4 py-2">
+                  <div ref={setPinnedHost} className="w-[198px]" />
                 </div>
                 <div className="border-t bg-background/95 px-4 pb-2 pt-1">
                   <TabsList className="grid w-full grid-cols-5">
