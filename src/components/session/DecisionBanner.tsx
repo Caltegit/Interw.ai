@@ -73,6 +73,7 @@ interface DecisionBannerProps {
   audioFailed?: boolean;
   videoSlot?: ReactNode;
   videoSlotWidth?: number;
+  notesSlot?: ReactNode;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
