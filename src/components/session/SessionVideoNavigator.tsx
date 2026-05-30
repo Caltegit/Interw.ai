@@ -276,7 +276,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   return (
     <Card>
-      <CardContent className="space-y-3 pt-6">
+      <CardContent className="space-y-1.5 pt-3">
         <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             key={current.url}
@@ -371,10 +371,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             type="button"
             variant="outline"
             size="sm"
+            className="h-6 px-2 text-xs"
             onClick={prev}
             disabled={index === 0}
           >
-            <ChevronLeft className="mr-1 h-4 w-4" />
+            <ChevronLeft className="mr-1 h-3 w-3" />
             Préc.
           </Button>
           <div className="flex items-center gap-1">
@@ -384,7 +385,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                 type="button"
                 variant={rate === r ? "default" : "outline"}
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="h-6 px-2 text-xs"
                 onClick={() => setRate(r)}
               >
                 {r}×
@@ -395,11 +396,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             type="button"
             variant="outline"
             size="sm"
+            className="h-6 px-2 text-xs"
             onClick={next}
             disabled={index === clips.length - 1}
           >
             Suiv.
-            <ChevronRight className="ml-1 h-4 w-4" />
+            <ChevronRight className="ml-1 h-3 w-3" />
           </Button>
         </div>
 
