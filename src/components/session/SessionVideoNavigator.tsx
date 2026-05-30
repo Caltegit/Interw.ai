@@ -36,7 +36,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts }, ref) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
