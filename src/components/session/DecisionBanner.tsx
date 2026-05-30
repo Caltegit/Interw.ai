@@ -136,6 +136,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     audioFailed,
     videoSlot,
     videoSlotWidth = 320,
+    notesSlot,
   } = props;
 
   const openCv = async () => {
