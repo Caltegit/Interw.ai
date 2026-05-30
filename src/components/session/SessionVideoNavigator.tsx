@@ -324,34 +324,38 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               <RotateCw className="h-3.5 w-3.5" />
             </button>
           </div>
-        </div>
-
-        <div className="flex items-center justify-center gap-2">
-          {current.isFollowUp && (
-            <Badge variant="outline" className="text-xs">
-              Relance
-            </Badge>
-          )}
-          <div className="flex items-center gap-1">
+          <div className="pointer-events-none absolute inset-y-0 left-2 flex flex-col justify-center gap-1.5">
             {[1, 1.5, 2].map((r) => (
-              <Button
+              <button
                 key={r}
                 type="button"
-                variant={rate === r ? "default" : "outline"}
-                size="sm"
-                className="h-6 px-2 text-xs"
                 onClick={() => setRate(r)}
+                className={`pointer-events-auto inline-flex h-7 w-9 items-center justify-center rounded-full text-xs font-medium transition-opacity ${
+                  rate === r
+                    ? "bg-white text-black opacity-100"
+                    : "bg-black/50 text-white opacity-80 hover:opacity-100"
+                }`}
               >
                 {r}×
-              </Button>
+              </button>
             ))}
           </div>
-          {durationSec ? (
-            <span className="text-sm font-semibold tabular-nums">
-              {formatMinutes(durationSec)}
-            </span>
-          ) : null}
         </div>
+
+        {(current.isFollowUp || durationSec) && (
+          <div className="flex items-center justify-center gap-2">
+            {current.isFollowUp && (
+              <Badge variant="outline" className="text-xs">
+                Relance
+              </Badge>
+            )}
+            {durationSec ? (
+              <span className="text-sm font-semibold tabular-nums">
+                {formatMinutes(durationSec)}
+              </span>
+            ) : null}
+          </div>
+        )}
 
         <div className="grid grid-cols-3 items-center">
           <div className="justify-self-start">
