@@ -259,6 +259,27 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     [clips, index, durationSec],
   );
 
+  // Conteneur DOM stable créé une seule fois. On le déplace via `appendChild`
+  // entre la position « normale » et la barre fixe pour préserver l'élément
+  // `<video>` (pas de démontage React → la lecture continue).
+  const stableHostRef = useRef<HTMLDivElement | null>(null);
+  if (stableHostRef.current === null && typeof document !== "undefined") {
+    const el = document.createElement("div");
+    el.style.height = "100%";
+    el.style.width = "100%";
+    stableHostRef.current = el;
+  }
+  useLayoutEffect(() => {
+    const host = stableHostRef.current;
+    if (!host || !portalTarget) return;
+    portalTarget.appendChild(host);
+    return () => {
+      if (host.parentElement === portalTarget) {
+        portalTarget.removeChild(host);
+      }
+    };
+  }, [portalTarget]);
+
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
@@ -279,9 +300,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
-  return (
-    <Card>
-      <CardContent className="space-y-1.5 px-3 pb-3 pt-3">
+  const content = (
+    <Card className={cn(compact && "border-primary/30 shadow-md")}>
+      <CardContent
+        className={cn(
+          compact ? "space-y-1 p-1.5" : "space-y-1.5 px-3 pb-3 pt-3",
+        )}
+      >
         <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             key={current.url}
@@ -298,56 +323,60 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             onEnded={handleEnded}
             className="h-full w-full object-contain"
           />
-          <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
-            <button
-              type="button"
-              aria-label="Reculer de 10 secondes"
-              disabled={durationSec === null}
-              onClick={() => {
-                const v = videoRef.current;
-                if (!v) return;
-                v.currentTime = Math.max(0, v.currentTime - 10);
-              }}
-              className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              10s
-            </button>
-            <button
-              type="button"
-              aria-label="Avancer de 10 secondes"
-              disabled={durationSec === null}
-              onClick={() => {
-                const v = videoRef.current;
-                if (!v) return;
-                const d = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
-                v.currentTime = Math.min(Math.max(0, d - 0.1), v.currentTime + 10);
-              }}
-              className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
-            >
-              10s
-              <RotateCw className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
-            {[2, 1.5, 1].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRate(r)}
-                className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
-                  rate === r
-                    ? "bg-white text-black opacity-100"
-                    : "bg-black/50 text-white opacity-80 hover:opacity-100"
-                }`}
-              >
-                {r}×
-              </button>
-            ))}
-          </div>
+          {!compact && (
+            <>
+              <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Reculer de 10 secondes"
+                  disabled={durationSec === null}
+                  onClick={() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    v.currentTime = Math.max(0, v.currentTime - 10);
+                  }}
+                  className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  10s
+                </button>
+                <button
+                  type="button"
+                  aria-label="Avancer de 10 secondes"
+                  disabled={durationSec === null}
+                  onClick={() => {
+                    const v = videoRef.current;
+                    if (!v) return;
+                    const d = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
+                    v.currentTime = Math.min(Math.max(0, d - 0.1), v.currentTime + 10);
+                  }}
+                  className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
+                >
+                  10s
+                  <RotateCw className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
+                {[2, 1.5, 1].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRate(r)}
+                    className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
+                      rate === r
+                        ? "bg-white text-black opacity-100"
+                        : "bg-black/50 text-white opacity-80 hover:opacity-100"
+                    }`}
+                  >
+                    {r}×
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        {current.isFollowUp && (
+        {!compact && current.isFollowUp && (
           <div className="flex items-center justify-center gap-2">
             <Badge variant="outline" className="text-xs">
               Relance
@@ -413,4 +442,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       </CardContent>
     </Card>
   );
+
+  if (!stableHostRef.current) return null;
+  return createPortal(content, stableHostRef.current);
 });
