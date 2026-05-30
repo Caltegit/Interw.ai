@@ -277,49 +277,6 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   return (
     <Card>
       <CardContent className="space-y-3 pt-6">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Select
-              value={String(index)}
-              onValueChange={(v) => goTo(Number(v), true)}
-            >
-              <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
-                <SelectValue>
-                  Question {index + 1} / {clips.length}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="max-w-[22rem]">
-                {clips.map((c, i) => (
-                  <SelectItem key={i} value={String(i)}>
-                    <span className="flex items-center gap-2">
-                      <span className="font-medium">Q{i + 1}</span>
-                      <span className="truncate text-muted-foreground">— {c.questionText}</span>
-                      {c.isFollowUp && (
-                        <Badge variant="outline" className="ml-1 text-[10px]">
-                          Relance
-                        </Badge>
-                      )}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              {current.isFollowUp && (
-                <Badge variant="outline" className="text-xs">
-                  Relance
-                </Badge>
-              )}
-              {durationSec ? (
-                <span className="text-sm font-semibold tabular-nums">
-                  {formatMinutes(durationSec)}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground line-clamp-2">{current.questionText}</p>
-        </div>
-
         <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             key={current.url}
@@ -369,6 +326,45 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Select
+            value={String(index)}
+            onValueChange={(v) => goTo(Number(v), true)}
+          >
+            <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
+              <SelectValue>
+                Question {index + 1} / {clips.length}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-w-[22rem]">
+              {clips.map((c, i) => (
+                <SelectItem key={i} value={String(i)}>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">Q{i + 1}</span>
+                    <span className="truncate text-muted-foreground">— {c.questionText}</span>
+                    {c.isFollowUp && (
+                      <Badge variant="outline" className="ml-1 text-[10px]">
+                        Relance
+                      </Badge>
+                    )}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            {current.isFollowUp && (
+              <Badge variant="outline" className="text-xs">
+                Relance
+              </Badge>
+            )}
+            {durationSec ? (
+              <span className="text-sm font-semibold tabular-nums">
+                {formatMinutes(durationSec)}
+              </span>
+            ) : null}
+          </div>
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <Button
@@ -379,7 +375,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             disabled={index === 0}
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
-            Précédent
+            Préc.
           </Button>
           <div className="flex items-center gap-1">
             {[1, 1.5, 2].map((r) => (
@@ -402,10 +398,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             onClick={next}
             disabled={index === clips.length - 1}
           >
-            Suivant
+            Suiv.
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
+
 
         <Collapsible>
           <CollapsibleTrigger asChild>
