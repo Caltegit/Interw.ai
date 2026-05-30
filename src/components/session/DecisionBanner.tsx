@@ -76,14 +76,14 @@ interface DecisionBannerProps {
   notesSlot?: ReactNode;
 }
 
-const recoConfig: Record<string, { label: string; tone: string }> = {
+export const recoConfig: Record<string, { label: string; tone: string }> = {
   strong_yes: { label: "Fortement recommandé", tone: "bg-success text-success-foreground hover:bg-success" },
   yes: { label: "Recommandé", tone: "bg-success/85 text-success-foreground hover:bg-success/85" },
   maybe: { label: "À étudier", tone: "bg-warning text-warning-foreground hover:bg-warning" },
   no: { label: "Non retenu", tone: "bg-destructive text-destructive-foreground hover:bg-destructive" },
 };
 
-const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
+export const decisionConfig: Record<RecruiterDecision, { label: string; tone: string }> = {
   none: { label: "Aucune décision", tone: "bg-muted text-muted-foreground" },
   rejected: { label: "Non", tone: "bg-destructive text-destructive-foreground" },
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
