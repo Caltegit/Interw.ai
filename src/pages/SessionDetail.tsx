@@ -533,15 +533,12 @@ export default function SessionDetail() {
                       }
                       notesSlot={
                         report ? (
-                          <div className="flex h-full flex-col gap-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">Notes recruteur</span>
-                            <Textarea
-                              placeholder="Ajoutez vos observations…"
-                              value={recruiterNotes}
-                              onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                              className="flex-1 min-h-[80px] resize-none"
-                            />
-                          </div>
+                          <Textarea
+                            placeholder="Ajoutez vos observations…"
+                            value={recruiterNotes}
+                            onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
+                            className="flex-1 min-h-[80px] resize-none"
+                          />
                         ) : undefined
                       }
                     />
