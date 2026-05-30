@@ -412,26 +412,6 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             </Button>
           </div>
         </div>
-
-
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="group flex w-full items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm font-medium hover:bg-muted/60"
-            >
-              <span>Transcription</span>
-              <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
-            </button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-2">
-            <div className="min-h-[220px] max-h-[220px] overflow-y-auto rounded-md border bg-background p-3 text-sm leading-relaxed whitespace-pre-wrap">
-              {current.messageId && transcripts?.[current.messageId]
-                ? transcripts[current.messageId]
-                : <span className="text-muted-foreground">Transcription non disponible.</span>}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
       </CardContent>
     </Card>
   );
