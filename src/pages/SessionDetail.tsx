@@ -151,6 +151,8 @@ export default function SessionDetail() {
   const [isPinned, setIsPinned] = useState(false);
   const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
   const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
+  const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
+  const [pinnedBarH, setPinnedBarH] = useState(0);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -163,6 +165,13 @@ export default function SessionDetail() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+  useEffect(() => {
+    if (!pinnedBar) return;
+    const ro = new ResizeObserver(() => setPinnedBarH(pinnedBar.offsetHeight));
+    ro.observe(pinnedBar);
+    setPinnedBarH(pinnedBar.offsetHeight);
+    return () => ro.disconnect();
+  }, [pinnedBar]);
   const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
 
   const goToMessage = useCallback(
@@ -515,7 +524,7 @@ export default function SessionDetail() {
 
           {/* Barre fixe en haut quand on a scrollé sous le cartouche. */}
           {isPinned && (
-            <div className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+            <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
               <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {report?.recommendation && recoConfig[report.recommendation] && (
@@ -600,8 +609,9 @@ export default function SessionDetail() {
                     <TabsList
                       className={cn(
                         "grid w-full grid-cols-5",
-                        isPinned && "sticky top-[140px] z-30 bg-background shadow-sm",
+                        isPinned && "sticky z-30 bg-background shadow-sm",
                       )}
+                      style={isPinned ? { top: pinnedBarH } : undefined}
                     >
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
