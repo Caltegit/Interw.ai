@@ -477,51 +477,7 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {(() => {
-        const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
-        const audioFailed = isAudioFailed(audioHealth);
-        return (
-          <>
-            <AudioHealthBanner health={audioHealth} />
-            <DecisionBanner
-              candidateName={session.candidate_name}
-              candidateEmail={session.candidate_email}
-              jobTitle={project?.job_title}
-              projectTitle={project?.title}
-              durationLabel={formatDuration(session.duration_seconds)}
-              videoAnswersCount={candidateVideos.length}
-              createdAt={session.created_at}
-              fitScore={fitScore}
-              recommendation={report?.recommendation ?? null}
-              headline={verdictHeadline}
-              rankLabel={rankLabel}
-              decision={decision}
-              onDecisionChange={handleDecision}
-              isDecisionPending={updateDecision.isPending}
-              shareUrl={shareUrl}
-              onShare={handleShare}
-              onCopyShare={copyShareUrl}
-              copied={copied}
-              isShareLoading={createShare.isPending}
-              canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-              onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-              onRegenerate={report ? handleRegenerate : undefined}
-              isRegenerating={regenerate.isPending}
-              onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-              onEditLinks={() => setLinksOpen(true)}
-              onDelete={() => setDeleteOpen(true)}
-              decisionByName={(session as any).decision_by_name ?? null}
-              decisionAt={(session as any).recruiter_decision_at ?? null}
-              linkedinUrl={(session as any).candidate_linkedin_url ?? null}
-              cvUrl={(session as any).candidate_cv_url ?? null}
-              cvFilename={(session as any).candidate_cv_filename ?? null}
-              audioFailed={audioFailed}
-            />
-          </>
-        );
-      })()}
-
-      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:360px]" : "gap-6 [--video-col:459px]"}`}>
+      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:288px]" : "gap-6 [--video-col:367px]"}`}>
         <div className="order-2 flex flex-col gap-4 min-w-0 lg:order-1">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
@@ -529,31 +485,69 @@ export default function SessionDetail() {
                 const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
                 const audioFailed = isAudioFailed(audioHealth);
                 return (
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="decision" className="gap-1">
-                      <FileText className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
-                      <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
-                    </TabsTrigger>
-                    <TabsTrigger value="bigfive" className="gap-1">
-                      <Brain className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-                      <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
-                    </TabsTrigger>
-                    <TabsTrigger value="voice" className="gap-1">
-                      <Mic className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
-                      <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
-                    </TabsTrigger>
-                    <TabsTrigger value="attitude" className="gap-1">
-                      <User className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
-                      <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
-                    </TabsTrigger>
-                  </TabsList>
+                  <>
+                    <AudioHealthBanner health={audioHealth} />
+                    <DecisionBanner
+                      candidateName={session.candidate_name}
+                      candidateEmail={session.candidate_email}
+                      jobTitle={project?.job_title}
+                      projectTitle={project?.title}
+                      durationLabel={formatDuration(session.duration_seconds)}
+                      videoAnswersCount={candidateVideos.length}
+                      createdAt={session.created_at}
+                      fitScore={fitScore}
+                      recommendation={report?.recommendation ?? null}
+                      headline={verdictHeadline}
+                      rankLabel={rankLabel}
+                      decision={decision}
+                      onDecisionChange={handleDecision}
+                      isDecisionPending={updateDecision.isPending}
+                      shareUrl={shareUrl}
+                      onShare={handleShare}
+                      onCopyShare={copyShareUrl}
+                      copied={copied}
+                      isShareLoading={createShare.isPending}
+                      canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+                      onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+                      onRegenerate={report ? handleRegenerate : undefined}
+                      isRegenerating={regenerate.isPending}
+                      onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+                      onEditLinks={() => setLinksOpen(true)}
+                      onDelete={() => setDeleteOpen(true)}
+                      decisionByName={(session as any).decision_by_name ?? null}
+                      decisionAt={(session as any).recruiter_decision_at ?? null}
+                      linkedinUrl={(session as any).candidate_linkedin_url ?? null}
+                      cvUrl={(session as any).candidate_cv_url ?? null}
+                      cvFilename={(session as any).candidate_cv_filename ?? null}
+                      audioFailed={audioFailed}
+                    />
+                    <TabsList className="grid w-full grid-cols-4">
+                      <TabsTrigger value="decision" className="gap-1">
+                        <FileText className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
+                        <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                      <TabsTrigger value="bigfive" className="gap-1">
+                        <Brain className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
+                        <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                      <TabsTrigger value="voice" className="gap-1">
+                        <Mic className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
+                        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                      <TabsTrigger value="attitude" className="gap-1">
+                        <User className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
+                        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                    </TabsList>
+                  </>
                 );
               })()}
             </div>
+
 
             <TabsContent value="decision" className="mt-4 space-y-4">
               {regenerate.isPending && report && (
