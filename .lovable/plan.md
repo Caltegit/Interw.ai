@@ -1,39 +1,27 @@
-# Visibilité du projet (étape 5)
+## Réordonner le cartouche vidéo sur mobile
 
-## Comportement
-- Le créateur du projet **et** le propriétaire de l'organisation voient **toujours** le projet (impossibles à décocher).
-- À la création / édition, on peut cocher d'autres membres de l'organisation pour leur donner accès.
-- Les membres non cochés ne voient pas le projet dans leur liste « Projets ».
-- Les super admins continuent de tout voir.
+### Contexte
+Dans `SessionDetail.tsx` et `SharedReport.tsx`, la mise en page utilise une grille 2 colonnes sur desktop :
+- Colonne gauche : bannière candidat + onglets + contenu
+- Colonne droite : lecteur vidéo + notes
 
-## Étape 5 — UI
-Nouvelle carte « Visibilité du projet » sous « Destinataires des rapports » :
-- Texte court : « Choisissez qui peut voir ce projet. »
-- Sélecteur multi-membres (même Popover + Checkbox que les destinataires).
-- Créateur et propriétaire affichés cochés, désactivés, mention « (toujours) ».
-- Les autres membres sont cochables.
+Sur mobile (1 colonne), l’ordre DOM fait apparaître la vidéo **en bas**, après tout le contenu des onglets. L’utilisateur souhaite que la vidéo soit en **2ème position**, juste après la bannière du candidat.
 
-## Données
-Nouvelle colonne sur `projects` :
-- `visible_to_user_ids uuid[] NOT NULL DEFAULT '{}'` — membres additionnels autorisés (créateur et propriétaire non stockés, déduits dynamiquement).
+### Changements
 
-## Règle d'accès (RLS)
-La policy SELECT actuelle `Org members can view org projects v2` est remplacée par :
+#### 1. SessionDetail.tsx
+- Extraire le `<DecisionBanner>` de la colonne gauche du grid pour le placer comme **élément frère au-dessus du grid**.
+- Le `<TabsList>` reste dans la colonne gauche du grid.
+- Sur mobile, la grille à 1 colonne avec `order` donnera :
+  1. Bannière candidat (hors grid, en premier)
+  2. Cartouche vidéo (`order-1 lg:order-2`)
+  3. Onglets + contenu (`order-2 lg:order-1`)
+- Sur desktop (`lg:`), l’ordre redevient normal : colonne gauche (onglets) | colonne droite (vidéo).
+- Ajuster les classes `lg:sticky` et `lg:top-6` du wrapper Tabs pour qu’elles s’appliquent au `<TabsList>` isolé (ou au nouveau wrapper de la colonne gauche).
 
-```
-created_by = auth.uid()
-OR auth.uid() = ANY (visible_to_user_ids)
-OR EXISTS (SELECT 1 FROM organizations o
-           WHERE o.id = organization_id AND o.owner_id = auth.uid())
-OR is_super_admin(auth.uid())
-```
+#### 2. SharedReport.tsx
+- Appliquer exactement le même réordonnancement : sortir le `<DecisionBanner>` du grid, le placer au-dessus, et inverser l’`order` mobile de la vidéo (`order-1`) et du contenu (`order-2`).
 
-Policies UPDATE / DELETE inchangées (créateur, propriétaire, super admin gardent leurs droits actuels).
-
-## Code à modifier
-- **Migration** : ajout colonne + remplacement policy SELECT projects.
-- `src/components/project/ProjectForm.tsx` : nouvel état `visibleToUserIds`, nouvelle carte à l'étape 5, inclus dans `onSubmit`.
-- `src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx` : passer / lire `visible_to_user_ids` dans insert/update et l'état initial.
-- `ProjectFormState` : ajouter `visibleToUserIds: string[]`.
-
-Aucun changement sur les requêtes de liste : la RLS filtre automatiquement.
+### Vérification
+- Tester en responsive (mobile ≤ 1024 px) : la vidéo doit apparaître juste sous la bannière candidat, avant les onglets.
+- Tester en desktop (≥ 1024 px) : aucune régression visuelle, la vidéo reste dans la colonne de droite.
