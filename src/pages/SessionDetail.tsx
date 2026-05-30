@@ -35,7 +35,8 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 
 
 import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
-import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { DecisionBanner, recoConfig, decisionConfig } from "@/components/session/DecisionBanner";
+import { cn } from "@/lib/utils";
 import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog";
 import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
@@ -143,6 +144,26 @@ export default function SessionDetail() {
   };
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+
+  // Sticky mini-vidéo : on observe un sentinel placé sous le DecisionBanner.
+  // Quand il passe au-dessus du viewport, on bascule en mode épinglé.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [isPinned, setIsPinned] = useState(false);
+  const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
+  const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
 
   const goToMessage = useCallback(
     (messageId: string, startSeconds?: number) => {
@@ -480,6 +501,40 @@ export default function SessionDetail() {
 
       <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
         <div className="flex flex-col gap-4 min-w-0">
+          {/* Lecteur vidéo rendu une seule fois, déplacé via portail entre
+              le slot inline du cartouche et la mini-barre fixe. */}
+          {sessionClips.length > 0 && (
+            <SessionVideoNavigator
+              ref={videoNavRef}
+              clips={sessionClips}
+              transcripts={transcriptsByMessageId}
+              portalTarget={portalHost}
+              compact={isPinned}
+            />
+          )}
+
+          {/* Barre fixe en haut quand on a scrollé sous le cartouche. */}
+          {isPinned && (
+            <div className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+              <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {report?.recommendation && recoConfig[report.recommendation] && (
+                    <Badge className={cn(recoConfig[report.recommendation].tone, "shrink-0 text-[11px]")}>
+                      {recoConfig[report.recommendation].label}
+                    </Badge>
+                  )}
+                  <span className="truncate text-sm font-semibold">
+                    {session.candidate_name}
+                  </span>
+                  <Badge className={cn(decisionConfig[decision].tone, "shrink-0 text-[11px]")}>
+                    {decisionConfig[decision].label}
+                  </Badge>
+                </div>
+                <div ref={setPinnedHost} className="shrink-0 w-[180px]" />
+              </div>
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4">
               {(() => {
@@ -524,11 +579,7 @@ export default function SessionDetail() {
                       videoSlotWidth={copilotOpen ? 299 : 368}
                       videoSlot={
                         sessionClips.length > 0 ? (
-                          <SessionVideoNavigator
-                            ref={videoNavRef}
-                            clips={sessionClips}
-                            transcripts={transcriptsByMessageId}
-                          />
+                          <div ref={setInlineHost} className="h-full" />
                         ) : undefined
                       }
                       notesSlot={
@@ -543,8 +594,15 @@ export default function SessionDetail() {
                       }
                     />
 
+                    {/* Sentinel pour détecter la sortie du cartouche du viewport. */}
+                    <div ref={sentinelRef} aria-hidden className="h-px w-full" />
 
-                    <TabsList className="grid w-full grid-cols-5">
+                    <TabsList
+                      className={cn(
+                        "grid w-full grid-cols-5",
+                        isPinned && "sticky top-[140px] z-30 bg-background shadow-sm",
+                      )}
+                    >
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
                         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
@@ -574,6 +632,7 @@ export default function SessionDetail() {
                 );
               })()}
             </div>
+
 
 
             <TabsContent value="decision" className="mt-4 space-y-4">
