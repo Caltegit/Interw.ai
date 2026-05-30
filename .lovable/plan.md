@@ -1,27 +1,25 @@
-## Réordonner le cartouche vidéo sur mobile
+## Vidéo en sticky à droite du cartouche candidat
 
-### Contexte
-Dans `SessionDetail.tsx` et `SharedReport.tsx`, la mise en page utilise une grille 2 colonnes sur desktop :
-- Colonne gauche : bannière candidat + onglets + contenu
-- Colonne droite : lecteur vidéo + notes
+### Objectif
+Sur desktop, la vidéo se positionne dès le haut à droite du cartouche « prénom nom » (DecisionBanner) et reste sticky lors du défilement. La largeur du panneau vidéo est réduite d'environ 20 %.
 
-Sur mobile (1 colonne), l’ordre DOM fait apparaître la vidéo **en bas**, après tout le contenu des onglets. L’utilisateur souhaite que la vidéo soit en **2ème position**, juste après la bannière du candidat.
+### Changements (`src/pages/SessionDetail.tsx`)
 
-### Changements
+1. **Largeur du panneau vidéo** : passer la variable `--video-col` de `459px` à `367px` (≈ 459 × 0,8). Variante copilot ouvert : `360px` → `288px`.
 
-#### 1. SessionDetail.tsx
-- Extraire le `<DecisionBanner>` de la colonne gauche du grid pour le placer comme **élément frère au-dessus du grid**.
-- Le `<TabsList>` reste dans la colonne gauche du grid.
-- Sur mobile, la grille à 1 colonne avec `order` donnera :
-  1. Bannière candidat (hors grid, en premier)
-  2. Cartouche vidéo (`order-1 lg:order-2`)
-  3. Onglets + contenu (`order-2 lg:order-1`)
-- Sur desktop (`lg:`), l’ordre redevient normal : colonne gauche (onglets) | colonne droite (vidéo).
-- Ajuster les classes `lg:sticky` et `lg:top-6` du wrapper Tabs pour qu’elles s’appliquent au `<TabsList>` isolé (ou au nouveau wrapper de la colonne gauche).
+2. **Réintégrer le `DecisionBanner` dans la colonne gauche du grid** (au-dessus des `TabsList`), pour qu'il soit aligné horizontalement avec le panneau vidéo sticky à droite. L'`AudioHealthBanner` reste également en haut de la colonne gauche.
 
-#### 2. SharedReport.tsx
-- Appliquer exactement le même réordonnancement : sortir le `<DecisionBanner>` du grid, le placer au-dessus, et inverser l’`order` mobile de la vidéo (`order-1`) et du contenu (`order-2`).
+3. **Ordre mobile préservé** :
+   - Colonne gauche (banner + tabs) : `order-2 lg:order-1`
+   - Colonne droite (vidéo) : `order-1 lg:order-2`
+   - Sur mobile : banner d'abord (en haut du contenu gauche), puis vidéo, puis onglets — comportement déjà demandé précédemment.
+
+4. **Sticky vidéo** : la colonne vidéo conserve `lg:sticky lg:top-6 lg:self-start`. Comme elle est désormais alignée en haut du grid avec le banner, elle apparaît dès le haut et colle au défilement.
+
+### Hors scope
+- `SharedReport.tsx` n'est pas modifié (déjà en bon ordre, hors demande).
+- Pas de changement du contenu du DecisionBanner ni du SessionVideoNavigator.
 
 ### Vérification
-- Tester en responsive (mobile ≤ 1024 px) : la vidéo doit apparaître juste sous la bannière candidat, avant les onglets.
-- Tester en desktop (≥ 1024 px) : aucune régression visuelle, la vidéo reste dans la colonne de droite.
+- Desktop ≥ 1024 px : DecisionBanner à gauche, lecteur vidéo à droite, alignés au top ; lors du scroll, la vidéo reste visible.
+- Mobile : ordre inchangé (banner → vidéo → onglets).
