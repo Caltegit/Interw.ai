@@ -573,8 +573,8 @@ export default function SessionDetail() {
                 </div>
               </div>
             )}
-            {/* Espace réservé pour compenser la barre fixe (évite que le contenu saute sous elle). */}
-            {isPinned && <div aria-hidden style={{ height: pinnedBarH }} />}
+
+
 
             <div className="flex flex-col gap-4">
               {(() => {
