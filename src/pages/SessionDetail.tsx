@@ -780,23 +780,8 @@ export default function SessionDetail() {
 
           </Tabs>
         </div>
-
-        {report && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Notes recruteur</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Ajoutez vos observations…"
-                value={recruiterNotes}
-                onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                className="min-h-[180px] resize-y"
-              />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
 }
+
