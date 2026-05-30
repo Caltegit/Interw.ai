@@ -609,8 +609,9 @@ export default function SessionDetail() {
                     <TabsList
                       className={cn(
                         "grid w-full grid-cols-5",
-                        isPinned && "sticky top-[140px] z-30 bg-background shadow-sm",
+                        isPinned && "sticky z-30 bg-background shadow-sm",
                       )}
+                      style={isPinned ? { top: pinnedBarH } : undefined}
                     >
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
