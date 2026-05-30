@@ -145,6 +145,26 @@ export default function SessionDetail() {
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
 
+  // Sticky mini-vidéo : on observe un sentinel placé sous le DecisionBanner.
+  // Quand il passe au-dessus du viewport, on bascule en mode épinglé.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [isPinned, setIsPinned] = useState(false);
+  const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
+  const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
+
   const goToMessage = useCallback(
     (messageId: string, startSeconds?: number) => {
       const played = videoNavRef.current?.playMessage(messageId, startSeconds);
