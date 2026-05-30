@@ -341,18 +341,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           </div>
         </div>
 
-        {(current.isFollowUp || durationSec) && (
+        {current.isFollowUp && (
           <div className="flex items-center justify-center gap-2">
-            {current.isFollowUp && (
-              <Badge variant="outline" className="text-xs">
-                Relance
-              </Badge>
-            )}
-            {durationSec ? (
-              <span className="text-sm font-semibold tabular-nums">
-                {formatMinutes(durationSec)}
-              </span>
-            ) : null}
+            <Badge variant="outline" className="text-xs">
+              Relance
+            </Badge>
           </div>
         )}
 
