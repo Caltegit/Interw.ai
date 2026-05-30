@@ -333,7 +333,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           >
             <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
               <SelectValue>
-                Question {index + 1} / {clips.length}
+                Q {index + 1} / {clips.length}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-w-[22rem]">
