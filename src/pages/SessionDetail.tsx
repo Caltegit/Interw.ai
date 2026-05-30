@@ -524,7 +524,7 @@ export default function SessionDetail() {
 
           {/* Barre fixe en haut quand on a scrollé sous le cartouche. */}
           {isPinned && (
-            <div className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+            <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
               <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {report?.recommendation && recoConfig[report.recommendation] && (
