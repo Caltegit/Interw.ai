@@ -736,6 +736,33 @@ export default function SessionDetail() {
 
             </TabsContent>
 
+            <TabsContent value="transcription" className="mt-4 space-y-4">
+              <Card>
+                <CardContent className="p-6">
+                  {sessionClips.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune transcription disponible.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {sessionClips.map((clip, i) => {
+                        const text = clip.messageId ? transcriptsByMessageId[clip.messageId] : "";
+                        return (
+                          <div key={clip.messageId ?? i} className="space-y-2">
+                            <div className="flex items-baseline gap-2">
+                              <Badge variant="secondary" className="shrink-0">{clip.questionLabel}</Badge>
+                              <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
+                            </div>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
+                              {text || "Transcription non disponible."}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
           </Tabs>
         </div>
 
