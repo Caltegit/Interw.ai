@@ -1,9 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, RotateCcw, RotateCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface SessionVideoClip {
   url: string;
@@ -21,6 +23,10 @@ export interface SessionVideoNavigatorHandle {
 interface Props {
   clips: SessionVideoClip[];
   transcripts?: Record<string, string>;
+  /** Cible DOM où afficher le lecteur via portail. Permet de le déplacer entre la position normale et la barre fixe sans démonter `<video>`. */
+  portalTarget?: HTMLElement | null;
+  /** Mode compact (mini-vidéo dans la barre fixe). */
+  compact?: boolean;
 }
 
 function formatMinutes(s: number): string {
