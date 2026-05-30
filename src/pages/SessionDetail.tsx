@@ -531,7 +531,21 @@ export default function SessionDetail() {
                           />
                         ) : undefined
                       }
+                      notesSlot={
+                        report ? (
+                          <div className="flex h-full flex-col gap-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">Notes recruteur</span>
+                            <Textarea
+                              placeholder="Ajoutez vos observations…"
+                              value={recruiterNotes}
+                              onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
+                              className="flex-1 min-h-[80px] resize-none"
+                            />
+                          </div>
+                        ) : undefined
+                      }
                     />
+
 
                     <TabsList className="grid w-full grid-cols-5">
                       <TabsTrigger value="decision" className="gap-1">
@@ -766,23 +780,8 @@ export default function SessionDetail() {
 
           </Tabs>
         </div>
-
-        {report && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Notes recruteur</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Ajoutez vos observations…"
-                value={recruiterNotes}
-                onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                className="min-h-[180px] resize-y"
-              />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
 }
+
