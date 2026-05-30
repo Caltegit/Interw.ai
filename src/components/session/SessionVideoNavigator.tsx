@@ -324,7 +324,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               <RotateCw className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="pointer-events-none absolute inset-y-0 left-2 flex flex-col justify-center gap-1.5">
+          <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5">
             {[1, 1.5, 2].map((r) => (
               <button
                 key={r}
