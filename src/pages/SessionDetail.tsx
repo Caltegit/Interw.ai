@@ -526,7 +526,7 @@ export default function SessionDetail() {
             {/* Barre fixe en haut quand on a scrollé sous le cartouche.
                 Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
             {isPinned && (
-              <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+              <div ref={setPinnedBar} className="sticky top-0 z-40 -mx-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm md:-mx-6">
                 <div className="px-4 py-2">
                   <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="decision" className="gap-1">
