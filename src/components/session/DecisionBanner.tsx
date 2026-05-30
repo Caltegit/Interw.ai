@@ -358,8 +358,8 @@ export function DecisionBanner(props: DecisionBannerProps) {
         </div>
         {videoSlot && (
           <div
-            className="hidden shrink-0 lg:block"
-            style={{ width: videoSlotWidth }}
+            className="w-full shrink-0 lg:w-[var(--ds-video-w)]"
+            style={{ ["--ds-video-w" as any]: `${videoSlotWidth}px` }}
           >
             {videoSlot}
           </div>
