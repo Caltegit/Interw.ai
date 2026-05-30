@@ -151,6 +151,8 @@ export default function SessionDetail() {
   const [isPinned, setIsPinned] = useState(false);
   const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
   const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
+  const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
+  const [pinnedBarH, setPinnedBarH] = useState(0);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -163,6 +165,13 @@ export default function SessionDetail() {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+  useEffect(() => {
+    if (!pinnedBar) return;
+    const ro = new ResizeObserver(() => setPinnedBarH(pinnedBar.offsetHeight));
+    ro.observe(pinnedBar);
+    setPinnedBarH(pinnedBar.offsetHeight);
+    return () => ro.disconnect();
+  }, [pinnedBar]);
   const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
 
   const goToMessage = useCallback(
