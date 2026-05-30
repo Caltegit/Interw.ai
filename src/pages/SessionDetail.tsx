@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User } from "lucide-react";
+import { ArrowLeft, MessageSquare, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User, ScrollText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -532,7 +533,7 @@ export default function SessionDetail() {
                       }
                     />
 
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
                         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
@@ -552,6 +553,10 @@ export default function SessionDetail() {
                         <User className="h-4 w-4" />
                         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
                         <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                      <TabsTrigger value="transcription" className="gap-1">
+                        <ScrollText className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
                       </TabsTrigger>
                     </TabsList>
                   </>
@@ -730,6 +735,33 @@ export default function SessionDetail() {
                 resolveVideoMessageId={resolveVideoMessageId}
               />
 
+            </TabsContent>
+
+            <TabsContent value="transcription" className="mt-4 space-y-4">
+              <Card>
+                <CardContent className="p-6">
+                  {sessionClips.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucune transcription disponible.</p>
+                  ) : (
+                    <div className="space-y-6">
+                      {sessionClips.map((clip, i) => {
+                        const text = clip.messageId ? transcriptsByMessageId[clip.messageId] : "";
+                        return (
+                          <div key={clip.messageId ?? i} className="space-y-2">
+                            <div className="flex items-baseline gap-2">
+                              <Badge variant="secondary" className="shrink-0">{clip.questionLabel}</Badge>
+                              <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
+                            </div>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
+                              {text || "Transcription non disponible."}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
           </Tabs>
