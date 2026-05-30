@@ -522,29 +522,60 @@ export default function SessionDetail() {
             />
           )}
 
-          {/* Barre fixe en haut quand on a scrollé sous le cartouche. */}
-          {isPinned && (
-            <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
-              <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  {report?.recommendation && recoConfig[report.recommendation] && (
-                    <Badge className={cn(recoConfig[report.recommendation].tone, "shrink-0 text-[11px]")}>
-                      {recoConfig[report.recommendation].label}
-                    </Badge>
-                  )}
-                  <span className="truncate text-sm font-semibold">
-                    {session.candidate_name}
-                  </span>
-                  <Badge className={cn(decisionConfig[decision].tone, "shrink-0 text-[11px]")}>
-                    {decisionConfig[decision].label}
-                  </Badge>
-                </div>
-                <div ref={setPinnedHost} className="shrink-0 w-[180px]" />
-              </div>
-            </div>
-          )}
-
           <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {/* Barre fixe en haut quand on a scrollé sous le cartouche.
+                Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
+            {isPinned && (
+              <div ref={setPinnedBar} className="fixed inset-x-0 top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm">
+                <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    {report?.recommendation && recoConfig[report.recommendation] && (
+                      <Badge className={cn(recoConfig[report.recommendation].tone, "shrink-0 text-[11px]")}>
+                        {recoConfig[report.recommendation].label}
+                      </Badge>
+                    )}
+                    <span className="truncate text-sm font-semibold">
+                      {session.candidate_name}
+                    </span>
+                    <Badge className={cn(decisionConfig[decision].tone, "shrink-0 text-[11px]")}>
+                      {decisionConfig[decision].label}
+                    </Badge>
+                  </div>
+                  <div ref={setPinnedHost} className="shrink-0 w-[180px]" />
+                </div>
+                <div className="border-t bg-background/95 px-4 pb-2 pt-1">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="decision" className="gap-1">
+                      <FileText className="h-4 w-4" />
+                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
+                      <FitScoreBadge score={fitScore} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
+                    </TabsTrigger>
+                    <TabsTrigger value="bigfive" className="gap-1">
+                      <Brain className="h-4 w-4" />
+                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
+                      <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
+                    </TabsTrigger>
+                    <TabsTrigger value="voice" className="gap-1">
+                      <Mic className="h-4 w-4" />
+                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
+                      <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
+                    </TabsTrigger>
+                    <TabsTrigger value="attitude" className="gap-1">
+                      <User className="h-4 w-4" />
+                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
+                      <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
+                    </TabsTrigger>
+                    <TabsTrigger value="transcription" className="gap-1">
+                      <ScrollText className="h-4 w-4" />
+                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
+            )}
+
+
+
             <div className="flex flex-col gap-4">
               {(() => {
                 const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
@@ -606,42 +637,39 @@ export default function SessionDetail() {
                     {/* Sentinel pour détecter la sortie du cartouche du viewport. */}
                     <div ref={sentinelRef} aria-hidden className="h-px w-full" />
 
-                    <TabsList
-                      className={cn(
-                        "grid w-full grid-cols-5",
-                        isPinned && "sticky z-30 bg-background shadow-sm",
-                      )}
-                      style={isPinned ? { top: pinnedBarH } : undefined}
-                    >
-                      <TabsTrigger value="decision" className="gap-1">
-                        <FileText className="h-4 w-4" />
-                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
-                        <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
-                      </TabsTrigger>
-                      <TabsTrigger value="bigfive" className="gap-1">
-                        <Brain className="h-4 w-4" />
-                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-                        <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
-                      </TabsTrigger>
-                      <TabsTrigger value="voice" className="gap-1">
-                        <Mic className="h-4 w-4" />
-                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
-                        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
-                      </TabsTrigger>
-                      <TabsTrigger value="attitude" className="gap-1">
-                        <User className="h-4 w-4" />
-                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
-                        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
-                      </TabsTrigger>
-                      <TabsTrigger value="transcription" className="gap-1">
-                        <ScrollText className="h-4 w-4" />
-                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
-                      </TabsTrigger>
-                    </TabsList>
+                    {!isPinned && (
+                      <TabsList className="grid w-full grid-cols-5">
+                        <TabsTrigger value="decision" className="gap-1">
+                          <FileText className="h-4 w-4" />
+                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
+                          <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
+                        </TabsTrigger>
+                        <TabsTrigger value="bigfive" className="gap-1">
+                          <Brain className="h-4 w-4" />
+                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
+                          <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
+                        </TabsTrigger>
+                        <TabsTrigger value="voice" className="gap-1">
+                          <Mic className="h-4 w-4" />
+                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
+                          <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
+                        </TabsTrigger>
+                        <TabsTrigger value="attitude" className="gap-1">
+                          <User className="h-4 w-4" />
+                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
+                          <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+                        </TabsTrigger>
+                        <TabsTrigger value="transcription" className="gap-1">
+                          <ScrollText className="h-4 w-4" />
+                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
+                        </TabsTrigger>
+                      </TabsList>
+                    )}
                   </>
                 );
               })()}
             </div>
+
 
 
 
