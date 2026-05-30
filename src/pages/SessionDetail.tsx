@@ -732,7 +732,7 @@ export default function SessionDetail() {
 
         <div
           id="session-video-panel"
-          className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]"
+          className="order-1 flex flex-col gap-4 lg:order-2 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]"
         >
           {sessionClips.length > 0 && (
             <div className="shrink-0">
