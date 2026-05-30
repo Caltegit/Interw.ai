@@ -35,7 +35,8 @@ import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageL
 
 
 import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
-import { DecisionBanner } from "@/components/session/DecisionBanner";
+import { DecisionBanner, recoConfig, decisionConfig } from "@/components/session/DecisionBanner";
+import { cn } from "@/lib/utils";
 import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog";
 import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
