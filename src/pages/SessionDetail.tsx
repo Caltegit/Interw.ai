@@ -480,7 +480,7 @@ export default function SessionDetail() {
       <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
         <div className="flex flex-col gap-4 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
+            <div className="flex flex-col gap-4">
               {(() => {
                 const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
                 const audioFailed = isAudioFailed(audioHealth);
