@@ -376,9 +376,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               value={String(index)}
               onValueChange={(v) => goTo(Number(v), true)}
             >
-              <SelectTrigger className="h-8 w-auto gap-1 border-none px-1 text-sm font-semibold shadow-none focus:ring-0">
+              <SelectTrigger className="h-6 w-auto gap-1 border-none px-1 text-xs font-semibold shadow-none focus:ring-0">
                 <SelectValue>
-                  Q {index + 1} / {clips.length}
+                  Q {index + 1}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="max-w-[22rem]">
