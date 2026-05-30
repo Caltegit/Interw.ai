@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -71,6 +71,8 @@ interface DecisionBannerProps {
   cvFilename?: string | null;
   onEditLinks?: () => void;
   audioFailed?: boolean;
+  videoSlot?: ReactNode;
+  videoSlotWidth?: number;
 }
 
 const recoConfig: Record<string, { label: string; tone: string }> = {
@@ -131,6 +133,8 @@ export function DecisionBanner(props: DecisionBannerProps) {
     cvFilename,
     onEditLinks,
     audioFailed,
+    videoSlot,
+    videoSlotWidth = 320,
   } = props;
 
   const openCv = async () => {
@@ -175,7 +179,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
 
   return (
     <Card className="border-primary/20 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="flex flex-col gap-3 p-3 lg:flex-row lg:items-start">
+      <div className={cn("flex flex-col gap-3 p-3", videoSlot ? "lg:flex-row lg:items-stretch" : "lg:flex-row lg:items-start")}>
         {/* Score circle + reco + actions */}
         <div className="flex shrink-0 items-start gap-4">
           <div className="flex flex-col items-center gap-1.5 min-w-[72px]">
@@ -352,6 +356,14 @@ export function DecisionBanner(props: DecisionBannerProps) {
             <p className="text-sm font-medium leading-snug text-foreground">« {headline} »</p>
           )}
         </div>
+        {videoSlot && (
+          <div
+            className="w-full shrink-0 lg:w-[var(--ds-video-w)]"
+            style={{ ["--ds-video-w" as any]: `${videoSlotWidth}px` }}
+          >
+            {videoSlot}
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -477,10 +477,10 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:288px]" : "gap-6 [--video-col:367px]"}`}>
-        <div className="order-2 flex flex-col gap-4 min-w-0 lg:order-1">
+      <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
+        <div className="flex flex-col gap-4 min-w-0">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
+            <div className="flex flex-col gap-4">
               {(() => {
                 const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
                 const audioFailed = isAudioFailed(audioHealth);
@@ -520,7 +520,18 @@ export default function SessionDetail() {
                       cvUrl={(session as any).candidate_cv_url ?? null}
                       cvFilename={(session as any).candidate_cv_filename ?? null}
                       audioFailed={audioFailed}
+                      videoSlotWidth={copilotOpen ? 260 : 320}
+                      videoSlot={
+                        sessionClips.length > 0 ? (
+                          <SessionVideoNavigator
+                            ref={videoNavRef}
+                            clips={sessionClips}
+                            transcripts={transcriptsByMessageId}
+                          />
+                        ) : undefined
+                      }
                     />
+
                     <TabsList className="grid w-full grid-cols-4">
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
@@ -724,32 +735,21 @@ export default function SessionDetail() {
           </Tabs>
         </div>
 
-        <div
-          id="session-video-panel"
-          className="order-1 flex flex-col gap-4 lg:order-2 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1"
-        >
-
-          {sessionClips.length > 0 && (
-            <div className="shrink-0">
-              <SessionVideoNavigator ref={videoNavRef} clips={sessionClips} transcripts={transcriptsByMessageId} />
-            </div>
-          )}
-          {report && (
-            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden lg:min-h-0">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Notes recruteur</CardTitle>
-              </CardHeader>
-              <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <Textarea
-                  placeholder="Ajoutez vos observations…"
-                  value={recruiterNotes}
-                  onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                  className="min-h-[220px] flex-1 resize-none overflow-y-auto"
-                />
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {report && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Notes recruteur</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                placeholder="Ajoutez vos observations…"
+                value={recruiterNotes}
+                onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
+                className="min-h-[180px] resize-y"
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
