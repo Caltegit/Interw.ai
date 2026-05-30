@@ -357,6 +357,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
           {headline && (
             <p className="text-sm font-medium leading-snug text-foreground">« {headline} »</p>
           )}
+          {notesSlot && <div className="flex-1 min-h-0">{notesSlot}</div>}
         </div>
         {videoSlot && (
           <div
