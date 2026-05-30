@@ -275,7 +275,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   return (
     <Card>
-      <CardContent className="space-y-1.5 pt-3">
+      <CardContent className="space-y-1.5 px-3 pb-3 pt-3">
         <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             key={current.url}
