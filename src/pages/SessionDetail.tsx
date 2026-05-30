@@ -478,7 +478,7 @@ export default function SessionDetail() {
       </AlertDialog>
 
       <div className={`grid items-start lg:grid-cols-[minmax(0,1fr)_var(--video-col)] ${copilotOpen ? "gap-4 [--video-col:288px]" : "gap-6 [--video-col:367px]"}`}>
-        <div className="order-2 flex flex-col gap-4 min-w-0 lg:order-1">
+        <div className="order-2 flex flex-col gap-4 min-w-0 lg:order-1 lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:z-20 lg:bg-background lg:pb-3">
               {(() => {
@@ -520,7 +520,18 @@ export default function SessionDetail() {
                       cvUrl={(session as any).candidate_cv_url ?? null}
                       cvFilename={(session as any).candidate_cv_filename ?? null}
                       audioFailed={audioFailed}
+                      videoSlotWidth={copilotOpen ? 260 : 320}
+                      videoSlot={
+                        sessionClips.length > 0 ? (
+                          <SessionVideoNavigator
+                            ref={videoNavRef}
+                            clips={sessionClips}
+                            transcripts={transcriptsByMessageId}
+                          />
+                        ) : undefined
+                      }
                     />
+
                     <TabsList className="grid w-full grid-cols-4">
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
