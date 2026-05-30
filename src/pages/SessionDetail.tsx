@@ -521,7 +521,7 @@ export default function SessionDetail() {
                       cvUrl={(session as any).candidate_cv_url ?? null}
                       cvFilename={(session as any).candidate_cv_filename ?? null}
                       audioFailed={audioFailed}
-                      videoSlotWidth={copilotOpen ? 260 : 320}
+                      videoSlotWidth={copilotOpen ? 299 : 368}
                       videoSlot={
                         sessionClips.length > 0 ? (
                           <SessionVideoNavigator

@@ -324,7 +324,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             </button>
           </div>
           <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
-            {[1, 1.5, 2].map((r) => (
+            {[2, 1.5, 1].map((r) => (
               <button
                 key={r}
                 type="button"
