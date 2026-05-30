@@ -532,7 +532,7 @@ export default function SessionDetail() {
                       }
                     />
 
-                    <TabsList className="grid w-full grid-cols-4">
+                    <TabsList className="grid w-full grid-cols-5">
                       <TabsTrigger value="decision" className="gap-1">
                         <FileText className="h-4 w-4" />
                         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
@@ -552,6 +552,10 @@ export default function SessionDetail() {
                         <User className="h-4 w-4" />
                         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
                         <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+                      </TabsTrigger>
+                      <TabsTrigger value="transcription" className="gap-1">
+                        <ScrollText className="h-4 w-4" />
+                        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
                       </TabsTrigger>
                     </TabsList>
                   </>
