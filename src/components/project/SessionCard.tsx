@@ -408,30 +408,8 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           )}
         </div>
 
-        {/* Décision + note */}
+        {/* Note */}
         <div className="-mt-2 flex flex-col gap-2">
-          <div className="flex justify-center">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
-                    <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Aucune décision</SelectItem>
-                      <SelectItem value="rejected">Non</SelectItem>
-                      <SelectItem value="second_opinion">À discuter</SelectItem>
-                      <SelectItem value="shortlisted">Retenu</SelectItem>
-                      <SelectItem value="in_progress">RDV</SelectItem>
-                      <SelectItem value="accepted">Oui</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </TooltipTrigger>
-              {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
-            </Tooltip>
-          </div>
           {onNoteChange && (
             hasReport ? (
               <div className="flex items-center gap-1">
