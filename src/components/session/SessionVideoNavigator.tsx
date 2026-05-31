@@ -317,6 +317,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             ref={videoRef}
             src={current.url}
             controls
+            controlsList="nodownload"
+            disablePictureInPicture={false}
             playsInline
             preload="metadata"
             onLoadedMetadata={(e) => {
