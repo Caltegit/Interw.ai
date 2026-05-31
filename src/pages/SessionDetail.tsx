@@ -629,10 +629,10 @@ export default function SessionDetail() {
                       }
                     />
 
-                    {/* Sentinel pour détecter la sortie du cartouche du viewport. */}
-                    <div ref={sentinelRef} aria-hidden className="h-px w-full" />
-
                     {!isPinned && (
+                      <TabsList className="grid w-full grid-cols-5">
+                        <TabsTrigger value="decision" className="gap-1">
+                          <FileText className="h-4 w-4" />
                       <TabsList className="grid w-full grid-cols-5">
                         <TabsTrigger value="decision" className="gap-1">
                           <FileText className="h-4 w-4" />
