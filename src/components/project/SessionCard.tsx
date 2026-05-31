@@ -401,7 +401,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                 onClick={() => goTo(Math.min(clips.length - 1, index + 1), true)}
                 disabled={index >= clips.length - 1}
               >
-                Suivant
+                Suiv
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
