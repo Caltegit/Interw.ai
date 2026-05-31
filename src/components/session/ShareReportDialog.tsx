@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, Check, Copy, Share2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Check, Copy, KeyRound, Share2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShareReportDialogProps {
