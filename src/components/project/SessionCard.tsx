@@ -368,18 +368,18 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                       Question {index + 1}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="max-w-[20rem]">
+                  <SelectContent className="w-[32rem] max-w-[90vw]">
                     {clips.map((c, i) => {
                       const q = c.questionId ? questionByid.get(c.questionId) : null;
                       return (
                         <SelectItem key={i} value={String(i)}>
-                          <span className="flex items-center gap-2">
-                            <span className="font-medium">Q{i + 1}</span>
+                          <span className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="font-medium shrink-0">Question {i + 1}</span>
                             {q && (
                               <span className="truncate text-muted-foreground">— {q.content}</span>
                             )}
                             {c.isFollowUp && (
-                              <Badge variant="outline" className="ml-1 text-[10px]">Relance</Badge>
+                              <Badge variant="outline" className="ml-1 text-[10px] shrink-0">Relance</Badge>
                             )}
                           </span>
                         </SelectItem>
