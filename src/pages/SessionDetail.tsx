@@ -522,6 +522,11 @@ export default function SessionDetail() {
             />
           )}
 
+          {/* Sentinel placé hors du sous-arbre où la barre sticky se monte,
+              afin que monter/démonter la barre ne pousse pas le sentinel
+              (ce qui provoquait un scintillement et empêchait l'épinglage). */}
+          <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             {/* Barre fixe en haut quand on a scrollé sous le cartouche.
                 Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
@@ -623,9 +628,6 @@ export default function SessionDetail() {
                         ) : undefined
                       }
                     />
-
-                    {/* Sentinel pour détecter la sortie du cartouche du viewport. */}
-                    <div ref={sentinelRef} aria-hidden className="h-px w-full" />
 
                     {!isPinned && (
                       <TabsList className="grid w-full grid-cols-5">
