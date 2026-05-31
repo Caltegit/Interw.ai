@@ -405,14 +405,14 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             >
               <SelectTrigger className="h-6 w-auto gap-1 border-none px-1 text-xs font-semibold shadow-none focus:ring-0">
                 <SelectValue>
-                  Q {index + 1}
+                  Question {index + 1}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="max-w-[22rem]">
                 {clips.map((c, i) => (
                   <SelectItem key={i} value={String(i)}>
                     <span className="flex items-center gap-2">
-                      <span className="font-medium">Q{i + 1}</span>
+                      <span className="font-medium">Question {i + 1}</span>
                       <span className="truncate text-muted-foreground">— {c.questionText}</span>
                       {c.isFollowUp && (
                         <Badge variant="outline" className="ml-1 text-[10px]">
