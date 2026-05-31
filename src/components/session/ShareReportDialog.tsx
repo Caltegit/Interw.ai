@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, Check, Copy, Share2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Check, Copy, KeyRound, Share2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ShareReportDialogProps {
@@ -95,8 +95,9 @@ export function ShareReportDialog({
               <p className="text-muted-foreground">
                 Le lien expirera automatiquement passé ce délai.
               </p>
-              <p className="text-muted-foreground mt-1">
-                Lien à usage unique : il devient invalide dès la première ouverture.
+              <p className="text-muted-foreground mt-1 flex items-start gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+                <span><span className="font-semibold text-foreground">Lien à usage unique</span> : il devient invalide dès la première ouverture.</span>
               </p>
             </div>
           </div>
