@@ -1193,6 +1193,7 @@ export type Database = {
           report_id: string
           share_token: string
           viewed_at: string | null
+          viewer_secret: string | null
         }
         Insert: {
           created_at?: string
@@ -1203,6 +1204,7 @@ export type Database = {
           report_id: string
           share_token?: string
           viewed_at?: string | null
+          viewer_secret?: string | null
         }
         Update: {
           created_at?: string
@@ -1213,6 +1215,7 @@ export type Database = {
           report_id?: string
           share_token?: string
           viewed_at?: string | null
+          viewer_secret?: string | null
         }
         Relationships: [
           {

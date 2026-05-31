@@ -1,0 +1,1 @@
+ALTER TABLE public.report_shares ADD COLUMN IF NOT EXISTS viewer_secret text;
