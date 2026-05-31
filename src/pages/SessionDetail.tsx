@@ -145,26 +145,29 @@ export default function SessionDetail() {
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
 
-  // Sticky mini-vidéo : on observe un sentinel placé sous le DecisionBanner.
+  // Sticky mini-vidéo : on observe un sentinel placé sous le SessionVideoNavigator.
   // Quand il passe au-dessus du viewport, on bascule en mode épinglé.
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  // ⚠️ On utilise une callback ref + état : le composant fait plusieurs early-returns
+  // (loading, !session, …) avant de rendre le sentinel. Avec une useRef classique +
+  // useEffect([]), l'observer n'était jamais attaché car ref.current valait null au
+  // premier mount et l'effet ne se rejouait pas.
+  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
   const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
   const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
   const [pinnedBarH, setPinnedBarH] = useState(0);
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
+    if (!sentinelEl) return;
     const obs = new IntersectionObserver(
       ([entry]) => {
         setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
       },
       { threshold: 0 },
     );
-    obs.observe(el);
+    obs.observe(sentinelEl);
     return () => obs.disconnect();
-  }, []);
+  }, [sentinelEl]);
   useEffect(() => {
     if (!pinnedBar) return;
     const ro = new ResizeObserver(() => setPinnedBarH(pinnedBar.offsetHeight));
