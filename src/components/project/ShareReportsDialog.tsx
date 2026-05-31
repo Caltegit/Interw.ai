@@ -269,7 +269,9 @@ export function ShareReportsDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
+        </div>
+
+        <DialogFooter className="gap-2 px-6 pb-6 pt-2 border-t shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
             Fermer
           </Button>
