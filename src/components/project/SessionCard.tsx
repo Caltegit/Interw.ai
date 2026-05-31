@@ -356,7 +356,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                 disabled={index === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Précédent
+                Pré
               </Button>
               <div className="flex items-center gap-1.5">
                 <Select
