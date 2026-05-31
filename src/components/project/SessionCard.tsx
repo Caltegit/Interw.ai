@@ -374,7 +374,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                       return (
                         <SelectItem key={i} value={String(i)}>
                           <span className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="font-medium shrink-0">Question {i + 1}</span>
+                            <span className="font-medium shrink-0">Q{i + 1}</span>
                             {q && (
                               <span className="truncate text-muted-foreground">— {q.content}</span>
                             )}
