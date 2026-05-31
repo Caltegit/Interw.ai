@@ -40,6 +40,8 @@ function formatMinutes(s: number): string {
 
 export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { download: downloadMp4, status: dlStatus, progress: dlProgress } = useMp4Download();
+  const { toast } = useToast();
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
