@@ -180,14 +180,15 @@ export function ShareReportsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 shrink-0">
           <DialogTitle>Partager les rapports</DialogTitle>
           <DialogDescription>
             {recipients.length} rapport(s)
             {skippedCount > 0 ? ` — ${skippedCount} ignoré(s) (rapport non disponible)` : ""}
           </DialogDescription>
         </DialogHeader>
+        <div className="flex-1 overflow-y-auto px-6 space-y-4">
 
         {loading ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
