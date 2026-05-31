@@ -1,76 +1,63 @@
-# Plan — Test Playwright pour la détection de panne micro
+## Diagnostic
 
-## Contexte
-L'infra Playwright existe déjà (`tests/e2e/`, `playwright.config.ts` avec flux media factices, seed auto via `global-setup.ts`). Il suffit d'ajouter un fichier `.spec.ts`. Pas de nouvelle dépendance ni config.
+Dans `src/pages/SessionDetail.tsx`, la barre épinglée (`<div ref={setPinnedBar} className="sticky top-0 …">` ligne 528) n'est rendue dans le DOM que lorsque `isPinned === true`.
 
-## Fichier à créer
-`tests/e2e/interview-mic-failure.spec.ts`
+Le sentinel observé par l'`IntersectionObserver` (ligne 628) est placé **plus bas dans le même arbre Tabs**, à l'intérieur du `<div className="flex flex-col gap-4">` (ligne 569) qui se trouve **après** l'emplacement où la barre sticky est insérée (ligne 528).
 
-## Scénario du test
-Simuler une perte de piste micro en cours d'entretien et vérifier que `MicFailureBanner` apparaît avec le bon message.
+Conséquence quand on scrolle vers le bas :
+
+1. Le sentinel passe au-dessus du viewport → `isPinned` devient `true`.
+2. La barre sticky se monte au-dessus du flex-col → tout le contenu (dont le sentinel) est poussé vers le bas de `pinnedBarH` pixels (~50 px).
+3. Le sentinel se retrouve à nouveau dans le viewport → `isPinned` redevient `false`.
+4. La barre se démonte → le sentinel remonte → re-déclenchement → boucle / scintillement → la barre semble « ne pas fonctionner ».
+
+Cela ne se produisait pas avant parce que le sentinel et la barre n'étaient pas dans le même conteneur de flux.
+
+## Correctif proposé
+
+Sortir le sentinel du sous-arbre poussé par la barre, sans changer l'expérience visuelle :
+
+- Déplacer le `<div ref={sentinelRef}>` **au-dessus** de `<Tabs>` (juste après le `SessionVideoNavigator`, ligne ~523), donc avant l'emplacement où la barre sticky se monte.
+- Conserver `DecisionBanner` à sa place actuelle (le sentinel se déclenche désormais quand on a scrollé au-delà de la mini-vidéo + cartouche supérieur, comportement équivalent).
+- Garder le `TabsList` non-épinglé (ligne 630) tel quel.
+
+Ainsi, monter/démonter la barre sticky ne déplace plus le sentinel → plus de boucle, la barre reste épinglée tant qu'on scrolle.
+
+## Détails techniques
+
+Fichier modifié : `src/pages/SessionDetail.tsx`
 
 ```text
-1. goto /interview/{slug}/start/{pendingSessionToken}
-2. click "Démarrer l'entretien"
-3. attendre selfview + indicateur REC (comme interview-start-media.spec.ts)
-4. attendre que le bouton de réponse soit visible (= phase listening)
-5. page.evaluate(...) : forcer track.stop() sur la piste audio du stream actif
-6. expect bannière "Micro déconnecté" visible dans les 8 s
-7. expect bouton "Réactiver le micro" visible
+Avant :
+  SessionVideoNavigator
+  <Tabs>
+    [barre sticky si isPinned]                ← insertion ici pousse ce qui suit
+    <div flex col>
+       DecisionBanner
+       sentinel                                ← se fait pousser
+       [TabsList si !isPinned]
+    </div>
+    TabsContent…
+  </Tabs>
+
+Après :
+  SessionVideoNavigator
+  sentinel                                     ← hors du flux poussé
+  <Tabs>
+    [barre sticky si isPinned]
+    <div flex col>
+       DecisionBanner
+       [TabsList si !isPinned]
+    </div>
+    TabsContent…
+  </Tabs>
 ```
 
-## Comment déclencher la panne
-Trois options testées par ordre de fiabilité :
+Aucun changement de style, aucun changement de logique métier ; uniquement un déplacement du nœud sentinel et la suppression de sa ligne actuelle (628).
 
-**A. `track.stop()` via page.evaluate** (préféré)
-On accède au `MediaStream` actif via une référence exposée sur `window` (à ajouter dans `InterviewStart.tsx` en mode dev/test : `if (import.meta.env.DEV) (window as any).__streamRef = streamRef`). Le test appelle ensuite :
-```js
-window.__streamRef.current.getAudioTracks()[0].stop()
-```
-Déclenche l'event `ended` → bascule en `track-dead`.
+## Vérification
 
-**B. Sans hook : `RMS silencieux`**
-Plus simple mais plus lent — attendre 6 s sans signal STT pour basculer en `silent`. Problème : les flux factices Chromium émettent un signal audio non nul, donc le RMS reste au-dessus du seuil. Ne marchera pas sans patch.
-
-**C. Mock getUserMedia avant `goto`**
-`page.addInitScript` qui remplace `navigator.mediaDevices.getUserMedia` pour retourner un stream dont la piste audio se mute après 5 s. Plus invasif, casse les autres assertions du flow normal.
-
-**Recommandation : option A.** Petite trappe de test (`window.__streamRef`) gardée derrière `import.meta.env.DEV || import.meta.env.MODE === 'test'`. C'est la pratique standard pour tester du code WebRTC avec Playwright.
-
-## Implications / risques
-
-| Risque | Mitigation |
-|---|---|
-| Exposer `streamRef` sur `window` même en prod | Garde stricte `import.meta.env.DEV` — n'est jamais inclus dans le build prod (Vite tree-shake) |
-| Flaky : la bannière dépend du timing du watcher | `expect.poll` avec timeout 10 s sur `getByRole("alert")` filtré par texte |
-| La session pending est consommée par le test (passe en `in_progress`) | Le seed la recrée à chaque run via `global-setup.ts` — pas de nettoyage manuel |
-| Le test consomme un slot de session sur Lovable Cloud | Identique aux autres tests interview-* existants, aucun impact |
-| Sur CI headless, `requestAnimationFrame` peut tourner moins vite → watcher plus lent | Le watcher tourne sur rAF mais le `track.onended` est synchrone, donc bannière instantanée |
-
-## Tests à ajouter (1 fichier, 1 ou 2 cases)
-
-1. **`micro déconnecté affiche la bannière + bouton Réactiver`** — option A
-2. *(optionnel)* **`reacquireMic réussit avec fake media`** — clic sur "Réactiver", la bannière disparaît dans les 5 s
-
-## Modifications de code requises
-
-1. `src/pages/InterviewStart.tsx` : 2 lignes pour exposer `streamRef` en dev uniquement
-   ```ts
-   if (import.meta.env.DEV) {
-     (window as any).__interviewStreamRef = streamRef;
-   }
-   ```
-2. `tests/e2e/interview-mic-failure.spec.ts` : nouveau fichier (~50 lignes)
-3. `tests/e2e/README.md` : ajouter une ligne dans le tableau des scénarios
-
-## Lancer le test
-
-```bash
-npx playwright test tests/e2e/interview-mic-failure.spec.ts
-```
-
-Tourne automatiquement en CI au prochain push sur `main` (workflow `.github/workflows/e2e.yml` existant).
-
-## Hors scope
-- Test unitaire Vitest de `useMicHealthWatcher` (mock AnalyserNode) — utile mais redondant si le E2E passe
-- Test du fallback `getUserMedia` quand le deviceId exact échoue — difficile à simuler de façon réaliste
+- Charger `/sessions/<id>` avec un rapport généré.
+- Scroller vers le bas : la barre épinglée et la mini-vidéo apparaissent au passage du cartouche et restent affichées.
+- Scroller vers le haut : elles disparaissent une fois le cartouche revenu en vue.
+- Tester avec et sans le panneau Copilote ouvert (la largeur change).
