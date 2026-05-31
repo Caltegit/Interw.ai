@@ -4056,14 +4056,14 @@ export default function InterviewStart() {
                   const isCritical = hasTimeLimit && remaining <= 20;
                   const isFinal = hasTimeLimit && remaining <= 10;
                   const showTimerSetting = (project as { show_question_timer?: boolean })?.show_question_timer ?? true;
-                  // Indication statique « Répondez en … » quand le timer est masqué.
-                  const staticTimeLabel = (() => {
+                  // Indication statique « Répondez / X min » (sur 2 lignes) quand le timer est masqué.
+                  const staticDurationLabel = (() => {
                     if (!configuredMax || configuredMax <= 0) return "";
-                    if (configuredMax < 60) return `Répondez en ${configuredMax} s`;
+                    if (configuredMax < 60) return `${configuredMax} s`;
                     const m = Math.floor(configuredMax / 60);
                     const s = configuredMax % 60;
-                    if (s === 0) return `Répondez en ${m} min`;
-                    return `Répondez en ${m} min ${s}`;
+                    if (s === 0) return `${m} min`;
+                    return `${m} min ${s}`;
                   })();
                   // Dans les 20 dernières secondes, on réaffiche toujours le décompte
                   // (cf. spécification : reprend son service comme actuellement).
@@ -4086,8 +4086,11 @@ export default function InterviewStart() {
                       </div>
                     ) : (
                       <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        {staticTimeLabel}
+                        <Clock className="h-4 w-4 shrink-0" />
+                        <span className="flex flex-col leading-tight text-left">
+                          <span>Répondez</span>
+                          <span>{staticDurationLabel}</span>
+                        </span>
                       </div>
                     )
                   ) : null;
