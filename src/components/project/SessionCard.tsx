@@ -214,8 +214,8 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
         </div>
       )}
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
-        {/* En-tête : nom puis note + recommandation */}
-        <div className="flex flex-col items-center gap-1">
+        {/* En-tête : nom puis note + recommandation + décision */}
+        <div className="flex flex-col items-center gap-2">
           <Link
             to={`/sessions/${session.id}`}
             className="block max-w-full truncate text-base font-semibold hover:underline"
@@ -242,6 +242,26 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
               </Badge>
             )}
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Select value={decision} onValueChange={(v) => onDecisionChange(session.id, v)}>
+                  <SelectTrigger className={cn("h-9 min-w-[12rem] justify-center gap-2", decisionConfig[decision]?.className)}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucune décision</SelectItem>
+                    <SelectItem value="rejected">Non</SelectItem>
+                    <SelectItem value="second_opinion">À discuter</SelectItem>
+                    <SelectItem value="shortlisted">Retenu</SelectItem>
+                    <SelectItem value="in_progress">RDV</SelectItem>
+                    <SelectItem value="accepted">Oui</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TooltipTrigger>
+            {decision !== "none" && authorTooltip && <TooltipContent>{authorTooltip}</TooltipContent>}
+          </Tooltip>
         </div>
 
         {/* Vidéo */}
