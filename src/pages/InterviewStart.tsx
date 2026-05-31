@@ -22,6 +22,8 @@ import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
 import MicBlockingDialog from "@/components/interview/MicBlockingDialog";
+import MicFailureBanner from "@/components/interview/MicFailureBanner";
+import { useMicHealthWatcher } from "@/hooks/useMicHealthWatcher";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCachedTtsBlob,
