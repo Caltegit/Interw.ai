@@ -22,6 +22,8 @@ import AudioUnlockOverlay from "@/components/interview/AudioUnlockOverlay";
 import AudioDebugPanel from "@/components/interview/AudioDebugPanel";
 import ConsentDialog from "@/components/interview/ConsentDialog";
 import MicBlockingDialog from "@/components/interview/MicBlockingDialog";
+import MicFailureBanner from "@/components/interview/MicFailureBanner";
+import { useMicHealthWatcher } from "@/hooks/useMicHealthWatcher";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   getCachedTtsBlob,
@@ -1611,6 +1613,82 @@ export default function InterviewStart() {
       setSwitchingDevice(false);
     }
   }, [toast, session?.id]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
+  // ─────────────────────────────────────────────────────────────────────────
+  const micWatchActive = isListening && !isSpeaking && !isPaused && !isProcessing;
+  const { status: micHealthStatus } = useMicHealthWatcher({
+    stream: streamRef.current,
+    active: micWatchActive,
+    liveTranscript,
+    sessionId: session?.id ?? null,
+  });
+  const [reacquiringMic, setReacquiringMic] = useState(false);
+  const reacquireAttemptsRef = useRef(0);
+
+  // Réacquisition du micro après perte de piste (OS coupe l'accès, périph débranché).
+  // On stoppe la piste audio actuelle et on en récupère une nouvelle via getUserMedia,
+  // en privilégiant le deviceId courant puis en repliant sur le périphérique par défaut.
+  const reacquireMic = useCallback(async () => {
+    if (reacquiringMic) return;
+    setReacquiringMic(true);
+    reacquireAttemptsRef.current += 1;
+    logger.warn("mic_reacquire_start", {
+      sessionId: session?.id ?? null,
+      attempt: reacquireAttemptsRef.current,
+      deviceId: currentAudioDeviceId,
+    });
+    try {
+      const tryGet = async (constraints: MediaStreamConstraints) =>
+        navigator.mediaDevices.getUserMedia(constraints);
+      let newAudio: MediaStream | null = null;
+      try {
+        newAudio = await tryGet({
+          audio: currentAudioDeviceId
+            ? { deviceId: { exact: currentAudioDeviceId } }
+            : true,
+        });
+      } catch {
+        // Fallback : périphérique par défaut.
+        newAudio = await tryGet({ audio: true });
+      }
+      const existing = streamRef.current;
+      existing?.getAudioTracks().forEach((t) => {
+        try { existing.removeTrack(t); } catch { /* ignore */ }
+        try { t.stop(); } catch { /* ignore */ }
+      });
+      newAudio.getAudioTracks().forEach((t) => {
+        try { existing?.addTrack(t); } catch { /* ignore */ }
+      });
+      const newDeviceId = newAudio.getAudioTracks()[0]?.getSettings?.().deviceId || null;
+      if (newDeviceId) setCurrentAudioDeviceId(newDeviceId);
+      toast({
+        title: "Micro réactivé",
+        description: "Vous pouvez reprendre votre réponse.",
+      });
+      logger.warn("mic_reacquire_ok", {
+        sessionId: session?.id ?? null,
+        attempt: reacquireAttemptsRef.current,
+      });
+    } catch (err) {
+      logger.error("mic_reacquire_failed", {
+        sessionId: session?.id ?? null,
+        attempt: reacquireAttemptsRef.current,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast({
+        title: "Réactivation impossible",
+        description: "Vérifiez les autorisations micro de votre navigateur.",
+        variant: "destructive",
+      });
+    } finally {
+      setReacquiringMic(false);
+    }
+  }, [reacquiringMic, currentAudioDeviceId, toast, session?.id]);
+
+
+
 
 
   // Start a per-question video recorder (uses same stream)
@@ -4044,6 +4122,13 @@ export default function InterviewStart() {
                           background: "hsl(var(--l-bg-elev))",
                         }}
                       >
+                        {micHealthStatus !== "ok" && (
+                          <MicFailureBanner
+                            status={micHealthStatus}
+                            reacquiring={reacquiringMic}
+                            onReacquire={reacquireMic}
+                          />
+                        )}
                         <div className="flex items-center justify-center gap-3 py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
                           {TimerBadge}
