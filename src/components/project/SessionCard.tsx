@@ -301,6 +301,22 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                     <RotateCw className="h-3 w-3" />
                   </button>
                 </div>
+                <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
+                  {[2, 1.5, 1].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRate(r)}
+                      className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
+                        rate === r
+                          ? "bg-white text-black opacity-100"
+                          : "bg-black/50 text-white opacity-80 hover:opacity-100"
+                      }`}
+                    >
+                      {r}×
+                    </button>
+                  ))}
+                </div>
               </>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-white/70">
