@@ -12,11 +12,17 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function generateSecret() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { token, peek } = await req.json().catch(() => ({}));
+    const { token, peek, viewerSecret } = await req.json().catch(() => ({}));
     if (!token || typeof token !== "string") {
       return json({ error: "token requis" }, 400);
     }
@@ -27,27 +33,50 @@ Deno.serve(async (req) => {
 
     const { data: share } = await admin
       .from("report_shares")
-      .select("id, report_id, is_active, expires_at, viewed_at")
+      .select("id, report_id, is_active, expires_at, viewed_at, viewer_secret")
       .eq("share_token", token)
       .maybeSingle();
 
     if (!share) return json({ error: "Lien introuvable" }, 404);
-    if (share.viewed_at) return json({ error: "Ce lien a déjà été consulté et n'est plus valide." }, 410);
-    if (!share.is_active) return json({ error: "Ce lien a été désactivé." }, 410);
     if (share.expires_at && new Date(share.expires_at) < new Date()) {
       return json({ error: "Ce lien a expiré." }, 410);
     }
 
+    let issuedSecret: string | null = null;
+
     if (!peek) {
-      const { data: updated, error: updErr } = await admin
-        .from("report_shares")
-        .update({ viewed_at: new Date().toISOString(), is_active: false })
-        .eq("id", share.id)
-        .is("viewed_at", null)
-        .select("id")
-        .maybeSingle();
-      if (updErr || !updated) {
-        return json({ error: "Ce lien a déjà été consulté et n'est plus valide." }, 410);
+      if (share.viewed_at && share.viewer_secret) {
+        // Lien déjà ouvert : seul le navigateur qui détient le secret peut revenir.
+        if (!viewerSecret || viewerSecret !== share.viewer_secret) {
+          return json(
+            { error: "Ce lien a déjà été ouvert sur un autre appareil et ne peut plus être consulté ici." },
+            410,
+          );
+        }
+      } else if (!share.viewed_at) {
+        // Première ouverture : on verrouille le lien sur ce navigateur.
+        const newSecret = generateSecret();
+        const { data: updated, error: updErr } = await admin
+          .from("report_shares")
+          .update({
+            viewed_at: new Date().toISOString(),
+            viewer_secret: newSecret,
+          })
+          .eq("id", share.id)
+          .is("viewed_at", null)
+          .select("id, viewer_secret")
+          .maybeSingle();
+        if (updErr || !updated) {
+          // Race condition : un autre appel a verrouillé entre temps.
+          return json(
+            { error: "Ce lien vient d'être ouvert sur un autre appareil et ne peut plus être consulté ici." },
+            410,
+          );
+        }
+        issuedSecret = updated.viewer_secret;
+      } else if (!share.is_active) {
+        // Ancien lien verrouillé sans viewer_secret (avant ce correctif) → désactivé.
+        return json({ error: "Ce lien a été désactivé." }, 410);
       }
     }
 
@@ -75,7 +104,12 @@ Deno.serve(async (req) => {
       .eq("session_id", report.session_id)
       .order("timestamp");
 
-    return json({ report, session, messages: messages ?? [] });
+    return json({
+      report,
+      session,
+      messages: messages ?? [],
+      viewerSecret: issuedSecret,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erreur inconnue";
     return json({ error: msg }, 500);

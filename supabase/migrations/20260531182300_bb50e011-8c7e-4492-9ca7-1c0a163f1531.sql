@@ -1,0 +1,1 @@
+UPDATE public.report_shares SET viewed_at = NULL, viewer_secret = NULL WHERE share_token = '6e3e807502aab20bac9a8f67297c564bf423645e8a6abf48ce11eaaaa04633c0';
