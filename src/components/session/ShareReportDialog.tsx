@@ -97,7 +97,7 @@ export function ShareReportDialog({
               </p>
               <p className="text-muted-foreground mt-1 flex items-start gap-1.5">
                 <KeyRound className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
-                <span><span className="font-semibold text-foreground">Lien à usage unique</span> : il devient invalide dès la première ouverture.</span>
+                <span><span className="font-semibold text-foreground">Lien à usage unique</span> : il se verrouille sur le premier navigateur qui l'ouvre et expire automatiquement.</span>
               </p>
             </div>
           </div>
