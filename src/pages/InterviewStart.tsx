@@ -4086,8 +4086,11 @@ export default function InterviewStart() {
                       </div>
                     ) : (
                       <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
-                        <Clock className="h-4 w-4" />
-                        {staticTimeLabel}
+                        <Clock className="h-4 w-4 shrink-0" />
+                        <span className="flex flex-col leading-tight text-left">
+                          <span>Répondez</span>
+                          <span>{staticDurationLabel}</span>
+                        </span>
                       </div>
                     )
                   ) : null;
