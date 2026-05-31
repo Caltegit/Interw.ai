@@ -378,6 +378,41 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   </button>
                 ))}
               </div>
+              <div className="pointer-events-none absolute top-2 right-2">
+                <button
+                  type="button"
+                  aria-label="Télécharger en MP4"
+                  disabled={dlStatus === "downloading" || dlStatus === "converting"}
+                  onClick={async () => {
+                    const safe = (current.questionText || `question-${index + 1}`)
+                      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) || `question-${index + 1}`;
+                    const filename = `entretien-${String(index + 1).padStart(2, "0")}-${safe}.mp4`;
+                    try {
+                      await downloadMp4(current.url, filename);
+                    } catch (err) {
+                      toast({
+                        title: "Téléchargement impossible",
+                        description: (err as Error)?.message || "Réessayez plus tard.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-60 transition-opacity"
+                >
+                  {dlStatus === "downloading" || dlStatus === "converting" ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {Math.round(dlProgress)}%
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5" />
+                      MP4
+                    </>
+                  )}
+                </button>
+              </div>
             </>
           )}
         </div>
