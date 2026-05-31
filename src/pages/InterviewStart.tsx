@@ -366,6 +366,11 @@ export default function InterviewStart() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  // Trappe de test (dev uniquement, supprimée du bundle prod par Vite) :
+  // permet aux tests Playwright de simuler une perte de piste micro.
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    (window as unknown as { __interviewStreamRef?: typeof streamRef }).__interviewStreamRef = streamRef;
+  }
   const thumbnailCapturedRef = useRef(false);
   // On garde TOUS les éléments <video> selfview montés (mobile + desktop) pour
   // pouvoir leur rattacher le flux caméra simultanément. Indispensable car
