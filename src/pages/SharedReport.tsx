@@ -47,14 +47,23 @@ export default function SharedReport() {
     if (!token) return;
 
     const loadReport = async () => {
+      const storageKey = `report-share:${token}`;
+      const storedSecret =
+        typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
+
       const { data, error: fnError } = await supabase.functions.invoke("consume-report-share", {
-        body: { token },
+        body: { token, viewerSecret: storedSecret ?? undefined },
       });
 
       if (fnError || !data || (data as any).error) {
         setError((data as any)?.error ?? "Lien de partage introuvable ou expiré.");
         setLoading(false);
         return;
+      }
+
+      const issued = (data as any).viewerSecret;
+      if (issued && typeof window !== "undefined") {
+        window.localStorage.setItem(storageKey, issued);
       }
 
       setReport((data as any).report);
@@ -65,6 +74,7 @@ export default function SharedReport() {
 
     loadReport();
   }, [token]);
+
 
   const project = session?.projects;
   const { data: projectAverages } = useProjectAverages(session?.project_id);
