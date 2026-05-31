@@ -4122,6 +4122,13 @@ export default function InterviewStart() {
                           background: "hsl(var(--l-bg-elev))",
                         }}
                       >
+                        {micHealthStatus !== "ok" && (
+                          <MicFailureBanner
+                            status={micHealthStatus}
+                            reacquiring={reacquiringMic}
+                            onReacquire={reacquireMic}
+                          />
+                        )}
                         <div className="flex items-center justify-center gap-3 py-2">
                           <MicVolumeMeter stream={streamRef.current} active={isListening} />
                           {TimerBadge}
