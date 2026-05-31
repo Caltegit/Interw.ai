@@ -107,7 +107,7 @@ async function run(msg: StartMessage) {
     const out = await convertToMp4(ffmpeg, inputName, outputName);
     await ffmpeg.deleteFile(inputName).catch(() => {});
     post({ type: "progress", value: 100, label: "" });
-    post({ type: "done", blob: new Blob([out], { type: "video/mp4" }), filename: msg.filename });
+    post({ type: "done", blob: new Blob([out as BlobPart], { type: "video/mp4" }), filename: msg.filename });
   } catch (err) {
     post({ type: "error", message: (err as Error)?.message || String(err) });
   }
