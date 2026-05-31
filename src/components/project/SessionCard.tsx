@@ -301,6 +301,22 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                     <RotateCw className="h-3 w-3" />
                   </button>
                 </div>
+                <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
+                  {[2, 1.5, 1].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRate(r)}
+                      className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
+                        rate === r
+                          ? "bg-white text-black opacity-100"
+                          : "bg-black/50 text-white opacity-80 hover:opacity-100"
+                      }`}
+                    >
+                      {r}×
+                    </button>
+                  ))}
+                </div>
               </>
             ) : (
               <div className="flex h-full items-center justify-center text-xs text-white/70">
@@ -310,87 +326,65 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           </div>
 
           {clips.length > 0 && (
-            <>
-              <div className="min-h-[2.25rem]">
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <Select
-                    value={String(index)}
-                    onValueChange={(v) => goTo(Number(v), true)}
-                  >
-                    <SelectTrigger className="h-7 w-auto gap-1 border-none px-1 text-xs font-semibold shadow-none focus:ring-0">
-                      <SelectValue>
-                        Question {index + 1} / {clips.length}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="max-w-[20rem]">
-                      {clips.map((c, i) => {
-                        const q = c.questionId ? questionByid.get(c.questionId) : null;
-                        return (
-                          <SelectItem key={i} value={String(i)}>
-                            <span className="flex items-center gap-2">
-                              <span className="font-medium">Q{i + 1}</span>
-                              {q && (
-                                <span className="truncate text-muted-foreground">— {q.content}</span>
-                              )}
-                              {c.isFollowUp && (
-                                <Badge variant="outline" className="ml-1 text-[10px]">Relance</Badge>
-                              )}
-                            </span>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  {current?.isFollowUp && (
-                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                      Relance
-                    </Badge>
-                  )}
-                </div>
-                {currentQ && (
-                  <p className="line-clamp-2 text-xs text-muted-foreground">{currentQ.content}</p>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => goTo(Math.max(0, index - 1), true)}
+                disabled={index === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Précédent
+              </Button>
+              <div className="flex items-center gap-1.5">
+                <Select
+                  value={String(index)}
+                  onValueChange={(v) => goTo(Number(v), true)}
+                >
+                  <SelectTrigger className="h-7 w-auto shrink-0 gap-1 whitespace-nowrap border-none px-1 text-xs font-semibold shadow-none focus:ring-0 [&>span]:truncate-none">
+                    <SelectValue>
+                      Question {index + 1}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="max-w-[20rem]">
+                    {clips.map((c, i) => {
+                      const q = c.questionId ? questionByid.get(c.questionId) : null;
+                      return (
+                        <SelectItem key={i} value={String(i)}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-medium">Q{i + 1}</span>
+                            {q && (
+                              <span className="truncate text-muted-foreground">— {q.content}</span>
+                            )}
+                            {c.isFollowUp && (
+                              <Badge variant="outline" className="ml-1 text-[10px]">Relance</Badge>
+                            )}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                {current?.isFollowUp && (
+                  <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                    Relance
+                  </Badge>
                 )}
               </div>
-
-              <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => goTo(Math.max(0, index - 1), true)}
-                  disabled={index === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Précédent
-                </Button>
-                <div className="flex items-center gap-1">
-                  {[1, 1.5, 2].map((r) => (
-                    <Button
-                      key={r}
-                      type="button"
-                      variant={rate === r ? "default" : "outline"}
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => setRate(r)}
-                    >
-                      {r}×
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => goTo(Math.min(clips.length - 1, index + 1), true)}
-                  disabled={index >= clips.length - 1}
-                >
-                  Suivant
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => goTo(Math.min(clips.length - 1, index + 1), true)}
+                disabled={index >= clips.length - 1}
+              >
+                Suivant
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
 
