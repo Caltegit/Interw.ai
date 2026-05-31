@@ -343,7 +343,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                   value={String(index)}
                   onValueChange={(v) => goTo(Number(v), true)}
                 >
-                  <SelectTrigger className="h-7 w-auto gap-1 border-none px-1 text-xs font-semibold shadow-none focus:ring-0">
+                  <SelectTrigger className="h-7 w-auto shrink-0 gap-1 whitespace-nowrap border-none px-1 text-xs font-semibold shadow-none focus:ring-0 [&>span]:truncate-none">
                     <SelectValue>
                       Question {index + 1}
                     </SelectValue>
