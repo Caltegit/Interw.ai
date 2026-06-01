@@ -40,7 +40,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact }, ref) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact, sessionId }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { download: downloadMp4, status: dlStatus, progress: dlProgress } = useMp4Download();
   const { toast } = useToast();
