@@ -29,6 +29,8 @@ interface Props {
   portalTarget?: HTMLElement | null;
   /** Mode compact (mini-vidéo dans la barre fixe). */
   compact?: boolean;
+  /** ID de la session : si fourni, le téléchargement MP4 s'ouvre dans un nouvel onglet (page d'export dédiée). Sinon, conversion inline. */
+  sessionId?: string;
 }
 
 function formatMinutes(s: number): string {
