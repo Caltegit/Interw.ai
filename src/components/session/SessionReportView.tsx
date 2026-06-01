@@ -191,13 +191,19 @@ export function SessionReportView({
       : null;
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
+  const hasAutoPlayedRef = useRef(false);
 
-  // Lance automatiquement la première vidéo à l'arrivée sur le rapport
+  // Lance automatiquement la première vidéo à l'arrivée sur le rapport (une seule fois).
+  // Sans ce verrou, les refetch de session_messages (déclenchés par backfill-report-timestamps)
+  // changeraient la référence de sessionClips et ramèneraient le player sur la Q1
+  // à chaque fois que l'utilisateur sélectionne une autre question.
   useEffect(() => {
+    if (hasAutoPlayedRef.current) return;
     if (sessionClips.length > 0 && videoNavRef.current) {
       const first = sessionClips[0];
       if (first?.messageId) {
-        videoNavRef.current.playMessage(first.messageId);
+        const played = videoNavRef.current.playMessage(first.messageId);
+        if (played) hasAutoPlayedRef.current = true;
       }
     }
   }, [sessionClips]);
