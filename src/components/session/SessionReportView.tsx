@@ -192,6 +192,16 @@ export function SessionReportView({
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
 
+  // Lance automatiquement la première vidéo à l'arrivée sur le rapport
+  useEffect(() => {
+    if (sessionClips.length > 0 && videoNavRef.current) {
+      const first = sessionClips[0];
+      if (first?.messageId) {
+        videoNavRef.current.playMessage(first.messageId);
+      }
+    }
+  }, [sessionClips]);
+
   const goToMessage = useCallback(
     (messageId: string, startSeconds?: number) => {
       const played = videoNavRef.current?.playMessage(messageId, startSeconds);
