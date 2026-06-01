@@ -69,6 +69,7 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questi
     "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien.";
 
   const handleRetry = async () => {
+    if (!sessionId) return;
     setRetrying(true);
     try {
       const { error } = await supabase.functions.invoke("analyze-nonverbal", {
