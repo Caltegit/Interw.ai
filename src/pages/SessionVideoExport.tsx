@@ -182,6 +182,89 @@ export default function SessionVideoExport() {
 
         setPhase("downloading");
 
+        // -------- Mode « une seule question » : conversion MP4 directe --------
+        if (isSingle) {
+          const target = segments[singleQuestionIndex! - 1];
+          if (!target) {
+            throw new Error(`Question ${singleQuestionIndex} introuvable dans cette session.`);
+          }
+
+          const slug = (target.questionText || `question-${singleQuestionIndex}`)
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+/g, "-")
+            .replace(/^-|-$/g, "")
+            .toLowerCase()
+            .slice(0, 40) || `question-${singleQuestionIndex}`;
+          const outName = `entretien-${String(singleQuestionIndex).padStart(2, "0")}-${slug}.mp4`;
+
+          worker = new Worker(
+            new URL("../workers/videoClipToMp4.worker.ts", import.meta.url),
+            { type: "module" },
+          );
+
+          worker.onmessage = (e: MessageEvent<any>) => {
+            if (cancelled) return;
+            const data = e.data;
+            if (data.type === "progress") {
+              setProgress(data.value);
+              if (data.label) setStatusLabel(data.label);
+              if (data.value >= 40 && data.value < 100) setPhase("converting");
+            } else if (data.type === "done") {
+              const url = URL.createObjectURL(data.blob);
+              objectUrls.push(url);
+              setDownloadUrl(url);
+              setFilename(data.filename);
+              setFileCount(1);
+              setProgress(100);
+              setPhase("ready");
+              setStatusLabel("Vidéo prête.");
+
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = data.filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+
+              if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                  new Notification("Vidéo MP4 prête", { body: data.filename });
+                } catch {}
+              }
+
+              stopAudio?.();
+              stopAudio = null;
+              releaseWakeLock();
+              worker?.terminate();
+              worker = null;
+            } else if (data.type === "error") {
+              setErrorMsg(data.message || "Conversion impossible.");
+              setErrorCode("FFMPEG_LOAD_FAILED");
+              setPhase("error");
+              stopAudio?.();
+              stopAudio = null;
+              releaseWakeLock();
+              worker?.terminate();
+              worker = null;
+            }
+          };
+
+          worker.onerror = (err) => {
+            if (cancelled) return;
+            setErrorMsg(`Erreur du worker : ${err.message}`);
+            setErrorCode("UNKNOWN");
+            setPhase("error");
+            stopAudio?.();
+            stopAudio = null;
+            releaseWakeLock();
+          };
+
+          worker.postMessage({ type: "start", url: target.url, filename: outName });
+          return;
+        }
+
+        // -------- Mode groupé (ZIP) --------
         worker = new Worker(
           new URL("../workers/videoExport.worker.ts", import.meta.url),
           { type: "module" },
