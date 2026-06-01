@@ -522,6 +522,7 @@ export default function SessionDetail() {
               transcripts={transcriptsByMessageId}
               portalTarget={portalHost}
               compact={isPinned}
+              sessionId={id}
             />
           )}
 
