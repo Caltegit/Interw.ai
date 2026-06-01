@@ -392,6 +392,26 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             className="h-full w-full object-contain"
           />
           {!compact && (
+            <button
+              type="button"
+              aria-label={isPlaying ? "Mettre en pause" : "Lire"}
+              onClick={togglePlayPause}
+              className={cn(
+                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                "flex h-20 w-20 items-center justify-center rounded-full",
+                "bg-black/50 text-white backdrop-blur-sm transition-opacity duration-200",
+                "hover:bg-black/70",
+                overlayVisible ? "opacity-90" : "opacity-0 pointer-events-none",
+              )}
+            >
+              {isPlaying ? (
+                <Pause className="h-9 w-9" fill="currentColor" />
+              ) : (
+                <Play className="h-9 w-9 translate-x-[2px]" fill="currentColor" />
+              )}
+            </button>
+          )}
+          {!compact && (
             <>
               <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
                 <button
