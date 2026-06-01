@@ -437,9 +437,9 @@ export default function SessionVideoExport() {
               {phase === "ready" && downloadUrl ? (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    {fileCount} vidéo{fileCount > 1 ? "s" : ""} dans l'archive.
-                    Le téléchargement a démarré automatiquement. Sinon, utilisez
-                    le bouton ci-dessous.
+                    {isSingle
+                      ? "Le téléchargement a démarré automatiquement. Sinon, utilisez le bouton ci-dessous."
+                      : `${fileCount} vidéo${fileCount > 1 ? "s" : ""} dans l'archive. Le téléchargement a démarré automatiquement. Sinon, utilisez le bouton ci-dessous.`}
                   </p>
                   {failedSegments.length > 0 && (
                     <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
@@ -462,7 +462,7 @@ export default function SessionVideoExport() {
                   <Button asChild className="w-full">
                     <a href={downloadUrl} download={filename}>
                       <Download className="mr-2 h-4 w-4" />
-                      Télécharger l'archive
+                      {isSingle ? "Télécharger la vidéo" : "Télécharger l'archive"}
                     </a>
                   </Button>
                   <Button
