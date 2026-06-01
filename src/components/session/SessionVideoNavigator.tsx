@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Download, Loader2, RotateCcw, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Loader2, Pause, Play, RotateCcw, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const [index, setIndex] = useState(0);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [overlayVisible, setOverlayVisible] = useState(true);
+  const hideOverlayTimerRef = useRef<number | null>(null);
   const [rate, setRate] = useState(1);
   const rateRef = useRef(rate);
   rateRef.current = rate;
@@ -221,6 +224,57 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (v) v.playbackRate = rate;
   }, [rate]);
 
+  // Sync état play/pause avec l'élément vidéo natif (pour l'overlay custom).
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onPlay = () => {
+      setIsPlaying(true);
+      // En lecture : masquer l'overlay après un court délai.
+      if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
+      hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1200);
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      setOverlayVisible(true);
+      if (hideOverlayTimerRef.current) {
+        window.clearTimeout(hideOverlayTimerRef.current);
+        hideOverlayTimerRef.current = null;
+      }
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setOverlayVisible(true);
+    };
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    v.addEventListener("ended", onEnded);
+    return () => {
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+      v.removeEventListener("ended", onEnded);
+    };
+  }, [index]);
+
+  const showOverlayTemporarily = () => {
+    setOverlayVisible(true);
+    if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
+    if (isPlaying) {
+      hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1500);
+    }
+  };
+
+  const togglePlayPause = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      safePlay();
+    } else {
+      pauseOnly();
+    }
+  };
+
+
   useImperativeHandle(
     ref,
     () => ({
@@ -315,7 +369,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           compact ? "space-y-1 p-1.5" : "space-y-1.5 px-3 pb-3 pt-3",
         )}
       >
-        <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
+        <div
+          className="relative overflow-hidden rounded-lg bg-black aspect-video"
+          onMouseMove={!compact ? showOverlayTemporarily : undefined}
+          onMouseLeave={!compact && isPlaying ? () => setOverlayVisible(false) : undefined}
+        >
           <video
             key={current.url}
             ref={videoRef}
@@ -333,6 +391,26 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             onEnded={handleEnded}
             className="h-full w-full object-contain"
           />
+          {!compact && (
+            <button
+              type="button"
+              aria-label={isPlaying ? "Mettre en pause" : "Lire"}
+              onClick={togglePlayPause}
+              className={cn(
+                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+                "flex h-20 w-20 items-center justify-center rounded-full",
+                "bg-black/50 text-white backdrop-blur-sm transition-opacity duration-200",
+                "hover:bg-black/70",
+                overlayVisible ? "opacity-90" : "opacity-0 pointer-events-none",
+              )}
+            >
+              {isPlaying ? (
+                <Pause className="h-9 w-9" fill="currentColor" />
+              ) : (
+                <Play className="h-9 w-9 translate-x-[2px]" fill="currentColor" />
+              )}
+            </button>
+          )}
           {!compact && (
             <>
               <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
