@@ -31,6 +31,8 @@ interface Props {
   compact?: boolean;
   /** ID de la session : si fourni, le téléchargement MP4 s'ouvre dans un nouvel onglet (page d'export dédiée). Sinon, conversion inline. */
   sessionId?: string;
+  /** Masque le bouton de téléchargement MP4 (utilisé pour les rapports partagés). */
+  hideDownload?: boolean;
 }
 
 function formatMinutes(s: number): string {
