@@ -390,6 +390,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                       .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                       .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) || `question-${index + 1}`;
                     const filename = `entretien-${String(index + 1).padStart(2, "0")}-${safe}.mp4`;
+                    if (sessionId) {
+                      // Conversion dans un onglet dédié (comme le téléchargement groupé).
+                      const url = `/sessions/${sessionId}/export?question=${index + 1}`;
+                      window.open(url, "_blank", "noopener");
+                      return;
+                    }
                     try {
                       await downloadMp4(current.url, filename);
                     } catch (err) {
@@ -402,7 +408,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   }}
                   className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-60 transition-opacity"
                 >
-                  {dlStatus === "downloading" || dlStatus === "converting" ? (
+                  {!sessionId && (dlStatus === "downloading" || dlStatus === "converting") ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       {Math.round(dlProgress)}%
