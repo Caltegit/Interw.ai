@@ -43,6 +43,15 @@ function startSilentAudio(): () => void {
 
 export default function SessionVideoExport() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const questionParam = searchParams.get("question");
+  const singleQuestionIndex = useMemo(() => {
+    if (!questionParam) return null;
+    const n = parseInt(questionParam, 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }, [questionParam]);
+  const isSingle = singleQuestionIndex !== null;
+
   const [phase, setPhase] = useState<Phase>("loading");
   const [progress, setProgress] = useState(0);
   const [statusLabel, setStatusLabel] = useState("Préparation…");
