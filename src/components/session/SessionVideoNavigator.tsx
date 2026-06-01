@@ -61,10 +61,17 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const pendingSeekRef = useRef<number>(0);
   // Empêche les doubles attaches de timeupdate (inline onLoadedMetadata + effet).
   const fixingDurationRef = useRef(false);
+  // Diagnostic d'erreur média ; reset à chaque changement de clip.
+  const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
+
+  // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
+  useEffect(() => {
+    setMediaError(null);
+  }, [index]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
   const pauseOnly = async () => {
