@@ -13,11 +13,12 @@ import {
 
 interface Props {
   analysis?: NonverbalAnalysis | null;
-  sessionId: string;
+  sessionId?: string;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
   transcriptsByMessageId?: Record<string, string>;
   resolveVideoMessageId?: (messageId: string) => string | undefined;
+  readOnly?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
