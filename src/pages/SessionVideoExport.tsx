@@ -373,7 +373,7 @@ export default function SessionVideoExport() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-xl">
         <CardHeader>
-          <CardTitle>Téléchargement des vidéos</CardTitle>
+          <CardTitle>{isSingle ? "Téléchargement de la vidéo" : "Téléchargement des vidéos"}</CardTitle>
           {candidateName && (
             <p className="text-sm text-muted-foreground">
               Entretien de {candidateName}
