@@ -362,7 +362,7 @@ export default function SessionVideoExport() {
       releaseWakeLock();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [id, attempt]);
+  }, [id, attempt, isSingle, singleQuestionIndex]);
 
   const retry = () => {
     startedRef.current = false;
