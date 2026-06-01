@@ -1,59 +1,49 @@
-## Diagnostic
+## Objectif
 
-Le partage de rapport passe par l'edge function `consume-report-share`, qui :
+Aujourd'hui, le bouton « Télécharger » sur une vidéo de question (lecteur dans `SessionVideoNavigator`) lance la conversion WebM → MP4 **dans l'onglet courant** via `useMp4Download` (hook + worker). Si l'onglet passe en arrière-plan ou si l'utilisateur ferme la popover, la conversion est ralentie / interrompue, et rien ne se passe visiblement.
 
-1. Lit le `share_token` via la `service_role` (donc bypass RLS, indépendant du compte connecté).
-2. **Dès le premier appel**, marque le lien `viewed_at = now()` et `is_active = false` (lien à « usage unique »).
-3. Renvoie le rapport.
+On veut le même comportement que le bouton « Télécharger toutes les vidéos », qui ouvre `/sessions/:id/export` dans un nouvel onglet dédié avec barre de progression et téléchargement final.
 
-Le compte connecté n'est jamais vérifié, ni côté route (`/shared-report/:token` est public), ni côté edge function (`verify_jwt = false`, client `service_role`). **Le compte connecté n'est donc pas la vraie cause** — il l'a juste révélée.
+## Changements
 
-Le vrai coupable est l'« usage unique » : le premier `GET` du lien consomme le partage. En pratique, ce premier `GET` est souvent fait par :
+### 1. Page d'export — mode « une seule question »
 
-- les scanners de sécurité des messageries (Microsoft Defender SafeLinks, Gmail/Outlook URL scanning) **avant** que le destinataire ne clique ;
-- les aperçus de lien (Slack, Teams, iMessage, Outlook reading pane) ;
-- un double-clic accidentel, un refresh, un retour navigateur.
+Étendre `src/pages/SessionVideoExport.tsx` pour gérer un paramètre `?question=<index>` (index 1-based du segment dans `segments`).
 
-Résultat : quand le vrai destinataire ouvre le lien (connecté ou non, sur n'importe quel compte), il tombe sur « Ce lien a déjà été consulté ».
+- Si le paramètre est absent → comportement actuel (zip de toutes les vidéos).
+- Si le paramètre est présent :
+  - On charge les segments comme aujourd'hui.
+  - On ne garde que le segment ciblé.
+  - On télécharge **le seul fichier**, converti en MP4 si nécessaire (réutiliser la logique de conversion déjà appelée par le worker pour les segments WebM).
+  - Sortie : un fichier `.mp4` nommé `entretien-<NN>-<slug-question>.mp4` (même convention que le bouton actuel).
+  - Titre de la carte adapté : « Téléchargement de la vidéo » et libellé « 1 fichier ».
+  - Auto-download identique : lien déclenché automatiquement, fallback « Cliquez ici » si bloqué.
 
-## Correctif
+Implémentation : on peut soit étendre le worker existant (`videoExport.worker.ts`) avec un mode `single`, soit, plus simple, court-circuiter le mode zip dans la page : quand `segments.length === 1` et mode single, on appelle directement la conversion WebM→MP4 (réutiliser `videoClipToMp4.worker.ts` qui fait déjà exactement ça pour une URL unique) et on télécharge le blob MP4 sans archiver.
 
-Remplacer l'« usage unique » par un « **usage lié au premier navigateur qui ouvre le lien** » :
+Approche retenue : utiliser `videoClipToMp4.worker.ts` dans la page d'export en mode single (déjà éprouvé pour un fichier). Cela évite de complexifier le worker zip.
 
-1. Au premier appel à `consume-report-share`, générer un `viewer_secret` côté serveur, le stocker en base sur la ligne `report_shares`, et le renvoyer au client.
-2. Le client stocke le `viewer_secret` dans `localStorage` (clé `share:<token>`) et le renvoie à chaque appel suivant.
-3. Côté edge function :
-   - Si le lien n'a jamais été consommé → on génère `viewer_secret`, on enregistre `viewed_at` + `viewer_secret`, on renvoie le rapport + le secret.
-   - Si le lien a déjà été consommé et que le secret reçu correspond → on renvoie le rapport (autant de fois que voulu, tant que `expires_at` n'est pas dépassé).
-   - Sinon → 410 « lien déjà consulté ».
-4. Le `is_active = false` est conservé pour le verrouillage initial ; l'expiration à 48 h reste en place.
+### 2. Bouton dans `SessionVideoNavigator`
 
-Côté UI du dialogue de partage, mettre à jour la mention :
-- avant : « Lien à usage unique : il devient invalide dès la première ouverture. »
-- après : « Lien à usage unique : il se verrouille sur le premier navigateur qui l'ouvre et expire après 48 h. »
+Dans `src/components/session/SessionVideoNavigator.tsx` :
+
+- Supprimer l'usage de `useMp4Download` et l'état de progression (`dlStatus`, `dlProgress`).
+- Le bouton devient un simple `window.open(`/sessions/${sessionId}/export?question=${index + 1}`, "_blank", "noopener")`.
+- Le label reste « MP4 » avec l'icône `Download`, sans loader (puisque la conversion se fait dans l'autre onglet).
+- Il faut donc passer `sessionId` au composant si pas déjà disponible (vérifier les props ; sinon l'ajouter et le passer depuis `SessionDetail.tsx`).
+
+### 3. Nettoyage
+
+- Si plus aucun composant n'utilise `useMp4Download`, garder le hook (utile potentiellement) mais ne plus l'importer ici. Vérifier avec `rg`.
+
+## Notes techniques
+
+- La route `/sessions/:id/export` est déjà protégée (auth requise). Idem pour le mode single — le nouvel onglet hérite de la session Supabase.
+- Pas de changement DB, pas de changement edge function.
+- Le worker `videoClipToMp4.worker.ts` est déjà autonome (charge FFmpeg via CDN si besoin).
 
 ## Fichiers touchés
 
-```text
-supabase/functions/consume-report-share/index.ts  # logique viewer_secret
-supabase/migrations/<new>.sql                     # ajout colonne report_shares.viewer_secret (text, nullable)
-src/pages/SharedReport.tsx                        # envoyer/persister viewer_secret en localStorage
-src/components/session/ShareReportDialog.tsx      # libellé mis à jour
-src/components/project/ShareReportsDialog.tsx     # libellé mis à jour (bloc d'avertissement)
-```
-
-## Détails techniques
-
-- Migration : `ALTER TABLE public.report_shares ADD COLUMN viewer_secret text;` (la table est déjà accessible uniquement par `service_role`, pas de GRANT supplémentaire requis).
-- `viewer_secret` : 32 octets aléatoires en hex (`crypto.getRandomValues`).
-- `localStorage` key : `report-share:<token>` → résiste aux reloads et aux retours, scopé au navigateur.
-- Pas de fuite côté autres comptes : un second navigateur (collègue, manager, etc.) qui ouvrirait le même lien reçoit 410, conformément à la promesse « un seul destinataire ».
-- Pas de retry implicite : si tu veux pouvoir partager le même rapport avec plusieurs personnes, il faudra générer un nouveau lien par destinataire (ce qui est déjà le cas dans `ShareReportsDialog`).
-
-## Alternative plus simple (à valider)
-
-Si tu préfères supprimer complètement le verrou « 1 navigateur », on peut aussi :
-- juste retirer `viewed_at` + `is_active = false` du premier appel ;
-- ne garder que l'expiration à 48 h.
-
-C'est moins strict côté confidentialité (n'importe qui avec le lien peut l'ouvrir pendant 48 h), mais c'est 5 lignes de code et zéro migration. À toi de me dire laquelle tu veux.
+- `src/pages/SessionVideoExport.tsx` — branche « single »
+- `src/components/session/SessionVideoNavigator.tsx` — bouton ouvre un nouvel onglet
+- Éventuellement `src/pages/SessionDetail.tsx` si `sessionId` doit être propagé au navigator (à vérifier)
