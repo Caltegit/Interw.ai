@@ -13,11 +13,12 @@ import {
 
 interface Props {
   analysis?: NonverbalAnalysis | null;
-  sessionId: string;
+  sessionId?: string;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
   transcriptsByMessageId?: Record<string, string>;
   resolveVideoMessageId?: (messageId: string) => string | undefined;
+  readOnly?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -36,7 +37,7 @@ const REASON_LABELS: Record<string, string> = {
     "L'enregistrement vidéo n'était pas activé pour ce projet.",
 };
 
-export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId }: Props) {
+export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId, readOnly }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
@@ -60,7 +61,7 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questi
   const isRunning = status === "running";
   // Bouton toujours visible sauf quand l'enregistrement n'a jamais été activé
   // (rien à relancer) ou quand une analyse est déjà en cours.
-  const canRetry = !isRunning && reason !== "video_not_recorded";
+  const canRetry = !readOnly && !!sessionId && !isRunning && reason !== "video_not_recorded";
 
   const message =
     (reason && REASON_LABELS[reason]) ||
@@ -68,6 +69,7 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questi
     "Analyse corporelle non disponible. Elle nécessite des réponses vidéo et peut prendre quelques minutes après la fin de l'entretien.";
 
   const handleRetry = async () => {
+    if (!sessionId) return;
     setRetrying(true);
     try {
       const { error } = await supabase.functions.invoke("analyze-nonverbal", {

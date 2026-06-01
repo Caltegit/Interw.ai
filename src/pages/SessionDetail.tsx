@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, MessageSquare, FileText, Sparkles, Loader2, VideoOff, Trash2, Brain, Mic, User, ScrollText } from "lucide-react";
+import { ArrowLeft, Loader2, VideoOff, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,39 +28,10 @@ import {
   type RecruiterDecision,
 } from "@/hooks/queries/useSessionDetail";
 import { useProjectAverages } from "@/hooks/queries/useProjectAverages";
-import { VirtualizedMessageList } from "@/components/session/VirtualizedMessageList";
-
-
-import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
-import { DecisionBanner, recoConfig, decisionConfig } from "@/components/session/DecisionBanner";
-import { cn } from "@/lib/utils";
 import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog";
 import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
-import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
-import { SignalsCard } from "@/components/session/SignalsCard";
-import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
-import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCard";
-
-import { DeepAnalysisAccordion } from "@/components/session/DeepAnalysisAccordion";
-import { BigFiveBadge } from "@/components/session/BigFiveBadge";
-import { FitScoreBadge } from "@/components/session/FitScoreBadge";
-import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
-import { NonverbalProfileCard } from "@/components/session/NonverbalProfileCard";
-import { NonverbalTabContent } from "@/components/session/NonverbalTabContent";
-import { NonverbalBadge } from "@/components/session/NonverbalBadge";
-import { PersonalityRadar } from "@/components/session/PersonalityRadar";
-import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
-import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
-import { AudioHealthBanner, isAudioFailed, type AudioHealth } from "@/components/session/AudioHealthBanner";
-
-const formatDuration = (seconds?: number | null) => {
-  if (!seconds || seconds <= 0) return undefined;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m} min`;
-};
-
+import { SessionReportView } from "@/components/session/SessionReportView";
 import { useCopilot } from "@/contexts/CopilotContext";
 
 export default function SessionDetail() {
@@ -74,8 +42,6 @@ export default function SessionDetail() {
   const { data, isLoading } = useSessionDetail(id);
   const session = data?.session ?? null;
   const incomingReport = data?.report ?? null;
-  // Conserve le dernier rapport non nul pour éviter qu'il disparaisse pendant
-  // une régénération ou un refetch ponctuel renvoyant null.
   const lastReportRef = useRef<typeof incomingReport>(null);
   const lastReportSessionIdRef = useRef<string | undefined>(undefined);
   if (lastReportSessionIdRef.current !== id) {
@@ -93,12 +59,8 @@ export default function SessionDetail() {
   const [recruiterNotes, setRecruiterNotes] = useState("");
   const lastServerNoteRef = useRef<string | null>(null);
   const noteDirtyRef = useRef(false);
-  const [activeMessageIndex, setActiveMessageIndex] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("decision");
   const [copied, setCopied] = useState(false);
-  const [retranscribing, setRetranscribing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [analyzingVoice, setAnalyzingVoice] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
@@ -112,90 +74,8 @@ export default function SessionDetail() {
   const regenerate = useRegenerateReport(id);
   const { data: projectAverages } = useProjectAverages(session?.project_id);
 
-  const candidateMessagesWithMedia = useMemo(
-    () => messages.filter((m: any) => m.role === "candidate" && (m.video_segment_url || m.audio_segment_url)),
-    [messages],
-  );
-  const pendingTranscriptionCount = useMemo(
-    () => candidateMessagesWithMedia.filter((m: any) => m.transcription_status !== "done").length,
-    [candidateMessagesWithMedia],
-  );
-
-  const handleRetranscribe = async (force: boolean) => {
-    if (!id || retranscribing) return;
-    setRetranscribing(true);
-    toast({ title: "Re-transcription en cours…", description: "L'IA relit les vidéos. Cela peut prendre une minute." });
-    try {
-      const { data: result, error } = await supabase.functions.invoke("transcribe-session", {
-        body: { session_id: id, force },
-      });
-      if (error) throw error;
-      const r = result as { processed?: number; failed?: number; total?: number };
-      toast({
-        title: "Re-transcription terminée",
-        description: `${r?.processed ?? 0} segment(s) nettoyé(s)${r?.failed ? `, ${r.failed} échec(s)` : ""}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.session(id) });
-    } catch (e: any) {
-      toast({ title: "Erreur de re-transcription", description: e.message ?? String(e), variant: "destructive" });
-    } finally {
-      setRetranscribing(false);
-    }
-  };
-
-  const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);
-
-  // Sticky mini-vidéo : on observe un sentinel placé sous le SessionVideoNavigator.
-  // Quand il passe au-dessus du viewport, on bascule en mode épinglé.
-  // ⚠️ On utilise une callback ref + état : le composant fait plusieurs early-returns
-  // (loading, !session, …) avant de rendre le sentinel. Avec une useRef classique +
-  // useEffect([]), l'observer n'était jamais attaché car ref.current valait null au
-  // premier mount et l'effet ne se rejouait pas.
-  const [sentinelEl, setSentinelEl] = useState<HTMLDivElement | null>(null);
-  const [isPinned, setIsPinned] = useState(false);
-  const [inlineHost, setInlineHost] = useState<HTMLDivElement | null>(null);
-  const [pinnedHost, setPinnedHost] = useState<HTMLDivElement | null>(null);
-  const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
-  const [pinnedBarH, setPinnedBarH] = useState(0);
-  useEffect(() => {
-    if (!sentinelEl) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-      },
-      { threshold: 0 },
-    );
-    obs.observe(sentinelEl);
-    return () => obs.disconnect();
-  }, [sentinelEl]);
-  useEffect(() => {
-    if (!pinnedBar) return;
-    const ro = new ResizeObserver(() => setPinnedBarH(pinnedBar.offsetHeight));
-    ro.observe(pinnedBar);
-    setPinnedBarH(pinnedBar.offsetHeight);
-    return () => ro.disconnect();
-  }, [pinnedBar]);
-  const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
-
-  const goToMessage = useCallback(
-    (messageId: string, startSeconds?: number) => {
-      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
-      if (played) {
-        setTimeout(() => {
-          document
-            .getElementById("session-video-panel")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 50);
-        return;
-      }
-      // Aucun clip vidéo correspondant : informe le recruteur.
-      toast({
-        title: "Extrait vidéo indisponible",
-        description: "Ce moment n'a pas pu être retrouvé dans les enregistrements.",
-        variant: "destructive",
-      });
-    },
-    [toast],
+  const candidateMessagesWithMedia = messages.filter(
+    (m: any) => m.role === "candidate" && (m.video_segment_url || m.audio_segment_url),
   );
 
   useEffect(() => {
@@ -229,9 +109,7 @@ export default function SessionDetail() {
     return () => clearTimeout(t);
   }, [recruiterNotes, session?.id]);
 
-  const handleShare = () => {
-    setShareOpen(true);
-  };
+  const handleShare = () => setShareOpen(true);
 
   const generateShareLink = async () => {
     if (!report?.id || !user) return;
@@ -249,103 +127,7 @@ export default function SessionDetail() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const candidateVideos = useMemo(
-    () => messages.filter((m: any) => m.role === "candidate" && m.video_segment_url),
-    [messages],
-  );
-  const transcriptsByMessageId = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const m of messages as any[]) {
-      if (m?.id && typeof m?.content === "string") map[m.id] = m.content;
-    }
-    return map;
-  }, [messages]);
-
-  // Mapping `message_id (audio/vidéo) → message_id du clip vidéo` partageant la
-  // même `question_id`. Permet aux boutons « Voir » des analyses paraverbale
-  // et nonverbale (qui peuvent référencer un segment audio seul) d'ouvrir
-  // le clip vidéo correspondant dans le lecteur de session.
-  const videoMessageIdByMessageId = useMemo(() => {
-    const videoIdByQuestionId = new Map<string, string>();
-    for (const m of messages as any[]) {
-      if (m?.role === "candidate" && m?.video_segment_url && m?.question_id) {
-        if (!videoIdByQuestionId.has(m.question_id)) {
-          videoIdByQuestionId.set(m.question_id, m.id);
-        }
-      }
-    }
-    const map: Record<string, string> = {};
-    for (const m of messages as any[]) {
-      if (m?.role === "candidate" && m?.question_id) {
-        const v = videoIdByQuestionId.get(m.question_id);
-        if (v) map[m.id] = v;
-      }
-    }
-    return map;
-  }, [messages]);
-  const resolveVideoMessageId = useCallback(
-    (id: string) => videoMessageIdByMessageId[id],
-    [videoMessageIdByMessageId],
-  );
-
-
-  const sessionClips = useMemo<SessionVideoClip[]>(() => {
-    const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
-      .slice()
-      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    const orderById = new Map<string, number>();
-    projectQuestions.forEach((q: any, i: number) => {
-      if (q?.id) orderById.set(q.id, i + 1);
-    });
-    return [...candidateVideos]
-      .sort(
-        (a: any, b: any) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      )
-      .map((m: any) => {
-        const num = m.question_id ? orderById.get(m.question_id) : null;
-        const projectQ = m.question_id
-          ? projectQuestions.find((q: any) => q.id === m.question_id)
-          : null;
-        return {
-          url: m.video_segment_url as string,
-          questionLabel: num ? `Question ${num}` : "Question",
-          questionText: projectQ?.content ?? "",
-          isFollowUp: !!m.is_follow_up,
-          messageId: m.id as string,
-        };
-      });
-  }, [candidateVideos, session]);
-
-  // Mapping messageId → numéro de question (Q1, Q2…) pour l'affichage des
-  // repères "Qn t.ss" à côté de chaque citation.
-  const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
-    const projectQuestions = ((session?.projects?.questions as any[]) ?? [])
-      .slice()
-      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    const orderById = new Map<string, number>();
-    projectQuestions.forEach((q: any, i: number) => {
-      if (q?.id) orderById.set(q.id, i + 1);
-    });
-    const map: Record<string, number> = {};
-    for (const m of messages as any[]) {
-      if (m?.id && m?.question_id) {
-        const n = orderById.get(m.question_id);
-        if (typeof n === "number") map[m.id] = n;
-      }
-    }
-    return map;
-  }, [messages, session]);
-
-  const stats = (report?.stats as Record<string, any>) ?? {};
-  const questionEvaluations = (report?.question_evaluations as Record<string, any>) ?? {};
-  const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const project = session?.projects;
-
-  const verdictHeadline =
-    stats.verdict_headline || report?.executive_summary_short || null;
-  const fitScore = typeof stats.fit_score === "number" ? stats.fit_score : (report ? Number(report.overall_score) : null);
-
+  const candidateVideos = messages.filter((m: any) => m.role === "candidate" && m.video_segment_url);
 
   const handleDecision = (d: RecruiterDecision) => {
     if (!user) return;
@@ -396,7 +178,6 @@ export default function SessionDetail() {
     }
   };
 
-  // Cas particulier : aucun enregistrement candidat (entretien terminé sans réponse)
   if (candidateMessagesWithMedia.length === 0 && session.status === "completed") {
     return (
       <div className="space-y-4">
@@ -450,14 +231,9 @@ export default function SessionDetail() {
   }
 
   const decision = (session.recruiter_decision ?? "none") as RecruiterDecision;
-  const rankLabel =
-    projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
-      ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
-      : null;
 
   return (
     <div className="flex flex-col gap-4">
-
       <BulkEmailDialog
         open={emailOpen}
         onOpenChange={setEmailOpen}
@@ -466,7 +242,7 @@ export default function SessionDetail() {
           candidate_name: session.candidate_name,
           candidate_email: session.candidate_email,
         }]}
-        projectTitle={project?.title ?? ""}
+        projectTitle={session.projects?.title ?? ""}
       />
 
       <CandidateLinksDialog
@@ -487,8 +263,6 @@ export default function SessionDetail() {
         isGenerating={createShare.isPending}
         onGenerate={generateShareLink}
       />
-
-
 
       <AlertDialog open={deleteOpen} onOpenChange={(o) => !deleting && setDeleteOpen(o)}>
         <AlertDialogContent>
@@ -511,367 +285,31 @@ export default function SessionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
-        <div className="flex flex-col gap-4 min-w-0">
-          {/* Lecteur vidéo rendu une seule fois, déplacé via portail entre
-              le slot inline du cartouche et la mini-barre fixe. */}
-          {sessionClips.length > 0 && (
-            <SessionVideoNavigator
-              ref={videoNavRef}
-              clips={sessionClips}
-              transcripts={transcriptsByMessageId}
-              portalTarget={portalHost}
-              compact={isPinned}
-              sessionId={id}
-            />
-          )}
-
-          {/* Sentinel placé hors du sous-arbre où la barre sticky se monte,
-              afin que monter/démonter la barre ne pousse pas le sentinel
-              (ce qui provoquait un scintillement et empêchait l'épinglage). */}
-          <div ref={setSentinelEl} aria-hidden className="h-px w-full" />
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            {/* Barre fixe en haut quand on a scrollé sous le cartouche.
-                Contient les infos + mini-vidéo, et juste en dessous le menu des onglets. */}
-            {isPinned && (
-              <div ref={setPinnedBar} className="sticky top-0 z-40 -mx-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm md:-mx-6">
-                <div className="px-4 py-2">
-                  <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="decision" className="gap-1">
-                      <FileText className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
-                      <FitScoreBadge score={fitScore} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
-                    </TabsTrigger>
-                    <TabsTrigger value="bigfive" className="gap-1">
-                      <Brain className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-                      <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
-                    </TabsTrigger>
-                    <TabsTrigger value="voice" className="gap-1">
-                      <Mic className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
-                      <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
-                    </TabsTrigger>
-                    <TabsTrigger value="attitude" className="gap-1">
-                      <User className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
-                      <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={isAudioFailed((report as any)?.audio_health)} />
-                    </TabsTrigger>
-                    <TabsTrigger value="transcription" className="gap-1">
-                      <ScrollText className="h-4 w-4" />
-                      <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-              </div>
-            )}
-
-            {isPinned && (
-              <div className="fixed right-4 top-[68px] z-40">
-                <div ref={setPinnedHost} className="w-[220px] overflow-hidden rounded-lg border bg-background shadow-lg" />
-              </div>
-            )}
-
-
-
-            <div className="flex flex-col gap-4">
-              {(() => {
-                const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
-                const audioFailed = isAudioFailed(audioHealth);
-                return (
-                  <>
-                    <AudioHealthBanner health={audioHealth} />
-                    <DecisionBanner
-                      candidateName={session.candidate_name}
-                      candidateEmail={session.candidate_email}
-                      jobTitle={project?.job_title}
-                      projectTitle={project?.title}
-                      durationLabel={formatDuration(session.duration_seconds)}
-                      videoAnswersCount={candidateVideos.length}
-                      createdAt={session.created_at}
-                      fitScore={fitScore}
-                      recommendation={report?.recommendation ?? null}
-                      headline={verdictHeadline}
-                      rankLabel={rankLabel}
-                      decision={decision}
-                      onDecisionChange={handleDecision}
-                      isDecisionPending={updateDecision.isPending}
-                      shareUrl={shareUrl}
-                      onShare={handleShare}
-                      onCopyShare={copyShareUrl}
-                      copied={copied}
-                      isShareLoading={createShare.isPending}
-                      canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
-                      onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
-                      onRegenerate={report ? handleRegenerate : undefined}
-                      isRegenerating={regenerate.isPending}
-                      onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
-                      onEditLinks={() => setLinksOpen(true)}
-                      onDelete={() => setDeleteOpen(true)}
-                      decisionByName={(session as any).decision_by_name ?? null}
-                      decisionAt={(session as any).recruiter_decision_at ?? null}
-                      linkedinUrl={(session as any).candidate_linkedin_url ?? null}
-                      cvUrl={(session as any).candidate_cv_url ?? null}
-                      cvFilename={(session as any).candidate_cv_filename ?? null}
-                      audioFailed={audioFailed}
-                      videoSlotWidth={copilotOpen ? 299 : 368}
-                      videoSlot={
-                        sessionClips.length > 0 ? (
-                          <div ref={setInlineHost} className="h-full" />
-                        ) : undefined
-                      }
-                      notesSlot={
-                        report ? (
-                          <Textarea
-                            placeholder="Ajoutez vos observations…"
-                            value={recruiterNotes}
-                            onChange={(e) => { noteDirtyRef.current = true; setRecruiterNotes(e.target.value); }}
-                            className="flex-1 min-h-[80px] resize-none"
-                          />
-                        ) : undefined
-                      }
-                    />
-
-                    {!isPinned && (
-                      <TabsList className="grid w-full grid-cols-5">
-                        <TabsTrigger value="decision" className="gap-1">
-                          <FileText className="h-4 w-4" />
-                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
-                          <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
-                        </TabsTrigger>
-                        <TabsTrigger value="bigfive" className="gap-1">
-                          <Brain className="h-4 w-4" />
-                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-                          <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
-                        </TabsTrigger>
-                        <TabsTrigger value="voice" className="gap-1">
-                          <Mic className="h-4 w-4" />
-                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
-                          <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
-                        </TabsTrigger>
-                        <TabsTrigger value="attitude" className="gap-1">
-                          <User className="h-4 w-4" />
-                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
-                          <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
-                        </TabsTrigger>
-                        <TabsTrigger value="transcription" className="gap-1">
-                          <ScrollText className="h-4 w-4" />
-                          <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
-                        </TabsTrigger>
-                      </TabsList>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-
-
-
-            <TabsContent value="decision" className="mt-4 space-y-4">
-              {regenerate.isPending && report && (
-                <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Régénération en cours — affichage du rapport précédent.
-                </div>
-              )}
-              {report ? (
-                <>
-                  <FitBreakdownCard
-                    items={stats.fit_breakdown}
-                    legacyCriteriaScores={criteriaScores as any}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-
-                  <SignalsCard
-                    signals={stats.signals}
-                    legacyRedFlags={report.red_flags as any}
-                    legacyFollowups={report.followup_questions as any}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-
-                  <CommunicationProfileCard
-                    profile={stats.communication_profile}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-
-                  {projectAverages && projectAverages.count >= 3 && (
-                    <ProjectComparisonCard
-                      candidateScore={fitScore}
-                      averages={projectAverages}
-                      candidateCriteria={criteriaScores as any}
-                    />
-                  )}
-
-                  {report.executive_summary && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Bilan global</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {report.executive_summary}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </>
-              ) : (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground">Rapport non encore généré.</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Le rapport sera généré automatiquement après l'analyse de la session.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="bigfive" className="mt-4 space-y-4">
-              {report && (report.personality_profile || report.soft_skills) ? (
-                <>
-                  <PersonalityRadar
-                    profile={report.personality_profile}
-                    onGoToMessage={goToMessage}
-                    projectAverages={projectAverages?.bigFive}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-                  <SoftSkillsCard
-                    skills={report.soft_skills as any}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-                </>
-              ) : (
-                <Card>
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    Analyse Big Five non disponible.
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="voice" className="mt-4 space-y-4">
-              {report && (report as any).paraverbal_analysis?.profile ? (
-                <ParaverbalProfileCard
-                  analysis={(report as any).paraverbal_analysis}
-                  onGoToMessage={goToMessage}
-                  questionNumberByMessageId={questionNumberByMessageId}
-                  transcriptsByMessageId={transcriptsByMessageId}
-                  resolveVideoMessageId={resolveVideoMessageId}
-                />
-
-              ) : (
-                <Card>
-                  <CardContent className="space-y-4 py-8 text-center">
-                    <p className="text-sm text-muted-foreground">
-                      {(report as any)?.paraverbal_analysis?.status === "failed"
-                        ? "La dernière analyse vocale a échoué (modèle surchargé). Réessayez."
-                        : "Analyse vocale non disponible pour cette session."}
-                    </p>
-                    {report && id && (
-                      <Button
-                        size="sm"
-                        disabled={analyzingVoice}
-                        onClick={async () => {
-                          setAnalyzingVoice(true);
-                          toast({
-                            title: "Analyse vocale lancée",
-                            description: "Cela peut prendre 1 à 2 minutes.",
-                          });
-                          try {
-                            const { data, error } = await supabase.functions.invoke(
-                              "analyze-paraverbal",
-                              { body: { session_id: id, force: true } },
-                            );
-                            if (error) throw error;
-                            if ((data as any)?.skipped) {
-                              toast({
-                                title: "Analyse non effectuée",
-                                description: String((data as any).skipped),
-                                variant: "destructive",
-                              });
-                            } else {
-                              toast({ title: "Analyse vocale terminée" });
-                              queryClient.invalidateQueries({ queryKey: queryKeys.session(id) });
-                            }
-                          } catch (e: any) {
-                            toast({
-                              title: "Erreur de l'analyse vocale",
-                              description: e.message ?? String(e),
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setAnalyzingVoice(false);
-                          }
-                        }}
-                      >
-                        {analyzingVoice ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Analyse en cours…
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="mr-2 h-4 w-4" />
-                            Lancer l'analyse vocale
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            <TabsContent value="attitude" className="mt-4 space-y-4">
-              <NonverbalTabContent
-                analysis={(report as any)?.nonverbal_analysis}
-                sessionId={id!}
-                onGoToMessage={goToMessage}
-                questionNumberByMessageId={questionNumberByMessageId}
-                transcriptsByMessageId={transcriptsByMessageId}
-                resolveVideoMessageId={resolveVideoMessageId}
-              />
-
-            </TabsContent>
-
-            <TabsContent value="transcription" className="mt-4 space-y-4">
-              <Card>
-                <CardContent className="p-6">
-                  {sessionClips.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucune transcription disponible.</p>
-                  ) : (
-                    <div className="space-y-6">
-                      {sessionClips.map((clip, i) => {
-                        const text = clip.messageId ? transcriptsByMessageId[clip.messageId] : "";
-                        return (
-                          <div key={clip.messageId ?? i} className="space-y-2">
-                            <div className="flex items-baseline gap-2">
-                              <Badge variant="secondary" className="shrink-0">{clip.questionLabel}</Badge>
-                              <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
-                            </div>
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
-                              {text || "Transcription non disponible."}
-                            </p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-          </Tabs>
-        </div>
-      </div>
+      <SessionReportView
+        session={session}
+        report={report}
+        messages={messages}
+        projectAverages={projectAverages}
+        sessionId={id}
+        copilotOpen={copilotOpen}
+        decision={decision}
+        onDecisionChange={handleDecision}
+        isDecisionPending={updateDecision.isPending}
+        shareUrl={shareUrl}
+        onShare={handleShare}
+        onCopyShare={copyShareUrl}
+        copied={copied}
+        isShareLoading={createShare.isPending}
+        canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
+        onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
+        onRegenerate={report ? handleRegenerate : undefined}
+        isRegenerating={regenerate.isPending}
+        onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
+        onEditLinks={() => setLinksOpen(true)}
+        onDelete={() => setDeleteOpen(true)}
+        recruiterNotes={recruiterNotes}
+        onRecruiterNotesChange={(v) => { noteDirtyRef.current = true; setRecruiterNotes(v); }}
+      />
     </div>
   );
 }
-

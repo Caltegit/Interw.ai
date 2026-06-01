@@ -31,6 +31,8 @@ interface Props {
   compact?: boolean;
   /** ID de la session : si fourni, le téléchargement MP4 s'ouvre dans un nouvel onglet (page d'export dédiée). Sinon, conversion inline. */
   sessionId?: string;
+  /** Masque le bouton de téléchargement MP4 (utilisé pour les rapports partagés). */
+  hideDownload?: boolean;
 }
 
 function formatMinutes(s: number): string {
@@ -40,7 +42,7 @@ function formatMinutes(s: number): string {
   return `${m}.${sec.toString().padStart(2, "0")}min`;
 }
 
-export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact, sessionId }, ref) {
+export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Props>(function SessionVideoNavigator({ clips, transcripts, portalTarget, compact, sessionId, hideDownload }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { download: downloadMp4, status: dlStatus, progress: dlProgress } = useMp4Download();
   const { toast } = useToast();
@@ -380,47 +382,48 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   </button>
                 ))}
               </div>
-              <div className="pointer-events-none absolute top-2 right-2">
-                <button
-                  type="button"
-                  aria-label="Télécharger en MP4"
-                  disabled={dlStatus === "downloading" || dlStatus === "converting"}
-                  onClick={async () => {
-                    const safe = (current.questionText || `question-${index + 1}`)
-                      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                      .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) || `question-${index + 1}`;
-                    const filename = `entretien-${String(index + 1).padStart(2, "0")}-${safe}.mp4`;
-                    if (sessionId) {
-                      // Conversion dans un onglet dédié (comme le téléchargement groupé).
-                      const url = `/sessions/${sessionId}/export?question=${index + 1}`;
-                      window.open(url, "_blank", "noopener");
-                      return;
-                    }
-                    try {
-                      await downloadMp4(current.url, filename);
-                    } catch (err) {
-                      toast({
-                        title: "Téléchargement impossible",
-                        description: (err as Error)?.message || "Réessayez plus tard.",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-60 transition-opacity"
-                >
-                  {!sessionId && (dlStatus === "downloading" || dlStatus === "converting") ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      {Math.round(dlProgress)}%
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-3.5 w-3.5" />
-                      MP4
-                    </>
-                  )}
-                </button>
-              </div>
+              {!hideDownload && (
+                <div className="pointer-events-none absolute top-2 right-2">
+                  <button
+                    type="button"
+                    aria-label="Télécharger en MP4"
+                    disabled={dlStatus === "downloading" || dlStatus === "converting"}
+                    onClick={async () => {
+                      const safe = (current.questionText || `question-${index + 1}`)
+                        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) || `question-${index + 1}`;
+                      const filename = `entretien-${String(index + 1).padStart(2, "0")}-${safe}.mp4`;
+                      if (sessionId) {
+                        const url = `/sessions/${sessionId}/export?question=${index + 1}`;
+                        window.open(url, "_blank", "noopener");
+                        return;
+                      }
+                      try {
+                        await downloadMp4(current.url, filename);
+                      } catch (err) {
+                        toast({
+                          title: "Téléchargement impossible",
+                          description: (err as Error)?.message || "Réessayez plus tard.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-60 transition-opacity"
+                  >
+                    {!sessionId && (dlStatus === "downloading" || dlStatus === "converting") ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {Math.round(dlProgress)}%
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-3.5 w-3.5" />
+                        MP4
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

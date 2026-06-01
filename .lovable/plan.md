@@ -1,49 +1,97 @@
 ## Objectif
 
-Aujourd'hui, le bouton « Télécharger » sur une vidéo de question (lecteur dans `SessionVideoNavigator`) lance la conversion WebM → MP4 **dans l'onglet courant** via `useMp4Download` (hook + worker). Si l'onglet passe en arrière-plan ou si l'utilisateur ferme la popover, la conversion est ralentie / interrompue, et rien ne se passe visiblement.
+La page « rapport partagé » (`/r/:token` → `SharedReport.tsx`) doit afficher **exactement la même mise en page** que la page « rapport connecté » (`/sessions/:id` → `SessionDetail.tsx`), à deux exceptions près :
 
-On veut le même comportement que le bouton « Télécharger toutes les vidéos », qui ouvre `/sessions/:id/export` dans un nouvel onglet dédié avec barre de progression et téléchargement final.
+1. **Aucune action** : pas de bouton Partager / Copier / Télécharger les vidéos / Régénérer / Email / Supprimer / Modifier liens / Décision recruteur / Relancer analyse vocale / Relancer analyse non-verbale / Notes recruteur.
+2. **Pas de téléchargement MP4 depuis le lecteur vidéo** (le bouton « MP4 » en haut à droite du `SessionVideoNavigator` doit disparaître).
 
-## Changements
+Le reste — sticky bar, onglets, contenu, transcription, structure 2 colonnes — doit être identique.
 
-### 1. Page d'export — mode « une seule question »
+## Approche
 
-Étendre `src/pages/SessionVideoExport.tsx` pour gérer un paramètre `?question=<index>` (index 1-based du segment dans `segments`).
+Plutôt que de dupliquer 800 lignes, on **extrait le rendu commun** dans un composant partagé, puis les deux pages l'utilisent avec des props différentes.
 
-- Si le paramètre est absent → comportement actuel (zip de toutes les vidéos).
-- Si le paramètre est présent :
-  - On charge les segments comme aujourd'hui.
-  - On ne garde que le segment ciblé.
-  - On télécharge **le seul fichier**, converti en MP4 si nécessaire (réutiliser la logique de conversion déjà appelée par le worker pour les segments WebM).
-  - Sortie : un fichier `.mp4` nommé `entretien-<NN>-<slug-question>.mp4` (même convention que le bouton actuel).
-  - Titre de la carte adapté : « Téléchargement de la vidéo » et libellé « 1 fichier ».
-  - Auto-download identique : lien déclenché automatiquement, fallback « Cliquez ici » si bloqué.
+### 1. Nouveau composant `src/components/session/SessionReportView.tsx`
 
-Implémentation : on peut soit étendre le worker existant (`videoExport.worker.ts`) avec un mode `single`, soit, plus simple, court-circuiter le mode zip dans la page : quand `segments.length === 1` et mode single, on appelle directement la conversion WebM→MP4 (réutiliser `videoClipToMp4.worker.ts` qui fait déjà exactement ça pour une URL unique) et on télécharge le blob MP4 sans archiver.
+Reçoit en props toutes les données et les callbacks utiles :
 
-Approche retenue : utiliser `videoClipToMp4.worker.ts` dans la page d'export en mode single (déjà éprouvé pour un fichier). Cela évite de complexifier le worker zip.
+```ts
+interface SessionReportViewProps {
+  session: any;
+  report: any;
+  messages: any[];
+  projectAverages: ProjectAverages | null;
+  // mode lecture seule = aucune action, aucun textarea
+  readOnly: boolean;
+  // Actions recruteur (optionnelles, ignorées si readOnly)
+  decision?: RecruiterDecision;
+  onDecisionChange?: (d: RecruiterDecision) => void;
+  isDecisionPending?: boolean;
+  shareUrl?: string | null;
+  onShare?: () => void;
+  onCopyShare?: () => void;
+  copied?: boolean;
+  isShareLoading?: boolean;
+  onDownloadVideos?: () => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
+  onEmail?: () => void;
+  onEditLinks?: () => void;
+  onDelete?: () => void;
+  // Notes
+  recruiterNotes?: string;
+  onRecruiterNotesChange?: (v: string) => void;
+  // Vidéo
+  sessionId?: string;        // pour ouvrir l'onglet d'export (uniquement non-readOnly)
+  hideVideoDownload?: boolean; // cache le bouton MP4 du player
+  // Onglet Voice — relance analyse (uniquement non-readOnly)
+  onAnalyzeVoice?: () => void;
+  analyzingVoice?: boolean;
+  // Onglet Attitude — composant complet ou version read-only
+}
+```
 
-### 2. Bouton dans `SessionVideoNavigator`
+Le composant contient :
+- Tout le bloc layout depuis `flex flex-col gap-4` jusqu'à la fin (sticky bar, `Tabs`, `DecisionBanner`, vidéo via portail, onglets Reco IA / Big Five / Orale / Attitude / Transcription).
+- En `readOnly` : passe `readOnly` à `DecisionBanner` (qui cache déjà les boutons), n'affiche pas `notesSlot`, n'affiche pas le bouton « Lancer l'analyse vocale », et utilise un rendu non-verbal sans bouton « Relancer ».
+- Le portail/sticky reste actif dans les deux modes (mêmes proportions).
 
-Dans `src/components/session/SessionVideoNavigator.tsx` :
+### 2. `SharedReport.tsx` — simplifié
 
-- Supprimer l'usage de `useMp4Download` et l'état de progression (`dlStatus`, `dlProgress`).
-- Le bouton devient un simple `window.open(`/sessions/${sessionId}/export?question=${index + 1}`, "_blank", "noopener")`.
-- Le label reste « MP4 » avec l'icône `Download`, sans loader (puisque la conversion se fait dans l'autre onglet).
-- Il faut donc passer `sessionId` au composant si pas déjà disponible (vérifier les props ; sinon l'ajouter et le passer depuis `SessionDetail.tsx`).
+- Garde l'appel `consume-report-share` + récupération `report/session/messages`.
+- Calcule `projectAverages` via le hook existant.
+- Rend `<SessionReportView readOnly hideVideoDownload ... />`.
+- Conserve le bandeau « Rapport partagé via un lien sécurisé · Généré par Interw.ai » en pied.
 
-### 3. Nettoyage
+### 3. `SessionDetail.tsx` — simplifié
 
-- Si plus aucun composant n'utilise `useMp4Download`, garder le hook (utile potentiellement) mais ne plus l'importer ici. Vérifier avec `rg`.
+- Garde toute la logique d'état (mutations, sticky, copilot, suppression, dialogues).
+- Garde les 3 dialogues (`BulkEmailDialog`, `CandidateLinksDialog`, `ShareReportDialog`, `AlertDialog` suppression) côté page.
+- Délègue le rendu central à `<SessionReportView ... />` en passant toutes les actions.
+- Note : la barre de copilot et son layout `gap` restent autour du composant.
 
-## Notes techniques
+### 4. `SessionVideoNavigator` — prop `hideDownload`
 
-- La route `/sessions/:id/export` est déjà protégée (auth requise). Idem pour le mode single — le nouvel onglet hérite de la session Supabase.
-- Pas de changement DB, pas de changement edge function.
-- Le worker `videoClipToMp4.worker.ts` est déjà autonome (charge FFmpeg via CDN si besoin).
+Ajouter `hideDownload?: boolean`. Quand `true`, le bouton « MP4 » (`<div className="pointer-events-none absolute top-2 right-2">`) n'est pas rendu.
+
+### 5. Onglet « Attitude » en read-only
+
+`NonverbalTabContent` requiert un `sessionId` pour relancer l'analyse. Deux options :
+- (a) Ajouter une prop `readOnly` qui cache le bouton « Relancer l'analyse ».
+- (b) En mode read-only, faire rendre directement `<NonverbalProfileCard>` (comme aujourd'hui dans `SharedReport`) sans passer par `NonverbalTabContent`.
+
+→ Option (a) plus simple, garantit même rendu pour les cas « analyse failed » / « pas encore lancée ». À implémenter dans `NonverbalTabContent`.
 
 ## Fichiers touchés
 
-- `src/pages/SessionVideoExport.tsx` — branche « single »
-- `src/components/session/SessionVideoNavigator.tsx` — bouton ouvre un nouvel onglet
-- Éventuellement `src/pages/SessionDetail.tsx` si `sessionId` doit être propagé au navigator (à vérifier)
+- **Créé** : `src/components/session/SessionReportView.tsx` (~500 lignes, extrait de SessionDetail)
+- **Modifié** : `src/pages/SharedReport.tsx` (drastiquement raccourci)
+- **Modifié** : `src/pages/SessionDetail.tsx` (rendu central remplacé par `SessionReportView`)
+- **Modifié** : `src/components/session/SessionVideoNavigator.tsx` (prop `hideDownload`)
+- **Modifié** : `src/components/session/NonverbalTabContent.tsx` (prop `readOnly`)
+
+## Non-objectifs
+
+- Pas de changement de comportement côté SessionDetail (ni régression).
+- Pas de changement DB / edge function.
+- Pas de modification du design system.
