@@ -224,6 +224,57 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (v) v.playbackRate = rate;
   }, [rate]);
 
+  // Sync état play/pause avec l'élément vidéo natif (pour l'overlay custom).
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onPlay = () => {
+      setIsPlaying(true);
+      // En lecture : masquer l'overlay après un court délai.
+      if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
+      hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1200);
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      setOverlayVisible(true);
+      if (hideOverlayTimerRef.current) {
+        window.clearTimeout(hideOverlayTimerRef.current);
+        hideOverlayTimerRef.current = null;
+      }
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setOverlayVisible(true);
+    };
+    v.addEventListener("play", onPlay);
+    v.addEventListener("pause", onPause);
+    v.addEventListener("ended", onEnded);
+    return () => {
+      v.removeEventListener("play", onPlay);
+      v.removeEventListener("pause", onPause);
+      v.removeEventListener("ended", onEnded);
+    };
+  }, [index]);
+
+  const showOverlayTemporarily = () => {
+    setOverlayVisible(true);
+    if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
+    if (isPlaying) {
+      hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1500);
+    }
+  };
+
+  const togglePlayPause = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      safePlay();
+    } else {
+      pauseOnly();
+    }
+  };
+
+
   useImperativeHandle(
     ref,
     () => ({
