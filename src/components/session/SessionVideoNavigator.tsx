@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface SessionVideoClip {
   url: string;
+  audioUrl?: string | null;
   questionLabel: string;
   questionText: string;
   isFollowUp: boolean;
@@ -60,10 +61,17 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const pendingSeekRef = useRef<number>(0);
   // Empêche les doubles attaches de timeupdate (inline onLoadedMetadata + effet).
   const fixingDurationRef = useRef(false);
+  // Diagnostic d'erreur média ; reset à chaque changement de clip.
+  const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
   }, [clips.length, index]);
+
+  // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
+  useEffect(() => {
+    setMediaError(null);
+  }, [index]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
   const pauseOnly = async () => {
@@ -387,10 +395,71 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
               else if (d === Infinity) fixDuration();
+              setMediaError(null);
+            }}
+            onError={(e) => {
+              const err = e.currentTarget.error;
+              const codeMap: Record<number, string> = {
+                1: "Lecture interrompue.",
+                2: "Réseau indisponible pour charger la vidéo.",
+                3: "Fichier vidéo corrompu ou non décodable.",
+                4: "Fichier vidéo introuvable ou bloqué par le navigateur.",
+              };
+              const code = err?.code ?? null;
+              const message = (code && codeMap[code]) || "Vidéo indisponible.";
+              setMediaError({ code, message });
+              setIsPlaying(false);
+              setOverlayVisible(true);
             }}
             onEnded={handleEnded}
             className="h-full w-full object-contain"
           />
+          {mediaError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center text-white">
+              <p className="text-sm font-medium">{mediaError.message}</p>
+              <p className="text-xs text-white/70">
+                {current.questionLabel}
+                {current.questionText ? ` — ${current.questionText}` : ""}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMediaError(null);
+                    const v = videoRef.current;
+                    if (!v) return;
+                    try { v.load(); } catch { /* noop */ }
+                  }}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+                >
+                  Réessayer
+                </button>
+                <a
+                  href={current.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+                >
+                  Ouvrir dans un onglet
+                </a>
+                {current.audioUrl && (
+                  <a
+                    href={current.audioUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+                  >
+                    Écouter l'audio
+                  </a>
+                )}
+              </div>
+              {current.messageId && transcripts?.[current.messageId] && (
+                <p className="mt-2 max-h-24 overflow-auto px-2 text-left text-xs italic text-white/80">
+                  « {transcripts[current.messageId]} »
+                </p>
+              )}
+            </div>
+          )}
           {!compact && (
             <button
               type="button"
