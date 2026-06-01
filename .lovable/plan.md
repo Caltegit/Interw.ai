@@ -1,26 +1,30 @@
-## Objectif
+# Plan — Sélecteur Q15 qui retombe sur Q1
 
-Ajouter un gros bouton Play/Pause central superposé sur la vidéo, deux fois plus grand que le bouton natif, sans remplacer les contrôles natifs (timeline, volume, plein écran restent).
+## Cause
+Dans `src/components/session/SessionReportView.tsx`, l'effet d'auto-lecture de la première question :
 
-## Approche
+```ts
+useEffect(() => {
+  if (sessionClips.length > 0 && videoNavRef.current) {
+    videoNavRef.current.playMessage(sessionClips[0].messageId);
+  }
+}, [sessionClips]);
+```
 
-Dans `src/components/session/SessionVideoNavigator.tsx` :
+se déclenche à chaque nouvelle référence de `sessionClips`. Or l'edge function `backfill-report-timestamps` est appelée plusieurs fois après l'ouverture du rapport et provoque des refetch de `session_messages`, donc une nouvelle référence de `sessionClips`. Quand l'utilisateur choisit la Question 15 (ou n'importe quelle question), l'effet refire juste après et ramène le player sur la Question 1.
 
-1. Ajouter un état local `isPlaying` synchronisé avec les évènements `play` / `pause` / `ended` de l'élément `<video>`.
-2. Superposer un bouton circulaire centré sur la zone vidéo (mode non-compact uniquement) :
-   - Taille ~80 px (≈ 2× la taille du bouton play natif)
-   - Fond `bg-black/50` semi-transparent, icône blanche `Play` ou `Pause` (lucide-react)
-   - Visible en permanence quand la vidéo est en pause ; en lecture, masqué automatiquement après ~1,5 s d'inactivité souris, réapparaît au survol (comme YouTube)
-   - `pointer-events-auto` ; au clic : toggle play/pause via `safePlay()` / `pauseOnly()`
-3. Garder les contrôles natifs (`controls`) pour timeline / volume / fullscreen.
-4. Ne pas afficher en mode `compact` (mini-lecteur de la barre fixe) ni en mode `hideDownload` n'a pas d'impact ici.
+C'est ce qui explique le symptôme reporté sur Anne Mascarelli et Guillaume Breton : la Q15 apparaît bien dans le sélecteur et dans la Transcription, mais le lecteur revient toujours sur la Q1.
 
-## Détails techniques
+## Correctif
+- Ne lancer l'auto-lecture de la première vidéo qu'**une seule fois**, à la première arrivée sur le rapport.
+- Garder un `useRef` booléen `hasAutoPlayedRef` mis à `true` au premier lancement réussi pour bloquer toute relance ultérieure.
+- Dépendance de l'effet : conserver `sessionClips` pour pouvoir attendre que les clips soient prêts, mais sortir immédiatement si l'auto-lecture a déjà eu lieu.
 
-- Utiliser un `useState` + `useEffect` qui attache `play` / `pause` / `ended` sur `videoRef.current` (re-attaché quand `current.url` change via `key`).
-- Pour l'auto-masquage : `useState` `controlsVisible`, timer `setTimeout` réinitialisé sur `mousemove` du conteneur vidéo.
-- Pas de modification de la logique existante (autoplay, seek, vitesse, fixDuration).
+## Fichier modifié
+- `src/components/session/SessionReportView.tsx`
 
-## Fichiers modifiés
-
-- `src/components/session/SessionVideoNavigator.tsx`
+## Validation
+- Ouvrir le rapport d'Anne Mascarelli dans la preview
+- Sélectionner la Question 15 dans le player → la vidéo doit se charger et rester sur Q15
+- Vérifier qu'au premier chargement, la Question 1 démarre toujours automatiquement
+- Refaire le test sur le rapport de Guillaume Breton
