@@ -61,7 +61,7 @@ export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questi
   const isRunning = status === "running";
   // Bouton toujours visible sauf quand l'enregistrement n'a jamais été activé
   // (rien à relancer) ou quand une analyse est déjà en cours.
-  const canRetry = !isRunning && reason !== "video_not_recorded";
+  const canRetry = !readOnly && !!sessionId && !isRunning && reason !== "video_not_recorded";
 
   const message =
     (reason && REASON_LABELS[reason]) ||
