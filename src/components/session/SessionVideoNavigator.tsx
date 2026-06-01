@@ -538,7 +538,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   Question {index + 1}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="w-[28rem] max-w-[90vw]">
+              <SelectContent className="w-[56rem] max-w-[90vw]">
                 {clips.map((c, i) => (
                   <SelectItem key={i} value={String(i)}>
                     <span className="flex items-center gap-2 whitespace-nowrap">
