@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface SessionVideoClip {
   url: string;
+  audioUrl?: string | null;
   questionLabel: string;
   questionText: string;
   isFollowUp: boolean;
