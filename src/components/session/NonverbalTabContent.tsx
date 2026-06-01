@@ -37,7 +37,7 @@ const REASON_LABELS: Record<string, string> = {
     "L'enregistrement vidéo n'était pas activé pour ce projet.",
 };
 
-export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId }: Props) {
+export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId, readOnly }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
