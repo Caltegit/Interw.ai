@@ -605,7 +605,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 />
               </div>
               <div>
-                <Label>Nom du recruteur IA</Label>
+                <Label>Votre nom de recruteur</Label>
                 <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
