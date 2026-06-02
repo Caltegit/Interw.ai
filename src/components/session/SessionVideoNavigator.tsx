@@ -65,6 +65,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
+  const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -407,6 +408,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
+  const clipKey = current.messageId ?? current.url;
+  const currentUrl = clipUrlOverrides[clipKey] ?? current.url;
 
   // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
   // récupération côté serveur sur ce clip précis.
