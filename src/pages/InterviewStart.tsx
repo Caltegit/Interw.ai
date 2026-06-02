@@ -418,14 +418,21 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
-  // Streaming des chunks vers Storage : index séquentiel et liste des chemins par question.
-  const chunkIndexRef = useRef(0);
-  const uploadedChunkPathsRef = useRef<string[]>([]);
-  const chunkMimeRef = useRef<string>("video/webm");
   // Enregistrement audio séparé (léger, pour la transcription IA — vidéo reste pour la relecture)
   const questionAudioRecorderRef = useRef<MediaRecorder | null>(null);
   const questionAudioChunksRef = useRef<Blob[]>([]);
-  const audioMimeRef = useRef<string>("audio/webm;codecs=opus");
+  type ActiveQuestionRecording = {
+    recorder: MediaRecorder;
+    audioRecorder: MediaRecorder | null;
+    questionIndex: number;
+    chunkMime: string;
+    audioMime: string;
+    videoChunks: Blob[];
+    audioChunks: Blob[];
+    uploadedChunkPaths: string[];
+    uploadPromises: Promise<unknown>[];
+  };
+  const activeQuestionRecordingRef = useRef<ActiveQuestionRecording | null>(null);
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
