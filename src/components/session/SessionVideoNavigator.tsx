@@ -4,10 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Download, Loader2, Pause, Play, RotateCcw, RotateCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Loader2, Pause, Play, RotateCcw, RotateCw, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface SessionVideoClip {
   url: string;
@@ -63,6 +64,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const fixingDurationRef = useRef(false);
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -354,6 +356,54 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   const current = clips[index];
 
+  // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
+  // récupération côté serveur sur ce clip précis.
+  const parsedRecover = (() => {
+    if (!current?.url) return null;
+    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.webm(?:\?.*)?$/i);
+    if (!m) return null;
+    return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
+  })();
+  const canRecover = !!parsedRecover;
+
+  const handleRecover = async () => {
+    if (!parsedRecover || recovering) return;
+    setRecovering(true);
+    toast({
+      title: "Réparation en cours…",
+      description: "Reconstruction du fichier vidéo. Cela peut prendre quelques secondes.",
+    });
+    try {
+      const { data, error } = await supabase.functions.invoke("recover-session-video", {
+        body: {
+          session_id: parsedRecover.sessionId,
+          question_index: parsedRecover.questionIndex,
+          sync: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "Réparation terminée", description: "Tentative de rechargement du lecteur." });
+      setMediaError(null);
+      const v = videoRef.current;
+      if (v) {
+        // Cache-bust pour forcer le rechargement de la nouvelle version.
+        const u = new URL(current.url);
+        u.searchParams.set("v", String(Date.now()));
+        v.src = u.toString();
+        try { v.load(); } catch { /* noop */ }
+      }
+      console.log("recover-session-video result:", data);
+    } catch (e: any) {
+      toast({
+        title: "Réparation impossible",
+        description: e?.message ?? "Le fichier n'a pas pu être récupéré.",
+        variant: "destructive",
+      });
+    } finally {
+      setRecovering(false);
+    }
+  };
+
   const goTo = async (newIndex: number, autoplay: boolean) => {
     if (newIndex === index) return;
     await stopCurrent();
@@ -451,6 +501,21 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   >
                     Écouter l'audio
                   </a>
+                )}
+                {canRecover && (
+                  <button
+                    type="button"
+                    onClick={handleRecover}
+                    disabled={recovering}
+                    className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20 disabled:opacity-60"
+                  >
+                    {recovering ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Wrench className="h-3 w-3" />
+                    )}
+                    Réparer la vidéo
+                  </button>
                 )}
               </div>
               {current.messageId && transcripts?.[current.messageId] && (
