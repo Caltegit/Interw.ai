@@ -311,6 +311,18 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const togglePlayPause = () => {
     const v = videoRef.current;
     if (!v) return;
+    // Si la source DOM ne correspond plus au clip courant (cas de désync
+    // après un changement d'index rapide), on resynchronise avant de jouer.
+    const want = clips[index]?.url;
+    if (want) {
+      const resolve = (u: string) => { try { return new URL(u, window.location.href).toString(); } catch { return u; } };
+      if (resolve(v.currentSrc || v.src || "") !== resolve(want)) {
+        console.warn("[SessionVideoNavigator] source désync au clic Play, resync", { index, want });
+        try { v.src = want; v.load(); } catch { /* noop */ }
+        setShouldAutoPlay(true);
+        return;
+      }
+    }
     if (v.paused) {
       safePlay();
     } else {
