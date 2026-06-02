@@ -25,81 +25,98 @@ function indexOfMagic(buf: Uint8Array): number {
   return -1;
 }
 
-async function rebuild(session_id: string, question_index: number) {
+async function rebuild(session_id: string, question_index: number, force = false) {
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const folder = `interviews/${session_id}/q${question_index}`;
-  const finalPath = `interviews/${session_id}/q${question_index}.webm`;
+  // Le fichier final peut être .webm (Chrome/Firefox) ou .mp4 (Safari/iOS).
+  // On regarde ce qui existe réellement dans le dossier parent.
+  const parentFolder = `interviews/${session_id}`;
+  const { data: siblings } = await sb.storage.from("media").list(parentFolder, { limit: 1000 });
+  const existingFinal = (siblings ?? []).find(
+    (f) => f.name === `q${question_index}.webm` || f.name === `q${question_index}.mp4`,
+  );
+  const finalPath = `${parentFolder}/${existingFinal?.name ?? `q${question_index}.webm`}`;
+  const isMp4 = finalPath.endsWith(".mp4");
 
-  // ── 1) Tentative de réparation in-place du `q{N}.webm` existant ────────────
-  // Si le fichier est présent mais que sa magic EBML est en offset > 0, on le
-  // tronque puis on le ré-upload. Beaucoup moins coûteux que de tout recoller.
-  try {
-    const { data: existing, error: dlErr } = await sb.storage
-      .from("media")
-      .download(finalPath);
-    if (!dlErr && existing) {
-      const buf = new Uint8Array(await existing.arrayBuffer());
-      const idx = indexOfMagic(buf);
-      if (idx === 0) {
-        console.log("recover: q file already valid at offset 0, nothing to do");
-        return { mode: "skip" as const, path: finalPath };
+  // ── 1) Tentative de réparation in-place du fichier existant ────────────────
+  // Pour les WebM : si la magic EBML est en offset > 0, on tronque le préfixe.
+  // Pour les MP4 : on ne tente pas de truncate (pas de signature simple), on
+  // passe directement à la reconstruction depuis chunks.
+  // Si `force=true` (déclenché manuellement par le RH), on saute aussi le
+  // truncate et on reconstruit toujours depuis les chunks : utile quand le
+  // header est intact mais que des clusters internes sont cassés.
+  if (!force && !isMp4) {
+    try {
+      const { data: existing, error: dlErr } = await sb.storage
+        .from("media")
+        .download(finalPath);
+      if (!dlErr && existing) {
+        const buf = new Uint8Array(await existing.arrayBuffer());
+        const idx = indexOfMagic(buf);
+        if (idx === 0) {
+          console.log("recover: q file already valid at offset 0, nothing to do");
+          return { mode: "skip" as const, path: finalPath };
+        }
+        if (idx > 0) {
+          console.log(`recover: truncating ${idx} junk bytes from ${finalPath}`);
+          const truncated = buf.slice(idx);
+          const { error: upErr } = await sb.storage
+            .from("media")
+            .upload(finalPath, truncated, {
+              contentType: "video/webm",
+              upsert: true,
+            });
+          if (upErr) throw upErr;
+          return { mode: "truncate" as const, path: finalPath, droppedBytes: idx };
+        }
+        console.log("recover: EBML magic absent, falling back to chunk rebuild");
       }
-      if (idx > 0) {
-        console.log(`recover: truncating ${idx} junk bytes from ${finalPath}`);
-        const truncated = buf.slice(idx);
-        const { error: upErr } = await sb.storage
-          .from("media")
-          .upload(finalPath, truncated, {
-            contentType: "video/webm",
-            upsert: true,
-          });
-        if (upErr) throw upErr;
-        return { mode: "truncate" as const, path: finalPath, droppedBytes: idx };
-      }
-      console.log("recover: EBML magic absent from existing file, falling back to chunk rebuild");
+    } catch (e) {
+      console.warn("recover: in-place truncate failed, falling back to chunk rebuild", e);
     }
-  } catch (e) {
-    console.warn("recover: in-place truncate failed, falling back to chunk rebuild", e);
   }
 
   // ── 2) Reconstruction depuis les chunks intermédiaires ─────────────────────
   await sb.storage.from("media").remove([finalPath]);
 
+  const chunkExt = isMp4 ? ".mp4" : ".webm";
   const { data: chunks } = await sb.storage
     .from("media")
     .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
   const files = (chunks ?? [])
-    .filter((f) => f.name.startsWith("chunk-") && f.name.endsWith(".webm"))
+    .filter((f) => f.name.startsWith("chunk-") && f.name.endsWith(chunkExt))
     .sort((a, b) => a.name.localeCompare(b.name));
-  console.log("chunks:", files.length);
+  console.log("chunks:", files.length, "ext:", chunkExt);
 
   if (files.length === 0) {
     throw new Error("no chunks available to rebuild from");
   }
 
-  // On va d'abord scanner les premiers chunks pour trouver le premier qui
-  // contient la magic EBML, et tronquer son préfixe le cas échéant. Les chunks
-  // suivants sont concaténés tels quels.
+  let firstValidIdx = 0;
   let droppedFromFirst = 0;
-  let firstValidIdx = -1;
-  for (let k = 0; k < files.length; k++) {
-    const f = files[k];
-    const { data, error } = await sb.storage.from("media").download(`${folder}/${f.name}`);
-    if (error || !data) continue;
-    const buf = new Uint8Array(await data.arrayBuffer());
-    const idx = indexOfMagic(buf);
-    if (idx >= 0) {
-      firstValidIdx = k;
-      droppedFromFirst = idx;
-      console.log(`recover: first EBML in ${f.name} at offset ${idx}; skipping ${k} earlier chunks`);
-      break;
+  if (!isMp4) {
+    // WebM : on cherche le premier chunk contenant la magic EBML pour démarrer
+    // exactement sur un init segment valide.
+    firstValidIdx = -1;
+    for (let k = 0; k < files.length; k++) {
+      const f = files[k];
+      const { data, error } = await sb.storage.from("media").download(`${folder}/${f.name}`);
+      if (error || !data) continue;
+      const buf = new Uint8Array(await data.arrayBuffer());
+      const idx = indexOfMagic(buf);
+      if (idx >= 0) {
+        firstValidIdx = k;
+        droppedFromFirst = idx;
+        console.log(`recover: first EBML in ${f.name} at offset ${idx}; skipping ${k} earlier chunks`);
+        break;
+      }
     }
-  }
-  if (firstValidIdx < 0) {
-    throw new Error("no chunk contains an EBML header — unrecoverable");
+    if (firstValidIdx < 0) {
+      throw new Error("no chunk contains an EBML header — unrecoverable");
+    }
   }
 
   let i = firstValidIdx;
@@ -115,10 +132,7 @@ async function rebuild(session_id: string, question_index: number) {
             const { data, error } = await sb.storage.from("media").download(`${folder}/${f.name}`);
             if (error || !data) { console.error("dl fail", f.name, error?.message); continue; }
             currentReader = data.stream().getReader();
-            // Le tout premier chunk valide doit être tronqué pour démarrer
-            // exactement sur la magic EBML.
             if (!firstChunkConsumed && droppedFromFirst > 0) {
-              // On lit en entier ce premier chunk, on tronque, on enqueue.
               const parts: Uint8Array[] = [];
               while (true) {
                 const { value, done } = await currentReader.read();
@@ -147,10 +161,11 @@ async function rebuild(session_id: string, question_index: number) {
     },
   });
 
+  const uploadContentType = isMp4 ? "video/mp4" : "video/webm";
   const { error: upErr } = await sb.storage
     .from("media")
     .upload(finalPath, stream as any, {
-      contentType: "video/webm",
+      contentType: uploadContentType,
       upsert: true,
       duplex: "half",
     } as any);
@@ -162,7 +177,7 @@ async function rebuild(session_id: string, question_index: number) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
-    const { session_id, question_index, sync } = await req.json();
+    const { session_id, question_index, sync, force } = await req.json();
     if (!session_id || typeof question_index !== "number") {
       return new Response(JSON.stringify({ error: "session_id + question_index required" }), {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
@@ -171,13 +186,13 @@ Deno.serve(async (req) => {
     // Mode synchrone (utile pour le bouton "Tenter récupération" côté UI : on
     // veut attendre la fin avant de rafraîchir le lecteur).
     if (sync) {
-      const result = await rebuild(session_id, question_index);
+      const result = await rebuild(session_id, question_index, !!force);
       return new Response(JSON.stringify({ status: "done", ...result }), {
         status: 200, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     // @ts-ignore
-    EdgeRuntime.waitUntil(rebuild(session_id, question_index).catch((e) => console.error("rebuild err", e)));
+    EdgeRuntime.waitUntil(rebuild(session_id, question_index, !!force).catch((e) => console.error("rebuild err", e)));
     return new Response(JSON.stringify({ status: "processing" }), {
       status: 202, headers: { ...cors, "Content-Type": "application/json" },
     });

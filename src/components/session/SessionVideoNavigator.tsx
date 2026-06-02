@@ -412,7 +412,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
     if (!current?.url) return null;
-    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.webm(?:\?.*)?$/i);
+    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
@@ -431,6 +431,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           session_id: parsedRecover.sessionId,
           question_index: parsedRecover.questionIndex,
           sync: true,
+          // Forcer la reconstruction depuis les chunks : si le RH a cliqué sur
+          // "Réparer", c'est que le fichier final est cassé même si son header
+          // semble valide. On ne retombe plus sur le "skip" trompeur.
+          force: true,
         },
       });
       if (error) throw error;

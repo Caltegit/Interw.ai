@@ -274,6 +274,15 @@ export default function InterviewStart() {
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  // Toujours synchronisé avec la dernière valeur de currentQuestionIndex.
+  // Indispensable pour que startQuestionRecording lise l'index ACTUEL au
+  // moment où l'enregistrement démarre, et non la valeur capturée par la
+  // closure lors de la création précédente du callback (sinon les chunks
+  // de la question N+1 sont écrits dans le dossier qN/ → vidéos cassées).
+  const currentQuestionIndexRef = useRef(0);
+  useEffect(() => {
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
   type ChatMessage = {
     role: string;
     content: string;
@@ -1821,7 +1830,10 @@ export default function InterviewStart() {
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       const sessionId = session?.id ?? null;
-      const questionIndex = currentQuestionIndex;
+      // Lit la valeur ACTUELLE de l'index (via ref) plutôt que la valeur
+      // capturée par la closure du useCallback : évite que les chunks de la
+      // question courante soient uploadés dans le dossier de la précédente.
+      const questionIndex = currentQuestionIndexRef.current;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return;
@@ -1956,10 +1968,16 @@ export default function InterviewStart() {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
-      const blob = new Blob(videoBufferLocal, { type: "video/webm" });
+      // IMPORTANT : utiliser le MIME RÉEL produit par MediaRecorder. Sur
+      // Safari/iOS c'est `video/mp4`, sur Chrome/Firefox c'est `video/webm`.
+      // Forcer `.webm` partout produisait un fichier illisible sur le rapport
+      // (MIME ↔ contenu incohérents → MEDIA_ERR_DECODE).
+      const realMime = chunkMimeRef.current || "video/webm";
+      const ext = realMime.startsWith("video/mp4") ? "mp4" : "webm";
+      const blob = new Blob(videoBufferLocal, { type: realMime });
       const audioChunks = [...audioBufferLocal];
       const chunkPaths = chunkPathsLocal;
-      const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+      const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
       const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
@@ -2040,7 +2058,7 @@ export default function InterviewStart() {
         try {
           const { error: uploadError } = await supabase.storage
             .from("media")
-            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+            .upload(fileName, blob, { contentType: realMime, upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
             videoUrl = urlData.publicUrl;
