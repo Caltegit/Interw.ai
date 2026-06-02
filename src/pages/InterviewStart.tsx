@@ -400,7 +400,8 @@ export default function InterviewStart() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSttResultAtRef = useRef<number>(0);
-  const startListeningRef = useRef<(() => void) | null>(null);
+  type StartListeningOptions = { force?: boolean; reason?: string; questionIndex?: number };
+  const startListeningRef = useRef<((options?: StartListeningOptions) => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -428,6 +429,13 @@ export default function InterviewStart() {
   const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showManualContinue, setShowManualContinue] = useState(false);
   const manualContinueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listeningTransitionRef = useRef<{ blockId: number; questionIndex: number; source: string } | null>(null);
+  const activeRecorderMetaRef = useRef<{
+    blockId: number;
+    questionIndex: number;
+    source: string;
+    startedAt: number;
+  } | null>(null);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
   const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
@@ -1090,9 +1098,24 @@ export default function InterviewStart() {
   );
 
   // STT: start listening
-  const startListening = useCallback(() => {
+  const startListening = useCallback((options?: StartListeningOptions) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const reason = options?.reason ?? "default";
+    const questionIndex = options?.questionIndex ?? currentQuestionIndex;
+    const forceRestart = options?.force === true;
+    if (isListeningRef.current && !forceRestart) {
+      console.log("[interview] startListening skipped — already listening", { reason, questionIndex });
+      return;
+    }
+    if (forceRestart && recognitionRef.current) {
+      try { recognitionRef.current.onend = null; } catch {}
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+      isListeningRef.current = false;
+      setIsListening(false);
+    }
     if (!SpeechRecognition) {
+      listeningTransitionRef.current = null;
       toast({
         title: "Erreur",
         description: "La reconnaissance vocale n'est pas supportée par ce navigateur.",
@@ -1174,17 +1197,25 @@ export default function InterviewStart() {
     try {
       recognition.start();
     } catch (e) {
-      console.warn("[interview] STT start() threw:", e);
+      console.warn("[interview] STT start() threw:", e, { reason });
       logger.error("interview_stt_start_failed", {
         sessionId: session?.id ?? null,
         error: e instanceof Error ? e.message : String(e),
       });
       isListeningRef.current = false;
       setIsListening(false);
+      listeningTransitionRef.current = null;
       return;
     }
     isListeningRef.current = true;
     setIsListening(true);
+    listeningTransitionRef.current = null;
+    activeRecorderMetaRef.current = {
+      blockId: currentBlockIdRef.current,
+      questionIndex,
+      source: reason,
+      startedAt: Date.now(),
+    };
 
     // Watchdog de vivacité STT : si aucun onresult depuis 10s pendant
     // l'écoute active, on force un redémarrage complet de la recognition.
@@ -1236,11 +1267,13 @@ export default function InterviewStart() {
         try { recognitionRef.current?.stop(); } catch {}
       }
     }, 2000);
-  }, [toast, isSpeaking, noMicSignal]);
+  }, [toast, isSpeaking, noMicSignal, currentQuestionIndex]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
+    listeningTransitionRef.current = null;
+    activeRecorderMetaRef.current = null;
     if (sttWatchdogRef.current) {
       clearInterval(sttWatchdogRef.current);
       sttWatchdogRef.current = null;
@@ -1363,7 +1396,7 @@ export default function InterviewStart() {
       const hasMedia = !!(q?.audio_url || q?.video_url);
       if (!hasMedia) {
         ensureRecorder();
-        startListening();
+        startListening({ reason: "resume-written" });
         resetSilenceTimer();
       } else {
         // After greeting/transition TTS, the media should auto-play
@@ -1394,7 +1427,7 @@ export default function InterviewStart() {
     // Garantit que le bouton « Enregistrer ma réponse » réapparaît même si le
     // recorder s'est terminé pendant la pause (état "inactive" ou null).
     ensureRecorder();
-    startListening();
+    startListening({ reason: "resume-listening" });
     resetSilenceTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
@@ -1892,6 +1925,7 @@ export default function InterviewStart() {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
       if (!recorder || recorder.state === "inactive") {
+        activeRecorderMetaRef.current = null;
         setIsRecordingActive(false);
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
@@ -1915,6 +1949,7 @@ export default function InterviewStart() {
       // Détacher seulement si on n'a pas déjà été remplacé entre-temps.
       if (questionRecorderRef.current === recorder) questionRecorderRef.current = null;
       if (questionAudioRecorderRef.current === audioRecorder) questionAudioRecorderRef.current = null;
+      activeRecorderMetaRef.current = null;
       setIsRecordingActive(false);
 
       if (videoBufferLocal.length === 0) {
@@ -2051,19 +2086,74 @@ export default function InterviewStart() {
     setShowManualContinue(false);
   }, []);
 
-  const forceStartListening = useCallback(() => {
+  const enterListeningPhase = useCallback((source: string, blockId = currentBlockIdRef.current) => {
     if (isPausedRef.current) {
-      console.log("[InterviewStart] forceStartListening blocked — interview is paused");
-      return;
+      console.log("[InterviewStart] enterListeningPhase blocked — interview is paused", { source, blockId });
+      return false;
     }
-    console.log("[interview] Forcing transition to listening");
+    if (blockId !== currentBlockIdRef.current) {
+      console.log("[InterviewStart] enterListeningPhase ignored — stale block", { source, blockId, current: currentBlockIdRef.current });
+      return false;
+    }
+
+    const pendingTransition = listeningTransitionRef.current;
+    if (
+      pendingTransition &&
+      pendingTransition.blockId === blockId &&
+      pendingTransition.questionIndex === currentQuestionIndex
+    ) {
+      console.log("[InterviewStart] enterListeningPhase skipped — transition already pending", {
+        source,
+        activeSource: pendingTransition.source,
+        blockId,
+        questionIndex: currentQuestionIndex,
+      });
+      return false;
+    }
+
+    const currentMeta = activeRecorderMetaRef.current;
+    if (
+      currentMeta &&
+      currentMeta.blockId === blockId &&
+      currentMeta.questionIndex === currentQuestionIndex &&
+      questionRecorderRef.current &&
+      questionRecorderRef.current.state !== "inactive" &&
+      isListeningRef.current
+    ) {
+      console.log("[InterviewStart] enterListeningPhase skipped — already active", {
+        source,
+        activeSource: currentMeta.source,
+        blockId,
+        questionIndex: currentQuestionIndex,
+      });
+      resetSilenceTimer();
+      return false;
+    }
+
+    console.log("[interview] Enter listening phase", {
+      source,
+      blockId,
+      questionIndex: currentQuestionIndex,
+      previousSource: currentMeta?.source ?? null,
+      recorderState: questionRecorderRef.current?.state ?? null,
+      listening: isListeningRef.current,
+    });
+
     clearPlaybackWatchdog();
-    currentPresentationRef.current = null; // presentation finished
+    listeningTransitionRef.current = { blockId, questionIndex: currentQuestionIndex, source };
+    currentPresentationRef.current = null;
     setShouldAutoPlay(false);
     setIsSpeaking(false);
+    setShowManualContinue(false);
     startQuestionRecording();
-    startListening();
-  }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+    startListening({ force: true, reason: source, questionIndex: currentQuestionIndex });
+    resetSilenceTimer();
+    return true;
+  }, [clearPlaybackWatchdog, currentQuestionIndex, resetSilenceTimer, startQuestionRecording, startListening]);
+
+  const forceStartListening = useCallback((source = "media-end", blockId?: number) => {
+    enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
+  }, [enterListeningPhase]);
 
   // Mark current question as a media presentation (for pause/resume replay)
   const markMediaPresentation = useCallback((qIndex: number) => {
@@ -2094,7 +2184,7 @@ export default function InterviewStart() {
         return;
       }
       console.warn("[interview] Playback watchdog triggered after 25s — forcing listening");
-      forceStartListening();
+      forceStartListening("playback-watchdog", myBlock);
     }, 25000);
   }, [clearPlaybackWatchdog, forceStartListening]);
 
@@ -2520,8 +2610,7 @@ export default function InterviewStart() {
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("intro-written", myBlock);
     }
   };
 
@@ -2552,7 +2641,7 @@ export default function InterviewStart() {
         description: "Veuillez parler avant d'envoyer votre réponse.",
         variant: "destructive",
       });
-      startListening();
+      startListening({ reason: "empty-transcript" });
       // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
       resetSilenceTimer();
       setIsProcessing(false);
@@ -2811,9 +2900,7 @@ export default function InterviewStart() {
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
-      startQuestionRecording();
-      startListening();
-      resetSilenceTimer();
+      enterListeningPhase("follow-up", followBlock);
       return;
     }
 
@@ -3037,8 +3124,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("fallback-text-after-media", nextBlock);
     } else {
       // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
@@ -3046,8 +3132,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("next-written", nextBlock);
     }
     } finally {
       if (!aborted) setIsProcessing(false);
@@ -3193,8 +3278,7 @@ export default function InterviewStart() {
           armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
-        startQuestionRecording();
-        startListening();
+        enterListeningPhase("skip-written", skipBlock);
       }
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
@@ -3903,7 +3987,7 @@ export default function InterviewStart() {
                           return;
                         }
                         console.log("[InterviewStart] onPlaybackEnd (video) fired");
-                        forceStartListening();
+                        forceStartListening("video-ended");
                       }}
                     />
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium z-10">
@@ -4028,7 +4112,7 @@ export default function InterviewStart() {
                         return;
                       }
                       console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
-                      forceStartListening();
+                      forceStartListening("audio-ended");
                     }}
                   />
                 )}
@@ -4241,7 +4325,7 @@ export default function InterviewStart() {
                             className="w-full h-12 rounded-xl"
                             onClick={() => {
                               setInterviewStuck(false);
-                              startListening();
+                              startListening({ force: true, reason: "stuck-banner" });
                             }}
                           >
                             <Mic className="mr-2 h-4 w-4" />

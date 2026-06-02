@@ -290,7 +290,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     () => ({
       playMessage: (messageId, startSeconds) => {
         const i = clips.findIndex((c) => c.messageId === messageId);
-        if (i === -1) return false;
+        if (i === -1) {
+          console.warn("[SessionVideoNavigator] clip introuvable pour messageId", {
+            messageId,
+            availableMessageIds: clips.map((clip) => clip.messageId).filter(Boolean),
+          });
+          return false;
+        }
         // Marge adaptative : ~15 % du timestamp, bornée entre 0,5 s et 3 s.
         const raw = Math.max(0, startSeconds ?? 0);
         const margin = Math.min(3, Math.max(0.5, raw * 0.15));
@@ -382,7 +388,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         },
       });
       if (error) throw error;
-      toast({ title: "Réparation terminée", description: "Tentative de rechargement du lecteur." });
+      const mode = (data as { mode?: string } | null)?.mode;
+      toast({
+        title: mode === "skip" ? "Vidéo déjà valide" : "Réparation terminée",
+        description: mode === "skip" ? "Le fichier semble déjà sain ; rechargement du lecteur." : "Tentative de rechargement du lecteur.",
+      });
       setMediaError(null);
       const v = videoRef.current;
       if (v) {

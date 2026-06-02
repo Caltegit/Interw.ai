@@ -110,19 +110,37 @@ export function SessionReportView({
   }, [messages]);
 
   const videoMessageIdByMessageId = useMemo(() => {
-    const videoIdByQuestionId = new Map<string, string>();
+    const candidateById = new Map<string, any>();
+    const videoIdsByQuestionId = new Map<string, string[]>();
     for (const m of messages as any[]) {
-      if (m?.role === "candidate" && m?.video_segment_url && m?.question_id) {
-        if (!videoIdByQuestionId.has(m.question_id)) {
-          videoIdByQuestionId.set(m.question_id, m.id);
-        }
+      if (m?.role !== "candidate" || !m?.id) continue;
+      candidateById.set(m.id, m);
+      if (m?.video_segment_url && m?.question_id) {
+        const list = videoIdsByQuestionId.get(m.question_id) ?? [];
+        list.push(m.id);
+        videoIdsByQuestionId.set(m.question_id, list);
       }
     }
     const map: Record<string, string> = {};
     for (const m of messages as any[]) {
-      if (m?.role === "candidate" && m?.question_id) {
-        const v = videoIdByQuestionId.get(m.question_id);
-        if (v) map[m.id] = v;
+      if (m?.role !== "candidate" || !m?.id) continue;
+      if (m.video_segment_url) {
+        map[m.id] = m.id;
+        continue;
+      }
+      if (!m.question_id) continue;
+      const videoIds = videoIdsByQuestionId.get(m.question_id) ?? [];
+      if (videoIds.length === 1) {
+        map[m.id] = videoIds[0];
+        continue;
+      }
+      if (videoIds.length > 1) {
+        const sameQuestionMessages = (messages as any[])
+          .filter((row: any) => row?.role === "candidate" && row?.question_id === m.question_id)
+          .sort((a: any, b: any) => new Date(a.timestamp ?? 0).getTime() - new Date(b.timestamp ?? 0).getTime());
+        const targetIdx = sameQuestionMessages.findIndex((row: any) => row.id === m.id);
+        const resolved = targetIdx >= 0 ? videoIds[Math.min(targetIdx, videoIds.length - 1)] : videoIds[0];
+        if (resolved && candidateById.has(resolved)) map[m.id] = resolved;
       }
     }
     return map;
@@ -211,7 +229,8 @@ export function SessionReportView({
 
   const goToMessage = useCallback(
     (messageId: string, startSeconds?: number) => {
-      const played = videoNavRef.current?.playMessage(messageId, startSeconds);
+      const resolvedMessageId = resolveVideoMessageId(messageId) ?? messageId;
+      const played = videoNavRef.current?.playMessage(resolvedMessageId, startSeconds);
       if (played) {
         setTimeout(() => {
           document.getElementById("session-video-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -220,11 +239,11 @@ export function SessionReportView({
       }
       toast({
         title: "Extrait vidéo indisponible",
-        description: "Ce moment n'a pas pu être retrouvé dans les enregistrements.",
+        description: "Ce moment n'a pas pu être rattaché à un extrait vidéo exploitable.",
         variant: "destructive",
       });
     },
-    [toast],
+    [resolveVideoMessageId, toast],
   );
 
   // Sticky mini-vidéo
