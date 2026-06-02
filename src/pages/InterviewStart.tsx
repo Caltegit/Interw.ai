@@ -274,6 +274,15 @@ export default function InterviewStart() {
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [consentChecked, setConsentChecked] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  // Toujours synchronisé avec la dernière valeur de currentQuestionIndex.
+  // Indispensable pour que startQuestionRecording lise l'index ACTUEL au
+  // moment où l'enregistrement démarre, et non la valeur capturée par la
+  // closure lors de la création précédente du callback (sinon les chunks
+  // de la question N+1 sont écrits dans le dossier qN/ → vidéos cassées).
+  const currentQuestionIndexRef = useRef(0);
+  useEffect(() => {
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [currentQuestionIndex]);
   type ChatMessage = {
     role: string;
     content: string;
