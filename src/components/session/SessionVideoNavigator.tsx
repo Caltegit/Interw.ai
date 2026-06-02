@@ -462,9 +462,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setMediaError(null);
       const v = videoRef.current;
       if (v) {
-        // Cache-bust pour forcer le rechargement de la nouvelle version.
-        const u = new URL(current.url);
+        const repairedPath = (data as { path?: string } | null)?.path ?? null;
+        const repairedUrl = repairedPath
+          ? supabase.storage.from("media").getPublicUrl(repairedPath).data.publicUrl
+          : currentUrl;
+        const u = new URL(repairedUrl, window.location.href);
         u.searchParams.set("v", String(Date.now()));
+        swapClipUrl(u.toString());
         v.src = u.toString();
         try { v.load(); } catch { /* noop */ }
       }
