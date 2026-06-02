@@ -101,9 +101,58 @@ export default function InterviewLanding() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = candidateEmail.trim();
   const trimmedName = candidateName.trim();
+  const trimmedJobTitle = candidateJobTitle.trim();
+  const trimmedLinkedin = candidateLinkedin.trim();
   const emailValid = emailRegex.test(trimmedEmail);
   const showEmailError = candidateEmail.length > 0 && !emailValid;
-  const canSubmit = trimmedName.length > 0 && emailValid && !starting;
+
+  const linkedinValid = !trimmedLinkedin || /^https?:\/\//i.test(trimmedLinkedin);
+
+  // Validation des champs additionnels selon la config du projet
+  const missingRequired =
+    (candidateFields.job_title.enabled && candidateFields.job_title.required && !trimmedJobTitle) ||
+    (candidateFields.linkedin.enabled && candidateFields.linkedin.required && !trimmedLinkedin) ||
+    (candidateFields.cv.enabled && candidateFields.cv.required && !cvFile) ||
+    (candidateFields.cover_letter.enabled && candidateFields.cover_letter.required && !coverLetterFile);
+
+  const canSubmit =
+    trimmedName.length > 0 &&
+    emailValid &&
+    linkedinValid &&
+    !missingRequired &&
+    !starting;
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ACCEPTED_EXTS = [".pdf", ".doc", ".docx"];
+
+  const handlePickFile = (file: File | null, setter: (f: File | null) => void) => {
+    setFileError(null);
+    if (!file) {
+      setter(null);
+      return;
+    }
+    const lower = file.name.toLowerCase();
+    if (!ACCEPTED_EXTS.some((e) => lower.endsWith(e))) {
+      setFileError("Format non supporté. Utilisez PDF, DOC ou DOCX.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError("Fichier trop volumineux (10 Mo max).");
+      return;
+    }
+    setter(file);
+  };
+
+  const uploadCandidateFile = async (sessionId: string, file: File, kind: "cv" | "cover-letter") => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const prefix = kind === "cv" ? "" : "cover-letters/";
+    const path = `${sessionId}/${prefix}${Date.now()}_${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from("candidate-cvs")
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (upErr) throw upErr;
+    return { url: path, filename: file.name };
+  };
 
   const handleStart = async () => {
     if (!canSubmit || !project) return;
@@ -116,6 +165,8 @@ export default function InterviewLanding() {
         organization_id: project.organization_id,
         candidate_name: trimmedName,
         candidate_email: trimmedEmail,
+        candidate_job_title: candidateFields.job_title.enabled && trimmedJobTitle ? trimmedJobTitle : null,
+        candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
       })
       .select()
       .single();
@@ -125,6 +176,28 @@ export default function InterviewLanding() {
       setStarting(false);
       return;
     }
+
+    // Upload des fichiers (CV / lettre de motivation) si présents
+    try {
+      const patch: Record<string, string | null> = {};
+      if (candidateFields.cv.enabled && cvFile) {
+        const { url, filename } = await uploadCandidateFile(session.id, cvFile, "cv");
+        patch.candidate_cv_url = url;
+        patch.candidate_cv_filename = filename;
+      }
+      if (candidateFields.cover_letter.enabled && coverLetterFile) {
+        const { url, filename } = await uploadCandidateFile(session.id, coverLetterFile, "cover-letter");
+        patch.candidate_cover_letter_url = url;
+        patch.candidate_cover_letter_filename = filename;
+      }
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("sessions").update(patch as never).eq("id", session.id);
+      }
+    } catch (uploadErr) {
+      console.error("[InterviewLanding] file upload failed", uploadErr);
+      // On n'interrompt pas le candidat — il pourra continuer l'entretien
+    }
+
 
     const introEnabled = project.intro_enabled !== false;
     const dbMode: string | null = project.intro_mode ?? null;
