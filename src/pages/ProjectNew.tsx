@@ -223,6 +223,7 @@ export default function ProjectNew() {
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
+          candidate_fields: s.candidateFields,
         } as never)
         .select()
         .single();
