@@ -218,6 +218,14 @@ async function rebuild(session_id: string, question_index: number, force = false
     } as any);
   if (upErr) throw upErr;
   console.log("rebuilt", finalPath);
+
+  // Reconstruction OK : on peut maintenant nettoyer l'extension "fantôme"
+  // (ex. q14.webm cassé qui traîne après reconstruction en q14.mp4).
+  // Si ce remove échoue, ce n'est pas bloquant.
+  try {
+    await sb.storage.from("media").remove([otherPath]);
+  } catch { /* noop */ }
+
   return { mode: "rebuild" as const, path: finalPath, chunks: files.length, droppedFromFirst, ext };
 }
 
