@@ -13,6 +13,7 @@ import {
   DEFAULT_PRE_SESSION_MESSAGE,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { mergeCandidateFields } from "@/lib/candidateFields";
 
 export default function ProjectEdit() {
   const { id } = useParams();
