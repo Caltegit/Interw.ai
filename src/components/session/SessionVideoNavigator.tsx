@@ -431,6 +431,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           session_id: parsedRecover.sessionId,
           question_index: parsedRecover.questionIndex,
           sync: true,
+          // Forcer la reconstruction depuis les chunks : si le RH a cliqué sur
+          // "Réparer", c'est que le fichier final est cassé même si son header
+          // semble valide. On ne retombe plus sur le "skip" trompeur.
+          force: true,
         },
       });
       if (error) throw error;
