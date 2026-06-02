@@ -2159,7 +2159,7 @@ export default function InterviewStart() {
         return;
       }
       console.warn("[interview] Playback watchdog triggered after 25s — forcing listening");
-      forceStartListening();
+      forceStartListening("playback-watchdog", myBlock);
     }, 25000);
   }, [clearPlaybackWatchdog, forceStartListening]);
 
@@ -3253,8 +3253,7 @@ export default function InterviewStart() {
           armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
-        startQuestionRecording();
-        startListening();
+        enterListeningPhase("skip-written", skipBlock);
       }
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
