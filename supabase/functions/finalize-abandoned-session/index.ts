@@ -1,5 +1,6 @@
 // Finalise une session abandonnée (téléphone fermé / onglet tué) :
-// - reconstitue q{i}.webm à partir des chunks uploadés au fil de l'eau,
+// - reconstitue q{i}.{webm|mp4} à partir des chunks uploadés au fil de l'eau,
+//   en détectant le format réel via le manifest ou l'extension des chunks,
 // - écrit/met à jour le manifest,
 // - passe la session en 'completed' (le trigger Postgres déclenchera la
 //   transcription + génération du rapport via finalize-session).
@@ -22,19 +23,86 @@ function buildCorsHeaders(req: Request) {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const EBML_MAGIC = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]);
+
+function indexOfMagic(buf: Uint8Array): number {
+  outer: for (let i = 0; i <= buf.length - EBML_MAGIC.length; i++) {
+    for (let j = 0; j < EBML_MAGIC.length; j++) {
+      if (buf[i + j] !== EBML_MAGIC[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+// Détermine le format réel de la question :
+//  1) lit le manifest.json s'il existe (mimeType posé par le front),
+//  2) sinon regarde l'extension majoritaire des chunks,
+//  3) fallback `.webm`.
+async function detectQuestionFormat(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  questionIndex: number,
+): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
+  const folder = `interviews/${sessionId}/q${questionIndex}`;
+  try {
+    const { data: manifestBlob } = await supabase.storage
+      .from("media")
+      .download(`${folder}/manifest.json`);
+    if (manifestBlob) {
+      const text = await manifestBlob.text();
+      const m = JSON.parse(text);
+      const mt: string | undefined = m?.mimeType;
+      if (mt && mt.startsWith("video/mp4")) {
+        return { ext: "mp4", contentType: "video/mp4" };
+      }
+      if (mt && mt.startsWith("video/webm")) {
+        return { ext: "webm", contentType: "video/webm" };
+      }
+    }
+  } catch {
+    /* pas de manifest : on continue */
+  }
+  try {
+    const { data: chunks } = await supabase.storage
+      .from("media")
+      .list(folder, { limit: 1000 });
+    const mp4 = (chunks ?? []).filter((f) => f.name.endsWith(".mp4")).length;
+    const webm = (chunks ?? []).filter((f) => f.name.endsWith(".webm")).length;
+    if (mp4 > webm) return { ext: "mp4", contentType: "video/mp4" };
+    if (webm > 0) return { ext: "webm", contentType: "video/webm" };
+  } catch {
+    /* noop */
+  }
+  return { ext: "webm", contentType: "video/webm" };
+}
+
 async function assembleQuestion(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
   questionIndex: number,
 ): Promise<boolean> {
   const folder = `interviews/${sessionId}/q${questionIndex}`;
-  const finalPath = `interviews/${sessionId}/q${questionIndex}.webm`;
+  const parent = `interviews/${sessionId}`;
+  const { ext, contentType } = await detectQuestionFormat(
+    supabase,
+    sessionId,
+    questionIndex,
+  );
+  const finalName = `q${questionIndex}.${ext}`;
+  const finalPath = `${parent}/${finalName}`;
 
-  // Si le blob final existe déjà, rien à faire.
+  // Si un blob final existe déjà (webm ou mp4), rien à faire.
   const { data: existing } = await supabase.storage
     .from("media")
-    .list(`interviews/${sessionId}`, { limit: 1000 });
-  if (existing?.some((f) => f.name === `q${questionIndex}.webm`)) {
+    .list(parent, { limit: 1000 });
+  if (
+    existing?.some(
+      (f) =>
+        f.name === `q${questionIndex}.webm` ||
+        f.name === `q${questionIndex}.mp4`,
+    )
+  ) {
     return true;
   }
 
@@ -42,14 +110,52 @@ async function assembleQuestion(
     .from("media")
     .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
 
+  // On accepte les deux extensions (sessions hybrides produites par les
+  // anciennes versions où les chunks étaient toujours `.webm` même en mp4).
   const chunkFiles = (chunks ?? [])
-    .filter((f) => f.name.startsWith("chunk-") && f.name.endsWith(".webm"))
+    .filter(
+      (f) =>
+        f.name.startsWith("chunk-") &&
+        (f.name.endsWith(".webm") || f.name.endsWith(".mp4")),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (chunkFiles.length === 0) return false;
 
+  // Pour les WebM, on s'assure de démarrer sur un init segment EBML valide
+  // (sinon le fichier reconstruit est illisible). Pour MP4, on ne tente pas
+  // de scan : on concatène tel quel.
+  let firstValidIdx = 0;
+  let droppedFromFirst = 0;
+  if (ext === "webm") {
+    firstValidIdx = -1;
+    for (let k = 0; k < chunkFiles.length; k++) {
+      const f = chunkFiles[k];
+      const { data, error } = await supabase.storage
+        .from("media")
+        .download(`${folder}/${f.name}`);
+      if (error || !data) continue;
+      const buf = new Uint8Array(await data.arrayBuffer());
+      const idx = indexOfMagic(buf);
+      if (idx >= 0) {
+        firstValidIdx = k;
+        droppedFromFirst = idx;
+        break;
+      }
+    }
+    if (firstValidIdx < 0) {
+      console.error(
+        "finalize-abandoned: no EBML header found in chunks",
+        sessionId,
+        questionIndex,
+      );
+      return false;
+    }
+  }
+
   // Assemblage en streaming : un seul chunk en mémoire à la fois.
-  let i = 0;
+  let i = firstValidIdx;
+  let firstChunkConsumed = false;
   let currentReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
@@ -66,9 +172,33 @@ async function assembleQuestion(
               .download(`${folder}/${f.name}`);
             if (error || !data) {
               console.error("download failed", folder, f.name, error?.message);
-              continue; // skip ce chunk, passe au suivant
+              continue;
             }
             currentReader = data.stream().getReader();
+            if (!firstChunkConsumed && droppedFromFirst > 0) {
+              // Lit tout le premier chunk en mémoire pour tronquer le préfixe.
+              const parts: Uint8Array[] = [];
+              while (true) {
+                const { value, done } = await currentReader.read();
+                if (done) break;
+                if (value?.byteLength) parts.push(value);
+              }
+              currentReader = null;
+              const total = parts.reduce((n, p) => n + p.byteLength, 0);
+              const merged = new Uint8Array(total);
+              let off = 0;
+              for (const p of parts) {
+                merged.set(p, off);
+                off += p.byteLength;
+              }
+              firstChunkConsumed = true;
+              if (droppedFromFirst < merged.byteLength) {
+                controller.enqueue(merged.slice(droppedFromFirst));
+                return;
+              }
+              continue;
+            }
+            firstChunkConsumed = true;
           }
           const { value, done } = await currentReader.read();
           if (done) {
@@ -92,7 +222,7 @@ async function assembleQuestion(
   const { error: upErr } = await supabase.storage
     .from("media")
     .upload(finalPath, stream as any, {
-      contentType: "video/webm",
+      contentType,
       upsert: true,
       duplex: "half",
     } as any);
@@ -101,11 +231,11 @@ async function assembleQuestion(
     return false;
   }
 
-  // Manifest (utile pour le lecteur fallback)
+  // Manifest (utile pour la réparation et le lecteur fallback).
   const manifest = {
     sessionId,
     questionIndex,
-    mimeType: "video/webm",
+    mimeType: contentType,
     chunks: chunkFiles.map((f) => `${folder}/${f.name}`),
     createdAt: new Date().toISOString(),
     recovered: true,
@@ -142,8 +272,7 @@ async function processSession(
     return;
   }
 
-  // Reconstitue toutes les questions ayant des chunks orphelins (par sécurité,
-  // pas seulement la dernière).
+  // Reconstitue toutes les questions ayant des chunks orphelins.
   const { data: dirs } = await supabase.storage
     .from("media")
     .list(`interviews/${sessionId}`, { limit: 1000 });
@@ -164,8 +293,6 @@ async function processSession(
   }
 
   if (recovered === 0) {
-    // Aucun média reconstitué : on ne peut ni transcrire ni générer de rapport.
-    // On annule la session pour ne pas polluer la liste "À traiter".
     await supabase
       .from("sessions")
       .update({
@@ -212,7 +339,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
   try {
-    // Lecture du body brut pour accepter aussi text/plain (sendBeacon sans preflight).
     const raw = await req.text();
     const body = raw ? JSON.parse(raw) : {};
     const sessionId = typeof body?.session_id === "string" ? body.session_id : null;
