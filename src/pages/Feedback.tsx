@@ -119,8 +119,15 @@ export default function Feedback() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium truncate">{t.subject}</h3>
-                        <FeedbackStatusBadge status={t.status} />
+                        {t.status === "open" && !unreadByThread[t.id] ? (
+                          <span className="inline-flex items-center rounded-md border border-primary/30 bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                            Lu
+                          </span>
+                        ) : (
+                          <FeedbackStatusBadge status={t.status} />
+                        )}
                       </div>
+
                       {isSuperAdmin && author && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {author.full_name || author.email}
