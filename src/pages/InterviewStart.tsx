@@ -1870,15 +1870,24 @@ export default function InterviewStart() {
     ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
       const recorder = questionRecorderRef.current;
       const audioRecorder = questionAudioRecorderRef.current;
+      // SNAPSHOT immédiat des buffers + chemins de chunks pour ce recorder. On
+      // les détache des refs partagés AVANT l'await pour qu'un nouveau
+      // startQuestionRecording concurrent ne touche pas à notre snapshot.
+      const videoBufferLocal = questionVideoChunksRef.current;
+      const audioBufferLocal = questionAudioChunksRef.current;
+      const chunkPathsLocal = [...uploadedChunkPathsRef.current];
+      const audioMime = audioMimeRef.current;
+      // On ne réinitialise PAS questionVideoChunksRef.current ici : il pointe
+      // sur le tableau du recorder courant ; le prochain startQuestionRecording
+      // créera un nouveau tableau et fera repointer la ref dessus.
+      uploadedChunkPathsRef.current = [];
+
       // Mode démo : on stoppe les recorders proprement mais aucun upload.
       if (isDemoRef.current) {
         try { if (recorder && recorder.state !== "inactive") recorder.stop(); } catch { /* ignore */ }
         try { if (audioRecorder && audioRecorder.state !== "inactive") audioRecorder.stop(); } catch { /* ignore */ }
         questionRecorderRef.current = null;
         questionAudioRecorderRef.current = null;
-        questionVideoChunksRef.current = [];
-        questionAudioChunksRef.current = [];
-        uploadedChunkPathsRef.current = [];
         setIsRecordingActive(false);
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
@@ -1903,22 +1912,18 @@ export default function InterviewStart() {
         );
       }
       await Promise.all(stops);
-      questionRecorderRef.current = null;
-      questionAudioRecorderRef.current = null;
+      // Détacher seulement si on n'a pas déjà été remplacé entre-temps.
+      if (questionRecorderRef.current === recorder) questionRecorderRef.current = null;
+      if (questionAudioRecorderRef.current === audioRecorder) questionAudioRecorderRef.current = null;
       setIsRecordingActive(false);
 
-      if (questionVideoChunksRef.current.length === 0) {
-        questionAudioChunksRef.current = [];
+      if (videoBufferLocal.length === 0) {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
-      const blob = new Blob(questionVideoChunksRef.current, { type: "video/webm" });
-      const audioChunks = [...questionAudioChunksRef.current];
-      const audioMime = audioMimeRef.current;
-      const chunkPaths = [...uploadedChunkPathsRef.current];
-      questionVideoChunksRef.current = [];
-      questionAudioChunksRef.current = [];
-      uploadedChunkPathsRef.current = [];
+      const blob = new Blob(videoBufferLocal, { type: "video/webm" });
+      const audioChunks = [...audioBufferLocal];
+      const chunkPaths = chunkPathsLocal;
       const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
       const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
 
