@@ -115,6 +115,7 @@ export interface ProjectFormState {
   saveIntroToLibrary?: boolean;
   reportRecipientUserIds: string[];
   visibleToUserIds: string[];
+  candidateFields: CandidateFieldsConfig;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
