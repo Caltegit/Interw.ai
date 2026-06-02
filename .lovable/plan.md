@@ -1,44 +1,47 @@
-# Plan
+## Objectif
+Éliminer le bug où la dernière vidéo du rapport échoue avec « fichier introuvable ou bloqué par le navigateur », puis sécuriser tout le flux pour qu’une réparation ne puisse plus casser une vidéo déjà présente.
 
-## État
-Correctifs déployés sur le pipeline vidéo. La cause structurelle (incohérence
-de format entre enregistrement, chunks, fichier final et reconstruction) est
-levée. Les anciennes sessions cassées restent réparables via le bouton
-"Réparer la vidéo".
+## Ce que je vais faire
 
-## Ce qui a été fait
+1. **Sécuriser `recover-session-video`**
+   - Ne plus supprimer `qN.webm` / `qN.mp4` avant d’avoir confirmé qu’une reconstruction est réellement possible.
+   - Vérifier d’abord qu’il existe des chunks exploitables et, pour WebM, qu’au moins un chunk contient un header EBML valide.
+   - Si la reconstruction est impossible, renvoyer une erreur propre sans toucher au fichier final existant.
 
-1. **Front (`src/pages/InterviewStart.tsx`)**
-   - Les chunks sont écrits avec la **vraie extension** (`.mp4` sur Safari/iOS,
-     `.webm` ailleurs) au lieu de toujours `.webm`. Plus de fichier `.webm`
-     contenant des octets MP4.
+2. **Rendre la réparation atomique**
+   - Reconstruire d’abord dans un chemin temporaire.
+   - Remplacer le fichier final seulement après upload réussi.
+   - Ne supprimer l’extension fantôme (`.webm` vs `.mp4`) qu’après succès complet.
 
-2. **`finalize-abandoned-session`**
-   - Détecte le format réel via `manifest.json` (sinon extension majoritaire
-     des chunks).
-   - Reconstruit `qN.webm` **ou** `qN.mp4` selon le cas, avec le bon
-     `contentType`.
-   - Pour les WebM, démarre sur le premier chunk contenant l'init segment
-     EBML pour éviter les fichiers illisibles.
-   - Accepte les chunks hybrides (`.webm` ou `.mp4`) pour les sessions
-     produites par les versions précédentes.
+3. **Empêcher le rapport de pointer vers un fichier mort**
+   - Ajouter une vérification côté lecteur / réparation pour distinguer :
+     - fichier réellement absent,
+     - fichier présent mais illisible,
+     - réparation impossible faute de chunks valides.
+   - Afficher une erreur cohérente au lieu de relancer une réparation destructrice.
 
-3. **`recover-session-video`**
-   - Même détection de format (manifest → fichier final → extension chunks).
-   - Nettoie aussi l'extension "fantôme" (`q15.webm` cassé + `q15.mp4` sain).
-   - Garde le mode `skip` / `truncate` / `rebuild` selon le cas.
+4. **Traiter le cas concret Q15**
+   - Vérifier la session concernée où le message de Q15 existe mais où le fichier référencé n’existe plus.
+   - Rejouer la réparation seulement si les chunks permettent une reconstruction saine.
+   - Sinon, préserver l’état actuel et éviter toute nouvelle suppression accidentelle.
 
-4. **Lecteur (`SessionVideoNavigator`)**
-   - Inchangé hors du strict nécessaire : reconnait déjà `.webm` et `.mp4`,
-     bouton "Réparer la vidéo" envoie `force: true`.
+5. **Valider avant de conclure**
+   - Tester le cas Q15 sur une session complète 15/15.
+   - Vérifier qu’un clic sur « Réparer la vidéo » ne peut plus transformer une vidéo existante en 404.
+   - Contrôler qu’une dernière question saine (`q14.webm`) reste lisible après réparation forcée et après rechargement du rapport.
 
-## Validation effectuée
-- Réparation `q9` de la session `955b…` : `rebuild` réussi depuis 24 chunks.
-- Vérification `q5` même session : `skip` (fichier déjà valide).
-- Aucune régression sur la liste des fichiers en place.
+## Diagnostic retenu
+- **Q15 n’est pas `q15.webm` mais `q14.webm`** : l’indexation est bien en base 0, donc ce n’est pas le bug principal.
+- Le vrai point dangereux est dans **`supabase/functions/recover-session-video/index.ts`** : la fonction supprime le fichier final au début de la reconstruction, avant d’avoir prouvé qu’elle peut reconstruire.
+- Résultat possible : la base garde une URL vers `interviews/{sessionId}/q14.webm`, mais le fichier a été supprimé si la réparation échoue ensuite.
+- J’ai aussi confirmé en base que certaines sessions complètes ont bien 15 vidéos, mais qu’au moins une session a une URL Q15 enregistrée sans objet Storage correspondant.
 
-## À tester côté utilisateur
-- Recharger le rapport `955b…` et lancer Q5 → Q9 dans le lecteur.
-- Lancer une nouvelle interview complète et vérifier la dernière question.
-- Tester une fermeture d'onglet en cours de question pour valider la
-  reconstruction automatique côté serveur.
+## Fichiers concernés
+- `supabase/functions/recover-session-video/index.ts`
+- `src/components/session/SessionVideoNavigator.tsx`
+- éventuellement `supabase/functions/finalize-abandoned-session/index.ts` pour aligner la logique de sécurité
+
+## Résultat attendu
+- Q15 reste lisible quand le fichier existe.
+- Le bouton de réparation ne casse plus une vidéo existante.
+- En cas d’échec de reconstruction, on garde l’ancien fichier et on remonte une erreur explicite au lieu d’un faux succès.
