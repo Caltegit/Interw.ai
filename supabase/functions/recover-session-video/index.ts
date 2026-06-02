@@ -1,10 +1,13 @@
-// One-shot : reconstruit qN.webm en streaming.
+// One-shot : reconstruit qN.{webm|mp4} en streaming.
 // Supporte deux modes :
-//  1) Reconstruction depuis les chunks `q{N}/chunk-*.webm` quand `q{N}.webm` est absent.
+//  1) Reconstruction depuis les chunks `q{N}/chunk-*` quand `q{N}.{webm|mp4}` est absent.
 //  2) Réparation d'un `q{N}.webm` corrompu : on cherche la première occurrence de
 //     la magic EBML (1A 45 DF A3) et on tronque les octets de préfixe invalides.
-//     Cas typique : la dernière question d'une session avait été polluée par
-//     ~1 s de chunks mid-stream d'un recorder précédent encore actif.
+//
+// Le format réel (webm vs mp4) est déterminé via :
+//  - le manifest.json déposé par le front (mimeType),
+//  - ou l'extension du fichier final existant,
+//  - ou l'extension majoritaire des chunks (fallback : webm).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const cors = {
@@ -25,29 +28,64 @@ function indexOfMagic(buf: Uint8Array): number {
   return -1;
 }
 
+async function detectFormat(
+  sb: ReturnType<typeof createClient>,
+  sessionId: string,
+  questionIndex: number,
+): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
+  const folder = `interviews/${sessionId}/q${questionIndex}`;
+  const parent = `interviews/${sessionId}`;
+
+  // 1) Manifest.json
+  try {
+    const { data: manifestBlob } = await sb.storage
+      .from("media")
+      .download(`${folder}/manifest.json`);
+    if (manifestBlob) {
+      const m = JSON.parse(await manifestBlob.text());
+      const mt: string | undefined = m?.mimeType;
+      if (mt?.startsWith("video/mp4")) return { ext: "mp4", contentType: "video/mp4" };
+      if (mt?.startsWith("video/webm")) return { ext: "webm", contentType: "video/webm" };
+    }
+  } catch { /* noop */ }
+
+  // 2) Fichier final existant
+  try {
+    const { data: siblings } = await sb.storage.from("media").list(parent, { limit: 1000 });
+    const hasMp4 = (siblings ?? []).some((f) => f.name === `q${questionIndex}.mp4`);
+    if (hasMp4) return { ext: "mp4", contentType: "video/mp4" };
+    const hasWebm = (siblings ?? []).some((f) => f.name === `q${questionIndex}.webm`);
+    if (hasWebm) return { ext: "webm", contentType: "video/webm" };
+  } catch { /* noop */ }
+
+  // 3) Extension majoritaire des chunks
+  try {
+    const { data: chunks } = await sb.storage.from("media").list(folder, { limit: 1000 });
+    const mp4 = (chunks ?? []).filter((f) => f.name.endsWith(".mp4")).length;
+    const webm = (chunks ?? []).filter((f) => f.name.endsWith(".webm")).length;
+    if (mp4 > webm) return { ext: "mp4", contentType: "video/mp4" };
+  } catch { /* noop */ }
+
+  return { ext: "webm", contentType: "video/webm" };
+}
+
 async function rebuild(session_id: string, question_index: number, force = false) {
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const folder = `interviews/${session_id}/q${question_index}`;
-  // Le fichier final peut être .webm (Chrome/Firefox) ou .mp4 (Safari/iOS).
-  // On regarde ce qui existe réellement dans le dossier parent.
   const parentFolder = `interviews/${session_id}`;
-  const { data: siblings } = await sb.storage.from("media").list(parentFolder, { limit: 1000 });
-  const existingFinal = (siblings ?? []).find(
-    (f) => f.name === `q${question_index}.webm` || f.name === `q${question_index}.mp4`,
-  );
-  const finalPath = `${parentFolder}/${existingFinal?.name ?? `q${question_index}.webm`}`;
-  const isMp4 = finalPath.endsWith(".mp4");
 
-  // ── 1) Tentative de réparation in-place du fichier existant ────────────────
-  // Pour les WebM : si la magic EBML est en offset > 0, on tronque le préfixe.
-  // Pour les MP4 : on ne tente pas de truncate (pas de signature simple), on
-  // passe directement à la reconstruction depuis chunks.
-  // Si `force=true` (déclenché manuellement par le RH), on saute aussi le
-  // truncate et on reconstruit toujours depuis les chunks : utile quand le
-  // header est intact mais que des clusters internes sont cassés.
+  const { ext, contentType } = await detectFormat(sb, session_id, question_index);
+  const isMp4 = ext === "mp4";
+
+  // Nettoie l'ancien fichier final dans l'AUTRE extension s'il existe
+  // (évite d'avoir à la fois q15.webm cassé et q15.mp4 sain qui s'ignorent).
+  const finalPath = `${parentFolder}/q${question_index}.${ext}`;
+  const otherPath = `${parentFolder}/q${question_index}.${isMp4 ? "webm" : "mp4"}`;
+
+  // ── 1) Tentative de réparation in-place du fichier WebM existant ────────────
   if (!force && !isMp4) {
     try {
       const { data: existing, error: dlErr } = await sb.storage
@@ -80,16 +118,21 @@ async function rebuild(session_id: string, question_index: number, force = false
   }
 
   // ── 2) Reconstruction depuis les chunks intermédiaires ─────────────────────
-  await sb.storage.from("media").remove([finalPath]);
+  await sb.storage.from("media").remove([finalPath, otherPath]).catch(() => {});
 
-  const chunkExt = isMp4 ? ".mp4" : ".webm";
   const { data: chunks } = await sb.storage
     .from("media")
     .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
-  const files = (chunks ?? [])
-    .filter((f) => f.name.startsWith("chunk-") && f.name.endsWith(chunkExt))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  console.log("chunks:", files.length, "ext:", chunkExt);
+  // On accepte les deux extensions : certaines sessions hybrides ont des
+  // chunks en .webm alors que le manifest annonce mp4 (ou l'inverse).
+  // On filtre quand même sur l'extension cible pour ne pas mélanger les
+  // conteneurs ; si rien ne matche on retombe sur tout.
+  const all = (chunks ?? []).filter((f) => f.name.startsWith("chunk-"));
+  const preferred = all.filter((f) => f.name.endsWith(`.${ext}`));
+  const files = (preferred.length > 0 ? preferred : all).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  console.log("chunks:", files.length, "ext:", ext);
 
   if (files.length === 0) {
     throw new Error("no chunks available to rebuild from");
@@ -98,8 +141,6 @@ async function rebuild(session_id: string, question_index: number, force = false
   let firstValidIdx = 0;
   let droppedFromFirst = 0;
   if (!isMp4) {
-    // WebM : on cherche le premier chunk contenant la magic EBML pour démarrer
-    // exactement sur un init segment valide.
     firstValidIdx = -1;
     for (let k = 0; k < files.length; k++) {
       const f = files[k];
@@ -161,17 +202,16 @@ async function rebuild(session_id: string, question_index: number, force = false
     },
   });
 
-  const uploadContentType = isMp4 ? "video/mp4" : "video/webm";
   const { error: upErr } = await sb.storage
     .from("media")
     .upload(finalPath, stream as any, {
-      contentType: uploadContentType,
+      contentType,
       upsert: true,
       duplex: "half",
     } as any);
   if (upErr) throw upErr;
   console.log("rebuilt", finalPath);
-  return { mode: "rebuild" as const, path: finalPath, chunks: files.length, droppedFromFirst };
+  return { mode: "rebuild" as const, path: finalPath, chunks: files.length, droppedFromFirst, ext };
 }
 
 Deno.serve(async (req) => {
@@ -183,8 +223,6 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
-    // Mode synchrone (utile pour le bouton "Tenter récupération" côté UI : on
-    // veut attendre la fin avant de rafraîchir le lecteur).
     if (sync) {
       const result = await rebuild(session_id, question_index, !!force);
       return new Response(JSON.stringify({ status: "done", ...result }), {
