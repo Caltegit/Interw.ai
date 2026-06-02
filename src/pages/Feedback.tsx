@@ -31,6 +31,7 @@ export default function Feedback() {
   const { isSuperAdmin, loading: superLoading } = useSuperAdmin();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [unreadByThread, setUnreadByThread] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +45,22 @@ export default function Feedback() {
 
       const list = (data ?? []) as Thread[];
       setThreads(list);
+
+      if (list.length > 0) {
+        const expectedRole = isSuperAdmin ? "user" : "super_admin";
+        const { data: unreadMsgs } = await supabase
+          .from("feedback_messages")
+          .select("thread_id")
+          .in("thread_id", list.map((t) => t.id))
+          .eq("author_role", expectedRole)
+          .is("read_by_recipient_at", null)
+          .neq("author_id", user.id);
+        const map: Record<string, boolean> = {};
+        (unreadMsgs ?? []).forEach((m: any) => { map[m.thread_id] = true; });
+        setUnreadByThread(map);
+      } else {
+        setUnreadByThread({});
+      }
 
       if (isSuperAdmin && list.length > 0) {
         const userIds = Array.from(new Set(list.map((t) => t.user_id)));
@@ -63,10 +80,12 @@ export default function Feedback() {
     const channel = supabase
       .channel("feedback-threads-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "feedback_threads" }, fetchThreads)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_messages" }, fetchThreads)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user, isSuperAdmin, superLoading]);
+
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6">
