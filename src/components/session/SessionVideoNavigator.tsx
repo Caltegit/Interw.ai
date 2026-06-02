@@ -502,6 +502,21 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                     Écouter l'audio
                   </a>
                 )}
+                {canRecover && (
+                  <button
+                    type="button"
+                    onClick={handleRecover}
+                    disabled={recovering}
+                    className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20 disabled:opacity-60"
+                  >
+                    {recovering ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Wrench className="h-3 w-3" />
+                    )}
+                    Réparer la vidéo
+                  </button>
+                )}
               </div>
               {current.messageId && transcripts?.[current.messageId] && (
                 <p className="mt-2 max-h-24 overflow-auto px-2 text-left text-xs italic text-white/80">
