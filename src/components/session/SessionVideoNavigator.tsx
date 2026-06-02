@@ -203,7 +203,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const targetUrl = clips[index]?.url;
+    const targetUrl = currentUrl;
     if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
@@ -261,7 +261,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay, clips]);
+  }, [index, shouldAutoPlay, clips, currentUrl]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
@@ -314,7 +314,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     // Si la source DOM ne correspond plus au clip courant (cas de désync
     // après un changement d'index rapide), on resynchronise avant de jouer.
-    const want = clips[index]?.url;
+    const want = currentUrl;
     if (want) {
       const resolve = (u: string) => { try { return new URL(u, window.location.href).toString(); } catch { return u; } };
       if (resolve(v.currentSrc || v.src || "") !== resolve(want)) {
@@ -381,7 +381,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         return true;
       },
     }),
-    [clips, index, durationSec],
+    [clips, index, durationSec, currentUrl],
   );
 
   // Conteneur DOM stable créé une seule fois. On le déplace via `appendChild`
