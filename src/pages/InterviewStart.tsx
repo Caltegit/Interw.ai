@@ -1272,6 +1272,7 @@ export default function InterviewStart() {
   // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
+    listeningTransitionRef.current = null;
     activeRecorderMetaRef.current = null;
     if (sttWatchdogRef.current) {
       clearInterval(sttWatchdogRef.current);
