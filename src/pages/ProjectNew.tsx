@@ -13,6 +13,7 @@ import {
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
 import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
