@@ -1267,6 +1267,7 @@ export default function InterviewStart() {
   // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
+    activeRecorderMetaRef.current = null;
     if (sttWatchdogRef.current) {
       clearInterval(sttWatchdogRef.current);
       sttWatchdogRef.current = null;
@@ -1918,6 +1919,7 @@ export default function InterviewStart() {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
       if (!recorder || recorder.state === "inactive") {
+        activeRecorderMetaRef.current = null;
         setIsRecordingActive(false);
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
@@ -1941,6 +1943,7 @@ export default function InterviewStart() {
       // Détacher seulement si on n'a pas déjà été remplacé entre-temps.
       if (questionRecorderRef.current === recorder) questionRecorderRef.current = null;
       if (questionAudioRecorderRef.current === audioRecorder) questionAudioRecorderRef.current = null;
+      activeRecorderMetaRef.current = null;
       setIsRecordingActive(false);
 
       if (videoBufferLocal.length === 0) {
