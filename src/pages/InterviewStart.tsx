@@ -2660,7 +2660,7 @@ export default function InterviewStart() {
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
-      enterListeningPhase("intro-written", myBlock);
+      void enterListeningPhase("intro-written", myBlock);
     }
   };
 
@@ -2950,7 +2950,7 @@ export default function InterviewStart() {
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
-      enterListeningPhase("follow-up", followBlock);
+      void enterListeningPhase("follow-up", followBlock);
       return;
     }
 
@@ -3174,7 +3174,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      enterListeningPhase("fallback-text-after-media", nextBlock);
+      void enterListeningPhase("fallback-text-after-media", nextBlock);
     } else {
       // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
@@ -3182,7 +3182,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      enterListeningPhase("next-written", nextBlock);
+      void enterListeningPhase("next-written", nextBlock);
     }
     } finally {
       if (!aborted) setIsProcessing(false);
@@ -3328,7 +3328,7 @@ export default function InterviewStart() {
           armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
-        enterListeningPhase("skip-written", skipBlock);
+        void enterListeningPhase("skip-written", skipBlock);
       }
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
