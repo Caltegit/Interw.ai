@@ -1,41 +1,49 @@
-# Plan
+## Diagnostic
 
-## Ce que je vais corriger
+J'ai téléchargé `q14.webm` (Q15) de 5 candidats du projet : **4 sur 5 sont corrompus** (EBML header parsing failed). Tous démarrent par ~60 KB de données mid-stream avant la vraie en-tête EBML (`1A 45 DF A3`).
 
-1. **Améliorer le diagnostic du lecteur vidéo**
-   - Ajouter une vraie détection d’erreur média dans `SessionVideoNavigator`.
-   - Capturer le clip courant, la question, l’URL média et le type d’échec pour distinguer :
-     - vidéo absente en base,
-     - vidéo présente mais illisible,
-     - blocage navigateur/origine croisée,
-     - média corrompu ou introuvable.
-   - Afficher un message court et utile dans l’interface au lieu du simple état cassé du lecteur.
+En listant les chunks intermédiaires sur Storage, la cause saute aux yeux. Pour Anne Mascarelli par exemple :
+- Dossier `q13/` (Q14) : chunks `00000, 00001, …, 00038, 00040, 00042, 00044, 00046, 00047, 00048` (manque 39, 41, 43, 45)
+- Dossier `q14/` (Q15) : chunks `00001, 00003, 00005, 00007, …, 00045` (uniquement les **impairs**, le `00000` est manquant)
 
-2. **Rendre le rapport robuste quand la transcription existe mais que la vidéo ne passe pas**
-   - Préserver la navigation vers la bonne question même si la vidéo est indisponible.
-   - Ajouter un repli propre pour ces cas : transcript toujours visible, et lecture audio si disponible.
-   - Éviter qu’un clip en erreur casse l’état du sélecteur ou renvoie vers une autre question.
+**Conclusion** : pendant Q15, **deux MediaRecorder tournent en parallèle** (celui de Q14 n'a pas été arrêté avant le démarrage de celui de Q15). Ils partagent :
+- `chunkIndexRef.current` (compteur global) → les indices s'entrelacent entre les deux dossiers
+- `questionVideoChunksRef.current` (le tableau de blobs servant à reconstruire `q14.webm`) → le recorder Q14 y pousse ses chunks mid-stream avant que le premier chunk EBML de Q15 n'arrive
 
-3. **Corriger la sélection/navigation des questions si elle se désynchronise**
-   - Vérifier et fiabiliser la logique qui relie `messages`, `clips`, `question_id` et l’index affiché.
-   - Corriger le libellé/état sélectionné du dropdown pour que la question affichée corresponde toujours au clip actif.
+Résultat : le blob final de Q15 commence par ~1 s de données provenant du recorder Q14 (≈ 60 KB à 500 kbps) → fichier illisible.
 
-4. **Valider sur les cas signalés**
-   - Rejouer le cas Anne Mascarelli.
-   - Rejouer le cas Guillaume Breton.
-   - Confirmer dans la preview que la Q15 reste sélectionnée et que l’interface explique clairement pourquoi la vidéo ne se lit pas si le fichier est bloqué ou manquant.
+Pourquoi Q15 et pas les autres ? Pour les questions intermédiaires, `await stopAndUploadQuestionVideo()` est attendu **avant** `startQuestionRecording()` suivant. Pour la dernière question, la séquence `endInterview` peut déclencher un second `startQuestionRecording()` (via watchdog / `forceStartListening`) pendant que le recorder précédent est encore en train de se vider.
 
-## Diagnostic déjà trouvé
+## Correctifs
 
-- La page charge bien les `session_messages`, donc la **transcription est présente**.
-- La Q15 apparaît bien dans le sélecteur, donc il ne s’agit pas seulement d’une question absente du rapport.
-- Le navigateur remonte un échec média de type **blocage d’origine croisée** sur les fichiers vidéo en preview (`NotSameOriginAfterDefaultedToSameOriginByCoep`).
-- Il faut donc corriger **à la fois** le diagnostic UI et la robustesse de navigation, pas seulement l’autoplay.
+### 1. Isoler chaque recorder (`src/pages/InterviewStart.tsx`)
 
-## Détails techniques
+Dans `startQuestionRecording` :
+- Avant de créer le nouveau recorder, **stopper de force** l'ancien (`questionRecorderRef.current` et `questionAudioRecorderRef.current` s'ils existent) et **détacher leurs handlers** (`ondataavailable = null`, `onstop = null`) pour qu'aucun chunk tardif ne pollue le nouveau buffer.
+- Donner à chaque recorder son **propre tableau de chunks** et son **propre compteur d'index** capturés en closure (au lieu des refs partagés `questionVideoChunksRef` / `chunkIndexRef`). Les refs partagés ne servent qu'à pointer sur le tableau du recorder courant pour la lecture par `stopAndUploadQuestionVideo`.
 
-- Fichiers visés :
-  - `src/components/session/SessionVideoNavigator.tsx`
-  - `src/components/session/SessionReportView.tsx`
-  - éventuellement `src/hooks/queries/useSessionDetail.ts` si un enrichissement léger du diagnostic est utile côté données
-- Validation : preview + logs réseau + sélection manuelle de la question 15 sur les sessions concernées.
+Idem dans `stopAndUploadQuestionVideo` : capturer le recorder et son tableau **localement** en début de fonction, puis nettoyer immédiatement les refs partagés, pour qu'un nouveau `startQuestionRecording` concurrent ne touche pas au snapshot.
+
+### 2. Garde-fou anti-double-démarrage
+
+`startQuestionRecording` log + ignore l'appel si un recorder est déjà `state === "recording"` pour la même `currentQuestionIndex`. Empêche que `forceStartListening` (watchdog) en double avec `onPlaybackEnd` ne redémarre un recorder sain.
+
+### 3. Récupération des Q15 corrompus existants
+
+Étendre `supabase/functions/recover-session-video` pour, en plus de recoller les chunks :
+- Scanner le `q{N}.webm` actuel : si présent et non-corrompu, ne rien faire.
+- Sinon : recoller les chunks impairs déjà uploadés (`q{N}/chunk-*.webm`) en cherchant le premier offset contenant la magic EBML `1A 45 DF A3` et en tronquant les octets de prefix invalides avant ré-upload.
+- Exposer un bouton "Tenter récupération vidéo" dans l'overlay d'erreur du lecteur (déjà en place dans `SessionVideoNavigator.tsx`) qui appelle cette fonction pour le clip concerné, puis refetch.
+
+### 4. Vérification
+
+- Tester en local : enregistrer une session 2 questions, vérifier que les blobs `q0.webm` et `q1.webm` sont valides (`ffprobe`).
+- Lancer la récupération sur les 4 sessions corrompues identifiées (Anne Mascarelli, Daniela Amendola, Florian Ozenne, Guillaume Breton) et vérifier que `q14.webm` redevient lisible.
+
+## Fichiers touchés
+
+- `src/pages/InterviewStart.tsx` — fix lifecycle des recorders (points 1 + 2)
+- `supabase/functions/recover-session-video/index.ts` — détection EBML + truncate (point 3)
+- `src/components/session/SessionVideoNavigator.tsx` — bouton récupération dans l'overlay d'erreur
+
+Aucune migration DB nécessaire.
