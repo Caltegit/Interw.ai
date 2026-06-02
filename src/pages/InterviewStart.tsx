@@ -2095,6 +2095,21 @@ export default function InterviewStart() {
       return false;
     }
 
+    const pendingTransition = listeningTransitionRef.current;
+    if (
+      pendingTransition &&
+      pendingTransition.blockId === blockId &&
+      pendingTransition.questionIndex === currentQuestionIndex
+    ) {
+      console.log("[InterviewStart] enterListeningPhase skipped — transition already pending", {
+        source,
+        activeSource: pendingTransition.source,
+        blockId,
+        questionIndex: currentQuestionIndex,
+      });
+      return false;
+    }
+
     const currentMeta = activeRecorderMetaRef.current;
     if (
       currentMeta &&
@@ -2124,12 +2139,13 @@ export default function InterviewStart() {
     });
 
     clearPlaybackWatchdog();
+    listeningTransitionRef.current = { blockId, questionIndex: currentQuestionIndex, source };
     currentPresentationRef.current = null;
     setShouldAutoPlay(false);
     setIsSpeaking(false);
     setShowManualContinue(false);
     startQuestionRecording();
-    startListening({ force: true, reason: source });
+    startListening({ force: true, reason: source, questionIndex: currentQuestionIndex });
     resetSilenceTimer();
     return true;
   }, [clearPlaybackWatchdog, currentQuestionIndex, resetSilenceTimer, startQuestionRecording, startListening]);
