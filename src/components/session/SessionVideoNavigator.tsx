@@ -535,7 +535,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               };
               const code = err?.code ?? null;
               const fallback = (code && codeMap[code]) || "Vidéo indisponible.";
-              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message: fallback });
+              console.warn("[SessionVideoNavigator] erreur média", { index, url: currentUrl, code, message: fallback });
               setMediaError({ code, message: fallback });
               setIsPlaying(false);
               setOverlayVisible(true);
@@ -544,8 +544,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // réellement l'existence du fichier via HEAD. Ça évite le message
               // trompeur "introuvable" quand le fichier est en fait présent
               // mais non décodable par ce navigateur.
-              if (code === 4 && current?.url) {
-                fetch(current.url, { method: "HEAD" })
+              if (code === 4 && currentUrl) {
+                fetch(currentUrl, { method: "HEAD" })
                   .then((res) => {
                     if (res.ok) {
                       setMediaError({
@@ -554,10 +554,29 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                           "Vidéo présente mais non décodable par ce navigateur. Essayez Chrome ou Firefox, ou téléchargez en MP4.",
                       });
                     } else if (res.status === 404) {
-                      setMediaError({
-                        code: 4,
-                        message: "Fichier vidéo introuvable sur le serveur.",
-                      });
+                      const altUrl = buildAltUrl(currentUrl);
+                      if (!altUrl) {
+                        setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                        return;
+                      }
+                      fetch(altUrl, { method: "HEAD" })
+                        .then((altRes) => {
+                          if (!altRes.ok) {
+                            setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                            return;
+                          }
+                          const withBust = new URL(altUrl, window.location.href);
+                          withBust.searchParams.set("v", String(Date.now()));
+                          swapClipUrl(withBust.toString());
+                          setMediaError(null);
+                          const video = videoRef.current;
+                          if (!video) return;
+                          video.src = withBust.toString();
+                          try { video.load(); } catch { /* noop */ }
+                        })
+                        .catch(() => {
+                          setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                        });
                     }
                   })
                   .catch(() => { /* on garde le message fallback */ });
