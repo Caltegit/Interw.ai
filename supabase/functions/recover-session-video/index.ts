@@ -54,6 +54,17 @@ function extFromPath(path: string): "webm" | "mp4" | null {
   return null;
 }
 
+function sniffChunkFormat(buf: Uint8Array): "webm" | "mp4" | null {
+  if (indexOfMagic(buf) >= 0) return "webm";
+  if (buf.length >= 8) {
+    const boxType = String.fromCharCode(buf[4], buf[5], buf[6], buf[7]);
+    if (boxType === "ftyp" || boxType === "moof" || boxType === "moov" || boxType === "mdat") {
+      return "mp4";
+    }
+  }
+  return null;
+}
+
 function sortChunkSources(a: ChunkSource, b: ChunkSource): number {
   return parseChunkIndex(a.name) - parseChunkIndex(b.name) || a.order - b.order || a.name.localeCompare(b.name);
 }
@@ -124,6 +135,25 @@ async function detectFormat(
   return { ext: "webm", contentType: "video/webm" };
 }
 
+async function refineFormatFromChunkContent(
+  sb: ReturnType<typeof createClient>,
+  files: ChunkSource[],
+  current: { ext: "webm" | "mp4"; contentType: string },
+): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
+  for (const file of files.slice(0, 5)) {
+    try {
+      const { data, error } = await sb.storage.from("media").download(file.path);
+      if (error || !data) continue;
+      const detected = sniffChunkFormat(new Uint8Array(await data.arrayBuffer()));
+      if (detected === "mp4") return { ext: "mp4", contentType: "video/mp4" };
+      if (detected === "webm") return { ext: "webm", contentType: "video/webm" };
+    } catch {
+      /* noop */
+    }
+  }
+  return current;
+}
+
 async function resolveChunkSources(
   sb: ReturnType<typeof createClient>,
   sessionId: string,
@@ -154,7 +184,13 @@ async function rebuild(session_id: string, question_index: number, force = false
   );
   const parentFolder = `interviews/${session_id}`;
   const manifest = await readManifest(sb, session_id, question_index);
-  const { ext, contentType } = await detectFormat(sb, session_id, question_index, manifest);
+  const chunkSources = await resolveChunkSources(sb, session_id, question_index, manifest);
+  const detectedFormat = await refineFormatFromChunkContent(
+    sb,
+    chunkSources,
+    await detectFormat(sb, session_id, question_index, manifest),
+  );
+  const { ext, contentType } = detectedFormat;
   const isMp4 = ext === "mp4";
 
   const finalPath = `${parentFolder}/q${question_index}.${ext}`;
@@ -191,7 +227,7 @@ async function rebuild(session_id: string, question_index: number, force = false
     }
   }
 
-  const files = await resolveChunkSources(sb, session_id, question_index, manifest);
+  const files = chunkSources;
   console.log("chunks:", files.length, "ext:", ext, "source:", manifest?.chunks?.length ? "manifest" : "folder");
 
   if (files.length === 0) {
