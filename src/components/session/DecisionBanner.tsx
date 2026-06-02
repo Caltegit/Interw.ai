@@ -313,10 +313,16 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 linkedinUrl={linkedinUrl}
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
+                coverLetterUrl={coverLetterUrl}
+                coverLetterFilename={coverLetterFilename}
                 onOpenCv={openCv}
+                onOpenCoverLetter={openCoverLetter}
                 onAddLinks={onEditLinks}
               />
             </div>
+            {candidateJobTitle && (
+              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
+            )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
