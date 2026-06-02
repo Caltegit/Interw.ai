@@ -25,44 +25,58 @@ function indexOfMagic(buf: Uint8Array): number {
   return -1;
 }
 
-async function rebuild(session_id: string, question_index: number) {
+async function rebuild(session_id: string, question_index: number, force = false) {
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
   const folder = `interviews/${session_id}/q${question_index}`;
-  const finalPath = `interviews/${session_id}/q${question_index}.webm`;
+  // Le fichier final peut être .webm (Chrome/Firefox) ou .mp4 (Safari/iOS).
+  // On regarde ce qui existe réellement dans le dossier parent.
+  const parentFolder = `interviews/${session_id}`;
+  const { data: siblings } = await sb.storage.from("media").list(parentFolder, { limit: 1000 });
+  const existingFinal = (siblings ?? []).find(
+    (f) => f.name === `q${question_index}.webm` || f.name === `q${question_index}.mp4`,
+  );
+  const finalPath = `${parentFolder}/${existingFinal?.name ?? `q${question_index}.webm`}`;
+  const isMp4 = finalPath.endsWith(".mp4");
 
-  // ── 1) Tentative de réparation in-place du `q{N}.webm` existant ────────────
-  // Si le fichier est présent mais que sa magic EBML est en offset > 0, on le
-  // tronque puis on le ré-upload. Beaucoup moins coûteux que de tout recoller.
-  try {
-    const { data: existing, error: dlErr } = await sb.storage
-      .from("media")
-      .download(finalPath);
-    if (!dlErr && existing) {
-      const buf = new Uint8Array(await existing.arrayBuffer());
-      const idx = indexOfMagic(buf);
-      if (idx === 0) {
-        console.log("recover: q file already valid at offset 0, nothing to do");
-        return { mode: "skip" as const, path: finalPath };
+  // ── 1) Tentative de réparation in-place du fichier existant ────────────────
+  // Pour les WebM : si la magic EBML est en offset > 0, on tronque le préfixe.
+  // Pour les MP4 : on ne tente pas de truncate (pas de signature simple), on
+  // passe directement à la reconstruction depuis chunks.
+  // Si `force=true` (déclenché manuellement par le RH), on saute aussi le
+  // truncate et on reconstruit toujours depuis les chunks : utile quand le
+  // header est intact mais que des clusters internes sont cassés.
+  if (!force && !isMp4) {
+    try {
+      const { data: existing, error: dlErr } = await sb.storage
+        .from("media")
+        .download(finalPath);
+      if (!dlErr && existing) {
+        const buf = new Uint8Array(await existing.arrayBuffer());
+        const idx = indexOfMagic(buf);
+        if (idx === 0) {
+          console.log("recover: q file already valid at offset 0, nothing to do");
+          return { mode: "skip" as const, path: finalPath };
+        }
+        if (idx > 0) {
+          console.log(`recover: truncating ${idx} junk bytes from ${finalPath}`);
+          const truncated = buf.slice(idx);
+          const { error: upErr } = await sb.storage
+            .from("media")
+            .upload(finalPath, truncated, {
+              contentType: "video/webm",
+              upsert: true,
+            });
+          if (upErr) throw upErr;
+          return { mode: "truncate" as const, path: finalPath, droppedBytes: idx };
+        }
+        console.log("recover: EBML magic absent, falling back to chunk rebuild");
       }
-      if (idx > 0) {
-        console.log(`recover: truncating ${idx} junk bytes from ${finalPath}`);
-        const truncated = buf.slice(idx);
-        const { error: upErr } = await sb.storage
-          .from("media")
-          .upload(finalPath, truncated, {
-            contentType: "video/webm",
-            upsert: true,
-          });
-        if (upErr) throw upErr;
-        return { mode: "truncate" as const, path: finalPath, droppedBytes: idx };
-      }
-      console.log("recover: EBML magic absent from existing file, falling back to chunk rebuild");
+    } catch (e) {
+      console.warn("recover: in-place truncate failed, falling back to chunk rebuild", e);
     }
-  } catch (e) {
-    console.warn("recover: in-place truncate failed, falling back to chunk rebuild", e);
   }
 
   // ── 2) Reconstruction depuis les chunks intermédiaires ─────────────────────
