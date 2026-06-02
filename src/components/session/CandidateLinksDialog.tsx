@@ -12,51 +12,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileText, Upload, Trash2, Loader2 } from "lucide-react";
+import { FileText, FileSignature, Upload, Trash2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionId: string;
+  initialJobTitle?: string | null;
   initialLinkedinUrl?: string | null;
   initialCvUrl?: string | null;
   initialCvFilename?: string | null;
+  initialCoverLetterUrl?: string | null;
+  initialCoverLetterFilename?: string | null;
   onSaved?: () => void;
 }
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ACCEPTED = [".pdf", ".doc", ".docx"];
 
-export function CandidateLinksDialog({
-  open,
-  onOpenChange,
-  sessionId,
-  initialLinkedinUrl,
-  initialCvUrl,
-  initialCvFilename,
-  onSaved,
-}: Props) {
-  const [linkedin, setLinkedin] = useState("");
-  const [cvUrl, setCvUrl] = useState<string | null>(null);
-  const [cvFilename, setCvFilename] = useState<string | null>(null);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [removeCv, setRemoveCv] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [saving, setSaving] = useState(false);
+type FileSlotProps = {
+  label: string;
+  icon: React.ReactNode;
+  storedUrl: string | null;
+  storedFilename: string | null;
+  pendingFile: File | null;
+  remove: boolean;
+  onPick: (file: File) => void;
+  onRemove: () => void;
+  storagePrefix: string;
+};
+
+function FileSlot({
+  label,
+  icon,
+  storedFilename,
+  pendingFile,
+  remove,
+  onPick,
+  onRemove,
+}: Omit<FileSlotProps, "storedUrl" | "storagePrefix">) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      setLinkedin(initialLinkedinUrl ?? "");
-      setCvUrl(initialCvUrl ?? null);
-      setCvFilename(initialCvFilename ?? null);
-      setPendingFile(null);
-      setRemoveCv(false);
-    }
-  }, [open, initialLinkedinUrl, initialCvUrl, initialCvFilename]);
-
-  const validateFile = (file: File): string | null => {
+  const validate = (file: File): string | null => {
     const lower = file.name.toLowerCase();
     if (!ACCEPTED.some((ext) => lower.endsWith(ext))) {
       return "Format non supporté. Utilisez PDF, DOC ou DOCX.";
@@ -67,21 +66,131 @@ export function CandidateLinksDialog({
     return null;
   };
 
-  const handleFile = useCallback((file: File) => {
-    const error = validateFile(file);
+  const handle = useCallback((file: File) => {
+    const error = validate(file);
     if (error) {
       toast.error(error);
       return;
     }
-    setPendingFile(file);
-    setRemoveCv(false);
-  }, []);
+    onPick(file);
+  }, [onPick]);
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+  const currentLabel = pendingFile?.name ?? (remove ? null : storedFilename);
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (file) handle(file);
+        }}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-4 text-sm transition-colors",
+          dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50",
+        )}
+      >
+        <Upload className="h-5 w-5 text-muted-foreground" />
+        <span className="text-center text-muted-foreground text-xs">
+          Glissez un fichier ou cliquez — PDF, DOC, DOCX, 10 Mo max
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handle(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      {currentLabel && (
+        <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-primary">{icon}</span>
+            <span className="truncate">{currentLabel}</span>
+            {pendingFile && (
+              <span className="shrink-0 text-xs text-muted-foreground">(à enregistrer)</span>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function CandidateLinksDialog({
+  open,
+  onOpenChange,
+  sessionId,
+  initialJobTitle,
+  initialLinkedinUrl,
+  initialCvUrl,
+  initialCvFilename,
+  initialCoverLetterUrl,
+  initialCoverLetterFilename,
+  onSaved,
+}: Props) {
+  const [jobTitle, setJobTitle] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+
+  const [cvUrl, setCvUrl] = useState<string | null>(null);
+  const [cvFilename, setCvFilename] = useState<string | null>(null);
+  const [cvPending, setCvPending] = useState<File | null>(null);
+  const [cvRemove, setCvRemove] = useState(false);
+
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverFilename, setCoverFilename] = useState<string | null>(null);
+  const [coverPending, setCoverPending] = useState<File | null>(null);
+  const [coverRemove, setCoverRemove] = useState(false);
+
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setJobTitle(initialJobTitle ?? "");
+      setLinkedin(initialLinkedinUrl ?? "");
+      setCvUrl(initialCvUrl ?? null);
+      setCvFilename(initialCvFilename ?? null);
+      setCvPending(null);
+      setCvRemove(false);
+      setCoverUrl(initialCoverLetterUrl ?? null);
+      setCoverFilename(initialCoverLetterFilename ?? null);
+      setCoverPending(null);
+      setCoverRemove(false);
+    }
+  }, [open, initialJobTitle, initialLinkedinUrl, initialCvUrl, initialCvFilename, initialCoverLetterUrl, initialCoverLetterFilename]);
+
+  const uploadOne = async (file: File, prefix: string) => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${sessionId}/${prefix}${Date.now()}_${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from("candidate-cvs")
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (upErr) throw upErr;
+    return path;
   };
 
   const handleSave = async () => {
@@ -94,30 +203,36 @@ export function CandidateLinksDialog({
     try {
       let newCvUrl: string | null = cvUrl;
       let newCvFilename: string | null = cvFilename;
-
-      if (removeCv) {
+      if (cvRemove) {
         newCvUrl = null;
         newCvFilename = null;
       }
+      if (cvPending) {
+        newCvUrl = await uploadOne(cvPending, "");
+        newCvFilename = cvPending.name;
+      }
 
-      if (pendingFile) {
-        const safeName = pendingFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${sessionId}/${Date.now()}_${safeName}`;
-        const { error: upErr } = await supabase.storage
-          .from("candidate-cvs")
-          .upload(path, pendingFile, { upsert: false, contentType: pendingFile.type });
-        if (upErr) throw upErr;
-        newCvUrl = path;
-        newCvFilename = pendingFile.name;
+      let newCoverUrl: string | null = coverUrl;
+      let newCoverFilename: string | null = coverFilename;
+      if (coverRemove) {
+        newCoverUrl = null;
+        newCoverFilename = null;
+      }
+      if (coverPending) {
+        newCoverUrl = await uploadOne(coverPending, "cover-letters/");
+        newCoverFilename = coverPending.name;
       }
 
       const { error: updErr } = await supabase
         .from("sessions")
         .update({
+          candidate_job_title: jobTitle.trim() || null,
           candidate_linkedin_url: linkedin.trim() || null,
           candidate_cv_url: newCvUrl,
           candidate_cv_filename: newCvFilename,
-        })
+          candidate_cover_letter_url: newCoverUrl,
+          candidate_cover_letter_filename: newCoverFilename,
+        } as never)
         .eq("id", sessionId);
       if (updErr) throw updErr;
 
@@ -131,19 +246,28 @@ export function CandidateLinksDialog({
     }
   };
 
-  const currentCvLabel = pendingFile?.name ?? (removeCv ? null : cvFilename);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>LinkedIn et CV du candidat</DialogTitle>
+          <DialogTitle>Informations candidat</DialogTitle>
           <DialogDescription>
-            Ajoutez le profil LinkedIn et déposez le CV du candidat.
+            Renseignez le poste, le profil LinkedIn, le CV et la lettre de motivation.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto pr-1">
+          <div className="space-y-2">
+            <Label htmlFor="job-title">Poste</Label>
+            <Input
+              id="job-title"
+              placeholder="Intitulé du poste visé"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              maxLength={200}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="linkedin-url">Profil LinkedIn</Label>
             <Input
@@ -156,67 +280,37 @@ export function CandidateLinksDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>CV</Label>
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-              onClick={() => inputRef.current?.click()}
-              className={cn(
-                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 text-sm transition-colors",
-                dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50",
-              )}
-            >
-              <Upload className="h-6 w-6 text-muted-foreground" />
-              <span className="text-center text-muted-foreground">
-                Glissez un fichier ici ou cliquez pour parcourir
-              </span>
-              <span className="text-xs text-muted-foreground">PDF, DOC, DOCX — 10 Mo max</span>
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFile(file);
-                  e.target.value = "";
-                }}
-              />
-            </div>
+          <FileSlot
+            label="CV"
+            icon={<FileText className="h-4 w-4" />}
+            storedFilename={cvFilename}
+            pendingFile={cvPending}
+            remove={cvRemove}
+            onPick={(f) => {
+              setCvPending(f);
+              setCvRemove(false);
+            }}
+            onRemove={() => {
+              if (cvPending) setCvPending(null);
+              else setCvRemove(true);
+            }}
+          />
 
-            {currentCvLabel && (
-              <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                <div className="flex min-w-0 items-center gap-2">
-                  <FileText className="h-4 w-4 shrink-0 text-primary" />
-                  <span className="truncate">{currentCvLabel}</span>
-                  {pendingFile && (
-                    <span className="shrink-0 text-xs text-muted-foreground">(à enregistrer)</span>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (pendingFile) {
-                      setPendingFile(null);
-                    } else {
-                      setRemoveCv(true);
-                    }
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
+          <FileSlot
+            label="Lettre de motivation"
+            icon={<FileSignature className="h-4 w-4" />}
+            storedFilename={coverFilename}
+            pendingFile={coverPending}
+            remove={coverRemove}
+            onPick={(f) => {
+              setCoverPending(f);
+              setCoverRemove(false);
+            }}
+            onRemove={() => {
+              if (coverPending) setCoverPending(null);
+              else setCoverRemove(true);
+            }}
+          />
         </div>
 
         <DialogFooter>
