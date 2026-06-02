@@ -455,17 +455,24 @@ function CandidateLinkIcons({
   linkedinUrl,
   cvUrl,
   cvFilename,
+  coverLetterUrl,
+  coverLetterFilename,
   onOpenCv,
+  onOpenCoverLetter,
   onAddLinks,
 }: {
   linkedinUrl?: string | null;
   cvUrl?: string | null;
   cvFilename?: string | null;
+  coverLetterUrl?: string | null;
+  coverLetterFilename?: string | null;
   onOpenCv: () => void;
+  onOpenCoverLetter?: () => void;
   onAddLinks?: () => void;
 }) {
   const hasLinkedin = !!linkedinUrl;
   const hasCv = !!cvUrl;
+  const hasCover = !!coverLetterUrl;
   return (
     <div className="flex shrink-0 items-center gap-1">
       <Tooltip>
@@ -531,6 +538,38 @@ function CandidateLinkIcons({
               : "CV non renseigné"}
         </TooltipContent>
       </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasCover ? (
+            <button
+              type="button"
+              onClick={onOpenCoverLetter}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-primary hover:bg-muted"
+              aria-label="Ouvrir la lettre de motivation"
+            >
+              <FileSignature className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onAddLinks}
+              disabled={!onAddLinks}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-foreground/70 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+              aria-label="Ajouter la lettre de motivation"
+            >
+              <FileSignature className="h-4 w-4" />
+            </button>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>
+          {hasCover
+            ? (coverLetterFilename ?? "Ouvrir la lettre de motivation")
+            : onAddLinks
+              ? "Ajouter la lettre de motivation"
+              : "Lettre de motivation non renseignée"}
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
+
