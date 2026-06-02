@@ -27,6 +27,7 @@ import {
   ThumbsUp,
   Linkedin,
   FileText,
+  FileSignature,
   UserCog,
   MicOff,
 } from "lucide-react";
