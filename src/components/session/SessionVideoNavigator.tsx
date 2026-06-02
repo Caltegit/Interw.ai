@@ -356,6 +356,54 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   const current = clips[index];
 
+  // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
+  // récupération côté serveur sur ce clip précis.
+  const parsedRecover = (() => {
+    if (!current?.url) return null;
+    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.webm(?:\?.*)?$/i);
+    if (!m) return null;
+    return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
+  })();
+  const canRecover = !!parsedRecover;
+
+  const handleRecover = async () => {
+    if (!parsedRecover || recovering) return;
+    setRecovering(true);
+    toast({
+      title: "Réparation en cours…",
+      description: "Reconstruction du fichier vidéo. Cela peut prendre quelques secondes.",
+    });
+    try {
+      const { data, error } = await supabase.functions.invoke("recover-session-video", {
+        body: {
+          session_id: parsedRecover.sessionId,
+          question_index: parsedRecover.questionIndex,
+          sync: true,
+        },
+      });
+      if (error) throw error;
+      toast({ title: "Réparation terminée", description: "Tentative de rechargement du lecteur." });
+      setMediaError(null);
+      const v = videoRef.current;
+      if (v) {
+        // Cache-bust pour forcer le rechargement de la nouvelle version.
+        const u = new URL(current.url);
+        u.searchParams.set("v", String(Date.now()));
+        v.src = u.toString();
+        try { v.load(); } catch { /* noop */ }
+      }
+      console.log("recover-session-video result:", data);
+    } catch (e: any) {
+      toast({
+        title: "Réparation impossible",
+        description: e?.message ?? "Le fichier n'a pas pu être récupéré.",
+        variant: "destructive",
+      });
+    } finally {
+      setRecovering(false);
+    }
+  };
+
   const goTo = async (newIndex: number, autoplay: boolean) => {
     if (newIndex === index) return;
     await stopCurrent();
