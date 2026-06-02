@@ -266,7 +266,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay, clips, currentUrl]);
+  }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
