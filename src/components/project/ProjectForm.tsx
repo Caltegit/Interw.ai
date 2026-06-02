@@ -355,6 +355,13 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
   const [visibleToUserIds, setVisibleToUserIds] = useState<string[]>(initial.visibleToUserIds ?? []);
+  const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(
+    initial.candidateFields ?? DEFAULT_CANDIDATE_FIELDS,
+  );
+
+  const setCandidateField = (key: CandidateFieldKey, patch: Partial<CandidateFieldsConfig[CandidateFieldKey]>) => {
+    setCandidateFields((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  };
   const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
   const [orgOwnerId, setOrgOwnerId] = useState<string | null>(null);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
