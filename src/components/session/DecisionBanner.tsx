@@ -70,6 +70,9 @@ interface DecisionBannerProps {
   linkedinUrl?: string | null;
   cvUrl?: string | null;
   cvFilename?: string | null;
+  coverLetterUrl?: string | null;
+  coverLetterFilename?: string | null;
+  candidateJobTitle?: string | null;
   onEditLinks?: () => void;
   audioFailed?: boolean;
   videoSlot?: ReactNode;
