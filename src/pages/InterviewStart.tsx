@@ -400,7 +400,8 @@ export default function InterviewStart() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSttResultAtRef = useRef<number>(0);
-  const startListeningRef = useRef<(() => void) | null>(null);
+  type StartListeningOptions = { force?: boolean; reason?: string };
+  const startListeningRef = useRef<((options?: StartListeningOptions) => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -428,6 +429,12 @@ export default function InterviewStart() {
   const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showManualContinue, setShowManualContinue] = useState(false);
   const manualContinueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeRecorderMetaRef = useRef<{
+    blockId: number;
+    questionIndex: number;
+    source: string;
+    startedAt: number;
+  } | null>(null);
   const handleSendResponseRef = useRef<(() => void) | null>(null);
   // Background jobs (DB inserts, AI calls) — tracked so we can flush before redirect
   const backgroundJobsRef = useRef<Promise<unknown>[]>([]);
