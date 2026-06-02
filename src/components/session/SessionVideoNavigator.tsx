@@ -65,6 +65,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
+  const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
+  const getClipUrl = (clip: SessionVideoClip | undefined) => {
+    if (!clip) return null;
+    const key = clip.messageId ?? clip.url;
+    return clipUrlOverrides[key] ?? clip.url;
+  };
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -202,7 +208,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const targetUrl = clips[index]?.url;
+    const targetUrl = getClipUrl(clips[index]);
     if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
@@ -260,7 +266,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay, clips]);
+  }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
@@ -313,7 +319,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     // Si la source DOM ne correspond plus au clip courant (cas de désync
     // après un changement d'index rapide), on resynchronise avant de jouer.
-    const want = clips[index]?.url;
+    const want = getClipUrl(clips[index]);
     if (want) {
       const resolve = (u: string) => { try { return new URL(u, window.location.href).toString(); } catch { return u; } };
       if (resolve(v.currentSrc || v.src || "") !== resolve(want)) {
@@ -380,7 +386,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         return true;
       },
     }),
-    [clips, index, durationSec],
+    [clips, index, durationSec, clipUrlOverrides],
   );
 
   // Conteneur DOM stable créé une seule fois. On le déplace via `appendChild`
@@ -407,12 +413,22 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   if (!clips || clips.length === 0) return null;
 
   const current = clips[index];
+  const clipKey = current.messageId ?? current.url;
+  const currentUrl = clipUrlOverrides[clipKey] ?? current.url;
+  const buildAltUrl = (url: string) => {
+    if (/\.webm(\?.*)?$/i.test(url)) return url.replace(/\.webm(\?.*)?$/i, ".mp4$1");
+    if (/\.mp4(\?.*)?$/i.test(url)) return url.replace(/\.mp4(\?.*)?$/i, ".webm$1");
+    return null;
+  };
+  const swapClipUrl = (nextUrl: string) => {
+    setClipUrlOverrides((prev) => (prev[clipKey] === nextUrl ? prev : { ...prev, [clipKey]: nextUrl }));
+  };
 
   // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
-    if (!current?.url) return null;
-    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
+    if (!currentUrl) return null;
+    const m = currentUrl.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
@@ -446,9 +462,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setMediaError(null);
       const v = videoRef.current;
       if (v) {
-        // Cache-bust pour forcer le rechargement de la nouvelle version.
-        const u = new URL(current.url);
+        const repairedPath = (data as { path?: string } | null)?.path ?? null;
+        const repairedUrl = repairedPath
+          ? supabase.storage.from("media").getPublicUrl(repairedPath).data.publicUrl
+          : currentUrl;
+        const u = new URL(repairedUrl, window.location.href);
         u.searchParams.set("v", String(Date.now()));
+        swapClipUrl(u.toString());
         v.src = u.toString();
         try { v.load(); } catch { /* noop */ }
       }
@@ -515,7 +535,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               };
               const code = err?.code ?? null;
               const fallback = (code && codeMap[code]) || "Vidéo indisponible.";
-              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message: fallback });
+              console.warn("[SessionVideoNavigator] erreur média", { index, url: currentUrl, code, message: fallback });
               setMediaError({ code, message: fallback });
               setIsPlaying(false);
               setOverlayVisible(true);
@@ -524,8 +544,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // réellement l'existence du fichier via HEAD. Ça évite le message
               // trompeur "introuvable" quand le fichier est en fait présent
               // mais non décodable par ce navigateur.
-              if (code === 4 && current?.url) {
-                fetch(current.url, { method: "HEAD" })
+              if (code === 4 && currentUrl) {
+                fetch(currentUrl, { method: "HEAD" })
                   .then((res) => {
                     if (res.ok) {
                       setMediaError({
@@ -534,10 +554,29 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                           "Vidéo présente mais non décodable par ce navigateur. Essayez Chrome ou Firefox, ou téléchargez en MP4.",
                       });
                     } else if (res.status === 404) {
-                      setMediaError({
-                        code: 4,
-                        message: "Fichier vidéo introuvable sur le serveur.",
-                      });
+                      const altUrl = buildAltUrl(currentUrl);
+                      if (!altUrl) {
+                        setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                        return;
+                      }
+                      fetch(altUrl, { method: "HEAD" })
+                        .then((altRes) => {
+                          if (!altRes.ok) {
+                            setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                            return;
+                          }
+                          const withBust = new URL(altUrl, window.location.href);
+                          withBust.searchParams.set("v", String(Date.now()));
+                          swapClipUrl(withBust.toString());
+                          setMediaError(null);
+                          const video = videoRef.current;
+                          if (!video) return;
+                          video.src = withBust.toString();
+                          try { video.load(); } catch { /* noop */ }
+                        })
+                        .catch(() => {
+                          setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
+                        });
                     }
                   })
                   .catch(() => { /* on garde le message fallback */ });
@@ -567,7 +606,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   Réessayer
                 </button>
                 <a
-                  href={current.url}
+                  href={currentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
@@ -693,7 +732,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                         return;
                       }
                       try {
-                        await downloadMp4(current.url, filename);
+                        await downloadMp4(currentUrl, filename);
                       } catch (err) {
                         toast({
                           title: "Téléchargement impossible",

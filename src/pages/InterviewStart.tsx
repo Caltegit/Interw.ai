@@ -418,14 +418,21 @@ export default function InterviewStart() {
   const questionVideoChunksRef = useRef<Blob[]>([]);
   const questionRecorderRef = useRef<MediaRecorder | null>(null);
   const allQuestionVideosRef = useRef<{ index: number; url: string }[]>([]);
-  // Streaming des chunks vers Storage : index séquentiel et liste des chemins par question.
-  const chunkIndexRef = useRef(0);
-  const uploadedChunkPathsRef = useRef<string[]>([]);
-  const chunkMimeRef = useRef<string>("video/webm");
   // Enregistrement audio séparé (léger, pour la transcription IA — vidéo reste pour la relecture)
   const questionAudioRecorderRef = useRef<MediaRecorder | null>(null);
   const questionAudioChunksRef = useRef<Blob[]>([]);
-  const audioMimeRef = useRef<string>("audio/webm;codecs=opus");
+  type ActiveQuestionRecording = {
+    recorder: MediaRecorder;
+    audioRecorder: MediaRecorder | null;
+    questionIndex: number;
+    chunkMime: string;
+    audioMime: string;
+    videoChunks: Blob[];
+    audioChunks: Blob[];
+    uploadedChunkPaths: string[];
+    uploadPromises: Promise<unknown>[];
+  };
+  const activeQuestionRecordingRef = useRef<ActiveQuestionRecording | null>(null);
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
   const [isRecordingActive, setIsRecordingActive] = useState(false);
   const featuredPlayerRef = useRef<QuestionMediaPlayerHandle>(null);
@@ -1383,7 +1390,7 @@ export default function InterviewStart() {
       const rec = questionRecorderRef.current;
       if (!rec || rec.state === "inactive") {
         console.log("[interview] RESUME — recorder absent/inactif, redémarrage");
-        startQuestionRecording();
+        void startQuestionRecording();
       } else if (rec.state === "paused") {
         try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
         const arec = questionAudioRecorderRef.current;
@@ -1741,13 +1748,18 @@ export default function InterviewStart() {
   // Start a per-question video recorder (uses same stream)
   // Upload d'un chunk individuel vers Storage, en arrière-plan, avec retry court.
   const uploadChunk = useCallback(
-    async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
+    async (
+      sessionId: string,
+      questionIndex: number,
+      chunkIdx: number,
+      blob: Blob,
+      mime: string,
+    ) => {
       // Mode démo : aucun upload, aucun enregistrement persisté.
       if (isDemoRef.current) return null;
       // Utiliser l'extension réelle (mp4 sur Safari/iOS, webm sinon) pour que
       // les chunks correspondent au contenu et que la reconstruction serveur
       // les retrouve sans deviner.
-      const mime = chunkMimeRef.current || "video/webm";
       const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
       const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.${ext}`;
       const backoffs = [500, 1500, 4000];
@@ -1756,10 +1768,7 @@ export default function InterviewStart() {
           const { error } = await supabase.storage
             .from("media")
             .upload(path, blob, { contentType: mime, upsert: true });
-          if (!error) {
-            uploadedChunkPathsRef.current.push(path);
-            return path;
-          }
+          if (!error) return path;
         } catch {
           /* retry */
         }
@@ -1790,26 +1799,29 @@ export default function InterviewStart() {
     return undefined;
   }, []);
 
-  const startQuestionRecording = useCallback(() => {
+  const startQuestionRecording = useCallback(async () => {
     if (!streamRef.current) return;
 
-    // ── ISOLATION : on coupe d'abord proprement tout recorder existant pour
-    // éviter qu'un ancien recorder continue à pousser des chunks dans le buffer
-    // du nouveau (cause historique de corruption du dernier `q{N}.webm` :
-    // l'init segment EBML était précédé d'~1 s de données mid-stream).
-    const prevVideo = questionRecorderRef.current;
-    if (prevVideo) {
-      try { prevVideo.ondataavailable = null as any; } catch { /* ignore */ }
-      try { prevVideo.onstop = null as any; } catch { /* ignore */ }
-      try { if (prevVideo.state !== "inactive") prevVideo.stop(); } catch { /* ignore */ }
-      questionRecorderRef.current = null;
-    }
-    const prevAudio = questionAudioRecorderRef.current;
-    if (prevAudio) {
-      try { prevAudio.ondataavailable = null as any; } catch { /* ignore */ }
-      try { prevAudio.onstop = null as any; } catch { /* ignore */ }
-      try { if (prevAudio.state !== "inactive") prevAudio.stop(); } catch { /* ignore */ }
-      questionAudioRecorderRef.current = null;
+    const previous = activeQuestionRecordingRef.current;
+    if (previous) {
+      console.warn("[interview] startQuestionRecording: recorder précédent encore actif, arrêt défensif");
+      const stopRecorder = (rec: MediaRecorder | null) =>
+        new Promise<void>((resolve) => {
+          if (!rec || rec.state === "inactive") return resolve();
+          const prevOnStop = rec.onstop;
+          rec.onstop = (event) => {
+            try { prevOnStop?.call(rec, event); } catch { /* noop */ }
+            resolve();
+          };
+          try { rec.stop(); } catch { resolve(); }
+        });
+      await Promise.all([
+        stopRecorder(previous.recorder),
+        stopRecorder(previous.audioRecorder),
+      ]);
+      if (activeQuestionRecordingRef.current === previous) {
+        activeQuestionRecordingRef.current = null;
+      }
     }
 
     // Buffers locaux propres à ce recorder (capturés en closure dans les
@@ -1821,12 +1833,10 @@ export default function InterviewStart() {
     let localChunkIdx = 0;
     questionVideoChunksRef.current = videoChunks;
     questionAudioChunksRef.current = audioChunks;
-    chunkIndexRef.current = 0;
-    uploadedChunkPathsRef.current = [];
 
     try {
       const mimeType = getSupportedMimeType();
-      chunkMimeRef.current = mimeType ?? "video/webm";
+      const resolvedChunkMime = mimeType ?? "video/webm";
       const options: MediaRecorderOptions = {
         ...(mimeType ? { mimeType } : {}),
         videoBitsPerSecond: 500_000,
@@ -1835,25 +1845,40 @@ export default function InterviewStart() {
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       const sessionId = session?.id ?? null;
-      // Lit la valeur ACTUELLE de l'index (via ref) plutôt que la valeur
-      // capturée par la closure du useCallback : évite que les chunks de la
-      // question courante soient uploadés dans le dossier de la précédente.
       const questionIndex = currentQuestionIndexRef.current;
+      const recording: ActiveQuestionRecording = {
+        recorder,
+        audioRecorder: null,
+        questionIndex,
+        chunkMime: resolvedChunkMime,
+        audioMime: "audio/webm;codecs=opus",
+        videoChunks,
+        audioChunks,
+        uploadedChunkPaths: [],
+        uploadPromises: [],
+      };
+      activeQuestionRecordingRef.current = recording;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return;
-        // SAFETY : si un autre recorder a remplacé celui-ci, ignorer.
-        if (questionRecorderRef.current !== recorder) return;
+        if (activeQuestionRecordingRef.current !== recording) return;
         videoChunks.push(e.data);
         if (!sessionId) return;
         const idx = localChunkIdx++;
-        chunkIndexRef.current = localChunkIdx;
         setPendingChunkUploads((n) => n + 1);
-        trackBackground(
-          uploadChunk(sessionId, questionIndex, idx, e.data).finally(() => {
+        const uploadPromise = trackBackground(
+          uploadChunk(sessionId, questionIndex, idx, e.data, recording.chunkMime)
+            .then((path) => {
+              if (path) recording.uploadedChunkPaths.push(path);
+            })
+            .finally(() => {
+              recording.uploadPromises = recording.uploadPromises.filter((p) => p !== uploadPromise);
+            })
+            .finally(() => {
             setPendingChunkUploads((n) => Math.max(0, n - 1));
-          }),
+            }),
         );
+        recording.uploadPromises.push(uploadPromise);
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
 
@@ -1864,7 +1889,7 @@ export default function InterviewStart() {
         if (audioTracks.length > 0) {
           const audioStream = new MediaStream(audioTracks);
           const audioMime = getSupportedAudioMimeType();
-          audioMimeRef.current = audioMime ?? "audio/webm";
+          recording.audioMime = audioMime ?? "audio/webm";
           let audioRecorder: MediaRecorder | null = null;
           try {
             const audioOptions: MediaRecorderOptions = {
@@ -1883,10 +1908,12 @@ export default function InterviewStart() {
             audioRecorder = new MediaRecorder(audioStream);
           }
           questionAudioRecorderRef.current = audioRecorder;
+          recording.audioRecorder = audioRecorder;
           const audioRec = audioRecorder;
           audioRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return;
-            if (questionAudioRecorderRef.current !== audioRec) return;
+            if (activeQuestionRecordingRef.current !== recording) return;
+            if (recording.audioRecorder !== audioRec) return;
             audioChunks.push(e.data);
           };
           audioRecorder.start(1000);
@@ -1904,6 +1931,7 @@ export default function InterviewStart() {
 
       setIsRecordingActive(true);
     } catch (e) {
+      activeQuestionRecordingRef.current = null;
       logger.error("interview_recorder_failed", {
         sessionId: session?.id ?? null,
         phase: "start",
@@ -1918,19 +1946,9 @@ export default function InterviewStart() {
       sessionId: string,
       questionIndex: number,
     ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
-      const recorder = questionRecorderRef.current;
-      const audioRecorder = questionAudioRecorderRef.current;
-      // SNAPSHOT immédiat des buffers + chemins de chunks pour ce recorder. On
-      // les détache des refs partagés AVANT l'await pour qu'un nouveau
-      // startQuestionRecording concurrent ne touche pas à notre snapshot.
-      const videoBufferLocal = questionVideoChunksRef.current;
-      const audioBufferLocal = questionAudioChunksRef.current;
-      const chunkPathsLocal = [...uploadedChunkPathsRef.current];
-      const audioMime = audioMimeRef.current;
-      // On ne réinitialise PAS questionVideoChunksRef.current ici : il pointe
-      // sur le tableau du recorder courant ; le prochain startQuestionRecording
-      // créera un nouveau tableau et fera repointer la ref dessus.
-      uploadedChunkPathsRef.current = [];
+      const activeRecording = activeQuestionRecordingRef.current;
+      const recorder = activeRecording?.recorder ?? questionRecorderRef.current;
+      const audioRecorder = activeRecording?.audioRecorder ?? questionAudioRecorderRef.current;
 
       // Mode démo : on stoppe les recorders proprement mais aucun upload.
       if (isDemoRef.current) {
@@ -1963,11 +1981,21 @@ export default function InterviewStart() {
         );
       }
       await Promise.all(stops);
+      if (activeRecording && activeRecording.uploadPromises.length > 0) {
+        await Promise.allSettled(activeRecording.uploadPromises);
+      }
       // Détacher seulement si on n'a pas déjà été remplacé entre-temps.
       if (questionRecorderRef.current === recorder) questionRecorderRef.current = null;
       if (questionAudioRecorderRef.current === audioRecorder) questionAudioRecorderRef.current = null;
+      if (activeQuestionRecordingRef.current === activeRecording) activeQuestionRecordingRef.current = null;
       activeRecorderMetaRef.current = null;
       setIsRecordingActive(false);
+
+      const videoBufferLocal = activeRecording?.videoChunks ?? questionVideoChunksRef.current;
+      const audioBufferLocal = activeRecording?.audioChunks ?? questionAudioChunksRef.current;
+      const audioMime = activeRecording?.audioMime ?? "audio/webm";
+      const realMime = activeRecording?.chunkMime ?? "video/webm";
+      const chunkPathsLocal = [...(activeRecording?.uploadedChunkPaths ?? [])].sort((a, b) => a.localeCompare(b));
 
       if (videoBufferLocal.length === 0) {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
@@ -1977,7 +2005,6 @@ export default function InterviewStart() {
       // Safari/iOS c'est `video/mp4`, sur Chrome/Firefox c'est `video/webm`.
       // Forcer `.webm` partout produisait un fichier illisible sur le rapport
       // (MIME ↔ contenu incohérents → MEDIA_ERR_DECODE).
-      const realMime = chunkMimeRef.current || "video/webm";
       const ext = realMime.startsWith("video/mp4") ? "mp4" : "webm";
       const blob = new Blob(videoBufferLocal, { type: realMime });
       const audioChunks = [...audioBufferLocal];
@@ -1990,7 +2017,7 @@ export default function InterviewStart() {
         const manifest = {
           sessionId,
           questionIndex,
-          mimeType: chunkMimeRef.current,
+          mimeType: realMime,
           chunks: chunkPaths,
           createdAt: new Date().toISOString(),
         };
@@ -2109,7 +2136,7 @@ export default function InterviewStart() {
     setShowManualContinue(false);
   }, []);
 
-  const enterListeningPhase = useCallback((source: string, blockId = currentBlockIdRef.current) => {
+  const enterListeningPhase = useCallback(async (source: string, blockId = currentBlockIdRef.current) => {
     if (isPausedRef.current) {
       console.log("[InterviewStart] enterListeningPhase blocked — interview is paused", { source, blockId });
       return false;
@@ -2168,14 +2195,14 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     setIsSpeaking(false);
     setShowManualContinue(false);
-    startQuestionRecording();
+    await startQuestionRecording();
     startListening({ force: true, reason: source, questionIndex: currentQuestionIndex });
     resetSilenceTimer();
     return true;
   }, [clearPlaybackWatchdog, currentQuestionIndex, resetSilenceTimer, startQuestionRecording, startListening]);
 
   const forceStartListening = useCallback((source = "media-end", blockId?: number) => {
-    enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
+    void enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
   }, [enterListeningPhase]);
 
   // Mark current question as a media presentation (for pause/resume replay)
@@ -2633,7 +2660,7 @@ export default function InterviewStart() {
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
-      enterListeningPhase("intro-written", myBlock);
+      void enterListeningPhase("intro-written", myBlock);
     }
   };
 
@@ -2923,7 +2950,7 @@ export default function InterviewStart() {
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
-      enterListeningPhase("follow-up", followBlock);
+      void enterListeningPhase("follow-up", followBlock);
       return;
     }
 
@@ -3147,7 +3174,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      enterListeningPhase("fallback-text-after-media", nextBlock);
+      void enterListeningPhase("fallback-text-after-media", nextBlock);
     } else {
       // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
@@ -3155,7 +3182,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      enterListeningPhase("next-written", nextBlock);
+      void enterListeningPhase("next-written", nextBlock);
     }
     } finally {
       if (!aborted) setIsProcessing(false);
@@ -3301,7 +3328,7 @@ export default function InterviewStart() {
           armPlaybackWatchdog(skipBlock);
         }, 30);
       } else {
-        enterListeningPhase("skip-written", skipBlock);
+        void enterListeningPhase("skip-written", skipBlock);
       }
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);

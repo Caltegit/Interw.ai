@@ -25,6 +25,17 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const EBML_MAGIC = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]);
 
+type ManifestData = {
+  mimeType?: string;
+  chunks?: string[];
+};
+
+type ChunkSource = {
+  name: string;
+  path: string;
+  order: number;
+};
+
 function indexOfMagic(buf: Uint8Array): number {
   outer: for (let i = 0; i <= buf.length - EBML_MAGIC.length; i++) {
     for (let j = 0; j < EBML_MAGIC.length; j++) {
@@ -35,6 +46,57 @@ function indexOfMagic(buf: Uint8Array): number {
   return -1;
 }
 
+function basename(path: string): string {
+  return path.split("/").pop() ?? path;
+}
+
+function parseChunkIndex(name: string): number {
+  const match = name.match(/chunk-(\d+)/);
+  return match ? parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
+}
+
+function extFromPath(path: string): "webm" | "mp4" | null {
+  if (path.endsWith(".mp4")) return "mp4";
+  if (path.endsWith(".webm")) return "webm";
+  return null;
+}
+
+function sniffChunkFormat(buf: Uint8Array): "webm" | "mp4" | null {
+  if (indexOfMagic(buf) >= 0) return "webm";
+  if (buf.length >= 8) {
+    const boxType = String.fromCharCode(buf[4], buf[5], buf[6], buf[7]);
+    if (boxType === "ftyp" || boxType === "moof" || boxType === "moov" || boxType === "mdat") {
+      return "mp4";
+    }
+  }
+  return null;
+}
+
+function sortChunkSources(a: ChunkSource, b: ChunkSource): number {
+  return parseChunkIndex(a.name) - parseChunkIndex(b.name) || a.order - b.order || a.name.localeCompare(b.name);
+}
+
+async function readManifest(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  questionIndex: number,
+): Promise<ManifestData | null> {
+  const folder = `interviews/${sessionId}/q${questionIndex}`;
+  try {
+    const { data: manifestBlob } = await supabase.storage
+      .from("media")
+      .download(`${folder}/manifest.json`);
+    if (!manifestBlob) return null;
+    const m = JSON.parse(await manifestBlob.text());
+    return {
+      mimeType: typeof m?.mimeType === "string" ? m.mimeType : undefined,
+      chunks: Array.isArray(m?.chunks) ? m.chunks.filter((v: unknown): v is string => typeof v === "string") : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 // Détermine le format réel de la question :
 //  1) lit le manifest.json s'il existe (mimeType posé par le front),
 //  2) sinon regarde l'extension majoritaire des chunks,
@@ -43,25 +105,20 @@ async function detectQuestionFormat(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
   questionIndex: number,
+  manifest: ManifestData | null,
 ): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
   const folder = `interviews/${sessionId}/q${questionIndex}`;
-  try {
-    const { data: manifestBlob } = await supabase.storage
-      .from("media")
-      .download(`${folder}/manifest.json`);
-    if (manifestBlob) {
-      const text = await manifestBlob.text();
-      const m = JSON.parse(text);
-      const mt: string | undefined = m?.mimeType;
-      if (mt && mt.startsWith("video/mp4")) {
-        return { ext: "mp4", contentType: "video/mp4" };
-      }
-      if (mt && mt.startsWith("video/webm")) {
-        return { ext: "webm", contentType: "video/webm" };
-      }
-    }
-  } catch {
-    /* pas de manifest : on continue */
+  const manifestPaths = manifest?.chunks ?? [];
+  const mp4FromManifest = manifestPaths.filter((path) => path.endsWith(".mp4")).length;
+  const webmFromManifest = manifestPaths.filter((path) => path.endsWith(".webm")).length;
+  if (mp4FromManifest > webmFromManifest) return { ext: "mp4", contentType: "video/mp4" };
+  if (webmFromManifest > 0) return { ext: "webm", contentType: "video/webm" };
+  const mt: string | undefined = manifest?.mimeType;
+  if (mt && mt.startsWith("video/mp4")) {
+    return { ext: "mp4", contentType: "video/mp4" };
+  }
+  if (mt && mt.startsWith("video/webm")) {
+    return { ext: "webm", contentType: "video/webm" };
   }
   try {
     const { data: chunks } = await supabase.storage
@@ -77,17 +134,70 @@ async function detectQuestionFormat(
   return { ext: "webm", contentType: "video/webm" };
 }
 
+async function resolveChunkSources(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  questionIndex: number,
+  manifest: ManifestData | null,
+): Promise<ChunkSource[]> {
+  const folder = `interviews/${sessionId}/q${questionIndex}`;
+  const manifestChunks = (manifest?.chunks ?? [])
+    .map((path, order) => ({ name: basename(path), path, order }))
+    .filter((chunk) => chunk.name.startsWith("chunk-") && extFromPath(chunk.path));
+  if (manifestChunks.length > 0) {
+    return manifestChunks.sort(sortChunkSources);
+  }
+
+  const { data: chunks } = await supabase.storage
+    .from("media")
+    .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
+
+  return (chunks ?? [])
+    .filter(
+      (f) =>
+        f.name.startsWith("chunk-") &&
+        (f.name.endsWith(".webm") || f.name.endsWith(".mp4")),
+    )
+    .map((f, order) => ({ name: f.name, path: `${folder}/${f.name}`, order }))
+    .sort(sortChunkSources);
+}
+
+async function refineFormatFromChunkContent(
+  supabase: ReturnType<typeof createClient>,
+  chunkFiles: ChunkSource[],
+  current: { ext: "webm" | "mp4"; contentType: string },
+): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
+  for (const file of chunkFiles.slice(0, 5)) {
+    try {
+      const { data, error } = await supabase.storage.from("media").download(file.path);
+      if (error || !data) continue;
+      const detected = sniffChunkFormat(new Uint8Array(await data.arrayBuffer()));
+      if (detected === "mp4") return { ext: "mp4", contentType: "video/mp4" };
+      if (detected === "webm") return { ext: "webm", contentType: "video/webm" };
+    } catch {
+      /* noop */
+    }
+  }
+  return current;
+}
+
 async function assembleQuestion(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
   questionIndex: number,
 ): Promise<boolean> {
-  const folder = `interviews/${sessionId}/q${questionIndex}`;
   const parent = `interviews/${sessionId}`;
-  const { ext, contentType } = await detectQuestionFormat(
+  const manifest = await readManifest(supabase, sessionId, questionIndex);
+  const chunkFiles = await resolveChunkSources(supabase, sessionId, questionIndex, manifest);
+  const { ext, contentType } = await refineFormatFromChunkContent(
     supabase,
-    sessionId,
-    questionIndex,
+    chunkFiles,
+    await detectQuestionFormat(
+      supabase,
+      sessionId,
+      questionIndex,
+      manifest,
+    ),
   );
   const finalName = `q${questionIndex}.${ext}`;
   const finalPath = `${parent}/${finalName}`;
@@ -106,20 +216,6 @@ async function assembleQuestion(
     return true;
   }
 
-  const { data: chunks } = await supabase.storage
-    .from("media")
-    .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
-
-  // On accepte les deux extensions (sessions hybrides produites par les
-  // anciennes versions où les chunks étaient toujours `.webm` même en mp4).
-  const chunkFiles = (chunks ?? [])
-    .filter(
-      (f) =>
-        f.name.startsWith("chunk-") &&
-        (f.name.endsWith(".webm") || f.name.endsWith(".mp4")),
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-
   if (chunkFiles.length === 0) return false;
 
   // Pour les WebM, on s'assure de démarrer sur un init segment EBML valide
@@ -133,7 +229,7 @@ async function assembleQuestion(
       const f = chunkFiles[k];
       const { data, error } = await supabase.storage
         .from("media")
-        .download(`${folder}/${f.name}`);
+        .download(f.path);
       if (error || !data) continue;
       const buf = new Uint8Array(await data.arrayBuffer());
       const idx = indexOfMagic(buf);
@@ -169,9 +265,9 @@ async function assembleQuestion(
             const f = chunkFiles[i++];
             const { data, error } = await supabase.storage
               .from("media")
-              .download(`${folder}/${f.name}`);
+              .download(f.path);
             if (error || !data) {
-              console.error("download failed", folder, f.name, error?.message);
+              console.error("download failed", f.path, error?.message);
               continue;
             }
             currentReader = data.stream().getReader();
@@ -236,7 +332,7 @@ async function assembleQuestion(
     sessionId,
     questionIndex,
     mimeType: contentType,
-    chunks: chunkFiles.map((f) => `${folder}/${f.name}`),
+    chunks: chunkFiles.map((f) => f.path),
     createdAt: new Date().toISOString(),
     recovered: true,
   };
