@@ -66,6 +66,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
+  const getClipUrl = (clip: SessionVideoClip | undefined) => {
+    if (!clip) return null;
+    const key = clip.messageId ?? clip.url;
+    return clipUrlOverrides[key] ?? clip.url;
+  };
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -203,7 +208,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const targetUrl = currentUrl;
+    const targetUrl = getClipUrl(clips[index]);
     if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
@@ -314,7 +319,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     // Si la source DOM ne correspond plus au clip courant (cas de désync
     // après un changement d'index rapide), on resynchronise avant de jouer.
-    const want = currentUrl;
+    const want = getClipUrl(clips[index]);
     if (want) {
       const resolve = (u: string) => { try { return new URL(u, window.location.href).toString(); } catch { return u; } };
       if (resolve(v.currentSrc || v.src || "") !== resolve(want)) {
@@ -381,7 +386,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         return true;
       },
     }),
-    [clips, index, durationSec, currentUrl],
+    [clips, index, durationSec, clipUrlOverrides],
   );
 
   // Conteneur DOM stable créé une seule fois. On le déplace via `appendChild`
