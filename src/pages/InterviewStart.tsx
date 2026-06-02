@@ -2058,7 +2058,7 @@ export default function InterviewStart() {
         try {
           const { error: uploadError } = await supabase.storage
             .from("media")
-            .upload(fileName, blob, { contentType: "video/webm", upsert: true });
+            .upload(fileName, blob, { contentType: realMime, upsert: true });
           if (!uploadError) {
             const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
             videoUrl = urlData.publicUrl;
