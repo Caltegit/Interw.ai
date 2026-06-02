@@ -490,7 +490,6 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         >
           <video
             ref={videoRef}
-            src={current.url}
             controls
             controlsList="nodownload"
             disablePictureInPicture={false}
@@ -512,6 +511,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               };
               const code = err?.code ?? null;
               const message = (code && codeMap[code]) || "Vidéo indisponible.";
+              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message });
               setMediaError({ code, message });
               setIsPlaying(false);
               setOverlayVisible(true);
