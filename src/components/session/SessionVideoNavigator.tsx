@@ -780,7 +780,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               disabled={index === 0}
             >
               <ChevronLeft className={cn("h-3 w-3", compact ? "" : "mr-1")} />
-              {!compact && "Préc."}
+              {!compact && "Préc"}
             </Button>
           </div>
           <div className="justify-self-center">
