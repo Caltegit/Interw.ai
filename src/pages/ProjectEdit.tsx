@@ -190,6 +190,7 @@ export default function ProjectEdit() {
           (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
         visibleToUserIds:
           (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
+        candidateFields: mergeCandidateFields((project as { candidate_fields?: unknown }).candidate_fields),
       });
 
       setLoading(false);
