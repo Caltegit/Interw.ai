@@ -415,12 +415,20 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const current = clips[index];
   const clipKey = current.messageId ?? current.url;
   const currentUrl = clipUrlOverrides[clipKey] ?? current.url;
+  const buildAltUrl = (url: string) => {
+    if (/\.webm(\?.*)?$/i.test(url)) return url.replace(/\.webm(\?.*)?$/i, ".mp4$1");
+    if (/\.mp4(\?.*)?$/i.test(url)) return url.replace(/\.mp4(\?.*)?$/i, ".webm$1");
+    return null;
+  };
+  const swapClipUrl = (nextUrl: string) => {
+    setClipUrlOverrides((prev) => (prev[clipKey] === nextUrl ? prev : { ...prev, [clipKey]: nextUrl }));
+  };
 
   // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
-    if (!current?.url) return null;
-    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
+    if (!currentUrl) return null;
+    const m = currentUrl.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
