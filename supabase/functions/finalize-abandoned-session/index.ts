@@ -61,6 +61,17 @@ function extFromPath(path: string): "webm" | "mp4" | null {
   return null;
 }
 
+function sniffChunkFormat(buf: Uint8Array): "webm" | "mp4" | null {
+  if (indexOfMagic(buf) >= 0) return "webm";
+  if (buf.length >= 8) {
+    const boxType = String.fromCharCode(buf[4], buf[5], buf[6], buf[7]);
+    if (boxType === "ftyp" || boxType === "moof" || boxType === "moov" || boxType === "mdat") {
+      return "mp4";
+    }
+  }
+  return null;
+}
+
 function sortChunkSources(a: ChunkSource, b: ChunkSource): number {
   return parseChunkIndex(a.name) - parseChunkIndex(b.name) || a.order - b.order || a.name.localeCompare(b.name);
 }
@@ -151,6 +162,25 @@ async function resolveChunkSources(
     .sort(sortChunkSources);
 }
 
+async function refineFormatFromChunkContent(
+  supabase: ReturnType<typeof createClient>,
+  chunkFiles: ChunkSource[],
+  current: { ext: "webm" | "mp4"; contentType: string },
+): Promise<{ ext: "webm" | "mp4"; contentType: string }> {
+  for (const file of chunkFiles.slice(0, 5)) {
+    try {
+      const { data, error } = await supabase.storage.from("media").download(file.path);
+      if (error || !data) continue;
+      const detected = sniffChunkFormat(new Uint8Array(await data.arrayBuffer()));
+      if (detected === "mp4") return { ext: "mp4", contentType: "video/mp4" };
+      if (detected === "webm") return { ext: "webm", contentType: "video/webm" };
+    } catch {
+      /* noop */
+    }
+  }
+  return current;
+}
+
 async function assembleQuestion(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -158,11 +188,16 @@ async function assembleQuestion(
 ): Promise<boolean> {
   const parent = `interviews/${sessionId}`;
   const manifest = await readManifest(supabase, sessionId, questionIndex);
-  const { ext, contentType } = await detectQuestionFormat(
+  const chunkFiles = await resolveChunkSources(supabase, sessionId, questionIndex, manifest);
+  const { ext, contentType } = await refineFormatFromChunkContent(
     supabase,
-    sessionId,
-    questionIndex,
-    manifest,
+    chunkFiles,
+    await detectQuestionFormat(
+      supabase,
+      sessionId,
+      questionIndex,
+      manifest,
+    ),
   );
   const finalName = `q${questionIndex}.${ext}`;
   const finalPath = `${parent}/${finalName}`;
@@ -180,8 +215,6 @@ async function assembleQuestion(
   ) {
     return true;
   }
-
-  const chunkFiles = await resolveChunkSources(supabase, sessionId, questionIndex, manifest);
 
   if (chunkFiles.length === 0) return false;
 
