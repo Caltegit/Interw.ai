@@ -1744,13 +1744,18 @@ export default function InterviewStart() {
     async (sessionId: string, questionIndex: number, chunkIdx: number, blob: Blob) => {
       // Mode démo : aucun upload, aucun enregistrement persisté.
       if (isDemoRef.current) return null;
-      const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.webm`;
+      // Utiliser l'extension réelle (mp4 sur Safari/iOS, webm sinon) pour que
+      // les chunks correspondent au contenu et que la reconstruction serveur
+      // les retrouve sans deviner.
+      const mime = chunkMimeRef.current || "video/webm";
+      const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+      const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.${ext}`;
       const backoffs = [500, 1500, 4000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
         try {
           const { error } = await supabase.storage
             .from("media")
-            .upload(path, blob, { contentType: chunkMimeRef.current, upsert: true });
+            .upload(path, blob, { contentType: mime, upsert: true });
           if (!error) {
             uploadedChunkPathsRef.current.push(path);
             return path;
