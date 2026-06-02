@@ -580,6 +580,74 @@ export default function InterviewLanding() {
                 </p>
               )}
             </div>
+
+            {/* Champs candidat configurables */}
+            {candidateFields.job_title.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="job-title" className="text-sm font-medium">
+                  Poste {candidateFields.job_title.required && "*"}
+                </Label>
+                <Input
+                  id="job-title"
+                  placeholder="Intitulé du poste visé"
+                  value={candidateJobTitle}
+                  onChange={(e) => setCandidateJobTitle(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+              </div>
+            )}
+
+            {candidateFields.linkedin.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="linkedin" className="text-sm font-medium">
+                  Profil LinkedIn {candidateFields.linkedin.required && "*"}
+                </Label>
+                <Input
+                  id="linkedin"
+                  type="url"
+                  placeholder="https://www.linkedin.com/in/..."
+                  value={candidateLinkedin}
+                  onChange={(e) => setCandidateLinkedin(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+                {!linkedinValid && (
+                  <p className="text-xs" style={{ color: "#f87171" }}>
+                    L'URL doit commencer par http:// ou https://
+                  </p>
+                )}
+              </div>
+            )}
+
+            {candidateFields.cv.enabled && (
+              <CandidateFileField
+                id="cv"
+                label="CV"
+                required={candidateFields.cv.required}
+                file={cvFile}
+                onPick={(f) => handlePickFile(f, setCvFile)}
+                icon={<FileText className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+              />
+            )}
+
+            {candidateFields.cover_letter.enabled && (
+              <CandidateFileField
+                id="cover-letter"
+                label="Lettre de motivation"
+                required={candidateFields.cover_letter.required}
+                file={coverLetterFile}
+                onPick={(f) => handlePickFile(f, setCoverLetterFile)}
+                icon={<FileSignature className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+              />
+            )}
+
+            {fileError && (
+              <p className="text-xs" style={{ color: "#f87171" }}>
+                {fileError}
+              </p>
+            )}
+
             <Button
               className="w-full h-12 rounded-lg text-base font-semibold group transition-all duration-300"
               size="lg"
