@@ -1745,10 +1745,38 @@ export default function InterviewStart() {
 
   const startQuestionRecording = useCallback(() => {
     if (!streamRef.current) return;
-    questionVideoChunksRef.current = [];
-    questionAudioChunksRef.current = [];
+
+    // ── ISOLATION : on coupe d'abord proprement tout recorder existant pour
+    // éviter qu'un ancien recorder continue à pousser des chunks dans le buffer
+    // du nouveau (cause historique de corruption du dernier `q{N}.webm` :
+    // l'init segment EBML était précédé d'~1 s de données mid-stream).
+    const prevVideo = questionRecorderRef.current;
+    if (prevVideo) {
+      try { prevVideo.ondataavailable = null as any; } catch { /* ignore */ }
+      try { prevVideo.onstop = null as any; } catch { /* ignore */ }
+      try { if (prevVideo.state !== "inactive") prevVideo.stop(); } catch { /* ignore */ }
+      questionRecorderRef.current = null;
+    }
+    const prevAudio = questionAudioRecorderRef.current;
+    if (prevAudio) {
+      try { prevAudio.ondataavailable = null as any; } catch { /* ignore */ }
+      try { prevAudio.onstop = null as any; } catch { /* ignore */ }
+      try { if (prevAudio.state !== "inactive") prevAudio.stop(); } catch { /* ignore */ }
+      questionAudioRecorderRef.current = null;
+    }
+
+    // Buffers locaux propres à ce recorder (capturés en closure dans les
+    // handlers). On expose les références partagées pour la lecture par
+    // stopAndUploadQuestionVideo, mais aucun ancien handler ne peut plus écrire
+    // dedans car ils ont été détachés ci-dessus.
+    const videoChunks: Blob[] = [];
+    const audioChunks: Blob[] = [];
+    let localChunkIdx = 0;
+    questionVideoChunksRef.current = videoChunks;
+    questionAudioChunksRef.current = audioChunks;
     chunkIndexRef.current = 0;
     uploadedChunkPathsRef.current = [];
+
     try {
       const mimeType = getSupportedMimeType();
       chunkMimeRef.current = mimeType ?? "video/webm";
@@ -1764,10 +1792,12 @@ export default function InterviewStart() {
 
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return;
-        // Garde aussi en mémoire pour le blob final (fallback robuste pour la lecture).
-        questionVideoChunksRef.current.push(e.data);
+        // SAFETY : si un autre recorder a remplacé celui-ci, ignorer.
+        if (questionRecorderRef.current !== recorder) return;
+        videoChunks.push(e.data);
         if (!sessionId) return;
-        const idx = chunkIndexRef.current++;
+        const idx = localChunkIdx++;
+        chunkIndexRef.current = localChunkIdx;
         setPendingChunkUploads((n) => n + 1);
         trackBackground(
           uploadChunk(sessionId, questionIndex, idx, e.data).finally(() => {
@@ -1803,9 +1833,11 @@ export default function InterviewStart() {
             audioRecorder = new MediaRecorder(audioStream);
           }
           questionAudioRecorderRef.current = audioRecorder;
+          const audioRec = audioRecorder;
           audioRecorder.ondataavailable = (e) => {
             if (e.data.size === 0) return;
-            questionAudioChunksRef.current.push(e.data);
+            if (questionAudioRecorderRef.current !== audioRec) return;
+            audioChunks.push(e.data);
           };
           audioRecorder.start(1000);
         }
