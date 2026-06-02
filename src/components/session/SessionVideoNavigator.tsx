@@ -489,7 +489,6 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           onMouseLeave={!compact && isPlaying ? () => setOverlayVisible(false) : undefined}
         >
           <video
-            key={current.url}
             ref={videoRef}
             src={current.url}
             controls
