@@ -136,6 +136,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
     linkedinUrl,
     cvUrl,
     cvFilename,
+    coverLetterUrl,
+    coverLetterFilename,
+    candidateJobTitle,
     onEditLinks,
     audioFailed,
     videoSlot,
@@ -143,17 +146,23 @@ export function DecisionBanner(props: DecisionBannerProps) {
     notesSlot,
   } = props;
 
-  const openCv = async () => {
-    if (!cvUrl) return;
+  const openStorageFile = async (path: string) => {
     try {
       const { data, error } = await supabase.storage
         .from("candidate-cvs")
-        .createSignedUrl(cvUrl, 60);
+        .createSignedUrl(path, 60);
       if (error || !data?.signedUrl) throw error;
       window.open(data.signedUrl, "_blank", "noopener");
     } catch {
       // silently ignore
     }
+  };
+
+  const openCv = () => {
+    if (cvUrl) openStorageFile(cvUrl);
+  };
+  const openCoverLetter = () => {
+    if (coverLetterUrl) openStorageFile(coverLetterUrl);
   };
 
   const reco = recommendation ? recoConfig[recommendation] : null;
