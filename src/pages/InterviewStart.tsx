@@ -1968,10 +1968,16 @@ export default function InterviewStart() {
         return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
       }
 
-      const blob = new Blob(videoBufferLocal, { type: "video/webm" });
+      // IMPORTANT : utiliser le MIME RÉEL produit par MediaRecorder. Sur
+      // Safari/iOS c'est `video/mp4`, sur Chrome/Firefox c'est `video/webm`.
+      // Forcer `.webm` partout produisait un fichier illisible sur le rapport
+      // (MIME ↔ contenu incohérents → MEDIA_ERR_DECODE).
+      const realMime = chunkMimeRef.current || "video/webm";
+      const ext = realMime.startsWith("video/mp4") ? "mp4" : "webm";
+      const blob = new Blob(videoBufferLocal, { type: realMime });
       const audioChunks = [...audioBufferLocal];
       const chunkPaths = chunkPathsLocal;
-      const fileName = `interviews/${sessionId}/q${questionIndex}.webm`;
+      const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
       const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
