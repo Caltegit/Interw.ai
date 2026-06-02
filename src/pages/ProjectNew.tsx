@@ -13,6 +13,7 @@ import {
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
 import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
@@ -87,6 +88,7 @@ const initialState: ProjectFormState = {
   showQuestionTimer: true,
   reportRecipientUserIds: [],
   visibleToUserIds: [],
+  candidateFields: DEFAULT_CANDIDATE_FIELDS,
 };
 
 export default function ProjectNew() {
@@ -221,6 +223,7 @@ export default function ProjectNew() {
           ai_question_transitions_custom_text: s.aiQuestionTransitionsCustomText.trim() || null,
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
+          candidate_fields: s.candidateFields,
         } as never)
         .select()
         .single();

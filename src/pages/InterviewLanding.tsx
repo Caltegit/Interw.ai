@@ -5,8 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video, ArrowRight } from "lucide-react";
+import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video, ArrowRight, Upload, FileText, FileSignature, Linkedin, Trash2 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
+import {
+  CANDIDATE_FIELD_KEYS,
+  CANDIDATE_FIELD_LABELS,
+  DEFAULT_CANDIDATE_FIELDS,
+  mergeCandidateFields,
+  type CandidateFieldKey,
+  type CandidateFieldsConfig,
+} from "@/lib/candidateFields";
+import { cn } from "@/lib/utils";
 
 export default function InterviewLanding() {
   const { slug } = useParams();
@@ -17,6 +26,14 @@ export default function InterviewLanding() {
   const [candidateName, setCandidateName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
+
+  // Champs candidat configurables
+  const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(DEFAULT_CANDIDATE_FIELDS);
+  const [candidateJobTitle, setCandidateJobTitle] = useState("");
+  const [candidateLinkedin, setCandidateLinkedin] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Intermediate media screen state
   const [showIntroMedia, setShowIntroMedia] = useState(false);
@@ -55,6 +72,7 @@ export default function InterviewLanding() {
       }
 
       setProject(proj);
+      setCandidateFields(mergeCandidateFields((proj as any).candidate_fields));
       setLoading(false);
 
       // Si l'option « intro en premier écran » est activée et qu'une intro est configurée,
@@ -83,9 +101,58 @@ export default function InterviewLanding() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = candidateEmail.trim();
   const trimmedName = candidateName.trim();
+  const trimmedJobTitle = candidateJobTitle.trim();
+  const trimmedLinkedin = candidateLinkedin.trim();
   const emailValid = emailRegex.test(trimmedEmail);
   const showEmailError = candidateEmail.length > 0 && !emailValid;
-  const canSubmit = trimmedName.length > 0 && emailValid && !starting;
+
+  const linkedinValid = !trimmedLinkedin || /^https?:\/\//i.test(trimmedLinkedin);
+
+  // Validation des champs additionnels selon la config du projet
+  const missingRequired =
+    (candidateFields.job_title.enabled && candidateFields.job_title.required && !trimmedJobTitle) ||
+    (candidateFields.linkedin.enabled && candidateFields.linkedin.required && !trimmedLinkedin) ||
+    (candidateFields.cv.enabled && candidateFields.cv.required && !cvFile) ||
+    (candidateFields.cover_letter.enabled && candidateFields.cover_letter.required && !coverLetterFile);
+
+  const canSubmit =
+    trimmedName.length > 0 &&
+    emailValid &&
+    linkedinValid &&
+    !missingRequired &&
+    !starting;
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const ACCEPTED_EXTS = [".pdf", ".doc", ".docx"];
+
+  const handlePickFile = (file: File | null, setter: (f: File | null) => void) => {
+    setFileError(null);
+    if (!file) {
+      setter(null);
+      return;
+    }
+    const lower = file.name.toLowerCase();
+    if (!ACCEPTED_EXTS.some((e) => lower.endsWith(e))) {
+      setFileError("Format non supporté. Utilisez PDF, DOC ou DOCX.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError("Fichier trop volumineux (10 Mo max).");
+      return;
+    }
+    setter(file);
+  };
+
+  const uploadCandidateFile = async (sessionId: string, file: File, kind: "cv" | "cover-letter") => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const prefix = kind === "cv" ? "" : "cover-letters/";
+    const path = `${sessionId}/${prefix}${Date.now()}_${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from("candidate-cvs")
+      .upload(path, file, { upsert: false, contentType: file.type });
+    if (upErr) throw upErr;
+    return { url: path, filename: file.name };
+  };
 
   const handleStart = async () => {
     if (!canSubmit || !project) return;
@@ -98,6 +165,8 @@ export default function InterviewLanding() {
         organization_id: project.organization_id,
         candidate_name: trimmedName,
         candidate_email: trimmedEmail,
+        candidate_job_title: candidateFields.job_title.enabled && trimmedJobTitle ? trimmedJobTitle : null,
+        candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
       })
       .select()
       .single();
@@ -107,6 +176,28 @@ export default function InterviewLanding() {
       setStarting(false);
       return;
     }
+
+    // Upload des fichiers (CV / lettre de motivation) si présents
+    try {
+      const patch: Record<string, string | null> = {};
+      if (candidateFields.cv.enabled && cvFile) {
+        const { url, filename } = await uploadCandidateFile(session.id, cvFile, "cv");
+        patch.candidate_cv_url = url;
+        patch.candidate_cv_filename = filename;
+      }
+      if (candidateFields.cover_letter.enabled && coverLetterFile) {
+        const { url, filename } = await uploadCandidateFile(session.id, coverLetterFile, "cover-letter");
+        patch.candidate_cover_letter_url = url;
+        patch.candidate_cover_letter_filename = filename;
+      }
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("sessions").update(patch as never).eq("id", session.id);
+      }
+    } catch (uploadErr) {
+      console.error("[InterviewLanding] file upload failed", uploadErr);
+      // On n'interrompt pas le candidat — il pourra continuer l'entretien
+    }
+
 
     const introEnabled = project.intro_enabled !== false;
     const dbMode: string | null = project.intro_mode ?? null;
@@ -489,6 +580,74 @@ export default function InterviewLanding() {
                 </p>
               )}
             </div>
+
+            {/* Champs candidat configurables */}
+            {candidateFields.job_title.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="job-title" className="text-sm font-medium">
+                  Poste {candidateFields.job_title.required && "*"}
+                </Label>
+                <Input
+                  id="job-title"
+                  placeholder="Intitulé du poste visé"
+                  value={candidateJobTitle}
+                  onChange={(e) => setCandidateJobTitle(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+              </div>
+            )}
+
+            {candidateFields.linkedin.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="linkedin" className="text-sm font-medium">
+                  Profil LinkedIn {candidateFields.linkedin.required && "*"}
+                </Label>
+                <Input
+                  id="linkedin"
+                  type="url"
+                  placeholder="https://www.linkedin.com/in/..."
+                  value={candidateLinkedin}
+                  onChange={(e) => setCandidateLinkedin(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+                {!linkedinValid && (
+                  <p className="text-xs" style={{ color: "#f87171" }}>
+                    L'URL doit commencer par http:// ou https://
+                  </p>
+                )}
+              </div>
+            )}
+
+            {candidateFields.cv.enabled && (
+              <CandidateFileField
+                id="cv"
+                label="CV"
+                required={candidateFields.cv.required}
+                file={cvFile}
+                onPick={(f) => handlePickFile(f, setCvFile)}
+                icon={<FileText className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+              />
+            )}
+
+            {candidateFields.cover_letter.enabled && (
+              <CandidateFileField
+                id="cover-letter"
+                label="Lettre de motivation"
+                required={candidateFields.cover_letter.required}
+                file={coverLetterFile}
+                onPick={(f) => handlePickFile(f, setCoverLetterFile)}
+                icon={<FileSignature className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+              />
+            )}
+
+            {fileError && (
+              <p className="text-xs" style={{ color: "#f87171" }}>
+                {fileError}
+              </p>
+            )}
+
             <Button
               className="w-full h-12 rounded-lg text-base font-semibold group transition-all duration-300"
               size="lg"
@@ -518,3 +677,68 @@ export default function InterviewLanding() {
     </CandidateLayout>
   );
 }
+
+function CandidateFileField({
+  id,
+  label,
+  required,
+  file,
+  onPick,
+  icon,
+}: {
+  id: string;
+  label: string;
+  required: boolean;
+  file: File | null;
+  onPick: (f: File | null) => void;
+  icon: React.ReactNode;
+}) {
+  const inputId = `file-${id}`;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={inputId} className="text-sm font-medium">
+        {label} {required && "*"}
+      </Label>
+      {file ? (
+        <div
+          className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm"
+          style={{ borderColor: "rgba(245, 240, 232, 0.18)", backgroundColor: "rgba(255,255,255,0.03)" }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {icon}
+            <span className="truncate">{file.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onPick(null)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Retirer le fichier"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={inputId}
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm transition-colors hover:border-[#d4a574]"
+          style={{ borderColor: "rgba(245, 240, 232, 0.2)", color: "rgba(245, 240, 232, 0.6)" }}
+        >
+          <Upload className="h-4 w-4" />
+          Glissez ou cliquez (PDF, DOC — 10 Mo max)
+        </label>
+      )}
+      <input
+        id={inputId}
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          onPick(f);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+

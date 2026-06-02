@@ -21,7 +21,15 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown, Mail } from "lucide-react";
+import {
+  CANDIDATE_FIELD_KEYS,
+  CANDIDATE_FIELD_LABELS,
+  DEFAULT_CANDIDATE_FIELDS,
+  type CandidateFieldKey,
+  type CandidateFieldsConfig,
+} from "@/lib/candidateFields";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
@@ -107,6 +115,7 @@ export interface ProjectFormState {
   saveIntroToLibrary?: boolean;
   reportRecipientUserIds: string[];
   visibleToUserIds: string[];
+  candidateFields: CandidateFieldsConfig;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
@@ -346,6 +355,13 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [saveIntroToLibrary, setSaveIntroToLibrary] = useState<boolean>(initial.saveIntroToLibrary ?? false);
   const [reportRecipientUserIds, setReportRecipientUserIds] = useState<string[]>(initial.reportRecipientUserIds ?? []);
   const [visibleToUserIds, setVisibleToUserIds] = useState<string[]>(initial.visibleToUserIds ?? []);
+  const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(
+    initial.candidateFields ?? DEFAULT_CANDIDATE_FIELDS,
+  );
+
+  const setCandidateField = (key: CandidateFieldKey, patch: Partial<CandidateFieldsConfig[CandidateFieldKey]>) => {
+    setCandidateFields((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  };
   const [orgMembers, setOrgMembers] = useState<Array<{ user_id: string; full_name: string; email: string }>>([]);
   const [orgOwnerId, setOrgOwnerId] = useState<string | null>(null);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
@@ -407,6 +423,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       saveIntroToLibrary,
       reportRecipientUserIds,
       visibleToUserIds,
+      candidateFields,
     });
   };
 
@@ -758,160 +775,233 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-                <div>
-                  <Label>Durée maximale (minutes) : {maxDuration}</Label>
-                  <input
-                    type="range"
-                    min={15}
-                    max={60}
-                    value={maxDuration}
-                    onChange={(e) => setMaxDuration(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Autoriser le candidat à mettre en pause</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un bouton « Pause » pendant la session. Le candidat peut figer l'interview et reprendre
-                      exactement où il s'était arrêté.
-                    </p>
-                  </div>
-                  <Switch checked={allowPause} onCheckedChange={setAllowPause} />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Autoriser le candidat à passer une question</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Affiche un lien discret « Passer la question » pendant l'entretien.
-                    </p>
-                  </div>
-                  <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <Label>Afficher le timer sur les questions</Label>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Si désactivé, le candidat voit uniquement une indication du temps imparti (ex. « Répondez en 1 min »). Le décompte réapparaît automatiquement dans les 20 dernières secondes.
-                    </p>
-                  </div>
-                  <Switch checked={showQuestionTimer} onCheckedChange={setShowQuestionTimer} />
-                </div>
-                <div>
-                  <Label>Statut</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Actif</SelectItem>
-                      {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Message de début</Label>
-                  <Textarea
-                    value={preSessionMessage}
-                    onChange={(e) => setPreSessionMessage(e.target.value)}
-                    placeholder={DEFAULT_PRE_SESSION_MESSAGE}
-                    rows={2}
-                    className="mt-1.5"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Court message d'encouragement affiché au candidat juste avant le démarrage de la session.
-                  </p>
-                </div>
-                <div>
-                  <Label>Message de fin</Label>
-                  <Textarea
-                    value={completionMessage}
-                    onChange={(e) => setCompletionMessage(e.target.value)}
-                    placeholder={DEFAULT_COMPLETION_MESSAGE}
-                    rows={3}
-                    className="mt-1.5"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Ce message s'affichera sur l'écran de remerciement après l'session.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <Label>Intro IA</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Si désactivé, l'IA ne prononce pas de phrase d'accueil avant la première question.
-                      </p>
-                    </div>
-                    <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
-                  </div>
-                  {aiIntroEnabled && (
-                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                      <RadioGroup
-                        value={aiIntroMode}
-                        onValueChange={(v) => setAiIntroMode(v as "auto" | "custom")}
-                        className="gap-1.5"
-                      >
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="auto" id={`ai-intro-auto-${idSuffix}`} />
-                          <Label htmlFor={`ai-intro-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                            Laisser l'IA s'adapter au contexte des réponses
-                          </Label>
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-6">
+
+                    {/* ────────── Formulaire candidat ────────── */}
+                    <section className="space-y-3">
+                      <div>
+                        <h4 className="text-sm font-semibold">Formulaire candidat</h4>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Champs supplémentaires demandés au candidat avant le démarrage de l'entretien.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        {CANDIDATE_FIELD_KEYS.map((key) => {
+                          const cfg = candidateFields[key];
+                          return (
+                            <div
+                              key={key}
+                              className="flex items-center justify-between gap-4 rounded-md border border-border/60 px-3 py-2"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <Switch
+                                  checked={cfg.enabled}
+                                  onCheckedChange={(v) =>
+                                    setCandidateField(key, { enabled: v, required: v ? cfg.required : false })
+                                  }
+                                  aria-label={`Activer ${CANDIDATE_FIELD_LABELS[key]}`}
+                                />
+                                <Label className="text-sm font-normal cursor-default">
+                                  {CANDIDATE_FIELD_LABELS[key]}
+                                </Label>
+                              </div>
+                              {cfg.enabled && (
+                                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                                  <Checkbox
+                                    checked={cfg.required}
+                                    onCheckedChange={(v) => setCandidateField(key, { required: !!v })}
+                                  />
+                                  Champ obligatoire
+                                </label>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    <Separator />
+
+                    {/* ────────── Déroulé de l'entretien ────────── */}
+                    <section className="space-y-4">
+                      <h4 className="text-sm font-semibold">Déroulé de l'entretien</h4>
+                      <div>
+                        <Label>Durée maximale (minutes) : {maxDuration}</Label>
+                        <input
+                          type="range"
+                          min={15}
+                          max={60}
+                          value={maxDuration}
+                          onChange={(e) => setMaxDuration(Number(e.target.value))}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <Label>Autoriser le candidat à mettre en pause</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Affiche un bouton « Pause » pendant la session. Le candidat peut figer l'interview et reprendre
+                            exactement où il s'était arrêté.
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="custom" id={`ai-intro-custom-${idSuffix}`} />
-                          <Label htmlFor={`ai-intro-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                            Utiliser un texte fixe
-                          </Label>
+                        <Switch checked={allowPause} onCheckedChange={setAllowPause} />
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <Label>Autoriser le candidat à passer une question</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Affiche un lien discret « Passer la question » pendant l'entretien.
+                          </p>
                         </div>
-                      </RadioGroup>
-                      {aiIntroMode === "custom" && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
-                          Modifier le texte
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <Label>Transitions entre questions</Label>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Phrase prononcée par l'IA entre deux questions.
-                      </p>
-                    </div>
-                    <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
-                  </div>
-                  {aiQuestionTransitionsEnabled && (
-                    <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                      <RadioGroup
-                        value={aiQuestionTransitionsMode}
-                        onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
-                        className="gap-1.5"
-                      >
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
-                          <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                            Laisser l'IA s'adapter au contexte des réponses
-                          </Label>
+                        <Switch checked={allowSkipQuestion} onCheckedChange={setAllowSkipQuestion} />
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <Label>Afficher le timer sur les questions</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Si désactivé, le candidat voit uniquement une indication du temps imparti (ex. « Répondez en 1 min »). Le décompte réapparaît automatiquement dans les 20 dernières secondes.
+                          </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
-                          <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                            Utiliser un texte fixe
-                          </Label>
+                        <Switch checked={showQuestionTimer} onCheckedChange={setShowQuestionTimer} />
+                      </div>
+                    </section>
+
+                    <Separator />
+
+                    {/* ────────── Messages affichés au candidat ────────── */}
+                    <section className="space-y-4">
+                      <h4 className="text-sm font-semibold">Messages affichés au candidat</h4>
+                      <div>
+                        <Label>Message de début</Label>
+                        <Textarea
+                          value={preSessionMessage}
+                          onChange={(e) => setPreSessionMessage(e.target.value)}
+                          placeholder={DEFAULT_PRE_SESSION_MESSAGE}
+                          rows={2}
+                          className="mt-1.5"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Court message d'encouragement affiché au candidat juste avant le démarrage de la session.
+                        </p>
+                      </div>
+                      <div>
+                        <Label>Message de fin</Label>
+                        <Textarea
+                          value={completionMessage}
+                          onChange={(e) => setCompletionMessage(e.target.value)}
+                          placeholder={DEFAULT_COMPLETION_MESSAGE}
+                          rows={3}
+                          className="mt-1.5"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Ce message s'affichera sur l'écran de remerciement après l'session.
+                        </p>
+                      </div>
+                    </section>
+
+                    <Separator />
+
+                    {/* ────────── Voix de l'IA ────────── */}
+                    <section className="space-y-4">
+                      <h4 className="text-sm font-semibold">Voix de l'IA</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <Label>Intro IA</Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Si désactivé, l'IA ne prononce pas de phrase d'accueil avant la première question.
+                            </p>
+                          </div>
+                          <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
                         </div>
-                      </RadioGroup>
-                      {aiQuestionTransitionsMode === "custom" && (
-                        <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
-                          Modifier le texte
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        {aiIntroEnabled && (
+                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                            <RadioGroup
+                              value={aiIntroMode}
+                              onValueChange={(v) => setAiIntroMode(v as "auto" | "custom")}
+                              className="gap-1.5"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="auto" id={`ai-intro-auto-${idSuffix}`} />
+                                <Label htmlFor={`ai-intro-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                                  Laisser l'IA s'adapter au contexte des réponses
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="custom" id={`ai-intro-custom-${idSuffix}`} />
+                                <Label htmlFor={`ai-intro-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                                  Utiliser un texte fixe
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                            {aiIntroMode === "custom" && (
+                              <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
+                                Modifier le texte
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <Label>Transitions entre questions</Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Phrase prononcée par l'IA entre deux questions.
+                            </p>
+                          </div>
+                          <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
+                        </div>
+                        {aiQuestionTransitionsEnabled && (
+                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
+                            <RadioGroup
+                              value={aiQuestionTransitionsMode}
+                              onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
+                              className="gap-1.5"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
+                                <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                                  Laisser l'IA s'adapter au contexte des réponses
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
+                                <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
+                                  Utiliser un texte fixe
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                            {aiQuestionTransitionsMode === "custom" && (
+                              <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
+                                Modifier le texte
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    <Separator />
+
+                    {/* ────────── Diffusion ────────── */}
+                    <section className="space-y-3">
+                      <h4 className="text-sm font-semibold">Diffusion</h4>
+                      <div>
+                        <Label>Statut</Label>
+                        <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </section>
+
+
 
                 <AiTextCustomizerDialog
                   open={introCustomizerOpen}

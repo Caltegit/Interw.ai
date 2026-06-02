@@ -27,6 +27,7 @@ import {
   ThumbsUp,
   Linkedin,
   FileText,
+  FileSignature,
   UserCog,
   MicOff,
 } from "lucide-react";
@@ -69,6 +70,9 @@ interface DecisionBannerProps {
   linkedinUrl?: string | null;
   cvUrl?: string | null;
   cvFilename?: string | null;
+  coverLetterUrl?: string | null;
+  coverLetterFilename?: string | null;
+  candidateJobTitle?: string | null;
   onEditLinks?: () => void;
   audioFailed?: boolean;
   videoSlot?: ReactNode;
@@ -132,6 +136,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
     linkedinUrl,
     cvUrl,
     cvFilename,
+    coverLetterUrl,
+    coverLetterFilename,
+    candidateJobTitle,
     onEditLinks,
     audioFailed,
     videoSlot,
@@ -139,17 +146,23 @@ export function DecisionBanner(props: DecisionBannerProps) {
     notesSlot,
   } = props;
 
-  const openCv = async () => {
-    if (!cvUrl) return;
+  const openStorageFile = async (path: string) => {
     try {
       const { data, error } = await supabase.storage
         .from("candidate-cvs")
-        .createSignedUrl(cvUrl, 60);
+        .createSignedUrl(path, 60);
       if (error || !data?.signedUrl) throw error;
       window.open(data.signedUrl, "_blank", "noopener");
     } catch {
       // silently ignore
     }
+  };
+
+  const openCv = () => {
+    if (cvUrl) openStorageFile(cvUrl);
+  };
+  const openCoverLetter = () => {
+    if (coverLetterUrl) openStorageFile(coverLetterUrl);
   };
 
   const reco = recommendation ? recoConfig[recommendation] : null;
@@ -274,10 +287,16 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 linkedinUrl={linkedinUrl}
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
+                coverLetterUrl={coverLetterUrl}
+                coverLetterFilename={coverLetterFilename}
                 onOpenCv={openCv}
+                onOpenCoverLetter={openCoverLetter}
                 onAddLinks={onEditLinks}
               />
             </div>
+            {candidateJobTitle && (
+              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
+            )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
@@ -294,10 +313,16 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 linkedinUrl={linkedinUrl}
                 cvUrl={cvUrl}
                 cvFilename={cvFilename}
+                coverLetterUrl={coverLetterUrl}
+                coverLetterFilename={coverLetterFilename}
                 onOpenCv={openCv}
+                onOpenCoverLetter={openCoverLetter}
                 onAddLinks={onEditLinks}
               />
             </div>
+            {candidateJobTitle && (
+              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
+            )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
@@ -430,17 +455,24 @@ function CandidateLinkIcons({
   linkedinUrl,
   cvUrl,
   cvFilename,
+  coverLetterUrl,
+  coverLetterFilename,
   onOpenCv,
+  onOpenCoverLetter,
   onAddLinks,
 }: {
   linkedinUrl?: string | null;
   cvUrl?: string | null;
   cvFilename?: string | null;
+  coverLetterUrl?: string | null;
+  coverLetterFilename?: string | null;
   onOpenCv: () => void;
+  onOpenCoverLetter?: () => void;
   onAddLinks?: () => void;
 }) {
   const hasLinkedin = !!linkedinUrl;
   const hasCv = !!cvUrl;
+  const hasCover = !!coverLetterUrl;
   return (
     <div className="flex shrink-0 items-center gap-1">
       <Tooltip>
@@ -506,6 +538,38 @@ function CandidateLinkIcons({
               : "CV non renseigné"}
         </TooltipContent>
       </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {hasCover ? (
+            <button
+              type="button"
+              onClick={onOpenCoverLetter}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-primary hover:bg-muted"
+              aria-label="Ouvrir la lettre de motivation"
+            >
+              <FileSignature className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onAddLinks}
+              disabled={!onAddLinks}
+              className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground/40 hover:bg-muted hover:text-foreground/70 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+              aria-label="Ajouter la lettre de motivation"
+            >
+              <FileSignature className="h-4 w-4" />
+            </button>
+          )}
+        </TooltipTrigger>
+        <TooltipContent>
+          {hasCover
+            ? (coverLetterFilename ?? "Ouvrir la lettre de motivation")
+            : onAddLinks
+              ? "Ajouter la lettre de motivation"
+              : "Lettre de motivation non renseignée"}
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
+

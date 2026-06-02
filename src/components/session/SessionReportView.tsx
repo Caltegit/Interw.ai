@@ -362,6 +362,9 @@ export function SessionReportView({
               linkedinUrl={(session as any).candidate_linkedin_url ?? null}
               cvUrl={(session as any).candidate_cv_url ?? null}
               cvFilename={(session as any).candidate_cv_filename ?? null}
+              coverLetterUrl={(session as any).candidate_cover_letter_url ?? null}
+              coverLetterFilename={(session as any).candidate_cover_letter_filename ?? null}
+              candidateJobTitle={(session as any).candidate_job_title ?? null}
               audioFailed={audioFailed}
               videoSlotWidth={copilotOpen ? 299 : 368}
               videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full" /> : undefined}

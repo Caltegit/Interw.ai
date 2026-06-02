@@ -249,9 +249,12 @@ export default function SessionDetail() {
         open={linksOpen}
         onOpenChange={setLinksOpen}
         sessionId={session.id}
+        initialJobTitle={(session as any).candidate_job_title ?? null}
         initialLinkedinUrl={(session as any).candidate_linkedin_url ?? null}
         initialCvUrl={(session as any).candidate_cv_url ?? null}
         initialCvFilename={(session as any).candidate_cv_filename ?? null}
+        initialCoverLetterUrl={(session as any).candidate_cover_letter_url ?? null}
+        initialCoverLetterFilename={(session as any).candidate_cover_letter_filename ?? null}
         onSaved={() => queryClient.invalidateQueries({ queryKey: queryKeys.session(id!) })}
       />
 

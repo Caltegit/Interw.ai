@@ -928,6 +928,7 @@ export type Database = {
           audio_analysis_enabled: boolean
           auto_skip_silence: boolean
           avatar_image_url: string | null
+          candidate_fields: Json
           completion_message: string | null
           created_at: string
           created_by: string
@@ -970,6 +971,7 @@ export type Database = {
           audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          candidate_fields?: Json
           completion_message?: string | null
           created_at?: string
           created_by: string
@@ -1012,6 +1014,7 @@ export type Database = {
           audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          candidate_fields?: Json
           completion_message?: string | null
           created_at?: string
           created_by?: string
@@ -1486,9 +1489,12 @@ export type Database = {
           assigned_to: string | null
           audio_recording_url: string | null
           cancelled_at: string | null
+          candidate_cover_letter_filename: string | null
+          candidate_cover_letter_url: string | null
           candidate_cv_filename: string | null
           candidate_cv_url: string | null
           candidate_email: string
+          candidate_job_title: string | null
           candidate_linkedin_url: string | null
           candidate_name: string
           completed_at: string | null
@@ -1518,9 +1524,12 @@ export type Database = {
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
+          candidate_cover_letter_filename?: string | null
+          candidate_cover_letter_url?: string | null
           candidate_cv_filename?: string | null
           candidate_cv_url?: string | null
           candidate_email: string
+          candidate_job_title?: string | null
           candidate_linkedin_url?: string | null
           candidate_name: string
           completed_at?: string | null
@@ -1550,9 +1559,12 @@ export type Database = {
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
+          candidate_cover_letter_filename?: string | null
+          candidate_cover_letter_url?: string | null
           candidate_cv_filename?: string | null
           candidate_cv_url?: string | null
           candidate_email?: string
+          candidate_job_title?: string | null
           candidate_linkedin_url?: string | null
           candidate_name?: string
           completed_at?: string | null

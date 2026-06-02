@@ -13,6 +13,7 @@ import {
   DEFAULT_PRE_SESSION_MESSAGE,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { mergeCandidateFields } from "@/lib/candidateFields";
 
 export default function ProjectEdit() {
   const { id } = useParams();
@@ -189,6 +190,7 @@ export default function ProjectEdit() {
           (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids ?? [],
         visibleToUserIds:
           (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
+        candidateFields: mergeCandidateFields((project as { candidate_fields?: unknown }).candidate_fields),
       });
 
       setLoading(false);
@@ -282,6 +284,7 @@ export default function ProjectEdit() {
           show_question_timer: s.showQuestionTimer,
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
+          candidate_fields: s.candidateFields,
         } as never)
         .eq("id", id);
 
