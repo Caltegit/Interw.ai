@@ -21,7 +21,15 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown, Mail } from "lucide-react";
+import {
+  CANDIDATE_FIELD_KEYS,
+  CANDIDATE_FIELD_LABELS,
+  DEFAULT_CANDIDATE_FIELDS,
+  type CandidateFieldKey,
+  type CandidateFieldsConfig,
+} from "@/lib/candidateFields";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
