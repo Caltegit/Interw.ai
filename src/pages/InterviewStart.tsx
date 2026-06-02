@@ -3963,7 +3963,7 @@ export default function InterviewStart() {
                           return;
                         }
                         console.log("[InterviewStart] onPlaybackEnd (video) fired");
-                        forceStartListening();
+                        forceStartListening("video-ended");
                       }}
                     />
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium z-10">
@@ -4088,7 +4088,7 @@ export default function InterviewStart() {
                         return;
                       }
                       console.log("[InterviewStart] onPlaybackEnd (audio/text) fired");
-                      forceStartListening();
+                      forceStartListening("audio-ended");
                     }}
                   />
                 )}
@@ -4301,7 +4301,7 @@ export default function InterviewStart() {
                             className="w-full h-12 rounded-xl"
                             onClick={() => {
                               setInterviewStuck(false);
-                              startListening();
+                              startListening({ force: true, reason: "stuck-banner" });
                             }}
                           >
                             <Mic className="mr-2 h-4 w-4" />
