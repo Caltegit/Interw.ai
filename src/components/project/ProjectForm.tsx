@@ -423,6 +423,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       saveIntroToLibrary,
       reportRecipientUserIds,
       visibleToUserIds,
+      candidateFields,
     });
   };
 
