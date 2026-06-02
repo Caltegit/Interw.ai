@@ -1390,7 +1390,7 @@ export default function InterviewStart() {
       const rec = questionRecorderRef.current;
       if (!rec || rec.state === "inactive") {
         console.log("[interview] RESUME — recorder absent/inactif, redémarrage");
-        startQuestionRecording();
+        void startQuestionRecording();
       } else if (rec.state === "paused") {
         try { rec.resume(); } catch (e) { console.warn("recorder.resume failed", e); }
         const arec = questionAudioRecorderRef.current;
@@ -2136,7 +2136,7 @@ export default function InterviewStart() {
     setShowManualContinue(false);
   }, []);
 
-  const enterListeningPhase = useCallback((source: string, blockId = currentBlockIdRef.current) => {
+  const enterListeningPhase = useCallback(async (source: string, blockId = currentBlockIdRef.current) => {
     if (isPausedRef.current) {
       console.log("[InterviewStart] enterListeningPhase blocked — interview is paused", { source, blockId });
       return false;
@@ -2195,14 +2195,14 @@ export default function InterviewStart() {
     setShouldAutoPlay(false);
     setIsSpeaking(false);
     setShowManualContinue(false);
-    startQuestionRecording();
+    await startQuestionRecording();
     startListening({ force: true, reason: source, questionIndex: currentQuestionIndex });
     resetSilenceTimer();
     return true;
   }, [clearPlaybackWatchdog, currentQuestionIndex, resetSilenceTimer, startQuestionRecording, startListening]);
 
   const forceStartListening = useCallback((source = "media-end", blockId?: number) => {
-    enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
+    void enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
   }, [enterListeningPhase]);
 
   // Mark current question as a media presentation (for pause/resume replay)
