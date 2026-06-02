@@ -177,7 +177,7 @@ async function rebuild(session_id: string, question_index: number, force = false
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   try {
-    const { session_id, question_index, sync } = await req.json();
+    const { session_id, question_index, sync, force } = await req.json();
     if (!session_id || typeof question_index !== "number") {
       return new Response(JSON.stringify({ error: "session_id + question_index required" }), {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
@@ -186,13 +186,13 @@ Deno.serve(async (req) => {
     // Mode synchrone (utile pour le bouton "Tenter récupération" côté UI : on
     // veut attendre la fin avant de rafraîchir le lecteur).
     if (sync) {
-      const result = await rebuild(session_id, question_index);
+      const result = await rebuild(session_id, question_index, !!force);
       return new Response(JSON.stringify({ status: "done", ...result }), {
         status: 200, headers: { ...cors, "Content-Type": "application/json" },
       });
     }
     // @ts-ignore
-    EdgeRuntime.waitUntil(rebuild(session_id, question_index).catch((e) => console.error("rebuild err", e)));
+    EdgeRuntime.waitUntil(rebuild(session_id, question_index, !!force).catch((e) => console.error("rebuild err", e)));
     return new Response(JSON.stringify({ status: "processing" }), {
       status: 202, headers: { ...cors, "Content-Type": "application/json" },
     });
