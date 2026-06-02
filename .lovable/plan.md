@@ -1,53 +1,84 @@
 # Plan
 
-Le problème n’est plus l’autoplay : les signaux montrent surtout des **fichiers vidéo déjà corrompus ou mal assemblés**.
+## Objectif
+Éliminer durablement les vidéos illisibles sur la dernière question et les questions de fin de session, sans réintroduire les anciens bugs de lecture.
 
-## Ce qu’on fait
+## Stratégie
+On traite le problème comme un **bug de pipeline média**, pas comme un bug d’interface.
+Le plan vise à :
+- empêcher la création de nouveaux fichiers corrompus,
+- rendre cohérent le format vidéo de bout en bout,
+- réparer les sessions déjà touchées quand des chunks exploitables existent,
+- vérifier le résultat sur des cas réels avant de conclure.
 
-1. **Sécuriser l’enregistrement question par question**
-   - Fiabiliser `InterviewStart` pour que chaque question enregistre et uploade dans le bon dossier.
-   - Supprimer le risque de mélange entre deux questions successives.
-   - Utiliser le **vrai format détecté** (`webm` ou `mp4`) au lieu de forcer `webm` partout.
+## Étape 1 — Stabiliser définitivement l’écriture des vidéos
+Mettre le front d’enregistrement sur un pipeline unique et cohérent :
+- utiliser le **format réellement produit** par `MediaRecorder` pour chaque question,
+- propager ce format jusqu’aux **chunks**, au **fichier final** et au **manifest**,
+- éviter tout mélange entre deux questions successives,
+- garantir qu’un recorder précédent ne peut plus injecter de données dans la question suivante.
 
-2. **Fiabiliser la finalisation des segments**
-   - Garantir que le recorder précédent est complètement vidé avant d’en démarrer un autre.
-   - Isoler les listes de chunks par question pour éviter qu’un upload tardif pollue la suivante.
-   - Éviter les blobs finaux incohérents quand la transition entre questions est rapide.
+**Résultat attendu :** une nouvelle interview ne peut plus produire une dernière question avec extension, MIME ou contenu incohérents.
 
-3. **Renforcer la réparation côté backend**
-   - Améliorer `recover-session-video` pour ne plus considérer un fichier “valide” juste parce qu’il commence par un header EBML.
-   - Gérer correctement les cas de préfixe parasite, de reconstruction depuis chunks, et de format réel du média.
-   - Prévoir la réparation des sessions déjà cassées, notamment celles où ça lâche à partir de la Q5 ou sur la Q15.
+## Étape 2 — Corriger la finalisation de fin de session
+Fiabiliser la logique qui tourne quand l’onglet se ferme, que le téléphone se verrouille ou que la page disparaît :
+- faire en sorte que `finalize-abandoned-session` reconstruise dans le **bon format**,
+- ne plus supposer que tout est en `.webm`,
+- reconstruire le bon fichier final (`.webm` ou `.mp4`) selon le manifest ou les chunks réellement présents,
+- conserver la compatibilité avec les sessions déjà commencées sous l’ancien comportement.
 
-4. **Garder le lecteur simple, sans faux remède**
-   - Ne pas retirer l’autoplay comme “solution”.
-   - Conserver le lecteur actuel, avec seulement le diagnostic utile si le fichier source est irrécupérable.
+**Résultat attendu :** la dernière question reste lisible même si la session se termine brutalement.
 
-5. **Valider sur les cas réels avant de conclure**
-   - Re-tester la session actuelle (`9e68…`, Q15).
-   - Re-tester la session signalée (`955b…`, à partir de la Q5).
-   - Vérifier qu’on lit bien les fichiers réparés et que les nouvelles sessions n’en produisent plus de corrompus.
+## Étape 3 — Renforcer la réparation des sessions déjà cassées
+Améliorer la fonction de réparation pour qu’elle sache traiter les cas hybrides produits jusqu’ici :
+- détecter le format réel au lieu de deviner,
+- chercher les chunks dans le bon dossier avec la bonne extension,
+- reconstruire même si le fichier final existant est trompeur ou partiellement invalide,
+- mieux distinguer un fichier vraiment sain d’un fichier seulement “plausible”.
 
-## Détails techniques
+**Résultat attendu :** les vidéos déjà cassées peuvent être récupérées dès que les chunks bruts sont exploitables.
 
-- **Fichiers visés**
-  - `src/pages/InterviewStart.tsx`
-  - `supabase/functions/recover-session-video/index.ts`
-  - éventuellement `supabase/functions/finalize-abandoned-session/index.ts`
-  - au besoin, ajustement mineur de `src/components/session/SessionVideoNavigator.tsx`
+## Étape 4 — Garder le lecteur simple et fiable
+Le lecteur ne doit pas masquer le vrai problème, mais il doit rester robuste :
+- conserver le diagnostic d’erreur utile,
+- garder la réparation manuelle côté RH,
+- recharger proprement la source réparée,
+- éviter toute “fausse solution” côté autoplay si le média source est invalide.
 
-- **Causes probables à traiter en priorité**
-  - mauvais rattachement des chunks à la mauvaise question
-  - format réel du média ignoré (`mp4` servi comme `webm` sur certains navigateurs)
-  - flush incomplet du recorder précédent
-  - réparation trop naïve des fichiers déjà cassés
+**Résultat attendu :** si un clip est cassé, l’interface aide à le réparer au lieu de brouiller le diagnostic.
 
-- **Décision produit**
-  - **Je ne recommande pas un retour arrière global** : ça pourrait limiter de nouveaux dégâts, mais ça **ne réparera pas** les vidéos déjà cassées.
-  - Si on veut un frein d’urgence ensuite, on pourra envisager un rollback séparé, mais la bonne correction reste la réparation du pipeline.
+## Étape 5 — Validation sur cas réels avant conclusion
+Vérifier le correctif sur des cas concrets, pas seulement sur du code lu :
+- retester le cas de la **dernière question** qui échoue encore,
+- retester la session signalée où ça casse à partir de la **Q5**,
+- simuler une fin brutale de session pour vérifier la reconstruction automatique,
+- vérifier que les fichiers produits sont décodables et que le lecteur les lit bien.
 
-## Résultat attendu
+**Résultat attendu :** on confirme à la fois la prévention des nouveaux bugs et la récupération des anciens.
 
-- Les nouvelles interviews ne génèrent plus de segments cassés.
-- Les sessions déjà touchées peuvent être réparées quand les chunks exploitables existent.
-- Le lecteur n’affiche plus une erreur trompeuse liée à l’autoplay alors que le vrai souci est le média lui-même.
+## Décision sur le rollback
+Je ne propose **pas** de rollback global comme solution principale.
+
+Pourquoi :
+- il ne réparera pas les vidéos déjà corrompues,
+- il risque de réintroduire les problèmes corrigés récemment,
+- il ne traite pas la cause structurelle : l’incohérence de format entre enregistrement, chunks, finalisation et récupération.
+
+## Fallback de sécurité si besoin
+Si on veut limiter le risque pendant le correctif, le bon fallback est **ciblé** :
+- désactiver provisoirement la reconstruction automatique fautive si elle produit des fichiers incohérents,
+- garder la réparation manuelle et les correctifs déjà utiles,
+- réactiver la finalisation automatique une fois le pipeline validé.
+
+## Fichiers concernés
+- `src/pages/InterviewStart.tsx`
+- `supabase/functions/finalize-abandoned-session/index.ts`
+- `supabase/functions/recover-session-video/index.ts`
+- ajustement mineur éventuel dans `src/components/session/SessionVideoNavigator.tsx`
+
+## Critères de succès
+Le problème sera considéré comme résorbé seulement si :
+- une nouvelle interview complète génère des vidéos lisibles jusqu’à la dernière question,
+- la fermeture d’onglet ou l’abandon ne casse plus le dernier segment,
+- les sessions déjà touchées peuvent être réparées quand les chunks existent,
+- le lecteur charge bien les fichiers reconstruits sans erreur de décodage.
