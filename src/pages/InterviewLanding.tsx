@@ -27,6 +27,14 @@ export default function InterviewLanding() {
   const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
 
+  // Champs candidat configurables
+  const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(DEFAULT_CANDIDATE_FIELDS);
+  const [candidateJobTitle, setCandidateJobTitle] = useState("");
+  const [candidateLinkedin, setCandidateLinkedin] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
   // Intermediate media screen state
   const [showIntroMedia, setShowIntroMedia] = useState(false);
   const [introMediaType, setIntroMediaType] = useState<"audio" | "video" | "text" | "tts" | null>(null);
