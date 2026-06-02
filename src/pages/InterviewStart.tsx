@@ -1389,7 +1389,7 @@ export default function InterviewStart() {
       const hasMedia = !!(q?.audio_url || q?.video_url);
       if (!hasMedia) {
         ensureRecorder();
-        startListening();
+        startListening({ reason: "resume-written" });
         resetSilenceTimer();
       } else {
         // After greeting/transition TTS, the media should auto-play
@@ -1420,7 +1420,7 @@ export default function InterviewStart() {
     // Garantit que le bouton « Enregistrer ma réponse » réapparaît même si le
     // recorder s'est terminé pendant la pause (état "inactive" ou null).
     ensureRecorder();
-    startListening();
+    startListening({ reason: "resume-listening" });
     resetSilenceTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
@@ -2585,8 +2585,7 @@ export default function InterviewStart() {
       // Don't start listening yet — onPlaybackEnd will do it (watchdog as backup)
     } else {
       // Text question: start recording + listening immediately after TTS
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("intro-written", myBlock);
     }
   };
 
@@ -2617,7 +2616,7 @@ export default function InterviewStart() {
         description: "Veuillez parler avant d'envoyer votre réponse.",
         variant: "destructive",
       });
-      startListening();
+      startListening({ reason: "empty-transcript" });
       // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
       resetSilenceTimer();
       setIsProcessing(false);
@@ -2876,9 +2875,7 @@ export default function InterviewStart() {
       if (followBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
       // Resume listening on the same question
-      startQuestionRecording();
-      startListening();
-      resetSilenceTimer();
+      enterListeningPhase("follow-up", followBlock);
       return;
     }
 
@@ -3102,8 +3099,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("fallback-text-after-media", nextBlock);
     } else {
       // Question écrite native : on prononce la transition (qui contient déjà la
       // question), puis on écoute.
@@ -3111,8 +3107,7 @@ export default function InterviewStart() {
       if (token.aborted) { aborted = true; return; }
       if (nextBlock !== currentBlockIdRef.current) return;
       if (isPausedRef.current) return;
-      startQuestionRecording();
-      startListening();
+      enterListeningPhase("next-written", nextBlock);
     }
     } finally {
       if (!aborted) setIsProcessing(false);
