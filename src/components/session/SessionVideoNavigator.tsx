@@ -195,18 +195,42 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
-  // Reset position + autoplay au changement de clip uniquement
+  // Charge la source du clip courant et applique seek/autoplay.
+  // On ne s'appuie plus sur `key={current.url}` (qui démontait <video>) :
+  // l'élément persiste, on pilote `src` + `load()` à la main. Ainsi le
+  // cleanup ne pause plus accidentellement le nouvel élément monté.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    const targetUrl = clips[index]?.url;
+    if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
-    const apply = () => {
+    setMediaError(null);
+
+    // (Re)charge la source seulement si elle a changé pour éviter de couper
+    // une lecture en cours sur le même clip.
+    const resolve = (u: string) => {
+      try { return new URL(u, window.location.href).toString(); }
+      catch { return u; }
+    };
+    const currentSrc = resolve(v.currentSrc || v.src || "");
+    const desiredSrc = resolve(targetUrl);
+    const needsLoad = currentSrc !== desiredSrc;
+    if (needsLoad) {
+      try { v.pause(); } catch { /* noop */ }
       try {
-        v.playbackRate = rateRef.current;
-      } catch {
-        /* noop */
+        v.src = targetUrl;
+        v.load();
+      } catch (err) {
+        console.warn("[SessionVideoNavigator] échec set src", { index, targetUrl, err });
       }
+    }
+
+    let cancelled = false;
+    const apply = () => {
+      if (cancelled) return;
+      try { v.playbackRate = rateRef.current; } catch { /* noop */ }
       if (v.duration === Infinity) {
         fixDuration();
       } else {
@@ -215,18 +239,28 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         if (shouldAutoPlay) safePlay();
       }
     };
-    if (v.readyState >= 1) apply();
-    else v.addEventListener("loadedmetadata", apply, { once: true });
-    return () => {
-      v.removeEventListener("loadedmetadata", apply);
-      // Coupe l'audio résiduel sur l'élément démonté
-      try {
-        v.pause();
-      } catch {
-        /* noop */
+
+    if (v.readyState >= 1 && !needsLoad) {
+      apply();
+      return () => { cancelled = true; };
+    }
+
+    v.addEventListener("loadedmetadata", apply, { once: true });
+    // Filet de sécurité : si loadedmetadata n'arrive jamais, on tente
+    // quand même un play après 4s — l'erreur média s'affichera via onError.
+    const safety = window.setTimeout(() => {
+      if (cancelled) return;
+      if (shouldAutoPlay && v.paused) {
+        console.warn("[SessionVideoNavigator] loadedmetadata timeout, tentative play", { index, targetUrl });
+        safePlay();
       }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(safety);
+      v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay]);
+  }, [index, shouldAutoPlay, clips]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
@@ -277,6 +311,18 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const togglePlayPause = () => {
     const v = videoRef.current;
     if (!v) return;
+    // Si la source DOM ne correspond plus au clip courant (cas de désync
+    // après un changement d'index rapide), on resynchronise avant de jouer.
+    const want = clips[index]?.url;
+    if (want) {
+      const resolve = (u: string) => { try { return new URL(u, window.location.href).toString(); } catch { return u; } };
+      if (resolve(v.currentSrc || v.src || "") !== resolve(want)) {
+        console.warn("[SessionVideoNavigator] source désync au clic Play, resync", { index, want });
+        try { v.src = want; v.load(); } catch { /* noop */ }
+        setShouldAutoPlay(true);
+        return;
+      }
+    }
     if (v.paused) {
       safePlay();
     } else {
@@ -443,9 +489,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           onMouseLeave={!compact && isPlaying ? () => setOverlayVisible(false) : undefined}
         >
           <video
-            key={current.url}
             ref={videoRef}
-            src={current.url}
             controls
             controlsList="nodownload"
             disablePictureInPicture={false}
@@ -467,6 +511,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               };
               const code = err?.code ?? null;
               const message = (code && codeMap[code]) || "Vidéo indisponible.";
+              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message });
               setMediaError({ code, message });
               setIsPlaying(false);
               setOverlayVisible(true);
