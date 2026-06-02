@@ -72,6 +72,7 @@ export default function InterviewLanding() {
       }
 
       setProject(proj);
+      setCandidateFields(mergeCandidateFields((proj as any).candidate_fields));
       setLoading(false);
 
       // Si l'option « intro en premier écran » est activée et qu'une intro est configurée,
