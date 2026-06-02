@@ -606,7 +606,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   Réessayer
                 </button>
                 <a
-                  href={current.url}
+                  href={currentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
@@ -732,7 +732,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                         return;
                       }
                       try {
-                        await downloadMp4(current.url, filename);
+                        await downloadMp4(currentUrl, filename);
                       } catch (err) {
                         toast({
                           title: "Téléchargement impossible",
