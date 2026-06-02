@@ -1097,8 +1097,21 @@ export default function InterviewStart() {
   );
 
   // STT: start listening
-  const startListening = useCallback(() => {
+  const startListening = useCallback((options?: StartListeningOptions) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const reason = options?.reason ?? "default";
+    const forceRestart = options?.force === true;
+    if (isListeningRef.current && !forceRestart) {
+      console.log("[interview] startListening skipped — already listening", { reason, questionIndex: currentQuestionIndex });
+      return;
+    }
+    if (forceRestart && recognitionRef.current) {
+      try { recognitionRef.current.onend = null; } catch {}
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+      isListeningRef.current = false;
+      setIsListening(false);
+    }
     if (!SpeechRecognition) {
       toast({
         title: "Erreur",
@@ -1181,7 +1194,7 @@ export default function InterviewStart() {
     try {
       recognition.start();
     } catch (e) {
-      console.warn("[interview] STT start() threw:", e);
+      console.warn("[interview] STT start() threw:", e, { reason });
       logger.error("interview_stt_start_failed", {
         sessionId: session?.id ?? null,
         error: e instanceof Error ? e.message : String(e),
@@ -1192,6 +1205,12 @@ export default function InterviewStart() {
     }
     isListeningRef.current = true;
     setIsListening(true);
+    activeRecorderMetaRef.current = {
+      blockId: currentBlockIdRef.current,
+      questionIndex: currentQuestionIndex,
+      source: reason,
+      startedAt: Date.now(),
+    };
 
     // Watchdog de vivacité STT : si aucun onresult depuis 10s pendant
     // l'écoute active, on force un redémarrage complet de la recognition.
@@ -1243,7 +1262,7 @@ export default function InterviewStart() {
         try { recognitionRef.current?.stop(); } catch {}
       }
     }, 2000);
-  }, [toast, isSpeaking, noMicSignal]);
+  }, [toast, isSpeaking, noMicSignal, currentQuestionIndex]);
 
   // STT: stop listening
   const stopListening = useCallback(() => {
