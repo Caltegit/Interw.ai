@@ -88,6 +88,7 @@ const initialState: ProjectFormState = {
   showQuestionTimer: true,
   reportRecipientUserIds: [],
   visibleToUserIds: [],
+  candidateFields: DEFAULT_CANDIDATE_FIELDS,
 };
 
 export default function ProjectNew() {
