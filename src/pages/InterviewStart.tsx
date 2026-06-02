@@ -2058,19 +2058,58 @@ export default function InterviewStart() {
     setShowManualContinue(false);
   }, []);
 
-  const forceStartListening = useCallback(() => {
+  const enterListeningPhase = useCallback((source: string, blockId = currentBlockIdRef.current) => {
     if (isPausedRef.current) {
-      console.log("[InterviewStart] forceStartListening blocked — interview is paused");
-      return;
+      console.log("[InterviewStart] enterListeningPhase blocked — interview is paused", { source, blockId });
+      return false;
     }
-    console.log("[interview] Forcing transition to listening");
+    if (blockId !== currentBlockIdRef.current) {
+      console.log("[InterviewStart] enterListeningPhase ignored — stale block", { source, blockId, current: currentBlockIdRef.current });
+      return false;
+    }
+
+    const currentMeta = activeRecorderMetaRef.current;
+    if (
+      currentMeta &&
+      currentMeta.blockId === blockId &&
+      currentMeta.questionIndex === currentQuestionIndex &&
+      questionRecorderRef.current &&
+      questionRecorderRef.current.state !== "inactive" &&
+      isListeningRef.current
+    ) {
+      console.log("[InterviewStart] enterListeningPhase skipped — already active", {
+        source,
+        activeSource: currentMeta.source,
+        blockId,
+        questionIndex: currentQuestionIndex,
+      });
+      resetSilenceTimer();
+      return false;
+    }
+
+    console.log("[interview] Enter listening phase", {
+      source,
+      blockId,
+      questionIndex: currentQuestionIndex,
+      previousSource: currentMeta?.source ?? null,
+      recorderState: questionRecorderRef.current?.state ?? null,
+      listening: isListeningRef.current,
+    });
+
     clearPlaybackWatchdog();
-    currentPresentationRef.current = null; // presentation finished
+    currentPresentationRef.current = null;
     setShouldAutoPlay(false);
     setIsSpeaking(false);
+    setShowManualContinue(false);
     startQuestionRecording();
-    startListening();
-  }, [clearPlaybackWatchdog, startQuestionRecording, startListening]);
+    startListening({ force: true, reason: source });
+    resetSilenceTimer();
+    return true;
+  }, [clearPlaybackWatchdog, currentQuestionIndex, resetSilenceTimer, startQuestionRecording, startListening]);
+
+  const forceStartListening = useCallback((source = "media-end", blockId?: number) => {
+    enterListeningPhase(source, blockId ?? currentBlockIdRef.current);
+  }, [enterListeningPhase]);
 
   // Mark current question as a media presentation (for pause/resume replay)
   const markMediaPresentation = useCallback((qIndex: number) => {
