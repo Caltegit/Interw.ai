@@ -614,8 +614,11 @@ export default function ProjectDetail() {
         (s) =>
           (s.candidate_name || "").toLowerCase().includes(q) ||
           (s.candidate_email || "").toLowerCase().includes(q) ||
-          ((s as any).candidate_job_title || "").toLowerCase().includes(q),
+          ((s as any).candidate_job_title || "").toLowerCase().includes(q) ||
+          ((s as any).recruiter_note || "").toLowerCase().includes(q) ||
+          (noteDrafts[s.id] || "").toLowerCase().includes(q),
       );
+
     }
     if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
     else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
