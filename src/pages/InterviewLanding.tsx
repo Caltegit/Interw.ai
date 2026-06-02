@@ -5,8 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video, ArrowRight } from "lucide-react";
+import { Clock, Globe, Mic, CheckCircle, Play, Volume2, Video, ArrowRight, Upload, FileText, FileSignature, Linkedin, Trash2 } from "lucide-react";
 import CandidateLayout from "@/components/CandidateLayout";
+import {
+  CANDIDATE_FIELD_KEYS,
+  CANDIDATE_FIELD_LABELS,
+  DEFAULT_CANDIDATE_FIELDS,
+  mergeCandidateFields,
+  type CandidateFieldKey,
+  type CandidateFieldsConfig,
+} from "@/lib/candidateFields";
+import { cn } from "@/lib/utils";
 
 export default function InterviewLanding() {
   const { slug } = useParams();
