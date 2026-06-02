@@ -31,6 +31,7 @@ export default function Feedback() {
   const { isSuperAdmin, loading: superLoading } = useSuperAdmin();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [unreadByThread, setUnreadByThread] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,6 +45,22 @@ export default function Feedback() {
 
       const list = (data ?? []) as Thread[];
       setThreads(list);
+
+      if (list.length > 0) {
+        const expectedRole = isSuperAdmin ? "user" : "super_admin";
+        const { data: unreadMsgs } = await supabase
+          .from("feedback_messages")
+          .select("thread_id")
+          .in("thread_id", list.map((t) => t.id))
+          .eq("author_role", expectedRole)
+          .is("read_by_recipient_at", null)
+          .neq("author_id", user.id);
+        const map: Record<string, boolean> = {};
+        (unreadMsgs ?? []).forEach((m: any) => { map[m.thread_id] = true; });
+        setUnreadByThread(map);
+      } else {
+        setUnreadByThread({});
+      }
 
       if (isSuperAdmin && list.length > 0) {
         const userIds = Array.from(new Set(list.map((t) => t.user_id)));
@@ -63,10 +80,12 @@ export default function Feedback() {
     const channel = supabase
       .channel("feedback-threads-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "feedback_threads" }, fetchThreads)
+      .on("postgres_changes", { event: "*", schema: "public", table: "feedback_messages" }, fetchThreads)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user, isSuperAdmin, superLoading]);
+
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6">
@@ -100,8 +119,15 @@ export default function Feedback() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium truncate">{t.subject}</h3>
-                        <FeedbackStatusBadge status={t.status} />
+                        {t.status === "open" && !unreadByThread[t.id] ? (
+                          <span className="inline-flex items-center rounded-md border border-primary/30 bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                            Lu
+                          </span>
+                        ) : (
+                          <FeedbackStatusBadge status={t.status} />
+                        )}
                       </div>
+
                       {isSuperAdmin && author && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {author.full_name || author.email}
