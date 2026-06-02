@@ -1101,9 +1101,10 @@ export default function InterviewStart() {
   const startListening = useCallback((options?: StartListeningOptions) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const reason = options?.reason ?? "default";
+    const questionIndex = options?.questionIndex ?? currentQuestionIndex;
     const forceRestart = options?.force === true;
     if (isListeningRef.current && !forceRestart) {
-      console.log("[interview] startListening skipped — already listening", { reason, questionIndex: currentQuestionIndex });
+      console.log("[interview] startListening skipped — already listening", { reason, questionIndex });
       return;
     }
     if (forceRestart && recognitionRef.current) {
@@ -1114,6 +1115,7 @@ export default function InterviewStart() {
       setIsListening(false);
     }
     if (!SpeechRecognition) {
+      listeningTransitionRef.current = null;
       toast({
         title: "Erreur",
         description: "La reconnaissance vocale n'est pas supportée par ce navigateur.",
@@ -1202,13 +1204,15 @@ export default function InterviewStart() {
       });
       isListeningRef.current = false;
       setIsListening(false);
+      listeningTransitionRef.current = null;
       return;
     }
     isListeningRef.current = true;
     setIsListening(true);
+    listeningTransitionRef.current = null;
     activeRecorderMetaRef.current = {
       blockId: currentBlockIdRef.current,
-      questionIndex: currentQuestionIndex,
+      questionIndex,
       source: reason,
       startedAt: Date.now(),
     };
