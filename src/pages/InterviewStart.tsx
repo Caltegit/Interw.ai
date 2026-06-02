@@ -1830,7 +1830,10 @@ export default function InterviewStart() {
       const recorder = new MediaRecorder(streamRef.current, options);
       questionRecorderRef.current = recorder;
       const sessionId = session?.id ?? null;
-      const questionIndex = currentQuestionIndex;
+      // Lit la valeur ACTUELLE de l'index (via ref) plutôt que la valeur
+      // capturée par la closure du useCallback : évite que les chunks de la
+      // question courante soient uploadés dans le dossier de la précédente.
+      const questionIndex = currentQuestionIndexRef.current;
 
       recorder.ondataavailable = (e) => {
         if (e.data.size === 0) return;
