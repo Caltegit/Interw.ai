@@ -677,3 +677,68 @@ export default function InterviewLanding() {
     </CandidateLayout>
   );
 }
+
+function CandidateFileField({
+  id,
+  label,
+  required,
+  file,
+  onPick,
+  icon,
+}: {
+  id: string;
+  label: string;
+  required: boolean;
+  file: File | null;
+  onPick: (f: File | null) => void;
+  icon: React.ReactNode;
+}) {
+  const inputId = `file-${id}`;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={inputId} className="text-sm font-medium">
+        {label} {required && "*"}
+      </Label>
+      {file ? (
+        <div
+          className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm"
+          style={{ borderColor: "rgba(245, 240, 232, 0.18)", backgroundColor: "rgba(255,255,255,0.03)" }}
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            {icon}
+            <span className="truncate">{file.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onPick(null)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Retirer le fichier"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <label
+          htmlFor={inputId}
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm transition-colors hover:border-[#d4a574]"
+          style={{ borderColor: "rgba(245, 240, 232, 0.2)", color: "rgba(245, 240, 232, 0.6)" }}
+        >
+          <Upload className="h-4 w-4" />
+          Glissez ou cliquez (PDF, DOC — 10 Mo max)
+        </label>
+      )}
+      <input
+        id={inputId}
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          onPick(f);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
