@@ -819,7 +819,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               onClick={next}
               disabled={index === clips.length - 1}
             >
-              {!compact && "Suiv."}
+              {!compact && "Suiv"}
               <ChevronRight className={cn("h-3 w-3", compact ? "" : "ml-1")} />
             </Button>
           </div>
