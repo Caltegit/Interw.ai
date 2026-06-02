@@ -294,13 +294,13 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 onAddLinks={onEditLinks}
               />
             </div>
-            {candidateJobTitle && (
-              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
-            )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
             <p className="text-xs text-muted-foreground">{meta}</p>
+            {candidateJobTitle && (
+              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
+            )}
           </div>
         </div>
 
@@ -320,13 +320,13 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 onAddLinks={onEditLinks}
               />
             </div>
-            {candidateJobTitle && (
-              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
-            )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
             <p className="text-xs text-muted-foreground">{meta}</p>
+            {candidateJobTitle && (
+              <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
+            )}
           </div>
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">

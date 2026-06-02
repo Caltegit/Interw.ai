@@ -158,6 +158,7 @@ export default function InterviewLanding() {
     if (!canSubmit || !project) return;
     setStarting(true);
 
+    const jobTitleValue = candidateFields.job_title.enabled && trimmedJobTitle ? trimmedJobTitle : null;
     const { data: session, error: err } = await supabase
       .from("sessions")
       .insert({
@@ -165,8 +166,9 @@ export default function InterviewLanding() {
         organization_id: project.organization_id,
         candidate_name: trimmedName,
         candidate_email: trimmedEmail,
-        candidate_job_title: candidateFields.job_title.enabled && trimmedJobTitle ? trimmedJobTitle : null,
+        candidate_job_title: jobTitleValue,
         candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
+        recruiter_note: jobTitleValue ? `Poste : ${jobTitleValue}` : null,
       })
       .select()
       .single();
