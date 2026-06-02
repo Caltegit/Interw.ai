@@ -284,6 +284,7 @@ export default function ProjectEdit() {
           show_question_timer: s.showQuestionTimer,
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
+          candidate_fields: s.candidateFields,
         } as never)
         .eq("id", id);
 
