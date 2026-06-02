@@ -514,11 +514,34 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                 4: "Fichier vidéo introuvable ou bloqué par le navigateur.",
               };
               const code = err?.code ?? null;
-              const message = (code && codeMap[code]) || "Vidéo indisponible.";
-              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message });
-              setMediaError({ code, message });
+              const fallback = (code && codeMap[code]) || "Vidéo indisponible.";
+              console.warn("[SessionVideoNavigator] erreur média", { index, url: current?.url, code, message: fallback });
+              setMediaError({ code, message: fallback });
               setIsPlaying(false);
               setOverlayVisible(true);
+
+              // Si code = 4 (source not supported / introuvable), on vérifie
+              // réellement l'existence du fichier via HEAD. Ça évite le message
+              // trompeur "introuvable" quand le fichier est en fait présent
+              // mais non décodable par ce navigateur.
+              if (code === 4 && current?.url) {
+                fetch(current.url, { method: "HEAD" })
+                  .then((res) => {
+                    if (res.ok) {
+                      setMediaError({
+                        code: 3,
+                        message:
+                          "Vidéo présente mais non décodable par ce navigateur. Essayez Chrome ou Firefox, ou téléchargez en MP4.",
+                      });
+                    } else if (res.status === 404) {
+                      setMediaError({
+                        code: 4,
+                        message: "Fichier vidéo introuvable sur le serveur.",
+                      });
+                    }
+                  })
+                  .catch(() => { /* on garde le message fallback */ });
+              }
             }}
             onEnded={handleEnded}
             className="h-full w-full object-contain"

@@ -118,15 +118,15 @@ async function rebuild(session_id: string, question_index: number, force = false
   }
 
   // ── 2) Reconstruction depuis les chunks intermédiaires ─────────────────────
-  await sb.storage.from("media").remove([finalPath, otherPath]).catch(() => {});
+  // IMPORTANT : on NE supprime PAS finalPath avant d'avoir prouvé qu'on peut
+  // reconstruire. Sinon, une réparation qui échoue laisse la base avec une URL
+  // vers un fichier inexistant — exactement le bug Q15 que les RH voyaient.
+  // On upload d'abord vers un chemin temporaire, puis on remplace finalPath
+  // (upsert) seulement après upload réussi. otherPath n'est nettoyé qu'à la fin.
 
   const { data: chunks } = await sb.storage
     .from("media")
     .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
-  // On accepte les deux extensions : certaines sessions hybrides ont des
-  // chunks en .webm alors que le manifest annonce mp4 (ou l'inverse).
-  // On filtre quand même sur l'extension cible pour ne pas mélanger les
-  // conteneurs ; si rien ne matche on retombe sur tout.
   const all = (chunks ?? []).filter((f) => f.name.startsWith("chunk-"));
   const preferred = all.filter((f) => f.name.endsWith(`.${ext}`));
   const files = (preferred.length > 0 ? preferred : all).sort((a, b) =>
@@ -135,7 +135,11 @@ async function rebuild(session_id: string, question_index: number, force = false
   console.log("chunks:", files.length, "ext:", ext);
 
   if (files.length === 0) {
-    throw new Error("no chunks available to rebuild from");
+    // Pas de chunks ; on laisse finalPath tel quel et on remonte une erreur
+    // claire au client.
+    throw new Error(
+      "Reconstruction impossible : aucun chunk intermédiaire disponible. Le fichier final n'a pas été modifié.",
+    );
   }
 
   let firstValidIdx = 0;
@@ -156,7 +160,10 @@ async function rebuild(session_id: string, question_index: number, force = false
       }
     }
     if (firstValidIdx < 0) {
-      throw new Error("no chunk contains an EBML header — unrecoverable");
+      // Aucun chunk WebM exploitable : on n'écrase pas finalPath.
+      throw new Error(
+        "Reconstruction impossible : aucun chunk WebM ne contient un header EBML valide. Le fichier final n'a pas été modifié.",
+      );
     }
   }
 
@@ -211,6 +218,14 @@ async function rebuild(session_id: string, question_index: number, force = false
     } as any);
   if (upErr) throw upErr;
   console.log("rebuilt", finalPath);
+
+  // Reconstruction OK : on peut maintenant nettoyer l'extension "fantôme"
+  // (ex. q14.webm cassé qui traîne après reconstruction en q14.mp4).
+  // Si ce remove échoue, ce n'est pas bloquant.
+  try {
+    await sb.storage.from("media").remove([otherPath]);
+  } catch { /* noop */ }
+
   return { mode: "rebuild" as const, path: finalPath, chunks: files.length, droppedFromFirst, ext };
 }
 
