@@ -587,11 +587,23 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           />
           {mediaError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center text-white">
-              <p className="text-sm font-medium">{mediaError.message}</p>
+              <p className="text-sm font-medium">
+                {current.audioUrl
+                  ? "Vidéo indisponible — lecture audio uniquement"
+                  : mediaError.message}
+              </p>
               <p className="text-xs text-white/70">
                 {current.questionLabel}
                 {current.questionText ? ` — ${current.questionText}` : ""}
               </p>
+              {current.audioUrl && (
+                <audio
+                  src={current.audioUrl}
+                  controls
+                  autoPlay
+                  className="mt-1 w-full max-w-md"
+                />
+              )}
               <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
                 <button
                   type="button"
@@ -603,26 +615,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   }}
                   className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
                 >
-                  Réessayer
+                  Réessayer la vidéo
                 </button>
-                <a
-                  href={currentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
-                >
-                  Ouvrir dans un onglet
-                </a>
-                {current.audioUrl && (
-                  <a
-                    href={current.audioUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
-                  >
-                    Écouter l'audio
-                  </a>
-                )}
                 {canRecover && (
                   <button
                     type="button"
