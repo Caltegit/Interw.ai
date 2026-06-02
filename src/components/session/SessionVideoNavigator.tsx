@@ -64,6 +64,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const fixingDurationRef = useRef(false);
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
+  const [recovering, setRecovering] = useState(false);
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
