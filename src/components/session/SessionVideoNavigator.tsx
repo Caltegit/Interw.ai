@@ -412,7 +412,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
     if (!current?.url) return null;
-    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.webm(?:\?.*)?$/i);
+    const m = current.url.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
