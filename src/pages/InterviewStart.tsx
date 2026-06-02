@@ -400,7 +400,7 @@ export default function InterviewStart() {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSttResultAtRef = useRef<number>(0);
-  type StartListeningOptions = { force?: boolean; reason?: string };
+  type StartListeningOptions = { force?: boolean; reason?: string; questionIndex?: number };
   const startListeningRef = useRef<((options?: StartListeningOptions) => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSkipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -429,6 +429,7 @@ export default function InterviewStart() {
   const playbackWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showManualContinue, setShowManualContinue] = useState(false);
   const manualContinueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const listeningTransitionRef = useRef<{ blockId: number; questionIndex: number; source: string } | null>(null);
   const activeRecorderMetaRef = useRef<{
     blockId: number;
     questionIndex: number;
