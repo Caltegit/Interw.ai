@@ -93,7 +93,7 @@ export const decisionConfig: Record<RecruiterDecision, { label: string; tone: st
   second_opinion: { label: "À discuter", tone: "bg-warning text-warning-foreground" },
   shortlisted: { label: "Retenu", tone: "bg-success text-success-foreground" },
   in_progress: { label: "RDV", tone: "bg-info text-info-foreground" },
-  accepted: { label: "Oui", tone: "bg-success-strong text-success-strong-foreground" },
+  accepted: { label: "Recruté", tone: "bg-success-strong text-success-strong-foreground" },
 };
 
 function fitColor(score: number | null) {
@@ -374,7 +374,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
                 disabled={isDecisionPending}
                 tone="success-strong"
                 icon={ThumbsUp}
-                label="Oui"
+                label="Recruté"
                 tooltip={decision === "accepted" ? authorTooltip : null}
               />
             </div>
