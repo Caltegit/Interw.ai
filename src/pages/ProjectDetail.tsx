@@ -672,7 +672,7 @@ export default function ProjectDetail() {
     { value: "second_opinion", label: "À discuter", dot: "bg-warning", text: "text-warning" },
     { value: "shortlisted", label: "Retenu", dot: "bg-success", text: "text-success" },
     { value: "in_progress", label: "RDV", dot: "bg-info", text: "text-info" },
-    { value: "accepted", label: "Oui", dot: "bg-success-strong", text: "text-success-strong" },
+    { value: "accepted", label: "Recruté", dot: "bg-success-strong", text: "text-success-strong" },
   ];
   const decisionByValue = Object.fromEntries(decisionOptions.map((d) => [d.value, d]));
 
