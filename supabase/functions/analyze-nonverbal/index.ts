@@ -247,7 +247,7 @@ serve(async (req) => {
     const questionsById = new Map<string, any>();
     (project.questions ?? []).forEach((q: any) => questionsById.set(q.id, q));
 
-    const segments: Segment[] = candidateMsgs.slice(0, MAX_SEGMENTS).map((m: any) => ({
+    const segments: Segment[] = pickDistributed(candidateMsgs, MAX_SEGMENTS).map((m: any) => ({
       message_id: m.id,
       question_label:
         questionsById.get(m.question_id)?.content?.slice(0, 120) ?? "Question libre",
@@ -256,6 +256,14 @@ serve(async (req) => {
 
     // Construit la liste des "parts" multimodales
     const userParts: any[] = [
+      {
+        type: "text",
+        text:
+          `Candidat : ${session.candidate_name}\nPoste : ${project.job_title}\n\nVoici jusqu'à ${MAX_SEGMENTS} segments vidéo de réponses du candidat, répartis sur l'entretien. Analyse uniquement la communication non-verbale.`,
+      },
+    ];
+    let uploaded = 0;
+    let totalBytes = 0;
       {
         type: "text",
         text:
