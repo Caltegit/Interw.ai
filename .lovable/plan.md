@@ -1,43 +1,20 @@
 ## Objectif
+Allonger ×3 la phrase à prononcer lors du test micro (test technique avant entretien).
 
-Le champ "Poste" saisi par le candidat doit apparaître à deux endroits dans le rapport :
-
-1. **Sous la ligne meta** ("Candidature spontanée · 0 min · 2 réponses · il y a 7 min") dans le bandeau du rapport.
-2. **Pré-rempli dans les notes recruteur** sous la forme `Poste : <texte saisi>`, écrit **une seule fois** à la création de la session. Si le recruteur édite ou supprime cette ligne, elle ne réapparaît jamais.
-
-## Bug bloquant à corriger d'abord
-
-Le hook `src/hooks/queries/useSessionDetail.ts` ne sélectionne pas `candidate_job_title`, `candidate_cover_letter_url` ni `candidate_cover_letter_filename`. Vérifié en base : ces colonnes sont bien remplies (session test `f9414b39…` contient le poste, le CV et la lettre), mais le SELECT renvoie `null`. Tant que ce n'est pas corrigé, ni le poste ni la lettre de motivation ne s'affichent dans le rapport.
-
-→ Ajouter ces 3 colonnes au `select(...)` de `useSessionDetail.ts`.
-
-## Modifications
-
-### 1. `src/hooks/queries/useSessionDetail.ts`
-Ajouter `candidate_job_title`, `candidate_cover_letter_url`, `candidate_cover_letter_filename` à la chaîne `select(...)` ligne 18.
-
-### 2. `src/components/session/DecisionBanner.tsx`
-Déplacer l'affichage du `candidateJobTitle` : actuellement entre le nom et l'email (lignes 297-299 et 323-325). Le déplacer **sous** la ligne meta (`<p className="text-xs text-muted-foreground">{meta}</p>`, lignes 303 et 329) dans les deux variantes (mobile lg:hidden et desktop lg:block).
-
-Style : `text-xs font-medium text-foreground/80` (déjà utilisé).
-
-### 3. `src/pages/InterviewLanding.tsx`
-Dans `handleStart`, au moment de l'`insert` dans `sessions` (ligne ~163), ajouter :
+## Changement
+Dans `src/pages/InterviewDeviceTest.tsx` (ligne 55), remplacer :
 
 ```ts
-recruiter_note: candidateFields.job_title.enabled && trimmedJobTitle
-  ? `Poste : ${trimmedJobTitle}`
-  : null,
+const MIC_TEST_PHRASE = "Bonjour, je suis prêt pour l'entretien.";
 ```
 
-→ Pré-remplissage **une seule fois** à la création. Comme `recruiter_note` n'est jamais réécrit par le système ensuite (seules les éditions manuelles via `useUpdateRecruiterNotes` le modifient), si le recruteur efface la ligne, elle ne revient pas.
+par une phrase ~3× plus longue (~22 mots → ~12-14s de lecture), par exemple :
 
-## Vérification après implémentation
+```ts
+const MIC_TEST_PHRASE =
+  "Bonjour, je suis prêt pour démarrer l'entretien. Je vérifie que mon micro fonctionne correctement et que ma voix est bien captée par la plateforme avant de commencer.";
+```
 
-1. Créer un projet avec le champ "Poste" activé.
-2. Passer un entretien candidat en saisissant un intitulé de poste.
-3. Ouvrir le rapport :
-   - Vérifier l'apparition de l'intitulé du poste **sous** la ligne "Candidature spontanée · …".
-   - Vérifier que la zone "Notes recruteur" contient `Poste : <intitulé>`.
-   - Effacer cette note, sauvegarder, rafraîchir → la note reste vide (pas de réécriture automatique).
-4. Vérifier que la lettre de motivation s'affiche bien aussi (icône cliquable) grâce au correctif du SELECT.
+## Hors périmètre
+- Pas de modification de `MIC_THRESHOLDS.TEST_DURATION_MS` (6s) — la fenêtre de capture reste suffisante puisque le candidat parle dès le début de la lecture.
+- Aucun autre fichier impacté.
