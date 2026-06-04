@@ -52,7 +52,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
-const MIC_TEST_PHRASE = "Bonjour, je suis prêt pour l'entretien.";
+const MIC_TEST_PHRASE =
+  "Bonjour, je suis prêt pour démarrer l'entretien. Je vérifie que mon micro fonctionne correctement et que ma voix est bien captée par la plateforme avant de commencer.";
 
 type Status = "idle" | "testing" | "ok" | "warning" | "error";
 type SpeedQuality = "good" | "limited" | "weak";
