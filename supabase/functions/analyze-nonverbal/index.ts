@@ -264,13 +264,6 @@ serve(async (req) => {
     ];
     let uploaded = 0;
     let totalBytes = 0;
-      {
-        type: "text",
-        text:
-          `Candidat : ${session.candidate_name}\nPoste : ${project.job_title}\n\nVoici jusqu'à ${MAX_SEGMENTS} segments vidéo de réponses du candidat. Analyse uniquement la communication non-verbale.`,
-      },
-    ];
-    let uploaded = 0;
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
@@ -284,6 +277,11 @@ serve(async (req) => {
         if (blob.size > MAX_BYTES_PER_SEGMENT) {
           console.warn("[nonverbal] segment too large", seg.message_id, blob.size);
           skippedSegments.push({ message_id: seg.message_id, reason: "too_large", details: `${Math.round(blob.size / 1024 / 1024)} Mo` });
+          continue;
+        }
+        if (totalBytes + blob.size > MAX_TOTAL_BYTES) {
+          console.warn("[nonverbal] payload cap reached, skipping segment", seg.message_id);
+          skippedSegments.push({ message_id: seg.message_id, reason: "payload_cap", details: `total ${Math.round((totalBytes + blob.size) / 1024 / 1024)} Mo` });
           continue;
         }
         const buf = new Uint8Array(await blob.arrayBuffer());
