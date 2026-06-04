@@ -295,6 +295,7 @@ serve(async (req) => {
           type: "image_url",
           image_url: { url: `data:${mime};base64,${b64}` },
         });
+        totalBytes += blob.size;
         uploaded += 1;
       } catch (e) {
         console.warn("[nonverbal] segment skipped", e);
