@@ -62,7 +62,7 @@ const TOOL_SCHEMA = {
         nonverbal_profile: {
           type: "object",
           properties: {
-            eye_contact: dim("Contact visuel avec la caméra (10 = soutenu et naturel)"),
+            eye_contact: dim("Présence du regard vers l'écran (l'avatar est à l'écran, pas dans la caméra). 10 = regard stable et engagé vers l'écran"),
             posture: dim("Posture (10 = ouverte, droite, stable)"),
             gestures: dim("Gestuelle (10 = expressive et adaptée, ni figée ni agitée)"),
             facial_expressivity: dim("Expressivité du visage (10 = vivante et congruente)"),
