@@ -14,8 +14,22 @@ const corsHeaders = {
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
 
-const MAX_SEGMENTS = 2;
+const MAX_SEGMENTS = 4;
 const MAX_BYTES_PER_SEGMENT = 15 * 1024 * 1024; // 15 Mo (Gemini accepte largement plus, edge ~256 Mo de RAM)
+const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // garde-fou payload global
+
+// Sélectionne jusqu'à `n` segments répartis sur l'entretien (début, milieu, fin)
+function pickDistributed<T>(arr: T[], n: number): T[] {
+  if (arr.length <= n) return arr;
+  if (n <= 1) return [arr[0]];
+  const out: T[] = [];
+  for (let i = 0; i < n; i++) {
+    const idx = Math.round((i * (arr.length - 1)) / (n - 1));
+    out.push(arr[idx]);
+  }
+  // dédoublonne (au cas où arr.length petit)
+  return Array.from(new Set(out));
+}
 
 type Segment = {
   message_id: string;
@@ -48,7 +62,7 @@ const TOOL_SCHEMA = {
         nonverbal_profile: {
           type: "object",
           properties: {
-            eye_contact: dim("Contact visuel avec la caméra (10 = soutenu et naturel)"),
+            eye_contact: dim("Présence du regard vers l'écran (l'avatar est à l'écran, pas dans la caméra). 10 = regard stable et engagé vers l'écran"),
             posture: dim("Posture (10 = ouverte, droite, stable)"),
             gestures: dim("Gestuelle (10 = expressive et adaptée, ni figée ni agitée)"),
             facial_expressivity: dim("Expressivité du visage (10 = vivante et congruente)"),
@@ -233,7 +247,7 @@ serve(async (req) => {
     const questionsById = new Map<string, any>();
     (project.questions ?? []).forEach((q: any) => questionsById.set(q.id, q));
 
-    const segments: Segment[] = candidateMsgs.slice(0, MAX_SEGMENTS).map((m: any) => ({
+    const segments: Segment[] = pickDistributed(candidateMsgs, MAX_SEGMENTS).map((m: any) => ({
       message_id: m.id,
       question_label:
         questionsById.get(m.question_id)?.content?.slice(0, 120) ?? "Question libre",
@@ -245,10 +259,11 @@ serve(async (req) => {
       {
         type: "text",
         text:
-          `Candidat : ${session.candidate_name}\nPoste : ${project.job_title}\n\nVoici jusqu'à ${MAX_SEGMENTS} segments vidéo de réponses du candidat. Analyse uniquement la communication non-verbale.`,
+          `Candidat : ${session.candidate_name}\nPoste : ${project.job_title}\n\nVoici jusqu'à ${MAX_SEGMENTS} segments vidéo de réponses du candidat, répartis sur l'entretien. Analyse uniquement la communication non-verbale.`,
       },
     ];
     let uploaded = 0;
+    let totalBytes = 0;
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
@@ -264,6 +279,11 @@ serve(async (req) => {
           skippedSegments.push({ message_id: seg.message_id, reason: "too_large", details: `${Math.round(blob.size / 1024 / 1024)} Mo` });
           continue;
         }
+        if (totalBytes + blob.size > MAX_TOTAL_BYTES) {
+          console.warn("[nonverbal] payload cap reached, skipping segment", seg.message_id);
+          skippedSegments.push({ message_id: seg.message_id, reason: "payload_cap", details: `total ${Math.round((totalBytes + blob.size) / 1024 / 1024)} Mo` });
+          continue;
+        }
         const buf = new Uint8Array(await blob.arrayBuffer());
         const b64 = bytesToBase64(buf);
         const mime = blob.type || "video/webm";
@@ -275,6 +295,7 @@ serve(async (req) => {
           type: "image_url",
           image_url: { url: `data:${mime};base64,${b64}` },
         });
+        totalBytes += blob.size;
         uploaded += 1;
       } catch (e) {
         console.warn("[nonverbal] segment skipped", e);
@@ -305,14 +326,25 @@ serve(async (req) => {
         "\n\nProduis maintenant l'analyse non-verbale via l'outil report_nonverbal en t'appuyant uniquement sur ce que tu vois.",
     });
 
-    const systemPrompt = `Tu es un expert en communication non-verbale en entretien d'embauche. Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat.
+    const systemPrompt = `Tu es un expert en communication non-verbale en entretien d'embauche VIDÉO À DISTANCE (le candidat répond à un avatar IA affiché à l'écran). Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat.
+
 Note 4 dimensions sur 10 :
-- eye_contact (10 = regard caméra naturel et soutenu)
+- eye_contact : présence et stabilité du regard. ATTENTION : dans ce format, le candidat regarde l'avatar À L'ÉCRAN, pas la lentille de la caméra. Un regard orienté vers l'écran de façon stable et engagée = 8-10. Ne pénalise que les vraies fuites de regard (plafond, sol, côté répété, lecture visible de notes). Ne JAMAIS pénaliser le fait de ne pas fixer la caméra : c'est attendu dans ce format.
 - posture (10 = ouverte, droite, stable)
-- gestures (10 = expressive et adaptée)
+- gestures (10 = expressive et adaptée, ni figée ni agitée)
 - facial_expressivity (10 = visage vivant et congruent)
+
+GRILLE D'ÉVALUATION — utilise TOUTE la plage, pas seulement 4-6 :
+- 10 : exceptionnel, niveau commercial/média
+- 8-9 : très bon, naturel et engageant (cible standard d'un bon candidat)
+- 6-7 : correct, quelques points d'amélioration mineurs (MOYENNE ATTENDUE d'un candidat normal)
+- 4-5 : inconfort ou rigidité visible, sans bloquer la communication
+- 2-3 : gêne marquée qui nuit clairement à l'échange
+- 0-1 : extrêmement problématique
+Un candidat "moyen normal" se situe à 6-7, PAS à 5. N'utilise pas 5 par défaut. Si rien de clairement négatif n'est observable, la note est ≥7.
+
 Pour chaque dimension : 1 phrase concrète + evidence_message_id du segment le plus représentatif.
-Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard, geste répétitif…) avec leur message_id.
+Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…) avec leur message_id. S'il n'y en a pas, retourne une liste vide.
 Ne juge JAMAIS l'apparence physique, l'âge, le genre, l'origine ou le handicap. Reste factuel et bienveillant.
 Retourne le résultat via l'outil report_nonverbal.`;
 
