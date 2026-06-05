@@ -5,7 +5,7 @@ import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
-const SITE_NAME = "interw.ai"
+const SITE_NAME = "Interw"
 // SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
 // It MUST match the subdomain delegated to Lovable's nameservers — never the root domain.
 // The email API looks up this exact domain; a mismatch causes "No email domain record found".
@@ -14,6 +14,12 @@ const SENDER_DOMAIN = "notify.interw.ai"
 // When display_from_root is enabled, this can be the root domain for cleaner branding,
 // even though actual sending uses the subdomain above.
 const FROM_DOMAIN = "notify.interw.ai"
+// Local-part de l'adresse expéditrice. `hello@` est mieux perçu que `noreply@`
+// par Gmail/Outlook (signal de délivrabilité positif depuis 2024).
+const FROM_LOCAL_PART = "hello"
+// Reply-To par défaut quand l'appelant n'en fournit pas explicitement.
+// Une vraie boîte surveillée augmente la confiance des filtres anti-spam.
+const DEFAULT_REPLY_TO = "contact@interw.ai"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -393,7 +399,7 @@ Deno.serve(async (req) => {
     payload: {
       message_id: messageId,
       to: effectiveRecipient,
-      from: `${fromName || SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `${fromName || SITE_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: resolvedSubject,
       html,
@@ -402,7 +408,7 @@ Deno.serve(async (req) => {
       label: templateName,
       idempotency_key: idempotencyKey,
       unsubscribe_token: unsubscribeToken,
-      reply_to: replyTo,
+      reply_to: replyTo || DEFAULT_REPLY_TO,
       queued_at: new Date().toISOString(),
     },
   })
