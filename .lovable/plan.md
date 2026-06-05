@@ -1,77 +1,41 @@
-## Objectif
+# Corriger le crash mémoire et relancer le recalibrage attitude
 
-Faire remonter le score d'attitude vers une moyenne réaliste (60-70 pour un candidat correct, au lieu de 35-45 aujourd'hui) en corrigeant 4 biais structurels, puis relancer l'analyse sur les 50 dernières sessions pour rétroactivement bénéficier de la correction.
+## Contexte
+
+Le batch précédent a échoué : l'edge function `analyze-nonverbal` plante avec **"Memory limit exceeded"** dès qu'on lui passe 4 segments vidéo (anciennement 2). Les 50 sessions n'ont donc pas été re-analysées — les scores actuels (gestures 2.94, eye 4.86) reflètent l'ancien prompt.
+
+Cause : 4 segments × ~15 Mo binaire + base64 (×1.33) tenus simultanément en RAM dépassent les 256 Mo alloués à une edge function.
 
 ## Changements
 
-### 1. Edge function `analyze-nonverbal/index.ts`
+### 1. `supabase/functions/analyze-nonverbal/index.ts` — réduire l'empreinte mémoire
 
-**A — Plus de segments analysés (2 → 4)**
-- `MAX_SEGMENTS = 4` (au lieu de 2)
-- Sélection mieux distribuée : 1er, 2 du milieu, dernier segment candidat (au lieu des 2 premiers). Si <4 réponses, on prend tout.
-- Garde-fou : si payload total >50 Mo, on retombe à 3 puis 2 segments.
+- `MAX_BYTES_PER_SEGMENT` : 15 Mo → **6 Mo** (segment ignoré au-delà)
+- `MAX_TOTAL_BYTES` : 50 Mo → **20 Mo** (garde-fou global)
+- `MAX_SEGMENTS` reste à **4** (la distribution début/milieu/fin reste la valeur ajoutée)
+- Refactor de la boucle d'encodage : encoder en base64 puis **libérer explicitement** `buf` et `blob` (mise à `null`) avant de passer au segment suivant, pour que le GC récupère la mémoire entre segments
+- Skipper proprement tout segment > 6 Mo (déjà loggué dans `skipped_segments`)
 
-**B — Recalibrer `eye_contact` pour la vidéo d'entretien IA**
-- Le candidat regarde l'avatar à l'écran, pas la caméra. Reformuler la consigne :
-  - "10 = regard orienté vers l'écran/caméra de façon stable et engagée. Un candidat qui regarde l'avatar à l'écran obtient 8-10, pas 4-5. Pénaliser uniquement les fuites de regard répétées (plafond, côté, lecture de notes)."
-- Renommer le tooltip côté UI : "Contact visuel" → "Présence du regard" (plus juste pour le format).
+Aucun changement de prompt, de schéma, ou d'UI.
 
-**C — Rubrique explicite 5 niveaux dans le prompt système**
-Ajouter au `systemPrompt` une grille calibrée pour TOUTES les dimensions :
-```
-Échelle (utilise toute la plage, pas seulement 4-6) :
-- 10 : exceptionnel, niveau commercial/média
-- 8-9 : très bon, naturel et engageant (cible standard d'un bon candidat)
-- 6-7 : correct, quelques points d'amélioration mineurs (moyenne attendue)
-- 4-5 : visible inconfort ou rigidité, sans bloquer la communication
-- 2-3 : gêne marquée qui nuit clairement à l'échange
-- 0-1 : extrêmement problématique
-Un candidat "moyen normal" se situe à 6-7, PAS à 5. N'utilise pas 5 par défaut.
-```
+### 2. Nettoyer la session orpheline
 
-**D — Mapping sigmoïde score 0-10 → 0-100**
-Remplacer le `×10` brut dans `NonverbalBadge.computeNonverbalAverage` par une courbe qui aligne la perception RH :
-| score brut /10 | affiché /100 |
-|---|---|
-| 3 | 30 |
-| 4 | 42 |
-| 5 | 58 |
-| 6 | 70 |
-| 7 | 80 |
-| 8 | 88 |
-| 9 | 94 |
+Une session avait `nonverbal_analysis.status = "running"` figée. Migration courte pour la marquer `failed` afin qu'elle soit réincluse dans le prochain batch.
 
-Implémentation simple par interpolation linéaire par morceaux (table de points + lerp). Pas de seuils d'affichage modifiés à ce stade (E reporté).
+### 3. Redéployer + relancer le batch
 
-### 2. Rétroactif — relancer les 50 dernières sessions
+- Redéployer `analyze-nonverbal`
+- Rappeler `replay-nonverbal-batch` avec `limit: 50`
+- Attendre ~10 min puis vérifier :
+  - Plus de "Memory limit exceeded" dans les logs
+  - Timestamps `generated_at` regroupés sur la fenêtre du batch
+  - Moyennes attendues : gestures ~6-7, eye ~6-7, posture ~6-7, face ~7
 
-Nouvelle edge function **`replay-nonverbal-batch`** (one-shot, déclenchée manuellement via `supabase.functions.invoke` ou `curl`) :
-- Sélectionne les 50 sessions `completed` les plus récentes ayant un `report` et au moins un `session_messages.video_segment_url`.
-- Pour chacune, appelle `analyze-nonverbal` avec `{ session_id, force: true }`, en série (1 toutes les 3s) pour ne pas saturer la passerelle IA.
-- Logue résumé : nb relancées / nb skipped / erreurs.
-- Protégée par check super-admin (`has_role(user, 'super_admin')`).
+### 4. Si le crash mémoire persiste malgré 6 Mo × 4
 
-Le mapping sigmoïde (D) étant côté front, il s'appliquera immédiatement à TOUTES les sessions existantes dès le déploiement — pas besoin de re-générer pour D. La relance des 50 sert à bénéficier de A+B+C (nouveaux scores Gemini plus justes).
-
-## Détails techniques
-
-- Fichiers modifiés :
-  - `supabase/functions/analyze-nonverbal/index.ts` (MAX_SEGMENTS, sélection segments, prompt + rubrique, libellé eye_contact)
-  - `src/components/session/NonverbalBadge.tsx` (fonction `computeNonverbalAverage` avec interpolation)
-  - `src/components/session/NonverbalProfileCard.tsx` (libellé "Contact visuel" → "Présence du regard")
-- Fichier créé :
-  - `supabase/functions/replay-nonverbal-batch/index.ts`
-- Pas de migration DB nécessaire.
-- Pas de changement des seuils d'affichage badge (orange/vert/rouge) — on observe d'abord l'effet du combo.
-
-## Validation
-
-1. Build OK
-2. Vérifier sur 1 session test (via `supabase--curl_edge_functions` sur `analyze-nonverbal` avec `force: true`) que le payload retourné a des scores 6-8 plutôt que 3-5
-3. Vérifier l'UI : badge passe au vert/orange clair sur sessions historiques
-4. Lancer `replay-nonverbal-batch` et observer logs
+Plan B (non appliqué d'office) : passer à **3 segments** (start/middle/end strict) au lieu de 4. À décider après vérification des logs.
 
 ## Hors scope
 
-- E (seuils d'affichage) : à décider après avoir vu la distribution post-déploiement
-- Modification de l'analyse para-verbale (audio) : pas demandé
+- Pas de changement de prompt, de rubrique, ou de mapping UI (déjà fait)
+- Pas de nouveau seuil d'affichage tant que la distribution post-batch n'est pas observée

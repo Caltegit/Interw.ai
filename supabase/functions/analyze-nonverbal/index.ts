@@ -15,8 +15,8 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
 
 const MAX_SEGMENTS = 4;
-const MAX_BYTES_PER_SEGMENT = 15 * 1024 * 1024; // 15 Mo (Gemini accepte largement plus, edge ~256 Mo de RAM)
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // garde-fou payload global
+const MAX_BYTES_PER_SEGMENT = 6 * 1024 * 1024; // 6 Mo : edge function limitée à 256 Mo de RAM, 4 segments × (binaire + base64 ×1.33) doit tenir
+const MAX_TOTAL_BYTES = 20 * 1024 * 1024; // garde-fou payload global
 
 // Sélectionne jusqu'à `n` segments répartis sur l'entretien (début, milieu, fin)
 function pickDistributed<T>(arr: T[], n: number): T[] {
@@ -273,20 +273,25 @@ serve(async (req) => {
           skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });
           continue;
         }
-        const blob = await res.blob();
-        if (blob.size > MAX_BYTES_PER_SEGMENT) {
-          console.warn("[nonverbal] segment too large", seg.message_id, blob.size);
-          skippedSegments.push({ message_id: seg.message_id, reason: "too_large", details: `${Math.round(blob.size / 1024 / 1024)} Mo` });
-          continue;
-        }
-        if (totalBytes + blob.size > MAX_TOTAL_BYTES) {
-          console.warn("[nonverbal] payload cap reached, skipping segment", seg.message_id);
-          skippedSegments.push({ message_id: seg.message_id, reason: "payload_cap", details: `total ${Math.round((totalBytes + blob.size) / 1024 / 1024)} Mo` });
-          continue;
-        }
-        const buf = new Uint8Array(await blob.arrayBuffer());
-        const b64 = bytesToBase64(buf);
+        let blob: Blob | null = await res.blob();
+        const size = blob.size;
         const mime = blob.type || "video/webm";
+        if (size > MAX_BYTES_PER_SEGMENT) {
+          console.warn("[nonverbal] segment too large", seg.message_id, size);
+          skippedSegments.push({ message_id: seg.message_id, reason: "too_large", details: `${Math.round(size / 1024 / 1024)} Mo` });
+          blob = null;
+          continue;
+        }
+        if (totalBytes + size > MAX_TOTAL_BYTES) {
+          console.warn("[nonverbal] payload cap reached, skipping segment", seg.message_id);
+          skippedSegments.push({ message_id: seg.message_id, reason: "payload_cap", details: `total ${Math.round((totalBytes + size) / 1024 / 1024)} Mo` });
+          blob = null;
+          continue;
+        }
+        let buf: Uint8Array | null = new Uint8Array(await blob.arrayBuffer());
+        blob = null; // libère le Blob avant l'encodage base64
+        const b64 = bytesToBase64(buf);
+        buf = null; // libère le buffer binaire avant le prochain segment
         userParts.push({
           type: "text",
           text: `\n--- Segment [message_id=${seg.message_id}] ---\nQuestion : ${seg.question_label}`,
@@ -295,13 +300,14 @@ serve(async (req) => {
           type: "image_url",
           image_url: { url: `data:${mime};base64,${b64}` },
         });
-        totalBytes += blob.size;
+        totalBytes += size;
         uploaded += 1;
       } catch (e) {
         console.warn("[nonverbal] segment skipped", e);
         skippedSegments.push({ message_id: seg.message_id, reason: "exception", details: e instanceof Error ? e.message : String(e) });
       }
     }
+
 
     if (uploaded < 1) {
       await supabase
