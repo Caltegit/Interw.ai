@@ -26,8 +26,10 @@ interface MicHealthState {
   peak: number;
 }
 
-const SILENT_THRESHOLD_DEFAULT = 6000;
+const SILENT_THRESHOLD_DEFAULT = 12000;
 const RMS_SILENCE_MAX_DEFAULT = 0.015;
+const INITIAL_MUTE_GRACE_MS = 1500;
+const SILENT_CONFIRM_TICKS = 2;
 
 /**
  * Surveille en continu la santé du micro candidat pendant un entretien :
@@ -71,6 +73,8 @@ export function useMicHealthWatcher({
     const track = stream.getAudioTracks()[0];
     if (!track) return;
 
+    let initialGraceTimer: number | null = null;
+
     const setTrackDead = (reason: string) => {
       if (statusRef.current === "track-dead") return;
       statusRef.current = "track-dead";
@@ -82,6 +86,10 @@ export function useMicHealthWatcher({
     const handleMute = () => setTrackDead("track_muted");
     const handleEnded = () => setTrackDead("track_ended");
     const handleUnmute = () => {
+      if (initialGraceTimer !== null) {
+        clearTimeout(initialGraceTimer);
+        initialGraceTimer = null;
+      }
       if (statusRef.current === "track-dead" && track.readyState === "live") {
         statusRef.current = "ok";
         setStatus("ok");
@@ -89,14 +97,23 @@ export function useMicHealthWatcher({
       }
     };
 
-    // État initial.
-    if (track.muted || track.readyState !== "live") {
-      setTrackDead(track.muted ? "track_muted_initial" : "track_not_live_initial");
+    // État initial : grâce de 1.5 s pour éviter le faux positif "muted" transitoire
+    // observé sur Chrome/Safari juste après getUserMedia.
+    if (track.readyState !== "live") {
+      setTrackDead("track_not_live_initial");
+    } else if (track.muted) {
+      initialGraceTimer = window.setTimeout(() => {
+        if (track.muted && track.readyState === "live") {
+          setTrackDead("track_muted_initial");
+        }
+        initialGraceTimer = null;
+      }, INITIAL_MUTE_GRACE_MS);
     }
     track.addEventListener("mute", handleMute);
     track.addEventListener("unmute", handleUnmute);
     track.addEventListener("ended", handleEnded);
     return () => {
+      if (initialGraceTimer !== null) clearTimeout(initialGraceTimer);
       track.removeEventListener("mute", handleMute);
       track.removeEventListener("unmute", handleUnmute);
       track.removeEventListener("ended", handleEnded);
@@ -116,6 +133,11 @@ export function useMicHealthWatcher({
       return;
     }
     if (stream.getAudioTracks().length === 0) return;
+
+    // Reset du chrono à chaque (ré)activation : évite de basculer en "silent"
+    // juste après que l'IA ait fini de parler (TTS > silentThresholdMs).
+    lastSignalAtRef.current = Date.now();
+    let silentTickCount = 0;
 
     let cancelled = false;
     let rafId: number | null = null;
@@ -147,6 +169,7 @@ export function useMicHealthWatcher({
         const now = Date.now();
         if (rms > rmsSilenceMax) {
           lastSignalAtRef.current = now;
+          silentTickCount = 0;
           if (statusRef.current === "silent") {
             statusRef.current = "ok";
             setStatus("ok");
@@ -155,10 +178,16 @@ export function useMicHealthWatcher({
         } else if (statusRef.current === "ok") {
           const silentFor = now - lastSignalAtRef.current;
           if (silentFor > silentThresholdMs) {
-            statusRef.current = "silent";
-            transitionAtRef.current.silent = now;
-            setStatus("silent");
-            logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+            silentTickCount += 1;
+            // Anti-glitch : exiger N ticks consécutifs sous le seuil avant de basculer.
+            if (silentTickCount >= SILENT_CONFIRM_TICKS) {
+              statusRef.current = "silent";
+              transitionAtRef.current.silent = now;
+              setStatus("silent");
+              logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+            }
+          } else {
+            silentTickCount = 0;
           }
         }
         rafId = requestAnimationFrame(tick);

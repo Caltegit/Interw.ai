@@ -24,14 +24,21 @@ export default function MicFailureBanner({
   onReacquire,
   onChangeDevice,
 }: MicFailureBannerProps) {
-  const [visible, setVisible] = useState<MicHealthStatus>(status === "ok" ? "ok" : status);
+  const [visible, setVisible] = useState<MicHealthStatus>(status === "track-dead" ? "track-dead" : "ok");
 
   useEffect(() => {
-    if (status !== "ok") {
-      setVisible(status);
+    if (status === "track-dead") {
+      // Vrai problème bloquant : afficher immédiatement.
+      setVisible("track-dead");
       return;
     }
-    // Debounce de la fermeture.
+    if (status === "silent") {
+      // Debounce d'affichage : 800 ms pour éviter tout clignotement
+      // sur de courtes pauses de réflexion.
+      const t = setTimeout(() => setVisible("silent"), 800);
+      return () => clearTimeout(t);
+    }
+    // status === "ok" : debounce de fermeture pour éviter le flicker.
     const t = setTimeout(() => setVisible("ok"), 1500);
     return () => clearTimeout(t);
   }, [status]);
