@@ -928,6 +928,8 @@ export type Database = {
           audio_analysis_enabled: boolean
           auto_skip_silence: boolean
           avatar_image_url: string | null
+          candidate_email_body: string | null
+          candidate_email_subject: string | null
           candidate_fields: Json
           completion_message: string | null
           created_at: string
@@ -971,6 +973,8 @@ export type Database = {
           audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          candidate_email_body?: string | null
+          candidate_email_subject?: string | null
           candidate_fields?: Json
           completion_message?: string | null
           created_at?: string
@@ -1014,6 +1018,8 @@ export type Database = {
           audio_analysis_enabled?: boolean
           auto_skip_silence?: boolean
           avatar_image_url?: string | null
+          candidate_email_body?: string | null
+          candidate_email_subject?: string | null
           candidate_fields?: Json
           completion_message?: string | null
           created_at?: string
