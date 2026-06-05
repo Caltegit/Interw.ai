@@ -9,6 +9,18 @@ interface CandidateThankYouProps {
   jobTitle?: string
   orgName?: string
   privacyUrl?: string
+  customSubject?: string
+  customBody?: string
+}
+
+const DEFAULT_SUBJECT = "Merci pour votre entretien"
+
+function substitute(text: string, vars: Record<string, string>): string {
+  return text
+    .replace(/\{firstName\}/g, vars.firstName || '')
+    .replace(/\{jobTitle\}/g, vars.jobTitle || '')
+    .replace(/\{orgName\}/g, vars.orgName || '')
+    .replace(/Bonjour ,/g, 'Bonjour,')
 }
 
 const CandidateThankYouEmail = ({
@@ -16,10 +28,21 @@ const CandidateThankYouEmail = ({
   jobTitle,
   orgName,
   privacyUrl,
+  customBody,
 }: CandidateThankYouProps) => {
-  const greeting = firstName ? `Bonjour ${firstName},` : 'Bonjour,'
-  const job = jobTitle?.trim() || 'votre poste'
-  const org = orgName?.trim() || "l'équipe de recrutement"
+  const vars = {
+    firstName: firstName || '',
+    jobTitle: (jobTitle && jobTitle.trim()) || 'votre poste',
+    orgName: (orgName && orgName.trim()) || "l'équipe de recrutement",
+  }
+  const bodyText = customBody && customBody.trim()
+    ? substitute(customBody, vars)
+    : substitute(
+        `Bonjour {firstName},\n\nMerci d'avoir passé votre entretien pour le poste de {jobTitle} chez {orgName}.\n\nVos réponses ont bien été enregistrées et vont être analysées par l'équipe de recrutement. Vous serez recontacté(e) prochainement.\n\nÀ bientôt,\nL'équipe de recrutement`,
+        vars,
+      )
+  const paragraphs = bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+
   return (
     <Html lang="fr" dir="ltr">
       <Head />
@@ -27,15 +50,17 @@ const CandidateThankYouEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>Merci pour votre entretien</Heading>
-          <Text style={text}>{greeting}</Text>
-          <Text style={text}>
-            Merci d'avoir passé votre entretien pour le poste de{' '}
-            <strong>{job}</strong> chez <strong>{org}</strong>.
-          </Text>
-          <Text style={text}>
-            Vos réponses ont bien été enregistrées et vont être analysées par l'équipe de recrutement.
-            Vous serez recontacté(e) prochainement.
-          </Text>
+          {paragraphs.map((p, i) => (
+            <Text key={i} style={text}>
+              {p.split('\n').map((line, j, arr) => (
+                <React.Fragment key={j}>
+                  {line}
+                  {j < arr.length - 1 ? <br /> : null}
+                </React.Fragment>
+              ))}
+            </Text>
+          ))}
+          {/* Encart RGPD — TOUJOURS présent, non modifiable */}
           <Section style={section}>
             <Text style={text}>
               Conformément au RGPD, vous pouvez à tout moment consulter les règles de traitement de vos
@@ -47,7 +72,6 @@ const CandidateThankYouEmail = ({
               </Button>
             ) : null}
           </Section>
-          <Text style={footer}>À bientôt,<br />L'équipe interw.ai</Text>
         </Container>
       </Body>
     </Html>
@@ -56,7 +80,10 @@ const CandidateThankYouEmail = ({
 
 export const template = {
   component: CandidateThankYouEmail,
-  subject: 'Merci pour votre entretien',
+  subject: (data: Record<string, any>) => {
+    const custom = (data?.customSubject as string | undefined)?.trim()
+    return custom || DEFAULT_SUBJECT
+  },
   displayName: 'Remerciement candidat (fin d\'entretien)',
   previewData: {
     firstName: 'Jane',
@@ -82,4 +109,3 @@ const button = {
   display: 'inline-block',
   marginTop: '8px',
 }
-const footer = { fontSize: '12px', color: '#6B7280', margin: '30px 0 0' }

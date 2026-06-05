@@ -14,6 +14,11 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { mergeCandidateFields } from "@/lib/candidateFields";
+import {
+  DEFAULT_CANDIDATE_EMAIL_BODY,
+  DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  CANDIDATE_EMAIL_TEMPLATE_KEY,
+} from "@/lib/candidateEmailDefaults";
 
 export default function ProjectEdit() {
   const { id } = useParams();
@@ -191,7 +196,37 @@ export default function ProjectEdit() {
         visibleToUserIds:
           (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
         candidateFields: mergeCandidateFields((project as { candidate_fields?: unknown }).candidate_fields),
+        candidateEmailSubject:
+          (project as { candidate_email_subject?: string | null }).candidate_email_subject ?? DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+        candidateEmailBody:
+          (project as { candidate_email_body?: string | null }).candidate_email_body ?? DEFAULT_CANDIDATE_EMAIL_BODY,
       });
+
+      // Fallback : si pas d'override projet, charger le modèle d'organisation
+      const projHasSubject = (project as { candidate_email_subject?: string | null }).candidate_email_subject;
+      const projHasBody = (project as { candidate_email_body?: string | null }).candidate_email_body;
+      if (!projHasSubject || !projHasBody) {
+        const orgId = (project as { organization_id?: string | null }).organization_id;
+        if (orgId) {
+          const { data: orgTpl } = await supabase
+            .from("candidate_message_templates")
+            .select("subject, body")
+            .eq("organization_id", orgId)
+            .eq("key", CANDIDATE_EMAIL_TEMPLATE_KEY)
+            .maybeSingle();
+          if (orgTpl) {
+            setInitial((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    candidateEmailSubject: projHasSubject ?? orgTpl.subject ?? prev.candidateEmailSubject,
+                    candidateEmailBody: projHasBody ?? orgTpl.body ?? prev.candidateEmailBody,
+                  }
+                : prev,
+            );
+          }
+        }
+      }
 
       setLoading(false);
     };
@@ -285,10 +320,34 @@ export default function ProjectEdit() {
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
           candidate_fields: s.candidateFields,
+          candidate_email_subject:
+            s.candidateEmailSubject.trim() && s.candidateEmailSubject.trim() !== DEFAULT_CANDIDATE_EMAIL_SUBJECT
+              ? s.candidateEmailSubject.trim()
+              : null,
+          candidate_email_body:
+            s.candidateEmailBody.trim() && s.candidateEmailBody.trim() !== DEFAULT_CANDIDATE_EMAIL_BODY
+              ? s.candidateEmailBody.trim()
+              : null,
         } as never)
         .eq("id", id);
 
       if (updateError) throw updateError;
+
+      if (s.saveCandidateEmailAsDefault) {
+        const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+        if (orgData) {
+          await supabase.from("candidate_message_templates").upsert(
+            {
+              organization_id: orgData,
+              key: CANDIDATE_EMAIL_TEMPLATE_KEY,
+              subject: s.candidateEmailSubject.trim() || DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+              body: s.candidateEmailBody.trim() || DEFAULT_CANDIDATE_EMAIL_BODY,
+            },
+            { onConflict: "organization_id,key" },
+          );
+        }
+      }
+
 
       if (s.saveIntroToLibrary && s.introEnabled) {
         const introTextValue =

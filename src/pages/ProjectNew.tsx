@@ -14,6 +14,11 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
+import {
+  DEFAULT_CANDIDATE_EMAIL_BODY,
+  DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  CANDIDATE_EMAIL_TEMPLATE_KEY,
+} from "@/lib/candidateEmailDefaults";
 import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
@@ -89,6 +94,8 @@ const initialState: ProjectFormState = {
   reportRecipientUserIds: [],
   visibleToUserIds: [],
   candidateFields: DEFAULT_CANDIDATE_FIELDS,
+  candidateEmailSubject: DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  candidateEmailBody: DEFAULT_CANDIDATE_EMAIL_BODY,
 };
 
 export default function ProjectNew() {
@@ -107,6 +114,29 @@ export default function ProjectNew() {
     if (!user) return;
     setFormInitial((s) => (s.reportRecipientUserIds.length === 0 ? { ...s, reportRecipientUserIds: [user.id] } : s));
   }, [user]);
+
+  // Charge le modèle d'email candidat enregistré au niveau de l'organisation
+  useEffect(() => {
+    if (!organizationId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("candidate_message_templates")
+        .select("subject, body")
+        .eq("organization_id", organizationId)
+        .eq("key", CANDIDATE_EMAIL_TEMPLATE_KEY)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setFormInitial((s) => ({
+        ...s,
+        candidateEmailSubject: data.subject || s.candidateEmailSubject,
+        candidateEmailBody: data.body || s.candidateEmailBody,
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
 
   useEffect(() => {
     if (!templateId) return;
@@ -224,6 +254,14 @@ export default function ProjectNew() {
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
           candidate_fields: s.candidateFields,
+          candidate_email_subject:
+            s.candidateEmailSubject.trim() && s.candidateEmailSubject.trim() !== DEFAULT_CANDIDATE_EMAIL_SUBJECT
+              ? s.candidateEmailSubject.trim()
+              : null,
+          candidate_email_body:
+            s.candidateEmailBody.trim() && s.candidateEmailBody.trim() !== DEFAULT_CANDIDATE_EMAIL_BODY
+              ? s.candidateEmailBody.trim()
+              : null,
         } as never)
         .select()
         .single();
@@ -434,6 +472,18 @@ export default function ProjectNew() {
         });
       } else {
         toast({ title: "Projet créé !", description: "Le lien candidat est fonctionnel ✓" });
+      }
+
+      if (s.saveCandidateEmailAsDefault && organizationId) {
+        await supabase.from("candidate_message_templates").upsert(
+          {
+            organization_id: organizationId,
+            key: CANDIDATE_EMAIL_TEMPLATE_KEY,
+            subject: s.candidateEmailSubject.trim() || DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+            body: s.candidateEmailBody.trim() || DEFAULT_CANDIDATE_EMAIL_BODY,
+          },
+          { onConflict: "organization_id,key" },
+        );
       }
 
       navigate(`/projects/${project.id}`);
