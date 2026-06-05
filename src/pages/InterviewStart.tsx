@@ -542,7 +542,7 @@ export default function InterviewStart() {
 
   // ── Garde micro bloquante au démarrage (warmup) ──
   const [micBlockOpen, setMicBlockOpen] = useState(false);
-  const [micBlockRetrying, setMicBlockRetrying] = useState(false);
+  // (retiré) micBlockRetrying : la dialog n'a plus de bouton « Réessayer »
   const micBlockResolveRef = useRef<((retry: boolean) => void) | null>(null);
 
   // ── Overlay de chargement entre deux questions ──
