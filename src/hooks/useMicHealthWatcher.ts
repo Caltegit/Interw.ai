@@ -73,6 +73,8 @@ export function useMicHealthWatcher({
     const track = stream.getAudioTracks()[0];
     if (!track) return;
 
+    let initialGraceTimer: number | null = null;
+
     const setTrackDead = (reason: string) => {
       if (statusRef.current === "track-dead") return;
       statusRef.current = "track-dead";
@@ -84,6 +86,10 @@ export function useMicHealthWatcher({
     const handleMute = () => setTrackDead("track_muted");
     const handleEnded = () => setTrackDead("track_ended");
     const handleUnmute = () => {
+      if (initialGraceTimer !== null) {
+        clearTimeout(initialGraceTimer);
+        initialGraceTimer = null;
+      }
       if (statusRef.current === "track-dead" && track.readyState === "live") {
         statusRef.current = "ok";
         setStatus("ok");
@@ -91,14 +97,23 @@ export function useMicHealthWatcher({
       }
     };
 
-    // État initial.
-    if (track.muted || track.readyState !== "live") {
-      setTrackDead(track.muted ? "track_muted_initial" : "track_not_live_initial");
+    // État initial : grâce de 1.5 s pour éviter le faux positif "muted" transitoire
+    // observé sur Chrome/Safari juste après getUserMedia.
+    if (track.readyState !== "live") {
+      setTrackDead("track_not_live_initial");
+    } else if (track.muted) {
+      initialGraceTimer = window.setTimeout(() => {
+        if (track.muted && track.readyState === "live") {
+          setTrackDead("track_muted_initial");
+        }
+        initialGraceTimer = null;
+      }, INITIAL_MUTE_GRACE_MS);
     }
     track.addEventListener("mute", handleMute);
     track.addEventListener("unmute", handleUnmute);
     track.addEventListener("ended", handleEnded);
     return () => {
+      if (initialGraceTimer !== null) clearTimeout(initialGraceTimer);
       track.removeEventListener("mute", handleMute);
       track.removeEventListener("unmute", handleUnmute);
       track.removeEventListener("ended", handleEnded);
