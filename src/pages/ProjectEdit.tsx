@@ -307,6 +307,22 @@ export default function ProjectEdit() {
 
       if (updateError) throw updateError;
 
+      if (s.saveCandidateEmailAsDefault) {
+        const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+        if (orgData) {
+          await supabase.from("candidate_message_templates").upsert(
+            {
+              organization_id: orgData,
+              key: CANDIDATE_EMAIL_TEMPLATE_KEY,
+              subject: s.candidateEmailSubject.trim() || DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+              body: s.candidateEmailBody.trim() || DEFAULT_CANDIDATE_EMAIL_BODY,
+            },
+            { onConflict: "organization_id,key" },
+          );
+        }
+      }
+
+
       if (s.saveIntroToLibrary && s.introEnabled) {
         const introTextValue =
           (s.introMode === "text" || s.introMode === "tts") ? s.introText.trim() : "";
