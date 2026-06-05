@@ -115,6 +115,29 @@ export default function ProjectNew() {
     setFormInitial((s) => (s.reportRecipientUserIds.length === 0 ? { ...s, reportRecipientUserIds: [user.id] } : s));
   }, [user]);
 
+  // Charge le modèle d'email candidat enregistré au niveau de l'organisation
+  useEffect(() => {
+    if (!organizationId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("candidate_message_templates")
+        .select("subject, body")
+        .eq("organization_id", organizationId)
+        .eq("key", CANDIDATE_EMAIL_TEMPLATE_KEY)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setFormInitial((s) => ({
+        ...s,
+        candidateEmailSubject: data.subject || s.candidateEmailSubject,
+        candidateEmailBody: data.body || s.candidateEmailBody,
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId]);
+
   useEffect(() => {
     if (!templateId) return;
     let cancelled = false;
