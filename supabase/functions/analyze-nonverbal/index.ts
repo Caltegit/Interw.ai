@@ -15,8 +15,8 @@ const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-pro";
 
 const MAX_SEGMENTS = 4;
-const MAX_BYTES_PER_SEGMENT = 15 * 1024 * 1024; // 15 Mo (Gemini accepte largement plus, edge ~256 Mo de RAM)
-const MAX_TOTAL_BYTES = 50 * 1024 * 1024; // garde-fou payload global
+const MAX_BYTES_PER_SEGMENT = 6 * 1024 * 1024; // 6 Mo : edge function limitée à 256 Mo de RAM, 4 segments × (binaire + base64 ×1.33) doit tenir
+const MAX_TOTAL_BYTES = 20 * 1024 * 1024; // garde-fou payload global
 
 // Sélectionne jusqu'à `n` segments répartis sur l'entretien (début, milieu, fin)
 function pickDistributed<T>(arr: T[], n: number): T[] {
