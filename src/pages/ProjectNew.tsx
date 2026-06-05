@@ -474,6 +474,18 @@ export default function ProjectNew() {
         toast({ title: "Projet créé !", description: "Le lien candidat est fonctionnel ✓" });
       }
 
+      if (s.saveCandidateEmailAsDefault && organizationId) {
+        await supabase.from("candidate_message_templates").upsert(
+          {
+            organization_id: organizationId,
+            key: CANDIDATE_EMAIL_TEMPLATE_KEY,
+            subject: s.candidateEmailSubject.trim() || DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+            body: s.candidateEmailBody.trim() || DEFAULT_CANDIDATE_EMAIL_BODY,
+          },
+          { onConflict: "organization_id,key" },
+        );
+      }
+
       navigate(`/projects/${project.id}`);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
