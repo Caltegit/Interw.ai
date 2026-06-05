@@ -31,7 +31,7 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
-import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid } from "@/lib/micLevel";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
 
@@ -335,10 +335,9 @@ export default function InterviewStart() {
   // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
   // on affiche un bandeau permettant au candidat de la relancer ou de passer.
   const [interviewStuck, setInterviewStuck] = useState(false);
-  // Aucun signal capté depuis le micro (STT silencieux + RMS plat) → bandeau ambre.
-  const [noMicSignal, setNoMicSignal] = useState(false);
-  const lastMicRmsAtRef = useRef<number>(0);
-  const micAnalyserRef = useRef<{ ctx: AudioContext; analyser: AnalyserNode; buffer: Uint8Array } | null>(null);
+  // (retiré) noMicSignal + micAnalyserRef : le `useMicHealthWatcher` est seul
+  // responsable de la santé micro pendant l'entretien.
+
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const [responseElapsedSec, setResponseElapsedSec] = useState(0);
@@ -543,7 +542,7 @@ export default function InterviewStart() {
 
   // ── Garde micro bloquante au démarrage (warmup) ──
   const [micBlockOpen, setMicBlockOpen] = useState(false);
-  const [micBlockRetrying, setMicBlockRetrying] = useState(false);
+  // (retiré) micBlockRetrying : la dialog n'a plus de bouton « Réessayer »
   const micBlockResolveRef = useRef<((retry: boolean) => void) | null>(null);
 
   // ── Overlay de chargement entre deux questions ──
@@ -1233,57 +1232,22 @@ export default function InterviewStart() {
       startedAt: Date.now(),
     };
 
-    // Watchdog de vivacité STT : si aucun onresult depuis 10s pendant
-    // l'écoute active, on force un redémarrage complet de la recognition.
+    // Watchdog STT minimal : si aucun onresult depuis 15 s pendant l'écoute
+    // active, on force un redémarrage de la recognition. Plus de mesure RMS
+    // ici — le `useMicHealthWatcher` est seul responsable de la santé micro.
     if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
     lastSttResultAtRef.current = Date.now();
-    lastMicRmsAtRef.current = Date.now();
-    // (Ré)initialisation de l'analyser RMS partagé pour détecter le vrai silence.
-    try {
-      if (!micAnalyserRef.current && streamRef.current) {
-        const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-        const ctx = new Ctor();
-        if (ctx.state === "suspended") { ctx.resume().catch(() => { /* ignore */ }); }
-        const source = ctx.createMediaStreamSource(streamRef.current);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 1024;
-        source.connect(analyser);
-        const buf = new Uint8Array(new ArrayBuffer(analyser.fftSize));
-        micAnalyserRef.current = { ctx, analyser, buffer: buf };
-      }
-    } catch { /* analyser facultatif */ }
     sttWatchdogRef.current = setInterval(() => {
       if (!isListeningRef.current || isPausedRef.current) return;
-      // Mesure RMS instantanée si l'analyser est disponible.
-      const m = micAnalyserRef.current;
-      if (m) {
-        try {
-          m.analyser.getByteTimeDomainData(m.buffer as Uint8Array<ArrayBuffer>);
-          let sum = 0;
-          for (let i = 0; i < m.buffer.length; i++) {
-            const v = (m.buffer[i] - 128) / 128;
-            sum += v * v;
-          }
-          const rms = Math.sqrt(sum / m.buffer.length);
-          if (rms > MIC_THRESHOLDS.WARMUP_SILENCE_MAX) lastMicRmsAtRef.current = Date.now();
-        } catch { /* ignore */ }
-      }
       const sttIdle = Date.now() - lastSttResultAtRef.current;
-      const rmsIdle = Date.now() - lastMicRmsAtRef.current;
-      // Si STT muet ET signal micro plat depuis >10s ET aucun TTS en cours,
-      // on prévient le candidat. Le bandeau disparaît dès que ça revient.
-      if (sttIdle > 10000 && rmsIdle > 10000 && !isSpeaking) {
-        if (!noMicSignal) setNoMicSignal(true);
-      } else if (noMicSignal && rmsIdle < 2000) {
-        setNoMicSignal(false);
-      }
-      if (sttIdle > 10000 && !candidateTranscriptRef.current.trim()) {
-        console.warn("[interview] STT watchdog : silence > 10s, redémarrage de la reconnaissance.");
+      if (sttIdle > 15000 && !candidateTranscriptRef.current.trim()) {
+        console.warn("[interview] STT watchdog : silence > 15s, redémarrage de la reconnaissance.");
         lastSttResultAtRef.current = Date.now();
-        try { recognitionRef.current?.stop(); } catch {}
+        try { recognitionRef.current?.stop(); } catch { /* ignore */ }
       }
-    }, 2000);
-  }, [toast, isSpeaking, noMicSignal, currentQuestionIndex]);
+    }, 3000);
+  }, [toast]);
+
 
   // STT: stop listening
   const stopListening = useCallback(() => {
@@ -2381,74 +2345,36 @@ export default function InterviewStart() {
     // Start camera stream
     await startVideoStream();
 
-    // Garde anti-silence bloquante : on mesure 1.5 s de signal micro avant la
-    // 1ʳᵉ question. Si rien (piste muted OU pic plat), on bloque le démarrage
-    // tant que le candidat n'a pas un micro fonctionnel — pas d'entretien muet.
+    // Garde micro non-bloquante : si le test technique a été validé < 30 min
+    // et que la piste audio courante est vivante, on démarre directement.
+    // Plus de remesure de warmup ici — c'était la cause N°1 de faux positifs.
     {
-      let blocked = false;
-      // Boucle : on remesure tant que le candidat appuie sur « Réessayer ».
-      // « Refaire le test technique » navigue ailleurs et démonte le composant.
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const s = streamRef.current;
-        let m: Awaited<ReturnType<typeof measureMicLevel>> | null = null;
-        if (s) {
-          try {
-            m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
-          } catch {
-            m = null;
-          }
-        }
-        const failed =
-          !s ||
-          !m ||
-          !m.ok ||
-          m.muted ||
-          m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX;
+      const s = streamRef.current;
+      const audioTrack = s?.getAudioTracks()[0] ?? null;
+      const currentDeviceId = audioTrack?.getSettings?.().deviceId ?? null;
+      const trackLive = !!audioTrack && audioTrack.readyState === "live";
+      const testValid = isMicTestStillValid(token, currentDeviceId);
 
-        if (!failed) {
-          if (blocked) {
-            // Le candidat est revenu en état OK : on ferme la modale et on continue.
-            setMicBlockOpen(false);
-            setMicBlockRetrying(false);
-          }
-          break;
-        }
-
-        blocked = true;
-        logger.error("interview_mic_warmup_silent", {
+      if (!s || !audioTrack || !trackLive || !testValid) {
+        logger.warn("interview_mic_precheck_failed", {
           sessionId: session?.id ?? null,
-          peak: m?.peak ?? null,
-          activeMs: m?.activeMs ?? null,
-          muted: m?.muted ?? null,
-          ok: m?.ok ?? false,
+          hasStream: !!s,
+          hasTrack: !!audioTrack,
+          trackLive,
+          testValid,
         });
-
-        // On masque l'overlay de boot tant que la modale est visible.
         setBootActive(false);
-        setMicBlockRetrying(false);
         setMicBlockOpen(true);
-
-        // Attend l'action utilisateur. true = réessayer ; false = abandon (la
-        // dialog redirige vers le test technique, le composant sera démonté).
-        const retry = await new Promise<boolean>((resolve) => {
+        // Dialog n'a qu'une seule action : refaire le test technique
+        // (qui navigue ailleurs et démonte ce composant).
+        await new Promise<boolean>((resolve) => {
           micBlockResolveRef.current = resolve;
         });
         micBlockResolveRef.current = null;
-
-        if (!retry) {
-          // L'utilisateur a choisi de refaire le test technique → on quitte
-          // beginInterview sans démarrer l'entretien.
-          setMicBlockOpen(false);
-          return;
-        }
-
-        // Réessayer : on relance la mesure (boucle).
-        setMicBlockRetrying(true);
-        // Réactive le boot overlay pour le prochain affichage si la mesure réussit.
-        setBootActive(true);
+        return;
       }
     }
+
 
 
 
@@ -3981,13 +3907,8 @@ export default function InterviewStart() {
           recording={isRecordingActive}
         />
       )}
-      {!interviewFinished && noMicSignal && (
-        <div className="fixed top-4 left-1/2 z-40 -translate-x-1/2 max-w-xl px-4">
-          <div className="rounded-lg border border-amber-500/40 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg dark:bg-amber-950/60 dark:text-amber-100">
-            Nous ne recevons pas votre voix. Vérifiez que votre micro est branché et activé, ou mettez la session en pause.
-          </div>
-        </div>
-      )}
+      {/* (retiré) bandeau noMicSignal : doublon avec MicFailureBanner du watcher */}
+
       {endCountdown !== null && !interviewFinished && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="mx-4 max-w-md rounded-2xl border border-destructive/30 bg-card p-8 text-center shadow-2xl">
@@ -4854,11 +4775,8 @@ export default function InterviewStart() {
 
       <MicBlockingDialog
         open={micBlockOpen}
-        retrying={micBlockRetrying}
-        onRetry={() => {
-          micBlockResolveRef.current?.(true);
-        }}
         onRedoTest={() => {
+          setMicBlockOpen(false);
           micBlockResolveRef.current?.(false);
           try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
           if (token) {
@@ -4867,6 +4785,7 @@ export default function InterviewStart() {
           navigate(`/session/${slug}/test/${token}`);
         }}
       />
+
     </CandidateLayout>
   );
 }

@@ -329,8 +329,11 @@ export default function InterviewDeviceTest() {
 
       const peakOk = measurement.peak >= MIC_THRESHOLDS.TEST_PEAK_MIN;
       const activeOk = measurement.activeMs >= MIC_THRESHOLDS.TEST_ACTIVE_MS_MIN;
+      // Vérification finale : la piste doit être toujours vivante et non muted
+      // au moment de valider — sinon le navigateur a coupé le micro pendant le test.
+      const trackStillLive = audioTrack.readyState === "live" && !audioTrack.muted;
 
-      if (peakOk && activeOk) {
+      if (peakOk && activeOk && trackStillLive && recorderOk) {
         setMicStatus("ok");
         // Persiste la validation pour la garde au démarrage de session.
         try {
@@ -353,12 +356,17 @@ export default function InterviewDeviceTest() {
         // muets qui aboutissent à un rapport inexploitable.
         setMicStatus("error");
         setMicError(
-          peakOk
-            ? "Votre voix est trop faible. Rapprochez-vous du micro et relancez le test."
-            : "Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.",
+          !trackStillLive
+            ? "Votre micro a été coupé pendant le test. Réessayez."
+            : !recorderOk
+              ? "Impossible d'enregistrer depuis votre micro. Essayez-en un autre."
+              : peakOk
+                ? "Votre voix est trop faible. Rapprochez-vous du micro et relancez le test."
+                : "Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.",
         );
         setMicRetries((n) => n + 1);
       }
+
       await refreshDevices();
     } catch (err) {
       setMicError(classifyMediaError(err, "mic").message);

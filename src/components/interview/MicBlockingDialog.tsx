@@ -1,19 +1,19 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MicOff, RotateCcw, Settings2 } from "lucide-react";
+import { MicOff, Settings2 } from "lucide-react";
 
 interface MicBlockingDialogProps {
   open: boolean;
-  retrying?: boolean;
-  onRetry: () => void;
   onRedoTest: () => void;
 }
 
 /**
- * Modal non-dismissible affichée au démarrage de session quand le micro est
- * silencieux ou coupé. Empêche le candidat de commencer un entretien muet.
+ * Modal non-dismissible affichée au démarrage de session si la garde micro échoue
+ * (pas de test technique valide récent, ou piste audio indisponible).
+ * Une seule action : refaire le test technique. Évite les boucles de remesure
+ * qui causaient des faux positifs.
  */
-export default function MicBlockingDialog({ open, retrying, onRetry, onRedoTest }: MicBlockingDialogProps) {
+export default function MicBlockingDialog({ open, onRedoTest }: MicBlockingDialogProps) {
   return (
     <Dialog open={open}>
       <DialogContent
@@ -25,18 +25,14 @@ export default function MicBlockingDialog({ open, retrying, onRetry, onRedoTest 
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/15">
             <MicOff className="h-6 w-6 text-destructive" />
           </div>
-          <DialogTitle className="text-center">Micro non détecté</DialogTitle>
+          <DialogTitle className="text-center">Micro indisponible</DialogTitle>
           <DialogDescription className="text-center">
-            Aucun son n'a été capté. Votre micro est peut-être coupé, débranché, ou utilisé par une autre application
-            (Teams, Zoom, autre onglet). Vérifiez votre matériel puis réessayez.
+            Votre micro n'est pas accessible ou le test technique n'a pas été validé récemment.
+            Refaites le test pour vérifier votre matériel avant de démarrer l'entretien.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
-          <Button onClick={onRetry} disabled={retrying} className="w-full">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {retrying ? "Vérification…" : "Réessayer"}
-          </Button>
-          <Button onClick={onRedoTest} variant="outline" className="w-full">
+          <Button onClick={onRedoTest} className="w-full">
             <Settings2 className="mr-2 h-4 w-4" />
             Refaire le test technique
           </Button>
