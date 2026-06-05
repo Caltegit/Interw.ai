@@ -39,7 +39,7 @@ async function sendCandidateThankYou(
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organizations:organizations(name))",
+      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organization_id, candidate_email_subject, candidate_email_body, organizations:organizations(name))",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -53,13 +53,40 @@ async function sendCandidateThankYou(
   const privacyUrl = session.token
     ? `https://interw.ai/session/${slug}/privacy/${session.token}`
     : undefined;
+
+  // Récupère l'override projet ; sinon, fallback sur le modèle de l'organisation.
+  let customSubject: string | null = project?.candidate_email_subject ?? null;
+  let customBody: string | null = project?.candidate_email_body ?? null;
+  if ((!customSubject || !customBody) && project?.organization_id) {
+    const { data: orgTpl } = await supabase
+      .from("candidate_message_templates")
+      .select("subject, body")
+      .eq("organization_id", project.organization_id)
+      .eq("key", "candidate-thank-you")
+      .maybeSingle();
+    if (orgTpl) {
+      // deno-lint-ignore no-explicit-any
+      const tpl = orgTpl as any;
+      customSubject = customSubject || tpl.subject || null;
+      customBody = customBody || tpl.body || null;
+    }
+  }
+
   await invoke("send-transactional-email", {
     templateName: "candidate-thank-you",
     recipientEmail: session.candidate_email,
     idempotencyKey: `candidate-thanks-${sessionId}`,
-    templateData: { firstName, jobTitle, orgName, privacyUrl },
+    templateData: {
+      firstName,
+      jobTitle,
+      orgName,
+      privacyUrl,
+      customSubject: customSubject || undefined,
+      customBody: customBody || undefined,
+    },
   });
 }
+
 
 async function processSession(sessionId: string) {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
