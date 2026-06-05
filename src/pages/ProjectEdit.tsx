@@ -202,6 +202,32 @@ export default function ProjectEdit() {
           (project as { candidate_email_body?: string | null }).candidate_email_body ?? DEFAULT_CANDIDATE_EMAIL_BODY,
       });
 
+      // Fallback : si pas d'override projet, charger le modèle d'organisation
+      const projHasSubject = (project as { candidate_email_subject?: string | null }).candidate_email_subject;
+      const projHasBody = (project as { candidate_email_body?: string | null }).candidate_email_body;
+      if (!projHasSubject || !projHasBody) {
+        const orgId = (project as { organization_id?: string | null }).organization_id;
+        if (orgId) {
+          const { data: orgTpl } = await supabase
+            .from("candidate_message_templates")
+            .select("subject, body")
+            .eq("organization_id", orgId)
+            .eq("key", CANDIDATE_EMAIL_TEMPLATE_KEY)
+            .maybeSingle();
+          if (orgTpl) {
+            setFormInitial((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    candidateEmailSubject: projHasSubject ?? orgTpl.subject ?? prev.candidateEmailSubject,
+                    candidateEmailBody: projHasBody ?? orgTpl.body ?? prev.candidateEmailBody,
+                  }
+                : prev,
+            );
+          }
+        }
+      }
+
       setLoading(false);
     };
 
