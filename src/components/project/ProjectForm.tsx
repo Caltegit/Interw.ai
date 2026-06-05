@@ -361,6 +361,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(
     initial.candidateFields ?? DEFAULT_CANDIDATE_FIELDS,
   );
+  const [candidateEmailSubject, setCandidateEmailSubject] = useState<string>(initial.candidateEmailSubject);
+  const [candidateEmailBody, setCandidateEmailBody] = useState<string>(initial.candidateEmailBody);
+  const [saveCandidateEmailAsDefault, setSaveCandidateEmailAsDefault] = useState<boolean>(false);
 
   const setCandidateField = (key: CandidateFieldKey, patch: Partial<CandidateFieldsConfig[CandidateFieldKey]>) => {
     setCandidateFields((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
