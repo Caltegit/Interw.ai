@@ -30,6 +30,10 @@ import {
   type CandidateFieldKey,
   type CandidateFieldsConfig,
 } from "@/lib/candidateFields";
+import {
+  DEFAULT_CANDIDATE_EMAIL_BODY,
+  DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+} from "@/lib/candidateEmailDefaults";
 import { useToast } from "@/hooks/use-toast";
 import { StepQuestions, Question, createEmptyQuestion } from "@/components/project/StepQuestions";
 import { StepCriteria } from "@/components/project/StepCriteria";
