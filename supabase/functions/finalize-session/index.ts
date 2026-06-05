@@ -39,7 +39,7 @@ async function sendCandidateThankYou(
   const { data: session } = await supabase
     .from("sessions")
     .select(
-      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organization_id, candidate_email_subject, candidate_email_body, organizations:organizations(name))",
+      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organization_id, created_by, candidate_email_subject, candidate_email_body, organizations:organizations(name))",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -72,10 +72,27 @@ async function sendCandidateThankYou(
     }
   }
 
+  // Reply-To : email du créateur du projet (recruteur). Permet aux candidats
+  // de répondre à une vraie personne — booste fortement la délivrabilité.
+  let replyTo: string | undefined;
+  if (project?.created_by) {
+    const { data: creatorProfile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("user_id", project.created_by)
+      .maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    const email = (creatorProfile as any)?.email;
+    if (typeof email === "string" && email.includes("@")) {
+      replyTo = email;
+    }
+  }
+
   await invoke("send-transactional-email", {
     templateName: "candidate-thank-you",
     recipientEmail: session.candidate_email,
     idempotencyKey: `candidate-thanks-${sessionId}`,
+    replyTo,
     templateData: {
       firstName,
       jobTitle,
