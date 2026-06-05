@@ -97,27 +97,40 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
-  // Derniers projets actifs : on priorise ceux qui ont au moins 1 session,
-  // puis on complète avec les plus récents pour toujours afficher jusqu'à 3 cartes.
+  // Derniers projets actifs : on priorise ceux qui ont au moins 1 entretien
+  // (triés par date du dernier entretien), puis on complète avec les projets
+  // les plus récents pour afficher jusqu'à 5 cartes.
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
-    .select("id, title, job_title, created_at, sessions(count)")
+    .select("id, title, job_title, created_at, sessions(count), sessions_dates:sessions(created_at)")
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(10);
-  const mapped = (recentProjectsRaw ?? []).map((p: any) => ({
-    id: p.id as string,
-    title: p.title as string,
-    job_title: (p.job_title ?? null) as string | null,
-    created_at: p.created_at as string,
-    sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
-  }));
-  const withSessions = mapped.filter((p) => p.sessionCount > 0).slice(0, 3);
+    .limit(30);
+  const mapped = (recentProjectsRaw ?? []).map((p: any) => {
+    const dates = Array.isArray(p.sessions_dates)
+      ? p.sessions_dates.map((s: any) => s?.created_at).filter(Boolean)
+      : [];
+    const lastSessionAt = dates.length
+      ? dates.reduce((a: string, b: string) => (a > b ? a : b))
+      : null;
+    return {
+      id: p.id as string,
+      title: p.title as string,
+      job_title: (p.job_title ?? null) as string | null,
+      created_at: p.created_at as string,
+      sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
+      lastSessionAt: lastSessionAt as string | null,
+    };
+  });
+  const withSessions = mapped
+    .filter((p) => p.sessionCount > 0)
+    .sort((a, b) => (b.lastSessionAt ?? "").localeCompare(a.lastSessionAt ?? ""))
+    .slice(0, 5);
   const withoutSessions = mapped.filter((p) => p.sessionCount === 0);
   const recentProjects = [
     ...withSessions,
-    ...withoutSessions.slice(0, Math.max(0, 3 - withSessions.length)),
-  ];
+    ...withoutSessions.slice(0, Math.max(0, 5 - withSessions.length)),
+  ].map(({ lastSessionAt: _omit, ...rest }) => rest);
 
   // Candidats "à traiter" : sessions complétées dans des projets actifs de l'org,
   // avec un rapport généré, et sans décision recruteur (null ou "none").
