@@ -106,10 +106,46 @@ export const MIC_THRESHOLDS = {
   TEST_PEAK_MIN: 0.10,
   /** Temps cumulé (ms) au-dessus du seuil pour valider le micro au test. */
   TEST_ACTIVE_MS_MIN: 800,
-  /** RMS plafond considéré comme "silence quasi total" à l'entrée /start. */
+  /** RMS plafond considéré comme "silence quasi total" (legacy, conservé pour le watcher). */
   WARMUP_SILENCE_MAX: 0.01,
   /** Durée du test guidé (ms). */
   TEST_DURATION_MS: 6000,
-  /** Durée de la mesure de warm-up à l'entrée de session (ms). */
+  /** Durée de la mesure de warm-up (ms) — legacy, plus utilisé par défaut. */
   WARMUP_DURATION_MS: 1500,
 };
+
+/** Durée pendant laquelle une validation de test technique reste valable (30 min). */
+export const MIC_TEST_VALIDITY_MS = 30 * 60 * 1000;
+
+interface MicTestValidation {
+  deviceId: string | null;
+  validatedAt: number;
+  peak?: number;
+  activeMs?: number;
+}
+
+/**
+ * Vérifie qu'un test technique micro a été passé récemment, et que la piste
+ * audio courante correspond au périphérique validé. Évite de re-mesurer
+ * inutilement à l'entrée de session.
+ */
+export function isMicTestStillValid(
+  token: string | null | undefined,
+  currentDeviceId: string | null | undefined,
+  maxAgeMs: number = MIC_TEST_VALIDITY_MS,
+): boolean {
+  if (!token) return false;
+  try {
+    const raw = sessionStorage.getItem(`mic-test-validated:${token}`);
+    if (!raw) return false;
+    const data = JSON.parse(raw) as MicTestValidation;
+    if (!data?.validatedAt) return false;
+    if (Date.now() - data.validatedAt > maxAgeMs) return false;
+    // Si on connait le deviceId courant ET celui validé, ils doivent matcher.
+    if (currentDeviceId && data.deviceId && data.deviceId !== currentDeviceId) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
