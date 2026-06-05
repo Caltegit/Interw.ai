@@ -68,12 +68,13 @@ export function useMicHealthWatcher({
   }, [liveTranscript]);
 
   // Surveille les events natifs de la piste audio.
+  // Important : on NE bascule PAS en "track-dead" sur `track.muted` — c'est un
+  // évènement transient sur Chrome/macOS (notamment au démarrage) qui causait
+  // énormément de faux positifs. Seul `ended` ou `readyState !== "live"` compte.
   useEffect(() => {
     if (!stream || !active) return;
     const track = stream.getAudioTracks()[0];
     if (!track) return;
-
-    let initialGraceTimer: number | null = null;
 
     const setTrackDead = (reason: string) => {
       if (statusRef.current === "track-dead") return;
@@ -83,42 +84,17 @@ export function useMicHealthWatcher({
       logger.warn("mic_health_track_dead", { sessionId, reason });
     };
 
-    const handleMute = () => setTrackDead("track_muted");
     const handleEnded = () => setTrackDead("track_ended");
-    const handleUnmute = () => {
-      if (initialGraceTimer !== null) {
-        clearTimeout(initialGraceTimer);
-        initialGraceTimer = null;
-      }
-      if (statusRef.current === "track-dead" && track.readyState === "live") {
-        statusRef.current = "ok";
-        setStatus("ok");
-        lastSignalAtRef.current = Date.now();
-      }
-    };
 
-    // État initial : grâce de 1.5 s pour éviter le faux positif "muted" transitoire
-    // observé sur Chrome/Safari juste après getUserMedia.
     if (track.readyState !== "live") {
       setTrackDead("track_not_live_initial");
-    } else if (track.muted) {
-      initialGraceTimer = window.setTimeout(() => {
-        if (track.muted && track.readyState === "live") {
-          setTrackDead("track_muted_initial");
-        }
-        initialGraceTimer = null;
-      }, INITIAL_MUTE_GRACE_MS);
     }
-    track.addEventListener("mute", handleMute);
-    track.addEventListener("unmute", handleUnmute);
     track.addEventListener("ended", handleEnded);
     return () => {
-      if (initialGraceTimer !== null) clearTimeout(initialGraceTimer);
-      track.removeEventListener("mute", handleMute);
-      track.removeEventListener("unmute", handleUnmute);
       track.removeEventListener("ended", handleEnded);
     };
   }, [stream, active, sessionId]);
+
 
   // Boucle de mesure RMS.
   useEffect(() => {
