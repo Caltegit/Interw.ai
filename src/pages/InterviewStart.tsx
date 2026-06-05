@@ -2381,74 +2381,36 @@ export default function InterviewStart() {
     // Start camera stream
     await startVideoStream();
 
-    // Garde anti-silence bloquante : on mesure 1.5 s de signal micro avant la
-    // 1ʳᵉ question. Si rien (piste muted OU pic plat), on bloque le démarrage
-    // tant que le candidat n'a pas un micro fonctionnel — pas d'entretien muet.
+    // Garde micro non-bloquante : si le test technique a été validé < 30 min
+    // et que la piste audio courante est vivante, on démarre directement.
+    // Plus de remesure de warmup ici — c'était la cause N°1 de faux positifs.
     {
-      let blocked = false;
-      // Boucle : on remesure tant que le candidat appuie sur « Réessayer ».
-      // « Refaire le test technique » navigue ailleurs et démonte le composant.
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const s = streamRef.current;
-        let m: Awaited<ReturnType<typeof measureMicLevel>> | null = null;
-        if (s) {
-          try {
-            m = await measureMicLevel(s, MIC_THRESHOLDS.WARMUP_DURATION_MS, MIC_THRESHOLDS.ACTIVE_RMS);
-          } catch {
-            m = null;
-          }
-        }
-        const failed =
-          !s ||
-          !m ||
-          !m.ok ||
-          m.muted ||
-          m.peak <= MIC_THRESHOLDS.WARMUP_SILENCE_MAX;
+      const s = streamRef.current;
+      const audioTrack = s?.getAudioTracks()[0] ?? null;
+      const currentDeviceId = audioTrack?.getSettings?.().deviceId ?? null;
+      const trackLive = !!audioTrack && audioTrack.readyState === "live";
+      const testValid = isMicTestStillValid(token, currentDeviceId);
 
-        if (!failed) {
-          if (blocked) {
-            // Le candidat est revenu en état OK : on ferme la modale et on continue.
-            setMicBlockOpen(false);
-            setMicBlockRetrying(false);
-          }
-          break;
-        }
-
-        blocked = true;
-        logger.error("interview_mic_warmup_silent", {
+      if (!s || !audioTrack || !trackLive || !testValid) {
+        logger.warn("interview_mic_precheck_failed", {
           sessionId: session?.id ?? null,
-          peak: m?.peak ?? null,
-          activeMs: m?.activeMs ?? null,
-          muted: m?.muted ?? null,
-          ok: m?.ok ?? false,
+          hasStream: !!s,
+          hasTrack: !!audioTrack,
+          trackLive,
+          testValid,
         });
-
-        // On masque l'overlay de boot tant que la modale est visible.
         setBootActive(false);
-        setMicBlockRetrying(false);
         setMicBlockOpen(true);
-
-        // Attend l'action utilisateur. true = réessayer ; false = abandon (la
-        // dialog redirige vers le test technique, le composant sera démonté).
-        const retry = await new Promise<boolean>((resolve) => {
+        // Dialog n'a qu'une seule action : refaire le test technique
+        // (qui navigue ailleurs et démonte ce composant).
+        await new Promise<boolean>((resolve) => {
           micBlockResolveRef.current = resolve;
         });
         micBlockResolveRef.current = null;
-
-        if (!retry) {
-          // L'utilisateur a choisi de refaire le test technique → on quitte
-          // beginInterview sans démarrer l'entretien.
-          setMicBlockOpen(false);
-          return;
-        }
-
-        // Réessayer : on relance la mesure (boucle).
-        setMicBlockRetrying(true);
-        // Réactive le boot overlay pour le prochain affichage si la mesure réussit.
-        setBootActive(true);
+        return;
       }
     }
+
 
 
 
