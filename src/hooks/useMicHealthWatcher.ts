@@ -134,6 +134,11 @@ export function useMicHealthWatcher({
     }
     if (stream.getAudioTracks().length === 0) return;
 
+    // Reset du chrono à chaque (ré)activation : évite de basculer en "silent"
+    // juste après que l'IA ait fini de parler (TTS > silentThresholdMs).
+    lastSignalAtRef.current = Date.now();
+    let silentTickCount = 0;
+
     let cancelled = false;
     let rafId: number | null = null;
     let ctx: AudioContext | null = null;
