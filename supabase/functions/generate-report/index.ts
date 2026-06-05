@@ -4,9 +4,10 @@ import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
 
-const SITE_NAME = "interw.ai";
+const SITE_NAME = "Interw";
 const SENDER_DOMAIN = "notify.interw.ai";
 const FROM_DOMAIN = "notify.interw.ai";
+const FROM_LOCAL_PART = "hello";
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
@@ -1252,7 +1253,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         const payload: Record<string, unknown> = {
           message_id: messageId,
           to: recruiterEmail,
-          from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+          from: `${SITE_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
           sender_domain: SENDER_DOMAIN,
           subject,
           html,

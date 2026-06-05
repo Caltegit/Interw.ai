@@ -1,6 +1,6 @@
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Button, Container, Head, Heading, Html, Preview, Section, Text,
+  Body, Button, Container, Head, Heading, Hr, Html, Link, Preview, Section, Text,
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
@@ -13,14 +13,28 @@ interface CandidateThankYouProps {
   customBody?: string
 }
 
-const DEFAULT_SUBJECT = "Merci pour votre entretien"
-
 function substitute(text: string, vars: Record<string, string>): string {
   return text
     .replace(/\{firstName\}/g, vars.firstName || '')
     .replace(/\{jobTitle\}/g, vars.jobTitle || '')
     .replace(/\{orgName\}/g, vars.orgName || '')
     .replace(/Bonjour ,/g, 'Bonjour,')
+}
+
+function buildSubject(data: Record<string, any>): string {
+  const custom = (data?.customSubject as string | undefined)?.trim()
+  if (custom) {
+    return substitute(custom, {
+      firstName: data?.firstName || '',
+      jobTitle: (data?.jobTitle && String(data.jobTitle).trim()) || 'votre poste',
+      orgName: (data?.orgName && String(data.orgName).trim()) || '',
+    })
+  }
+  const jobTitle = (data?.jobTitle && String(data.jobTitle).trim()) || 'votre poste'
+  const orgName = (data?.orgName && String(data.orgName).trim()) || ''
+  return orgName
+    ? `Confirmation de votre entretien ${jobTitle} – ${orgName}`
+    : `Confirmation de votre entretien ${jobTitle}`
 }
 
 const CandidateThankYouEmail = ({
@@ -38,7 +52,7 @@ const CandidateThankYouEmail = ({
   const bodyText = customBody && customBody.trim()
     ? substitute(customBody, vars)
     : substitute(
-        `Bonjour {firstName},\n\nMerci d'avoir passé votre entretien pour le poste de {jobTitle} chez {orgName}.\n\nVos réponses ont bien été enregistrées et vont être analysées par l'équipe de recrutement. Vous serez recontacté(e) prochainement.\n\nÀ bientôt,\nL'équipe de recrutement`,
+        `Bonjour {firstName},\n\nMerci d'avoir passé votre entretien pour le poste de {jobTitle} chez {orgName}.\n\nVos réponses ont bien été enregistrées et vont être analysées par l'équipe de recrutement. Vous serez recontacté(e) prochainement quant aux suites données à votre candidature.\n\nSi vous avez la moindre question, vous pouvez répondre directement à cet email — nous sommes là pour vous aider.\n\nÀ bientôt,\nL'équipe de recrutement`,
         vars,
       )
   const paragraphs = bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
@@ -46,10 +60,22 @@ const CandidateThankYouEmail = ({
   return (
     <Html lang="fr" dir="ltr">
       <Head />
-      <Preview>Merci d'avoir passé votre entretien</Preview>
+      <Preview>Confirmation de votre entretien pour {vars.jobTitle}</Preview>
       <Body style={main}>
         <Container style={container}>
+          {/* En-tête identité */}
+          <Section style={header}>
+            <Text style={brand}>Interw</Text>
+          </Section>
+
+          {/* Justification contextuelle (signal positif pour les filtres) */}
+          <Text style={context}>
+            Vous recevez cet email car vous venez de passer un entretien pour le poste de
+            {' '}<strong>{vars.jobTitle}</strong>{orgName ? <> chez <strong>{vars.orgName}</strong></> : null}.
+          </Text>
+
           <Heading style={h1}>Merci pour votre entretien</Heading>
+
           {paragraphs.map((p, i) => (
             <Text key={i} style={text}>
               {p.split('\n').map((line, j, arr) => (
@@ -60,16 +86,36 @@ const CandidateThankYouEmail = ({
               ))}
             </Text>
           ))}
+
           {/* Encart RGPD — TOUJOURS présent, non modifiable */}
           <Section style={section}>
-            <Text style={text}>
-              Conformément au RGPD, vous pouvez à tout moment consulter les règles de traitement de vos
-              données et demander leur suppression depuis la page suivante :
+            <Text style={textMuted}>
+              Conformément au RGPD, vous pouvez à tout moment consulter les règles de traitement
+              de vos données personnelles et demander leur suppression depuis la page suivante :
             </Text>
             {privacyUrl ? (
               <Button href={privacyUrl} style={button}>
-                Mes données personnelles
+                Gérer mes données personnelles
               </Button>
+            ) : null}
+          </Section>
+
+          <Hr style={hr} />
+
+          {/* Footer identitaire */}
+          <Section style={footer}>
+            <Text style={footerText}>
+              <strong>Interw</strong> — Plateforme d'entretien assistée par IA
+            </Text>
+            <Text style={footerText}>
+              <Link href="https://interw.ai" style={footerLink}>interw.ai</Link>
+              {' · '}
+              <Link href="mailto:contact@interw.ai" style={footerLink}>contact@interw.ai</Link>
+            </Text>
+            {firstName ? (
+              <Text style={footerHint}>
+                Si vous n'êtes pas {firstName}, vous pouvez ignorer ce message en toute sécurité.
+              </Text>
             ) : null}
           </Section>
         </Container>
@@ -80,10 +126,7 @@ const CandidateThankYouEmail = ({
 
 export const template = {
   component: CandidateThankYouEmail,
-  subject: (data: Record<string, any>) => {
-    const custom = (data?.customSubject as string | undefined)?.trim()
-    return custom || DEFAULT_SUBJECT
-  },
+  subject: buildSubject,
   displayName: 'Remerciement candidat (fin d\'entretien)',
   previewData: {
     firstName: 'Jane',
@@ -95,8 +138,12 @@ export const template = {
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = { padding: '24px', maxWidth: '640px', margin: '0 auto' }
+const header = { padding: '0 0 16px', borderBottom: '1px solid #E5E7EB', marginBottom: '24px' }
+const brand = { fontSize: '20px', fontWeight: 'bold' as const, color: '#6366F1', margin: '0', letterSpacing: '-0.01em' }
+const context = { fontSize: '13px', color: '#6B7280', lineHeight: '1.6', margin: '0 0 20px' }
 const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#111827', margin: '0 0 20px' }
 const text = { fontSize: '14px', color: '#374151', lineHeight: '1.6', margin: '0 0 14px' }
+const textMuted = { fontSize: '13px', color: '#4B5563', lineHeight: '1.6', margin: '0 0 12px' }
 const section = { margin: '24px 0', padding: '16px', backgroundColor: '#F3F4F6', borderRadius: '8px' }
 const button = {
   backgroundColor: '#6366F1',
@@ -107,5 +154,10 @@ const button = {
   fontSize: '14px',
   fontWeight: 'bold' as const,
   display: 'inline-block',
-  marginTop: '8px',
+  marginTop: '4px',
 }
+const hr = { borderColor: '#E5E7EB', margin: '32px 0 16px' }
+const footer = { padding: '0' }
+const footerText = { fontSize: '12px', color: '#6B7280', lineHeight: '1.5', margin: '0 0 4px' }
+const footerLink = { color: '#6366F1', textDecoration: 'none' }
+const footerHint = { fontSize: '11px', color: '#9CA3AF', lineHeight: '1.5', margin: '8px 0 0', fontStyle: 'italic' as const }
