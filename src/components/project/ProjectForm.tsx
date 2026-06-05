@@ -1217,6 +1217,75 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4" />
+                    Email envoyé au candidat après l'entretien
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Ce message est envoyé automatiquement à chaque candidat à la fin de son entretien.
+                    Variables disponibles : <code>{"{firstName}"}</code>, <code>{"{jobTitle}"}</code>,{" "}
+                    <code>{"{orgName}"}</code>.
+                  </p>
+                  <div className="space-y-1">
+                    <Label htmlFor={`candidate-email-subject-${idSuffix}`}>Objet</Label>
+                    <Input
+                      id={`candidate-email-subject-${idSuffix}`}
+                      value={candidateEmailSubject}
+                      onChange={(e) => setCandidateEmailSubject(e.target.value)}
+                      placeholder={DEFAULT_CANDIDATE_EMAIL_SUBJECT}
+                      maxLength={200}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`candidate-email-body-${idSuffix}`}>Message</Label>
+                    <Textarea
+                      id={`candidate-email-body-${idSuffix}`}
+                      value={candidateEmailBody}
+                      onChange={(e) => setCandidateEmailBody(e.target.value)}
+                      rows={8}
+                      placeholder={DEFAULT_CANDIDATE_EMAIL_BODY}
+                    />
+                  </div>
+                  <div className="rounded-md border border-dashed bg-muted/50 p-3 text-xs text-muted-foreground space-y-2">
+                    <p className="font-medium text-foreground/80">
+                      Encart RGPD ajouté automatiquement à la fin (non modifiable) :
+                    </p>
+                    <p>
+                      « Conformément au RGPD, vous pouvez à tout moment consulter les règles de
+                      traitement de vos données et demander leur suppression depuis la page suivante : »
+                    </p>
+                    <div className="inline-block rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
+                      Mes données personnelles
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={saveCandidateEmailAsDefault}
+                        onCheckedChange={(v) => setSaveCandidateEmailAsDefault(v === true)}
+                      />
+                      <span>Garder ce texte comme modèle par défaut pour mes prochains projets</span>
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCandidateEmailSubject(DEFAULT_CANDIDATE_EMAIL_SUBJECT);
+                        setCandidateEmailBody(DEFAULT_CANDIDATE_EMAIL_BODY);
+                      }}
+                    >
+                      Réinitialiser
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+
                     <User className="h-4 w-4" />
                     Visibilité du projet
                   </CardTitle>
