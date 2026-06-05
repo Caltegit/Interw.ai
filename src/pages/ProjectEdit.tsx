@@ -14,6 +14,11 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { mergeCandidateFields } from "@/lib/candidateFields";
+import {
+  DEFAULT_CANDIDATE_EMAIL_BODY,
+  DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  CANDIDATE_EMAIL_TEMPLATE_KEY,
+} from "@/lib/candidateEmailDefaults";
 
 export default function ProjectEdit() {
   const { id } = useParams();
