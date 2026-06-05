@@ -116,6 +116,9 @@ export interface ProjectFormState {
   reportRecipientUserIds: string[];
   visibleToUserIds: string[];
   candidateFields: CandidateFieldsConfig;
+  candidateEmailSubject: string;
+  candidateEmailBody: string;
+  saveCandidateEmailAsDefault?: boolean;
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
