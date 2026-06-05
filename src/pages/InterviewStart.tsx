@@ -4854,11 +4854,8 @@ export default function InterviewStart() {
 
       <MicBlockingDialog
         open={micBlockOpen}
-        retrying={micBlockRetrying}
-        onRetry={() => {
-          micBlockResolveRef.current?.(true);
-        }}
         onRedoTest={() => {
+          setMicBlockOpen(false);
           micBlockResolveRef.current?.(false);
           try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* ignore */ }
           if (token) {
@@ -4867,6 +4864,7 @@ export default function InterviewStart() {
           navigate(`/session/${slug}/test/${token}`);
         }}
       />
+
     </CandidateLayout>
   );
 }
