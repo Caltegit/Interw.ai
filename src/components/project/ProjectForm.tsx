@@ -430,6 +430,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
       reportRecipientUserIds,
       visibleToUserIds,
       candidateFields,
+      candidateEmailSubject,
+      candidateEmailBody,
+      saveCandidateEmailAsDefault,
     });
   };
 
