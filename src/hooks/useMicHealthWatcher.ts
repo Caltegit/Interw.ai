@@ -26,10 +26,10 @@ interface MicHealthState {
   peak: number;
 }
 
-const SILENT_THRESHOLD_DEFAULT = 12000;
+const SILENT_THRESHOLD_DEFAULT = 20000;
 const RMS_SILENCE_MAX_DEFAULT = 0.015;
-const INITIAL_MUTE_GRACE_MS = 1500;
-const SILENT_CONFIRM_TICKS = 2;
+const SILENT_CONFIRM_TICKS = 3;
+
 
 /**
  * Surveille en continu la santé du micro candidat pendant un entretien :
