@@ -294,6 +294,14 @@ export default function ProjectEdit() {
           report_recipient_user_ids: s.reportRecipientUserIds,
           visible_to_user_ids: s.visibleToUserIds,
           candidate_fields: s.candidateFields,
+          candidate_email_subject:
+            s.candidateEmailSubject.trim() && s.candidateEmailSubject.trim() !== DEFAULT_CANDIDATE_EMAIL_SUBJECT
+              ? s.candidateEmailSubject.trim()
+              : null,
+          candidate_email_body:
+            s.candidateEmailBody.trim() && s.candidateEmailBody.trim() !== DEFAULT_CANDIDATE_EMAIL_BODY
+              ? s.candidateEmailBody.trim()
+              : null,
         } as never)
         .eq("id", id);
 
