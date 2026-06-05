@@ -1086,6 +1086,235 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
           {step === 4 && (
             <div className="space-y-4">
+              <Accordion type="multiple" className="space-y-3">
+                {/* 1. Visibilité du projet */}
+                <AccordionItem value="visibility" className="rounded-lg border bg-card px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <User className="h-4 w-4" />
+                      Visibilité du projet
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3 pt-1">
+                      <p className="text-sm text-muted-foreground">
+                        Choisissez qui peut voir ce projet. Le créateur et le propriétaire de l'organisation y ont toujours accès.
+                      </p>
+                      {(() => {
+                        const creatorId = creatorUserId ?? user?.id ?? null;
+                        const alwaysIds = new Set<string>();
+                        if (creatorId) alwaysIds.add(creatorId);
+                        if (orgOwnerId) alwaysIds.add(orgOwnerId);
+                        const extraCount = visibleToUserIds.filter((id) => !alwaysIds.has(id)).length;
+                        const totalCount = alwaysIds.size + extraCount;
+                        return (
+                          <Popover open={visibilityOpen} onOpenChange={setVisibilityOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between" type="button">
+                                <span>
+                                  {extraCount === 0
+                                    ? `${totalCount} personne${totalCount > 1 ? "s" : ""} (créateur et propriétaire)`
+                                    : `${totalCount} personnes peuvent voir ce projet`}
+                                </span>
+                                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                              <div className="max-h-72 overflow-auto p-1">
+                                {orgMembers.length === 0 ? (
+                                  <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
+                                ) : (
+                                  orgMembers.map((m) => {
+                                    const always = alwaysIds.has(m.user_id);
+                                    const checked = always || visibleToUserIds.includes(m.user_id);
+                                    return (
+                                      <label
+                                        key={m.user_id}
+                                        className={`flex items-center gap-3 rounded-sm px-2 py-2 ${always ? "opacity-70" : "cursor-pointer hover:bg-accent"}`}
+                                      >
+                                        <Checkbox
+                                          checked={checked}
+                                          disabled={always}
+                                          onCheckedChange={(v) => {
+                                            if (always) return;
+                                            setVisibleToUserIds((prev) =>
+                                              v
+                                                ? [...prev, m.user_id]
+                                                : prev.filter((id) => id !== m.user_id),
+                                            );
+                                          }}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-sm font-medium">
+                                            {m.full_name || m.email}
+                                            {always && (
+                                              <span className="ml-2 text-xs text-muted-foreground">(toujours)</span>
+                                            )}
+                                          </p>
+                                          {m.full_name && (
+                                            <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                                          )}
+                                        </div>
+                                      </label>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      })()}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 2. Destinataires des rapports */}
+                <AccordionItem value="recipients" className="rounded-lg border bg-card px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Mail className="h-4 w-4" />
+                      Destinataires des rapports
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3 pt-1">
+                      <p className="text-sm text-muted-foreground">
+                        Ces personnes recevront l'email de rapport après chaque entretien.
+                      </p>
+                      <Popover open={recipientsOpen} onOpenChange={setRecipientsOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-between" type="button">
+                            <span>
+                              {reportRecipientUserIds.length === 0
+                                ? "Aucun destinataire sélectionné"
+                                : reportRecipientUserIds.length === 1
+                                  ? orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.full_name ||
+                                    orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.email ||
+                                    "1 destinataire"
+                                  : `${reportRecipientUserIds.length} destinataires sélectionnés`}
+                            </span>
+                            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <div className="max-h-72 overflow-auto p-1">
+                            {orgMembers.length === 0 ? (
+                              <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
+                            ) : (
+                              orgMembers.map((m) => {
+                                const checked = reportRecipientUserIds.includes(m.user_id);
+                                return (
+                                  <label
+                                    key={m.user_id}
+                                    className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 hover:bg-accent"
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      onCheckedChange={(v) => {
+                                        setReportRecipientUserIds((prev) =>
+                                          v
+                                            ? [...prev, m.user_id]
+                                            : prev.filter((id) => id !== m.user_id),
+                                        );
+                                      }}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="truncate text-sm font-medium">
+                                        {m.full_name || m.email}
+                                      </p>
+                                      {m.full_name && (
+                                        <p className="truncate text-xs text-muted-foreground">{m.email}</p>
+                                      )}
+                                    </div>
+                                  </label>
+                                );
+                              })
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      {reportRecipientUserIds.length === 0 && (
+                        <p className="text-xs text-destructive">
+                          Aucun destinataire : personne ne recevra le rapport après chaque entretien.
+                        </p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* 3. Email envoyé au candidat */}
+                <AccordionItem value="candidate-email" className="rounded-lg border bg-card px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Mail className="h-4 w-4" />
+                      Email envoyé au candidat après l'entretien
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3 pt-1">
+                      <p className="text-sm text-muted-foreground">
+                        Ce message est envoyé automatiquement à chaque candidat à la fin de son entretien.
+                        Variables disponibles : <code>{"{firstName}"}</code>, <code>{"{jobTitle}"}</code>,{" "}
+                        <code>{"{orgName}"}</code>.
+                      </p>
+                      <div className="space-y-1">
+                        <Label htmlFor={`candidate-email-subject-${idSuffix}`}>Objet</Label>
+                        <Input
+                          id={`candidate-email-subject-${idSuffix}`}
+                          value={candidateEmailSubject}
+                          onChange={(e) => setCandidateEmailSubject(e.target.value)}
+                          placeholder={DEFAULT_CANDIDATE_EMAIL_SUBJECT}
+                          maxLength={200}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`candidate-email-body-${idSuffix}`}>Message</Label>
+                        <Textarea
+                          id={`candidate-email-body-${idSuffix}`}
+                          value={candidateEmailBody}
+                          onChange={(e) => setCandidateEmailBody(e.target.value)}
+                          rows={8}
+                          placeholder={DEFAULT_CANDIDATE_EMAIL_BODY}
+                        />
+                      </div>
+                      <div className="rounded-md border border-dashed bg-muted/50 p-3 text-xs text-muted-foreground space-y-2">
+                        <p className="font-medium text-foreground/80">
+                          Encart RGPD ajouté automatiquement à la fin (non modifiable) :
+                        </p>
+                        <p>
+                          « Conformément au RGPD, vous pouvez à tout moment consulter les règles de
+                          traitement de vos données et demander leur suppression depuis la page suivante : »
+                        </p>
+                        <div className="inline-block rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
+                          Mes données personnelles
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={saveCandidateEmailAsDefault}
+                            onCheckedChange={(v) => setSaveCandidateEmailAsDefault(v === true)}
+                          />
+                          <span>Garder ce texte comme modèle par défaut pour mes prochains projets</span>
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setCandidateEmailSubject(DEFAULT_CANDIDATE_EMAIL_SUBJECT);
+                            setCandidateEmailBody(DEFAULT_CANDIDATE_EMAIL_BODY);
+                          }}
+                        >
+                          Réinitialiser
+                        </Button>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+
+              {/* Récapitulatif (toujours visible, en dernier) */}
               <Card className="bg-muted/50">
                 <CardHeader>
                   <CardTitle className="text-sm">Récapitulatif</CardTitle>
@@ -1143,226 +1372,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </p>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4" />
-                    Destinataires des rapports
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Ces personnes recevront l'email de rapport après chaque entretien.
-                  </p>
-                  <Popover open={recipientsOpen} onOpenChange={setRecipientsOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between" type="button">
-                        <span>
-                          {reportRecipientUserIds.length === 0
-                            ? "Aucun destinataire sélectionné"
-                            : reportRecipientUserIds.length === 1
-                              ? orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.full_name ||
-                                orgMembers.find((m) => m.user_id === reportRecipientUserIds[0])?.email ||
-                                "1 destinataire"
-                              : `${reportRecipientUserIds.length} destinataires sélectionnés`}
-                        </span>
-                        <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <div className="max-h-72 overflow-auto p-1">
-                        {orgMembers.length === 0 ? (
-                          <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
-                        ) : (
-                          orgMembers.map((m) => {
-                            const checked = reportRecipientUserIds.includes(m.user_id);
-                            return (
-                              <label
-                                key={m.user_id}
-                                className="flex cursor-pointer items-center gap-3 rounded-sm px-2 py-2 hover:bg-accent"
-                              >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={(v) => {
-                                    setReportRecipientUserIds((prev) =>
-                                      v
-                                        ? [...prev, m.user_id]
-                                        : prev.filter((id) => id !== m.user_id),
-                                    );
-                                  }}
-                                />
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium">
-                                    {m.full_name || m.email}
-                                  </p>
-                                  {m.full_name && (
-                                    <p className="truncate text-xs text-muted-foreground">{m.email}</p>
-                                  )}
-                                </div>
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  {reportRecipientUserIds.length === 0 && (
-                    <p className="text-xs text-destructive">
-                      Aucun destinataire : personne ne recevra le rapport après chaque entretien.
-                    </p>
-                  )}
-
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4" />
-                    Email envoyé au candidat après l'entretien
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Ce message est envoyé automatiquement à chaque candidat à la fin de son entretien.
-                    Variables disponibles : <code>{"{firstName}"}</code>, <code>{"{jobTitle}"}</code>,{" "}
-                    <code>{"{orgName}"}</code>.
-                  </p>
-                  <div className="space-y-1">
-                    <Label htmlFor={`candidate-email-subject-${idSuffix}`}>Objet</Label>
-                    <Input
-                      id={`candidate-email-subject-${idSuffix}`}
-                      value={candidateEmailSubject}
-                      onChange={(e) => setCandidateEmailSubject(e.target.value)}
-                      placeholder={DEFAULT_CANDIDATE_EMAIL_SUBJECT}
-                      maxLength={200}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor={`candidate-email-body-${idSuffix}`}>Message</Label>
-                    <Textarea
-                      id={`candidate-email-body-${idSuffix}`}
-                      value={candidateEmailBody}
-                      onChange={(e) => setCandidateEmailBody(e.target.value)}
-                      rows={8}
-                      placeholder={DEFAULT_CANDIDATE_EMAIL_BODY}
-                    />
-                  </div>
-                  <div className="rounded-md border border-dashed bg-muted/50 p-3 text-xs text-muted-foreground space-y-2">
-                    <p className="font-medium text-foreground/80">
-                      Encart RGPD ajouté automatiquement à la fin (non modifiable) :
-                    </p>
-                    <p>
-                      « Conformément au RGPD, vous pouvez à tout moment consulter les règles de
-                      traitement de vos données et demander leur suppression depuis la page suivante : »
-                    </p>
-                    <div className="inline-block rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground">
-                      Mes données personnelles
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={saveCandidateEmailAsDefault}
-                        onCheckedChange={(v) => setSaveCandidateEmailAsDefault(v === true)}
-                      />
-                      <span>Garder ce texte comme modèle par défaut pour mes prochains projets</span>
-                    </label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setCandidateEmailSubject(DEFAULT_CANDIDATE_EMAIL_SUBJECT);
-                        setCandidateEmailBody(DEFAULT_CANDIDATE_EMAIL_BODY);
-                      }}
-                    >
-                      Réinitialiser
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm">
-
-                    <User className="h-4 w-4" />
-                    Visibilité du projet
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Choisissez qui peut voir ce projet. Le créateur et le propriétaire de l'organisation y ont toujours accès.
-                  </p>
-                  {(() => {
-                    const creatorId = creatorUserId ?? user?.id ?? null;
-                    const alwaysIds = new Set<string>();
-                    if (creatorId) alwaysIds.add(creatorId);
-                    if (orgOwnerId) alwaysIds.add(orgOwnerId);
-                    const extraCount = visibleToUserIds.filter((id) => !alwaysIds.has(id)).length;
-                    const totalCount = alwaysIds.size + extraCount;
-                    return (
-                      <Popover open={visibilityOpen} onOpenChange={setVisibilityOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-between" type="button">
-                            <span>
-                              {extraCount === 0
-                                ? `${totalCount} personne${totalCount > 1 ? "s" : ""} (créateur et propriétaire)`
-                                : `${totalCount} personnes peuvent voir ce projet`}
-                            </span>
-                            <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <div className="max-h-72 overflow-auto p-1">
-                            {orgMembers.length === 0 ? (
-                              <p className="p-3 text-sm text-muted-foreground">Aucun membre.</p>
-                            ) : (
-                              orgMembers.map((m) => {
-                                const always = alwaysIds.has(m.user_id);
-                                const checked = always || visibleToUserIds.includes(m.user_id);
-                                return (
-                                  <label
-                                    key={m.user_id}
-                                    className={`flex items-center gap-3 rounded-sm px-2 py-2 ${always ? "opacity-70" : "cursor-pointer hover:bg-accent"}`}
-                                  >
-                                    <Checkbox
-                                      checked={checked}
-                                      disabled={always}
-                                      onCheckedChange={(v) => {
-                                        if (always) return;
-                                        setVisibleToUserIds((prev) =>
-                                          v
-                                            ? [...prev, m.user_id]
-                                            : prev.filter((id) => id !== m.user_id),
-                                        );
-                                      }}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-sm font-medium">
-                                        {m.full_name || m.email}
-                                        {always && (
-                                          <span className="ml-2 text-xs text-muted-foreground">(toujours)</span>
-                                        )}
-                                      </p>
-                                      {m.full_name && (
-                                        <p className="truncate text-xs text-muted-foreground">{m.email}</p>
-                                      )}
-                                    </div>
-                                  </label>
-                                );
-                              })
-                            )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
             </div>
+
           )}
         </CardContent>
       </Card>
