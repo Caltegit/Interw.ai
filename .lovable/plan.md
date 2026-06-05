@@ -1,82 +1,51 @@
-## Ce qui est en place aujourd'hui
+# Améliorer la délivrabilité des emails Interw
 
-Il y a **5 couches de vérif micro** qui s'empilent, dont 3 actives simultanément pendant l'entretien :
+## Diagnostic
 
-1. **Test technique** (`InterviewDeviceTest.tsx`) — avant l'entretien
-   - `getUserMedia` + mesure RMS 6 s via `measureMicLevel` + `MediaRecorder` en parallèle.
-   - Valide si `peak ≥ 0.10` ET `activeMs ≥ 800 ms`.
-   - Si OK : stocke `sessionStorage["mic-test-validated:{token}"]` avec `deviceId + validatedAt + peak`.
+- Domaine `notify.interw.ai` **vérifié** (DKIM/SPF/DMARC OK, gérés par Lovable Cloud).
+- 7 derniers jours : ~5 200 envois, **0 bounce dur récent**, 119 suppressions historiques → côté DNS, tout est sain.
+- Les emails partent depuis `noreply@notify.interw.ai`, nom d'expéditeur = `interw.ai`, **sans `Reply-To`** pour le mail de remerciement candidat (le gros volume).
 
-2. **Warmup bloquant** (`InterviewStart.tsx` lignes 2384-2451) — juste après « Démarrer »
-   - Remesure 1.5 s via `measureMicLevel`.
-   - Si piste muted OU `peak ≤ 0.01` → ouvre `MicBlockingDialog` bloquante (« Réessayer / Refaire le test »).
-   - Boucle while jusqu'à OK.
-   - **C'est lui qui s'est déclenché chez toi alors que le test était bon.**
+Le problème est éditorial, pas technique. Les filtres Gmail/Outlook pénalisent surtout :
+1. Le préfixe `noreply@` (signal négatif fort depuis 2024).
+2. L'absence de `Reply-To` → "email auquel on ne peut pas répondre" = score spam +.
+3. Sujet par défaut très générique (`"Merci pour votre entretien"`).
+4. Template court, ratio HTML/texte faible, pas de footer identifiable.
 
-3. **useMicHealthWatcher** (pendant l'entretien) — surveillance continue
-   - Écoute `track.onmute / onended` → bascule en `"track-dead"` (bannière rouge bloquante + bouton réacquérir).
-   - Mesure RMS en continu : 12 s sans signal + 2 ticks consécutifs → `"silent"` (bannière jaune).
-   - Affiche `MicFailureBanner`.
+## Plan d'action (étapes 1-4, code uniquement)
 
-4. **STT watchdog** (`InterviewStart.tsx` lignes 1240-1286) — toutes les 2 s
-   - Son propre `AudioContext` + `analyser` redondants avec ceux du watcher.
-   - Si STT muet >10 s ET RMS plat >10 s → `noMicSignal=true` (autre bannière).
-   - Si STT muet >10 s → relance `recognition.stop()` (course condition avec le watcher).
+### 1. Adresse expéditrice
+- Remplacer `noreply@notify.interw.ai` → `hello@notify.interw.ai`.
+- Mettre à jour le nom From de `interw.ai` → `Interw` (plus propre dans l'inbox).
+- Fichiers : `send-transactional-email/index.ts`, `generate-report/index.ts`.
 
-5. **Auto-pause silence** (`resetSilenceTimer`) — fin du palier silence
-   - Met l'entretien en pause + annonce TTS « vérifiez votre micro ».
+### 2. Reply-To par défaut
+- Ajouter une constante `DEFAULT_REPLY_TO = "contact@interw.ai"` utilisée si l'appelant n'en fournit pas.
+- Pour `candidate-thank-you` : passer en `replyTo` l'email du créateur du projet (lookup `profiles.email` via `projects.created_by`), fallback `contact@interw.ai`. Modifié dans `finalize-session/index.ts`.
+- Pour `interview-report` : déjà OK (utilise l'email candidat).
 
-**Bugs principaux** :
-- Trois `AudioContext` concurrents sur le même `MediaStream` (warmup → watcher → STT watchdog) → certains navigateurs renvoient des mesures à zéro sur le 2ᵉ et 3ᵉ.
-- Le warmup re-mesure ce qui vient d'être validé 30 s plus tôt par le test → faux positifs si le candidat n'a pas reparlé entre-temps.
-- `track.muted` est un évènement *transient* sur Chrome/macOS au démarrage : `useMicHealthWatcher` peut basculer en `track-dead` à tort.
-- STT watchdog qui `recognition.stop()` pendant que le watcher mesure encore → relance la recognition, qui re-déclenche `track.onmute` sur certains setups → boucle.
+### 3. Sujet du mail candidat
+- Sujet par défaut → `"Confirmation de votre entretien {jobTitle} – {orgName}"` (plus spécifique = meilleur engagement).
+- L'override par projet/organisation reste prioritaire.
+- Fichier : `candidate-thank-you.tsx`.
 
-## Plan de simplification
+### 4. Enrichir le template `candidate-thank-you`
+- Ajouter un **en-tête** avec le nom "Interw" stylé (pas de logo image pour rester simple, on évite les images externes qui peuvent casser).
+- Ajouter une **mention contextuelle** en tête de mail : *"Vous recevez cet email car vous avez passé un entretien pour le poste de {jobTitle} chez {orgName}."* — justifie le caractère transactionnel pour les filtres.
+- Ajouter un **footer** avec : "Interw — Plateforme d'entretien IA", lien vers `interw.ai`, mention "Si vous n'êtes pas {firstName}, vous pouvez ignorer ce mail.".
+- Rééquilibrer le ratio HTML/texte (un peu plus de copie réelle).
 
-**Principe** : une fois le test technique passé (< 30 min), on fait confiance. On enlève la mesure bloquante au démarrage, on supprime le STT watchdog redondant, et on durcit le test technique pour qu'il soit vraiment fiable.
+## Hors-scope (pas dans ce ticket)
 
-### 1. Renforcer le test technique (`InterviewDeviceTest.tsx`)
-- Garder la mesure RMS 6 s + MediaRecorder.
-- **Ajouter** une vérification finale `track.readyState === "live" && !track.muted` avant validation.
-- **Ajouter** une passe SpeechRecognition de 3 s pour confirmer que le STT capte au moins un résultat (skipped silencieusement si l'API n'est pas dispo).
-- Persister la validation **30 min** (au lieu de 10) avec `deviceId` exact.
+- Dashboard `/admin/email-health` (étape 5 — à voir après).
+- Google Postmaster Tools / DMARC reporting (actions DNS, à faire manuellement).
+- Pas de changement DNS ni de migration vers Resend/SendGrid.
 
-### 2. Supprimer le warmup bloquant (`InterviewStart.tsx`, ~2384-2451)
-- Si `sessionStorage["mic-test-validated:{token}"]` existe ET < 30 min ET la piste audio actuelle a le **même `deviceId`** ET `readyState === "live"` → **on saute la mesure de warmup, on démarre directement**.
-- Sinon (cas rare : refresh, nouveau périphérique) : `MicBlockingDialog` qui propose **« Refaire le test technique »** comme unique action, plus de boucle de remesure.
-- Le hook `MicBlockingDialog` reste, mais ne sert plus que pour ce cas.
+## Fichiers modifiés
 
-### 3. Supprimer le STT watchdog redondant
-- Retirer le bloc lignes 1240-1286 (`micAnalyserRef` + `sttWatchdogRef` + état `noMicSignal`).
-- Conserver uniquement le redémarrage de `recognition` après 10 s sans résultat (logique pure STT, sans mesure RMS).
+- `supabase/functions/send-transactional-email/index.ts`
+- `supabase/functions/generate-report/index.ts`
+- `supabase/functions/finalize-session/index.ts`
+- `supabase/functions/_shared/transactional-email-templates/candidate-thank-you.tsx`
 
-### 4. Adoucir `useMicHealthWatcher`
-- `silentThresholdMs` 12 s → **20 s** ; `SILENT_CONFIRM_TICKS` 2 → **3**.
-- **Ne plus basculer en `track-dead` sur `track.muted`** (event transient non fiable). Garder seulement `track.onended` (= micro vraiment débranché) et `readyState !== "live"`.
-- Supprimer la grâce 1.5 s `track_muted_initial` qui devient inutile.
-
-### 5. Mutualiser l'analyser RMS
-- Nouveau hook `useSharedMicLevel(stream, active)` qui ouvre **un seul** `AudioContext` + `AnalyserNode` par stream et expose `rmsRef` (ref polled à 60 fps).
-- `useMicHealthWatcher` et `MicVolumeMeter` lisent ce ref au lieu d'instancier leurs propres analysers.
-
-### 6. Réacquisition micro
-- Inchangée, mais ne plus déclencher automatiquement : reste uniquement le bouton manuel dans `MicFailureBanner` lorsque `track.ended` est avéré.
-
-## Hors périmètre
-
-- Pas de changement de l'auto-pause silence (UX volontaire pour le candidat).
-- Pas de modif du test caméra / son.
-- Pas de changement de l'overlay boot ni des stats serveur.
-
-## Détails techniques
-
-| Fichier | Changement |
-|---|---|
-| `src/lib/micLevel.ts` | Ajouter helper `isMicTestStillValid(token, currentDeviceId)` |
-| `src/pages/InterviewDeviceTest.tsx` | Vérif `readyState/muted` finale + passe STT + TTL 30 min |
-| `src/pages/InterviewStart.tsx` | Supprimer warmup loop + STT watchdog ; nouveau garde `isMicTestStillValid` |
-| `src/hooks/useMicHealthWatcher.ts` | Seuils élargis, retrait du `track.muted` initial |
-| `src/hooks/useSharedMicLevel.ts` *(nouveau)* | Analyser unique mutualisé |
-| `src/components/interview/MicVolumeMeter.tsx` | Consomme `useSharedMicLevel` |
-| `src/components/interview/MicBlockingDialog.tsx` | Mode « test technique requis » uniquement |
+Puis redéploiement des 3 edge functions modifiées.
