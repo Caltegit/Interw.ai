@@ -89,6 +89,8 @@ const initialState: ProjectFormState = {
   reportRecipientUserIds: [],
   visibleToUserIds: [],
   candidateFields: DEFAULT_CANDIDATE_FIELDS,
+  candidateEmailSubject: DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  candidateEmailBody: DEFAULT_CANDIDATE_EMAIL_BODY,
 };
 
 export default function ProjectNew() {
