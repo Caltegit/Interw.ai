@@ -14,6 +14,11 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
+import {
+  DEFAULT_CANDIDATE_EMAIL_BODY,
+  DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+  CANDIDATE_EMAIL_TEMPLATE_KEY,
+} from "@/lib/candidateEmailDefaults";
 import { loadInterviewTemplate } from "@/components/project/loadInterviewTemplate";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
