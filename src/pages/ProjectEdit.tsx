@@ -215,7 +215,7 @@ export default function ProjectEdit() {
             .eq("key", CANDIDATE_EMAIL_TEMPLATE_KEY)
             .maybeSingle();
           if (orgTpl) {
-            setFormInitial((prev) =>
+            setInitial((prev) =>
               prev
                 ? {
                     ...prev,
