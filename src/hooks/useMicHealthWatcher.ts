@@ -169,6 +169,7 @@ export function useMicHealthWatcher({
         const now = Date.now();
         if (rms > rmsSilenceMax) {
           lastSignalAtRef.current = now;
+          silentTickCount = 0;
           if (statusRef.current === "silent") {
             statusRef.current = "ok";
             setStatus("ok");
@@ -177,10 +178,16 @@ export function useMicHealthWatcher({
         } else if (statusRef.current === "ok") {
           const silentFor = now - lastSignalAtRef.current;
           if (silentFor > silentThresholdMs) {
-            statusRef.current = "silent";
-            transitionAtRef.current.silent = now;
-            setStatus("silent");
-            logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+            silentTickCount += 1;
+            // Anti-glitch : exiger N ticks consécutifs sous le seuil avant de basculer.
+            if (silentTickCount >= SILENT_CONFIRM_TICKS) {
+              statusRef.current = "silent";
+              transitionAtRef.current.silent = now;
+              setStatus("silent");
+              logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+            }
+          } else {
+            silentTickCount = 0;
           }
         }
         rafId = requestAnimationFrame(tick);
