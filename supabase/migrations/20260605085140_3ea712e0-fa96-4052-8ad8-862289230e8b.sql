@@ -1,0 +1,1 @@
+UPDATE reports SET nonverbal_analysis = jsonb_set(nonverbal_analysis, '{status}', '"failed"') WHERE id = 'e0e4864b-621d-42f0-998a-5eb9f61ca0d9' AND nonverbal_analysis->>'status' = 'running';
