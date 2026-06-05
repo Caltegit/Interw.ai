@@ -191,6 +191,10 @@ export default function ProjectEdit() {
         visibleToUserIds:
           (project as { visible_to_user_ids?: string[] | null }).visible_to_user_ids ?? [],
         candidateFields: mergeCandidateFields((project as { candidate_fields?: unknown }).candidate_fields),
+        candidateEmailSubject:
+          (project as { candidate_email_subject?: string | null }).candidate_email_subject ?? DEFAULT_CANDIDATE_EMAIL_SUBJECT,
+        candidateEmailBody:
+          (project as { candidate_email_body?: string | null }).candidate_email_body ?? DEFAULT_CANDIDATE_EMAIL_BODY,
       });
 
       setLoading(false);
