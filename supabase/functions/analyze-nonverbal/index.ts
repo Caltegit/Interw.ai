@@ -88,9 +88,15 @@ const TOOL_SCHEMA = {
             properties: {
               message_id: { type: "string" },
               description: { type: "string", description: "1 phrase factuelle" },
+              start_seconds: {
+                type: "number",
+                minimum: 0,
+                description: "Position en secondes depuis le début de la réponse à laquelle la tension est observée",
+              },
             },
             required: ["message_id", "description"],
           },
+
         },
         summary: {
           type: "string",
