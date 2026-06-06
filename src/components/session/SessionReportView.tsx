@@ -404,6 +404,7 @@ export function SessionReportView({
                   paraverbalAnalysis={report.paraverbal_analysis}
                   nonverbalAnalysis={(report as any).nonverbal_analysis}
                   audioFailed={audioFailed}
+                  projectAverages={projectAverages}
                 />
                 {report.executive_summary && (
                   <Card>
