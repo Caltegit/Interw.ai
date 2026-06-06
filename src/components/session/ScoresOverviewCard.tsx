@@ -62,12 +62,6 @@ export function ScoresOverviewCard({
       unavailable: false,
     },
     {
-      label: "Big Five",
-      score: bigFive,
-      avg: bigFiveProjectAvg,
-      unavailable: false,
-    },
-    {
       label: "Orale",
       score: paraverbal,
       avg: null,
@@ -78,6 +72,12 @@ export function ScoresOverviewCard({
       score: nonverbal,
       avg: null,
       unavailable: !!audioFailed,
+    },
+    {
+      label: "Big Five",
+      score: bigFive,
+      avg: bigFiveProjectAvg,
+      unavailable: false,
     },
   ];
 
@@ -199,10 +199,10 @@ function ScoreGauge({
         </div>
       </div>
       <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-      <div className="h-5 mt-1 flex items-center">
+      <div className="h-6 mt-1.5 flex items-center">
         {delta !== null ? (
           <span
-            className={`text-[11px] font-semibold tabular-nums ${
+            className={`text-sm font-bold tabular-nums ${
               delta > 0
                 ? "text-emerald-600"
                 : delta < 0
@@ -212,7 +212,8 @@ function ScoreGauge({
             title="Écart vs moyenne projet"
           >
             {delta > 0 ? "+" : ""}
-            {delta} vs moyenne
+            {delta}{" "}
+            <span className="text-[11px] font-medium text-muted-foreground">moy.</span>
           </span>
         ) : (
           <span className="text-[11px] text-muted-foreground/60">—</span>
