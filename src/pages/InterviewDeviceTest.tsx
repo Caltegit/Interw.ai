@@ -842,68 +842,6 @@ export default function InterviewDeviceTest() {
           </div>
         </div>
 
-        {/* Bandeau caméra (vignette) */}
-        <div className="flex items-center gap-4 rounded-2xl border bg-card p-3 animate-fade-in">
-          <div
-            className={cn(
-              "relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-2xl bg-black",
-              camStatus === "error" && "bg-amber-500/10 ring-2 ring-amber-500/40",
-            )}
-          >
-            {(camStatus === "ok" || camStatus === "testing") && (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-            )}
-            {camStatus === "testing" && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              </div>
-            )}
-            {camStatus === "error" && (
-              <button
-                type="button"
-                onClick={() => testCam(selectedVideoId)}
-                className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-amber-700 dark:text-amber-400"
-              >
-                <Video className="h-5 w-5" />
-                <span className="text-[10px] font-medium leading-tight text-center px-1">Activer la caméra</span>
-              </button>
-            )}
-            {camStatus === "ok" && (
-              <div className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-card">
-                <CheckCircle className="h-3 w-3 text-white" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 space-y-1">
-            <p className="text-sm font-medium">
-              {camStatus === "ok" && "Vous êtes bien cadré"}
-              {camStatus === "testing" && "Activation de la caméra…"}
-              {camStatus === "error" && "Caméra non disponible"}
-              {camStatus === "idle" && "Caméra"}
-            </p>
-            {camStatus === "error" && camError && (
-              <p className="text-xs text-muted-foreground line-clamp-2">{camError}</p>
-            )}
-            {camStatus === "ok" && devices.video.length > 1 && (
-              <DeviceSelector
-                devices={devices.video}
-                value={selectedVideoId}
-                onChange={handleVideoDeviceChange}
-                placeholder="Changer de caméra"
-              />
-            )}
-            {camStatus === "ok" && devices.video.length <= 1 && (
-              <p className="text-xs text-muted-foreground">L'image que verra votre interlocuteur.</p>
-            )}
-          </div>
-        </div>
 
         {/* Indicateur d'étape : « Étape X/Y — Nom » */}
         {currentStep !== "recap" && (
