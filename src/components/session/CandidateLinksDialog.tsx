@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileText, FileSignature, Upload, Trash2, Loader2 } from "lucide-react";
+import { FileText, FileSignature, Upload, Trash2, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
