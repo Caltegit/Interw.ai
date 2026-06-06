@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       if (!project?.slug || !s.candidate_email || !s.token) { skipped++; continue; }
 
       const prenom = (s.candidate_name || "").trim().split(/\s+/)[0] || "";
-      const sessionName = project.name || "votre entretien";
+      const sessionName = project.title || "votre entretien";
       const sessionUrl = `${SITE_URL}/session/${project.slug}/start/${s.token}`;
 
       const { error: invokeErr } = await supabase.functions.invoke("send-transactional-email", {
