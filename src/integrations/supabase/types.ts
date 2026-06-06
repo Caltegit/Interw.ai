@@ -1192,6 +1192,66 @@ export type Database = {
           },
         ]
       }
+      report_jobs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          last_error: string | null
+          locked_at: string | null
+          locked_until: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["report_job_status"]
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string | null
+          session_id: string
+          status?: Database["public"]["Enums"]["report_job_status"]
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          last_error?: string | null
+          locked_at?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          organization_id?: string | null
+          session_id?: string
+          status?: Database["public"]["Enums"]["report_job_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_jobs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_shares: {
         Row: {
           created_at: string
@@ -1701,6 +1761,29 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: undefined
       }
+      claim_report_jobs: {
+        Args: { p_limit: number; p_lock_ms: number }
+        Returns: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          last_error: string | null
+          locked_at: string | null
+          locked_until: string | null
+          max_attempts: number
+          next_attempt_at: string
+          organization_id: string | null
+          session_id: string
+          status: Database["public"]["Enums"]["report_job_status"]
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "report_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -1710,6 +1793,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      enqueue_report_job: { Args: { p_session_id: string }; Returns: undefined }
       get_session_id_by_token: { Args: { _token: string }; Returns: string }
       get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -1732,6 +1816,14 @@ export type Database = {
         Args: { _attempt_id: string }
         Returns: undefined
       }
+      mark_report_job_done: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      mark_report_job_failed: {
+        Args: { p_error: string; p_session_id: string }
+        Returns: undefined
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -1749,6 +1841,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      requeue_stuck_report_jobs: { Args: never; Returns: number }
       seed_default_criteria_templates: {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
@@ -1791,6 +1884,12 @@ export type Database = {
         | "shortlisted"
         | "rejected"
         | "second_opinion"
+      report_job_status:
+        | "queued"
+        | "processing"
+        | "done"
+        | "failed"
+        | "cancelled"
       scoring_scale_type: "0-5" | "0-10" | "ABC"
       session_status:
         | "pending"
@@ -1943,6 +2042,13 @@ export const Constants = {
         "shortlisted",
         "rejected",
         "second_opinion",
+      ],
+      report_job_status: [
+        "queued",
+        "processing",
+        "done",
+        "failed",
+        "cancelled",
       ],
       scoring_scale_type: ["0-5", "0-10", "ABC"],
       session_status: [
