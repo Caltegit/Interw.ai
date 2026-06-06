@@ -142,8 +142,15 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+    const hasMinLength = newPassword.length >= 6;
+    const hasDigit = /\d/.test(newPassword);
+    const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+    if (!hasMinLength || !hasDigit || !hasSpecial) {
+      toast({
+        title: "Mot de passe trop faible",
+        description: "Au moins 6 caractères, un chiffre et un caractère spécial.",
+        variant: "destructive",
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -238,12 +245,12 @@ export default function Settings() {
           <CardTitle className="flex items-center gap-2 text-lg">
             <Lock className="h-5 w-5" /> Mot de passe
           </CardTitle>
-          <CardDescription>Changez votre mot de passe</CardDescription>
+          <CardDescription>Au moins 6 caractères, un chiffre et un caractère spécial.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <Label>Nouveau mot de passe</Label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 6 caractères" />
+            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Au moins 6 caractères, un chiffre et un caractère spécial" />
           </div>
           <div>
             <Label>Confirmer le mot de passe</Label>
