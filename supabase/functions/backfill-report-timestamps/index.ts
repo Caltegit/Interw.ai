@@ -118,6 +118,16 @@ serve(async (req) => {
     }
 
     const para = report.paraverbal_analysis as any;
+    if (para?.profile && typeof para.profile === "object") {
+      for (const k of Object.keys(para.profile)) {
+        fixEntry(para.profile[k], {
+          msgKey: "evidence_message_id",
+          tsKey: "evidence_start_seconds",
+          quoteKey: "evidence_quote",
+        });
+      }
+    }
+    // Compat ancien format `dimensions[]` (au cas où).
     if (para && Array.isArray(para.dimensions)) {
       para.dimensions.forEach((d: any) =>
         fixEntry(d, {
@@ -127,6 +137,27 @@ serve(async (req) => {
         }),
       );
     }
+
+    const nonverbal = report.nonverbal_analysis as any;
+    if (nonverbal?.profile && typeof nonverbal.profile === "object") {
+      for (const k of Object.keys(nonverbal.profile)) {
+        fixEntry(nonverbal.profile[k], {
+          msgKey: "evidence_message_id",
+          tsKey: "evidence_start_seconds",
+          quoteKey: "evidence_quote",
+        });
+      }
+    }
+    if (nonverbal && Array.isArray(nonverbal.micro_tensions)) {
+      nonverbal.micro_tensions.forEach((t: any) =>
+        fixEntry(t, {
+          msgKey: "message_id",
+          tsKey: "start_seconds",
+          quoteKey: "description",
+        }),
+      );
+    }
+
 
     // question_evaluations : clé_quote + evidence_message_id
     const qEvals = report.question_evaluations as any;
@@ -158,9 +189,11 @@ serve(async (req) => {
         soft_skills: softSkills,
         red_flags: redFlags,
         paraverbal_analysis: para,
+        nonverbal_analysis: nonverbal,
         question_evaluations: qEvals,
       })
       .eq("id", report.id);
+
 
     if (updateErr) {
       return json({ error: "update_failed", detail: updateErr.message }, 500);

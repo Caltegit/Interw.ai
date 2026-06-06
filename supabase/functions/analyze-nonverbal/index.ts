@@ -43,12 +43,22 @@ function dim(description: string) {
     properties: {
       score: { type: "number", minimum: 0, maximum: 10 },
       comment: { type: "string", description: "1 phrase concrète" },
-      evidence_message_id: { type: "string" },
+      evidence_message_id: { type: "string", description: "message_id du segment vidéo le plus représentatif" },
+      evidence_start_seconds: {
+        type: "number",
+        minimum: 0,
+        description: "Position en secondes (depuis le début de la réponse) du moment vidéo le plus représentatif",
+      },
+      evidence_quote: {
+        type: "string",
+        description: "Description visuelle factuelle ≤ 20 mots du moment précis observé (ou courte citation du candidat à ce moment)",
+      },
     },
     required: ["score", "comment"],
     description,
   };
 }
+
 
 const TOOL_SCHEMA = {
   type: "function",
@@ -78,9 +88,15 @@ const TOOL_SCHEMA = {
             properties: {
               message_id: { type: "string" },
               description: { type: "string", description: "1 phrase factuelle" },
+              start_seconds: {
+                type: "number",
+                minimum: 0,
+                description: "Position en secondes depuis le début de la réponse à laquelle la tension est observée",
+              },
             },
             required: ["message_id", "description"],
           },
+
         },
         summary: {
           type: "string",
@@ -349,8 +365,9 @@ GRILLE D'ÉVALUATION — utilise TOUTE la plage, pas seulement 4-6 :
 - 0-1 : extrêmement problématique
 Un candidat "moyen normal" se situe à 6-7, PAS à 5. N'utilise pas 5 par défaut. Si rien de clairement négatif n'est observable, la note est ≥7.
 
-Pour chaque dimension : 1 phrase concrète + evidence_message_id du segment le plus représentatif.
-Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…) avec leur message_id. S'il n'y en a pas, retourne une liste vide.
+Pour chaque dimension : 1 phrase concrète ET, dès que possible, l'evidence du segment vidéo le plus représentatif : evidence_message_id, evidence_start_seconds (position EN SECONDES depuis le début de la réponse correspondante, pas depuis le début de l'entretien) et evidence_quote (≤ 20 mots décrivant factuellement ce qui s'observe à ce moment précis, ou courte citation du candidat). Ces 3 champs permettent au recruteur de sauter directement au moment clé dans la vidéo.
+Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…). Pour chacune : message_id, description factuelle (1 phrase) et start_seconds (position en secondes depuis le début de la réponse). S'il n'y en a pas, retourne une liste vide.
+
 Ne juge JAMAIS l'apparence physique, l'âge, le genre, l'origine ou le handicap. Reste factuel et bienveillant.
 Retourne le résultat via l'outil report_nonverbal.`;
 

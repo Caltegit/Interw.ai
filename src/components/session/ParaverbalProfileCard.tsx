@@ -11,6 +11,7 @@ interface ParaverbalDim {
   evidence_quote?: string;
 }
 
+
 export interface ParaverbalProfile {
   fluency?: ParaverbalDim;
   hesitation?: ParaverbalDim;
@@ -89,6 +90,10 @@ export function ParaverbalProfileCard({
             const videoMessageId = dim.evidence_message_id
               ? resolveVideoMessageId?.(dim.evidence_message_id)
               : undefined;
+            const fallbackTranscript = dim.evidence_message_id
+              ? transcriptsByMessageId?.[dim.evidence_message_id]
+              : undefined;
+            const quote = dim.evidence_quote || fallbackTranscript || (videoMessageId ? "Voir le moment dans la vidéo" : "");
             return (
               <div key={key}>
                 <div className="flex items-center justify-between text-sm">
@@ -105,9 +110,9 @@ export function ParaverbalProfileCard({
                   <p className="mt-1 text-xs leading-snug text-muted-foreground">{dim.comment}</p>
                 )}
                 <EvidenceLink
-                  quote={dim.evidence_quote || (dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined)}
+                  quote={quote}
                   messageId={videoMessageId}
-                  startSeconds={undefined}
+                  startSeconds={dim.evidence_start_seconds}
                   questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
                   onGoToMessage={videoMessageId ? onGoToMessage : undefined}
                   compact
@@ -116,6 +121,7 @@ export function ParaverbalProfileCard({
             );
           })}
         </div>
+
       </CardContent>
     </Card>
   );
