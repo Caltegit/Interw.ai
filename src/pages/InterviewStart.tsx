@@ -2345,23 +2345,29 @@ export default function InterviewStart() {
     // Start camera stream
     await startVideoStream();
 
-    // Garde micro non-bloquante : si le test technique a été validé < 30 min
-    // et que la piste audio courante est vivante, on démarre directement.
-    // Plus de remesure de warmup ici — c'était la cause N°1 de faux positifs.
+    // Garde micro : si le test technique a été validé récemment, on fait
+    // confiance au candidat et on démarre, même si la piste audio actuelle
+    // semble suspecte (le watcher d'auto-silence prendra le relais en cours
+    // d'entretien si vraiment rien n'est capté). On ne bloque QUE si la
+    // validation du test technique est absente ou expirée.
     {
       const s = streamRef.current;
       const audioTrack = s?.getAudioTracks()[0] ?? null;
       const currentDeviceId = audioTrack?.getSettings?.().deviceId ?? null;
       const trackLive = !!audioTrack && audioTrack.readyState === "live";
-      const testValid = isMicTestStillValid(token, currentDeviceId);
+      // On passe `null` pour le deviceId afin de ne pas invalider sur un
+      // simple changement d'ID entre le test et le start (Chrome remplace
+      // parfois "default" par un hash réel après acceptation de la permission).
+      const testValid = isMicTestStillValid(token, null);
 
-      if (!s || !audioTrack || !trackLive || !testValid) {
+      if (!testValid) {
         logger.warn("interview_mic_precheck_failed", {
           sessionId: session?.id ?? null,
           hasStream: !!s,
           hasTrack: !!audioTrack,
           trackLive,
           testValid,
+          currentDeviceId,
         });
         setBootActive(false);
         setMicBlockOpen(true);
@@ -2372,6 +2378,19 @@ export default function InterviewStart() {
         });
         micBlockResolveRef.current = null;
         return;
+      }
+
+      if (!s || !audioTrack || !trackLive) {
+        // Test technique validé mais stream/track instable : on log pour suivi
+        // et on continue quand même (le watcher d'auto-silence interviendra
+        // si nécessaire).
+        logger.warn("interview_mic_precheck_soft", {
+          sessionId: session?.id ?? null,
+          hasStream: !!s,
+          hasTrack: !!audioTrack,
+          trackLive,
+          currentDeviceId,
+        });
       }
     }
 
