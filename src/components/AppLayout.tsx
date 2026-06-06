@@ -74,7 +74,7 @@ function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         <main className={copilotOpen ? "flex-1 px-4 pb-4 pt-1" : "flex-1 px-6 pb-6 pt-1"}>
           <BackButton />
-          <div className="pt-0.5"><Outlet /></div>
+          <Outlet />
         </main>
       </div>
       <CopilotSidePanel />
