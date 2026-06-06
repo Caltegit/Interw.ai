@@ -245,7 +245,7 @@ export default function Settings() {
           <CardTitle className="flex items-center gap-2 text-lg">
             <Lock className="h-5 w-5" /> Mot de passe
           </CardTitle>
-          <CardDescription>Modifier votre mot de passe</CardDescription>
+          <CardDescription>Au moins 6 caractères, un chiffre et un caractère spécial.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
