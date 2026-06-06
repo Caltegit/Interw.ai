@@ -1,28 +1,80 @@
-## Diagnostic
+## Objectif
 
-L'API renvoie une erreur Postgres `42702 : column reference "created_at" is ambiguous` lors de l'appel à `admin_search_sessions`. Résultat : la liste affiche « Aucune session » alors que la base contient bien des sessions réelles (visibles dans les stats du haut).
+Rendre les **deux players identiques** (vue tableau projet + vue rapport) avec :
+- Gros bouton **Play** central au repos
+- Bouton **téléchargement MP4**
+- Boutons ±10s et sélecteur de vitesse 1× / 1.5× / 2×
+- Overlay **titre de question** centré en bas, fond transparent, sur une ligne, tronqué à 30 caractères, visible quand le curseur n'est PAS sur le player et masqué au survol
 
-Cause : dans la fonction PL/pgSQL `admin_search_sessions`, les paramètres OUT déclarés dans `RETURNS TABLE(... created_at ..., started_at ..., completed_at ...)` portent les mêmes noms que des colonnes utilisées dans l'`ORDER BY` final (`f.completed_at`, `f.created_at`). PL/pgSQL ne sait pas résoudre la référence et avorte la requête.
+Seule la **taille** diffère (chaque hôte garde son `aspect-video` à la largeur de sa carte).
 
-La précédente tentative de correctif (migration) n'a jamais été appliquée — la fonction en base est toujours l'ancienne version.
+## Approche : composant partagé
 
-## Correctif
+Création de `src/components/session/SessionClipPlayer.tsx` qui encapsule tout le rendu du player + ses overlays. Le composant existant `SessionVideoNavigator` est déjà ce player avec sa logique de navigation, portail et récupération MP4 — on en extrait la **partie purement visuelle** (boîte `aspect-video`, `<video>`, overlays ±10s / vitesse / Play central / Download / nouveau titre overlay) dans `SessionClipPlayer`.
 
-Recréer `admin_search_sessions` à l'identique en ajoutant en tête du corps PL/pgSQL la directive :
+- `SessionVideoNavigator` continue à gérer : liste de clips, navigation Préc/Suiv, sélecteur de question, portail mini-player, transcripts, recovery → il consomme `SessionClipPlayer` en interne.
+- `SessionCard` (vue tableau) remplace son bloc `<video>` actuel par `<SessionClipPlayer />` et profite ainsi automatiquement du gros Play, du Download MP4 et de l'overlay titre.
 
+## Détail des changements
+
+### 1. `SessionClipPlayer.tsx` (nouveau)
+
+Props :
+```ts
+{
+  url: string;                  // clip courant
+  questionTitle?: string | null;
+  sessionId?: string;           // pour useMp4Download (lien export dédié si fourni)
+  onEnded?: () => void;
+  autoPlay?: boolean;
+}
 ```
-#variable_conflict use_column
-```
 
-Cela force la résolution des références non qualifiées vers les colonnes de la table plutôt que vers les paramètres OUT. Aucun changement de signature, ni de comportement, ni de permissions.
+Comportement et UI repris à l'identique de `SessionVideoNavigator` (lignes ~511-720) :
+- conteneur `relative overflow-hidden rounded-lg bg-black aspect-video`
+- `<video>` plein avec gestion `playsInline`, `preload`, `onLoadedMetadata` (gestion durée `Infinity` via reseek), `onEnded`
+- Overlay haut : pilules ±10s centrées en haut + colonne vitesse 1×/1.5×/2× en haut-gauche
+- Overlay centre : gros bouton Play (visible quand `paused`), masqué en lecture
+- Overlay bas-droit : bouton Download MP4 (état Idle/Loading + progress, hook `useMp4Download`)
+- **Nouveau** overlay bas : bandeau `absolute inset-x-0 bottom-0` avec dégradé `from-black/60 to-transparent`, texte centré blanc `text-xs font-medium truncate`. Affiché par défaut, `opacity-0` au `group-hover` (transition 200ms). Le conteneur racine reçoit la classe `group`.
+- Troncature côté composant : `title.length > 30 ? title.slice(0,30).trimEnd() + '…' : title`. Si pas de titre, pas de bandeau.
 
-## Vérification après application
+### 2. `SessionVideoNavigator.tsx`
 
-1. Recharger `/admin/sessions-queue` → la liste paginée doit afficher les sessions réelles (et masquer les démos quand le toggle est activé).
-2. Tester recherche par email, filtres statuts, toggles « Anomalies » et « Exclure démos ».
-3. Confirmer qu'un utilisateur non super_admin reçoit toujours `forbidden`.
+- Ajouter `questionTitle?: string | null` à `SessionVideoClip`.
+- Remplacer le bloc visuel actuel par `<SessionClipPlayer url={…} questionTitle={current.questionTitle} sessionId={sessionId} onEnded={…} />`.
+- Garde toute sa logique externe : liste clips, navigation, portail, sélecteur, recovery (`recover-session-video`), `hideDownload` est désormais géré en NE passant simplement pas `sessionId`/en masquant via prop `hideDownload` propagée.
+
+### 3. `SessionReportView.tsx`
+
+- Ligne ~171, ajouter `questionTitle: projectQ?.title ?? null` dans la construction de `sessionClips`.
+
+### 4. `SessionCard.tsx` (vue tableau projet)
+
+- Étendre l'interface `Question` locale avec `title: string`.
+- S'assurer que `ProjectDetail` sélectionne `title` quand il charge les questions (vérifier le `.select(...)` ; si manquant, l'ajouter).
+- Construire des objets clip enrichis avec `questionTitle` (lookup via `questionByid`).
+- Remplacer tout le bloc `<video> + overlays ±10s + vitesse` (lignes 268-346) par `<SessionClipPlayer url={current.url} questionTitle={…} sessionId={session.id} onEnded={() => goTo(index+1, true)} />`.
+- Supprimer les états locaux devenus inutiles (`rate`, `durationSec`, `videoRef` interne au rendu, `safePlay/stopCurrent`) — ils vivent maintenant dans `SessionClipPlayer`. Conserver la navigation Préc/Suiv et le sélecteur de question existants sous le player.
+
+### 5. Hook MP4
+
+Aucun changement à `useMp4Download`. Quand `sessionId` est fourni, le hook ouvre la page d'export dédiée (comportement existant côté Navigator) ; même comportement appliqué côté SessionCard.
 
 ## Hors scope
 
-- Pas de modification de `admin_sessions_queue_stats` (déjà OK, c'est cette fonction qui alimente les cartes en haut).
-- Pas de changement UI — le bug est 100 % SQL.
+- Aucun changement SQL.
+- Pas de modification des players intro/library/MediaRecorder/HighlightReel/QuestionAnswerRow.
+- Pas d'unification du sélecteur de question / boutons Préc-Suiv (ils sont spécifiques au contexte).
+
+## Vérification
+
+1. Vue tableau d'un projet :
+   - Le player affiche le gros bouton Play au repos.
+   - Le titre de question apparaît centré en bas, disparaît au survol, réapparaît au mouseleave, tronqué à 30 caractères.
+   - Boutons ±10s, vitesse, et **Download MP4** présents et fonctionnels.
+   - Préc/Suiv et sélecteur Question N fonctionnent comme avant.
+2. Vue rapport (`/sessions/:id`) :
+   - Mêmes commandes, même rendu, plus l'overlay titre.
+   - Portail mini-player et recovery toujours fonctionnels.
+3. Cas sans titre (anciennes questions) : pas de bandeau, le reste fonctionne.
