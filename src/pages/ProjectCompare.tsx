@@ -67,7 +67,7 @@ export default function ProjectCompare() {
     (async () => {
       const [pRes, qRes, sRes, rRes] = await Promise.all([
         supabase.from("projects").select("*").eq("id", id).single(),
-        supabase.from("questions").select("id, order_index, content").eq("project_id", id).order("order_index"),
+        supabase.from("questions").select("id, order_index, content, title").eq("project_id", id).order("order_index"),
         supabase.from("sessions").select("id, candidate_name, candidate_email, status, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note").in("id", ids),
         supabase.from("reports").select("session_id, overall_score, recommendation, executive_summary_short, executive_summary, strengths, areas_for_improvement, red_flags, criteria_scores, soft_skills").in("session_id", ids),
       ]);
