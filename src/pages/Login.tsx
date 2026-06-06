@@ -120,6 +120,36 @@ export default function Login() {
           </p>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showSentDialog} onOpenChange={setShowSentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vérifiez votre boîte mail</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>
+                  Si un compte existe pour <strong>{sentToEmail}</strong>, vous allez recevoir un email contenant un{" "}
+                  <strong>lien de connexion automatique</strong>. Cliquez dessus pour vous connecter directement, sans mot de passe.
+                </p>
+                <p>Le lien est valable 24h et utilisable une seule fois.</p>
+                <p>
+                  <strong>Pensez à vérifier vos spams</strong> si vous ne voyez pas l'email d'ici quelques minutes.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSentDialog(false);
+                setMode("login");
+              }}
+            >
+              J'ai compris
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
