@@ -49,7 +49,7 @@ const CandidateThankYouEmail = ({
   const bodyText = customBody && customBody.trim()
     ? substitute(customBody, vars)
     : substitute(
-        `Bonjour {firstName},\n\nMerci d'avoir passé votre entretien pour le poste de {jobTitle} chez {orgName}.\n\nVos réponses ont bien été enregistrées et vont être analysées par l'équipe de recrutement. Vous serez recontacté(e) prochainement quant aux suites données à votre candidature.\n\nSi vous avez la moindre question, vous pouvez répondre directement à cet email — nous sommes là pour vous aider.\n\nÀ bientôt,\nL'équipe de recrutement`,
+        `Bonjour {firstName},\n\nMerci d'avoir passé cet entretien pour le poste {jobTitle}.\n\nLes réponses sont bien enregistrées et vont être analysées par l'équipe. En cas de profil retenu, un retour sera fait rapidement pour passer à l'étape suivante.\n\nÀ bientôt,\n\nL'équipe recrutement`,
         vars,
       )
   const paragraphs = bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
