@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Loader2, Brain, Mic, User, ScrollText, LayoutDashboard } from "lucide-react";
+import { FileText, Loader2, Brain, Mic, User, ScrollText, LayoutDashboard, Target } from "lucide-react";
 import { ScoresOverviewCard } from "@/components/session/ScoresOverviewCard";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -277,7 +277,7 @@ export function SessionReportView({
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Résumé</span>
       </TabsTrigger>
       <TabsTrigger value="decision" className="gap-1">
-        <FileText className="h-4 w-4" />
+        <Target className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Fit Poste</span>
         <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
       </TabsTrigger>
