@@ -1194,6 +1194,7 @@ export default function InterviewDeviceTest() {
                   ["browser", browserStatus] as const,
                   ["mic", micStatus] as const,
                   ["sound", soundStatus] as const,
+                  ["camera", (cameraConfirmed ? "ok" : camStatus) as Status] as const,
                   ["stt", sttStatus] as const,
                   ["network", networkStatusComputed] as const,
                 ]).map(([key, st]) => {
