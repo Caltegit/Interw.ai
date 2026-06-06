@@ -139,14 +139,14 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     const { data: toProcessRaw } = await supabase
       .from("sessions")
       .select(
-        "id, candidate_name, recruiter_decision, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
+        "id, candidate_name, recruiter_decision, completed_at, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
       )
       .eq("status", "completed")
       .eq("is_demo", false)
       .eq("projects.status", "active")
       .eq("projects.organization_id", orgId)
       .or("recruiter_decision.is.null,recruiter_decision.eq.none")
-      .order("generated_at", { ascending: false, foreignTable: "reports" })
+      .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(20);
     toProcess = (toProcessRaw ?? [])
       .map((s: any) => {
@@ -157,7 +157,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
           session_id: s.id as string,
           candidate_name: s.candidate_name ?? null,
           project_title: proj?.title ?? "",
-          generated_at: rep.generated_at as string,
+          generated_at: (s.completed_at ?? rep.generated_at) as string,
           overall_score: Math.round(Number(rep.overall_score ?? 0)),
           recommendation: rep.recommendation ?? null,
         };
