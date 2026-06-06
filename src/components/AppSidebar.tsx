@@ -59,6 +59,7 @@ export function AppSidebar() {
         ...bottomItems,
         { title: "Super Admin", url: "/admin", icon: Shield, showFeedbackBadge: true },
         { title: "Santé emails", url: "/admin/emails", icon: Mail },
+        { title: "Sessions queue", url: "/admin/sessions-queue", icon: Activity },
         { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
       ]
     : bottomItems;
