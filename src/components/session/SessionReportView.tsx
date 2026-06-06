@@ -298,7 +298,7 @@ export function SessionReportView({
       </TabsTrigger>
       <TabsTrigger value="transcription" className="gap-1">
         <ScrollText className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
+        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Texte</span>
       </TabsTrigger>
     </TabsList>
   );
@@ -581,7 +581,7 @@ export function SessionReportView({
             <Card>
               <CardContent className="p-6">
                 {sessionClips.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune transcription disponible.</p>
+                  <p className="text-sm text-muted-foreground">Aucun texte disponible.</p>
                 ) : (
                   <div className="space-y-6">
                     {sessionClips.map((clip, i) => {
@@ -593,7 +593,7 @@ export function SessionReportView({
                             <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
                           </div>
                           <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
-                            {text || "Transcription non disponible."}
+                            {text || "Texte non disponible."}
                           </p>
                         </div>
                       );
