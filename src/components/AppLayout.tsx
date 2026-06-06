@@ -72,11 +72,9 @@ function AppShell() {
     <div className="min-h-screen flex w-full">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <main className={copilotOpen ? "flex-1 p-4 pt-2" : "flex-1 p-6 pt-3"}>
+        <main className={copilotOpen ? "flex-1 p-4 pt-1" : "flex-1 p-6 pt-1"}>
           <BackButton />
-          <div className="mt-2">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
       <CopilotSidePanel />
