@@ -16,17 +16,34 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type, x-lovable-signature, x-lovable-timestamp, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirmez votre inscription sur Interw.ai',
-  invite: 'Vous êtes invité à rejoindre Interw.ai',
-  magiclink: 'Votre lien de connexion Interw.ai',
-  recovery: 'Réinitialisation de votre mot de passe Interw.ai',
-  email_change: 'Confirmez votre nouvelle adresse email',
-  reauthentication: 'Votre code de vérification Interw.ai',
+// Sujets sobres, naturels, sans répétition de marque — meilleurs scores anti-spam
+// (Gmail/Outlook pénalisent les sujets trop "marketing" ou répétitifs).
+function buildSubject(emailType: string, data: Record<string, unknown>): string {
+  switch (emailType) {
+    case 'signup':
+      return 'Confirmez votre adresse email'
+    case 'invite':
+      return 'Vous êtes invité sur Interw'
+    case 'magiclink':
+      return 'Votre lien de connexion'
+    case 'recovery':
+      return 'Réinitialisez votre mot de passe'
+    case 'email_change':
+      return 'Confirmez votre nouvelle adresse'
+    case 'reauthentication': {
+      const token = typeof data?.token === 'string' ? data.token : ''
+      return token ? `Code de vérification : ${token}` : 'Votre code de vérification'
+    }
+    default:
+      return 'Notification Interw'
+  }
 }
 
 const REPLY_TO_EMAIL = 'hello@interw.ai'
-const FROM_NAME = 'Interw.ai'
+const FROM_NAME = 'Interw'
+// Local-part de l'adresse expéditrice. `hello@` est mieux noté que `noreply@`
+// par Gmail/Outlook (signal de délivrabilité positif depuis 2024).
+const FROM_LOCAL_PART = 'hello'
 
 // Template mapping
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
