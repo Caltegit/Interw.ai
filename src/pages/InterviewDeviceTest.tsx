@@ -557,13 +557,13 @@ export default function InterviewDeviceTest() {
     (async () => {
       const perms = await queryPermissions();
       if (cancelled) return;
+      // Micro : on NE LANCE PAS auto, on attend le clic candidat sur l'écran 1.
       if (perms.mic === "denied") {
         setMicStatus("error"); setRecorderStatus("error");
         setMicError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez le micro, puis rechargez la page.");
-      } else {
-        await testMicAndRecorder(selectedAudioId);
       }
       if (cancelled) return;
+      // Caméra : on précharge le flux pour que l'écran 3 soit déjà actif.
       if (perms.cam === "denied") {
         setCamStatus("error");
         setCamError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez la caméra, puis rechargez la page.");
