@@ -69,43 +69,9 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   >([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [rate, setRate] = useState(1);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const playPromiseRef = useRef<Promise<void> | null>(null);
-  const autoPlayRef = useRef(false);
-  const rateRef = useRef(rate);
-  rateRef.current = rate;
-  const [durationSec, setDurationSec] = useState<number | null>(null);
 
-  const stopCurrent = async () => {
-    const v = videoRef.current;
-    if (!v) return;
-    try {
-      if (playPromiseRef.current) {
-        await playPromiseRef.current.catch(() => {});
-        playPromiseRef.current = null;
-      }
-      v.pause();
-      try { v.currentTime = 0; } catch { /* noop */ }
-    } catch { /* noop */ }
-  };
-
-  const safePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    try {
-      const p = v.play();
-      if (p && typeof p.then === "function") {
-        playPromiseRef.current = p;
-        p.catch(() => {}).finally(() => { playPromiseRef.current = null; });
-      }
-    } catch { /* noop */ }
-  };
-
-  const goTo = async (newIndex: number, autoplay: boolean) => {
+  const goTo = (newIndex: number) => {
     if (newIndex === index) return;
-    await stopCurrent();
-    autoPlayRef.current = autoplay;
     setIndex(newIndex);
   };
 
@@ -134,52 +100,6 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
       cancelled = true;
     };
   }, [session.id]);
-
-  const fixDuration = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.duration === Infinity) {
-      const onTime = () => {
-        v.removeEventListener("timeupdate", onTime);
-        const real = v.duration;
-        try { v.currentTime = 0; } catch { /* noop */ }
-        try { v.playbackRate = rateRef.current; } catch { /* noop */ }
-        if (Number.isFinite(real)) setDurationSec(real);
-        if (autoPlayRef.current) safePlay();
-      };
-      v.addEventListener("timeupdate", onTime);
-      try { v.currentTime = 1e9; } catch { /* noop */ }
-    } else if (Number.isFinite(v.duration)) {
-      setDurationSec(v.duration);
-    }
-  };
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    setDurationSec(null);
-    const apply = () => {
-      try { v.playbackRate = rateRef.current; } catch { /* noop */ }
-      if (v.duration === Infinity) {
-        fixDuration();
-      } else {
-        try { v.currentTime = 0; } catch { /* noop */ }
-        if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-        if (autoPlayRef.current) safePlay();
-      }
-    };
-    if (v.readyState >= 1) apply();
-    else v.addEventListener("loadedmetadata", apply, { once: true });
-    return () => {
-      v.removeEventListener("loadedmetadata", apply);
-      try { v.pause(); } catch { /* noop */ }
-    };
-  }, [index, clips.length]);
-
-  useEffect(() => {
-    const v = videoRef.current;
-    if (v) v.playbackRate = rate;
-  }, [rate]);
 
   const current = clips[index];
   const questionByid = new Map(questions.map((q) => [q.id, q]));
