@@ -5,6 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,6 +22,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSentDialog, setShowSentDialog] = useState(false);
+  const [sentToEmail, setSentToEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session } = useAuth();
@@ -34,11 +45,8 @@ export default function Login() {
           },
         });
         if (error) throw error;
-        toast({
-          title: "Lien de connexion envoyé",
-          description: "Si un compte existe, un lien vient d'être envoyé. Il est valable 24h et utilisable une seule fois.",
-        });
-        setMode("login");
+        setSentToEmail(email);
+        setShowSentDialog(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -112,6 +120,36 @@ export default function Login() {
           </p>
         </CardContent>
       </Card>
+
+      <AlertDialog open={showSentDialog} onOpenChange={setShowSentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Vérifiez votre boîte mail</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>
+                  Si un compte existe pour <strong>{sentToEmail}</strong>, vous allez recevoir un email contenant un{" "}
+                  <strong>lien de connexion automatique</strong>. Cliquez dessus pour vous connecter directement, sans mot de passe.
+                </p>
+                <p>Le lien est valable 24h et utilisable une seule fois.</p>
+                <p>
+                  <strong>Pensez à vérifier vos spams</strong> si vous ne voyez pas l'email d'ici quelques minutes.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => {
+                setShowSentDialog(false);
+                setMode("login");
+              }}
+            >
+              J'ai compris
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
