@@ -146,6 +146,7 @@ export function CandidateLinksDialog({
   open,
   onOpenChange,
   sessionId,
+  candidateName,
   initialJobTitle,
   initialLinkedinUrl,
   initialCvUrl,
