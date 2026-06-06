@@ -1054,6 +1054,83 @@ export default function InterviewDeviceTest() {
             </TestCard>
           )}
 
+          {currentStep === "camera" && (
+            <div key="step-camera" className="rounded-xl border bg-card p-4 space-y-4 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <StatusIcon status={cameraConfirmed ? "ok" : camStatus} fallback={Video} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium leading-tight">Vérifiez votre cadrage</p>
+                  <p className="text-xs text-muted-foreground">Centrez votre visage, assurez-vous d'être bien éclairé.</p>
+                </div>
+              </div>
+
+              <div className={cn(
+                "relative w-full overflow-hidden rounded-xl bg-black aspect-video",
+                camStatus === "error" && "bg-amber-500/10 ring-2 ring-amber-500/40",
+              )}>
+                {(camStatus === "ok" || camStatus === "testing") && (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: "scaleX(-1)" }}
+                  />
+                )}
+                {camStatus === "ok" && (
+                  <>
+                    {/* Guide de cadrage : rectangle centré pointillé */}
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="w-[55%] h-[80%] rounded-[40%] border-2 border-dashed border-white/50" />
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-card">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                  </>
+                )}
+                {camStatus === "testing" && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
+                {camStatus === "error" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-amber-700 dark:text-amber-400 p-4 text-center">
+                    <Video className="h-8 w-8" />
+                    <p className="text-xs font-medium">Caméra non disponible</p>
+                    {camError && <p className="text-[11px] text-muted-foreground">{camError}</p>}
+                  </div>
+                )}
+              </div>
+
+              {camStatus === "error" && (
+                <Button variant="outline" size="sm" onClick={() => testCam(selectedVideoId)} className="w-full">
+                  <Video className="mr-2 h-4 w-4" /> Activer la caméra
+                </Button>
+              )}
+
+              {devices.video.length > 1 && camStatus === "ok" && (
+                <DeviceSelector
+                  devices={devices.video}
+                  value={selectedVideoId}
+                  onChange={handleVideoDeviceChange}
+                  placeholder="Changer de caméra"
+                />
+              )}
+
+              <Button
+                size="lg"
+                className="w-full candidate-btn-primary h-12 text-base font-semibold"
+                disabled={camStatus !== "ok"}
+                onClick={() => { setCameraConfirmed(true); goToNextStep(); }}
+              >
+                <CheckCircle className="mr-2 h-5 w-5" /> Je suis bien cadré
+              </Button>
+            </div>
+          )}
+
+
+
           {currentStep === "stt" && (
             <TestCard
               key="step-stt"
