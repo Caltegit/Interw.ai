@@ -1,7 +1,8 @@
-// One-shot backfill : reprend toutes les sessions completed sans rapport.
-// Idempotent via finalize-session. Annule les sessions sans aucun média.
-// Skippe le thank-you email (sessions vieilles, un mail tardif spammerait).
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+// One-shot : enqueue toutes les sessions completed sans rapport dans
+// report_jobs. Le worker process-report-queue les traitera ensuite,
+// 3 jobs/minute espacés 10 s. Aussi : annule les sessions completed sans
+// aucun média (cas où candidate a closed le tab avant le 1er enregistrement).
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,25 +20,17 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  let skipThankYouEmail = true;
-  try {
-    const body = await req.json();
-    if (typeof body?.skipThankYouEmail === "boolean") {
-      skipThankYouEmail = body.skipThankYouEmail;
-    }
-  } catch { /* body optionnel */ }
-
   const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
   const { data: orphans, error } = await supabase
     .from("sessions")
-    .select("id, completed_at, reports!left(id)")
+    .select("id, organization_id, reports!left(id)")
     .eq("status", "completed")
     .eq("is_demo", false)
     .lt("completed_at", cutoff)
     .is("reports.id", null)
     .order("completed_at", { ascending: true })
-    .limit(500);
+    .limit(1000);
 
   if (error) {
     return new Response(
@@ -46,9 +39,8 @@ Deno.serve(async (req) => {
     );
   }
 
-  let processed = 0;
+  let enqueued = 0;
   let cancelled = 0;
-  let failed = 0;
   const errors: string[] = [];
 
   for (const session of orphans ?? []) {
@@ -72,40 +64,24 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const res = await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-session`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ session_id: session.id, skipThankYouEmail }),
-        },
-      );
-      if (!res.ok && res.status !== 202) {
-        failed += 1;
-        errors.push(`finalize ${session.id}: HTTP ${res.status}`);
+      const { error: rpcErr } = await supabase.rpc("enqueue_report_job", {
+        p_session_id: session.id,
+      });
+      if (rpcErr) {
+        errors.push(`enqueue ${session.id}: ${rpcErr.message}`);
       } else {
-        processed += 1;
+        enqueued += 1;
       }
-      await new Promise((r) => setTimeout(r, 5000));
     } catch (e) {
-      failed += 1;
-      errors.push(
-        `${session.id}: ${e instanceof Error ? e.message : String(e)}`,
-      );
+      errors.push(`${session.id}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
   const summary = {
     ok: true,
     total: orphans?.length ?? 0,
-    processed,
+    enqueued,
     cancelled,
-    failed,
-    skipThankYouEmail,
     errors: errors.slice(0, 20),
   };
   console.log("backfill-orphan-reports", JSON.stringify(summary));

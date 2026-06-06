@@ -1,7 +1,6 @@
-// Edge function : finalise une session côté serveur (transcription puis
-// génération du rapport + email). Appelée par un trigger Postgres dès que
-// sessions.status passe à 'completed', et par cleanup-abandoned-sessions
-// en filet de sécurité.
+// Edge function : thin wrapper qui se contente d'enqueue un job de génération.
+// Conservé pour rétro-compat des appelants (cleanup, UI legacy). Tout le
+// travail réel (transcription + IA + email) est fait par process-report-queue.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -13,218 +12,13 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-async function invoke(name: string, body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      apikey: SERVICE_ROLE_KEY,
-      "x-internal-secret": SERVICE_ROLE_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) {
-    console.error(`finalize-session: ${name} failed`, res.status, text);
-    throw new Error(`${name} ${res.status}: ${text}`);
-  }
-  return text;
-}
-
-async function sendCandidateThankYou(
-  supabase: ReturnType<typeof createClient>,
-  sessionId: string,
-) {
-  const { data: session } = await supabase
-    .from("sessions")
-    .select(
-      "id, token, candidate_name, candidate_email, projects:projects!inner(title, job_title, slug, organization_id, created_by, candidate_email_subject, candidate_email_body, organizations:organizations(name))",
-    )
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (!session?.candidate_email) return;
-
-  // Idempotence : si un thank-you a déjà été enqueued/envoyé à ce candidat
-  // dans les 30 derniers jours, on ne renvoie pas. Évite que les retries du
-  // cron `cleanup-abandoned-sessions` ne spamment les candidats sur des
-  // sessions orphelines (cause initiale d'envois 30+ fois).
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-  const { data: alreadySent } = await supabase
-    .from("email_send_log")
-    .select("id")
-    .eq("template_name", "candidate-thank-you")
-    .eq("recipient_email", session.candidate_email)
-    .in("status", ["pending", "sent"])
-    .gte("created_at", thirtyDaysAgo)
-    .limit(1);
-  if (alreadySent && alreadySent.length > 0) {
-    console.log("finalize-session: thank-you already sent, skipping", sessionId);
-    return;
-  }
-
-  // deno-lint-ignore no-explicit-any
-  const project = (session as any).projects;
-  const orgName = project?.organizations?.name ?? "";
-  const jobTitle = project?.job_title || project?.title || "";
-  const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
-  const slug = project?.slug ?? "session";
-  const privacyUrl = session.token
-    ? `https://interw.ai/session/${slug}/privacy/${session.token}`
-    : undefined;
-
-  // Récupère l'override projet ; sinon, fallback sur le modèle de l'organisation.
-  let customSubject: string | null = project?.candidate_email_subject ?? null;
-  let customBody: string | null = project?.candidate_email_body ?? null;
-  if ((!customSubject || !customBody) && project?.organization_id) {
-    const { data: orgTpl } = await supabase
-      .from("candidate_message_templates")
-      .select("subject, body")
-      .eq("organization_id", project.organization_id)
-      .eq("key", "candidate-thank-you")
-      .maybeSingle();
-    if (orgTpl) {
-      // deno-lint-ignore no-explicit-any
-      const tpl = orgTpl as any;
-      customSubject = customSubject || tpl.subject || null;
-      customBody = customBody || tpl.body || null;
-    }
-  }
-
-  // Reply-To : email du créateur du projet (recruteur). Permet aux candidats
-  // de répondre à une vraie personne — booste fortement la délivrabilité.
-  let replyTo: string | undefined;
-  if (project?.created_by) {
-    const { data: creatorProfile } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("user_id", project.created_by)
-      .maybeSingle();
-    // deno-lint-ignore no-explicit-any
-    const email = (creatorProfile as any)?.email;
-    if (typeof email === "string" && email.includes("@")) {
-      replyTo = email;
-    }
-  }
-
-  await invoke("send-transactional-email", {
-    templateName: "candidate-thank-you",
-    recipientEmail: session.candidate_email,
-    idempotencyKey: `candidate-thanks-${sessionId}`,
-    replyTo,
-    templateData: {
-      firstName,
-      jobTitle,
-      orgName,
-      privacyUrl,
-      customSubject: customSubject || undefined,
-      customBody: customBody || undefined,
-    },
-  });
-}
-
-
-async function processSession(sessionId: string, options: { skipThankYouEmail?: boolean } = {}) {
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-
-  // Vérifie que la session est bien terminée.
-  const { data: session } = await supabase
-    .from("sessions")
-    .select("id, status, is_demo")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (!session || session.status !== "completed") {
-    console.log("finalize-session: session not completed, skipping", sessionId);
-    return;
-  }
-  if ((session as any).is_demo) {
-    console.log("finalize-session: demo session, skipping", sessionId);
-    return;
-  }
-
-  // Idempotence sur la génération du rapport : si un rapport existe déjà,
-  // on saute transcription + génération mais on tente quand même l'email
-  // (l'idempotency_key côté email évite le double envoi).
-  const { data: existing } = await supabase
-    .from("reports")
-    .select("id")
-    .eq("session_id", sessionId)
-    .maybeSingle();
-
-  if (!existing) {
-    // Boucle la transcription tant qu'il reste des segments en attente.
-    // transcribe-session plafonne à 8 segments par exécution, donc une seule
-    // passe ne suffit pas pour les entretiens longs (15+ questions).
-    const MAX_TRANSCRIBE_RUNS = 10;
-    const startedAt = Date.now();
-    const TIMEOUT_MS = 4 * 60 * 1000; // 4 minutes max
-    for (let i = 0; i < MAX_TRANSCRIBE_RUNS; i++) {
-      try {
-        const raw = await invoke("transcribe-session", { session_id: sessionId });
-        let remaining = 0;
-        try {
-          const json = JSON.parse(raw);
-          remaining = Number(json?.remaining ?? 0);
-        } catch {
-          // réponse non-JSON : on sort de la boucle
-          break;
-        }
-        if (remaining <= 0) break;
-        if (Date.now() - startedAt > TIMEOUT_MS) {
-          console.warn("finalize-session: transcribe loop timeout", sessionId, "remaining=", remaining);
-          break;
-        }
-      } catch (e) {
-        console.error("finalize-session: transcribe failed (continuing)", e);
-        break;
-      }
-    }
-
-    // Vérification finale : log d'un warning si des segments restent non terminaux.
-    const { data: pending } = await supabase
-      .from("session_messages")
-      .select("id, transcription_status")
-      .eq("session_id", sessionId)
-      .eq("role", "candidate")
-      .or("video_segment_url.not.is.null,audio_segment_url.not.is.null")
-      .not("transcription_status", "in", "(done,skipped,failed,too_large)");
-    if (pending && pending.length > 0) {
-      console.warn(
-        "finalize-session: generating report with pending transcriptions",
-        sessionId,
-        "pending=", pending.length,
-      );
-    }
-
-    await invoke("generate-report", { session_id: sessionId });
-  } else {
-    console.log("finalize-session: report already exists", sessionId);
-  }
-
-  // Email de remerciement RGPD au candidat (best-effort, non bloquant).
-  // Peut être skippé via skipThankYouEmail (utilisé par les jobs de rattrapage
-  // sur de vieilles sessions où un email tardif serait perturbant).
-  if (!options.skipThankYouEmail) {
-    try {
-      await sendCandidateThankYou(supabase, sessionId);
-    } catch (e) {
-      console.error("finalize-session: thank-you email failed (continuing)", e);
-    }
-  } else {
-    console.log("finalize-session: thank-you email skipped (flag)", sessionId);
-  }
-
-  console.log("finalize-session: done", sessionId);
-}
-
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { session_id, skipThankYouEmail } = await req.json();
+    const { session_id } = await req.json();
     if (!session_id || typeof session_id !== "string") {
       return new Response(
         JSON.stringify({ error: "session_id required" }),
@@ -232,17 +26,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Lance le traitement en arrière-plan pour ne pas bloquer l'appelant
-    // (trigger Postgres ou cron). Le runtime garde le worker en vie.
-    // @ts-ignore EdgeRuntime global
-    EdgeRuntime.waitUntil(
-      processSession(session_id, { skipThankYouEmail: skipThankYouEmail === true }).catch((e) => {
-        console.error("finalize-session error", session_id, e);
-      }),
-    );
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const { error } = await supabase.rpc("enqueue_report_job", { p_session_id: session_id });
+    if (error) {
+      console.error("finalize-session: enqueue failed", session_id, error);
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     return new Response(
-      JSON.stringify({ status: "processing", session_id }),
+      JSON.stringify({ status: "queued", session_id }),
       { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

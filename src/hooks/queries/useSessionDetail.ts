@@ -173,11 +173,10 @@ export function useRegenerateReport(sessionId: string | undefined) {
   return useMutation({
     mutationFn: async () => {
       if (!sessionId) throw new Error("Session manquante");
-      // On garde l'ancien rapport jusqu'au succès de la regénération
-      // (upsert côté edge function). Si l'IA échoue, l'utilisateur ne se
-      // retrouve pas avec un écran vide.
-      const { error } = await supabase.functions.invoke("generate-report", {
-        body: { session_id: sessionId, force: true },
+      // Bouton « Régénérer » : on enqueue dans report_jobs (idempotent).
+      // Le worker process-report-queue traitera dans la minute.
+      const { error } = await (supabase.rpc as any)("enqueue_report_job", {
+        p_session_id: sessionId,
       });
       if (error) throw error;
     },

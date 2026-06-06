@@ -3373,23 +3373,11 @@ export default function InterviewStart() {
           });
         }
 
-        // Trigger report generation
-        try {
-          const { error: reportError } = await supabase.functions.invoke("generate-report", {
-            body: { session_id: sessionId },
-          });
-          if (reportError) {
-            logger.error("interview_report_generation_failed", {
-              sessionId,
-              error: reportError.message ?? String(reportError),
-            });
-          }
-        } catch (e) {
-          logger.error("interview_report_generation_failed", {
-            sessionId,
-            error: e instanceof Error ? e.message : String(e),
-          });
-        }
+        // La génération du rapport est enqueuée automatiquement par le trigger
+        // Postgres (sessions_enqueue_report) dès que status passe à 'completed'.
+        // Le worker process-report-queue prend le relais : transcription +
+        // génération + email. Plus d'appel direct ici (fire-and-forget perdu si
+        // l'utilisateur ferme l'onglet). cf. table report_jobs.
       } catch (e) {
         logger.error("interview_session_update_failed", {
           sessionId,
