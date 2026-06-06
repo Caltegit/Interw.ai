@@ -129,24 +129,23 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 4. Filet de sécurité : sessions terminées sans rapport généré.
-  // Cas typique : le candidat a fermé l'onglet avant que le navigateur
-  // ne déclenche generate-report. On relance finalize-session.
-  let finalizedRetries = 0;
+  // 4. Filet de sécurité : sessions terminées sans rapport → on les enqueue.
+  // Le worker process-report-queue les traitera (avec backoff exponentiel,
+  // espacement, et idempotence sur l'email de remerciement).
+  let enqueuedReports = 0;
   const finalizeCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const { data: orphanCompleted } = await supabase
     .from("sessions")
-    .select("id, completed_at, reports!left(id)")
+    .select("id, reports!left(id)")
     .eq("status", "completed")
+    .eq("is_demo", false)
     .lt("completed_at", finalizeCutoff)
     .is("reports.id", null)
-    .limit(50);
+    .order("completed_at", { ascending: true })
+    .limit(200);
 
   for (const session of orphanCompleted ?? []) {
     try {
-      // Si la session n'a aucun message candidat avec média, on l'annule
-      // directement plutôt que de retenter generate-report (qui répondra
-      // no_recordings indéfiniment).
       const { count: mediaCount } = await supabase
         .from("session_messages")
         .select("id", { count: "exact", head: true })
@@ -165,28 +164,23 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-session`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ session_id: session.id }),
-        },
-      );
-      finalizedRetries += 1;
+      const { error: rpcErr } = await supabase.rpc("enqueue_report_job", {
+        p_session_id: session.id,
+      });
+      if (rpcErr) {
+        errors.push(`enqueue ${session.id}: ${rpcErr.message}`);
+      } else {
+        enqueuedReports += 1;
+      }
     } catch (e) {
       errors.push(
-        `finalize ${session.id}: ${e instanceof Error ? e.message : String(e)}`,
+        `enqueue ${session.id}: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
   }
 
   console.log(
-    `cleanup_abandoned_sessions purged=${purgedSessions} files=${purgedFiles} finalized=${finalizedRetries} errors=${errors.length}`,
+    `cleanup_abandoned_sessions purged=${purgedSessions} files=${purgedFiles} enqueued_reports=${enqueuedReports} errors=${errors.length}`,
   );
 
   return new Response(
@@ -195,7 +189,7 @@ Deno.serve(async (req) => {
       purgedSessions,
       purgedFiles,
       recoveredSessions,
-      finalizedRetries,
+      enqueuedReports,
       candidates: sessions?.length ?? 0,
       errors,
     }),
