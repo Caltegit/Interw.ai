@@ -71,6 +71,7 @@ import AdminEmails from "./pages/AdminEmails";
 import AdminTuto from "./pages/AdminTuto";
 import AdminTtsCompare from "./pages/AdminTtsCompare";
 import AdminReportJobs from "./pages/AdminReportJobs";
+import AdminSessionsQueue from "./pages/AdminSessionsQueue";
 import Feedback from "./pages/Feedback";
 import FeedbackThread from "./pages/FeedbackThread";
 import { SuperAdminRoute } from "@/components/SuperAdminRoute";
