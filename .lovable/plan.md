@@ -1,256 +1,103 @@
-## Diagnostic actuel
+## Objectif
 
-Quatre chemins peuvent déclencher `generate-report` aujourd'hui :
+Donner au super admin une vue unique sur **toutes les sessions** (toutes organisations) pour suivre en temps réel le pipeline complet : session → transcript → rapport → email candidat. Recherche ouverte, filtres, et toutes les actions de réparation accessibles ligne par ligne.
 
-```
-1. Navigateur fin d'entretien   →  generate-report  (fire-and-forget)
-2. Bouton « Générer le rapport »  →  generate-report
-3. trigger Postgres sessions.status='completed'  →  finalize-session  →  generate-report
-4. cron horaire cleanup-abandoned-sessions  →  finalize-session  →  generate-report
-```
+## 1. Entrée menu
 
-Problèmes :
+Dans `src/components/AppSidebar.tsx`, ajouter pour `isSuperAdmin` un item **"Sessions queue"** (icône `ListChecks` ou `Activity`) juste **après "Santé emails"**, route `/admin/sessions-queue`.
 
-- **Aucune file persistante** : si l'IA renvoie 429/5xx ou si la fonction timeout, le job est simplement perdu jusqu'au prochain passage du cron (1 h).
-- **Pas d'observabilité** : 32 sessions orphelines aujourd'hui sans qu'on sache *pourquoi* `generate-report` a échoué.
-- **Concurrence** : navigateur + trigger + cron peuvent tirer simultanément sur la même session → appels IA gâchés + race sur l'insert dans `reports`.
-- **Pas de lissage** : si 20 entretiens se terminent en même temps, on enchaîne 20 appels IA en parallèle → risque de saturer la quota Lovable AI.
-- **Pas de retry stratégique** : exponential backoff inexistant, max attempts inexistant, donc soit on retry à l'infini, soit on abandonne silencieusement.
+## 2. Nouvelle page `/admin/sessions-queue`
 
----
+Fichier : `src/pages/AdminSessionsQueue.tsx`, protégée par `<SuperAdminRoute>` (ajout dans `src/App.tsx`).
 
-## Architecture cible
+### Layout
+- Header : titre + stats compactes 24h / 7j (total sessions, completed, rapports générés, jobs en échec, emails échoués).
+- Barre de filtres :
+  - **Recherche ouverte** (debounced 300ms) : matche nom candidat, email candidat, titre projet, nom org, session.id, session.token.
+  - Filtre statut session (multi : in_progress, completed, cancelled, expired…).
+  - Filtre statut job rapport (multi : none, queued, processing, done, failed, cancelled).
+  - Filtre santé email (sent / failed / suppressed / none).
+  - Filtre organisation (select).
+  - Toggle "Démos exclues" (par défaut on).
+  - Toggle "Anomalies seulement" (completed sans rapport, ou job failed, ou attempts ≥ 3).
+- Tableau paginé (50/page, tri par défaut `sessions.completed_at DESC NULLS LAST, created_at DESC`).
 
-Une vraie file `report_jobs` table-based (visible, debuggable) avec un worker unique cadencé par pg_cron. Pas de pgmq ici : un job = une session = une ligne, c'est plus simple à inspecter qu'une queue binaire.
+### Colonnes (tout pour bien suivre)
+1. Candidat (nom + email)
+2. Projet (titre, lien `/projects/:id`)
+3. Organisation
+4. Statut session (badge)
+5. Démarrée / Terminée (timestamps relatifs + tooltip absolu)
+6. Transcript (badge : `n/n segments`, vert si complet, ambre si partiel, rouge si vide)
+7. Rapport (badge : ✓ généré + lien, ou ✗ + raison)
+8. Job rapport (status, attempts/max, next_attempt_at, dernier `last_error` tronqué + tooltip)
+9. Email candidat (dernier statut depuis `email_send_log` dédupliqué par `message_id` pour `template_name='candidate-thank-you'`)
+10. Actions (menu kebab, voir §3)
 
-```
-[trigger DB on status=completed]
-[bouton UI "Régénérer"]                ─►  upsert report_jobs (queued)
-[fin d'entretien navigateur]
-[backfill / cleanup]
+Ligne expansible (chevron) : affiche le détail brut du job (`last_error` complet, locked_until, historique des tentatives), le report.id + scores, l'historique email (toutes les rows `email_send_log` liées à la session).
 
-                                                  ▼
-                                  cron */1 * * * *   (pg_cron)
-                                                  ▼
-                                  process-report-queue   ── 3 jobs / run, espacés 10 s
-                                                  ▼
-                                          generate-report
-                                                  ▼
-                              succès ─► report_jobs.status='done' + thank-you email
-                              échec  ─► attempts++, next_attempt_at = now + backoff
-```
+### Auto-refresh
+- Polling `useQuery` toutes les 15s + bouton "Rafraîchir".
+- Optionnel : abonnement realtime sur `report_jobs` (déjà dans Cloud) pour MAJ instantanée des statuts.
 
----
+## 3. Actions par ligne (menu déroulant)
 
-## Plan
+Toutes via RPC ou edge function existante, exécutées en tant que super admin :
 
-### 1. Schéma DB — table `report_jobs`
+- **Ouvrir la session** → `/sessions/:id`
+- **Ouvrir le rapport** (si existe) → `/sessions/:id` ancré rapport
+- **Forcer le job rapport** : reset `attempts=0`, `status='queued'`, `next_attempt_at=now()`, `locked_until=null`. Si pas de job, appelle `enqueue_report_job`.
+- **Annuler le job** : `status='cancelled'`, stoppe les retries.
+- **Relancer la transcription seule** : invoke `transcribe-session`.
+- **Relancer la génération de rapport seule** : invoke `generate-report` (bypass file).
+- **Renvoyer le thank-you email** : invoke `send-transactional-email` avec un `idempotencyKey` forcé (suffixe `-manual-<timestamp>`) pour bypasser le verrou 30j.
+- **Marquer la session cancelled** (cas sans média) : update `sessions.status='cancelled'`.
+- **Copier session.id / token**.
 
-Migration :
+Confirmation `AlertDialog` pour actions destructives (cancel, force).
 
-```sql
-CREATE TYPE report_job_status AS ENUM ('queued','processing','done','failed','cancelled');
+## 4. Backend
 
-CREATE TABLE public.report_jobs (
-  session_id uuid PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
-  status report_job_status NOT NULL DEFAULT 'queued',
-  attempts int NOT NULL DEFAULT 0,
-  max_attempts int NOT NULL DEFAULT 6,
-  next_attempt_at timestamptz NOT NULL DEFAULT now(),
-  locked_at timestamptz,
-  locked_until timestamptz,
-  last_error text,
-  organization_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  completed_at timestamptz
-);
+### Nouvelle RPC `admin_search_sessions(...)` (SECURITY DEFINER, vérifie `has_role(auth.uid(),'super_admin')`)
 
-CREATE INDEX report_jobs_pickup_idx
-  ON report_jobs (status, next_attempt_at)
-  WHERE status IN ('queued','processing');
+Paramètres : `p_search text, p_session_statuses text[], p_job_statuses text[], p_email_statuses text[], p_org_id uuid, p_exclude_demo bool, p_anomalies_only bool, p_limit int, p_offset int`.
 
--- GRANTS + RLS : admin org peut lire, edge functions service_role écrit
-```
+Retourne en un seul appel (jointures côté DB pour éviter le N+1) :
+- session (id, token, candidate_name/email, status, started_at, completed_at, is_demo)
+- project (id, title)
+- organization (id, name)
+- transcript_stats (segments_total, segments_with_transcript)
+- report (id, overall_score)
+- report_job (status, attempts, max_attempts, next_attempt_at, locked_until, last_error, updated_at)
+- last_thank_you_email (status, created_at, error_message) — `DISTINCT ON (message_id)` sur `email_send_log` filtré template + recipient.
 
-Politiques RLS : seuls les membres de l'organisation propriétaire (via `organization_id`) peuvent lire ; aucune politique d'écriture côté utilisateur (tout passe par les edge functions service_role).
++ RPC compagnon `admin_sessions_queue_stats(p_window interval)` pour les KPI du header.
 
-### 2. RPC d'enqueue idempotent
+### RPC d'action `admin_force_report_job(p_session_id uuid)`
+SECURITY DEFINER, vérifie super admin. Upsert/reset le job comme décrit en §3.
 
-```sql
-CREATE FUNCTION enqueue_report_job(p_session_id uuid)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-BEGIN
-  INSERT INTO report_jobs (session_id, organization_id)
-  SELECT s.id, s.organization_id FROM sessions s WHERE s.id = p_session_id
-  ON CONFLICT (session_id) DO UPDATE
-    SET status = CASE
-      WHEN report_jobs.status IN ('done','processing') THEN report_jobs.status
-      ELSE 'queued'
-    END,
-    next_attempt_at = LEAST(report_jobs.next_attempt_at, now()),
-    updated_at = now();
-END $$;
-```
+### Index nécessaires (si manquants)
+- `sessions(completed_at desc, created_at desc)` partiel `WHERE is_demo=false`.
+- `email_send_log(template_name, recipient_email, created_at desc)`.
 
-Idempotente : appeler 10 fois ne crée qu'une ligne, ne re-tire pas un job `done`, et ne perturbe pas un job `processing`.
+## 5. Hors scope (déjà couvert ailleurs)
 
-### 3. Trigger Postgres : on enqueue dès qu'une session passe à `completed`
+- Le worker `process-report-queue`, le trigger d'enqueue, le backoff exponentiel : déjà en place, on les **observe** seulement.
+- La page existante `/admin/report-jobs` reste (vue brute par job). La nouvelle page est centrée **session**. On n'ajoute pas encore de fusion : on évaluera après usage.
+- Pas d'alerting externe (Slack/email) dans ce lot.
 
-```sql
-CREATE FUNCTION trg_enqueue_report_on_completed()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF NEW.status = 'completed'
-     AND COALESCE(OLD.status,'') <> 'completed'
-     AND NEW.is_demo = false THEN
-    PERFORM enqueue_report_job(NEW.id);
-  END IF;
-  RETURN NEW;
-END $$;
+## 6. Vérification
 
-CREATE TRIGGER sessions_enqueue_report
-AFTER INSERT OR UPDATE OF status ON sessions
-FOR EACH ROW EXECUTE FUNCTION trg_enqueue_report_on_completed();
-```
+1. Charger `/admin/sessions-queue`, vérifier que les 32 sessions backfillées apparaissent avec leur statut de job courant.
+2. Rechercher par email candidat, par titre de projet, par id de session → résultats instantanés.
+3. Filtrer "Anomalies seulement" : doit lister les sessions completed sans rapport + jobs failed.
+4. Forcer un job failed → vérifier que dans la minute suivante `process-report-queue` le reprend (log côté edge function).
+5. Renvoyer un thank-you email à un candidat test → vérifier nouvelle ligne dans `email_send_log` (status sent) et reception.
+6. Vérifier que la page renvoie 403/redirige pour un user non super admin.
 
-Remplace l'ancien trigger `trigger_finalize_session` (à dropper). Plus de risque de double-fire navigateur + trigger.
+## Détails techniques
 
-### 4. Worker `process-report-queue` (nouvelle edge function)
-
-```ts
-// Pseudo-code
-const BATCH_SIZE = 3
-const SPACING_MS = 10_000
-const LOCK_DURATION_MS = 5 * 60 * 1000  // 5 min
-
-// SELECT ... FOR UPDATE SKIP LOCKED garantit qu'un seul worker prend un job
-const jobs = await rpc('claim_report_jobs', { p_limit: BATCH_SIZE, p_lock_ms: LOCK_DURATION_MS })
-
-for (const job of jobs) {
-  try {
-    // 1. transcrire les segments restants (loop jusqu'à remaining=0 ou timeout 3min)
-    // 2. appeler generate-report
-    // 3. envoyer thank-you email (avec idempotence existante)
-    await markDone(job.session_id)
-  } catch (e) {
-    await markFailed(job.session_id, e.message)  // attempts++, backoff exp
-  }
-  await sleep(SPACING_MS)
-}
-```
-
-RPC SQL pour la prise atomique :
-
-```sql
-CREATE FUNCTION claim_report_jobs(p_limit int, p_lock_ms int)
-RETURNS SETOF report_jobs LANGUAGE plpgsql AS $$
-BEGIN
-  RETURN QUERY
-  UPDATE report_jobs SET
-    status = 'processing',
-    locked_at = now(),
-    locked_until = now() + (p_lock_ms || ' ms')::interval,
-    attempts = attempts + 1,
-    updated_at = now()
-  WHERE session_id IN (
-    SELECT session_id FROM report_jobs
-    WHERE status = 'queued'
-      AND next_attempt_at <= now()
-    ORDER BY next_attempt_at
-    LIMIT p_limit
-    FOR UPDATE SKIP LOCKED
-  )
-  RETURNING *;
-END $$;
-```
-
-Aussi : `requeue_stuck_processing()` qui re-passe en `queued` tout job dont `locked_until < now()` (worker crashed).
-
-### 5. Backoff exponentiel + max attempts
-
-```
-attempt 1 → next + 1 min
-attempt 2 → next + 5 min
-attempt 3 → next + 15 min
-attempt 4 → next + 1 h
-attempt 5 → next + 4 h
-attempt 6 → next + 12 h
-attempts >= 6 → status='failed', alerte
-```
-
-Cap à 6 tentatives pour éviter de retenter à vie un job structurellement cassé.
-
-### 6. Cadencement pg_cron
-
-```sql
-SELECT cron.schedule(
-  'process-report-queue-every-minute', '* * * * *',
-  $$ SELECT net.http_post(...process-report-queue...) $$
-);
-```
-
-Throughput max : 3 jobs × 60 runs = **180 rapports/h max**, espacés de 10 s → bien sous la limite Lovable AI. Si on observe du retard on monte `BATCH_SIZE` à 5 ou 8.
-
-### 7. Simplifications côté code existant
-
-- **`finalize-session`** : devient un thin wrapper qui ne fait qu'`enqueue_report_job` et termine. Plus de boucle transcription + appel `generate-report` ici (déplacés dans le worker).
-- **`InterviewStart.tsx` (l. 3378)** : l'appel direct à `generate-report` côté navigateur est supprimé. Le trigger DB s'en occupe quand la session passe à `completed`.
-- **`useSessionDetail.ts` (l. 179)** : le bouton « Générer le rapport » appelle `enqueue_report_job` via RPC + refresh.
-- **`cleanup-abandoned-sessions`** : on enlève le bloc « filet de sécurité » qui réinvoque `finalize-session` (le worker s'en charge). Garde uniquement le nettoyage des sessions abandonnées sans média.
-- **`backfill-orphan-reports`** : devient un simple « INSERT INTO report_jobs … FROM sessions WHERE status='completed' AND no report ». 5 lignes.
-
-### 8. Observabilité — page admin `/admin/report-jobs`
-
-Tableau filtrable :
-- session_id (lien)
-- candidate / project
-- status (badge)
-- attempts / max
-- next_attempt_at
-- last_error (tronqué, hover pour full)
-- bouton « Forcer retry » → `UPDATE … SET status='queued', attempts=0, next_attempt_at=now()`
-- bouton « Annuler » → status='cancelled'
-
-Réservée aux `super_admin`. Stats en haut : queued / processing / failed (24 h) / done (24 h).
-
-### 9. Migration des 32 orphelines actuelles
-
-Une fois la table créée :
-
-```sql
-INSERT INTO report_jobs (session_id, organization_id)
-SELECT s.id, s.organization_id
-FROM sessions s
-LEFT JOIN reports r ON r.session_id = s.id
-WHERE s.status = 'completed' AND s.is_demo = false AND r.id IS NULL
-ON CONFLICT DO NOTHING;
-```
-
-Le worker les reprendra naturellement, 3 par minute.
-
-### 10. Vérifications
-
-- Lancer un entretien démo end-to-end → vérifier qu'une ligne `report_jobs` apparaît avec `status=queued`, puis `processing`, puis `done`, et que `reports` est bien rempli.
-- Forcer un échec côté `generate-report` (mock) → vérifier que `attempts` incrémente et que `next_attempt_at` recule de 1 min, 5 min, etc.
-- Lancer 10 sessions simultanées (script) → vérifier que `process-report-queue` les traite par lot de 3 espacés de 10 s, sans double génération.
-- Couper le worker en plein traitement → après 5 min, vérifier que `requeue_stuck_processing` reset le job.
-- Charger la page admin et vérifier le rendu + les boutons.
-
----
-
-## Hors-scope
-
-- Pas de pgmq pour ce flux : une table Postgres simple suffit, est plus debuggable, et permet UPDATE/UPSERT idempotents triviaux.
-- Pas de retry sur `transcribe-session` au-delà de la boucle existante (4 min) — sa stabilité est correcte.
-- Pas de redesign de `generate-report` lui-même cette fois ; on enveloppe juste sa fragilité.
-- Pas d'alerting externe (Slack/email) sur `failed` dans cette itération — la page admin suffit pour démarrer.
-
----
-
-## Détails techniques pour info
-
-- `FOR UPDATE SKIP LOCKED` garantit qu'on peut lancer plusieurs workers en parallèle plus tard sans modifier le code.
-- La colonne `locked_until` permet de récupérer les jobs orphelins quand un worker crashe (pas de leader election à gérer).
-- Le trigger DB est `AFTER UPDATE OF status` pour ne fire qu'une fois lors de la transition `in_progress → completed`.
-- Le RPC `enqueue_report_job` est `SECURITY DEFINER` pour pouvoir être appelé depuis n'importe quel contexte (RLS bypass contrôlé).
+- Stack : React Query (`useQuery` + `useMutation`), shadcn `Table`, `Badge`, `DropdownMenu`, `AlertDialog`, `Input` (search), `Select` (filtres), `Popover` pour multi-select.
+- Recherche : ILIKE sur `candidate_name`, `candidate_email`, `projects.title`, `organizations.name` + égalité sur `sessions.id::text`, `sessions.token`. Index trigram `pg_trgm` optionnel sur `candidate_email` si lenteurs (>10k sessions).
+- Toutes les invocations edge function passent par `supabase.functions.invoke` avec le JWT du super admin (les fonctions vérifient déjà l'auth ou la clé service).
+- Aucune modification des composants RH existants, aucune modification du worker.
