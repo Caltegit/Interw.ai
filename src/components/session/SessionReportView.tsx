@@ -298,7 +298,7 @@ export function SessionReportView({
       </TabsTrigger>
       <TabsTrigger value="transcription" className="gap-1">
         <ScrollText className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Transcription</span>
+        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Texte</span>
       </TabsTrigger>
     </TabsList>
   );
