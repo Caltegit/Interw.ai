@@ -1761,6 +1761,59 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: undefined
       }
+      admin_cancel_report_job: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      admin_force_report_job: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      admin_search_sessions: {
+        Args: {
+          p_anomalies_only?: boolean
+          p_email_statuses?: string[]
+          p_exclude_demo?: boolean
+          p_job_statuses?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_org_id?: string
+          p_search?: string
+          p_session_statuses?: string[]
+        }
+        Returns: {
+          candidate_email: string
+          candidate_name: string
+          completed_at: string
+          created_at: string
+          email_created_at: string
+          email_error: string
+          email_status: string
+          is_demo: boolean
+          job_attempts: number
+          job_last_error: string
+          job_locked_until: string
+          job_max_attempts: number
+          job_next_attempt_at: string
+          job_status: string
+          job_updated_at: string
+          organization_id: string
+          organization_name: string
+          project_id: string
+          project_title: string
+          report_generated_at: string
+          report_id: string
+          report_overall_score: number
+          segments_done: number
+          segments_total: number
+          session_id: string
+          session_status: string
+          session_token: string
+          started_at: string
+          total_count: number
+        }[]
+      }
+      admin_sessions_queue_stats: { Args: { p_window?: string }; Returns: Json }
       claim_report_jobs: {
         Args: { p_limit: number; p_lock_ms: number }
         Returns: {
