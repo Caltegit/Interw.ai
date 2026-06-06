@@ -249,6 +249,7 @@ export default function SessionDetail() {
         open={linksOpen}
         onOpenChange={setLinksOpen}
         sessionId={session.id}
+        candidateName={session.candidate_name ?? null}
         initialJobTitle={(session as any).candidate_job_title ?? null}
         initialLinkedinUrl={(session as any).candidate_linkedin_url ?? null}
         initialCvUrl={(session as any).candidate_cv_url ?? null}
