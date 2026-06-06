@@ -281,11 +281,6 @@ export function SessionReportView({
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Fit Poste</span>
         <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="bigfive" className="gap-1">
-        <Brain className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-        <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
-      </TabsTrigger>
       <TabsTrigger value="voice" className="gap-1">
         <Mic className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
@@ -295,6 +290,11 @@ export function SessionReportView({
         <User className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
         <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+      </TabsTrigger>
+      <TabsTrigger value="bigfive" className="gap-1">
+        <Brain className="h-4 w-4" />
+        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
+        <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="transcription" className="gap-1">
         <ScrollText className="h-4 w-4" />
