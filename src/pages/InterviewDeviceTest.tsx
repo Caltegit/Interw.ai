@@ -696,6 +696,7 @@ export default function InterviewDeviceTest() {
     !browserBlocking &&
     micStatus === "ok" &&
     camStatus === "ok" &&
+    cameraConfirmed &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
     sttStatus === "ok" &&
