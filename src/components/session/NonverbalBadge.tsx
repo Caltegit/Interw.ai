@@ -67,7 +67,7 @@ export function NonverbalBadge({ analysis, size = 24, audioFailed }: Props) {
   const colorClass =
     value === null
       ? "bg-muted text-muted-foreground border-border"
-      : value >= 65
+      : value >= 70
       ? "bg-success/15 text-success border-success/30"
       : value >= 45
       ? "bg-warning/15 text-warning border-warning/30"

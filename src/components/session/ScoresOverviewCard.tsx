@@ -17,7 +17,7 @@ type Tone = "success" | "warning" | "danger" | "muted";
 
 function toneFromScore(score: number | null): Tone {
   if (score === null || !Number.isFinite(score)) return "muted";
-  if (score >= 65) return "success";
+  if (score >= 70) return "success";
   if (score >= 45) return "warning";
   return "danger";
 }
