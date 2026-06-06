@@ -62,12 +62,6 @@ export function ScoresOverviewCard({
       unavailable: false,
     },
     {
-      label: "Big Five",
-      score: bigFive,
-      avg: bigFiveProjectAvg,
-      unavailable: false,
-    },
-    {
       label: "Orale",
       score: paraverbal,
       avg: null,
@@ -78,6 +72,12 @@ export function ScoresOverviewCard({
       score: nonverbal,
       avg: null,
       unavailable: !!audioFailed,
+    },
+    {
+      label: "Big Five",
+      score: bigFive,
+      avg: bigFiveProjectAvg,
+      unavailable: false,
     },
   ];
 
