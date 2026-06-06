@@ -19,6 +19,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionId: string;
+  candidateName?: string | null;
   initialJobTitle?: string | null;
   initialLinkedinUrl?: string | null;
   initialCvUrl?: string | null;
