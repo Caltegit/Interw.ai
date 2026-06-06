@@ -581,7 +581,7 @@ export function SessionReportView({
             <Card>
               <CardContent className="p-6">
                 {sessionClips.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucune transcription disponible.</p>
+                  <p className="text-sm text-muted-foreground">Aucun texte disponible.</p>
                 ) : (
                   <div className="space-y-6">
                     {sessionClips.map((clip, i) => {
