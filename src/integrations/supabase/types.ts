@@ -1552,6 +1552,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          abandon_reminder_sent_at: string | null
           assigned_to: string | null
           audio_recording_url: string | null
           cancelled_at: string | null
@@ -1587,6 +1588,7 @@ export type Database = {
           video_viewed_at: string | null
         }
         Insert: {
+          abandon_reminder_sent_at?: string | null
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
@@ -1622,6 +1624,7 @@ export type Database = {
           video_viewed_at?: string | null
         }
         Update: {
+          abandon_reminder_sent_at?: string | null
           assigned_to?: string | null
           audio_recording_url?: string | null
           cancelled_at?: string | null
