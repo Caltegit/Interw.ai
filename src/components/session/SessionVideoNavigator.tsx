@@ -15,6 +15,7 @@ export interface SessionVideoClip {
   audioUrl?: string | null;
   questionLabel: string;
   questionText: string;
+  questionTitle?: string | null;
   isFollowUp: boolean;
   messageId?: string;
 }
