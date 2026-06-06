@@ -142,8 +142,15 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
-    if (newPassword.length < 6) {
-      toast({ title: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+    const hasMinLength = newPassword.length >= 6;
+    const hasDigit = /\d/.test(newPassword);
+    const hasSpecial = /[^A-Za-z0-9]/.test(newPassword);
+    if (!hasMinLength || !hasDigit || !hasSpecial) {
+      toast({
+        title: "Mot de passe trop faible",
+        description: "Au moins 6 caractères, un chiffre et un caractère spécial.",
+        variant: "destructive",
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
