@@ -208,8 +208,10 @@ export default function InterviewDeviceTest() {
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // Parcours guidé pas-à-pas : une étape visible à la fois.
-  type Step = "browser" | "mic" | "sound" | "stt" | "network" | "recap";
-  const [currentStep, setCurrentStep] = useState<Step>("browser");
+  // mic / sound / camera sont toujours visibles ; browser / stt / network ne s'intercalent qu'en cas d'erreur bloquante.
+  type Step = "mic" | "sound" | "camera" | "browser" | "stt" | "network" | "recap";
+  const [currentStep, setCurrentStep] = useState<Step>("mic");
+  const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const stepAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
