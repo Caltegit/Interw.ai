@@ -162,6 +162,7 @@ const App = () => (
               <Route path="/admin/emails" element={<SuperAdminRoute><AdminEmails /></SuperAdminRoute>} />
               <Route path="/admin/tuto" element={<SuperAdminRoute><AdminTuto /></SuperAdminRoute>} />
               <Route path="/admin/tts-compare" element={<SuperAdminRoute><AdminTtsCompare /></SuperAdminRoute>} />
+              <Route path="/admin/report-jobs" element={<SuperAdminRoute><AdminReportJobs /></SuperAdminRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
