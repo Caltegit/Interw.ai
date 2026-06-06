@@ -54,12 +54,17 @@ export function AppSidebar() {
   const isLibraryActive = location.pathname.startsWith("/library") || location.pathname === "/question-library";
   const [libraryOpen, setLibraryOpen] = useState(isLibraryActive);
 
+  const systemSubItems = [
+    { title: "Email", url: "/admin/emails", icon: Mail },
+    { title: "Sessions", url: "/admin/sessions-queue", icon: Activity },
+  ];
+  const isSystemActive = systemSubItems.some((s) => location.pathname.startsWith(s.url));
+  const [systemOpen, setSystemOpen] = useState(isSystemActive);
+
   const bottomItemsList = isSuperAdmin
     ? [
         ...bottomItems,
         { title: "Super Admin", url: "/admin", icon: Shield, showFeedbackBadge: true },
-        { title: "Santé emails", url: "/admin/emails", icon: Mail },
-        { title: "Sessions queue", url: "/admin/sessions-queue", icon: Activity },
         { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
       ]
     : bottomItems;
