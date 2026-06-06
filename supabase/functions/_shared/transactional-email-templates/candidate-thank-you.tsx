@@ -31,10 +31,7 @@ function buildSubject(data: Record<string, any>): string {
     })
   }
   const jobTitle = (data?.jobTitle && String(data.jobTitle).trim()) || 'votre poste'
-  const orgName = (data?.orgName && String(data.orgName).trim()) || ''
-  return orgName
-    ? `Confirmation de votre entretien ${jobTitle} – ${orgName}`
-    : `Confirmation de votre entretien ${jobTitle}`
+  return `Merci pour cet entretien : « ${jobTitle} »`
 }
 
 const CandidateThankYouEmail = ({
