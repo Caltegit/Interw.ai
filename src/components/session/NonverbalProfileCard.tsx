@@ -96,6 +96,10 @@ export function NonverbalProfileCard({
           {dims.map(({ key, label }) => {
             const dim = profile[key]!;
             const videoMessageId = resolve(dim.evidence_message_id);
+            const fallbackTranscript = dim.evidence_message_id
+              ? transcriptsByMessageId?.[dim.evidence_message_id]
+              : undefined;
+            const quote = dim.evidence_quote || fallbackTranscript || (videoMessageId ? "Voir le moment dans la vidéo" : "");
             return (
               <div key={key}>
                 <div className="flex items-center justify-between text-sm">
@@ -112,9 +116,9 @@ export function NonverbalProfileCard({
                   <p className="mt-1 text-xs leading-snug text-muted-foreground">{dim.comment}</p>
                 )}
                 <EvidenceLink
-                  quote={dim.evidence_message_id ? transcriptsByMessageId?.[dim.evidence_message_id] : undefined}
+                  quote={quote}
                   messageId={videoMessageId}
-                  startSeconds={undefined}
+                  startSeconds={dim.evidence_start_seconds}
                   questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
                   onGoToMessage={videoMessageId ? onGoToMessage : undefined}
                   compact
@@ -137,7 +141,7 @@ export function NonverbalProfileCard({
                     <EvidenceLink
                       quote={t.description}
                       messageId={videoMessageId}
-                      startSeconds={undefined}
+                      startSeconds={t.start_seconds}
                       questionNumber={videoMessageId ? questionNumberByMessageId?.[videoMessageId] : undefined}
                       onGoToMessage={videoMessageId ? onGoToMessage : undefined}
                       compact
@@ -148,6 +152,7 @@ export function NonverbalProfileCard({
             </ul>
           </div>
         )}
+
       </CardContent>
     </Card>
   );
