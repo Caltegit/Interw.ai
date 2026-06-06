@@ -386,6 +386,38 @@ Deno.serve(async (req) => {
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
 
+  // Garde-fou : dédup en rafale. Si un mail identique (template + recipient)
+  // est pending/sent dans les 5 dernières minutes, on court-circuite l'enqueue.
+  // Évite les boucles où un cron rappelle plusieurs fois la même fonction.
+  if (body.idempotencyKey || body.idempotency_key) {
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+    const { data: recent } = await supabase
+      .from('email_send_log')
+      .select('id')
+      .eq('template_name', templateName)
+      .eq('recipient_email', effectiveRecipient)
+      .in('status', ['pending', 'sent'])
+      .gte('created_at', fiveMinAgo)
+      .limit(1)
+    if (recent && recent.length > 0) {
+      console.log('send-transactional-email: duplicate within 5 min, skipping', {
+        templateName,
+        effectiveRecipient,
+      })
+      await supabase.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: templateName,
+        recipient_email: effectiveRecipient,
+        status: 'suppressed',
+        error_message: 'duplicate_idempotency_key',
+      })
+      return new Response(
+        JSON.stringify({ ok: true, deduped: true, messageId }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+  }
+
   // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
@@ -393,6 +425,7 @@ Deno.serve(async (req) => {
     recipient_email: effectiveRecipient,
     status: 'pending',
   })
+
 
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
     queue_name: 'transactional_emails',
