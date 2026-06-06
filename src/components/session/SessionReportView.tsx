@@ -170,6 +170,7 @@ export function SessionReportView({
           audioUrl: (m.audio_segment_url as string) ?? null,
           questionLabel: num ? `Question ${num}` : "Question",
           questionText: projectQ?.content ?? "",
+          questionTitle: (projectQ?.title as string) ?? null,
           isFollowUp: !!m.is_follow_up,
           messageId: m.id as string,
         };

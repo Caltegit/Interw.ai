@@ -15,6 +15,7 @@ export interface SessionVideoClip {
   audioUrl?: string | null;
   questionLabel: string;
   questionText: string;
+  questionTitle?: string | null;
   isFollowUp: boolean;
   messageId?: string;
 }
@@ -508,7 +509,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         )}
       >
         <div
-          className="relative overflow-hidden rounded-lg bg-black aspect-video"
+          className="group relative overflow-hidden rounded-lg bg-black aspect-video"
           onMouseMove={!compact ? showOverlayTemporarily : undefined}
           onMouseLeave={!compact && isPlaying ? () => setOverlayVisible(false) : undefined}
         >
@@ -753,6 +754,16 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               )}
             </>
           )}
+          {!compact && (() => {
+            const raw = (current.questionTitle ?? "").trim();
+            const display = raw.length > 30 ? raw.slice(0, 30).trimEnd() + "…" : raw;
+            if (!display) return null;
+            return (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-black/70 to-transparent px-3 pt-6 pb-2 opacity-100 transition-opacity duration-200 group-hover:opacity-0">
+                <span className="truncate text-xs font-medium text-white drop-shadow">{display}</span>
+              </div>
+            );
+          })()}
         </div>
 
         {!compact && current.isFollowUp && (
