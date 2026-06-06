@@ -64,13 +64,13 @@ export function ScoresOverviewCard({
     {
       label: "Orale",
       score: paraverbal,
-      avg: null,
+      avg: hasBenchmark ? projectAverages!.paraverbalScore : null,
       unavailable: !!audioFailed,
     },
     {
       label: "Attitude",
       score: nonverbal,
-      avg: null,
+      avg: hasBenchmark ? projectAverages!.nonverbalScore : null,
       unavailable: !!audioFailed,
     },
     {
