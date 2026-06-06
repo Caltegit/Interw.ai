@@ -45,11 +45,8 @@ export default function Login() {
           },
         });
         if (error) throw error;
-        toast({
-          title: "Lien de connexion envoyé",
-          description: "Si un compte existe, un lien vient d'être envoyé. Il est valable 24h et utilisable une seule fois.",
-        });
-        setMode("login");
+        setSentToEmail(email);
+        setShowSentDialog(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
