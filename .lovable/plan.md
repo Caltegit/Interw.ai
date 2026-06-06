@@ -1,80 +1,50 @@
-## Objectif
+# Plan — Onglet Résumé + renommage Fit Poste
 
-Rendre les **deux players identiques** (vue tableau projet + vue rapport) avec :
-- Gros bouton **Play** central au repos
-- Bouton **téléchargement MP4**
-- Boutons ±10s et sélecteur de vitesse 1× / 1.5× / 2×
-- Overlay **titre de question** centré en bas, fond transparent, sur une ligne, tronqué à 30 caractères, visible quand le curseur n'est PAS sur le player et masqué au survol
+## 1. Renommer "Reco IA" → "Fit Poste" et épurer
 
-Seule la **taille** diffère (chaque hôte garde son `aspect-video` à la largeur de sa carte).
+Dans `src/components/session/SessionReportView.tsx` :
 
-## Approche : composant partagé
+- TabsTrigger `value="decision"` : libellé `Reco IA` → `Fit Poste` (ligne 276).
+- Dans `TabsContent value="decision"` (lignes 387-446), ne garder QUE `FitBreakdownCard` (= "Adéquation selon les critères définis").
+- Retirer de cet onglet : `SignalsCard`, `CommunicationProfileCard`, `ProjectComparisonCard`, et la Card "Bilan global" (`executive_summary`). Ces éléments seront déplacés dans le nouvel onglet "Résumé".
 
-Création de `src/components/session/SessionClipPlayer.tsx` qui encapsule tout le rendu du player + ses overlays. Le composant existant `SessionVideoNavigator` est déjà ce player avec sa logique de navigation, portail et récupération MP4 — on en extrait la **partie purement visuelle** (boîte `aspect-video`, `<video>`, overlays ±10s / vitesse / Play central / Download / nouveau titre overlay) dans `SessionClipPlayer`.
+## 2. Nouvel onglet "Résumé" en première position
 
-- `SessionVideoNavigator` continue à gérer : liste de clips, navigation Préc/Suiv, sélecteur de question, portail mini-player, transcripts, recovery → il consomme `SessionClipPlayer` en interne.
-- `SessionCard` (vue tableau) remplace son bloc `<video>` actuel par `<SessionClipPlayer />` et profite ainsi automatiquement du gros Play, du Download MP4 et de l'overlay titre.
+- Nouvelle `TabsTrigger value="summary"` placée en premier (avant `decision`), icône `LayoutDashboard` (ou `Sparkles`), libellé "Résumé".
+- `TabsList` passe de `grid-cols-5` à `grid-cols-6`.
+- `activeTab` par défaut = `"summary"`.
 
-## Détail des changements
+### Contenu de l'onglet Résumé
 
-### 1. `SessionClipPlayer.tsx` (nouveau)
+Un panneau visuel synthétique avec :
 
-Props :
-```ts
-{
-  url: string;                  // clip courant
-  questionTitle?: string | null;
-  sessionId?: string;           // pour useMp4Download (lien export dédié si fourni)
-  onEnded?: () => void;
-  autoPlay?: boolean;
-}
-```
+**a) Vue graphique des 4 notes (radar / barres)**
+Un composant `ScoresOverviewCard` qui affiche côte à côte les 4 scores déjà calculés ailleurs dans le rapport :
+- Fit Poste — `fitScore`
+- Big Five — score agrégé dérivé de `report.personality_profile` (même logique que `BigFiveBadge`)
+- Orale (paraverbal) — score dérivé de `report.paraverbal_analysis` (même logique que `ParaverbalBadge`)
+- Attitude (non-verbal) — score dérivé de `report.nonverbal_analysis` (même logique que `NonverbalBadge`)
 
-Comportement et UI repris à l'identique de `SessionVideoNavigator` (lignes ~511-720) :
-- conteneur `relative overflow-hidden rounded-lg bg-black aspect-video`
-- `<video>` plein avec gestion `playsInline`, `preload`, `onLoadedMetadata` (gestion durée `Infinity` via reseek), `onEnded`
-- Overlay haut : pilules ±10s centrées en haut + colonne vitesse 1×/1.5×/2× en haut-gauche
-- Overlay centre : gros bouton Play (visible quand `paused`), masqué en lecture
-- Overlay bas-droit : bouton Download MP4 (état Idle/Loading + progress, hook `useMp4Download`)
-- **Nouveau** overlay bas : bandeau `absolute inset-x-0 bottom-0` avec dégradé `from-black/60 to-transparent`, texte centré blanc `text-xs font-medium truncate`. Affiché par défaut, `opacity-0` au `group-hover` (transition 200ms). Le conteneur racine reçoit la classe `group`.
-- Troncature côté composant : `title.length > 30 ? title.slice(0,30).trimEnd() + '…' : title`. Si pas de titre, pas de bandeau.
+Visualisation : Radar chart `recharts` (déjà utilisé dans le projet) avec 4 axes + badges chiffrés en-dessous réutilisant `FitScoreBadge` / `BigFiveBadge` / `ParaverbalBadge` / `NonverbalBadge` pour la cohérence visuelle. Gestion `audioFailed` (les 2 derniers passent en N/A si audio failed, comme aujourd'hui).
 
-### 2. `SessionVideoNavigator.tsx`
+**b) Reco IA sur le profil**
+Réutilisation des composants déjà existants déplacés depuis l'onglet `decision` :
+- `executive_summary` (Card "Bilan global")
+- `SignalsCard` (forces / red flags / questions de relance)
+- `CommunicationProfileCard`
+- `ProjectComparisonCard` (si `projectAverages.count >= 3`)
 
-- Ajouter `questionTitle?: string | null` à `SessionVideoClip`.
-- Remplacer le bloc visuel actuel par `<SessionClipPlayer url={…} questionTitle={current.questionTitle} sessionId={sessionId} onEnded={…} />`.
-- Garde toute sa logique externe : liste clips, navigation, portail, sélecteur, recovery (`recover-session-video`), `hideDownload` est désormais géré en NE passant simplement pas `sessionId`/en masquant via prop `hideDownload` propagée.
+Ordre proposé dans l'onglet : Radar des 4 notes → Bilan global → SignalsCard → CommunicationProfileCard → ProjectComparisonCard.
 
-### 3. `SessionReportView.tsx`
+## 3. Fichiers touchés
 
-- Ligne ~171, ajouter `questionTitle: projectQ?.title ?? null` dans la construction de `sessionClips`.
+- `src/components/session/SessionReportView.tsx` — modif tabs, déplacement des cards, défaut `activeTab`.
+- `src/components/session/ScoresOverviewCard.tsx` — **nouveau**, radar + badges des 4 scores.
 
-### 4. `SessionCard.tsx` (vue tableau projet)
+Aucune modification SQL, aucune modif des edge functions, aucun changement des données — uniquement réorganisation UI et un nouveau composant de visualisation.
 
-- Étendre l'interface `Question` locale avec `title: string`.
-- S'assurer que `ProjectDetail` sélectionne `title` quand il charge les questions (vérifier le `.select(...)` ; si manquant, l'ajouter).
-- Construire des objets clip enrichis avec `questionTitle` (lookup via `questionByid`).
-- Remplacer tout le bloc `<video> + overlays ±10s + vitesse` (lignes 268-346) par `<SessionClipPlayer url={current.url} questionTitle={…} sessionId={session.id} onEnded={() => goTo(index+1, true)} />`.
-- Supprimer les états locaux devenus inutiles (`rate`, `durationSec`, `videoRef` interne au rendu, `safePlay/stopCurrent`) — ils vivent maintenant dans `SessionClipPlayer`. Conserver la navigation Préc/Suiv et le sélecteur de question existants sous le player.
+## 4. Hors scope
 
-### 5. Hook MP4
-
-Aucun changement à `useMp4Download`. Quand `sessionId` est fourni, le hook ouvre la page d'export dédiée (comportement existant côté Navigator) ; même comportement appliqué côté SessionCard.
-
-## Hors scope
-
-- Aucun changement SQL.
-- Pas de modification des players intro/library/MediaRecorder/HighlightReel/QuestionAnswerRow.
-- Pas d'unification du sélecteur de question / boutons Préc-Suiv (ils sont spécifiques au contexte).
-
-## Vérification
-
-1. Vue tableau d'un projet :
-   - Le player affiche le gros bouton Play au repos.
-   - Le titre de question apparaît centré en bas, disparaît au survol, réapparaît au mouseleave, tronqué à 30 caractères.
-   - Boutons ±10s, vitesse, et **Download MP4** présents et fonctionnels.
-   - Préc/Suiv et sélecteur Question N fonctionnent comme avant.
-2. Vue rapport (`/sessions/:id`) :
-   - Mêmes commandes, même rendu, plus l'overlay titre.
-   - Portail mini-player et recovery toujours fonctionnels.
-3. Cas sans titre (anciennes questions) : pas de bandeau, le reste fonctionne.
+- Pas de modification des onglets Big Five / Orale / Attitude / Transcription.
+- Pas de changement du `DecisionBanner` (qui reste au-dessus des tabs).
+- Pas de nouveau calcul de score : on réutilise les scores existants tels qu'ils alimentent déjà les badges.

@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Loader2, Brain, Mic, User, ScrollText } from "lucide-react";
+import { FileText, Loader2, Brain, Mic, User, ScrollText, LayoutDashboard } from "lucide-react";
+import { ScoresOverviewCard } from "@/components/session/ScoresOverviewCard";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
@@ -91,7 +92,7 @@ export function SessionReportView({
 }: SessionReportViewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("decision");
+  const [activeTab, setActiveTab] = useState("summary");
   const [analyzingVoice, setAnalyzingVoice] = useState(false);
 
   const project = session?.projects;
@@ -270,10 +271,14 @@ export function SessionReportView({
   const audioFailed = isAudioFailed(audioHealth);
 
   const tabsList = (
-    <TabsList className="grid w-full grid-cols-5">
+    <TabsList className="grid w-full grid-cols-6">
+      <TabsTrigger value="summary" className="gap-1">
+        <LayoutDashboard className="h-4 w-4" />
+        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Résumé</span>
+      </TabsTrigger>
       <TabsTrigger value="decision" className="gap-1">
         <FileText className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Reco IA</span>
+        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Fit Poste</span>
         <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="bigfive" className="gap-1">
@@ -384,7 +389,7 @@ export function SessionReportView({
             {!isPinned && tabsList}
           </div>
 
-          <TabsContent value="decision" className="mt-4 space-y-4">
+          <TabsContent value="summary" className="mt-4 space-y-4">
             {isRegenerating && report && (
               <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -393,12 +398,25 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <FitBreakdownCard
-                  items={stats.fit_breakdown}
-                  legacyCriteriaScores={criteriaScores as any}
-                  onGoToMessage={goToMessage}
-                  questionNumberByMessageId={questionNumberByMessageId}
+                <ScoresOverviewCard
+                  fitScore={fitScore}
+                  personalityProfile={report.personality_profile}
+                  paraverbalAnalysis={report.paraverbal_analysis}
+                  nonverbalAnalysis={(report as any).nonverbal_analysis}
+                  audioFailed={audioFailed}
                 />
+                {report.executive_summary && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Bilan global</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {report.executive_summary}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
                 <SignalsCard
                   signals={stats.signals}
                   legacyRedFlags={report.red_flags as any}
@@ -418,18 +436,6 @@ export function SessionReportView({
                     candidateCriteria={criteriaScores as any}
                   />
                 )}
-                {report.executive_summary && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Bilan global</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {report.executive_summary}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
               </>
             ) : (
               <Card>
@@ -440,6 +446,23 @@ export function SessionReportView({
                       Le rapport sera généré automatiquement après l'analyse de la session.
                     </p>
                   )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="decision" className="mt-4 space-y-4">
+            {report ? (
+              <FitBreakdownCard
+                items={stats.fit_breakdown}
+                legacyCriteriaScores={criteriaScores as any}
+                onGoToMessage={goToMessage}
+                questionNumberByMessageId={questionNumberByMessageId}
+              />
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <p className="text-muted-foreground">Rapport non encore généré.</p>
                 </CardContent>
               </Card>
             )}
