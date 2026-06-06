@@ -103,7 +103,9 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
               </div>
               <div className="relative mt-1 h-2 rounded-full bg-muted">
                 <div
-                  className="h-2 rounded-full bg-primary transition-all"
+                  className={`h-2 rounded-full transition-all ${
+                    score >= 70 ? "bg-success" : score >= 50 ? "bg-primary" : score >= 30 ? "bg-warning" : "bg-destructive"
+                  }`}
                   style={{ width: `${score}%` }}
                 />
                 {typeof avg === "number" && (
