@@ -268,8 +268,9 @@ Tu écoutes l'audio fourni en plus de la transcription. Note 6 dimensions sur 10
 - energy (engagement vocal)
 - vocal_confidence (assurance)
 - vocal_stress (10 = aucun stress audible)
-Pour chaque dimension : 1 phrase concrète (langage manager, sans jargon) et idéalement evidence_message_id du segment le plus représentatif.
+Pour chaque dimension : 1 phrase concrète (langage manager, sans jargon) ET, dès que possible, l'evidence du segment le plus représentatif : evidence_message_id, evidence_start_seconds (position EN SECONDES depuis le début de la réponse correspondante, pas depuis le début de l'entretien) et evidence_quote (≤ 20 mots tirés de la transcription à ce moment). Ces 3 champs sont fortement encouragés pour permettre au recruteur de sauter directement au moment clé dans la vidéo.
 Retourne le résultat via l'outil report_paraverbal.`;
+
 
     const RETRY_STATUSES = new Set([500, 502, 503, 504]);
     const BACKOFFS_MS = [2000, 5000];
