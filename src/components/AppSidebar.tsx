@@ -18,6 +18,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarFooter,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -73,10 +74,11 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>
-            {!collapsed && (
+          <SidebarGroupLabel className="flex items-center justify-between pr-1">
+            {!collapsed ? (
               <span className="text-lg font-bold text-primary">Interw.ai</span>
-            )}
+            ) : <span />}
+            <SidebarTrigger className="h-6 w-6" />
           </SidebarGroupLabel>
           <div className="px-2 pb-2">
             <OrganizationSwitcher />
