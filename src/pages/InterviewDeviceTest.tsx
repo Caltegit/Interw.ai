@@ -208,8 +208,10 @@ export default function InterviewDeviceTest() {
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // Parcours guidé pas-à-pas : une étape visible à la fois.
-  type Step = "browser" | "mic" | "sound" | "stt" | "network" | "recap";
-  const [currentStep, setCurrentStep] = useState<Step>("browser");
+  // mic / sound / camera sont toujours visibles ; browser / stt / network ne s'intercalent qu'en cas d'erreur bloquante.
+  type Step = "mic" | "sound" | "camera" | "browser" | "stt" | "network" | "recap";
+  const [currentStep, setCurrentStep] = useState<Step>("mic");
+  const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const stepAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -555,13 +557,13 @@ export default function InterviewDeviceTest() {
     (async () => {
       const perms = await queryPermissions();
       if (cancelled) return;
+      // Micro : on NE LANCE PAS auto, on attend le clic candidat sur l'écran 1.
       if (perms.mic === "denied") {
         setMicStatus("error"); setRecorderStatus("error");
         setMicError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez le micro, puis rechargez la page.");
-      } else {
-        await testMicAndRecorder(selectedAudioId);
       }
       if (cancelled) return;
+      // Caméra : on précharge le flux pour que l'écran 3 soit déjà actif.
       if (perms.cam === "denied") {
         setCamStatus("error");
         setCamError("Accès refusé. Cliquez sur l'icône cadenas dans la barre d'adresse, autorisez la caméra, puis rechargez la page.");
@@ -588,6 +590,15 @@ export default function InterviewDeviceTest() {
     navigator.mediaDevices?.addEventListener?.("devicechange", handler);
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
   }, [browserBlocking, refreshDevices]);
+
+  // Quand l'étape caméra devient visible, on (ré)attache le flux pré-acquis au <video>.
+  useEffect(() => {
+    if (currentStep !== "camera") return;
+    if (videoRef.current && camStreamRef.current && videoRef.current.srcObject !== camStreamRef.current) {
+      videoRef.current.srcObject = camStreamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentStep, camStatus]);
 
   useEffect(() => {
     if (!slug) return;
@@ -694,6 +705,7 @@ export default function InterviewDeviceTest() {
     !browserBlocking &&
     micStatus === "ok" &&
     camStatus === "ok" &&
+    cameraConfirmed &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
     sttStatus === "ok" &&
@@ -722,26 +734,30 @@ export default function InterviewDeviceTest() {
   // ================== UI PRINCIPALE ==================
   // La caméra n'est plus un segment de progression : elle est visible en permanence
   // dans le bandeau d'en-tête, son statut s'y lit directement.
-  const progressTests: Status[] = [browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const progressTests: Status[] = [
+    micStatus,
+    soundStatus,
+    cameraConfirmed ? "ok" : camStatus === "ok" ? "idle" : camStatus,
+  ];
   const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
 
   // ================== STEP MACHINE ==================
-  // Ordre des étapes : on saute STT sauf s'il est en erreur (alors étape bloquante).
+  // Ordre des étapes : mic → sound → camera, puis on intercale les blocages éventuels avant le récap.
   const stepOrder: Step[] = useMemo(() => {
-    const base: Step[] = ["browser", "mic", "sound", "network", "recap"];
-    if (sttStatus === "error") {
-      // Intercaler STT juste avant le récap pour bloquer si la reco vocale a échoué.
-      const i = base.indexOf("network");
-      return [...base.slice(0, i + 1), "stt", ...base.slice(i + 1)];
-    }
+    const base: Step[] = ["mic", "sound", "camera"];
+    if (browserCompat.current.level === "blocked") base.push("browser");
+    if (sttStatus === "error") base.push("stt");
+    if (networkBlocking) base.push("network");
+    base.push("recap");
     return base;
-  }, [sttStatus]);
+  }, [sttStatus, networkBlocking]);
 
   const stepStatus = (s: Step): Status => {
     switch (s) {
       case "browser": return browserStatus;
       case "mic": return micStatus;
       case "sound": return soundStatus;
+      case "camera": return cameraConfirmed ? "ok" : camStatus === "ok" ? "idle" : camStatus;
       case "stt": return sttStatus;
       case "network": return networkStatusComputed;
       case "recap": return "idle";
@@ -754,12 +770,13 @@ export default function InterviewDeviceTest() {
   }, [currentStep, stepOrder]);
 
   // Auto-avance : dès que l'étape courante passe en « ok », on enchaîne après 800 ms.
+  // Exception : la caméra demande une validation manuelle (clic « Je suis bien cadré »).
   useEffect(() => {
     if (stepAdvanceTimer.current) {
       clearTimeout(stepAdvanceTimer.current);
       stepAdvanceTimer.current = null;
     }
-    if (currentStep === "recap") return;
+    if (currentStep === "recap" || currentStep === "camera") return;
     const st = stepStatus(currentStep);
     if (st === "ok") {
       stepAdvanceTimer.current = setTimeout(() => {
@@ -773,7 +790,7 @@ export default function InterviewDeviceTest() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed]);
+  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed, cameraConfirmed]);
 
   const stepIndex = stepOrder.indexOf(currentStep);
   const totalSteps = stepOrder.length - 1; // hors récap
@@ -782,15 +799,16 @@ export default function InterviewDeviceTest() {
     browser: "Navigateur",
     mic: "Micro",
     sound: "Son",
+    camera: "Caméra",
     stt: "Reconnaissance vocale",
     network: "Connexion",
     recap: "Récapitulatif",
   };
   const stepIcons: Record<Step, React.ComponentType<{ className?: string }>> = {
-    browser: Globe, mic: Mic, sound: Volume2, stt: MessageSquare, network: Wifi, recap: CheckCircle,
+    browser: Globe, mic: Mic, sound: Volume2, camera: Video, stt: MessageSquare, network: Wifi, recap: CheckCircle,
   };
   // L'étape micro/son/réseau peut être passée (best-effort) si elle est en erreur.
-  const canSkipCurrent = currentStep === "mic" || currentStep === "sound" || currentStep === "network";
+  const canSkipCurrent = currentStep === "sound" || currentStep === "network";
 
 
   return (
@@ -833,68 +851,6 @@ export default function InterviewDeviceTest() {
           </div>
         </div>
 
-        {/* Bandeau caméra (vignette) */}
-        <div className="flex items-center gap-4 rounded-2xl border bg-card p-3 animate-fade-in">
-          <div
-            className={cn(
-              "relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-2xl bg-black",
-              camStatus === "error" && "bg-amber-500/10 ring-2 ring-amber-500/40",
-            )}
-          >
-            {(camStatus === "ok" || camStatus === "testing") && (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-            )}
-            {camStatus === "testing" && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              </div>
-            )}
-            {camStatus === "error" && (
-              <button
-                type="button"
-                onClick={() => testCam(selectedVideoId)}
-                className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-amber-700 dark:text-amber-400"
-              >
-                <Video className="h-5 w-5" />
-                <span className="text-[10px] font-medium leading-tight text-center px-1">Activer la caméra</span>
-              </button>
-            )}
-            {camStatus === "ok" && (
-              <div className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-card">
-                <CheckCircle className="h-3 w-3 text-white" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0 space-y-1">
-            <p className="text-sm font-medium">
-              {camStatus === "ok" && "Vous êtes bien cadré"}
-              {camStatus === "testing" && "Activation de la caméra…"}
-              {camStatus === "error" && "Caméra non disponible"}
-              {camStatus === "idle" && "Caméra"}
-            </p>
-            {camStatus === "error" && camError && (
-              <p className="text-xs text-muted-foreground line-clamp-2">{camError}</p>
-            )}
-            {camStatus === "ok" && devices.video.length > 1 && (
-              <DeviceSelector
-                devices={devices.video}
-                value={selectedVideoId}
-                onChange={handleVideoDeviceChange}
-                placeholder="Changer de caméra"
-              />
-            )}
-            {camStatus === "ok" && devices.video.length <= 1 && (
-              <p className="text-xs text-muted-foreground">L'image que verra votre interlocuteur.</p>
-            )}
-          </div>
-        </div>
 
         {/* Indicateur d'étape : « Étape X/Y — Nom » */}
         {currentStep !== "recap" && (
@@ -1107,6 +1063,83 @@ export default function InterviewDeviceTest() {
             </TestCard>
           )}
 
+          {currentStep === "camera" && (
+            <div key="step-camera" className="rounded-xl border bg-card p-4 space-y-4 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <StatusIcon status={cameraConfirmed ? "ok" : camStatus} fallback={Video} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium leading-tight">Vérifiez votre cadrage</p>
+                  <p className="text-xs text-muted-foreground">Centrez votre visage, assurez-vous d'être bien éclairé.</p>
+                </div>
+              </div>
+
+              <div className={cn(
+                "relative w-full overflow-hidden rounded-xl bg-black aspect-video",
+                camStatus === "error" && "bg-amber-500/10 ring-2 ring-amber-500/40",
+              )}>
+                {(camStatus === "ok" || camStatus === "testing") && (
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                    style={{ transform: "scaleX(-1)" }}
+                  />
+                )}
+                {camStatus === "ok" && (
+                  <>
+                    {/* Guide de cadrage : rectangle centré pointillé */}
+                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      <div className="w-[55%] h-[80%] rounded-[40%] border-2 border-dashed border-white/50" />
+                    </div>
+                    <div className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 ring-2 ring-card">
+                      <CheckCircle className="h-4 w-4 text-white" />
+                    </div>
+                  </>
+                )}
+                {camStatus === "testing" && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  </div>
+                )}
+                {camStatus === "error" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-amber-700 dark:text-amber-400 p-4 text-center">
+                    <Video className="h-8 w-8" />
+                    <p className="text-xs font-medium">Caméra non disponible</p>
+                    {camError && <p className="text-[11px] text-muted-foreground">{camError}</p>}
+                  </div>
+                )}
+              </div>
+
+              {camStatus === "error" && (
+                <Button variant="outline" size="sm" onClick={() => testCam(selectedVideoId)} className="w-full">
+                  <Video className="mr-2 h-4 w-4" /> Activer la caméra
+                </Button>
+              )}
+
+              {devices.video.length > 1 && camStatus === "ok" && (
+                <DeviceSelector
+                  devices={devices.video}
+                  value={selectedVideoId}
+                  onChange={handleVideoDeviceChange}
+                  placeholder="Changer de caméra"
+                />
+              )}
+
+              <Button
+                size="lg"
+                className="w-full candidate-btn-primary h-12 text-base font-semibold"
+                disabled={camStatus !== "ok"}
+                onClick={() => { setCameraConfirmed(true); goToNextStep(); }}
+              >
+                <CheckCircle className="mr-2 h-5 w-5" /> Je suis bien cadré
+              </Button>
+            </div>
+          )}
+
+
+
           {currentStep === "stt" && (
             <TestCard
               key="step-stt"
@@ -1170,6 +1203,7 @@ export default function InterviewDeviceTest() {
                   ["browser", browserStatus] as const,
                   ["mic", micStatus] as const,
                   ["sound", soundStatus] as const,
+                  ["camera", (cameraConfirmed ? "ok" : camStatus) as Status] as const,
                   ["stt", sttStatus] as const,
                   ["network", networkStatusComputed] as const,
                 ]).map(([key, st]) => {
