@@ -179,6 +179,58 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* Système (super admin) */}
+              {isSuperAdmin && (
+                <Collapsible open={systemOpen || collapsed} onOpenChange={setSystemOpen}>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <button
+                        type="button"
+                        onClick={() => setSystemOpen((v) => !v)}
+                        className={`w-full flex items-center hover:bg-muted/50 ${isSystemActive ? "bg-muted text-primary font-medium" : ""}`}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        {!collapsed && (
+                          <>
+                            <span>Système</span>
+                            <CollapsibleTrigger asChild>
+                              <span
+                                className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+                                aria-label={systemOpen ? "Réduire" : "Développer"}
+                              >
+                                <ChevronDown
+                                  className={`h-4 w-4 transition-transform ${systemOpen ? "rotate-180" : ""}`}
+                                />
+                              </span>
+                            </CollapsibleTrigger>
+                          </>
+                        )}
+                      </button>
+                    </SidebarMenuButton>
+                    {!collapsed && (
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {systemSubItems.map((sub) => (
+                            <SidebarMenuSubItem key={sub.title}>
+                              <SidebarMenuSubButton asChild>
+                                <NavLink
+                                  to={sub.url}
+                                  className="hover:bg-muted/50"
+                                  activeClassName="bg-muted text-primary font-medium"
+                                >
+                                  <sub.icon className="mr-2 h-4 w-4" />
+                                  <span>{sub.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    )}
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
