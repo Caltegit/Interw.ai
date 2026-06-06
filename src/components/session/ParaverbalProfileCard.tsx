@@ -38,9 +38,9 @@ const DIMENSIONS: { key: keyof ParaverbalProfile; label: string }[] = [
 
 function scoreColor(score?: number) {
   if (typeof score !== "number") return "bg-muted";
-  if (score >= 7) return "bg-success";
-  if (score >= 5) return "bg-primary";
-  if (score >= 3) return "bg-warning";
+  if (score >= 70) return "bg-success";
+  if (score >= 50) return "bg-primary";
+  if (score >= 30) return "bg-warning";
   return "bg-destructive";
 }
 
@@ -98,11 +98,11 @@ export function ParaverbalProfileCard({
               <div key={key}>
                 <div className="flex items-center justify-between text-sm">
                   <span>{label}</span>
-                  <span className="font-medium tabular-nums">{dim.score}/10</span>
+                  <span className="font-medium tabular-nums">{Math.round((dim.score ?? 0) * 10)}/100</span>
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-muted">
                   <div
-                    className={cn("h-1.5 rounded-full transition-all", scoreColor(dim.score))}
+                    className={cn("h-1.5 rounded-full transition-all", scoreColor(Math.round((dim.score ?? 0) * 10)))}
                     style={{ width: `${(Math.max(0, Math.min(10, dim.score!)) / 10) * 100}%` }}
                   />
                 </div>

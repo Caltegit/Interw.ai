@@ -17,7 +17,7 @@ const SCORE_MAP: Array<[number, number]> = [
   [10, 100],
 ];
 
-function mapScore(raw: number): number {
+export function mapNonverbalScore(raw: number): number {
   if (raw <= SCORE_MAP[0][0]) return SCORE_MAP[0][1];
   if (raw >= SCORE_MAP[SCORE_MAP.length - 1][0]) return SCORE_MAP[SCORE_MAP.length - 1][1];
   for (let i = 0; i < SCORE_MAP.length - 1; i++) {
@@ -30,6 +30,7 @@ function mapScore(raw: number): number {
   }
   return raw * 10;
 }
+const mapScore = mapNonverbalScore;
 
 export function computeNonverbalAverage(analysis?: NonverbalAnalysis | null): number | null {
   const profile = analysis?.profile as NonverbalProfile | undefined | null;
