@@ -3,6 +3,7 @@ import { User, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EvidenceLink } from "./EvidenceLink";
 import { mapNonverbalScore } from "./NonverbalBadge";
+import { ScoreLevelBadge, inferLevel, levelBarColor } from "./scoreLevelBadge";
 
 interface NonverbalDim {
   score?: number;
@@ -103,13 +104,16 @@ export function NonverbalProfileCard({
             const quote = dim.evidence_quote || fallbackTranscript || (videoMessageId ? "Voir le moment dans la vidéo" : "");
             return (
               <div key={key}>
-                <div className="flex items-center justify-between text-sm">
-                  <span>{label}</span>
-                  <span className="font-medium tabular-nums">{Math.round(mapNonverbalScore(dim.score!))}/100</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <ScoreLevelBadge pct={Math.round(mapNonverbalScore(dim.score!))} />
+                    <span className="text-sm font-semibold tabular-nums text-muted-foreground">{Math.round(mapNonverbalScore(dim.score!))}%</span>
+                  </div>
                 </div>
-                <div className="mt-1 h-1.5 rounded-full bg-muted">
+                <div className="mt-1.5 h-2 rounded-full bg-muted">
                   <div
-                    className={cn("h-1.5 rounded-full transition-all", scoreColor(Math.round(mapNonverbalScore(dim.score!))))}
+                    className={cn("h-2 rounded-full transition-all", levelBarColor(inferLevel(Math.round(mapNonverbalScore(dim.score!)))))}
                     style={{ width: `${Math.max(0, Math.min(100, mapNonverbalScore(dim.score!)))}%` }}
                   />
                 </div>

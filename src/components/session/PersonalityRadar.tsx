@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Brain, ChevronDown, ChevronUp } from "lucide-react";
 import { EvidenceLink } from "./EvidenceLink";
+import { ScoreLevelBadge, inferLevel, levelBarColor } from "./scoreLevelBadge";
+import { cn } from "@/lib/utils";
 
 interface Evidence {
   quote?: string;
@@ -92,20 +94,19 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
           const avg = projectAverages?.[key];
           return (
             <div key={key}>
-              <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                <span className="font-medium">{label}</span>
-                <span className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">{label}</span>
+                <div className="flex items-center gap-2">
                   <span className={`text-[11px] ${confidenceColor[confidence]}`}>
                     {confidenceLabel[confidence]}
                   </span>
-                  <span className="font-medium text-foreground">{score}/100</span>
-                </span>
+                  <ScoreLevelBadge pct={score} />
+                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">{score}%</span>
+                </div>
               </div>
-              <div className="relative mt-1 h-2 rounded-full bg-muted">
+              <div className="relative mt-1.5 h-2 rounded-full bg-muted">
                 <div
-                  className={`h-2 rounded-full transition-all ${
-                    score >= 70 ? "bg-success" : score >= 50 ? "bg-primary" : score >= 30 ? "bg-warning" : "bg-destructive"
-                  }`}
+                  className={cn("h-2 rounded-full transition-all", levelBarColor(inferLevel(score)))}
                   style={{ width: `${score}%` }}
                 />
                 {typeof avg === "number" && (
