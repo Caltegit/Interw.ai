@@ -593,7 +593,7 @@ export function SessionReportView({
                             <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
                           </div>
                           <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
-                            {text || "Transcription non disponible."}
+                            {text || "Texte non disponible."}
                           </p>
                         </div>
                       );
