@@ -44,6 +44,25 @@ async function sendCandidateThankYou(
     .eq("id", sessionId)
     .maybeSingle();
   if (!session?.candidate_email) return;
+
+  // Idempotence : si un thank-you a déjà été enqueued/envoyé à ce candidat
+  // dans les 30 derniers jours, on ne renvoie pas. Évite que les retries du
+  // cron `cleanup-abandoned-sessions` ne spamment les candidats sur des
+  // sessions orphelines (cause initiale d'envois 30+ fois).
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const { data: alreadySent } = await supabase
+    .from("email_send_log")
+    .select("id")
+    .eq("template_name", "candidate-thank-you")
+    .eq("recipient_email", session.candidate_email)
+    .in("status", ["pending", "sent"])
+    .gte("created_at", thirtyDaysAgo)
+    .limit(1);
+  if (alreadySent && alreadySent.length > 0) {
+    console.log("finalize-session: thank-you already sent, skipping", sessionId);
+    return;
+  }
+
   // deno-lint-ignore no-explicit-any
   const project = (session as any).projects;
   const orgName = project?.organizations?.name ?? "";
@@ -105,7 +124,7 @@ async function sendCandidateThankYou(
 }
 
 
-async function processSession(sessionId: string) {
+async function processSession(sessionId: string, options: { skipThankYouEmail?: boolean } = {}) {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // Vérifie que la session est bien terminée.
@@ -182,15 +201,22 @@ async function processSession(sessionId: string) {
     console.log("finalize-session: report already exists", sessionId);
   }
 
-  // Email de remerciement RGPD au candidat (best-effort, non bloquant)
-  try {
-    await sendCandidateThankYou(supabase, sessionId);
-  } catch (e) {
-    console.error("finalize-session: thank-you email failed (continuing)", e);
+  // Email de remerciement RGPD au candidat (best-effort, non bloquant).
+  // Peut être skippé via skipThankYouEmail (utilisé par les jobs de rattrapage
+  // sur de vieilles sessions où un email tardif serait perturbant).
+  if (!options.skipThankYouEmail) {
+    try {
+      await sendCandidateThankYou(supabase, sessionId);
+    } catch (e) {
+      console.error("finalize-session: thank-you email failed (continuing)", e);
+    }
+  } else {
+    console.log("finalize-session: thank-you email skipped (flag)", sessionId);
   }
 
   console.log("finalize-session: done", sessionId);
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -198,7 +224,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { session_id } = await req.json();
+    const { session_id, skipThankYouEmail } = await req.json();
     if (!session_id || typeof session_id !== "string") {
       return new Response(
         JSON.stringify({ error: "session_id required" }),
@@ -210,7 +236,7 @@ Deno.serve(async (req) => {
     // (trigger Postgres ou cron). Le runtime garde le worker en vie.
     // @ts-ignore EdgeRuntime global
     EdgeRuntime.waitUntil(
-      processSession(session_id).catch((e) => {
+      processSession(session_id, { skipThankYouEmail: skipThankYouEmail === true }).catch((e) => {
         console.error("finalize-session error", session_id, e);
       }),
     );
