@@ -725,26 +725,30 @@ export default function InterviewDeviceTest() {
   // ================== UI PRINCIPALE ==================
   // La caméra n'est plus un segment de progression : elle est visible en permanence
   // dans le bandeau d'en-tête, son statut s'y lit directement.
-  const progressTests: Status[] = [browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const progressTests: Status[] = [
+    micStatus,
+    soundStatus,
+    cameraConfirmed ? "ok" : camStatus === "ok" ? "idle" : camStatus,
+  ];
   const progressVerified = progressTests.filter((s) => s === "ok" || s === "warning").length;
 
   // ================== STEP MACHINE ==================
-  // Ordre des étapes : on saute STT sauf s'il est en erreur (alors étape bloquante).
+  // Ordre des étapes : mic → sound → camera, puis on intercale les blocages éventuels avant le récap.
   const stepOrder: Step[] = useMemo(() => {
-    const base: Step[] = ["browser", "mic", "sound", "network", "recap"];
-    if (sttStatus === "error") {
-      // Intercaler STT juste avant le récap pour bloquer si la reco vocale a échoué.
-      const i = base.indexOf("network");
-      return [...base.slice(0, i + 1), "stt", ...base.slice(i + 1)];
-    }
+    const base: Step[] = ["mic", "sound", "camera"];
+    if (browserCompat.current.level === "blocked") base.push("browser");
+    if (sttStatus === "error") base.push("stt");
+    if (networkBlocking) base.push("network");
+    base.push("recap");
     return base;
-  }, [sttStatus]);
+  }, [sttStatus, networkBlocking]);
 
   const stepStatus = (s: Step): Status => {
     switch (s) {
       case "browser": return browserStatus;
       case "mic": return micStatus;
       case "sound": return soundStatus;
+      case "camera": return cameraConfirmed ? "ok" : camStatus === "ok" ? "idle" : camStatus;
       case "stt": return sttStatus;
       case "network": return networkStatusComputed;
       case "recap": return "idle";
@@ -757,12 +761,13 @@ export default function InterviewDeviceTest() {
   }, [currentStep, stepOrder]);
 
   // Auto-avance : dès que l'étape courante passe en « ok », on enchaîne après 800 ms.
+  // Exception : la caméra demande une validation manuelle (clic « Je suis bien cadré »).
   useEffect(() => {
     if (stepAdvanceTimer.current) {
       clearTimeout(stepAdvanceTimer.current);
       stepAdvanceTimer.current = null;
     }
-    if (currentStep === "recap") return;
+    if (currentStep === "recap" || currentStep === "camera") return;
     const st = stepStatus(currentStep);
     if (st === "ok") {
       stepAdvanceTimer.current = setTimeout(() => {
@@ -776,7 +781,7 @@ export default function InterviewDeviceTest() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed]);
+  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed, cameraConfirmed]);
 
   const stepIndex = stepOrder.indexOf(currentStep);
   const totalSteps = stepOrder.length - 1; // hors récap
@@ -785,15 +790,16 @@ export default function InterviewDeviceTest() {
     browser: "Navigateur",
     mic: "Micro",
     sound: "Son",
+    camera: "Caméra",
     stt: "Reconnaissance vocale",
     network: "Connexion",
     recap: "Récapitulatif",
   };
   const stepIcons: Record<Step, React.ComponentType<{ className?: string }>> = {
-    browser: Globe, mic: Mic, sound: Volume2, stt: MessageSquare, network: Wifi, recap: CheckCircle,
+    browser: Globe, mic: Mic, sound: Volume2, camera: Video, stt: MessageSquare, network: Wifi, recap: CheckCircle,
   };
   // L'étape micro/son/réseau peut être passée (best-effort) si elle est en erreur.
-  const canSkipCurrent = currentStep === "mic" || currentStep === "sound" || currentStep === "network";
+  const canSkipCurrent = currentStep === "sound" || currentStep === "network";
 
 
   return (
