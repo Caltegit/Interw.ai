@@ -83,10 +83,7 @@ export function ScoresOverviewCard({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Vue d'ensemble des notes</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {items.map((it) => (
             <ScoreGauge
