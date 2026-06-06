@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
   const { data: sessions, error } = await supabase
     .from("sessions")
-    .select("id, candidate_name, candidate_email, token, last_activity_at, created_at, is_demo, project:projects(name, slug)")
+    .select("id, candidate_name, candidate_email, token, last_activity_at, created_at, is_demo, project:projects(title, slug)")
     .in("status", ["pending", "in_progress"])
     .is("abandon_reminder_sent_at", null)
     .gt("created_at", maxAgeCutoff)
