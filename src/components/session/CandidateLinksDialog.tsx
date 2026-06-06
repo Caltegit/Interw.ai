@@ -12,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { FileText, FileSignature, Upload, Trash2, Loader2 } from "lucide-react";
+import { FileText, FileSignature, Upload, Trash2, Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sessionId: string;
+  candidateName?: string | null;
   initialJobTitle?: string | null;
   initialLinkedinUrl?: string | null;
   initialCvUrl?: string | null;
@@ -145,6 +146,7 @@ export function CandidateLinksDialog({
   open,
   onOpenChange,
   sessionId,
+  candidateName,
   initialJobTitle,
   initialLinkedinUrl,
   initialCvUrl,
@@ -269,7 +271,24 @@ export function CandidateLinksDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="linkedin-url">Profil LinkedIn</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="linkedin-url">Profil LinkedIn</Label>
+              {candidateName?.trim() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-muted-foreground hover:text-primary"
+                  title="Rechercher sur Google"
+                  onClick={() => {
+                    const q = encodeURIComponent(`${candidateName.trim()} linkedin`);
+                    window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <Input
               id="linkedin-url"
               type="url"
