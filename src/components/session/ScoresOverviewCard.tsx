@@ -1,16 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-} from "recharts";
-import { FitScoreBadge } from "./FitScoreBadge";
-import { BigFiveBadge, computeBigFiveAverage } from "./BigFiveBadge";
-import { ParaverbalBadge, computeParaverbalAverage } from "./ParaverbalBadge";
-import { NonverbalBadge, computeNonverbalAverage } from "./NonverbalBadge";
+import { computeBigFiveAverage } from "./BigFiveBadge";
+import { computeParaverbalAverage } from "./ParaverbalBadge";
+import { computeNonverbalAverage } from "./NonverbalBadge";
+import type { ProjectAverages } from "@/hooks/queries/useProjectAverages";
 
 interface Props {
   fitScore: number | null;
@@ -18,7 +10,24 @@ interface Props {
   paraverbalAnalysis?: any;
   nonverbalAnalysis?: any;
   audioFailed?: boolean;
+  projectAverages?: ProjectAverages | null;
 }
+
+type Tone = "success" | "warning" | "danger" | "muted";
+
+function toneFromScore(score: number | null): Tone {
+  if (score === null || !Number.isFinite(score)) return "muted";
+  if (score >= 80) return "success";
+  if (score >= 60) return "warning";
+  return "danger";
+}
+
+const TONE_STYLES: Record<Tone, { ring: string; dot: string; text: string }> = {
+  success: { ring: "text-emerald-500", dot: "bg-emerald-500", text: "text-emerald-600" },
+  warning: { ring: "text-amber-500", dot: "bg-amber-500", text: "text-amber-600" },
+  danger: { ring: "text-rose-500", dot: "bg-rose-500", text: "text-rose-600" },
+  muted: { ring: "text-muted-foreground/30", dot: "bg-muted-foreground/40", text: "text-muted-foreground" },
+};
 
 export function ScoresOverviewCard({
   fitScore,
@@ -26,72 +35,189 @@ export function ScoresOverviewCard({
   paraverbalAnalysis,
   nonverbalAnalysis,
   audioFailed,
+  projectAverages,
 }: Props) {
   const bigFive = computeBigFiveAverage(personalityProfile);
   const paraverbal = audioFailed ? null : computeParaverbalAverage(paraverbalAnalysis);
   const nonverbal = audioFailed ? null : computeNonverbalAverage(nonverbalAnalysis);
 
-  const data = [
-    { axis: "Fit Poste", value: fitScore ?? 0, raw: fitScore },
-    { axis: "Big Five", value: bigFive ?? 0, raw: bigFive },
-    { axis: "Orale", value: paraverbal ?? 0, raw: paraverbal },
-    { axis: "Attitude", value: nonverbal ?? 0, raw: nonverbal },
+  const hasBenchmark = !!projectAverages && projectAverages.count >= 3;
+
+  // Big Five project avg = mean of available trait averages
+  let bigFiveProjectAvg: number | null = null;
+  if (hasBenchmark && projectAverages?.bigFive) {
+    const vals = Object.values(projectAverages.bigFive).filter(
+      (v): v is number => typeof v === "number",
+    );
+    if (vals.length > 0) {
+      bigFiveProjectAvg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    }
+  }
+
+  const items = [
+    {
+      label: "Fit Poste",
+      score: fitScore,
+      avg: hasBenchmark ? projectAverages!.overallScore : null,
+      unavailable: false,
+    },
+    {
+      label: "Big Five",
+      score: bigFive,
+      avg: bigFiveProjectAvg,
+      unavailable: false,
+    },
+    {
+      label: "Orale",
+      score: paraverbal,
+      avg: null,
+      unavailable: !!audioFailed,
+    },
+    {
+      label: "Attitude",
+      score: nonverbal,
+      avg: null,
+      unavailable: !!audioFailed,
+    },
   ];
 
   return (
     <Card>
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Vue d'ensemble des notes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="h-[260px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} outerRadius="75%">
-              <PolarGrid stroke="hsl(var(--border))" />
-              <PolarAngleAxis
-                dataKey="axis"
-                tick={{ fill: "hsl(var(--foreground))", fontSize: 12 }}
-              />
-              <PolarRadiusAxis
-                domain={[0, 100]}
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
-                stroke="hsl(var(--border))"
-              />
-              <Radar
-                name="Scores"
-                dataKey="value"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.3}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
+        <div className="hidden sm:flex gap-3 text-[11px] font-medium text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Succès
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-amber-500" /> À surveiller
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500" /> Critique
+          </span>
         </div>
-
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <ScoreCell label="Fit Poste">
-            <FitScoreBadge score={fitScore} size={42} audioFailed={audioFailed} />
-          </ScoreCell>
-          <ScoreCell label="Big Five">
-            <BigFiveBadge profile={personalityProfile} size={42} audioFailed={audioFailed} />
-          </ScoreCell>
-          <ScoreCell label="Orale">
-            <ParaverbalBadge analysis={paraverbalAnalysis} size={42} audioFailed={audioFailed} />
-          </ScoreCell>
-          <ScoreCell label="Attitude">
-            <NonverbalBadge analysis={nonverbalAnalysis} size={42} audioFailed={audioFailed} />
-          </ScoreCell>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {items.map((it) => (
+            <ScoreGauge
+              key={it.label}
+              label={it.label}
+              score={it.score}
+              avg={it.avg}
+              unavailable={it.unavailable}
+            />
+          ))}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function ScoreCell({ label, children }: { label: string; children: React.ReactNode }) {
+function ScoreGauge({
+  label,
+  score,
+  avg,
+  unavailable,
+}: {
+  label: string;
+  score: number | null;
+  avg: number | null;
+  unavailable: boolean;
+}) {
+  const R = 42;
+  const C = 2 * Math.PI * R; // 263.89
+  const tone = unavailable ? "muted" : toneFromScore(score);
+  const styles = TONE_STYLES[tone];
+  const pct = score !== null && Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
+  const offset = C - (C * pct) / 100;
+
+  const delta =
+    !unavailable && score !== null && avg !== null && Number.isFinite(avg)
+      ? Math.round(score - avg)
+      : null;
+
+  if (unavailable) {
+    return (
+      <div className="relative flex flex-col items-center p-5 bg-muted/30 border border-dashed border-border rounded-xl">
+        <div className="relative w-24 h-24 flex items-center justify-center mb-3 opacity-50">
+          <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+            <circle
+              cx="48"
+              cy="48"
+              r={R}
+              stroke="currentColor"
+              strokeWidth="6"
+              fill="transparent"
+              strokeDasharray="4 4"
+              className="text-muted-foreground/40"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-base font-bold text-muted-foreground">N/A</span>
+          </div>
+        </div>
+        <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
+        <p className="mt-1 text-[10px] text-muted-foreground/80 uppercase tracking-tight">
+          Audio non détecté
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center gap-2 rounded-md border bg-card p-3">
-      {children}
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <div className="relative flex flex-col items-center p-5 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
+      <div className="relative w-24 h-24 flex items-center justify-center mb-3">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
+          <circle
+            cx="48"
+            cy="48"
+            r={R}
+            stroke="currentColor"
+            strokeWidth="6"
+            fill="transparent"
+            className="text-muted/40"
+          />
+          <circle
+            cx="48"
+            cy="48"
+            r={R}
+            stroke="currentColor"
+            strokeWidth="6"
+            fill="transparent"
+            strokeDasharray={C}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className={`${styles.ring} transition-all duration-500`}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-bold text-foreground leading-none">
+            {score !== null ? Math.round(score) : "--"}
+          </span>
+          <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">/100</span>
+        </div>
+      </div>
+      <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+      <div className="h-5 mt-1 flex items-center">
+        {delta !== null ? (
+          <span
+            className={`text-[11px] font-semibold tabular-nums ${
+              delta > 0
+                ? "text-emerald-600"
+                : delta < 0
+                  ? "text-rose-600"
+                  : "text-muted-foreground"
+            }`}
+            title="Écart vs moyenne projet"
+          >
+            {delta > 0 ? "+" : ""}
+            {delta} vs moyenne
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted-foreground/60">—</span>
+        )}
+      </div>
     </div>
   );
 }
