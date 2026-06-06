@@ -305,7 +305,7 @@ export function SessionReportView({
 
   return (
     <div className={`flex flex-col ${copilotOpen ? "gap-4" : "gap-6"}`}>
-      <div className="flex flex-col gap-4 min-w-0">
+      <div className="gap-4 min-w-0 items-center justify-start flex flex-col -my-[10px]">
         {sessionClips.length > 0 && (
           <SessionVideoNavigator
             ref={videoNavRef}
