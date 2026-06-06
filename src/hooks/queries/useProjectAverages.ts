@@ -38,23 +38,33 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
 
   const sessionIds = (sessions ?? []).map((s) => s.id);
   if (sessionIds.length === 0) {
-    return { count: 0, overallScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
+    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
   }
 
   const { data: reports } = await supabase
     .from("reports")
-    .select("overall_score, personality_profile, motivation_scores, criteria_scores")
+    .select("overall_score, personality_profile, motivation_scores, criteria_scores, paraverbal_analysis, nonverbal_analysis")
     .in("session_id", sessionIds);
 
   const list = reports ?? [];
   if (list.length === 0) {
-    return { count: 0, overallScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
+    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
   }
 
   const avg = (nums: number[]) =>
     nums.length === 0 ? null : nums.reduce((a, b) => a + b, 0) / nums.length;
 
   const overallScore = avg(list.map((r: any) => Number(r.overall_score)).filter((n) => Number.isFinite(n)));
+
+  const paraverbalVals = list
+    .map((r: any) => computeParaverbalAverage(r.paraverbal_analysis))
+    .filter((n: any): n is number => typeof n === "number" && Number.isFinite(n));
+  const paraverbalScore = avg(paraverbalVals);
+
+  const nonverbalVals = list
+    .map((r: any) => computeNonverbalAverage(r.nonverbal_analysis))
+    .filter((n: any): n is number => typeof n === "number" && Number.isFinite(n));
+  const nonverbalScore = avg(nonverbalVals);
 
   const bigFive: ProjectAverages["bigFive"] = {};
   for (const trait of BIG_FIVE) {
@@ -94,6 +104,8 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
   return {
     count: list.length,
     overallScore: overallScore !== null ? Math.round(overallScore) : null,
+    paraverbalScore: paraverbalScore !== null ? Math.round(paraverbalScore) : null,
+    nonverbalScore: nonverbalScore !== null ? Math.round(nonverbalScore) : null,
     bigFive,
     motivation,
     criteriaByLabel,
