@@ -8,6 +8,7 @@ interface NonverbalDim {
   comment?: string;
   evidence_message_id?: string;
   evidence_start_seconds?: number;
+  evidence_quote?: string;
 }
 
 export interface NonverbalProfile {
@@ -22,6 +23,7 @@ export interface MicroTension {
   description: string;
   start_seconds?: number;
 }
+
 
 export interface NonverbalAnalysis {
   profile?: NonverbalProfile | null;
