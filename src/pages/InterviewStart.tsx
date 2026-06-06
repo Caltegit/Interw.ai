@@ -2358,7 +2358,8 @@ export default function InterviewStart() {
       // On passe `null` pour le deviceId afin de ne pas invalider sur un
       // simple changement d'ID entre le test et le start (Chrome remplace
       // parfois "default" par un hash réel après acceptation de la permission).
-      const testValid = isMicTestStillValid(token, null);
+      // Les sessions démo bypassent la validation du test technique.
+      const testValid = session?.is_demo ? true : isMicTestStillValid(token, null);
 
       if (!testValid) {
         logger.warn("interview_mic_precheck_failed", {
