@@ -591,6 +591,15 @@ export default function InterviewDeviceTest() {
     return () => navigator.mediaDevices?.removeEventListener?.("devicechange", handler);
   }, [browserBlocking, refreshDevices]);
 
+  // Quand l'étape caméra devient visible, on (ré)attache le flux pré-acquis au <video>.
+  useEffect(() => {
+    if (currentStep !== "camera") return;
+    if (videoRef.current && camStreamRef.current && videoRef.current.srcObject !== camStreamRef.current) {
+      videoRef.current.srcObject = camStreamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentStep, camStatus]);
+
   useEffect(() => {
     if (!slug) return;
     (async () => {
