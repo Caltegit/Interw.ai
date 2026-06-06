@@ -178,10 +178,12 @@ function ScoreGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-foreground leading-none">
+          <span className="text-2xl font-bold text-foreground leading-tight text-center">
             {score !== null ? Math.round(score) : "--"}
+            <br />
+            <span className="text-[10px] font-semibold text-muted-foreground -mt-1 block">/100</span>
           </span>
-          <span className="text-[10px] font-semibold text-muted-foreground mt-0.5">/100</span>
+          <div className="h-1" />
         </div>
       </div>
       <h3 className="text-sm font-semibold text-foreground">{label}</h3>
@@ -199,7 +201,7 @@ function ScoreGauge({
           >
             {delta > 0 ? "+" : ""}
             {delta}{" "}
-            <span className="text-[11px] font-medium text-muted-foreground">moy.</span>
+            <span className="text-[11px] font-medium text-muted-foreground">/moy.</span>
           </span>
         ) : (
           <span className="text-[11px] text-muted-foreground/60">—</span>
