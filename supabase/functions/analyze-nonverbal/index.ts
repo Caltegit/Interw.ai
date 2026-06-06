@@ -43,12 +43,22 @@ function dim(description: string) {
     properties: {
       score: { type: "number", minimum: 0, maximum: 10 },
       comment: { type: "string", description: "1 phrase concrète" },
-      evidence_message_id: { type: "string" },
+      evidence_message_id: { type: "string", description: "message_id du segment vidéo le plus représentatif" },
+      evidence_start_seconds: {
+        type: "number",
+        minimum: 0,
+        description: "Position en secondes (depuis le début de la réponse) du moment vidéo le plus représentatif",
+      },
+      evidence_quote: {
+        type: "string",
+        description: "Description visuelle factuelle ≤ 20 mots du moment précis observé (ou courte citation du candidat à ce moment)",
+      },
     },
     required: ["score", "comment"],
     description,
   };
 }
+
 
 const TOOL_SCHEMA = {
   type: "function",
