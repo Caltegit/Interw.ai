@@ -189,9 +189,11 @@ serve(async (req) => {
         soft_skills: softSkills,
         red_flags: redFlags,
         paraverbal_analysis: para,
+        nonverbal_analysis: nonverbal,
         question_evaluations: qEvals,
       })
       .eq("id", report.id);
+
 
     if (updateErr) {
       return json({ error: "update_failed", detail: updateErr.message }, 500);
