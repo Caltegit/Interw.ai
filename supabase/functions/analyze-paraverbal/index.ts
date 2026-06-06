@@ -31,12 +31,22 @@ function dim(description: string) {
     properties: {
       score: { type: "number", minimum: 0, maximum: 10 },
       comment: { type: "string", description: "1 phrase concrète" },
-      evidence_message_id: { type: "string" },
+      evidence_message_id: { type: "string", description: "message_id du segment audio le plus représentatif" },
+      evidence_start_seconds: {
+        type: "number",
+        minimum: 0,
+        description: "Position en secondes (depuis le début de la réponse) du moment audio le plus représentatif",
+      },
+      evidence_quote: {
+        type: "string",
+        description: "Courte citation (≤ 20 mots) extraite de la transcription à ce moment précis",
+      },
     },
     required: ["score", "comment"],
     description,
   };
 }
+
 
 const TOOL_SCHEMA = {
   type: "function",
