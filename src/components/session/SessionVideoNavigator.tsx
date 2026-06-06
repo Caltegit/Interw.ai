@@ -509,7 +509,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         )}
       >
         <div
-          className="relative overflow-hidden rounded-lg bg-black aspect-video"
+          className="group relative overflow-hidden rounded-lg bg-black aspect-video"
           onMouseMove={!compact ? showOverlayTemporarily : undefined}
           onMouseLeave={!compact && isPlaying ? () => setOverlayVisible(false) : undefined}
         >
