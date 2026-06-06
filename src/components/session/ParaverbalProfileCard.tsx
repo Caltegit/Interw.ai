@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EvidenceLink } from "./EvidenceLink";
+import { ScoreLevelBadge, inferLevel, levelBarColor } from "./scoreLevelBadge";
 
 interface ParaverbalDim {
   score?: number;
@@ -96,13 +97,16 @@ export function ParaverbalProfileCard({
             const quote = dim.evidence_quote || fallbackTranscript || (videoMessageId ? "Voir le moment dans la vidéo" : "");
             return (
               <div key={key}>
-                <div className="flex items-center justify-between text-sm">
-                  <span>{label}</span>
-                  <span className="font-medium tabular-nums">{Math.round((dim.score ?? 0) * 10)}/100</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm">{label}</span>
+                  <div className="flex items-center gap-2">
+                    <ScoreLevelBadge pct={Math.round((dim.score ?? 0) * 10)} />
+                    <span className="text-sm font-semibold tabular-nums text-muted-foreground">{Math.round((dim.score ?? 0) * 10)}%</span>
+                  </div>
                 </div>
-                <div className="mt-1 h-1.5 rounded-full bg-muted">
+                <div className="mt-1.5 h-2 rounded-full bg-muted">
                   <div
-                    className={cn("h-1.5 rounded-full transition-all", scoreColor(Math.round((dim.score ?? 0) * 10)))}
+                    className={cn("h-2 rounded-full transition-all", levelBarColor(inferLevel(Math.round((dim.score ?? 0) * 10))))}
                     style={{ width: `${(Math.max(0, Math.min(10, dim.score!)) / 10) * 100}%` }}
                   />
                 </div>
