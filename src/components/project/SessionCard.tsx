@@ -104,7 +104,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
   const current = clips[index];
   const questionByid = new Map(questions.map((q) => [q.id, q]));
   const currentQ = current?.questionId ? questionByid.get(current.questionId) : null;
-  const qOrder = currentQ ? currentQ.order_index + 1 : null;
+  
 
   const decision = (session.recruiter_decision ?? "none") as string;
   const authorTooltip = formatDecisionAuthor(decisionByName, session.recruiter_decision_at);
