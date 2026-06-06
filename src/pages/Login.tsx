@@ -22,6 +22,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showSentDialog, setShowSentDialog] = useState(false);
+  const [sentToEmail, setSentToEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session } = useAuth();
