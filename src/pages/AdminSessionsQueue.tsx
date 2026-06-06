@@ -70,7 +70,7 @@ const EMAIL_STATUS_OPTIONS = ["none", "pending", "sent", "failed", "dlq", "suppr
 
 function useDebounced<T>(value: T, delay = 300): T {
   const [v, setV] = useState(value);
-  useMemo(() => {
+  useEffect(() => {
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
   }, [value, delay]);
