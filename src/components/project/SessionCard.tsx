@@ -188,84 +188,32 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
 
         {/* Vidéo */}
         <div className="space-y-2">
-          <div className="relative overflow-hidden rounded-md bg-black aspect-video">
-            {loading ? (
+          {loading ? (
+            <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
               <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                 Chargement…
               </div>
-            ) : current ? (
-              <>
-                <video
-                  key={current.url}
-                  ref={videoRef}
-                  src={current.url}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  onLoadedMetadata={(e) => {
-                    const d = e.currentTarget.duration;
-                    if (Number.isFinite(d)) setDurationSec(d);
-                    else if (d === Infinity) fixDuration();
-                  }}
-                  onEnded={() => {
-                    if (index < clips.length - 1) goTo(index + 1, true);
-                  }}
-                  className="h-full w-full object-contain"
-                />
-                <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
-                  <button
-                    type="button"
-                    aria-label="Reculer de 10 secondes"
-                    disabled={durationSec === null}
-                    onClick={() => {
-                      const v = videoRef.current;
-                      if (!v) return;
-                      v.currentTime = Math.max(0, v.currentTime - 10);
-                    }}
-                    className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    10s
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Avancer de 10 secondes"
-                    disabled={durationSec === null}
-                    onClick={() => {
-                      const v = videoRef.current;
-                      if (!v) return;
-                      const d = Number.isFinite(v.duration) ? v.duration : (durationSec ?? 0);
-                      v.currentTime = Math.min(Math.max(0, d - 0.1), v.currentTime + 10);
-                    }}
-                    className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white opacity-80 hover:opacity-100 disabled:opacity-40 transition-opacity"
-                  >
-                    10s
-                    <RotateCw className="h-3 w-3" />
-                  </button>
-                </div>
-                <div className="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-[2px]">
-                  {[2, 1.5, 1].map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRate(r)}
-                      className={`pointer-events-auto inline-flex h-[25px] w-[32px] items-center justify-center rounded-full text-[11px] font-medium transition-opacity ${
-                        rate === r
-                          ? "bg-white text-black opacity-100"
-                          : "bg-black/50 text-white opacity-80 hover:opacity-100"
-                      }`}
-                    >
-                      {r}×
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
+            </div>
+          ) : current ? (
+            <SessionClipPlayer
+              key={current.url}
+              url={current.url}
+              questionTitle={currentQ?.title ?? null}
+              questionText={currentQ?.content ?? ""}
+              questionIndex={index + 1}
+              sessionId={session.id}
+              autoPlayOnLoad={index > 0}
+              onEnded={() => {
+                if (index < clips.length - 1) goTo(index + 1);
+              }}
+            />
+          ) : (
+            <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
               <div className="flex h-full items-center justify-center text-xs text-white/70">
                 Aucune vidéo disponible
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {clips.length > 0 && (
             <div className="flex items-center justify-between gap-2">
@@ -274,7 +222,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                 variant="outline"
                 size="sm"
                 className="h-8"
-                onClick={() => goTo(Math.max(0, index - 1), true)}
+                onClick={() => goTo(Math.max(0, index - 1))}
                 disabled={index === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -283,7 +231,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
               <div className="flex items-center gap-1.5">
                 <Select
                   value={String(index)}
-                  onValueChange={(v) => goTo(Number(v), true)}
+                  onValueChange={(v) => goTo(Number(v))}
                 >
                   <SelectTrigger className="h-7 w-auto shrink-0 gap-1 whitespace-nowrap border-none px-1 text-xs font-semibold shadow-none focus:ring-0 [&>span]:truncate-none">
                     <SelectValue>
@@ -320,7 +268,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                 variant="outline"
                 size="sm"
                 className="h-8"
-                onClick={() => goTo(Math.min(clips.length - 1, index + 1), true)}
+                onClick={() => goTo(Math.min(clips.length - 1, index + 1))}
                 disabled={index >= clips.length - 1}
               >
                 Suiv
