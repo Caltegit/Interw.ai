@@ -245,12 +245,12 @@ export default function Settings() {
           <CardTitle className="flex items-center gap-2 text-lg">
             <Lock className="h-5 w-5" /> Mot de passe
           </CardTitle>
-          <CardDescription>Changez votre mot de passe</CardDescription>
+          <CardDescription>Modifier votre mot de passe</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <Label>Nouveau mot de passe</Label>
-            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 6 caractères" />
+            <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Au moins 6 caractères, un chiffre et un caractère spécial" />
           </div>
           <div>
             <Label>Confirmer le mot de passe</Label>
