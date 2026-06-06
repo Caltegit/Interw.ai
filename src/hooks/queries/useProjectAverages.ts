@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { computeParaverbalAverage } from "@/components/session/ParaverbalBadge";
+import { computeNonverbalAverage } from "@/components/session/NonverbalBadge";
 
 export interface ProjectAverages {
   count: number;
   overallScore: number | null;
+  paraverbalScore: number | null;
+  nonverbalScore: number | null;
   bigFive: Partial<Record<
     "openness" | "conscientiousness" | "extraversion" | "agreeableness" | "emotional_stability",
     number
