@@ -83,19 +83,8 @@ export function ScoresOverviewCard({
 
   return (
     <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="pb-2">
         <CardTitle className="text-base">Vue d'ensemble des notes</CardTitle>
-        <div className="hidden sm:flex gap-3 text-[11px] font-medium text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" /> Succès
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-500" /> À surveiller
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-rose-500" /> Critique
-          </span>
-        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
