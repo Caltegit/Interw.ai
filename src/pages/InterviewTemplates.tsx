@@ -233,7 +233,7 @@ export default function InterviewTemplates() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Aucun session type. Créez-en un pour commencer.
+            Aucune session type. Créez-en une pour commencer.
           </CardContent>
         </Card>
       ) : (
