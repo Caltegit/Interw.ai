@@ -91,7 +91,7 @@ export const createEmptyQuestion = (): Question => ({
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
-  written: { label: "Écrite", Icon: Type, className: "bg-muted text-muted-foreground" },
+  written: { label: "Lu par l'IA", Icon: Type, className: "bg-muted text-muted-foreground" },
   audio: { label: "Audio", Icon: Mic, className: "bg-primary/10 text-primary" },
   video: { label: "Vidéo", Icon: Video, className: "bg-accent text-accent-foreground" },
 };
