@@ -726,9 +726,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               </div>
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">Votre recruteur IA</h4>
+                  <h4 className="text-sm font-semibold">Votre recruteur</h4>
                   <p className="text-xs text-muted-foreground">
-                    Nom affiché, genre et voix utilisés pendant l'entretien.
+                    {"\n"}
                   </p>
                 </div>
 
