@@ -59,7 +59,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "emails",
     title: "Emails",
-    description: "Modèles d'emails personnalisés pour l'invitation, le rappel et l'envoi des résultats.",
+    description: "Sessions d'emails personnalisés pour l'invitation, le rappel et l'envoi des résultats.",
     icon: Mail,
     url: "/library/emails",
     table: "email_template_overrides",
