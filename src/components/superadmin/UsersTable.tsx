@@ -156,7 +156,7 @@ export function UsersTable({ refreshKey = 0, onChange }: Props) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Copier un lien de connexion (24h, usage unique)"
+                  title="Copier un lien de connexion (5 jours, usage unique)"
                   onClick={async () => {
                     try {
                       const { data, error } = await supabase.functions.invoke("superadmin-magic-link", {
