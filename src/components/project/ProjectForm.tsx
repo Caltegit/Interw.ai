@@ -555,10 +555,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               <Link2 className="mr-2 h-4 w-4" /> Démarrer depuis une offre existante
             </Button>
             <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
+              <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis une session type
             </Button>
           </div>
         )}
+
       </div>
 
       {!isEdit && (
