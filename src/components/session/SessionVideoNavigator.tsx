@@ -275,7 +275,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }, 4000);
     return () => {
       cancelled = true;
-      window.clearTimeout(safety);
+      if (safety !== null) window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
   }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
