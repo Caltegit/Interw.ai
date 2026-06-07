@@ -93,7 +93,7 @@ export default function InterviewTemplates() {
       .insert({
         organization_id: orgId,
         created_by: user.id,
-        name: "Nouvel session type",
+        name: "Nouvelle session type",
         description: "",
         category: null,
         job_title: "",
@@ -159,7 +159,7 @@ export default function InterviewTemplates() {
         }) as never,
       );
     }
-    toast({ title: "Modèle dupliqué" });
+    toast({ title: "Session dupliquée" });
     load();
   };
 
@@ -169,7 +169,7 @@ export default function InterviewTemplates() {
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Modèle supprimé" });
+      toast({ title: "Session supprimée" });
       load();
     }
     setDeleteId(null);
@@ -189,11 +189,11 @@ export default function InterviewTemplates() {
         <div>
           <h1 className="text-2xl font-bold">Sessions</h1>
           <p className="text-muted-foreground">
-            Modèles de session réutilisables (questions + critères) pour démarrer un projet en 1 clic.
+            Sessions types réutilisables (questions + critères) pour démarrer un projet en 1 clic.
           </p>
         </div>
         <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Nouveau modèle
+          <Plus className="mr-2 h-4 w-4" /> Nouvelle session type
         </Button>
       </div>
 
@@ -233,7 +233,7 @@ export default function InterviewTemplates() {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Aucun session type. Créez-en un pour commencer.
+            Aucune session type. Créez-en une pour commencer.
           </CardContent>
         </Card>
       ) : (
@@ -294,9 +294,9 @@ export default function InterviewTemplates() {
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce modèle ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Les projets déjà créés à partir de ce modèle ne seront pas affectés.
+              Cette action est irréversible. Les projets déjà créés à partir de cette session type ne seront pas affectés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

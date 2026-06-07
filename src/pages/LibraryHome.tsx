@@ -23,7 +23,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "interviews",
     title: "Sessions types",
-    description: "Modèles de sessions prêts à dupliquer pour lancer un projet en quelques secondes.",
+    description: "Sessions types prêtes à dupliquer pour lancer un projet en quelques secondes.",
     icon: ClipboardList,
     url: "/library/sessions",
     table: "interview_templates",
@@ -59,7 +59,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "emails",
     title: "Emails",
-    description: "Modèles d'emails personnalisés pour l'invitation, le rappel et l'envoi des résultats.",
+    description: "Sessions d'emails personnalisés pour l'invitation, le rappel et l'envoi des résultats.",
     icon: Mail,
     url: "/library/emails",
     table: "email_template_overrides",
@@ -114,7 +114,7 @@ export default function LibraryHome() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Ressources</h1>
         <p className="mt-2 text-muted-foreground">
-          Réutilisez vos modèles pour gagner du temps et garder une qualité constante d'un session à l'autre.
+          Réutilisez vos sessions pour gagner du temps et garder une qualité constante d'un projet à l'autre.
         </p>
       </div>
 

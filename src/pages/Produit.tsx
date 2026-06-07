@@ -75,7 +75,7 @@ const BLOCKS: Block[] = [
     bullets: [
       "Questions classées par type (écrite, vidéo, énigme…)",
       "Critères réutilisables sur tous vos projets",
-      "Intros et modèles d'emails personnalisables",
+      "Intros et sessions d'emails personnalisables",
     ],
     img: shotQuestions,
     icon: <Library className="h-4 w-4" />,

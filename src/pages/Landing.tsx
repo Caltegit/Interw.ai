@@ -628,7 +628,7 @@ export default function Landing() {
                 features: [
                   "50 entretiens inclus",
                   "Bibliothèque de questions partagée",
-                  "Modèles d'entretien réutilisables",
+                  "Sessions types réutilisables",
                   "Support prioritaire",
                 ],
                 cta: "Démarrer l'essai",

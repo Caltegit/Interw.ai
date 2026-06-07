@@ -106,7 +106,7 @@ export function SaveAsTemplateDialog({
         );
       }
 
-      toast({ title: "Modèle créé", description: "Disponible dans la bibliothèque." });
+      toast({ title: "Session type créée", description: "Disponible dans la bibliothèque." });
       setOpen(false);
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });
@@ -118,14 +118,14 @@ export function SaveAsTemplateDialog({
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Bookmark className="mr-1 h-4 w-4" /> Sauver comme modèle
+        <Bookmark className="mr-1 h-4 w-4" /> Sauver comme session type
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Sauvegarder comme session type</DialogTitle>
             <DialogDescription>
-              Crée un modèle réutilisable à partir des questions et critères de ce projet.
+              Crée une session type réutilisable à partir des questions et critères de ce projet.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -145,7 +145,7 @@ export function SaveAsTemplateDialog({
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
             <Button onClick={handleSave} disabled={saving || !name.trim()}>
-              {saving ? "Création..." : "Créer le modèle"}
+              {saving ? "Création..." : "Créer la session type"}
             </Button>
           </DialogFooter>
         </DialogContent>

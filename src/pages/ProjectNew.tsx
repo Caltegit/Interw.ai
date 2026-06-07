@@ -147,13 +147,13 @@ export default function ProjectNew() {
         if (cancelled) return;
         if (!payload) {
           toast({
-            title: "Modèle introuvable",
+            title: "Session type introuvable",
             description: "Le formulaire est vide.",
             variant: "destructive",
           });
         } else {
           setFormInitial((s) => mergeTemplateIntoState(s, payload));
-          toast({ title: "Modèle appliqué", description: payload.name });
+          toast({ title: "Session type appliquée", description: payload.name });
         }
       } finally {
         if (!cancelled) setTemplateLoading(false);

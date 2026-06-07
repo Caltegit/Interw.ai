@@ -169,7 +169,7 @@ export default function InterviewTemplateEdit() {
         );
       }
 
-      toast({ title: "Modèle enregistré" });
+      toast({ title: "Session enregistrée" });
       navigate("/library/sessions");
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });
@@ -199,7 +199,7 @@ export default function InterviewTemplateEdit() {
         </Button>
       </div>
 
-      <h1 className="text-2xl font-bold">Édition du modèle</h1>
+      <h1 className="text-2xl font-bold">Édition de la session</h1>
 
       <Tabs defaultValue="info">
         <TabsList>
@@ -212,7 +212,7 @@ export default function InterviewTemplateEdit() {
           <Card>
             <CardContent className="pt-6 space-y-4">
               <div>
-                <Label>Nom du modèle *</Label>
+                <Label>Nom de la session *</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Session Commercial Junior" />
               </div>
               <div>
@@ -220,7 +220,7 @@ export default function InterviewTemplateEdit() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="À quoi sert ce modèle ?"
+                  placeholder="À quoi sert cette session ?"
                   rows={3}
                 />
               </div>

@@ -29,11 +29,11 @@ import { useState } from "react";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Sessions", url: "/projects", icon: FolderKanban },
+  { title: "Projets", url: "/projects", icon: FolderKanban },
 ];
 
 const librarySubItems = [
-  { title: "Modèles", url: "/library/sessions", icon: ClipboardList },
+  { title: "Sessions", url: "/library/sessions", icon: ClipboardList },
   { title: "Questions", url: "/library/questions", icon: MessageSquare },
   { title: "Critères", url: "/library/criteria", icon: ListChecks },
   { title: "Intros", url: "/library/intros", icon: Mic },

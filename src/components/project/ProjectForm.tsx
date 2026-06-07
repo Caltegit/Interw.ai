@@ -479,7 +479,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         })),
       );
     }
-    toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
+    toast({ title: "Session type appliquée", description: "Vous pouvez ajuster les champs avant de créer le projet." });
   };
 
   const applyJobImport = (payload: JobImportPayload) => {
@@ -1263,7 +1263,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                             checked={saveCandidateEmailAsDefault}
                             onCheckedChange={(v) => setSaveCandidateEmailAsDefault(v === true)}
                           />
-                          <span>Garder ce texte comme modèle par défaut pour mes prochains projets</span>
+                          <span>Garder ce texte comme session type par défaut pour mes prochains projets</span>
                         </label>
                         <Button
                           type="button"

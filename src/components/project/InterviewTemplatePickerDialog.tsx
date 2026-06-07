@@ -125,9 +125,9 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Choisir un session type</DialogTitle>
+          <DialogTitle>Choisir une session type</DialogTitle>
           <DialogDescription>
-            Démarrer rapidement à partir d'un modèle. Vous pourrez tout modifier ensuite.
+            Démarrer rapidement à partir d'une session type. Vous pourrez tout modifier ensuite.
           </DialogDescription>
         </DialogHeader>
 
@@ -148,7 +148,7 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-center text-muted-foreground py-12 text-sm">
-              Aucun modèle. Créez-en dans la bibliothèque.
+              Aucune session type. Créez-en dans la bibliothèque.
             </p>
           ) : (
             <div className="space-y-2">
@@ -187,7 +187,7 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-          <Button onClick={handleApply} disabled={!selectedId}>Utiliser ce modèle</Button>
+          <Button onClick={handleApply} disabled={!selectedId}>Utiliser cette session</Button>
         </div>
       </DialogContent>
     </Dialog>
