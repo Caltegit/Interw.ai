@@ -283,12 +283,13 @@ export function QuestionFormDialog({
             </Label>
 
             <div className="space-y-1.5">
-              <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5">
+              <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5 my-[10px]">
                 <Lightbulb className="h-3.5 w-3.5 text-primary" />
                 {"\n"}
               </Label>
               <Textarea
                 id="qfd-hint"
+                className="-my-[22px]"
                 placeholder="Ecrivez ici la question que vous avez posé pour lui permettre de la lire..."
                 rows={2}
                 maxLength={MAX_HINT}
