@@ -415,14 +415,12 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
-  const [aiIntroMode, setAiIntroMode] = useState<"auto" | "custom">(initial.aiIntroMode);
+  const [aiIntroMode, setAiIntroMode] = useState<"auto" | "custom">("custom");
   const [aiIntroCustomText, setAiIntroCustomText] = useState(initial.aiIntroCustomText);
   const [aiQuestionTransitionsEnabled, setAiQuestionTransitionsEnabled] = useState(
     initial.aiQuestionTransitionsEnabled,
   );
-  const [aiQuestionTransitionsMode, setAiQuestionTransitionsMode] = useState<"auto" | "custom">(
-    initial.aiQuestionTransitionsMode,
-  );
+  const [aiQuestionTransitionsMode, setAiQuestionTransitionsMode] = useState<"auto" | "custom">("custom");
   const [aiQuestionTransitionsCustomText, setAiQuestionTransitionsCustomText] = useState(
     initial.aiQuestionTransitionsCustomText,
   );
@@ -532,12 +530,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     if (typeof t.intro_audio_url === "string") setIntroAudioPreviewUrl(t.intro_audio_url);
     if (typeof t.presentation_video_url === "string") setIntroVideoPreviewUrl(t.presentation_video_url);
     if (typeof t.ai_intro_enabled === "boolean") setAiIntroEnabled(t.ai_intro_enabled);
-    if (t.ai_intro_mode === "auto" || t.ai_intro_mode === "custom") setAiIntroMode(t.ai_intro_mode);
+    setAiIntroMode("custom");
     if (typeof t.ai_intro_custom_text === "string") setAiIntroCustomText(t.ai_intro_custom_text);
     if (typeof t.ai_question_transitions_enabled === "boolean") setAiQuestionTransitionsEnabled(t.ai_question_transitions_enabled);
-    if (t.ai_question_transitions_mode === "auto" || t.ai_question_transitions_mode === "custom") {
-      setAiQuestionTransitionsMode(t.ai_question_transitions_mode);
-    }
+    setAiQuestionTransitionsMode("custom");
     if (typeof t.ai_question_transitions_custom_text === "string") setAiQuestionTransitionsCustomText(t.ai_question_transitions_custom_text);
     if (typeof t.allow_pause === "boolean") setAllowPause(t.allow_pause);
     if (typeof t.allow_skip_question === "boolean") setAllowSkipQuestion(t.allow_skip_question);
@@ -1039,30 +1035,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                           <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
                         </div>
                         {aiIntroEnabled && (
-                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                            <RadioGroup
-                              value={aiIntroMode}
-                              onValueChange={(v) => setAiIntroMode(v as "auto" | "custom")}
-                              className="gap-1.5"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="auto" id={`ai-intro-auto-${idSuffix}`} />
-                                <Label htmlFor={`ai-intro-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Laisser l'IA s'adapter au contexte des réponses
-                                </Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="custom" id={`ai-intro-custom-${idSuffix}`} />
-                                <Label htmlFor={`ai-intro-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Utiliser un texte fixe
-                                </Label>
-                              </div>
-                            </RadioGroup>
-                            {aiIntroMode === "custom" && (
-                              <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
-                                Modifier le texte
-                              </Button>
-                            )}
+                          <div className="ml-1 border-l-2 border-border pl-3">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
+                              Modifier le texte
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -1077,30 +1053,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                           <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
                         </div>
                         {aiQuestionTransitionsEnabled && (
-                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                            <RadioGroup
-                              value={aiQuestionTransitionsMode}
-                              onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
-                              className="gap-1.5"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
-                                <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Laisser l'IA s'adapter au contexte des réponses
-                                </Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
-                                <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Utiliser un texte fixe
-                                </Label>
-                              </div>
-                            </RadioGroup>
-                            {aiQuestionTransitionsMode === "custom" && (
-                              <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
-                                Modifier le texte
-                              </Button>
-                            )}
+                          <div className="ml-1 border-l-2 border-border pl-3">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
+                              Modifier le texte
+                            </Button>
                           </div>
                         )}
                       </div>
