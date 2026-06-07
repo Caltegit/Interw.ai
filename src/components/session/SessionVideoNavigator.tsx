@@ -241,15 +241,20 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
 
     let cancelled = false;
+    let safety: number | null = null;
     const apply = () => {
       if (cancelled) return;
+      if (safety !== null) {
+        window.clearTimeout(safety);
+        safety = null;
+      }
       try { v.playbackRate = rateRef.current; } catch { /* noop */ }
       if (v.duration === Infinity) {
         fixDuration();
       } else {
         applyPendingSeek(v, Number.isFinite(v.duration) ? v.duration : 0);
         if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-        if (shouldAutoPlay) safePlay();
+        if (shouldAutoPlay && !userPausedRef.current) safePlay();
       }
     };
 
@@ -261,9 +266,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     v.addEventListener("loadedmetadata", apply, { once: true });
     // Filet de sécurité : si loadedmetadata n'arrive jamais, on tente
     // quand même un play après 4s — l'erreur média s'affichera via onError.
-    const safety = window.setTimeout(() => {
+    safety = window.setTimeout(() => {
       if (cancelled) return;
-      if (shouldAutoPlay && v.paused) {
+      if (shouldAutoPlay && v.paused && !userPausedRef.current) {
         console.warn("[SessionVideoNavigator] loadedmetadata timeout, tentative play", { index, targetUrl });
         safePlay();
       }
