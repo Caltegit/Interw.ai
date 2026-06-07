@@ -279,13 +279,13 @@ export function QuestionFormDialog({
           {/* Étape 3 — Pendant la réponse */}
           <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Pendant la réponse
+              Texte affiché au candidat pendant sa réponse
             </Label>
 
             <div className="space-y-1.5">
               <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5">
                 <Lightbulb className="h-3.5 w-3.5 text-primary" />
-                Indication affichée au candidat
+                {"\n"}
               </Label>
               <Textarea
                 id="qfd-hint"
