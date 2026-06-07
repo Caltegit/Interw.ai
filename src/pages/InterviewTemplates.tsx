@@ -185,6 +185,28 @@ export default function InterviewTemplates() {
     setDeleteId(null);
   };
 
+  const handleToggleStar = async (tpl: InterviewTemplate) => {
+    const next = !tpl.clone_to_new_orgs;
+    // Mise à jour optimiste
+    setTemplates((prev) => prev.map((t) => (t.id === tpl.id ? { ...t, clone_to_new_orgs: next } : t)));
+    const { error } = await supabase
+      .from("interview_templates" as never)
+      .update({ clone_to_new_orgs: next } as never)
+      .eq("id", tpl.id);
+    if (error) {
+      setTemplates((prev) => prev.map((t) => (t.id === tpl.id ? { ...t, clone_to_new_orgs: !next } : t)));
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: next ? "Session étoilée" : "Étoile retirée",
+        description: next
+          ? "Sera clonée automatiquement dans toutes les nouvelles organisations."
+          : "Ne sera plus clonée dans les nouvelles organisations.",
+      });
+    }
+  };
+
+
   const categories = Array.from(new Set(templates.map((t) => t.category).filter(Boolean) as string[]));
   const filtered = templates.filter((t) => {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) ||
