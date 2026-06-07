@@ -78,7 +78,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-2 py-2">
-        {!collapsed && <span className="text-lg font-bold text-primary">Interw.ai</span>}
+        {!collapsed && <span className="text-lg font-bold text-primary">Interw</span>}
         <SidebarTrigger className="h-7 w-7 ml-auto" />
       </SidebarHeader>
       <SidebarContent>
