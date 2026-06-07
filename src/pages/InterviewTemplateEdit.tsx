@@ -220,7 +220,7 @@ export default function InterviewTemplateEdit() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="À quoi sert ce modèle ?"
+                  placeholder="À quoi sert cette session ?"
                   rows={3}
                 />
               </div>
