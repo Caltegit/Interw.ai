@@ -106,7 +106,7 @@ export function SaveAsTemplateDialog({
         );
       }
 
-      toast({ title: "Modèle créé", description: "Disponible dans la bibliothèque." });
+      toast({ title: "Session type créée", description: "Disponible dans la bibliothèque." });
       setOpen(false);
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });
