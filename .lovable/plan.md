@@ -1,54 +1,55 @@
-## Objectif
+# Simplification des rôles : Admin / Membre
 
-Faire en sorte que le projet `3519629b-8906-477f-91e7-fc6f12ffa0d2` (« Votre premier entretien en digital ! ») soit automatiquement présent — et indépendamment modifiable — dans chaque organisation existante et dans toutes celles à venir.
+Aujourd'hui une organisation peut contenir 4 rôles : `admin`, `recruiter`, `viewer`, et des utilisateurs sans rôle (juste présents via `organization_members`). On rationalise à **2 rôles** : `admin` et `member` (le `super_admin` reste pour l'équipe interne, hors orga).
 
-Chaque organisation reçoit sa propre copie : nouvelle ligne `projects` + copies indépendantes de toutes les `questions` et `evaluation_criteria`. Aucune référence vers la source : modifier ou supprimer la copie n'affecte ni l'original ni les autres organisations.
+## Différence Admin vs Membre (cible)
 
-## Ce qui change
+**Admin de l'organisation**
+- Tous les droits sur l'organisation et son contenu
+- Invite / retire des utilisateurs, change leur rôle
+- Crée, modifie, supprime les projets, questions, critères
+- Accède aux paramètres de l'organisation (logo, nom, branding, alertes mail)
+- Voit toutes les sessions et tous les rapports de l'orga
+- Prend/édite les décisions de recrutement, note les candidats
 
-### 1. Nouvelle fonction SQL `clone_template_project_into_org(_org_id, _created_by)`
+**Membre de l'organisation**
+- Voit toutes les sessions, projets et rapports de l'orga
+- Peut créer/modifier des projets et lancer des entretiens (utilisation produit)
+- Peut prendre des décisions de recrutement et écrire des notes sur les candidats
+- **Ne peut pas** : gérer les utilisateurs, supprimer l'organisation, modifier les paramètres globaux de l'orga, ni supprimer les projets/sessions des autres admins
 
-Remplace `seed_demo_project`. Elle :
-- Vérifie qu'aucun projet avec ce `slug`/titre exact n'existe déjà dans l'organisation (idempotente : ré-exécutable sans créer de doublons).
-- Insère une nouvelle ligne dans `projects` en copiant tous les champs métier du projet source, sauf :
-  - `id` (généré), `organization_id` (= org cible), `created_by` (= owner de l'org), `created_at` (= now), `slug` (nouveau slug unique), `expires_at` (= NULL), `report_recipient_user_ids` / `visible_to_user_ids` (= NULL pour repartir propre).
-- Copie toutes les `questions` du projet source vers le nouveau projet (avec nouveaux `id`, `project_id` remappé, `created_at` réinitialisé). Les éventuels `scoring_criteria_ids` sont remappés vers les nouveaux IDs de critères.
-- Copie toutes les `evaluation_criteria` (nouveaux `id`, `project_id` remappé) — fait avant les questions pour pouvoir remapper les références.
+Concrètement, le seul "gate" qui change le comportement aujourd'hui c'est `isOwner / isAdmin` (déterminé par `organizations.owner_id` ou un rôle `admin` dans `user_roles`). Tout le reste (recruiter, viewer, sans rôle) se comportait déjà comme un membre standard côté UI. On formalise donc l'existant.
 
-### 2. Trigger sur création d'organisation
+## Changements base de données
 
-Le trigger existant `trg_seed_on_owner_set` (qui s'exécute déjà quand `owner_id` est défini sur une organisation) appellera la nouvelle fonction `clone_template_project_into_org` à la place de `seed_demo_project`. Tout le flux existant `superadmin-create-org` continuera donc de fonctionner sans modification de code applicatif.
+1. Ajouter la valeur `member` à l'enum `app_role`.
+2. Migrer les données :
+   - `user_roles.role = 'recruiter'` → `'member'` (4 lignes)
+   - `user_roles.role = 'viewer'` → `'member'` (0 ligne aujourd'hui)
+   - Pour chaque utilisateur présent dans `organization_members` mais sans ligne dans `user_roles` pour cette orga (et non-owner, non super_admin), créer une ligne `role = 'member'`. Ainsi "sans rôle" disparaît.
+3. Retirer `'recruiter'` et `'viewer'` de l'enum (créer un nouvel enum `app_role` à 3 valeurs `admin | member | super_admin`, swap des colonnes, drop de l'ancien).
+4. Mettre à jour `is_org_admin` (déjà OK : ne regarde que `admin`) et ajouter une fonction utilitaire `is_org_member_role(_user_id, _org_id)` qui renvoie vrai si l'utilisateur a `admin` ou `member` dans l'orga (utilisée plus tard si besoin par RLS).
+5. Mettre à jour les triggers existants :
+   - `trg_seed_on_admin_role` qui réagissait aux insertions `admin` dans `user_roles` reste tel quel.
+   - Aucun policy RLS ne référence `recruiter`/`viewer` directement (vérifié), donc rien à réécrire côté RLS.
 
-### 3. Backfill des organisations existantes
+## Changements code
 
-Exécuter une fois, dans la même migration :
+- `src/components/superadmin/EditUserDialog.tsx` : remplacer les options "Recruteur" / "Viewer" par "Membre". Valeur par défaut `member`.
+- `src/components/superadmin/CreateUserInOrgDialog.tsx` : `role: "member"` au lieu de `recruiter`.
+- `src/pages/SuperAdminOrgDetail.tsx` : remplacer les badges `recruiter` / `viewer` par un unique badge `Membre`.
+- `supabase/functions/superadmin-manage-user/index.ts` : `targetRole = role || "member"`.
+- `src/hooks/useOrgRole.ts` : conserver `isAdmin` (= owner ou rôle admin) et exposer correctement `isMember` (présent dans `user_roles` avec `admin`/`member`, ou via `organization_members`). Commentaire mis à jour.
+- Texte/UI : "Observateur" / "Recruteur" → "Membre" partout où visible.
 
-```sql
-SELECT public.clone_template_project_into_org(o.id, o.owner_id)
-FROM organizations o
-WHERE o.owner_id IS NOT NULL;
-```
+## Vérifications
 
-Grâce au check d'idempotence, les organisations qui auraient déjà une copie ne sont pas dupliquées.
+- Lister les 4 utilisateurs `recruiter` actuels : ils restent membres avec exactement les mêmes accès produit qu'aujourd'hui (aucun ne perd ni ne gagne de droit).
+- Vérifier qu'aucune policy RLS ne casse après le swap d'enum (re-run du linter Supabase).
+- Vérifier que la création d'utilisateur depuis le super admin produit bien un rôle `member`.
 
-### 4. Ancienne fonction `seed_demo_project`
+## Hors-scope
 
-Conservée mais plus appelée (au cas où il faudrait y revenir). Elle pourra être supprimée plus tard si tout est OK.
-
-## Détails techniques
-
-- L'ID du projet source est codé en dur dans la fonction : `3519629b-8906-477f-91e7-fc6f12ffa0d2`. Si ce projet est un jour supprimé, la fonction ne fait rien (early return) — pas d'erreur bloquante sur la création d'organisation.
-- `slug` final dans chaque org : `votre-premier-entretien-en-digital-<8 chars md5>` pour garantir l'unicité globale.
-- Aucune session ni rapport n'est copié : seules les définitions (projet + questions + critères).
-- Fonction `SECURITY DEFINER` + `search_path = public`, comme les autres seeds.
-- Aucun changement frontend nécessaire.
-
-## Vérification après déploiement
-
-1. Vérifier qu'une copie existe dans chaque organisation :
-   ```sql
-   SELECT o.name, p.id FROM organizations o
-   LEFT JOIN projects p ON p.organization_id = o.id AND p.title = 'Votre premier entretien en digital !'
-   ORDER BY o.created_at;
-   ```
-2. Créer une organisation de test via le superadmin et confirmer que le projet est présent avec ses 15 questions et 4 critères, et qu'il est librement modifiable.
+- Pas de changement sur `super_admin` (reste réservé à l'équipe).
+- Pas de changement sur le système d'invitations ni sur les magic links.
+- Pas de redesign UI au-delà du renommage des libellés/badges.

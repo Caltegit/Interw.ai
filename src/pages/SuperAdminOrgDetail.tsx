@@ -192,9 +192,8 @@ export default function SuperAdminOrgDetail() {
               <div className="flex items-center gap-2">
                 {m.isOwner && <Badge variant="default" className="gap-1"><Crown className="h-3 w-3" /> Propriétaire</Badge>}
                 {m.role === "admin" && !m.isOwner && <Badge variant="default" className="gap-1"><ShieldCheck className="h-3 w-3" /> Admin</Badge>}
-                {m.role === "recruiter" && <Badge variant="secondary">Recruteur</Badge>}
-                {m.role === "viewer" && <Badge variant="outline">Observateur</Badge>}
-                {!m.role && <Badge variant="outline">Sans rôle</Badge>}
+                {m.role === "member" && <Badge variant="secondary">Membre</Badge>}
+                {!m.role && <Badge variant="outline">Membre</Badge>}
                 <AlertDialog>
                   <AlertDialogTrigger
                     asChild

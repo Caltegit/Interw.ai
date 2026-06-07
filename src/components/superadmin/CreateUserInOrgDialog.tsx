@@ -34,7 +34,7 @@ export function CreateUserInOrgDialog({ organizationId, organizationName, onCrea
           email: email.trim().toLowerCase(),
           full_name: fullName.trim(),
           organization_id: organizationId,
-          role: "recruiter",
+          role: "member",
         },
       });
       if (error) {
