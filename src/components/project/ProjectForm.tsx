@@ -479,7 +479,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         })),
       );
     }
-    toast({ title: "Modèle appliqué", description: "Vous pouvez ajuster les champs avant de créer le projet." });
+    toast({ title: "Session type appliquée", description: "Vous pouvez ajuster les champs avant de créer le projet." });
   };
 
   const applyJobImport = (payload: JobImportPayload) => {
