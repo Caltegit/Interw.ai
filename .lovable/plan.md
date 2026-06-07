@@ -1,50 +1,54 @@
 ## Objectif
-Envoyer automatiquement un email de relance, **une seule fois**, aux candidats qui ont une session `pending` ou `in_progress` inactive depuis **30 minutes**, en utilisant le template fourni.
 
-## Comportement
+Faire en sorte que le projet `3519629b-8906-477f-91e7-fc6f12ffa0d2` (« Votre premier entretien en digital ! ») soit automatiquement présent — et indépendamment modifiable — dans chaque organisation existante et dans toutes celles à venir.
 
-- Cible : sessions `pending` OU `in_progress`, dont `last_activity_at` (ou à défaut `created_at`) date de plus de 30 minutes et de moins de 24h (garde-fou pour ne pas relancer d'anciennes sessions au premier déploiement).
-- Une seule relance par session, suivie via une nouvelle colonne `abandon_reminder_sent_at` sur `sessions`.
-- Pas de modification du cleanup à 2h : il continue à finaliser/purger comme aujourd'hui. Une session qui a déjà des médias est récupérée (déjà géré), une session vide est supprimée — dans les deux cas, le candidat a reçu sa relance avant.
-- Le lien envoyé pointe vers la route candidat existante : `https://<host>/session/<project.slug>/start/<session.token>`.
+Chaque organisation reçoit sa propre copie : nouvelle ligne `projects` + copies indépendantes de toutes les `questions` et `evaluation_criteria`. Aucune référence vers la source : modifier ou supprimer la copie n'affecte ni l'original ni les autres organisations.
 
-## Template email (`candidate-abandon-reminder`)
+## Ce qui change
 
-- **Objet** : `Abandon ? Sur « {{sessionName}} »` (sessionName = nom du projet)
-- **Corps** (React Email, stylé indigo cohérent avec les autres templates) :
-  - « Bonjour {{prenom}}, »
-  - « Il semble que vous ayez abandonné la session : « {{sessionName}} ». »
-  - « Vous pouvez cliquer ici pour la recommencer : »
-  - Bouton CTA « Reprendre l'entretien » → lien session
-  - « À bientôt, »
-  - « L'équipe interw »
-- Le footer unsubscribe est ajouté automatiquement par l'infra.
+### 1. Nouvelle fonction SQL `clone_template_project_into_org(_org_id, _created_by)`
+
+Remplace `seed_demo_project`. Elle :
+- Vérifie qu'aucun projet avec ce `slug`/titre exact n'existe déjà dans l'organisation (idempotente : ré-exécutable sans créer de doublons).
+- Insère une nouvelle ligne dans `projects` en copiant tous les champs métier du projet source, sauf :
+  - `id` (généré), `organization_id` (= org cible), `created_by` (= owner de l'org), `created_at` (= now), `slug` (nouveau slug unique), `expires_at` (= NULL), `report_recipient_user_ids` / `visible_to_user_ids` (= NULL pour repartir propre).
+- Copie toutes les `questions` du projet source vers le nouveau projet (avec nouveaux `id`, `project_id` remappé, `created_at` réinitialisé). Les éventuels `scoring_criteria_ids` sont remappés vers les nouveaux IDs de critères.
+- Copie toutes les `evaluation_criteria` (nouveaux `id`, `project_id` remappé) — fait avant les questions pour pouvoir remapper les références.
+
+### 2. Trigger sur création d'organisation
+
+Le trigger existant `trg_seed_on_owner_set` (qui s'exécute déjà quand `owner_id` est défini sur une organisation) appellera la nouvelle fonction `clone_template_project_into_org` à la place de `seed_demo_project`. Tout le flux existant `superadmin-create-org` continuera donc de fonctionner sans modification de code applicatif.
+
+### 3. Backfill des organisations existantes
+
+Exécuter une fois, dans la même migration :
+
+```sql
+SELECT public.clone_template_project_into_org(o.id, o.owner_id)
+FROM organizations o
+WHERE o.owner_id IS NOT NULL;
+```
+
+Grâce au check d'idempotence, les organisations qui auraient déjà une copie ne sont pas dupliquées.
+
+### 4. Ancienne fonction `seed_demo_project`
+
+Conservée mais plus appelée (au cas où il faudrait y revenir). Elle pourra être supprimée plus tard si tout est OK.
 
 ## Détails techniques
 
-1. **Migration DB**
-   - `ALTER TABLE public.sessions ADD COLUMN abandon_reminder_sent_at TIMESTAMPTZ;`
-   - Index partiel `WHERE abandon_reminder_sent_at IS NULL AND status IN ('pending','in_progress')` pour la requête du cron.
+- L'ID du projet source est codé en dur dans la fonction : `3519629b-8906-477f-91e7-fc6f12ffa0d2`. Si ce projet est un jour supprimé, la fonction ne fait rien (early return) — pas d'erreur bloquante sur la création d'organisation.
+- `slug` final dans chaque org : `votre-premier-entretien-en-digital-<8 chars md5>` pour garantir l'unicité globale.
+- Aucune session ni rapport n'est copié : seules les définitions (projet + questions + critères).
+- Fonction `SECURITY DEFINER` + `search_path = public`, comme les autres seeds.
+- Aucun changement frontend nécessaire.
 
-2. **Template** `supabase/functions/_shared/transactional-email-templates/candidate-abandon-reminder.tsx`
-   - `templateData`: `{ prenom, sessionName, sessionUrl }`
-   - Enregistré dans `registry.ts`.
+## Vérification après déploiement
 
-3. **Nouvelle edge function** `send-abandon-reminders/index.ts`
-   - SELECT sessions éligibles (statut, last_activity_at < now()-30min, > now()-24h, `abandon_reminder_sent_at IS NULL`, jointure `projects` pour récupérer `name` et `slug`).
-   - Pour chacune :
-     - Calcule `prenom` à partir de `candidate_name` (premier mot).
-     - Construit `sessionUrl` à partir de `SITE_URL` (ou `interw.ai` par défaut) + slug + token.
-     - Invoque `send-transactional-email` avec `idempotencyKey = abandon-reminder-${sessionId}`.
-     - Met à jour `abandon_reminder_sent_at = now()` en cas de succès d'enqueue.
-
-4. **Cron**
-   - Job `pg_cron` toutes les **5 minutes** qui POST sur `send-abandon-reminders` (suivant le pattern existant des autres cron de ce projet ; créé via `supabase--insert`, pas migration).
-
-## Hors-scope (pour rester focalisé)
-- Pas de toggle on/off par projet (peut être ajouté plus tard).
-- Pas de seconde relance.
-- Pas de modification de la durée de cleanup ni de la durée de vie du token.
-
-## Validation
-- Tester en abaissant temporairement le seuil à 1 min sur une session de test, vérifier la réception dans la boîte du candidat, vérifier `email_send_log` (dédup sur `message_id`) et que `abandon_reminder_sent_at` est bien posé, puis rétablir 30 min.
+1. Vérifier qu'une copie existe dans chaque organisation :
+   ```sql
+   SELECT o.name, p.id FROM organizations o
+   LEFT JOIN projects p ON p.organization_id = o.id AND p.title = 'Votre premier entretien en digital !'
+   ORDER BY o.created_at;
+   ```
+2. Créer une organisation de test via le superadmin et confirmer que le projet est présent avec ses 15 questions et 4 critères, et qu'il est librement modifiable.
