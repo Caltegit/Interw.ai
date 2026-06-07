@@ -46,7 +46,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
 
   const loadData = async () => {
     setLoading(true);
-    const [membersRes, invitationsRes, orgRes] = await Promise.all([
+    const [membersRes, invitationsRes, orgRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("id, user_id, full_name, email").eq("organization_id", orgId),
       supabase
         .from("organization_invitations")
@@ -54,19 +54,27 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false }),
       supabase.from("organizations").select("owner_id").eq("id", orgId).single(),
+      supabase.from("user_roles").select("user_id, role").eq("organization_id", orgId),
     ]);
 
     const owner = (orgRes.data as { owner_id?: string | null } | null)?.owner_id ?? null;
+    const adminIds = new Set(
+      ((rolesRes.data as { user_id: string; role: string }[] | null) || [])
+        .filter((r) => r.role === "admin")
+        .map((r) => r.user_id),
+    );
 
     const enriched: Member[] = (membersRes.data || []).map((m: { id: string; user_id: string; full_name: string; email: string }) => ({
       ...m,
       isOwner: m.user_id === owner,
+      isAdmin: adminIds.has(m.user_id),
     }));
 
     setMembers(enriched);
     setInvitations(invitationsRes.data || []);
     setLoading(false);
   };
+
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
