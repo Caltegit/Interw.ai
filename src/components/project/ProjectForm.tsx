@@ -1220,6 +1220,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+                </>)}
+
 
                 {/* 3. Email envoyé au candidat */}
                 <AccordionItem value="candidate-email" className="rounded-lg border bg-card px-4">
