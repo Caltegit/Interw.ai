@@ -93,7 +93,7 @@ export default function InterviewTemplates() {
       .insert({
         organization_id: orgId,
         created_by: user.id,
-        name: "Nouvel session type",
+        name: "Nouvelle session type",
         description: "",
         category: null,
         job_title: "",
