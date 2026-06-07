@@ -169,7 +169,7 @@ export default function InterviewTemplates() {
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Modèle supprimé" });
+      toast({ title: "Session supprimée" });
       load();
     }
     setDeleteId(null);
