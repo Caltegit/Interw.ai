@@ -143,7 +143,7 @@ export function AppSidebar() {
                   {!collapsed && (
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {librarySubItems.map((sub) => (
+                        {visibleLibrarySubItems.map((sub) => (
                           <SidebarMenuSubItem key={sub.title}>
                             <SidebarMenuSubButton asChild>
                               <NavLink
