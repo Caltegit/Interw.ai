@@ -23,7 +23,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "interviews",
     title: "Sessions types",
-    description: "Modèles de sessions prêts à dupliquer pour lancer un projet en quelques secondes.",
+    description: "Sessions types prêtes à dupliquer pour lancer un projet en quelques secondes.",
     icon: ClipboardList,
     url: "/library/sessions",
     table: "interview_templates",
