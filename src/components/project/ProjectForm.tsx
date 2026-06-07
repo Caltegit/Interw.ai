@@ -165,7 +165,7 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
 }
 
 export interface ProjectFormProps {
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "template";
   initial: ProjectFormState;
   onSubmit: (state: ProjectFormState) => Promise<void>;
   saving: boolean;
@@ -175,6 +175,8 @@ export interface ProjectFormProps {
 }
 
 export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel, creatorUserId }: ProjectFormProps) {
+  const isTemplate = mode === "template";
+
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
