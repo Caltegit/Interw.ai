@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldAlert, Crown } from "lucide-react";
+import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldAlert, Crown, Shield, ShieldPlus, ShieldMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
@@ -16,7 +16,9 @@ interface Member {
   full_name: string;
   email: string;
   isOwner: boolean;
+  isAdmin: boolean;
 }
+
 
 interface Invitation {
   id: string;
@@ -44,7 +46,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
 
   const loadData = async () => {
     setLoading(true);
-    const [membersRes, invitationsRes, orgRes] = await Promise.all([
+    const [membersRes, invitationsRes, orgRes, rolesRes] = await Promise.all([
       supabase.from("profiles").select("id, user_id, full_name, email").eq("organization_id", orgId),
       supabase
         .from("organization_invitations")
@@ -52,19 +54,27 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false }),
       supabase.from("organizations").select("owner_id").eq("id", orgId).single(),
+      supabase.from("user_roles").select("user_id, role").eq("organization_id", orgId),
     ]);
 
     const owner = (orgRes.data as { owner_id?: string | null } | null)?.owner_id ?? null;
+    const adminIds = new Set(
+      ((rolesRes.data as { user_id: string; role: string }[] | null) || [])
+        .filter((r) => r.role === "admin")
+        .map((r) => r.user_id),
+    );
 
     const enriched: Member[] = (membersRes.data || []).map((m: { id: string; user_id: string; full_name: string; email: string }) => ({
       ...m,
       isOwner: m.user_id === owner,
+      isAdmin: adminIds.has(m.user_id),
     }));
 
     setMembers(enriched);
     setInvitations(invitationsRes.data || []);
     setLoading(false);
   };
+
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +148,38 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     }
   };
 
+  const handleToggleAdmin = async (member: Member) => {
+    if (member.isOwner) return;
+    if (member.user_id === user?.id) {
+      toast({ title: "Vous ne pouvez pas modifier votre propre rôle.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (member.isAdmin) {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", member.user_id)
+          .eq("organization_id", orgId)
+          .eq("role", "admin");
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} n'est plus admin.` });
+      } else {
+        const { error } = await supabase.from("user_roles").insert({
+          user_id: member.user_id,
+          organization_id: orgId,
+          role: "admin",
+        });
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} est maintenant admin.` });
+      }
+      loadData();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    }
+  };
+
   const handleCancelInvitation = async (inv: Invitation) => {
     try {
       const { error } = await supabase.from("organization_invitations").delete().eq("id", inv.id);
@@ -155,6 +197,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     navigator.clipboard.writeText(link);
     toast({ title: "Lien copié." });
   };
+
 
   const pendingInvitations = invitations.filter((i) => i.status === "pending");
 
@@ -182,7 +225,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         {!isOwner && (
           <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
             <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Seul le propriétaire peut inviter ou retirer des membres.</span>
+            <span>Seuls les admins peuvent inviter, promouvoir ou retirer des membres.</span>
           </div>
         )}
 
@@ -219,22 +262,38 @@ export function OrgMembers({ orgId }: { orgId: string }) {
                   <Badge variant="default" className="gap-1">
                     <Crown className="h-3 w-3" /> Propriétaire
                   </Badge>
+                ) : m.isAdmin ? (
+                  <Badge variant="default" className="gap-1">
+                    <Shield className="h-3 w-3" /> Admin
+                  </Badge>
                 ) : (
                   <Badge variant="secondary">Membre</Badge>
                 )}
                 {m.user_id === user?.id && <Badge variant="outline">Vous</Badge>}
 
                 {isOwner && !m.isOwner && m.user_id !== user?.id && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveMember(m)}
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    title="Retirer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleToggleAdmin(m)}
+                      className="h-8 w-8"
+                      title={m.isAdmin ? "Retirer le rôle admin" : "Promouvoir admin"}
+                    >
+                      {m.isAdmin ? <ShieldMinus className="h-4 w-4" /> : <ShieldPlus className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveMember(m)}
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      title="Retirer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
+
               </div>
             </div>
           ))}
