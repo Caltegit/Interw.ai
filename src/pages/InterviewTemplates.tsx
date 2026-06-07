@@ -294,9 +294,9 @@ export default function InterviewTemplates() {
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer ce modèle ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Les projets déjà créés à partir de ce modèle ne seront pas affectés.
+              Cette action est irréversible. Les projets déjà créés à partir de cette session type ne seront pas affectés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
