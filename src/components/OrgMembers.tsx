@@ -38,6 +38,8 @@ export function OrgMembers({ orgId }: { orgId: string }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const isAccountOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
     loadData();
