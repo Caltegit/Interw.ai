@@ -187,7 +187,7 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-          <Button onClick={handleApply} disabled={!selectedId}>Utiliser ce modèle</Button>
+          <Button onClick={handleApply} disabled={!selectedId}>Utiliser cette session</Button>
         </div>
       </DialogContent>
     </Dialog>
