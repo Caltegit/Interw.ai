@@ -262,22 +262,38 @@ export function OrgMembers({ orgId }: { orgId: string }) {
                   <Badge variant="default" className="gap-1">
                     <Crown className="h-3 w-3" /> Propriétaire
                   </Badge>
+                ) : m.isAdmin ? (
+                  <Badge variant="default" className="gap-1">
+                    <Shield className="h-3 w-3" /> Admin
+                  </Badge>
                 ) : (
                   <Badge variant="secondary">Membre</Badge>
                 )}
                 {m.user_id === user?.id && <Badge variant="outline">Vous</Badge>}
 
                 {isOwner && !m.isOwner && m.user_id !== user?.id && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveMember(m)}
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    title="Retirer"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleToggleAdmin(m)}
+                      className="h-8 w-8"
+                      title={m.isAdmin ? "Retirer le rôle admin" : "Promouvoir admin"}
+                    >
+                      {m.isAdmin ? <ShieldMinus className="h-4 w-4" /> : <ShieldPlus className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveMember(m)}
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      title="Retirer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
+
               </div>
             </div>
           ))}
