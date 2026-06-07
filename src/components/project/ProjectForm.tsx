@@ -732,7 +732,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 <div className="flex items-end gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <Label htmlFor={`recruiter-name-${idSuffix}`} className="text-xs text-muted-foreground">
-                      Nom du recruteur
+                      Son prénom
                     </Label>
                     <Input
                       id={`recruiter-name-${idSuffix}`}
@@ -791,7 +791,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
                 <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-border">
                   <div className="flex items-center gap-2 text-sm min-w-0 pt-3">
-                    <span className="text-muted-foreground">Voix :</span>
+                    <span className="text-muted-foreground">Voix sélectionnée :</span>
                     <span className="font-medium truncate">{getVoiceName(ttsVoiceId)}</span>
                     <button
                       type="button"
