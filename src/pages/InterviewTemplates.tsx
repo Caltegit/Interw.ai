@@ -28,6 +28,7 @@ interface InterviewTemplate {
   category: string | null;
   job_title: string;
   default_duration_minutes: number;
+  clone_to_new_orgs?: boolean;
   questions_count?: number;
   criteria_count?: number;
 }
