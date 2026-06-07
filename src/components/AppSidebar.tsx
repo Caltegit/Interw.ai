@@ -56,6 +56,10 @@ export function AppSidebar() {
   const isLibraryActive = location.pathname.startsWith("/library") || location.pathname === "/question-library";
   const [libraryOpen, setLibraryOpen] = useState(isLibraryActive);
 
+  const visibleLibrarySubItems = isSuperAdmin
+    ? librarySubItems
+    : librarySubItems.filter((s) => s.url !== "/library/emails");
+
   const systemSubItems = [
     { title: "Email", url: "/admin/emails", icon: Mail },
     { title: "Sessions", url: "/admin/sessions-queue", icon: Activity },
@@ -139,7 +143,7 @@ export function AppSidebar() {
                   {!collapsed && (
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {librarySubItems.map((sub) => (
+                        {visibleLibrarySubItems.map((sub) => (
                           <SidebarMenuSubItem key={sub.title}>
                             <SidebarMenuSubButton asChild>
                               <NavLink
