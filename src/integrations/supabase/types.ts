@@ -1669,6 +1669,42 @@ export type Database = {
           },
         ]
       }
+      superadmin_magic_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          redirect_to: string | null
+          token: string
+          used_at: string | null
+          used_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at: string
+          id?: string
+          redirect_to?: string | null
+          token: string
+          used_at?: string | null
+          used_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          redirect_to?: string | null
+          token?: string
+          used_at?: string | null
+          used_ip?: string | null
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string

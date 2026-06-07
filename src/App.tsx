@@ -53,6 +53,7 @@ import InterviewTemplateEdit from "./pages/InterviewTemplateEdit";
 import EmailTemplates from "./pages/EmailTemplates";
 import InviteSignup from "./pages/InviteSignup";
 import MagicLink from "./pages/MagicLink";
+import MagicLinkRedeem from "./pages/MagicLinkRedeem";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InviteSignup />} />
             <Route path="/auth/magic-link" element={<MagicLink />} />
+            <Route path="/m/:token" element={<MagicLinkRedeem />} />
 
             {/* Session candidat — routes actuelles */}
             <Route path="/session/:slug" element={<InterviewLanding />} />

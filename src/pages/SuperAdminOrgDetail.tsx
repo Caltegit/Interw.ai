@@ -237,7 +237,7 @@ export default function SuperAdminOrgDetail() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="Copier un lien de connexion (24h, usage unique)"
+                  title="Copier un lien de connexion (5 jours, usage unique)"
                   onClick={async () => {
                     try {
                       const { data, error } = await supabase.functions.invoke("superadmin-magic-link", {
@@ -247,7 +247,7 @@ export default function SuperAdminOrgDetail() {
                       const link = (data as any)?.action_link;
                       if (!link) throw new Error("Lien indisponible");
                       await navigator.clipboard.writeText(link);
-                      toast({ title: "Lien copié", description: "Valable 24h, utilisable une seule fois." });
+                      toast({ title: "Lien copié", description: "Valable 5 jours, utilisable une seule fois." });
                     } catch (e: any) {
                       toast({ title: "Erreur", description: e?.message ?? "Impossible de générer le lien", variant: "destructive" });
                     }
