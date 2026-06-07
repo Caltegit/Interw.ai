@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldAlert, Crown } from "lucide-react";
+import { Users, UserPlus, Trash2, Copy, Mail, Clock, ShieldAlert, Crown, Shield, ShieldPlus, ShieldMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useOrgRole } from "@/hooks/useOrgRole";
 
@@ -16,7 +16,9 @@ interface Member {
   full_name: string;
   email: string;
   isOwner: boolean;
+  isAdmin: boolean;
 }
+
 
 interface Invitation {
   id: string;
