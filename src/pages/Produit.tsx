@@ -100,7 +100,7 @@ export default function Produit() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    document.title = "Produit — Interw.ai";
+    document.title = "Produit — Interw";
     const desc =
       "Découvrez interw : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
     let m = document.querySelector('meta[name="description"]');
@@ -148,7 +148,7 @@ export default function Produit() {
             >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
+            <span className="text-[15px] font-semibold tracking-tight">Interw</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
             <Link to="/produit" className="transition-colors text-foreground">Produit</Link>

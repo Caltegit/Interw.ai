@@ -4,7 +4,7 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 
 export default function Privacy() {
   useEffect(() => {
-    document.title = "Confidentialité & RGPD — Interw.ai";
+    document.title = "Confidentialité & RGPD — Interw";
   }, []);
 
   return (
@@ -15,7 +15,7 @@ export default function Privacy() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
+            <span className="text-[15px] font-semibold tracking-tight">Interw</span>
           </Link>
           <Link to="/" className="inline-flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>
             <ArrowLeft className="h-3.5 w-3.5" /> Retour
@@ -33,7 +33,7 @@ export default function Privacy() {
           <section>
             <h2 className="text-lg font-semibold text-white">Notre engagement</h2>
             <p className="mt-2">
-              Interw.ai est conçu pour respecter le Règlement Général sur la Protection des Données (RGPD).
+              Interw est conçu pour respecter le Règlement Général sur la Protection des Données (RGPD).
               Les données candidats appartiennent au recruteur et sont hébergées dans l'Union européenne.
             </p>
           </section>

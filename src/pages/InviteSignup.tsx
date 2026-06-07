@@ -96,7 +96,7 @@ export default function InviteSignup() {
       if (signUpError) {
         const msg = signUpError.message?.toLowerCase() ?? "";
         if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already")) {
-          // L'email a déjà un compte Interw.ai → bascule sur le formulaire de connexion
+          // L'email a déjà un compte Interw → bascule sur le formulaire de connexion
           setMode("signin");
           setPassword("");
           toast({
@@ -193,7 +193,7 @@ export default function InviteSignup() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Interw</CardTitle>
           <CardDescription>
             {mode === "signup" ? (
               <>

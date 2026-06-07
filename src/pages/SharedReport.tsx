@@ -79,7 +79,7 @@ export default function SharedReport() {
         readOnly
       />
       <p className="mt-4 text-center text-xs text-muted-foreground">
-        Rapport partagé via un lien sécurisé · Généré par Interw.ai
+        Rapport partagé via un lien sécurisé · Généré par Interw
       </p>
     </div>
   );

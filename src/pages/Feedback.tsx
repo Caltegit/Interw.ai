@@ -95,7 +95,7 @@ export default function Feedback() {
           <p className="text-muted-foreground">
             {isSuperAdmin
               ? "Tous les retours envoyés par les utilisateurs."
-              : "Échangez directement avec l'équipe Interw.ai."}
+              : "Échangez directement avec l'équipe Interw."}
           </p>
         </div>
         <NewFeedbackDialog />

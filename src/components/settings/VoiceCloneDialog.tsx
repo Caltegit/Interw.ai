@@ -8,7 +8,7 @@ import { Mic, Square, Play, Pause, Loader2, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const SAMPLE_TEXT = `Bonjour, je m'appelle [votre prénom]. Je teste aujourd'hui le clonage de voix sur la plateforme Interw.ai. Pour obtenir un résultat naturel, je vais lire ce paragraphe à voix haute, calmement, dans un environnement silencieux. La technologie d'intelligence artificielle analyse le timbre, le rythme et l'intonation de ma voix afin de pouvoir la reproduire fidèlement. Je veille à articuler clairement, à respirer normalement, et à varier légèrement mon ton pour transmettre toute la richesse de mon élocution. Voilà, l'enregistrement touche à sa fin et la voix est désormais prête à être analysée.`;
+const SAMPLE_TEXT = `Bonjour, je m'appelle [votre prénom]. Je teste aujourd'hui le clonage de voix sur la plateforme Interw. Pour obtenir un résultat naturel, je vais lire ce paragraphe à voix haute, calmement, dans un environnement silencieux. La technologie d'intelligence artificielle analyse le timbre, le rythme et l'intonation de ma voix afin de pouvoir la reproduire fidèlement. Je veille à articuler clairement, à respirer normalement, et à varier légèrement mon ton pour transmettre toute la richesse de mon élocution. Voilà, l'enregistrement touche à sa fin et la voix est désormais prête à être analysée.`;
 
 const MIN_SECONDS = 30;
 const MAX_SECONDS = 180;

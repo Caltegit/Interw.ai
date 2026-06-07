@@ -262,7 +262,7 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    document.title = "Interw.ai — Évaluez les candidats, pas leur CV";
+    document.title = "Interw — Évaluez les candidats, pas leur CV";
     const desc =
       "Vos questions, vos critères, votre processus. interw analyse les réponses de chaque candidat et vous livre un rapport détaillé — pour recruter plus vite, plus équitablement, sans rater le bon profil.";
     let m = document.querySelector('meta[name="description"]');
@@ -306,7 +306,7 @@ export default function Landing() {
             >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
+            <span className="text-[15px] font-semibold tracking-tight">Interw</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
             <Link to="/produit" className="transition-colors hover:text-foreground">Produit</Link>
@@ -548,7 +548,7 @@ export default function Landing() {
                 className="relative p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
                 style={{ background: "hsl(243 100% 96%)", color: "hsl(243 78% 54%)" }}
               >
-                <span>Interw.ai</span>
+                <span>Interw</span>
                 <span
                   className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-white"
                   style={{ background: "hsl(142 71% 38%)" }}
@@ -842,7 +842,7 @@ export default function Landing() {
             >
               <Sparkles className="h-3 w-3 text-white" />
             </div>
-            <span>© {new Date().getFullYear()} Interw.ai — Tous droits réservés</span>
+            <span>© {new Date().getFullYear()} Interw — Tous droits réservés</span>
           </div>
           <div className="flex items-center gap-5">
             <button
