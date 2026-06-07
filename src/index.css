@@ -508,7 +508,7 @@
 /* Make native video play overlay buttons more transparent to let the face show through */
 video::-webkit-media-controls-overlay-play-button,
 video::-webkit-media-controls-start-playback-button {
-  opacity: 0.08 !important;
+  opacity: 0.01 !important;
 }
 video::-webkit-media-controls-overlay-play-button:hover,
 video::-webkit-media-controls-start-playback-button:hover {
