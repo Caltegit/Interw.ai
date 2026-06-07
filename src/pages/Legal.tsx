@@ -4,7 +4,7 @@ import { Sparkles, ArrowLeft } from "lucide-react";
 
 export default function Legal() {
   useEffect(() => {
-    document.title = "Mentions légales — Interw.ai";
+    document.title = "Mentions légales — Interw";
   }, []);
 
   return (
@@ -15,7 +15,7 @@ export default function Legal() {
             <div className="flex h-7 w-7 items-center justify-center rounded-md" style={{ background: "linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)))" }}>
               <Sparkles className="h-4 w-4 text-white" />
             </div>
-            <span className="text-[15px] font-semibold tracking-tight">Interw.ai</span>
+            <span className="text-[15px] font-semibold tracking-tight">Interw</span>
           </Link>
           <Link to="/" className="inline-flex items-center gap-1.5 text-sm" style={{ color: "hsl(var(--l-fg-dim))" }}>
             <ArrowLeft className="h-3.5 w-3.5" /> Retour
@@ -29,7 +29,7 @@ export default function Legal() {
           <section>
             <h2 className="text-lg font-semibold text-white">Éditeur du site</h2>
             <p className="mt-2">
-              Interw.ai — service en cours d'édition.<br />
+              Interw — service en cours d'édition.<br />
               Pour toute information : <a href="mailto:hello@interw.ai" className="underline">hello@interw.ai</a>
             </p>
           </section>
@@ -42,7 +42,7 @@ export default function Legal() {
           <section>
             <h2 className="text-lg font-semibold text-white">Propriété intellectuelle</h2>
             <p className="mt-2">
-              L'ensemble des contenus (textes, visuels, logos) reste la propriété d'Interw.ai. Toute reproduction sans autorisation est interdite.
+              L'ensemble des contenus (textes, visuels, logos) reste la propriété d'Interw. Toute reproduction sans autorisation est interdite.
             </p>
           </section>
           <section>

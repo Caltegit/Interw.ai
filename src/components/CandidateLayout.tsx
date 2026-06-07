@@ -93,7 +93,7 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
         className="candidate-footer text-center text-[11px] py-3 relative z-10"
         style={{ opacity: 0.5 }}
       >
-        Propulsé par <span className="font-medium">Interw.ai</span>
+        Propulsé par <span className="font-medium">Interw</span>
       </footer>
     </div>
   );

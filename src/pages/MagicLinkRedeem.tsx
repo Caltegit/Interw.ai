@@ -59,7 +59,7 @@ export default function MagicLinkRedeem() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Interw.ai</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Interw</CardTitle>
           <CardDescription>{error}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">

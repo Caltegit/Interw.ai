@@ -105,7 +105,7 @@ export default function HighlightsPublic() {
       </div>
 
       <p className="mt-8 text-center text-xs text-muted-foreground">
-        Lien sécurisé · Généré par Interw.ai
+        Lien sécurisé · Généré par Interw
       </p>
     </div>
   );

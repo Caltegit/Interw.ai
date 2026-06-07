@@ -253,7 +253,7 @@ export default function FeedbackThread() {
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-lg p-3 space-y-2 ${mine ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                 <p className="text-xs opacity-70">
-                  {m.author_role === "super_admin" ? "Équipe Interw.ai" : "Utilisateur"} ·{" "}
+                  {m.author_role === "super_admin" ? "Équipe Interw" : "Utilisateur"} ·{" "}
                   {format(new Date(m.created_at), "d MMM HH:mm", { locale: fr })}
                 </p>
                 {parts.map((p, i) =>
