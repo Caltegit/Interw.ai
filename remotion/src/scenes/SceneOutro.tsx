@@ -61,7 +61,7 @@ export const SceneOutro: React.FC = () => {
           }}
         >
           <span style={{ width: 8, height: 8, borderRadius: 4, background: ACCENT, boxShadow: `0 0 12px ${ACCENT}` }} />
-          <span style={{ fontSize: 22, color: FG, fontWeight: 500, letterSpacing: 0.3 }}>interw.ai</span>
+          <span style={{ fontSize: 22, color: FG, fontWeight: 500, letterSpacing: 0.3 }}>interw</span>
         </div>
 
         <div style={{ opacity: urlIn * 0.7, fontSize: 14, color: FG_DIM, marginTop: 8, letterSpacing: 1 }}>

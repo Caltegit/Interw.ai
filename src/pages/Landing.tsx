@@ -264,7 +264,7 @@ export default function Landing() {
   useEffect(() => {
     document.title = "Interw.ai — Évaluez les candidats, pas leur CV";
     const desc =
-      "Vos questions, vos critères, votre processus. interw.ai analyse les réponses de chaque candidat et vous livre un rapport détaillé — pour recruter plus vite, plus équitablement, sans rater le bon profil.";
+      "Vos questions, vos critères, votre processus. interw analyse les réponses de chaque candidat et vous livre un rapport détaillé — pour recruter plus vite, plus équitablement, sans rater le bon profil.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -737,14 +737,14 @@ export default function Landing() {
               },
               {
                 q: "L'IA remplace-t-elle le recruteur ?",
-                a: "Non. interw.ai ne conduit pas l'entretien à votre place — c'est vous qui définissez les questions et les critères. L'IA intervient après, pour analyser les réponses et rédiger les rapports. Vous gardez le contrôle total. L'IA vous fait gagner le temps que vous passiez à décortiquer chaque entretien manuellement.",
+                a: "Non. interw ne conduit pas l'entretien à votre place — c'est vous qui définissez les questions et les critères. L'IA intervient après, pour analyser les réponses et rédiger les rapports. Vous gardez le contrôle total. L'IA vous fait gagner le temps que vous passiez à décortiquer chaque entretien manuellement.",
               },
               {
                 q: "Puis-je personnaliser la voix et le ton de l'IA ?",
                 a: "Oui. Vous choisissez la voix, la langue et le ton. Vous pouvez aussi ajouter une vidéo de présentation au début de l'entretien.",
               },
               {
-                q: "interw.ai favorise-t-il vraiment l'égalité des chances ?",
+                q: "interw favorise-t-il vraiment l'égalité des chances ?",
                 a: "Oui. Chaque candidat répond aux mêmes questions, évalué selon les mêmes critères, avec la même grille de notation. Les biais liés au CV, à l'école, au prénom ou à l'apparence n'ont plus d'impact sur la présélection. C'est une façon concrète de recruter plus équitablement — sans effort supplémentaire de votre part.",
               },
             ].map((item, i) => {
@@ -798,7 +798,7 @@ export default function Landing() {
             Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(230 8% 38%)" }}>
-            En 20 minutes, on vous montre comment interw.ai s'intègre à votre méthode de recrutement, sans la remplacer.
+            En 20 minutes, on vous montre comment interw s'intègre à votre méthode de recrutement, sans la remplacer.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button

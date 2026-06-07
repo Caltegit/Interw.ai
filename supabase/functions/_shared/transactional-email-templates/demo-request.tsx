@@ -24,7 +24,7 @@ const DemoRequestEmail = ({ email, message }: DemoRequestProps) => (
       <Container style={container}>
         <Heading style={h1}>Nouvelle demande de démo</Heading>
         <Text style={text}>
-          Un visiteur du site interw.ai souhaite planifier une démo.
+          Un visiteur du site interw souhaite planifier une démo.
         </Text>
         <Text style={label}>Email du contact :</Text>
         <Text style={value}>{email || '(non fourni)'}</Text>

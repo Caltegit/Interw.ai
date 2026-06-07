@@ -1,39 +1,49 @@
 ## Objectif
-Remplacer le terme « Bibliothèque » par « Ressources » partout dans l'interface, en respectant la grammaire française (accords, articles).
+Remplacer le nom de marque « Interw.ai » / « interw.ai » par « Interw » / « interw » dans l'UI, le contenu textuel et les emails.
 
-## Règles de remplacement
-- "Bibliothèque" → "Ressources" (pluriel)
-- "la bibliothèque" → "les ressources"
-- "ma bibliothèque" → "mes ressources"
-- "bibliothèques" → "ressources"
-- "depuis la bibliothèque" → "depuis les ressources"
-- "dans la bibliothèque" → "dans les ressources"
-- "Bibliothèque de questions/critères/intros" → "Ressources — questions/critères/intros" (ou simplement "Questions"/"Critères"/"Intros" selon le contexte de page)
+## Règles
+- ✅ Remplacer les mentions de marque dans du texte affiché (titres, descriptions, FAQ, signatures email, footer, etc.)
+- ❌ NE PAS toucher aux URLs `https://interw.ai/...` (canonical, og:url, schema.org, liens)
+- ❌ NE PAS toucher aux adresses email (`hello@interw.ai`, `contact@interw.ai`, `noreply@interw.ai`)
+- ❌ NE PAS toucher aux URLs de démo dans Remotion (`interw.ai/projects/new`, etc.) — ce sont des chrome de navigateur affichant l'URL réelle
+- ❌ NE PAS toucher à `demo@interw.local` (domaine technique distinct)
 
-## Fichiers à modifier (UI visible)
-- `src/pages/CriteriaLibrary.tsx` — titre h1
-- `src/pages/IntroLibrary.tsx` — titre h1 + toast
-- `src/pages/QuestionLibrary.tsx` — titre h1
-- `src/pages/Landing.tsx` — feature « Bibliothèque de questions partagée »
-- `src/pages/Produit.tsx` — pill, descriptions, meta SEO
-- `src/components/QuestionFormDialog.tsx` — labels étape sauvegarde
-- `src/components/QuestionLibraryManager.tsx` — titre + empty state
-- `src/components/CriterionFormDialog.tsx` — label
-- `src/components/CriteriaLibraryManager.tsx` — titre + empty state
-- `src/components/copilot/CopilotChatWindow.tsx` — boutons + toasts
-- `src/components/AppSidebar.tsx` — commentaire
-- `src/components/superadmin/CreateOrgDialog.tsx` — label seed
-- `src/components/project/IntroLibraryDialog.tsx` — bouton, titre, empty state
-- `src/components/project/InterviewTemplatePickerDialog.tsx` — empty state
-- `src/components/project/CriteriaLibraryDialog.tsx` — titre
-- `src/components/project/QuestionLibraryDialog.tsx` — titre
-- `src/components/project/SaveAsTemplateDialog.tsx` — toast
-- `src/components/project/StepIntro.tsx` — label
-- `src/components/project/StepQuestions.tsx` — boutons + commentaires
-- `src/components/project/StepCriteria.tsx` — boutons
-- `src/pages/ProjectEdit.tsx` — commentaires de code
+## Fichiers à modifier (texte de marque uniquement)
+
+### Pages
+- `src/pages/Landing.tsx` (3 mentions) :
+  - ligne 267 : "interw.ai analyse les réponses…" → "interw analyse les réponses…"
+  - ligne 740 : "interw.ai ne conduit pas l'entretien…" → "interw…"
+  - ligne 747 : "interw.ai favorise-t-il…" → "interw favorise-t-il…"
+  - ligne 801 : "comment interw.ai s'intègre…" → "comment interw s'intègre…"
+  - ligne 52 : `interw.ai/entretien/marie-d` (chrome navigateur démo) → garder
+- `src/pages/Produit.tsx` :
+  - ligne 105 (meta description) : "Découvrez interw.ai" → "Découvrez interw"
+  - ligne 269 : "voir interw.ai sur vos…" → "voir interw sur vos…"
+- `src/pages/OrgPublic.tsx` ligne 123 : footer "Propulsé par Interw.ai" → "Propulsé par Interw" (le `href` reste `https://interw.ai`)
+- `src/pages/Settings.tsx` ligne 297 : préfixe affiché `interw.ai/o/` → garder (c'est l'URL réelle de l'org publique, pas une marque)
+
+### Emails transactionnels (texte de signature uniquement, garder mailto/href)
+- `supabase/functions/_shared/transactional-email-templates/candidate-abandon-reminder.tsx` ligne 56 : texte du Link `interw.ai` → `interw` (href reste `https://interw.ai`)
+- `supabase/functions/_shared/transactional-email-templates/candidate-thank-you.tsx` ligne 108 : idem
+- `supabase/functions/_shared/transactional-email-templates/demo-request.tsx` ligne 27 : "Un visiteur du site interw.ai" → "Un visiteur du site interw"
+- `supabase/functions/_shared/transactional-email-templates/interview-issue-report.tsx` ligne 7 : `SITE_NAME = 'interw.ai'` → `'interw'`
+- `supabase/functions/_shared/transactional-email-templates/interview-report.tsx` :
+  - ligne 7 : `SITE_NAME = 'interw.ai'` → `'interw'`
+  - ligne 398 : subject `interw.ai - ${candidateName}` → `interw - ${candidateName}`
+
+### Remotion (vidéos de démo)
+- `remotion/src/scenes/SceneOutro.tsx` ligne 64 : signature de fin "interw.ai" → "interw"
+- `remotion/src/scenes/demo/SceneImpact.tsx` ligne 114 : idem
+- Les `BrowserChrome url="interw.ai/..."` représentent l'URL affichée dans une fausse barre d'adresse → **garder** (le site est bien sur interw.ai)
+
+### Sidebar
+- `src/components/AppSidebar.tsx` : afficher "Interw" au lieu de "Interw.ai" si présent (déjà vérifié : le brand affiché est `Interw.ai` ou `interw.ai` ?) — à vérifier et ajuster
+
+## Déploiement
+- Déployer les Edge Functions de templates email après modification : `send-transactional-email` (les templates sont chargés par cette fonction).
 
 ## Hors scope
-- Noms de fichiers (`QuestionLibrary.tsx`, `IntroLibrary.tsx`, etc.) — non visibles utilisateur
-- Noms de variables / types / tables BDD
-- Routes URL (`/library/...`) déjà inchangées
+- Domaine email (toujours `interw.ai`)
+- URLs canoniques, OG, schema.org dans `index.html`
+- Variables, noms de classes, identifiants techniques

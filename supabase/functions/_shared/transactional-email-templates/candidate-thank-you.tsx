@@ -105,7 +105,7 @@ const CandidateThankYouEmail = ({
               <strong>Interw</strong> — Plateforme d'entretien assistée par IA
             </Text>
             <Text style={footerText}>
-              <Link href="https://interw.ai" style={footerLink}>interw.ai</Link>
+              <Link href="https://interw.ai" style={footerLink}>interw</Link>
               {' · '}
               <Link href="mailto:contact@interw.ai" style={footerLink}>contact@interw.ai</Link>
             </Text>
