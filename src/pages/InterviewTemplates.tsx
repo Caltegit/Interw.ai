@@ -271,7 +271,35 @@ export default function InterviewTemplates() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((tpl) => (
-            <Card key={tpl.id} className="flex flex-col">
+            <Card key={tpl.id} className="relative flex flex-col">
+              {isSuperAdmin && (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStar(tpl)}
+                        aria-label={tpl.clone_to_new_orgs ? "Retirer l'étoile" : "Étoiler cette session"}
+                        aria-pressed={!!tpl.clone_to_new_orgs}
+                        className="absolute right-2 top-2 z-10 rounded-md p-1.5 hover:bg-muted transition-colors"
+                      >
+                        <Star
+                          className={
+                            tpl.clone_to_new_orgs
+                              ? "h-4 w-4 fill-yellow-400 text-yellow-500"
+                              : "h-4 w-4 text-muted-foreground"
+                          }
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">
+                      {tpl.clone_to_new_orgs
+                        ? "Clonée automatiquement dans toutes les nouvelles organisations"
+                        : "Cliquer pour cloner automatiquement dans toutes les nouvelles organisations"}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base">{tpl.name}</CardTitle>
