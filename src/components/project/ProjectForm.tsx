@@ -524,8 +524,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     }
   };
 
-  const isEdit = mode === "edit";
-  const idSuffix = isEdit ? "edit" : "new";
+  const isEdit = mode === "edit" || isTemplate;
+  const idSuffix = mode;
+
 
   const navButtons = (
     <div className="flex justify-between">
