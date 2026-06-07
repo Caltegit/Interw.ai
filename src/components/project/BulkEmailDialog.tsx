@@ -255,7 +255,7 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
               />
             </div>
             <div className="space-y-1">
-              <Label>Modèle</Label>
+              <Label>Session d'email</Label>
               <Select
                 value={selectedKey}
                 onValueChange={(v) => {
