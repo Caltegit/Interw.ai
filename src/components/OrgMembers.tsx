@@ -60,6 +60,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     ]);
 
     const owner = (orgRes.data as { owner_id?: string | null } | null)?.owner_id ?? null;
+    setOwnerId(owner);
     const adminIds = new Set(
       ((rolesRes.data as { user_id: string; role: string }[] | null) || [])
         .filter((r) => r.role === "admin")
