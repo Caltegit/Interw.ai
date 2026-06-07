@@ -1,26 +1,28 @@
-# Plan — Supprimer l'option "auto" pour Intro IA et Transitions
+# Plan — Brancher le seed étoilé sur la création d'organisation
 
-## Contexte
-Dans `src/components/project/ProjectForm.tsx` (section "Voix de l'IA", étape 1, fonctionnalités avancées), deux blocs proposent un `RadioGroup` avec deux choix :
-- **Laisser l'IA s'adapter au contexte des réponses** (`mode = "auto"`)
-- **Utiliser un texte fixe** (`mode = "custom"`) → ouvre `AiTextCustomizerDialog`
+## Diagnostic
+Le seed étoilé `seed_starred_templates_into_org` existe et fonctionne, mais il est uniquement branché sur le trigger **`trg_seed_on_owner_set`** (déclenché sur `UPDATE OF owner_id`).
 
-L'utilisateur veut supprimer le premier choix. Seul le texte fixe (modifiable) reste.
+Or l'edge function `superadmin-create-org` insère l'organisation avec `owner_id` déjà renseigné. C'est donc le trigger **`trg_seed_org_question_templates`** (`AFTER INSERT`) qui s'exécute — et celui-ci appelle `seed_demo_project` (qui crée le projet "Candidature spontanée - TEST -") et **n'appelle pas** `seed_starred_templates_into_org`.
 
-## Changements (frontend uniquement)
+Conséquence observée sur "Test 31" : un seul projet, le démo hardcodé, et aucun clone des sessions étoilées.
 
-### `src/components/project/ProjectForm.tsx`
+## Changement (migration unique)
 
-**Bloc Intro IA (lignes ~1041-1067)** : remplacer le `RadioGroup` + condition `aiIntroMode === "custom"` par directement le bouton "Modifier le texte" + un aperçu court du texte courant (ou `DEFAULT_AI_INTRO_TEXT`).
+Modifier la fonction `public.trg_seed_org_question_templates` :
+- Remplacer l'appel `PERFORM public.seed_demo_project(NEW.id, _creator);` par `PERFORM public.seed_starred_templates_into_org(NEW.id, _creator);`
+- Conserver le reste (seed des bibliothèques par défaut question/criteria/intros/sessions types).
 
-**Bloc Transitions (lignes ~1079-1105)** : même traitement avec `DEFAULT_AI_TRANSITION_TEXT`.
+Symétriquement, dans `public.trg_seed_on_owner_set` (cas legacy où l'orga est créée sans owner puis owner ajouté ensuite), garder déjà l'appel `seed_starred_templates_into_org` qui est en place — rien à modifier.
 
-**Modes** : forcer `aiIntroMode` et `aiQuestionTransitionsMode` à `"custom"` en permanence.
-- Conserver les états `aiIntroMode` / `aiQuestionTransitionsMode` côté state pour rester compatible avec la sauvegarde DB (colonnes `ai_intro_mode`, `ai_question_transitions_mode`) et les templates chargés.
-- Lors du chargement d'un template existant en mode `"auto"`, le forcer silencieusement à `"custom"` à l'initialisation.
-- Retirer `setAiIntroMode` / `setAiQuestionTransitionsMode` des handlers UI (plus de RadioGroup à afficher).
+`seed_demo_project` reste défini dans la base (non supprimée) au cas où un script externe l'utiliserait, mais n'est plus jamais appelé automatiquement.
 
 ## Hors-scope
-- Pas de migration DB : les colonnes `ai_intro_mode` et `ai_question_transitions_mode` restent en place (valeurs futures toujours `"custom"`). Les anciens projets en `"auto"` seront re-saisis en `"custom"` à la prochaine sauvegarde.
-- Pas de modification du runtime candidat ni des edge functions.
-- Pas de modification de `AiTextCustomizerDialog`.
+- Aucune modification frontend.
+- Aucune modification des organisations existantes (le clonage reste limité à la création).
+- Aucune suppression de `seed_demo_project` ni de `clone_template_project_into_org`.
+
+## Test après application
+1. Étoiler 1+ session type dans Ressources › Sessions.
+2. Créer une nouvelle organisation via le super-admin.
+3. Vérifier que la nouvelle orga contient les projets clonés (un par template étoilé) au statut actif, et **pas** "Candidature spontanée - TEST -".
