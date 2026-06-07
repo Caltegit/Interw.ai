@@ -194,7 +194,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         }
         pendingSeekRef.current = 0;
         if (Number.isFinite(real)) setDurationSec(real);
-        if (shouldAutoPlay) safePlay();
+        if (shouldAutoPlay && !userPausedRef.current) safePlay();
       };
       v.addEventListener("timeupdate", onTime);
       try {
