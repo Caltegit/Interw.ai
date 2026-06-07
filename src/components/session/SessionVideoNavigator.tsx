@@ -292,6 +292,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     const onPlay = () => {
       setIsPlaying(true);
+      userPausedRef.current = false;
       // En lecture : masquer l'overlay après un court délai.
       if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
       hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1200);
@@ -299,6 +300,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const onPause = () => {
       setIsPlaying(false);
       setOverlayVisible(true);
+      // Pause venant de l'élément vidéo (clic utilisateur sur les contrôles natifs
+      // ou notre overlay). On marque l'intention pour bloquer les `safePlay()`
+      // automatiques. Si l'app reprend la lecture (toggle/playMessage), `onPlay`
+      // remettra ce drapeau à `false`.
+      if (!v.ended) userPausedRef.current = true;
       if (hideOverlayTimerRef.current) {
         window.clearTimeout(hideOverlayTimerRef.current);
         hideOverlayTimerRef.current = null;
