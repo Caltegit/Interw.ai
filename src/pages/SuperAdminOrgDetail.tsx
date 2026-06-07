@@ -413,6 +413,38 @@ export default function SuperAdminOrgDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!roleTarget} onOpenChange={(o) => !o && !roleBusy && setRoleTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {roleTarget?.action === "promote_admin" && "Promouvoir admin ?"}
+              {roleTarget?.action === "demote_admin" && "Retirer le rôle admin ?"}
+              {roleTarget?.action === "transfer_owner" && "Transférer la propriété ?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {roleTarget?.action === "promote_admin" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} pourra gérer les membres et les paramètres de l'organisation.`}
+              {roleTarget?.action === "demote_admin" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} redeviendra un membre standard.`}
+              {roleTarget?.action === "transfer_owner" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} deviendra propriétaire de l'organisation. L'actuel propriétaire restera dans l'org en tant que membre. Cette action est irréversible côté UI.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={roleBusy}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRoleAction();
+              }}
+              disabled={roleBusy}
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
