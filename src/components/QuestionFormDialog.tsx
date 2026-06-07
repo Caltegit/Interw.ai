@@ -188,7 +188,7 @@ export function QuestionFormDialog({
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {/* Étape 1 — Format */}
           <section className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Format</Label>
+            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Choix du format</Label>
             <div className="grid grid-cols-3 gap-2">
               {FORMAT_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
