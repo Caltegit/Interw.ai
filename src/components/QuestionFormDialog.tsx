@@ -290,7 +290,7 @@ export function QuestionFormDialog({
               <Textarea
                 id="qfd-hint"
                 className="-my-[22px]"
-                placeholder="Ecrivez ici la question que vous avez posé pour lui permettre de la lire..."
+                placeholder="Copiez ici la question que vous avez posé pour lui permettre de la lire pendant qu'il répond..."
                 rows={2}
                 maxLength={MAX_HINT}
                 value={form.hintText}
