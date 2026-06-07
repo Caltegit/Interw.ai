@@ -69,9 +69,9 @@ const BLOCKS: Block[] = [
     icon: <FileText className="h-4 w-4" />,
   },
   {
-    pill: "Bibliothèque",
+    pill: "Ressources",
     title: "Vos questions et critères, prêts à réutiliser",
-    desc: "Construisez votre bibliothèque au fil du temps. Réutilisez les bonnes questions sur tous vos projets, capitalisez sur ce qui fonctionne.",
+    desc: "Construisez vos ressources au fil du temps. Réutilisez les bonnes questions sur tous vos projets, capitalisez sur ce qui fonctionne.",
     bullets: [
       "Questions classées par type (écrite, vidéo, énigme…)",
       "Critères réutilisables sur tous vos projets",
@@ -102,7 +102,7 @@ export default function Produit() {
   useEffect(() => {
     document.title = "Produit — Interw.ai";
     const desc =
-      "Découvrez interw.ai : entretiens vidéo asynchrones, rapports IA détaillés, bibliothèques de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
+      "Découvrez interw.ai : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -184,7 +184,7 @@ export default function Produit() {
             </span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
-            Entretiens vidéo asynchrones, rapports détaillés, bibliothèques réutilisables.
+            Entretiens vidéo asynchrones, rapports détaillés, ressources réutilisables.
             Une plateforme pensée pour les équipes qui veulent évaluer des candidats, pas leur CV.
           </p>
           <div className="landing-fade-up landing-delay-3 mt-8 flex flex-wrap justify-center gap-3">

@@ -112,7 +112,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
       <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" /> Bibliothèque de questions
+            <BookOpen className="h-5 w-5" /> Ressources — questions
           </DialogTitle>
         </DialogHeader>
 

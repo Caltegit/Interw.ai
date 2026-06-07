@@ -148,7 +148,7 @@ export function SaveAsTemplateDialog({
         );
       }
 
-      toast({ title: "Session type créée", description: "Disponible dans la bibliothèque." });
+      toast({ title: "Session type créée", description: "Disponible dans les ressources." });
       setOpen(false);
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });

@@ -270,7 +270,7 @@ export function StepIntro({
                   checked={saveToLibrary}
                   onCheckedChange={(v) => setSaveToLibrary(v === true)}
                 />
-                <span>Ajouter à la bibliothèque</span>
+                <span>Ajouter aux ressources</span>
               </label>
             );
           })()}

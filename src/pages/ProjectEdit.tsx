@@ -434,7 +434,7 @@ export default function ProjectEdit() {
         );
       }
 
-      // 2) Préparer org pour la bibliothèque (récupéré une seule fois si besoin)
+      // 2) Préparer org pour les ressources (récupéré une seule fois si besoin)
       let orgIdForLib: string | null = null;
       const needsLib = validQuestions.some((q) => q.save_to_library && !q.from_library);
       if (needsLib) {
@@ -514,7 +514,7 @@ export default function ProjectEdit() {
           await supabase.from("questions").update(mediaUpdates as never).eq("id", qId);
         }
 
-        // Sauvegarde en bibliothèque si demandée
+        // Sauvegarde en ressources si demandée
         if (q.save_to_library && !q.from_library && orgIdForLib) {
           const contentText = q.content.trim() || q.title || "";
           if (contentText) {
