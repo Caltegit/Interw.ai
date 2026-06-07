@@ -1096,7 +1096,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           {step === 4 && (
             <div className="space-y-4">
               <Accordion type="multiple" className="space-y-3">
+                {!isTemplate && (<>
                 {/* 1. Visibilité du projet */}
+
                 <AccordionItem value="visibility" className="rounded-lg border bg-card px-4">
                   <AccordionTrigger className="hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
