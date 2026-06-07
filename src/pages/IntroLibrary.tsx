@@ -323,7 +323,7 @@ export default function IntroLibrary() {
             ...payload,
           } as never);
         if (insertErr) throw insertErr;
-        toast({ title: "Intro ajoutée à la bibliothèque" });
+        toast({ title: "Intro ajoutée aux ressources" });
       }
 
       resetForm();
@@ -359,7 +359,7 @@ export default function IntroLibrary() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Bibliothèque d'intros</h1>
+          <h1 className="text-2xl font-bold">Ressources — intros</h1>
           <p className="text-muted-foreground">
             Vos messages d'introduction réutilisables — texte, voix IA, audio ou vidéo.
           </p>

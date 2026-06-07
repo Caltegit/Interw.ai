@@ -627,7 +627,7 @@ export default function Landing() {
                 desc: "Pour les équipes qui recrutent régulièrement et veulent un suivi personnalisé.",
                 features: [
                   "50 entretiens inclus",
-                  "Bibliothèque de questions partagée",
+                  "Ressources — questions partagée",
                   "Sessions types réutilisables",
                   "Support prioritaire",
                 ],

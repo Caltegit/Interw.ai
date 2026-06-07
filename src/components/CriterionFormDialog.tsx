@@ -120,7 +120,7 @@ export function CriterionFormDialog({
                 >
                   <span className="flex items-center gap-1.5 font-medium">
                     <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
-                    Ajouter à ma bibliothèque
+                    Ajouter à mes ressources
                   </span>
                   <span className="block text-xs text-muted-foreground mt-0.5">
                     Le critère sera réutilisable dans tes prochains projets.

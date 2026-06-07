@@ -328,13 +328,13 @@ function QuestionsActions({
                 try {
                   await addToLibrary.mutateAsync({ organizationId: orgId, userId, q });
                   setDone((d) => ({ ...d, [i]: "library" }));
-                  toast.success("Question enregistrée dans la bibliothèque");
+                  toast.success("Question enregistrée dans les ressources");
                 } catch (e: any) {
                   toast.error(e?.message || "Erreur");
                 }
               }}
             >
-              <Library className="h-3 w-3" /> Bibliothèque
+              <Library className="h-3 w-3" /> Ressources
             </Button>
           </div>
         </div>
@@ -400,13 +400,13 @@ function CriteriaActions({
                 try {
                   await addToLibrary.mutateAsync({ organizationId: orgId, userId, c });
                   setDone((d) => ({ ...d, [i]: "library" }));
-                  toast.success("Critère enregistré dans la bibliothèque");
+                  toast.success("Critère enregistré dans les ressources");
                 } catch (e: any) {
                   toast.error(e?.message || "Erreur");
                 }
               }}
             >
-              <Library className="h-3 w-3" /> Bibliothèque
+              <Library className="h-3 w-3" /> Ressources
             </Button>
           </div>
         </div>

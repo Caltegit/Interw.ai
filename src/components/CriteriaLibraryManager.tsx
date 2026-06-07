@@ -133,7 +133,7 @@ export function CriteriaLibraryManager({ orgId }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <BookOpen className="h-5 w-5" /> Bibliothèque de critères
+          <BookOpen className="h-5 w-5" /> Ressources — critères
         </CardTitle>
         <CardDescription>Créez vos critères d'évaluation types ({templates.length})</CardDescription>
       </CardHeader>
@@ -168,7 +168,7 @@ export function CriteriaLibraryManager({ orgId }: Props) {
           <p className="text-sm text-muted-foreground">Chargement...</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            {templates.length === 0 ? "Aucun critère dans la bibliothèque." : "Aucun résultat."}
+            {templates.length === 0 ? "Aucun critère dans les ressources." : "Aucun résultat."}
           </p>
         ) : (
           <div className="space-y-2">

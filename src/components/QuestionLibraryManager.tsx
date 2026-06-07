@@ -191,7 +191,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
-          <BookOpen className="h-5 w-5" /> Bibliothèque de questions
+          <BookOpen className="h-5 w-5" /> Ressources — questions
         </CardTitle>
         <CardDescription>Créez vos questions types ({templates.length})</CardDescription>
       </CardHeader>
@@ -237,7 +237,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
           <p className="text-sm text-muted-foreground">Chargement...</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            {templates.length === 0 ? "Aucune question dans la bibliothèque." : "Aucun résultat."}
+            {templates.length === 0 ? "Aucune question dans les ressources." : "Aucun résultat."}
           </p>
         ) : (
           <div className="space-y-2">

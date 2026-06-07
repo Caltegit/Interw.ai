@@ -452,7 +452,7 @@ export function QuestionFormDialog({
             </div>
           </section>
 
-          {/* Étape 5 — Sauvegarde bibliothèque */}
+          {/* Étape 5 — Sauvegarde ressources */}
           {showSaveToLibrary && (
             <div className="flex items-start gap-2 rounded-md border border-dashed bg-muted/20 px-3 py-2">
               <Checkbox
@@ -464,7 +464,7 @@ export function QuestionFormDialog({
               <Label htmlFor="qfd-save-lib" className="cursor-pointer text-sm leading-snug font-normal">
                 <span className="flex items-center gap-1.5 font-medium">
                   <BookmarkPlus className="h-3.5 w-3.5 text-primary" />
-                  Ajouter aussi à la bibliothèque
+                  Ajouter aussi aux ressources
                 </span>
                 <span className="block text-xs text-muted-foreground mt-0.5">
                   Réutilisable dans tes prochains projets.

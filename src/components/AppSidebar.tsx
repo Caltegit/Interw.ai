@@ -105,7 +105,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
 
-              {/* Bibliothèque with sub-items */}
+              {/* Ressources with sub-items */}
               <Collapsible open={libraryOpen || collapsed} onOpenChange={setLibraryOpen}>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>

@@ -182,7 +182,7 @@ export function InterviewTemplatePickerDialog({ open, onOpenChange, onApply }: P
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-center text-muted-foreground py-12 text-sm">
-              Aucune session type. Créez-en dans la bibliothèque.
+              Aucune session type. Créez-en dans les ressources.
             </p>
           ) : (
             <div className="space-y-2">

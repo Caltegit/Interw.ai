@@ -72,11 +72,11 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Library className="mr-1 h-4 w-4" /> Choisir depuis la bibliothèque
+        <Library className="mr-1 h-4 w-4" /> Choisir depuis les ressources
       </Button>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Bibliothèque d'intros — {meta.label}</DialogTitle>
+          <DialogTitle>Ressources — intros — {meta.label}</DialogTitle>
           <DialogDescription>Sélectionnez une intro pour l'utiliser dans ce projet.</DialogDescription>
         </DialogHeader>
 
@@ -86,7 +86,7 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
           </div>
         ) : items.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
-            Aucune intro {meta.label.toLowerCase()} dans la bibliothèque. Créez-en une depuis Bibliothèque &gt; Intros.
+            Aucune intro {meta.label.toLowerCase()} dans les ressources. Créez-en une depuis Ressources &gt; Intros.
           </p>
         ) : (
           <div className="space-y-3">

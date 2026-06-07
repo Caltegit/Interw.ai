@@ -58,9 +58,9 @@ export interface Question {
   audioPreviewUrl: string | null;
   videoBlob: Blob | null;
   videoPreviewUrl: string | null;
-  /** true si la question vient d'un import depuis la bibliothèque */
+  /** true si la question vient d'un import depuis les ressources */
   from_library?: boolean;
-  /** true si l'utilisateur veut sauvegarder cette question dans la bibliothèque à la sauvegarde du projet */
+  /** true si l'utilisateur veut sauvegarder cette question dans les ressources à la sauvegarde du projet */
   save_to_library?: boolean;
   /** Indication courte affichée au candidat pendant la réponse */
   hint_text: string;
@@ -185,7 +185,7 @@ function SortableQuestion({
           {q.save_to_library && !q.from_library && (
             <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary">
               <BookmarkPlus className="h-3 w-3" />
-              <span className="hidden sm:inline">Bibliothèque</span>
+              <span className="hidden sm:inline">Ressources</span>
             </span>
           )}
         </button>
@@ -373,7 +373,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 25}>
-            <BookOpen className="mr-1 h-4 w-4" /> Bibliothèque
+            <BookOpen className="mr-1 h-4 w-4" /> Ressources
           </Button>
           <Button variant="outline" size="sm" onClick={openNew} disabled={questions.length >= 25}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter

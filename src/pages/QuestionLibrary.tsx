@@ -16,7 +16,7 @@ export default function QuestionLibrary() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold">Bibliothèque de questions</h1>
+      <h1 className="text-2xl font-bold">Ressources — questions</h1>
       <p className="text-muted-foreground">Gérez vos questions réutilisables pour vos projets de session.</p>
       {orgId ? (
         <QuestionLibraryManager orgId={orgId} />
