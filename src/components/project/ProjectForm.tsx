@@ -717,7 +717,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           {step === 0 && (
             <div className="space-y-4">
               <div>
-                <Label>Titre *</Label>
+                <Label>Titre de la session*</Label>
                 <Input
                   placeholder="CDI Développeur Full-Stack Paris"
                   value={title}
