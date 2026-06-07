@@ -114,7 +114,7 @@ export default function LibraryHome() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Ressources</h1>
         <p className="mt-2 text-muted-foreground">
-          Réutilisez vos modèles pour gagner du temps et garder une qualité constante d'un session à l'autre.
+          Réutilisez vos sessions pour gagner du temps et garder une qualité constante d'un projet à l'autre.
         </p>
       </div>
 
