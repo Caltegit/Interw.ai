@@ -510,9 +510,48 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   };
 
   const applyTemplate = (tpl: InterviewTemplatePayload) => {
+    const t = tpl as InterviewTemplatePayload & Record<string, unknown>;
     if (tpl.name) setTitle(tpl.name);
     if (tpl.default_language) setLanguage(tpl.default_language);
     if (tpl.default_duration_minutes) setMaxDuration(tpl.default_duration_minutes);
+    if (typeof t.ai_persona_name === "string") setAiPersonaName(t.ai_persona_name);
+    if (typeof t.ai_voice === "string") setAiVoice(t.ai_voice);
+    if (typeof t.avatar_image_url === "string") {
+      setAvatarPreview(t.avatar_image_url);
+      setPresetAvatarUrl(t.avatar_image_url);
+      setAvatarFile(null);
+    }
+    if (t.tts_provider === "browser" || t.tts_provider === "elevenlabs") setTtsProvider(t.tts_provider);
+    if (typeof t.tts_voice_id === "string") setTtsVoiceId(t.tts_voice_id);
+    if (t.tts_voice_gender === "female" || t.tts_voice_gender === "male") setTtsVoiceGender(t.tts_voice_gender);
+    if (typeof t.intro_enabled === "boolean") setIntroEnabled(t.intro_enabled);
+    if (t.intro_mode === "text" || t.intro_mode === "tts" || t.intro_mode === "audio" || t.intro_mode === "video") {
+      setIntroMode(t.intro_mode);
+    }
+    if (typeof t.intro_text === "string") setIntroText(t.intro_text);
+    if (typeof t.intro_audio_url === "string") setIntroAudioPreviewUrl(t.intro_audio_url);
+    if (typeof t.presentation_video_url === "string") setIntroVideoPreviewUrl(t.presentation_video_url);
+    if (typeof t.ai_intro_enabled === "boolean") setAiIntroEnabled(t.ai_intro_enabled);
+    if (t.ai_intro_mode === "auto" || t.ai_intro_mode === "custom") setAiIntroMode(t.ai_intro_mode);
+    if (typeof t.ai_intro_custom_text === "string") setAiIntroCustomText(t.ai_intro_custom_text);
+    if (typeof t.ai_question_transitions_enabled === "boolean") setAiQuestionTransitionsEnabled(t.ai_question_transitions_enabled);
+    if (t.ai_question_transitions_mode === "auto" || t.ai_question_transitions_mode === "custom") {
+      setAiQuestionTransitionsMode(t.ai_question_transitions_mode);
+    }
+    if (typeof t.ai_question_transitions_custom_text === "string") setAiQuestionTransitionsCustomText(t.ai_question_transitions_custom_text);
+    if (typeof t.allow_pause === "boolean") setAllowPause(t.allow_pause);
+    if (typeof t.allow_skip_question === "boolean") setAllowSkipQuestion(t.allow_skip_question);
+    if (typeof t.intro_first_screen === "boolean") setIntroFirstScreen(t.intro_first_screen);
+    if (typeof t.audio_analysis_enabled === "boolean") setAudioAnalysisEnabled(t.audio_analysis_enabled);
+    if (typeof t.show_question_timer === "boolean") setShowQuestionTimer(t.show_question_timer);
+    if (typeof t.completion_message === "string") setCompletionMessage(t.completion_message);
+    if (typeof t.pre_session_message === "string") setPreSessionMessage(t.pre_session_message);
+    if (t.candidate_fields && typeof t.candidate_fields === "object") {
+      setCandidateFields(t.candidate_fields as CandidateFieldsConfig);
+    }
+    if (typeof t.candidate_email_subject === "string") setCandidateEmailSubject(t.candidate_email_subject);
+    if (typeof t.candidate_email_body === "string") setCandidateEmailBody(t.candidate_email_body);
+
     if (tpl.questions.length) {
       setQuestions(
         tpl.questions.map((q) => ({
@@ -543,6 +582,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           applies_to: c.applies_to,
           anchors: c.anchors,
           from_library: true,
+
         })),
       );
     }
