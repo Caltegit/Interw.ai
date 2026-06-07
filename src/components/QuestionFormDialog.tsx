@@ -89,7 +89,7 @@ const FORMAT_OPTIONS: {
 }[] = [
   {
     value: "written",
-    label: "Texte",
+    label: "Lu par IA",
     hint: "Lu par l'IA",
     icon: Type,
     description: "La question sera lue à voix haute par l'IA du projet.",
