@@ -271,46 +271,9 @@ export function QuestionFormDialog({
                     }))
                   }
                 />
-                <Collapsible defaultOpen={!!form.content}>
-                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left hover:bg-muted/40">
-                    <span className="text-xs text-muted-foreground">
-                      Ajouter un texte de secours
-                      <span className="ml-1 text-[10px]">(optionnel)</span>
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <Textarea
-                      placeholder="Affiché si le média ne peut pas être lu"
-                      rows={2}
-                      maxLength={MAX_CONTENT}
-                      value={form.content}
-                      onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Catégorie</Label>
-              <Select
-                value={form.category || "_none"}
-                onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Aucune" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">Aucune</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </section>
 
           {/* Étape 3 — Pendant la réponse */}
