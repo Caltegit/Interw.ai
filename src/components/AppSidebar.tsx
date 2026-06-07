@@ -29,7 +29,7 @@ import { useState } from "react";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Sessions", url: "/projects", icon: FolderKanban },
+  { title: "Projets", url: "/projects", icon: FolderKanban },
 ];
 
 const librarySubItems = [
