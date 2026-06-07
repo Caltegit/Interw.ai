@@ -128,11 +128,75 @@ export interface ProjectFormState {
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
+  const t = tpl as InterviewTemplatePayload & Partial<{
+    ai_persona_name: string | null;
+    ai_voice: string | null;
+    avatar_image_url: string | null;
+    tts_provider: "browser" | "elevenlabs" | null;
+    tts_voice_id: string | null;
+    tts_voice_gender: VoiceGender | null;
+    intro_enabled: boolean | null;
+    intro_mode: "text" | "tts" | "audio" | "video" | null;
+    intro_text: string | null;
+    intro_audio_url: string | null;
+    presentation_video_url: string | null;
+    ai_intro_enabled: boolean | null;
+    ai_intro_mode: "auto" | "custom" | null;
+    ai_intro_custom_text: string | null;
+    ai_question_transitions_enabled: boolean | null;
+    ai_question_transitions_mode: "auto" | "custom" | null;
+    ai_question_transitions_custom_text: string | null;
+    record_audio: boolean | null;
+    record_video: boolean | null;
+    auto_skip_silence: boolean | null;
+    allow_pause: boolean | null;
+    allow_skip_question: boolean | null;
+    intro_first_screen: boolean | null;
+    audio_analysis_enabled: boolean | null;
+    show_question_timer: boolean | null;
+    completion_message: string | null;
+    pre_session_message: string | null;
+    candidate_fields: CandidateFieldsConfig | null;
+    candidate_email_subject: string | null;
+    candidate_email_body: string | null;
+  }>;
+
   return {
     ...state,
     title: tpl.name || state.title,
     language: tpl.default_language || state.language,
     maxDuration: tpl.default_duration_minutes || state.maxDuration,
+    aiPersonaName: t.ai_persona_name ?? state.aiPersonaName,
+    aiVoice: t.ai_voice ?? state.aiVoice,
+    avatarPreview: t.avatar_image_url ?? state.avatarPreview,
+    presetAvatarUrl: t.avatar_image_url ?? state.presetAvatarUrl,
+    ttsProvider: t.tts_provider ?? state.ttsProvider,
+    ttsVoiceId: t.tts_voice_id ?? state.ttsVoiceId,
+    ttsVoiceGender: t.tts_voice_gender ?? state.ttsVoiceGender,
+    introEnabled: t.intro_enabled ?? state.introEnabled,
+    introMode: t.intro_mode ?? state.introMode,
+    introText: t.intro_text ?? state.introText,
+    introAudioPreviewUrl: t.intro_audio_url ?? state.introAudioPreviewUrl,
+    introVideoPreviewUrl: t.presentation_video_url ?? state.introVideoPreviewUrl,
+    aiIntroEnabled: t.ai_intro_enabled ?? state.aiIntroEnabled,
+    aiIntroMode: t.ai_intro_mode ?? state.aiIntroMode,
+    aiIntroCustomText: t.ai_intro_custom_text ?? state.aiIntroCustomText,
+    aiQuestionTransitionsEnabled: t.ai_question_transitions_enabled ?? state.aiQuestionTransitionsEnabled,
+    aiQuestionTransitionsMode: t.ai_question_transitions_mode ?? state.aiQuestionTransitionsMode,
+    aiQuestionTransitionsCustomText: t.ai_question_transitions_custom_text ?? state.aiQuestionTransitionsCustomText,
+    recordAudio: t.record_audio ?? state.recordAudio,
+    recordVideo: t.record_video ?? state.recordVideo,
+    autoSkipSilence: t.auto_skip_silence ?? state.autoSkipSilence,
+    allowPause: t.allow_pause ?? state.allowPause,
+    allowSkipQuestion: t.allow_skip_question ?? state.allowSkipQuestion,
+    introFirstScreen: t.intro_first_screen ?? state.introFirstScreen,
+    audioAnalysisEnabled: t.audio_analysis_enabled ?? state.audioAnalysisEnabled,
+    showQuestionTimer: t.show_question_timer ?? state.showQuestionTimer,
+    completionMessage: t.completion_message ?? state.completionMessage,
+    preSessionMessage: t.pre_session_message ?? state.preSessionMessage,
+    candidateFields: t.candidate_fields ?? state.candidateFields,
+    candidateEmailSubject: t.candidate_email_subject ?? state.candidateEmailSubject,
+    candidateEmailBody: t.candidate_email_body ?? state.candidateEmailBody,
     questions: tpl.questions.length
       ? tpl.questions.map((q) => ({
           ...createEmptyQuestion(),
@@ -163,6 +227,7 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
       : state.criteria,
   };
 }
+
 
 export interface ProjectFormProps {
   mode: "create" | "edit" | "template";
