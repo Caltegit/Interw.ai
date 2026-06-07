@@ -36,6 +36,7 @@ interface InterviewTemplate {
 export default function InterviewTemplates() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isSuperAdmin } = useSuperAdmin();
   const navigate = useNavigate();
   const [orgId, setOrgId] = useState<string | null>(null);
   const [templates, setTemplates] = useState<InterviewTemplate[]>([]);
