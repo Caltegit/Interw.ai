@@ -724,17 +724,24 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
-              <div>
-                <Label>Votre nom de recruteur</Label>
-                <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
-              </div>
-
-              <div className="rounded-lg border border-border bg-card p-5 space-y-5">
+              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">La voix de votre recruteur</h4>
+                  <h4 className="text-sm font-semibold">Votre recruteur IA</h4>
                   <p className="text-xs text-muted-foreground">
-                    Choisissez le genre et la voix utilisés pendant l'entretien.
+                    Nom affiché, genre et voix utilisés pendant l'entretien.
                   </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`recruiter-name-${idSuffix}`} className="text-xs text-muted-foreground">
+                    Nom du recruteur
+                  </Label>
+                  <Input
+                    id={`recruiter-name-${idSuffix}`}
+                    placeholder="Léa"
+                    value={aiPersonaName}
+                    onChange={(e) => setAiPersonaName(e.target.value)}
+                  />
                 </div>
 
                 <RadioGroup
@@ -745,7 +752,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     setTtsVoiceGender(g);
                     setTtsVoiceId(getDefaultVoiceForGender(g));
                   }}
-                  className="grid grid-cols-2 gap-3"
+                  className="grid grid-cols-2 gap-2"
                 >
                   {([
                     { value: "female" as VoiceGender, label: "Femme", Icon: UserRound },
@@ -757,25 +764,25 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     return (
                       <div
                         key={value}
-                        className={`relative rounded-lg border p-3 transition-colors ${
+                        className={`relative rounded-lg border px-3 py-2 transition-colors ${
                           selected ? "border-primary bg-primary/10" : "border-border hover:bg-accent/50"
                         }`}
                       >
-                        <Label htmlFor={inputId} className="flex items-center gap-3 cursor-pointer font-normal">
+                        <Label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer font-normal">
                           <RadioGroupItem value={value} id={inputId} />
-                          <Icon className={`h-5 w-5 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                          <span className="font-medium">{label}</span>
+                          <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className="text-sm font-medium">{label}</span>
                         </Label>
                         <button
                           type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); playVoicePreview(defaultId); }}
-                          className="absolute top-2 right-2 inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-primary hover:bg-background"
+                          className="absolute top-1.5 right-1.5 inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-background"
                           aria-label={`Écouter la voix ${label}`}
                         >
                           {previewingVoiceId === defaultId ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
-                            <Volume2 className="h-4 w-4" />
+                            <Volume2 className="h-3.5 w-3.5" />
                           )}
                         </button>
                       </div>
@@ -783,29 +790,27 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   })}
                 </RadioGroup>
 
-                <Separator />
-
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 text-sm min-w-0">
-                    <span className="text-muted-foreground">Voix sélectionnée :</span>
+                <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-border">
+                  <div className="flex items-center gap-2 text-sm min-w-0 pt-3">
+                    <span className="text-muted-foreground">Voix :</span>
                     <span className="font-medium truncate">{getVoiceName(ttsVoiceId)}</span>
                     <button
                       type="button"
                       onClick={() => playVoicePreview(ttsVoiceId)}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-primary hover:bg-accent shrink-0"
+                      className="inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-accent shrink-0"
                       aria-label="Écouter la voix sélectionnée"
                     >
                       {previewingVoiceId === ttsVoiceId ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <Volume2 className="h-4 w-4" />
+                        <Volume2 className="h-3.5 w-3.5" />
                       )}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-2 ml-auto pt-3">
                     <Button type="button" variant="outline" size="sm" onClick={() => setVoiceDialogOpen(true)}>
                       <Settings2 className="h-4 w-4" />
-                      Modifier la voix
+                      Modifier
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={handleCloneClick}>
                       <Mic className="h-4 w-4" />
@@ -814,6 +819,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                 </div>
               </div>
+
 
 
               <VoiceSelectorDialog
