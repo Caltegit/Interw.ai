@@ -1001,24 +1001,29 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       </div>
                     </section>
 
-                    <Separator />
+                    {!isTemplate && (
+                      <>
+                        <Separator />
 
-                    {/* ────────── Diffusion ────────── */}
-                    <section className="space-y-3">
-                      <h4 className="text-sm font-semibold">Diffusion</h4>
-                      <div>
-                        <Label>Statut</Label>
-                        <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Actif</SelectItem>
-                            {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </section>
+                        {/* ────────── Diffusion ────────── */}
+                        <section className="space-y-3">
+                          <h4 className="text-sm font-semibold">Diffusion</h4>
+                          <div>
+                            <Label>Statut</Label>
+                            <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Actif</SelectItem>
+                                {mode === "edit" && <SelectItem value="archived">Archivé</SelectItem>}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </section>
+                      </>
+                    )}
+
 
 
 
