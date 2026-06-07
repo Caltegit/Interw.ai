@@ -642,6 +642,7 @@ export type Database = {
           candidate_email_subject: string | null
           candidate_fields: Json
           category: string | null
+          clone_to_new_orgs: boolean
           completion_message: string | null
           created_at: string
           created_by: string
@@ -684,6 +685,7 @@ export type Database = {
           candidate_email_subject?: string | null
           candidate_fields?: Json
           category?: string | null
+          clone_to_new_orgs?: boolean
           completion_message?: string | null
           created_at?: string
           created_by: string
@@ -726,6 +728,7 @@ export type Database = {
           candidate_email_subject?: string | null
           candidate_fields?: Json
           category?: string | null
+          clone_to_new_orgs?: boolean
           completion_message?: string | null
           created_at?: string
           created_by?: string
@@ -2045,6 +2048,10 @@ export type Database = {
         Returns: undefined
       }
       seed_demo_project: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: undefined
+      }
+      seed_starred_templates_into_org: {
         Args: { _created_by: string; _org_id: string }
         Returns: undefined
       }
