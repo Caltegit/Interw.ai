@@ -1,29 +1,27 @@
-# Plan — Remplacer "interw.ai" par "interw" dans le texte visible des emails
+## Refonte de la carte « La voix de votre recruteur »
 
-## Diagnostic
-Le nom visible du produit dans les emails vient de `SITE_NAME = "interw.ai"` dans `supabase/functions/auth-email-hook/index.ts`. Cette variable est injectée comme `siteName` dans tous les templates auth (signup, magic-link, recovery, **invite**, email-change, reauthentication). C'est pourquoi l'email d'invitation affiche "Vous êtes invité(e) sur interw.ai".
+**Fichier :** `src/components/project/ProjectForm.tsx` (lignes ~732-814)
 
-Deux autres fichiers contiennent encore "Interw.ai" en dur dans du texte visible, et un template app email aussi.
+### Problèmes actuels
+1. Un `{"\n"}` dans un `<p>` laisse un espace vide bizarre sous le titre.
+2. Une fine ligne bleue (le `border-t` du `RadioGroup` mal placé visuellement) apparaît juste sous le titre.
+3. Le titre « La voix de votre recruteur » est traité comme un simple `<Label>`, pas comme un titre de section.
+4. La ligne « Voix sélectionnée : Léa » + boutons « Modifier la voix » / « Cloner ma voix » est tassée et la séparation visuelle est peu lisible.
 
-## Changements (texte visible uniquement — domaines techniques `interw.ai` conservés)
+### Modifications proposées
 
-1. `supabase/functions/auth-email-hook/index.ts`
-   - `SITE_NAME = "interw.ai"` → `"interw"`
-   - Conserver `REPLY_TO_EMAIL`, `SENDER_DOMAIN`, `ROOT_DOMAIN`, `FROM_DOMAIN` inchangés (techniques).
+1. **En-tête de la carte** : remplacer le `<Label>` + `<p>` vide par un vrai titre `h4` (text-sm font-semibold) + un sous-titre discret « Choisissez le genre et la voix utilisés pendant l'entretien. » (utile et cohérent avec les autres sections avancées du formulaire).
 
-2. `supabase/functions/_shared/email-templates/signup.tsx`
-   - `<Preview>Encore une étape pour activer votre compte Interw.ai</Preview>` → `... compte interw`
+2. **Supprimer le `{"\n"}`** et le `<p>` vide.
 
-3. `supabase/functions/_shared/email-templates/reauthentication.tsx`
-   - `L'équipe Interw.ai` → `L'équipe interw`
+3. **Séparateur** : retirer le `border-t` qui crée la ligne sous le titre, et garder un seul `Separator` propre entre la zone radio (Femme/Homme) et la zone « Voix sélectionnée + actions ».
 
-4. `supabase/functions/_shared/transactional-email-templates/demo-request.tsx`
-   - `<Preview>Nouvelle demande de démo Interw.ai</Preview>` → `... démo interw`
-   - Le champ `to: 'hello@interw.ai'` (adresse) reste inchangé.
+4. **Bloc bas (voix sélectionnée + actions)** :
+   - Mettre « Voix sélectionnée : **Léa** » sur sa propre ligne avec un label discret.
+   - Aligner les deux boutons « Modifier la voix » et « Cloner ma voix » à droite, avec un espacement régulier (`gap-2`), responsive (wrap sur mobile).
 
-## Hors-scope
-- Tous les `https://interw.ai/...` et `mailto:...@interw.ai` restent (domaine technique).
-- Aucune modif des templates où "interw.ai" apparaît uniquement comme URL ou email d'expéditeur/contact.
+5. **Padding** : passer le padding de la carte de `p-4` à `p-5` et l'espacement vertical interne à `space-y-5` pour aérer.
 
-## Déploiement
-Redéployer les fonctions impactées : `auth-email-hook` et `send-transactional-email`.
+### Hors scope
+- Aucun changement de logique, d'état, ou de comportement des boutons / preview audio.
+- Aucun changement aux autres sections du formulaire.
