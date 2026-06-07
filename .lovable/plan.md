@@ -1,17 +1,17 @@
-## Changement
+## Bug
 
-Dans `src/components/session/CommunicationProfileCard.tsx` (ligne 86), remplacer l'affichage `{dim.score}/10` par `{dim.score * 10}%` pour aligner avec le reste du rapport (Big Five, Motivation, etc. qui affichent /100 ou %).
+Dans `src/components/session/SessionVideoNavigator.tsx`, un filet de sécurité de 4 s rappelle `safePlay()` si `shouldAutoPlay` est encore vrai, même si l'utilisateur a mis la vidéo en pause entre temps. `shouldAutoPlay` n'est jamais remis à `false` sur action utilisateur, donc une pause précoce est écrasée. Même problème dans `fixDuration` (WebM `duration = Infinity`).
 
-La barre de progression ne change pas (déjà calculée en pourcentage).
+## Correctif
 
-## Détails techniques
+Modifier uniquement `src/components/session/SessionVideoNavigator.tsx` :
 
-```tsx
-// Avant
-<span className="font-medium tabular-nums">{dim!.score}/10</span>
+1. Ajouter un ref `userPausedRef` :
+   - mis à `true` dans le handler `onPause` (effet existant ~ligne 288),
+   - remis à `false` dans `onPlay`, au début de l'effet de chargement (changement d'`index`/clip) et dans `togglePlayPause`/`playMessage` quand l'app déclenche elle-même la lecture.
 
-// Après
-<span className="font-medium tabular-nums">{dim!.score * 10}%</span>
-```
+2. Dans `apply()` (effet de chargement), appeler `window.clearTimeout(safety)` dès que `loadedmetadata` est traité.
 
-Aucun autre fichier à modifier. Pas d'impact backend.
+3. Conditionner les `safePlay()` automatiques (filet de sécurité ligne ~258 et `fixDuration` ligne ~192) à `!userPausedRef.current`.
+
+Aucun autre fichier modifié, aucun impact backend.

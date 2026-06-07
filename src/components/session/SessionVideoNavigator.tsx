@@ -63,6 +63,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const pendingSeekRef = useRef<number>(0);
   // Empêche les doubles attaches de timeupdate (inline onLoadedMetadata + effet).
   const fixingDurationRef = useRef(false);
+  // Vrai dès que l'utilisateur a explicitement mis en pause (clic Play/Pause natif
+  // ou notre overlay). Empêche les `safePlay()` automatiques (filet de sécurité,
+  // fixDuration) de redémarrer la vidéo derrière son dos. Reset à chaque changement
+  // de clip ou quand l'app déclenche elle-même la lecture.
+  const userPausedRef = useRef(false);
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
@@ -189,7 +194,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         }
         pendingSeekRef.current = 0;
         if (Number.isFinite(real)) setDurationSec(real);
-        if (shouldAutoPlay) safePlay();
+        if (shouldAutoPlay && !userPausedRef.current) safePlay();
       };
       v.addEventListener("timeupdate", onTime);
       try {
@@ -213,6 +218,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
+    userPausedRef.current = false;
     setMediaError(null);
 
     // (Re)charge la source seulement si elle a changé pour éviter de couper
@@ -235,15 +241,20 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
 
     let cancelled = false;
+    let safety: number | null = null;
     const apply = () => {
       if (cancelled) return;
+      if (safety !== null) {
+        window.clearTimeout(safety);
+        safety = null;
+      }
       try { v.playbackRate = rateRef.current; } catch { /* noop */ }
       if (v.duration === Infinity) {
         fixDuration();
       } else {
         applyPendingSeek(v, Number.isFinite(v.duration) ? v.duration : 0);
         if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-        if (shouldAutoPlay) safePlay();
+        if (shouldAutoPlay && !userPausedRef.current) safePlay();
       }
     };
 
@@ -255,16 +266,16 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     v.addEventListener("loadedmetadata", apply, { once: true });
     // Filet de sécurité : si loadedmetadata n'arrive jamais, on tente
     // quand même un play après 4s — l'erreur média s'affichera via onError.
-    const safety = window.setTimeout(() => {
+    safety = window.setTimeout(() => {
       if (cancelled) return;
-      if (shouldAutoPlay && v.paused) {
+      if (shouldAutoPlay && v.paused && !userPausedRef.current) {
         console.warn("[SessionVideoNavigator] loadedmetadata timeout, tentative play", { index, targetUrl });
         safePlay();
       }
     }, 4000);
     return () => {
       cancelled = true;
-      window.clearTimeout(safety);
+      if (safety !== null) window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
   }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
@@ -281,6 +292,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     const onPlay = () => {
       setIsPlaying(true);
+      userPausedRef.current = false;
       // En lecture : masquer l'overlay après un court délai.
       if (hideOverlayTimerRef.current) window.clearTimeout(hideOverlayTimerRef.current);
       hideOverlayTimerRef.current = window.setTimeout(() => setOverlayVisible(false), 1200);
@@ -288,6 +300,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const onPause = () => {
       setIsPlaying(false);
       setOverlayVisible(true);
+      // Pause venant de l'élément vidéo (clic utilisateur sur les contrôles natifs
+      // ou notre overlay). On marque l'intention pour bloquer les `safePlay()`
+      // automatiques. Si l'app reprend la lecture (toggle/playMessage), `onPlay`
+      // remettra ce drapeau à `false`.
+      if (!v.ended) userPausedRef.current = true;
       if (hideOverlayTimerRef.current) {
         window.clearTimeout(hideOverlayTimerRef.current);
         hideOverlayTimerRef.current = null;
