@@ -415,14 +415,12 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   const [completionMessage, setCompletionMessage] = useState(initial.completionMessage);
   const [preSessionMessage, setPreSessionMessage] = useState(initial.preSessionMessage);
   const [aiIntroEnabled, setAiIntroEnabled] = useState(initial.aiIntroEnabled);
-  const [aiIntroMode, setAiIntroMode] = useState<"auto" | "custom">(initial.aiIntroMode);
+  const [aiIntroMode, setAiIntroMode] = useState<"auto" | "custom">("custom");
   const [aiIntroCustomText, setAiIntroCustomText] = useState(initial.aiIntroCustomText);
   const [aiQuestionTransitionsEnabled, setAiQuestionTransitionsEnabled] = useState(
     initial.aiQuestionTransitionsEnabled,
   );
-  const [aiQuestionTransitionsMode, setAiQuestionTransitionsMode] = useState<"auto" | "custom">(
-    initial.aiQuestionTransitionsMode,
-  );
+  const [aiQuestionTransitionsMode, setAiQuestionTransitionsMode] = useState<"auto" | "custom">("custom");
   const [aiQuestionTransitionsCustomText, setAiQuestionTransitionsCustomText] = useState(
     initial.aiQuestionTransitionsCustomText,
   );
