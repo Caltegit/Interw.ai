@@ -66,6 +66,47 @@ export default function SuperAdminOrgDetail() {
   const [editingUser, setEditingUser] = useState<Member | null>(null);
   const [deletingUser, setDeletingUser] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [roleTarget, setRoleTarget] = useState<{ member: Member; action: "promote_admin" | "demote_admin" | "transfer_owner" } | null>(null);
+  const [roleBusy, setRoleBusy] = useState(false);
+
+  const handleRoleAction = async () => {
+    if (!roleTarget || !org) return;
+    setRoleBusy(true);
+    try {
+      const { member, action } = roleTarget;
+      if (action === "promote_admin") {
+        const { error } = await supabase.from("user_roles").insert({
+          user_id: member.user_id,
+          organization_id: org.id,
+          role: "admin",
+        });
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} est maintenant admin.` });
+      } else if (action === "demote_admin") {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", member.user_id)
+          .eq("organization_id", org.id)
+          .eq("role", "admin");
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} n'est plus admin.` });
+      } else if (action === "transfer_owner") {
+        const { error } = await supabase
+          .from("organizations")
+          .update({ owner_id: member.user_id })
+          .eq("id", org.id);
+        if (error) throw error;
+        toast({ title: `Propriété transférée à ${member.full_name || member.email}.` });
+      }
+      setRoleTarget(null);
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Action impossible", variant: "destructive" });
+    } finally {
+      setRoleBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!orgId) return;
@@ -190,10 +231,41 @@ export default function SuperAdminOrgDetail() {
                 <p className="text-xs text-muted-foreground">{m.email}</p>
               </div>
               <div className="flex items-center gap-2">
-                {m.isOwner && <Badge variant="default" className="gap-1"><Crown className="h-3 w-3" /> Propriétaire</Badge>}
-                {m.role === "admin" && !m.isOwner && <Badge variant="default" className="gap-1"><ShieldCheck className="h-3 w-3" /> Admin</Badge>}
-                {m.role === "member" && <Badge variant="secondary">Membre</Badge>}
-                {!m.role && <Badge variant="outline">Membre</Badge>}
+                {m.isOwner ? (
+                  <Badge variant="default" className="gap-1"><Crown className="h-3 w-3" /> Propriétaire</Badge>
+                ) : m.role === "admin" ? (
+                  <button
+                    type="button"
+                    onClick={() => setRoleTarget({ member: m, action: "demote_admin" })}
+                    title="Cliquer pour rétrograder en membre"
+                    className="focus:outline-none focus:ring-2 focus:ring-ring rounded-full"
+                  >
+                    <Badge variant="default" className="gap-1 cursor-pointer hover:opacity-80">
+                      <ShieldCheck className="h-3 w-3" /> Admin
+                    </Badge>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRoleTarget({ member: m, action: "promote_admin" })}
+                    title="Cliquer pour promouvoir admin"
+                    className="focus:outline-none focus:ring-2 focus:ring-ring rounded-full"
+                  >
+                    <Badge variant="secondary" className="cursor-pointer hover:opacity-80">Membre</Badge>
+                  </button>
+                )}
+
+                {!m.isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRoleTarget({ member: m, action: "transfer_owner" })}
+                    title="Transférer la propriété à ce membre"
+                  >
+                    <Crown className="h-4 w-4" />
+                  </Button>
+                )}
+
                 <AlertDialog>
                   <AlertDialogTrigger
                     asChild
@@ -337,6 +409,38 @@ export default function SuperAdminOrgDetail() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!roleTarget} onOpenChange={(o) => !o && !roleBusy && setRoleTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {roleTarget?.action === "promote_admin" && "Promouvoir admin ?"}
+              {roleTarget?.action === "demote_admin" && "Retirer le rôle admin ?"}
+              {roleTarget?.action === "transfer_owner" && "Transférer la propriété ?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {roleTarget?.action === "promote_admin" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} pourra gérer les membres et les paramètres de l'organisation.`}
+              {roleTarget?.action === "demote_admin" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} redeviendra un membre standard.`}
+              {roleTarget?.action === "transfer_owner" &&
+                `${roleTarget.member.full_name || roleTarget.member.email} deviendra propriétaire de l'organisation. L'actuel propriétaire restera dans l'org en tant que membre. Cette action est irréversible côté UI.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={roleBusy}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRoleAction();
+              }}
+              disabled={roleBusy}
+            >
+              Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

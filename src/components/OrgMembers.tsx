@@ -38,6 +38,8 @@ export function OrgMembers({ orgId }: { orgId: string }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const isAccountOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
     loadData();
@@ -58,6 +60,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     ]);
 
     const owner = (orgRes.data as { owner_id?: string | null } | null)?.owner_id ?? null;
+    setOwnerId(owner);
     const adminIds = new Set(
       ((rolesRes.data as { user_id: string; role: string }[] | null) || [])
         .filter((r) => r.role === "admin")
@@ -225,7 +228,13 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         {!isOwner && (
           <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
             <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Seuls les admins peuvent inviter, promouvoir ou retirer des membres.</span>
+            <span>Seuls les admins peuvent inviter ou retirer des membres.</span>
+          </div>
+        )}
+        {isOwner && !isAccountOwner && (
+          <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
+            <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>Seul le propriétaire du compte peut promouvoir ou rétrograder un admin. Le transfert de propriété est réservé au support Interw.</span>
           </div>
         )}
 
@@ -273,15 +282,17 @@ export function OrgMembers({ orgId }: { orgId: string }) {
 
                 {isOwner && !m.isOwner && m.user_id !== user?.id && (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleToggleAdmin(m)}
-                      className="h-8 w-8"
-                      title={m.isAdmin ? "Retirer le rôle admin" : "Promouvoir admin"}
-                    >
-                      {m.isAdmin ? <ShieldMinus className="h-4 w-4" /> : <ShieldPlus className="h-4 w-4" />}
-                    </Button>
+                    {isAccountOwner && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleToggleAdmin(m)}
+                        className="h-8 w-8"
+                        title={m.isAdmin ? "Retirer le rôle admin" : "Promouvoir admin"}
+                      >
+                        {m.isAdmin ? <ShieldMinus className="h-4 w-4" /> : <ShieldPlus className="h-4 w-4" />}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
