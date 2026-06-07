@@ -159,7 +159,7 @@ export default function InterviewTemplates() {
         }) as never,
       );
     }
-    toast({ title: "Modèle dupliqué" });
+    toast({ title: "Session dupliquée" });
     load();
   };
 
