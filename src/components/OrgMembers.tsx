@@ -148,6 +148,38 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     }
   };
 
+  const handleToggleAdmin = async (member: Member) => {
+    if (member.isOwner) return;
+    if (member.user_id === user?.id) {
+      toast({ title: "Vous ne pouvez pas modifier votre propre rôle.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (member.isAdmin) {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", member.user_id)
+          .eq("organization_id", orgId)
+          .eq("role", "admin");
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} n'est plus admin.` });
+      } else {
+        const { error } = await supabase.from("user_roles").insert({
+          user_id: member.user_id,
+          organization_id: orgId,
+          role: "admin",
+        });
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} est maintenant admin.` });
+      }
+      loadData();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erreur";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    }
+  };
+
   const handleCancelInvitation = async (inv: Invitation) => {
     try {
       const { error } = await supabase.from("organization_invitations").delete().eq("id", inv.id);
@@ -165,6 +197,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
     navigator.clipboard.writeText(link);
     toast({ title: "Lien copié." });
   };
+
 
   const pendingInvitations = invitations.filter((i) => i.status === "pending");
 
