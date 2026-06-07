@@ -199,7 +199,7 @@ export default function InterviewTemplateEdit() {
         </Button>
       </div>
 
-      <h1 className="text-2xl font-bold">Édition du modèle</h1>
+      <h1 className="text-2xl font-bold">Édition de la session</h1>
 
       <Tabs defaultValue="info">
         <TabsList>
