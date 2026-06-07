@@ -726,7 +726,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               </div>
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
                 <div>
-                  <h4 className="text-sm font-semibold">Votre recruteur</h4>
+                  <h4 className="text-sm font-semibold">Qui recrute ?</h4>
                 </div>
 
                 <div className="flex items-end gap-3">
