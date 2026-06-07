@@ -63,6 +63,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const pendingSeekRef = useRef<number>(0);
   // Empêche les doubles attaches de timeupdate (inline onLoadedMetadata + effet).
   const fixingDurationRef = useRef(false);
+  // Vrai dès que l'utilisateur a explicitement mis en pause (clic Play/Pause natif
+  // ou notre overlay). Empêche les `safePlay()` automatiques (filet de sécurité,
+  // fixDuration) de redémarrer la vidéo derrière son dos. Reset à chaque changement
+  // de clip ou quand l'app déclenche elle-même la lecture.
+  const userPausedRef = useRef(false);
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
