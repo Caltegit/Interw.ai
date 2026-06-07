@@ -83,7 +83,7 @@ export function CommunicationProfileCard({ profile, onGoToMessage, questionNumbe
                   <div key={key}>
                     <div className="flex items-center justify-between text-sm">
                       <span>{label}</span>
-                      <span className="font-medium tabular-nums">{dim!.score}/10</span>
+                      <span className="font-medium tabular-nums">{dim!.score * 10}%</span>
                     </div>
                     <div className="mt-1 h-1.5 rounded-full bg-muted">
                       <div
