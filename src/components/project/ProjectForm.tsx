@@ -530,12 +530,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     if (typeof t.intro_audio_url === "string") setIntroAudioPreviewUrl(t.intro_audio_url);
     if (typeof t.presentation_video_url === "string") setIntroVideoPreviewUrl(t.presentation_video_url);
     if (typeof t.ai_intro_enabled === "boolean") setAiIntroEnabled(t.ai_intro_enabled);
-    if (t.ai_intro_mode === "auto" || t.ai_intro_mode === "custom") setAiIntroMode(t.ai_intro_mode);
+    setAiIntroMode("custom");
     if (typeof t.ai_intro_custom_text === "string") setAiIntroCustomText(t.ai_intro_custom_text);
     if (typeof t.ai_question_transitions_enabled === "boolean") setAiQuestionTransitionsEnabled(t.ai_question_transitions_enabled);
-    if (t.ai_question_transitions_mode === "auto" || t.ai_question_transitions_mode === "custom") {
-      setAiQuestionTransitionsMode(t.ai_question_transitions_mode);
-    }
+    setAiQuestionTransitionsMode("custom");
     if (typeof t.ai_question_transitions_custom_text === "string") setAiQuestionTransitionsCustomText(t.ai_question_transitions_custom_text);
     if (typeof t.allow_pause === "boolean") setAllowPause(t.allow_pause);
     if (typeof t.allow_skip_question === "boolean") setAllowSkipQuestion(t.allow_skip_question);
