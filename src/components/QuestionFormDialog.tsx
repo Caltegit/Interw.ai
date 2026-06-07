@@ -284,7 +284,6 @@ export function QuestionFormDialog({
 
             <div className="space-y-1.5">
               <Label htmlFor="qfd-hint" className="text-xs flex items-center gap-1.5 my-[10px]">
-                <Lightbulb className="h-3.5 w-3.5 text-primary" />
                 {"\n"}
               </Label>
               <Textarea
