@@ -1039,30 +1039,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                           <Switch checked={aiIntroEnabled} onCheckedChange={setAiIntroEnabled} />
                         </div>
                         {aiIntroEnabled && (
-                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                            <RadioGroup
-                              value={aiIntroMode}
-                              onValueChange={(v) => setAiIntroMode(v as "auto" | "custom")}
-                              className="gap-1.5"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="auto" id={`ai-intro-auto-${idSuffix}`} />
-                                <Label htmlFor={`ai-intro-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Laisser l'IA s'adapter au contexte des réponses
-                                </Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="custom" id={`ai-intro-custom-${idSuffix}`} />
-                                <Label htmlFor={`ai-intro-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Utiliser un texte fixe
-                                </Label>
-                              </div>
-                            </RadioGroup>
-                            {aiIntroMode === "custom" && (
-                              <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
-                                Modifier le texte
-                              </Button>
-                            )}
+                          <div className="ml-1 border-l-2 border-border pl-3">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setIntroCustomizerOpen(true)}>
+                              Modifier le texte
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -1077,30 +1057,10 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                           <Switch checked={aiQuestionTransitionsEnabled} onCheckedChange={setAiQuestionTransitionsEnabled} />
                         </div>
                         {aiQuestionTransitionsEnabled && (
-                          <div className="ml-1 space-y-2 border-l-2 border-border pl-3">
-                            <RadioGroup
-                              value={aiQuestionTransitionsMode}
-                              onValueChange={(v) => setAiQuestionTransitionsMode(v as "auto" | "custom")}
-                              className="gap-1.5"
-                            >
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="auto" id={`ai-trans-auto-${idSuffix}`} />
-                                <Label htmlFor={`ai-trans-auto-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Laisser l'IA s'adapter au contexte des réponses
-                                </Label>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <RadioGroupItem value="custom" id={`ai-trans-custom-${idSuffix}`} />
-                                <Label htmlFor={`ai-trans-custom-${idSuffix}`} className="cursor-pointer font-normal text-sm">
-                                  Utiliser un texte fixe
-                                </Label>
-                              </div>
-                            </RadioGroup>
-                            {aiQuestionTransitionsMode === "custom" && (
-                              <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
-                                Modifier le texte
-                              </Button>
-                            )}
+                          <div className="ml-1 border-l-2 border-border pl-3">
+                            <Button type="button" variant="outline" size="sm" onClick={() => setTransitionsCustomizerOpen(true)}>
+                              Modifier le texte
+                            </Button>
                           </div>
                         )}
                       </div>
