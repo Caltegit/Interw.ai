@@ -33,7 +33,7 @@ const navItems = [
 ];
 
 const librarySubItems = [
-  { title: "Modèles", url: "/library/sessions", icon: ClipboardList },
+  { title: "Sessions", url: "/library/sessions", icon: ClipboardList },
   { title: "Questions", url: "/library/questions", icon: MessageSquare },
   { title: "Critères", url: "/library/criteria", icon: ListChecks },
   { title: "Intros", url: "/library/intros", icon: Mic },
