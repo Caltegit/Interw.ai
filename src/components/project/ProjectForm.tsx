@@ -729,11 +729,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 <Input placeholder="Léa" value={aiPersonaName} onChange={(e) => setAiPersonaName(e.target.value)} />
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+              <div className="rounded-lg border border-border bg-card p-5 space-y-5">
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium">La voix de votre recruteur</Label>
+                  <h4 className="text-sm font-semibold">La voix de votre recruteur</h4>
                   <p className="text-xs text-muted-foreground">
-                    {"\n"}
+                    Choisissez le genre et la voix utilisés pendant l'entretien.
                   </p>
                 </div>
 
@@ -783,14 +783,16 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   })}
                 </RadioGroup>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 text-sm">
+                <Separator />
+
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm min-w-0">
                     <span className="text-muted-foreground">Voix sélectionnée :</span>
-                    <span className="font-medium">{getVoiceName(ttsVoiceId)}</span>
+                    <span className="font-medium truncate">{getVoiceName(ttsVoiceId)}</span>
                     <button
                       type="button"
                       onClick={() => playVoicePreview(ttsVoiceId)}
-                      className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-primary hover:bg-accent"
+                      className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-primary hover:bg-accent shrink-0"
                       aria-label="Écouter la voix sélectionnée"
                     >
                       {previewingVoiceId === ttsVoiceId ? (
@@ -800,7 +802,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       )}
                     </button>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-auto">
                     <Button type="button" variant="outline" size="sm" onClick={() => setVoiceDialogOpen(true)}>
                       <Settings2 className="h-4 w-4" />
                       Modifier la voix
@@ -812,6 +814,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   </div>
                 </div>
               </div>
+
 
               <VoiceSelectorDialog
                 open={voiceDialogOpen}
