@@ -147,7 +147,7 @@ export default function ProjectNew() {
         if (cancelled) return;
         if (!payload) {
           toast({
-            title: "Modèle introuvable",
+            title: "Session type introuvable",
             description: "Le formulaire est vide.",
             variant: "destructive",
           });
