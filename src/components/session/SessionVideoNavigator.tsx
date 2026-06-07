@@ -218,6 +218,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!targetUrl) return;
     setDurationSec(null);
     fixingDurationRef.current = false;
+    userPausedRef.current = false;
     setMediaError(null);
 
     // (Re)charge la source seulement si elle a changé pour éviter de couper
