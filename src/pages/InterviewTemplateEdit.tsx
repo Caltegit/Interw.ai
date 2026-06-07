@@ -169,7 +169,7 @@ export default function InterviewTemplateEdit() {
         );
       }
 
-      toast({ title: "Modèle enregistré" });
+      toast({ title: "Session enregistrée" });
       navigate("/library/sessions");
     } catch (e: unknown) {
       toast({ title: "Erreur", description: (e as Error).message, variant: "destructive" });
