@@ -181,7 +181,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={criteria.length >= 10}>
-            <BookOpen className="mr-1 h-4 w-4" /> Bibliothèque
+            <BookOpen className="mr-1 h-4 w-4" /> Ressources
           </Button>
           <Button variant="outline" size="sm" onClick={openNew} disabled={criteria.length >= 10}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter
@@ -221,7 +221,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   {c.save_to_library && !c.from_library && (
                     <span className="inline-flex items-center gap-1 text-[11px] text-primary mt-0.5">
                       <BookmarkPlus className="h-3 w-3" />
-                      Bibliothèque
+                      Ressources
                     </span>
                   )}
                 </button>

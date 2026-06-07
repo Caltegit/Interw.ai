@@ -334,7 +334,7 @@ function QuestionsActions({
                 }
               }}
             >
-              <Library className="h-3 w-3" /> Bibliothèque
+              <Library className="h-3 w-3" /> Ressources
             </Button>
           </div>
         </div>
@@ -406,7 +406,7 @@ function CriteriaActions({
                 }
               }}
             >
-              <Library className="h-3 w-3" /> Bibliothèque
+              <Library className="h-3 w-3" /> Ressources
             </Button>
           </div>
         </div>

@@ -373,7 +373,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)} disabled={questions.length >= 25}>
-            <BookOpen className="mr-1 h-4 w-4" /> Bibliothèque
+            <BookOpen className="mr-1 h-4 w-4" /> Ressources
           </Button>
           <Button variant="outline" size="sm" onClick={openNew} disabled={questions.length >= 25}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter
