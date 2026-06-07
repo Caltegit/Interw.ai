@@ -225,7 +225,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
         {!isOwner && (
           <div className="flex items-start gap-2 rounded-md border border-border bg-muted p-3 text-sm text-muted-foreground">
             <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>Seul le propriétaire peut inviter ou retirer des membres.</span>
+            <span>Seuls les admins peuvent inviter, promouvoir ou retirer des membres.</span>
           </div>
         )}
 
