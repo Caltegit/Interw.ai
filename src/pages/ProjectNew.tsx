@@ -153,7 +153,7 @@ export default function ProjectNew() {
           });
         } else {
           setFormInitial((s) => mergeTemplateIntoState(s, payload));
-          toast({ title: "Modèle appliqué", description: payload.name });
+          toast({ title: "Session type appliquée", description: payload.name });
         }
       } finally {
         if (!cancelled) setTemplateLoading(false);
