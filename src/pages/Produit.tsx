@@ -102,7 +102,7 @@ export default function Produit() {
   useEffect(() => {
     document.title = "Produit — Interw.ai";
     const desc =
-      "Découvrez interw.ai : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
+      "Découvrez interw : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -266,7 +266,7 @@ export default function Produit() {
       <section style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
           <h2 className="text-3xl md:text-5xl landing-gradient-text">
-            Prêt à voir interw.ai sur vos propres recrutements ?
+            Prêt à voir interw sur vos propres recrutements ?
           </h2>
           <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
             20 entretiens offerts. Sans carte bancaire. Setup en 10 minutes.

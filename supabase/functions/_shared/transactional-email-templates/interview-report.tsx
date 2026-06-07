@@ -4,7 +4,7 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const SITE_NAME = 'interw.ai'
+const SITE_NAME = 'interw'
 const PRIMARY = '#6366F1'
 
 interface CriteriaScore {
@@ -395,7 +395,7 @@ const InterviewReportEmail = ({
 
 export const template = {
   component: InterviewReportEmail,
-  subject: (data: Record<string, any>) => `interw.ai - ${data?.candidateName ?? 'Candidat'}`,
+  subject: (data: Record<string, any>) => `interw - ${data?.candidateName ?? 'Candidat'}`,
   displayName: 'Rapport de session',
   previewData: {
     candidateName: 'Jane Doe',

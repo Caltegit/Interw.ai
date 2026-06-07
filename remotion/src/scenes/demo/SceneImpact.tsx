@@ -111,7 +111,7 @@ export const SceneImpact: React.FC = () => {
               boxShadow: `0 0 12px ${ACCENT}`,
             }}
           />
-          <span style={{ color: FG, fontSize: 16, fontWeight: 500, letterSpacing: 0.3 }}>interw.ai</span>
+          <span style={{ color: FG, fontSize: 16, fontWeight: 500, letterSpacing: 0.3 }}>interw</span>
         </div>
       </div>
     </AbsoluteFill>
