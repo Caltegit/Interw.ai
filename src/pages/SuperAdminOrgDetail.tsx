@@ -66,6 +66,47 @@ export default function SuperAdminOrgDetail() {
   const [editingUser, setEditingUser] = useState<Member | null>(null);
   const [deletingUser, setDeletingUser] = useState<Member | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [roleTarget, setRoleTarget] = useState<{ member: Member; action: "promote_admin" | "demote_admin" | "transfer_owner" } | null>(null);
+  const [roleBusy, setRoleBusy] = useState(false);
+
+  const handleRoleAction = async () => {
+    if (!roleTarget || !org) return;
+    setRoleBusy(true);
+    try {
+      const { member, action } = roleTarget;
+      if (action === "promote_admin") {
+        const { error } = await supabase.from("user_roles").insert({
+          user_id: member.user_id,
+          organization_id: org.id,
+          role: "admin",
+        });
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} est maintenant admin.` });
+      } else if (action === "demote_admin") {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", member.user_id)
+          .eq("organization_id", org.id)
+          .eq("role", "admin");
+        if (error) throw error;
+        toast({ title: `${member.full_name || member.email} n'est plus admin.` });
+      } else if (action === "transfer_owner") {
+        const { error } = await supabase
+          .from("organizations")
+          .update({ owner_id: member.user_id })
+          .eq("id", org.id);
+        if (error) throw error;
+        toast({ title: `Propriété transférée à ${member.full_name || member.email}.` });
+      }
+      setRoleTarget(null);
+      refresh();
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message ?? "Action impossible", variant: "destructive" });
+    } finally {
+      setRoleBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (!orgId) return;
