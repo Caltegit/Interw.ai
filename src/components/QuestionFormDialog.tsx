@@ -182,7 +182,7 @@ export function QuestionFormDialog({
       <DialogContent className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{isEditing ? "Modifier la question" : "Nouvelle question"}</DialogTitle>
-          <DialogDescription>Choisis d'abord le format, puis renseigne le contenu et les options.</DialogDescription>
+          <DialogDescription>{"\n"}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
