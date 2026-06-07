@@ -189,11 +189,11 @@ export default function InterviewTemplates() {
         <div>
           <h1 className="text-2xl font-bold">Sessions</h1>
           <p className="text-muted-foreground">
-            Modèles de session réutilisables (questions + critères) pour démarrer un projet en 1 clic.
+            Sessions types réutilisables (questions + critères) pour démarrer un projet en 1 clic.
           </p>
         </div>
         <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" /> Nouveau modèle
+          <Plus className="mr-2 h-4 w-4" /> Nouvelle session type
         </Button>
       </div>
 
