@@ -380,40 +380,6 @@ export function QuestionFormDialog({
             </div>
           </section>
 
-          {/* Étape 4 — Relance IA */}
-          <section className="space-y-2 rounded-lg border bg-muted/20 p-3">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Relance par l'IA
-            </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  { v: "light", label: "Aucune", desc: "Passe à la suivante" },
-                  { v: "medium", label: "Légère", desc: "1 relance max" },
-                  { v: "deep", label: "Approfondie", desc: "2 relances max" },
-                ] as const
-              ).map((opt) => {
-                const selected = form.relanceLevel === opt.v;
-                return (
-                  <button
-                    key={opt.v}
-                    type="button"
-                    onClick={() => setRelance(opt.v)}
-                    className={cn(
-                      "flex flex-col items-start gap-0.5 rounded-md border p-2 text-left transition-all",
-                      selected
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border hover:border-primary/40 hover:bg-muted/40",
-                    )}
-                  >
-                    <span className="text-xs font-medium">{opt.label}</span>
-                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
           {/* Étape 5 — Sauvegarde ressources */}
           {showSaveToLibrary && (
