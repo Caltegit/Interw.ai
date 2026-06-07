@@ -112,17 +112,22 @@ export default function InterviewTemplates() {
 
   const handleDuplicate = async (tpl: InterviewTemplate) => {
     if (!orgId || !user) return;
+    // Recharger toutes les colonnes pour copier l'intégralité de la config
+    const { data: src } = await supabase
+      .from("interview_templates" as never)
+      .select("*")
+      .eq("id", tpl.id)
+      .maybeSingle();
+    const rest = { ...((src as Record<string, unknown>) || {}) };
+    delete rest.id;
+    delete rest.created_at;
     const { data: newTpl, error } = await supabase
       .from("interview_templates" as never)
       .insert({
+        ...rest,
         organization_id: orgId,
         created_by: user.id,
         name: `${tpl.name} (copie)`,
-        description: tpl.description,
-        category: tpl.category,
-        job_title: tpl.job_title,
-        default_duration_minutes: tpl.default_duration_minutes,
-        default_language: "fr",
       } as never)
       .select()
       .single();
@@ -131,6 +136,7 @@ export default function InterviewTemplates() {
       return;
     }
     const newId = (newTpl as { id: string }).id;
+
 
     const [{ data: srcQ }, { data: srcC }] = await Promise.all([
       supabase.from("interview_template_questions" as never).select("*").eq("template_id", tpl.id),
