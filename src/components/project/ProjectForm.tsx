@@ -725,70 +725,69 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 />
               </div>
               <div className="rounded-lg border border-border bg-card p-4 space-y-4">
-                <div className="space-y-1">
+                <div>
                   <h4 className="text-sm font-semibold">Votre recruteur</h4>
-                  <p className="text-xs text-muted-foreground">
-                    {"\n"}
-                  </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor={`recruiter-name-${idSuffix}`} className="text-xs text-muted-foreground">
-                    Nom du recruteur
-                  </Label>
-                  <Input
-                    id={`recruiter-name-${idSuffix}`}
-                    placeholder="Léa"
-                    value={aiPersonaName}
-                    onChange={(e) => setAiPersonaName(e.target.value)}
-                  />
-                </div>
+                <div className="flex items-end gap-3">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <Label htmlFor={`recruiter-name-${idSuffix}`} className="text-xs text-muted-foreground">
+                      Nom du recruteur
+                    </Label>
+                    <Input
+                      id={`recruiter-name-${idSuffix}`}
+                      placeholder="Léa"
+                      value={aiPersonaName}
+                      onChange={(e) => setAiPersonaName(e.target.value)}
+                    />
+                  </div>
 
-                <RadioGroup
-                  value={ttsVoiceGender}
-                  onValueChange={(v) => {
-                    const g = v as VoiceGender;
-                    stopPreview();
-                    setTtsVoiceGender(g);
-                    setTtsVoiceId(getDefaultVoiceForGender(g));
-                  }}
-                  className="grid grid-cols-2 gap-2"
-                >
-                  {([
-                    { value: "female" as VoiceGender, label: "Femme", Icon: UserRound },
-                    { value: "male" as VoiceGender, label: "Homme", Icon: User },
-                  ]).map(({ value, label, Icon }) => {
-                    const selected = ttsVoiceGender === value;
-                    const defaultId = getDefaultVoiceForGender(value);
-                    const inputId = `voice-gender-${value}-${idSuffix}`;
-                    return (
-                      <div
-                        key={value}
-                        className={`relative rounded-lg border px-3 py-2 transition-colors ${
-                          selected ? "border-primary bg-primary/10" : "border-border hover:bg-accent/50"
-                        }`}
-                      >
-                        <Label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer font-normal">
-                          <RadioGroupItem value={value} id={inputId} />
-                          <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                          <span className="text-sm font-medium">{label}</span>
-                        </Label>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); playVoicePreview(defaultId); }}
-                          className="absolute top-1.5 right-1.5 inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-background"
-                          aria-label={`Écouter la voix ${label}`}
+                  <RadioGroup
+                    value={ttsVoiceGender}
+                    onValueChange={(v) => {
+                      const g = v as VoiceGender;
+                      stopPreview();
+                      setTtsVoiceGender(g);
+                      setTtsVoiceId(getDefaultVoiceForGender(g));
+                    }}
+                    className="flex gap-2 shrink-0"
+                  >
+                    {([
+                      { value: "female" as VoiceGender, label: "Femme", Icon: UserRound },
+                      { value: "male" as VoiceGender, label: "Homme", Icon: User },
+                    ]).map(({ value, label, Icon }) => {
+                      const selected = ttsVoiceGender === value;
+                      const defaultId = getDefaultVoiceForGender(value);
+                      const inputId = `voice-gender-${value}-${idSuffix}`;
+                      return (
+                        <div
+                          key={value}
+                          className={`relative rounded-lg border h-10 pl-3 pr-8 flex items-center transition-colors ${
+                            selected ? "border-primary bg-primary/10" : "border-border hover:bg-accent/50"
+                          }`}
                         >
-                          {previewingVoiceId === defaultId ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Volume2 className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </RadioGroup>
+                          <Label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer font-normal">
+                            <RadioGroupItem value={value} id={inputId} />
+                            <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                            <span className="text-sm font-medium">{label}</span>
+                          </Label>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); playVoicePreview(defaultId); }}
+                            className="absolute top-1/2 -translate-y-1/2 right-1.5 inline-flex items-center justify-center h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-background"
+                            aria-label={`Écouter la voix ${label}`}
+                          >
+                            {previewingVoiceId === defaultId ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Volume2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </RadioGroup>
+                </div>
 
                 <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-border">
                   <div className="flex items-center gap-2 text-sm min-w-0 pt-3">
