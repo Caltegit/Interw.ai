@@ -125,7 +125,7 @@ export function SaveAsTemplateDialog({
           <DialogHeader>
             <DialogTitle>Sauvegarder comme session type</DialogTitle>
             <DialogDescription>
-              Crée un modèle réutilisable à partir des questions et critères de ce projet.
+              Crée une session type réutilisable à partir des questions et critères de ce projet.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
