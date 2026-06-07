@@ -112,7 +112,7 @@ export default function LibraryHome() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bibliothèques</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Ressources</h1>
         <p className="mt-2 text-muted-foreground">
           Réutilisez vos modèles pour gagner du temps et garder une qualité constante d'un session à l'autre.
         </p>

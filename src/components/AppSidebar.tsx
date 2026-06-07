@@ -115,7 +115,7 @@ export function AppSidebar() {
                       <BookOpen className="mr-2 h-4 w-4" />
                       {!collapsed && (
                         <>
-                          <span>Bibliothèques</span>
+                          <span>Ressources</span>
                           <CollapsibleTrigger asChild>
                             <button
                               type="button"
