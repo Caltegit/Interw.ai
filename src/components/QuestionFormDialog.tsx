@@ -271,46 +271,9 @@ export function QuestionFormDialog({
                     }))
                   }
                 />
-                <Collapsible defaultOpen={!!form.content}>
-                  <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-1 py-1.5 text-left hover:bg-muted/40">
-                    <span className="text-xs text-muted-foreground">
-                      Ajouter un texte de secours
-                      <span className="ml-1 text-[10px]">(optionnel)</span>
-                    </span>
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <Textarea
-                      placeholder="Affiché si le média ne peut pas être lu"
-                      rows={2}
-                      maxLength={MAX_CONTENT}
-                      value={form.content}
-                      onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    />
-                  </CollapsibleContent>
-                </Collapsible>
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label className="text-xs">Catégorie</Label>
-              <Select
-                value={form.category || "_none"}
-                onValueChange={(v) => setForm({ ...form, category: v === "_none" ? "" : v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Aucune" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">Aucune</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </section>
 
           {/* Étape 3 — Pendant la réponse */}
@@ -417,40 +380,6 @@ export function QuestionFormDialog({
             </div>
           </section>
 
-          {/* Étape 4 — Relance IA */}
-          <section className="space-y-2 rounded-lg border bg-muted/20 p-3">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              Relance par l'IA
-            </Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  { v: "light", label: "Aucune", desc: "Passe à la suivante" },
-                  { v: "medium", label: "Légère", desc: "1 relance max" },
-                  { v: "deep", label: "Approfondie", desc: "2 relances max" },
-                ] as const
-              ).map((opt) => {
-                const selected = form.relanceLevel === opt.v;
-                return (
-                  <button
-                    key={opt.v}
-                    type="button"
-                    onClick={() => setRelance(opt.v)}
-                    className={cn(
-                      "flex flex-col items-start gap-0.5 rounded-md border p-2 text-left transition-all",
-                      selected
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border hover:border-primary/40 hover:bg-muted/40",
-                    )}
-                  >
-                    <span className="text-xs font-medium">{opt.label}</span>
-                    <span className="text-[10px] text-muted-foreground leading-tight">{opt.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
           {/* Étape 5 — Sauvegarde ressources */}
           {showSaveToLibrary && (
