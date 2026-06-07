@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Pencil, Trash2, Copy, FileText, ListChecks, Clock, Sparkles } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Copy, FileText, ListChecks, Clock, Sparkles, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
