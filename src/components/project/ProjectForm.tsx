@@ -128,11 +128,75 @@ export interface ProjectFormState {
 }
 
 export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTemplatePayload): ProjectFormState {
+  const t = tpl as InterviewTemplatePayload & Partial<{
+    ai_persona_name: string | null;
+    ai_voice: string | null;
+    avatar_image_url: string | null;
+    tts_provider: "browser" | "elevenlabs" | null;
+    tts_voice_id: string | null;
+    tts_voice_gender: VoiceGender | null;
+    intro_enabled: boolean | null;
+    intro_mode: "text" | "tts" | "audio" | "video" | null;
+    intro_text: string | null;
+    intro_audio_url: string | null;
+    presentation_video_url: string | null;
+    ai_intro_enabled: boolean | null;
+    ai_intro_mode: "auto" | "custom" | null;
+    ai_intro_custom_text: string | null;
+    ai_question_transitions_enabled: boolean | null;
+    ai_question_transitions_mode: "auto" | "custom" | null;
+    ai_question_transitions_custom_text: string | null;
+    record_audio: boolean | null;
+    record_video: boolean | null;
+    auto_skip_silence: boolean | null;
+    allow_pause: boolean | null;
+    allow_skip_question: boolean | null;
+    intro_first_screen: boolean | null;
+    audio_analysis_enabled: boolean | null;
+    show_question_timer: boolean | null;
+    completion_message: string | null;
+    pre_session_message: string | null;
+    candidate_fields: CandidateFieldsConfig | null;
+    candidate_email_subject: string | null;
+    candidate_email_body: string | null;
+  }>;
+
   return {
     ...state,
     title: tpl.name || state.title,
     language: tpl.default_language || state.language,
     maxDuration: tpl.default_duration_minutes || state.maxDuration,
+    aiPersonaName: t.ai_persona_name ?? state.aiPersonaName,
+    aiVoice: t.ai_voice ?? state.aiVoice,
+    avatarPreview: t.avatar_image_url ?? state.avatarPreview,
+    presetAvatarUrl: t.avatar_image_url ?? state.presetAvatarUrl,
+    ttsProvider: t.tts_provider ?? state.ttsProvider,
+    ttsVoiceId: t.tts_voice_id ?? state.ttsVoiceId,
+    ttsVoiceGender: t.tts_voice_gender ?? state.ttsVoiceGender,
+    introEnabled: t.intro_enabled ?? state.introEnabled,
+    introMode: t.intro_mode ?? state.introMode,
+    introText: t.intro_text ?? state.introText,
+    introAudioPreviewUrl: t.intro_audio_url ?? state.introAudioPreviewUrl,
+    introVideoPreviewUrl: t.presentation_video_url ?? state.introVideoPreviewUrl,
+    aiIntroEnabled: t.ai_intro_enabled ?? state.aiIntroEnabled,
+    aiIntroMode: t.ai_intro_mode ?? state.aiIntroMode,
+    aiIntroCustomText: t.ai_intro_custom_text ?? state.aiIntroCustomText,
+    aiQuestionTransitionsEnabled: t.ai_question_transitions_enabled ?? state.aiQuestionTransitionsEnabled,
+    aiQuestionTransitionsMode: t.ai_question_transitions_mode ?? state.aiQuestionTransitionsMode,
+    aiQuestionTransitionsCustomText: t.ai_question_transitions_custom_text ?? state.aiQuestionTransitionsCustomText,
+    recordAudio: t.record_audio ?? state.recordAudio,
+    recordVideo: t.record_video ?? state.recordVideo,
+    autoSkipSilence: t.auto_skip_silence ?? state.autoSkipSilence,
+    allowPause: t.allow_pause ?? state.allowPause,
+    allowSkipQuestion: t.allow_skip_question ?? state.allowSkipQuestion,
+    introFirstScreen: t.intro_first_screen ?? state.introFirstScreen,
+    audioAnalysisEnabled: t.audio_analysis_enabled ?? state.audioAnalysisEnabled,
+    showQuestionTimer: t.show_question_timer ?? state.showQuestionTimer,
+    completionMessage: t.completion_message ?? state.completionMessage,
+    preSessionMessage: t.pre_session_message ?? state.preSessionMessage,
+    candidateFields: t.candidate_fields ?? state.candidateFields,
+    candidateEmailSubject: t.candidate_email_subject ?? state.candidateEmailSubject,
+    candidateEmailBody: t.candidate_email_body ?? state.candidateEmailBody,
     questions: tpl.questions.length
       ? tpl.questions.map((q) => ({
           ...createEmptyQuestion(),
@@ -164,8 +228,9 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
   };
 }
 
+
 export interface ProjectFormProps {
-  mode: "create" | "edit";
+  mode: "create" | "edit" | "template";
   initial: ProjectFormState;
   onSubmit: (state: ProjectFormState) => Promise<void>;
   saving: boolean;
@@ -175,6 +240,8 @@ export interface ProjectFormProps {
 }
 
 export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLabel, creatorUserId }: ProjectFormProps) {
+  const isTemplate = mode === "template";
+
   const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -443,9 +510,48 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
   };
 
   const applyTemplate = (tpl: InterviewTemplatePayload) => {
+    const t = tpl as InterviewTemplatePayload & Record<string, unknown>;
     if (tpl.name) setTitle(tpl.name);
     if (tpl.default_language) setLanguage(tpl.default_language);
     if (tpl.default_duration_minutes) setMaxDuration(tpl.default_duration_minutes);
+    if (typeof t.ai_persona_name === "string") setAiPersonaName(t.ai_persona_name);
+    if (typeof t.ai_voice === "string") setAiVoice(t.ai_voice);
+    if (typeof t.avatar_image_url === "string") {
+      setAvatarPreview(t.avatar_image_url);
+      setPresetAvatarUrl(t.avatar_image_url);
+      setAvatarFile(null);
+    }
+    if (t.tts_provider === "browser" || t.tts_provider === "elevenlabs") setTtsProvider(t.tts_provider);
+    if (typeof t.tts_voice_id === "string") setTtsVoiceId(t.tts_voice_id);
+    if (t.tts_voice_gender === "female" || t.tts_voice_gender === "male") setTtsVoiceGender(t.tts_voice_gender);
+    if (typeof t.intro_enabled === "boolean") setIntroEnabled(t.intro_enabled);
+    if (t.intro_mode === "text" || t.intro_mode === "tts" || t.intro_mode === "audio" || t.intro_mode === "video") {
+      setIntroMode(t.intro_mode);
+    }
+    if (typeof t.intro_text === "string") setIntroText(t.intro_text);
+    if (typeof t.intro_audio_url === "string") setIntroAudioPreviewUrl(t.intro_audio_url);
+    if (typeof t.presentation_video_url === "string") setIntroVideoPreviewUrl(t.presentation_video_url);
+    if (typeof t.ai_intro_enabled === "boolean") setAiIntroEnabled(t.ai_intro_enabled);
+    if (t.ai_intro_mode === "auto" || t.ai_intro_mode === "custom") setAiIntroMode(t.ai_intro_mode);
+    if (typeof t.ai_intro_custom_text === "string") setAiIntroCustomText(t.ai_intro_custom_text);
+    if (typeof t.ai_question_transitions_enabled === "boolean") setAiQuestionTransitionsEnabled(t.ai_question_transitions_enabled);
+    if (t.ai_question_transitions_mode === "auto" || t.ai_question_transitions_mode === "custom") {
+      setAiQuestionTransitionsMode(t.ai_question_transitions_mode);
+    }
+    if (typeof t.ai_question_transitions_custom_text === "string") setAiQuestionTransitionsCustomText(t.ai_question_transitions_custom_text);
+    if (typeof t.allow_pause === "boolean") setAllowPause(t.allow_pause);
+    if (typeof t.allow_skip_question === "boolean") setAllowSkipQuestion(t.allow_skip_question);
+    if (typeof t.intro_first_screen === "boolean") setIntroFirstScreen(t.intro_first_screen);
+    if (typeof t.audio_analysis_enabled === "boolean") setAudioAnalysisEnabled(t.audio_analysis_enabled);
+    if (typeof t.show_question_timer === "boolean") setShowQuestionTimer(t.show_question_timer);
+    if (typeof t.completion_message === "string") setCompletionMessage(t.completion_message);
+    if (typeof t.pre_session_message === "string") setPreSessionMessage(t.pre_session_message);
+    if (t.candidate_fields && typeof t.candidate_fields === "object") {
+      setCandidateFields(t.candidate_fields as CandidateFieldsConfig);
+    }
+    if (typeof t.candidate_email_subject === "string") setCandidateEmailSubject(t.candidate_email_subject);
+    if (typeof t.candidate_email_body === "string") setCandidateEmailBody(t.candidate_email_body);
+
     if (tpl.questions.length) {
       setQuestions(
         tpl.questions.map((q) => ({
@@ -476,6 +582,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           applies_to: c.applies_to,
           anchors: c.anchors,
           from_library: true,
+
         })),
       );
     }
@@ -522,8 +629,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     }
   };
 
-  const isEdit = mode === "edit";
-  const idSuffix = isEdit ? "edit" : "new";
+  const isEdit = mode === "edit" || isTemplate;
+  const idSuffix = mode;
+
 
   const navButtons = (
     <div className="flex justify-between">
@@ -552,10 +660,11 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               <Link2 className="mr-2 h-4 w-4" /> Démarrer depuis une offre existante
             </Button>
             <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)}>
-              <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis un session type
+              <Sparkles className="mr-2 h-4 w-4" /> Démarrer depuis une session type
             </Button>
           </div>
         )}
+
       </div>
 
       {!isEdit && (
@@ -997,24 +1106,29 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                       </div>
                     </section>
 
-                    <Separator />
+                    {!isTemplate && (
+                      <>
+                        <Separator />
 
-                    {/* ────────── Diffusion ────────── */}
-                    <section className="space-y-3">
-                      <h4 className="text-sm font-semibold">Diffusion</h4>
-                      <div>
-                        <Label>Statut</Label>
-                        <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Actif</SelectItem>
-                            {isEdit && <SelectItem value="archived">Archivé</SelectItem>}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </section>
+                        {/* ────────── Diffusion ────────── */}
+                        <section className="space-y-3">
+                          <h4 className="text-sm font-semibold">Diffusion</h4>
+                          <div>
+                            <Label>Statut</Label>
+                            <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Actif</SelectItem>
+                                {mode === "edit" && <SelectItem value="archived">Archivé</SelectItem>}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </section>
+                      </>
+                    )}
+
 
 
 
@@ -1087,7 +1201,9 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           {step === 4 && (
             <div className="space-y-4">
               <Accordion type="multiple" className="space-y-3">
+                {!isTemplate && (<>
                 {/* 1. Visibilité du projet */}
+
                 <AccordionItem value="visibility" className="rounded-lg border bg-card px-4">
                   <AccordionTrigger className="hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
@@ -1209,6 +1325,8 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                     </div>
                   </AccordionContent>
                 </AccordionItem>
+                </>)}
+
 
                 {/* 3. Email envoyé au candidat */}
                 <AccordionItem value="candidate-email" className="rounded-lg border bg-card px-4">
@@ -1314,10 +1432,13 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <p>
                     <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
                   </p>
-                  <p>
-                    <strong>Statut :</strong>{" "}
-                    {status === "archived" ? "Archivé" : "Actif"}
-                  </p>
+                  {!isTemplate && (
+                    <p>
+                      <strong>Statut :</strong>{" "}
+                      {status === "archived" ? "Archivé" : "Actif"}
+                    </p>
+                  )}
+
                   <p>
                     <strong>Intro :</strong>{" "}
                     {!introEnabled

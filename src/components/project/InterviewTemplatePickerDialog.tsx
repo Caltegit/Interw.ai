@@ -21,6 +21,37 @@ export interface InterviewTemplatePayload {
   job_title: string;
   default_duration_minutes: number;
   default_language: "fr" | "en";
+  // Extended project-like fields (all optional / nullable for backwards compat)
+  ai_persona_name?: string | null;
+  ai_voice?: string | null;
+  avatar_image_url?: string | null;
+  tts_provider?: "browser" | "elevenlabs" | null;
+  tts_voice_id?: string | null;
+  tts_voice_gender?: "female" | "male" | null;
+  intro_enabled?: boolean | null;
+  intro_mode?: "text" | "tts" | "audio" | "video" | null;
+  intro_text?: string | null;
+  intro_audio_url?: string | null;
+  presentation_video_url?: string | null;
+  ai_intro_enabled?: boolean | null;
+  ai_intro_mode?: "auto" | "custom" | null;
+  ai_intro_custom_text?: string | null;
+  ai_question_transitions_enabled?: boolean | null;
+  ai_question_transitions_mode?: "auto" | "custom" | null;
+  ai_question_transitions_custom_text?: string | null;
+  record_audio?: boolean | null;
+  record_video?: boolean | null;
+  auto_skip_silence?: boolean | null;
+  allow_pause?: boolean | null;
+  allow_skip_question?: boolean | null;
+  intro_first_screen?: boolean | null;
+  audio_analysis_enabled?: boolean | null;
+  show_question_timer?: boolean | null;
+  completion_message?: string | null;
+  pre_session_message?: string | null;
+  candidate_fields?: Record<string, unknown> | null;
+  candidate_email_subject?: string | null;
+  candidate_email_body?: string | null;
   questions: Array<{
     title: string;
     content: string;
@@ -32,6 +63,8 @@ export interface InterviewTemplatePayload {
     max_follow_ups: number;
     relance_level: "light" | "medium" | "deep";
     avatar_image_url: string | null;
+    hint_text?: string | null;
+    max_response_seconds?: number | null;
   }>;
   criteria: Array<{
     label: string;
@@ -42,6 +75,7 @@ export interface InterviewTemplatePayload {
     anchors: Record<string, string>;
   }>;
 }
+
 
 interface Props {
   open: boolean;
