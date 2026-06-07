@@ -1327,10 +1327,13 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                   <p>
                     <strong>Pause autorisée :</strong> {allowPause ? "Oui" : "Non"}
                   </p>
-                  <p>
-                    <strong>Statut :</strong>{" "}
-                    {status === "archived" ? "Archivé" : "Actif"}
-                  </p>
+                  {!isTemplate && (
+                    <p>
+                      <strong>Statut :</strong>{" "}
+                      {status === "archived" ? "Archivé" : "Actif"}
+                    </p>
+                  )}
+
                   <p>
                     <strong>Intro :</strong>{" "}
                     {!introEnabled
