@@ -98,6 +98,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InviteSignup />} />
             <Route path="/auth/magic-link" element={<MagicLink />} />
+            <Route path="/m/:token" element={<MagicLinkRedeem />} />
 
             {/* Session candidat — routes actuelles */}
             <Route path="/session/:slug" element={<InterviewLanding />} />
