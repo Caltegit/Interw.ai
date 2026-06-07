@@ -231,10 +231,41 @@ export default function SuperAdminOrgDetail() {
                 <p className="text-xs text-muted-foreground">{m.email}</p>
               </div>
               <div className="flex items-center gap-2">
-                {m.isOwner && <Badge variant="default" className="gap-1"><Crown className="h-3 w-3" /> Propriétaire</Badge>}
-                {m.role === "admin" && !m.isOwner && <Badge variant="default" className="gap-1"><ShieldCheck className="h-3 w-3" /> Admin</Badge>}
-                {m.role === "member" && <Badge variant="secondary">Membre</Badge>}
-                {!m.role && <Badge variant="outline">Membre</Badge>}
+                {m.isOwner ? (
+                  <Badge variant="default" className="gap-1"><Crown className="h-3 w-3" /> Propriétaire</Badge>
+                ) : m.role === "admin" ? (
+                  <button
+                    type="button"
+                    onClick={() => setRoleTarget({ member: m, action: "demote_admin" })}
+                    title="Cliquer pour rétrograder en membre"
+                    className="focus:outline-none focus:ring-2 focus:ring-ring rounded-full"
+                  >
+                    <Badge variant="default" className="gap-1 cursor-pointer hover:opacity-80">
+                      <ShieldCheck className="h-3 w-3" /> Admin
+                    </Badge>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setRoleTarget({ member: m, action: "promote_admin" })}
+                    title="Cliquer pour promouvoir admin"
+                    className="focus:outline-none focus:ring-2 focus:ring-ring rounded-full"
+                  >
+                    <Badge variant="secondary" className="cursor-pointer hover:opacity-80">Membre</Badge>
+                  </button>
+                )}
+
+                {!m.isOwner && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setRoleTarget({ member: m, action: "transfer_owner" })}
+                    title="Transférer la propriété à ce membre"
+                  >
+                    <Crown className="h-4 w-4" />
+                  </Button>
+                )}
+
                 <AlertDialog>
                   <AlertDialogTrigger
                     asChild
