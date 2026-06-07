@@ -145,7 +145,7 @@ export function SaveAsTemplateDialog({
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
             <Button onClick={handleSave} disabled={saving || !name.trim()}>
-              {saving ? "Création..." : "Créer le modèle"}
+              {saving ? "Création..." : "Créer la session type"}
             </Button>
           </DialogFooter>
         </DialogContent>
