@@ -6,6 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function generateToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -28,27 +41,25 @@ Deno.serve(async (req) => {
     if (!email || typeof email !== "string") return json({ error: "Email requis" }, 400);
 
     const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "";
-    const redirectTo = origin ? `${origin}/dashboard` : undefined;
+    if (!origin) return json({ error: "Origin manquant" }, 400);
 
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-      options: { redirectTo },
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
+    const redirectTo = `${origin}/dashboard`;
+
+    const { error: insertErr } = await admin.from("superadmin_magic_links").insert({
+      token,
+      email: email.toLowerCase().trim(),
+      redirect_to: redirectTo,
+      created_by: user.id,
+      expires_at: expiresAt,
     });
-    if (error) throw error;
+    if (insertErr) throw insertErr;
 
-    const actionLink = data?.properties?.action_link;
-    if (!actionLink) return json({ error: "Lien indisponible" }, 500);
-
-    return json({ action_link: actionLink });
-  } catch (e: any) {
-    return json({ error: e.message ?? String(e) }, 500);
+    const actionLink = `${origin}/m/${token}`;
+    return json({ action_link: actionLink, expires_at: expiresAt });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return json({ error: msg }, 500);
   }
 });
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
