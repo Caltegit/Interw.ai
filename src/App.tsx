@@ -53,6 +53,7 @@ import InterviewTemplateEdit from "./pages/InterviewTemplateEdit";
 import EmailTemplates from "./pages/EmailTemplates";
 import InviteSignup from "./pages/InviteSignup";
 import MagicLink from "./pages/MagicLink";
+import MagicLinkRedeem from "./pages/MagicLinkRedeem";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
