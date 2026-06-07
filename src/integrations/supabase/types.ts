@@ -625,40 +625,130 @@ export type Database = {
       }
       interview_templates: {
         Row: {
+          ai_intro_custom_text: string | null
+          ai_intro_enabled: boolean
+          ai_intro_mode: string
+          ai_persona_name: string
+          ai_question_transitions_custom_text: string | null
+          ai_question_transitions_enabled: boolean
+          ai_question_transitions_mode: string
+          ai_voice: Database["public"]["Enums"]["ai_voice_type"]
+          allow_pause: boolean
+          allow_skip_question: boolean
+          audio_analysis_enabled: boolean
+          auto_skip_silence: boolean
+          avatar_image_url: string | null
+          candidate_email_body: string | null
+          candidate_email_subject: string | null
+          candidate_fields: Json
           category: string | null
+          completion_message: string | null
           created_at: string
           created_by: string
           default_duration_minutes: number
           default_language: Database["public"]["Enums"]["project_language"]
           description: string
           id: string
+          intro_audio_url: string | null
+          intro_enabled: boolean
+          intro_first_screen: boolean
+          intro_mode: string | null
+          intro_text: string | null
           job_title: string
           name: string
           organization_id: string
+          pre_session_message: string | null
+          presentation_video_url: string | null
+          record_audio: boolean
+          record_video: boolean
+          show_question_timer: boolean
+          tts_provider: string
+          tts_voice_gender: string
+          tts_voice_id: string | null
         }
         Insert: {
+          ai_intro_custom_text?: string | null
+          ai_intro_enabled?: boolean
+          ai_intro_mode?: string
+          ai_persona_name?: string
+          ai_question_transitions_custom_text?: string | null
+          ai_question_transitions_enabled?: boolean
+          ai_question_transitions_mode?: string
+          ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
+          allow_pause?: boolean
+          allow_skip_question?: boolean
+          audio_analysis_enabled?: boolean
+          auto_skip_silence?: boolean
+          avatar_image_url?: string | null
+          candidate_email_body?: string | null
+          candidate_email_subject?: string | null
+          candidate_fields?: Json
           category?: string | null
+          completion_message?: string | null
           created_at?: string
           created_by: string
           default_duration_minutes?: number
           default_language?: Database["public"]["Enums"]["project_language"]
           description?: string
           id?: string
+          intro_audio_url?: string | null
+          intro_enabled?: boolean
+          intro_first_screen?: boolean
+          intro_mode?: string | null
+          intro_text?: string | null
           job_title?: string
           name: string
           organization_id: string
+          pre_session_message?: string | null
+          presentation_video_url?: string | null
+          record_audio?: boolean
+          record_video?: boolean
+          show_question_timer?: boolean
+          tts_provider?: string
+          tts_voice_gender?: string
+          tts_voice_id?: string | null
         }
         Update: {
+          ai_intro_custom_text?: string | null
+          ai_intro_enabled?: boolean
+          ai_intro_mode?: string
+          ai_persona_name?: string
+          ai_question_transitions_custom_text?: string | null
+          ai_question_transitions_enabled?: boolean
+          ai_question_transitions_mode?: string
+          ai_voice?: Database["public"]["Enums"]["ai_voice_type"]
+          allow_pause?: boolean
+          allow_skip_question?: boolean
+          audio_analysis_enabled?: boolean
+          auto_skip_silence?: boolean
+          avatar_image_url?: string | null
+          candidate_email_body?: string | null
+          candidate_email_subject?: string | null
+          candidate_fields?: Json
           category?: string | null
+          completion_message?: string | null
           created_at?: string
           created_by?: string
           default_duration_minutes?: number
           default_language?: Database["public"]["Enums"]["project_language"]
           description?: string
           id?: string
+          intro_audio_url?: string | null
+          intro_enabled?: boolean
+          intro_first_screen?: boolean
+          intro_mode?: string | null
+          intro_text?: string | null
           job_title?: string
           name?: string
           organization_id?: string
+          pre_session_message?: string | null
+          presentation_video_url?: string | null
+          record_audio?: boolean
+          record_video?: boolean
+          show_question_timer?: boolean
+          tts_provider?: string
+          tts_voice_gender?: string
+          tts_voice_id?: string | null
         }
         Relationships: [
           {
