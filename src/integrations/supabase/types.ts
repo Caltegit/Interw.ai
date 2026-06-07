@@ -1840,6 +1840,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      clone_template_project_into_org: {
+        Args: { _created_by: string; _org_id: string }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
