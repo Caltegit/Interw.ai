@@ -118,7 +118,7 @@ export function SaveAsTemplateDialog({
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Bookmark className="mr-1 h-4 w-4" /> Sauver comme modèle
+        <Bookmark className="mr-1 h-4 w-4" /> Sauver comme session type
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
