@@ -32,7 +32,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [orgId, setOrgId] = useState<string>("none");
-  const [newRole, setNewRole] = useState<string>("recruiter");
+  const [newRole, setNewRole] = useState<string>("member");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -158,8 +158,7 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
                 <SelectContent>
                   <SelectItem value="super_admin">Super Admin (global)</SelectItem>
                   <SelectItem value="admin">Admin (org)</SelectItem>
-                  <SelectItem value="recruiter">Recruteur (org)</SelectItem>
-                  <SelectItem value="viewer">Viewer (org)</SelectItem>
+                  <SelectItem value="member">Membre (org)</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={handleAddRole} disabled={loading}>Appliquer</Button>
