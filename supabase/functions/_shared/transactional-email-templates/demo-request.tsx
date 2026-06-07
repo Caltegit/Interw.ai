@@ -19,7 +19,7 @@ interface DemoRequestProps {
 const DemoRequestEmail = ({ email, message }: DemoRequestProps) => (
   <Html lang="fr" dir="ltr">
     <Head />
-    <Preview>Nouvelle demande de démo Interw.ai</Preview>
+    <Preview>Nouvelle demande de démo interw</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Nouvelle demande de démo</Heading>

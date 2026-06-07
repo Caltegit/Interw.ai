@@ -28,7 +28,7 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="fr" dir="ltr">
     <Head />
-    <Preview>Encore une étape pour activer votre compte Interw.ai</Preview>
+    <Preview>Encore une étape pour activer votre compte interw</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Bienvenue sur {siteName}</Heading>

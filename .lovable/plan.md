@@ -1,28 +1,29 @@
-# Plan — Brancher le seed étoilé sur la création d'organisation
+# Plan — Remplacer "interw.ai" par "interw" dans le texte visible des emails
 
 ## Diagnostic
-Le seed étoilé `seed_starred_templates_into_org` existe et fonctionne, mais il est uniquement branché sur le trigger **`trg_seed_on_owner_set`** (déclenché sur `UPDATE OF owner_id`).
+Le nom visible du produit dans les emails vient de `SITE_NAME = "interw.ai"` dans `supabase/functions/auth-email-hook/index.ts`. Cette variable est injectée comme `siteName` dans tous les templates auth (signup, magic-link, recovery, **invite**, email-change, reauthentication). C'est pourquoi l'email d'invitation affiche "Vous êtes invité(e) sur interw.ai".
 
-Or l'edge function `superadmin-create-org` insère l'organisation avec `owner_id` déjà renseigné. C'est donc le trigger **`trg_seed_org_question_templates`** (`AFTER INSERT`) qui s'exécute — et celui-ci appelle `seed_demo_project` (qui crée le projet "Candidature spontanée - TEST -") et **n'appelle pas** `seed_starred_templates_into_org`.
+Deux autres fichiers contiennent encore "Interw.ai" en dur dans du texte visible, et un template app email aussi.
 
-Conséquence observée sur "Test 31" : un seul projet, le démo hardcodé, et aucun clone des sessions étoilées.
+## Changements (texte visible uniquement — domaines techniques `interw.ai` conservés)
 
-## Changement (migration unique)
+1. `supabase/functions/auth-email-hook/index.ts`
+   - `SITE_NAME = "interw.ai"` → `"interw"`
+   - Conserver `REPLY_TO_EMAIL`, `SENDER_DOMAIN`, `ROOT_DOMAIN`, `FROM_DOMAIN` inchangés (techniques).
 
-Modifier la fonction `public.trg_seed_org_question_templates` :
-- Remplacer l'appel `PERFORM public.seed_demo_project(NEW.id, _creator);` par `PERFORM public.seed_starred_templates_into_org(NEW.id, _creator);`
-- Conserver le reste (seed des bibliothèques par défaut question/criteria/intros/sessions types).
+2. `supabase/functions/_shared/email-templates/signup.tsx`
+   - `<Preview>Encore une étape pour activer votre compte Interw.ai</Preview>` → `... compte interw`
 
-Symétriquement, dans `public.trg_seed_on_owner_set` (cas legacy où l'orga est créée sans owner puis owner ajouté ensuite), garder déjà l'appel `seed_starred_templates_into_org` qui est en place — rien à modifier.
+3. `supabase/functions/_shared/email-templates/reauthentication.tsx`
+   - `L'équipe Interw.ai` → `L'équipe interw`
 
-`seed_demo_project` reste défini dans la base (non supprimée) au cas où un script externe l'utiliserait, mais n'est plus jamais appelé automatiquement.
+4. `supabase/functions/_shared/transactional-email-templates/demo-request.tsx`
+   - `<Preview>Nouvelle demande de démo Interw.ai</Preview>` → `... démo interw`
+   - Le champ `to: 'hello@interw.ai'` (adresse) reste inchangé.
 
 ## Hors-scope
-- Aucune modification frontend.
-- Aucune modification des organisations existantes (le clonage reste limité à la création).
-- Aucune suppression de `seed_demo_project` ni de `clone_template_project_into_org`.
+- Tous les `https://interw.ai/...` et `mailto:...@interw.ai` restent (domaine technique).
+- Aucune modif des templates où "interw.ai" apparaît uniquement comme URL ou email d'expéditeur/contact.
 
-## Test après application
-1. Étoiler 1+ session type dans Ressources › Sessions.
-2. Créer une nouvelle organisation via le super-admin.
-3. Vérifier que la nouvelle orga contient les projets clonés (un par template étoilé) au statut actif, et **pas** "Candidature spontanée - TEST -".
+## Déploiement
+Redéployer les fonctions impactées : `auth-email-hook` et `send-transactional-email`.

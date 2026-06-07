@@ -31,7 +31,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
           Ce code expirera prochainement. Si vous n'êtes pas à l'origine de
           cette demande, vous pouvez ignorer cet email.
           <br />
-          L'équipe Interw.ai
+          L'équipe interw
         </Text>
       </Container>
     </Body>
