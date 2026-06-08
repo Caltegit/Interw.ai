@@ -11,6 +11,7 @@ interface Props {
   nonverbalAnalysis?: any;
   audioFailed?: boolean;
   projectAverages?: ProjectAverages | null;
+  onSelectTab?: (tab: string) => void;
 }
 
 type Tone = "success" | "warning" | "danger" | "muted";
@@ -36,6 +37,7 @@ export function ScoresOverviewCard({
   nonverbalAnalysis,
   audioFailed,
   projectAverages,
+  onSelectTab,
 }: Props) {
   const bigFive = computeBigFiveAverage(personalityProfile);
   const paraverbal = audioFailed ? null : computeParaverbalAverage(paraverbalAnalysis);
@@ -60,24 +62,28 @@ export function ScoresOverviewCard({
       score: fitScore,
       avg: hasBenchmark ? projectAverages!.overallScore : null,
       unavailable: false,
+      tab: "decision",
     },
     {
       label: "Orale",
       score: paraverbal,
       avg: hasBenchmark ? projectAverages!.paraverbalScore : null,
       unavailable: !!audioFailed,
+      tab: "voice",
     },
     {
       label: "Attitude",
       score: nonverbal,
       avg: hasBenchmark ? projectAverages!.nonverbalScore : null,
       unavailable: !!audioFailed,
+      tab: "attitude",
     },
     {
       label: "Big Five",
       score: bigFive,
       avg: bigFiveProjectAvg,
       unavailable: false,
+      tab: "bigfive",
     },
   ];
 
@@ -92,6 +98,7 @@ export function ScoresOverviewCard({
               score={it.score}
               avg={it.avg}
               unavailable={it.unavailable}
+              onClick={onSelectTab ? () => onSelectTab(it.tab) : undefined}
             />
           ))}
         </div>
@@ -105,11 +112,13 @@ function ScoreGauge({
   score,
   avg,
   unavailable,
+  onClick,
 }: {
   label: string;
   score: number | null;
   avg: number | null;
   unavailable: boolean;
+  onClick?: () => void;
 }) {
   const R = 42;
   const C = 2 * Math.PI * R; // 263.89
@@ -125,7 +134,7 @@ function ScoreGauge({
 
   if (unavailable) {
     return (
-      <div className="relative flex flex-row items-center justify-center gap-3 p-4 bg-muted/30 border border-dashed border-border rounded-xl">
+      <div className="relative flex flex-row items-center justify-center gap-3 p-4 bg-muted/30 border border-dashed border-border rounded-xl opacity-80">
         <div className="relative w-20 h-20 shrink-0 flex items-center justify-center opacity-50">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
             <circle
@@ -154,7 +163,12 @@ function ScoreGauge({
   }
 
   return (
-    <div className="relative flex flex-row items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className="relative flex flex-row items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer"
+    >
       <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
           <circle
@@ -210,6 +224,6 @@ function ScoreGauge({
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

@@ -408,6 +408,7 @@ export function SessionReportView({
                   nonverbalAnalysis={(report as any).nonverbal_analysis}
                   audioFailed={audioFailed}
                   projectAverages={projectAverages}
+                  onSelectTab={setActiveTab}
                 />
                 {report.executive_summary && (
                   <Card>
