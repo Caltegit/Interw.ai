@@ -341,6 +341,7 @@ export function SessionReportView({
               readOnly={readOnly}
               candidateName={session.candidate_name}
               candidateEmail={session.candidate_email}
+              candidatePhone={(session as any).candidate_phone ?? null}
               jobTitle={project?.job_title}
               projectTitle={project?.title}
               durationLabel={formatDuration(session.duration_seconds)}
