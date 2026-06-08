@@ -340,6 +340,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
+            {candidatePhone && (
+              <p className="text-xs text-muted-foreground truncate">{candidatePhone}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
             {candidateJobTitle && (
               <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
