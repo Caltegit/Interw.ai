@@ -156,6 +156,9 @@ Deno.serve(async (req) => {
       const cleaned = fn.replace(/[<>"\r\n]/g, '').trim().slice(0, 60)
       if (cleaned.length > 0) fromName = cleaned
     }
+    if (body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)) {
+      metadata = body.metadata as Record<string, any>
+    }
   } catch {
     return new Response(
       JSON.stringify({ error: 'Invalid JSON in request body' }),
