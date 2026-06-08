@@ -278,7 +278,7 @@ export function SessionReportView({
   const tabsList = (
     <TabsList className="grid w-full grid-cols-6 h-20">
       <TabsTrigger value="summary" className={triggerClass}>
-        <LayoutDashboard className="h-5 w-5" />
+        <LayoutDashboard className="h-12 w-12" strokeWidth={1.5} />
         <span className={labelClass}>Résumé</span>
       </TabsTrigger>
       <TabsTrigger value="decision" className={triggerClass}>
