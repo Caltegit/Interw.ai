@@ -1684,6 +1684,7 @@ export type Database = {
           candidate_job_title: string | null
           candidate_linkedin_url: string | null
           candidate_name: string
+          candidate_phone: string | null
           completed_at: string | null
           consent_accepted_at: string | null
           consent_given_at: string | null
@@ -1720,6 +1721,7 @@ export type Database = {
           candidate_job_title?: string | null
           candidate_linkedin_url?: string | null
           candidate_name: string
+          candidate_phone?: string | null
           completed_at?: string | null
           consent_accepted_at?: string | null
           consent_given_at?: string | null
@@ -1756,6 +1758,7 @@ export type Database = {
           candidate_job_title?: string | null
           candidate_linkedin_url?: string | null
           candidate_name?: string
+          candidate_phone?: string | null
           completed_at?: string | null
           consent_accepted_at?: string | null
           consent_given_at?: string | null
