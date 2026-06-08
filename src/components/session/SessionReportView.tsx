@@ -59,6 +59,7 @@ export interface SessionReportViewProps {
   onEmail?: () => void;
   onEditLinks?: () => void;
   onDelete?: () => void;
+  onOpenStats?: () => void;
   // Notes recruteur — masqué si readOnly
   recruiterNotes?: string;
   onRecruiterNotesChange?: (v: string) => void;
@@ -87,6 +88,7 @@ export function SessionReportView({
   onEmail,
   onEditLinks,
   onDelete,
+  onOpenStats,
   recruiterNotes,
   onRecruiterNotesChange,
 }: SessionReportViewProps) {
@@ -363,6 +365,7 @@ export function SessionReportView({
               onEmail={readOnly ? undefined : onEmail}
               onEditLinks={readOnly ? undefined : onEditLinks}
               onDelete={readOnly ? undefined : onDelete}
+              onOpenStats={readOnly ? undefined : onOpenStats}
               decisionByName={(session as any).decision_by_name ?? null}
               decisionAt={(session as any).recruiter_decision_at ?? null}
               linkedinUrl={(session as any).candidate_linkedin_url ?? null}

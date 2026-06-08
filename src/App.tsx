@@ -41,6 +41,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ProjectPublicPageEditor from "./pages/ProjectPublicPageEditor";
 import ProjectPublicPage from "./pages/ProjectPublicPage";
 import ProjectCompare from "./pages/ProjectCompare";
+import ProjectStats from "./pages/ProjectStats";
 import SessionDetail from "./pages/SessionDetail";
 import SessionVideoExport from "./pages/SessionVideoExport";
 import Settings from "./pages/Settings";
@@ -146,6 +147,7 @@ const App = () => (
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/projects/:id/public-page" element={<ProjectPublicPageEditor />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />
+              <Route path="/projects/:id/stats" element={<ProjectStats />} />
               <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
               <Route path="/library" element={<LibraryHome />} />
               <Route path="/library/questions" element={<QuestionLibrary />} />

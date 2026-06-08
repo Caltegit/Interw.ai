@@ -964,6 +964,33 @@ export type Database = {
           },
         ]
       }
+      project_page_views: {
+        Row: {
+          id: string
+          project_id: string
+          referrer_host: string | null
+          view_date: string
+          viewed_at: string
+          visitor_hash: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          referrer_host?: string | null
+          view_date?: string
+          viewed_at?: string
+          visitor_hash: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          referrer_host?: string | null
+          view_date?: string
+          viewed_at?: string
+          visitor_hash?: string
+        }
+        Relationships: []
+      }
       project_public_pages: {
         Row: {
           content: Json
@@ -1983,6 +2010,16 @@ export type Database = {
         Returns: number
       }
       enqueue_report_job: { Args: { p_session_id: string }; Returns: undefined }
+      get_project_stats_timeseries: {
+        Args: { p_from: string; p_project_id: string; p_to: string }
+        Returns: {
+          clicks: number
+          completed: number
+          day: string
+          forms: number
+          started: number
+        }[]
+      }
       get_session_id_by_token: { Args: { _token: string }; Returns: string }
       get_user_organization_id: { Args: { _user_id: string }; Returns: string }
       has_role: {

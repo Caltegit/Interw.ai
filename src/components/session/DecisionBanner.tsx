@@ -30,6 +30,7 @@ import {
   FileSignature,
   UserCog,
   MicOff,
+  BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -74,6 +75,7 @@ interface DecisionBannerProps {
   coverLetterFilename?: string | null;
   candidateJobTitle?: string | null;
   onEditLinks?: () => void;
+  onOpenStats?: () => void;
   audioFailed?: boolean;
   videoSlot?: ReactNode;
   videoSlotWidth?: number;
@@ -140,6 +142,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     coverLetterFilename,
     candidateJobTitle,
     onEditLinks,
+    onOpenStats,
     audioFailed,
     videoSlot,
     videoSlotWidth = 320,
@@ -206,6 +209,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
+                  {onOpenStats && (
+                    <>
+                      <DropdownMenuItem onClick={onOpenStats}>
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Statistiques du projet
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={onShare}>
                     <Share2 className="mr-2 h-4 w-4" />
                     Partager ce rapport
