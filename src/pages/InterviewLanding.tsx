@@ -173,6 +173,7 @@ export default function InterviewLanding() {
         candidate_email: trimmedEmail,
         candidate_job_title: jobTitleValue,
         candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
+        candidate_phone: candidateFields.phone.enabled && trimmedPhone ? trimmedPhone : null,
         recruiter_note: jobTitleValue ? `Poste : ${jobTitleValue}` : null,
       })
       .select()
