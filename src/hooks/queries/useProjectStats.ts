@@ -41,7 +41,37 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
     queryKey: ["project-stats", projectId, period],
     enabled: !!projectId,
     queryFn: async (): Promise<ProjectStatsData> => {
-      const { from, to } = periodToFromTo(period);
+      let { from, to } = periodToFromTo(period);
+
+      if (period === "all") {
+        const [firstView, firstSession] = await Promise.all([
+          supabase
+            .from("project_page_views")
+            .select("viewed_at")
+            .eq("project_id", projectId!)
+            .order("viewed_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("sessions")
+            .select("created_at")
+            .eq("project_id", projectId!)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        const candidates: number[] = [];
+        if (firstView.data?.viewed_at) candidates.push(new Date(firstView.data.viewed_at).getTime());
+        if (firstSession.data?.created_at) candidates.push(new Date(firstSession.data.created_at).getTime());
+        if (candidates.length) {
+          from = new Date(Math.min(...candidates));
+          from.setHours(0, 0, 0, 0);
+        } else {
+          from = new Date();
+          from.setDate(to.getDate() - 7);
+        }
+      }
+
       const fromIso = from.toISOString();
       const toIso = to.toISOString();
 
