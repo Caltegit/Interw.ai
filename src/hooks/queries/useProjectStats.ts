@@ -149,10 +149,13 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
         completed: Number(r.completed),
       }));
 
-      const FORCED_CLICKS: Record<string, number> = {
+      // Socle minimum de clics forcé pour certains projets : les nouveaux
+      // clics réels s'additionnent au socle au lieu de l'écraser.
+      const FORCED_CLICKS_BASELINE: Record<string, number> = {
         "7ea73a6b-27d6-4dac-916b-2157a09a323d": 120,
       };
-      const clicks = FORCED_CLICKS[projectId!] ?? views.length;
+      const baseline = FORCED_CLICKS_BASELINE[projectId!] ?? 0;
+      const clicks = baseline ? baseline + Math.max(0, views.length - 1) : views.length;
 
       return {
         project: projRes.data ?? null,
