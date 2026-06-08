@@ -1,26 +1,32 @@
-## Diagnostic
+## Problème
 
-Le tracking « clics » n'écrit dans `project_page_views` que depuis `src/pages/ProjectPublicPage.tsx` (route `/p/:slugPublic`).
+Sur la page Stats, "Entretiens démarrés" reste à 0 même quand des sessions sont complétées ou réellement démarrées.
 
-Or le lien partagé aux candidats est `/session/:slug` (page `InterviewLanding`), qui n'appelle jamais l'edge function `track-project-view`. Résultat : tous les clics sur le lien candidat ne sont pas comptés → la métrique reste à 0 (ou ne reflète que les visites de la page publique vitrine).
+**Cause racine** : la colonne `sessions.started_at` n'est jamais renseignée en base. Sur les 497 sessions du projet (430 `completed`, 60 `cancelled`, 7 `pending`), **aucune** n'a `started_at` rempli. L'écriture dans `InterviewStart.tsx` ne se propage pas (probable blocage RLS côté candidat anonyme), mais la correction de cette écriture est hors périmètre de ce ticket d'affichage.
 
-## Correctif
+Le KPI est donc structurellement bloqué à 0, ce qui rend la métrique "0 démarré / 1 complété" incohérente.
 
-Ajouter le tracking sur `InterviewLanding` (et le garder sur `ProjectPublicPage`).
+## Correctif (affichage uniquement)
 
-1. **`src/pages/InterviewLanding.tsx`**
-   - Une fois `project` chargé (avec `project.id`), invoquer `supabase.functions.invoke("track-project-view", { body: { project_id: project.id, referrer: document.referrer } })`.
-   - Garde-fou : n'appeler qu'une fois par montage (ref booléenne), ignorer les erreurs silencieusement, ne pas appeler en mode démo (`slug === "demo"` ou route `/demo`).
+Dans `src/hooks/queries/useProjectStats.ts`, calculer `started` à partir de signaux fiables au lieu de `started_at` :
 
-2. **Pas de changement DB** : la table `project_page_views` et son index unique `(project_id, visitor_hash, view_date)` gèrent déjà la déduplication quotidienne par visiteur (IP tronquée + UA + date). Un même candidat qui ouvre plusieurs fois la page le même jour ne sera compté qu'une fois — comportement voulu pour une métrique « visiteurs uniques / jour ».
+Une session est considérée "démarrée" si **au moins une** des conditions est vraie :
+- `status ∈ { completed, cancelled }` (forcément passé par l'entretien)
+- `started_at` est renseigné (compat future)
+- `last_activity_at` est renseigné (pending qui a progressé)
 
-3. **Vérification** après build :
-   - Ouvrir `/session/<slug>` dans le preview → vérifier l'appel réseau `track-project-view` (200).
-   - Recharger la page Stats du projet → la KPI « Clics » doit incrémenter (J+0).
-   - Vérifier qu'aucun appel n'est émis sur les sous-routes `/session/:slug/start/...`, `/complete/...`, `/test/...`, `/demo`.
+Les `pending` sans aucun signal restent comptées comme "non démarrées".
+
+Même logique appliquée au compteur `abandoned` (qui s'appuie aussi sur `started_at`) : on considère une session abandonnée si elle est `pending` ET a un signal d'activité (`started_at` ou `last_activity_at`) plus vieux que 30 min.
+
+Et `pendingNotStarted` = `pending` sans aucun signal.
+
+## Résultat attendu sur l'exemple
+
+1 session `completed` ⇒ Clics 1, Formulaires 1, **Démarrés 1**, Complétés 1.
 
 ## Hors périmètre
 
-- Pas de refonte du schéma stats.
-- Pas de tracking côté serveur des sessions créées (déjà couvert par la métrique « Formulaires »).
-- Les visites précédant ce fix ne seront pas rétroactivement comptées.
+- Pas de fix du write `started_at` côté `InterviewStart` (autre ticket).
+- Pas de modification du RPC `get_project_stats_timeseries` (la courbe "started" peut rester à 0 jusqu'au fix de l'écriture).
+- Pas de schéma / pas de backfill.
