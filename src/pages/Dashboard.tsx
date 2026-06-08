@@ -311,7 +311,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Complétés (30j)</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Entretiens complétés (30j)</CardTitle>
             <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
