@@ -298,7 +298,7 @@ export function SessionReportView({
         <span className={labelClass}>Big Five</span>
       </TabsTrigger>
       <TabsTrigger value="transcription" className={triggerClass}>
-        <ScrollText className="h-5 w-5" />
+        <ScrollText className="h-12 w-12" strokeWidth={1.5} />
         <span className={labelClass}>Texte</span>
       </TabsTrigger>
     </TabsList>
