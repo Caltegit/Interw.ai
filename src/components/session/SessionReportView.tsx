@@ -272,35 +272,38 @@ export function SessionReportView({
   const audioHealth = (report as any)?.audio_health as AudioHealth | null | undefined;
   const audioFailed = isAudioFailed(audioHealth);
 
+  const triggerClass =
+    "h-[72px] py-2 flex flex-col items-center justify-center gap-1 text-sm font-medium transition-colors data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-primary/30 data-[state=active]:font-semibold";
+  const labelClass = copilotOpen ? "hidden xl:inline" : "hidden sm:inline";
   const tabsList = (
-    <TabsList className="grid w-full grid-cols-6 h-14">
-      <TabsTrigger value="summary" className="gap-1.5 h-12 text-sm font-medium">
-        <LayoutDashboard className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Résumé</span>
+    <TabsList className="grid w-full grid-cols-6 h-20">
+      <TabsTrigger value="summary" className={triggerClass}>
+        <LayoutDashboard className="h-5 w-5" />
+        <span className={labelClass}>Résumé</span>
       </TabsTrigger>
-      <TabsTrigger value="decision" className="gap-1.5 h-12 text-sm font-medium">
-        <Target className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Fit Poste</span>
+      <TabsTrigger value="decision" className={triggerClass}>
+        <Target className="h-5 w-5" />
+        <span className={labelClass}>Fit Poste</span>
         <FitScoreBadge score={fitScore} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="voice" className="gap-1.5 h-12 text-sm font-medium">
-        <Mic className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
+      <TabsTrigger value="voice" className={triggerClass}>
+        <Mic className="h-5 w-5" />
+        <span className={labelClass}>Orale</span>
         <ParaverbalBadge analysis={report?.paraverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="attitude" className="gap-1.5 h-12 text-sm font-medium">
-        <User className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
+      <TabsTrigger value="attitude" className={triggerClass}>
+        <User className="h-5 w-5" />
+        <span className={labelClass}>Attitude</span>
         <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="bigfive" className="gap-1.5 h-12 text-sm font-medium">
-        <Brain className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
+      <TabsTrigger value="bigfive" className={triggerClass}>
+        <Brain className="h-5 w-5" />
+        <span className={labelClass}>Big Five</span>
         <BigFiveBadge profile={report?.personality_profile} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="transcription" className="gap-1.5 h-12 text-sm font-medium">
-        <ScrollText className="h-4 w-4" />
-        <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Texte</span>
+      <TabsTrigger value="transcription" className={triggerClass}>
+        <ScrollText className="h-5 w-5" />
+        <span className={labelClass}>Texte</span>
       </TabsTrigger>
     </TabsList>
   );
