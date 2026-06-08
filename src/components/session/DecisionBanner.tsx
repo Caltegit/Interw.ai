@@ -110,6 +110,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
   const {
     candidateName,
     candidateEmail,
+    candidatePhone,
     jobTitle,
     projectTitle,
     durationLabel,
