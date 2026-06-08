@@ -1,4 +1,4 @@
-export type CandidateFieldKey = "job_title" | "cv" | "linkedin" | "cover_letter";
+export type CandidateFieldKey = "phone" | "job_title" | "cv" | "linkedin" | "cover_letter";
 
 export interface CandidateFieldSetting {
   enabled: boolean;
@@ -7,9 +7,10 @@ export interface CandidateFieldSetting {
 
 export type CandidateFieldsConfig = Record<CandidateFieldKey, CandidateFieldSetting>;
 
-export const CANDIDATE_FIELD_KEYS: CandidateFieldKey[] = ["job_title", "cv", "linkedin", "cover_letter"];
+export const CANDIDATE_FIELD_KEYS: CandidateFieldKey[] = ["phone", "job_title", "cv", "linkedin", "cover_letter"];
 
 export const CANDIDATE_FIELD_LABELS: Record<CandidateFieldKey, string> = {
+  phone: "Tél. mobile",
   job_title: "Poste",
   cv: "CV",
   linkedin: "LinkedIn",
@@ -17,6 +18,7 @@ export const CANDIDATE_FIELD_LABELS: Record<CandidateFieldKey, string> = {
 };
 
 export const DEFAULT_CANDIDATE_FIELDS: CandidateFieldsConfig = {
+  phone: { enabled: false, required: false },
   job_title: { enabled: false, required: false },
   cv: { enabled: false, required: false },
   linkedin: { enabled: false, required: false },
@@ -25,6 +27,7 @@ export const DEFAULT_CANDIDATE_FIELDS: CandidateFieldsConfig = {
 
 export function mergeCandidateFields(raw: unknown): CandidateFieldsConfig {
   const out: CandidateFieldsConfig = {
+    phone: { ...DEFAULT_CANDIDATE_FIELDS.phone },
     job_title: { ...DEFAULT_CANDIDATE_FIELDS.job_title },
     cv: { ...DEFAULT_CANDIDATE_FIELDS.cv },
     linkedin: { ...DEFAULT_CANDIDATE_FIELDS.linkedin },
