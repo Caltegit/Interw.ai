@@ -147,6 +147,7 @@ const App = () => (
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />
               <Route path="/projects/:id/public-page" element={<ProjectPublicPageEditor />} />
               <Route path="/projects/:id/compare" element={<ProjectCompare />} />
+              <Route path="/projects/:id/stats" element={<ProjectStats />} />
               <Route path="/question-library" element={<Navigate to="/library/questions" replace />} />
               <Route path="/library" element={<LibraryHome />} />
               <Route path="/library/questions" element={<QuestionLibrary />} />
