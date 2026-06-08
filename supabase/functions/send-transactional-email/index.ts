@@ -393,7 +393,7 @@ Deno.serve(async (req) => {
   // Garde-fou : dédup en rafale. Si un mail identique (template + recipient)
   // est pending/sent dans les 5 dernières minutes, on court-circuite l'enqueue.
   // Évite les boucles où un cron rappelle plusieurs fois la même fonction.
-  if (body.idempotencyKey || body.idempotency_key) {
+  if (idempotencyKey && idempotencyKey !== messageId) {
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
     const { data: recent } = await supabase
       .from('email_send_log')
