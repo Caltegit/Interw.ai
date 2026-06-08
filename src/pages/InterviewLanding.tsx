@@ -49,6 +49,7 @@ export default function InterviewLanding() {
   const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const introVideoRef = useRef<HTMLVideoElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const trackedRef = useRef(false);
 
   useEffect(() => {
     if (!slug) return;
