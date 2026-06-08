@@ -125,8 +125,8 @@ function ScoreGauge({
 
   if (unavailable) {
     return (
-      <div className="relative flex flex-col items-center p-3 bg-muted/30 border border-dashed border-border rounded-xl">
-        <div className="relative w-16 h-16 flex items-center justify-center mb-2 opacity-50">
+      <div className="relative flex flex-row items-center gap-3 p-4 bg-muted/30 border border-dashed border-border rounded-xl">
+        <div className="relative w-20 h-20 shrink-0 flex items-center justify-center opacity-50">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
             <circle
               cx="48"
@@ -143,17 +143,19 @@ function ScoreGauge({
             <span className="text-sm font-bold text-muted-foreground">N/A</span>
           </div>
         </div>
-        <h3 className="text-xs font-semibold text-muted-foreground">{label}</h3>
-        <p className="mt-0.5 text-[9px] text-muted-foreground/80 uppercase tracking-tight">
-          Audio non détecté
-        </p>
+        <div className="flex flex-col min-w-0">
+          <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
+          <p className="mt-1 text-[10px] text-muted-foreground/80 uppercase tracking-tight">
+            Audio non détecté
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="relative flex flex-col items-center p-3 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
-      <div className="relative w-16 h-16 flex items-center justify-center mb-2">
+    <div className="relative flex flex-row items-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
+      <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
           <circle
             cx="48"
@@ -178,33 +180,35 @@ function ScoreGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold text-foreground leading-tight text-center">
+          <span className="text-xl font-bold text-foreground leading-tight text-center">
             {score !== null ? Math.round(score) : "--"}
             <br />
-            <span className="text-[8px] font-semibold text-muted-foreground -mt-1 block">/100</span>
+            <span className="text-[9px] font-semibold text-muted-foreground -mt-1 block">/100</span>
           </span>
         </div>
       </div>
-      <h3 className="text-xs font-semibold text-foreground">{label}</h3>
-      <div className="h-5 mt-1 flex items-center">
-        {delta !== null ? (
-          <span
-            className={`text-xs font-bold tabular-nums ${
-              delta > 0
-                ? "text-emerald-600"
-                : delta < 0
-                  ? "text-rose-600"
-                  : "text-muted-foreground"
-            }`}
-            title="Écart vs moyenne projet"
-          >
-            {delta > 0 ? "+" : ""}
-            {delta}{" "}
-            <span className="text-[10px] font-medium text-muted-foreground">/moy.</span>
-          </span>
-        ) : (
-          <span className="text-[10px] text-muted-foreground/60">—</span>
-        )}
+      <div className="flex flex-col min-w-0">
+        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <div className="mt-1 flex items-center">
+          {delta !== null ? (
+            <span
+              className={`text-sm font-bold tabular-nums ${
+                delta > 0
+                  ? "text-emerald-600"
+                  : delta < 0
+                    ? "text-rose-600"
+                    : "text-muted-foreground"
+              }`}
+              title="Écart vs moyenne projet"
+            >
+              {delta > 0 ? "+" : ""}
+              {delta}{" "}
+              <span className="text-[11px] font-medium text-muted-foreground">/moy.</span>
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-foreground/60">—</span>
+          )}
+        </div>
       </div>
     </div>
   );
