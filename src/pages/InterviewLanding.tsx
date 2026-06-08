@@ -31,6 +31,7 @@ export default function InterviewLanding() {
   const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(DEFAULT_CANDIDATE_FIELDS);
   const [candidateJobTitle, setCandidateJobTitle] = useState("");
   const [candidateLinkedin, setCandidateLinkedin] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -103,13 +104,16 @@ export default function InterviewLanding() {
   const trimmedName = candidateName.trim();
   const trimmedJobTitle = candidateJobTitle.trim();
   const trimmedLinkedin = candidateLinkedin.trim();
+  const trimmedPhone = candidatePhone.trim();
   const emailValid = emailRegex.test(trimmedEmail);
   const showEmailError = candidateEmail.length > 0 && !emailValid;
 
   const linkedinValid = !trimmedLinkedin || /^https?:\/\//i.test(trimmedLinkedin);
+  const phoneValid = !trimmedPhone || /^[+0-9 ().-]{6,}$/.test(trimmedPhone);
 
   // Validation des champs additionnels selon la config du projet
   const missingRequired =
+    (candidateFields.phone.enabled && candidateFields.phone.required && !trimmedPhone) ||
     (candidateFields.job_title.enabled && candidateFields.job_title.required && !trimmedJobTitle) ||
     (candidateFields.linkedin.enabled && candidateFields.linkedin.required && !trimmedLinkedin) ||
     (candidateFields.cv.enabled && candidateFields.cv.required && !cvFile) ||
@@ -119,6 +123,7 @@ export default function InterviewLanding() {
     trimmedName.length > 0 &&
     emailValid &&
     linkedinValid &&
+    phoneValid &&
     !missingRequired &&
     !starting;
 
@@ -168,6 +173,7 @@ export default function InterviewLanding() {
         candidate_email: trimmedEmail,
         candidate_job_title: jobTitleValue,
         candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
+        candidate_phone: candidateFields.phone.enabled && trimmedPhone ? trimmedPhone : null,
         recruiter_note: jobTitleValue ? `Poste : ${jobTitleValue}` : null,
       })
       .select()
@@ -584,6 +590,29 @@ export default function InterviewLanding() {
             </div>
 
             {/* Champs candidat configurables */}
+            {candidateFields.phone.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium">
+                  Tél. mobile {candidateFields.phone.required && "*"}
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+33 6 12 34 56 78"
+                  value={candidatePhone}
+                  onChange={(e) => setCandidatePhone(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+                {!phoneValid && (
+                  <p className="text-xs" style={{ color: "#f87171" }}>
+                    Numéro de téléphone invalide.
+                  </p>
+                )}
+              </div>
+            )}
+
             {candidateFields.job_title.enabled && (
               <div className="space-y-2">
                 <Label htmlFor="job-title" className="text-sm font-medium">
