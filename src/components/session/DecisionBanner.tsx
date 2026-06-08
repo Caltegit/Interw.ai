@@ -75,6 +75,7 @@ interface DecisionBannerProps {
   coverLetterFilename?: string | null;
   candidateJobTitle?: string | null;
   onEditLinks?: () => void;
+  onOpenStats?: () => void;
   audioFailed?: boolean;
   videoSlot?: ReactNode;
   videoSlotWidth?: number;
