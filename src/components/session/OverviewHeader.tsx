@@ -7,6 +7,7 @@ import { Clock, MessageSquare, Video, Target, HelpCircle } from "lucide-react";
 interface OverviewHeaderProps {
   candidateName: string;
   candidateEmail?: string;
+  candidatePhone?: string | null;
   jobTitle?: string;
   projectTitle?: string;
   createdAt?: string | null;
