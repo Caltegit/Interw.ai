@@ -7,6 +7,7 @@ import { Clock, MessageSquare, Video, Target, HelpCircle } from "lucide-react";
 interface OverviewHeaderProps {
   candidateName: string;
   candidateEmail?: string;
+  candidatePhone?: string | null;
   jobTitle?: string;
   projectTitle?: string;
   createdAt?: string | null;
@@ -31,6 +32,7 @@ export function OverviewHeader(props: OverviewHeaderProps) {
   const {
     candidateName,
     candidateEmail,
+    candidatePhone,
     jobTitle,
     projectTitle,
     createdAt,
@@ -66,6 +68,9 @@ export function OverviewHeader(props: OverviewHeaderProps) {
             )}
             {candidateEmail && (
               <p className="text-xs text-muted-foreground">{candidateEmail}</p>
+            )}
+            {candidatePhone && (
+              <p className="text-xs text-muted-foreground">{candidatePhone}</p>
             )}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {recommendation && <RecommendationBadge recommendation={recommendation} />}

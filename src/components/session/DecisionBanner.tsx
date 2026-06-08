@@ -42,6 +42,7 @@ export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "reject
 interface DecisionBannerProps {
   candidateName: string;
   candidateEmail?: string | null;
+  candidatePhone?: string | null;
   jobTitle?: string | null;
   projectTitle?: string | null;
   durationLabel?: string;
@@ -109,6 +110,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
   const {
     candidateName,
     candidateEmail,
+    candidatePhone,
     jobTitle,
     projectTitle,
     durationLabel,
@@ -309,6 +311,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
             )}
+            {candidatePhone && (
+              <p className="text-xs text-muted-foreground truncate">{candidatePhone}</p>
+            )}
             <p className="text-xs text-muted-foreground">{meta}</p>
             {candidateJobTitle && (
               <p className="text-xs font-medium text-foreground/80 truncate">{candidateJobTitle}</p>
@@ -334,6 +339,9 @@ export function DecisionBanner(props: DecisionBannerProps) {
             </div>
             {candidateEmail && (
               <p className="text-xs text-muted-foreground truncate">{candidateEmail}</p>
+            )}
+            {candidatePhone && (
+              <p className="text-xs text-muted-foreground truncate">{candidatePhone}</p>
             )}
             <p className="text-xs text-muted-foreground">{meta}</p>
             {candidateJobTitle && (
