@@ -209,6 +209,15 @@ export function DecisionBanner(props: DecisionBannerProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
+                  {onOpenStats && (
+                    <>
+                      <DropdownMenuItem onClick={onOpenStats}>
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Statistiques du projet
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={onShare}>
                     <Share2 className="mr-2 h-4 w-4" />
                     Partager ce rapport
