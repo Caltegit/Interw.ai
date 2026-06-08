@@ -11,6 +11,7 @@ interface Props {
   nonverbalAnalysis?: any;
   audioFailed?: boolean;
   projectAverages?: ProjectAverages | null;
+  onSelectTab?: (tab: string) => void;
 }
 
 type Tone = "success" | "warning" | "danger" | "muted";
