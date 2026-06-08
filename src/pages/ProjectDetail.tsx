@@ -734,6 +734,11 @@ export default function ProjectDetail() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
+                <Link to={`/projects/${project.id}/stats`}>
+                  <BarChart3 className="mr-2 h-4 w-4" /> Statistiques
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link to={`/projects/${project.id}/public-page`}>
                   <Globe className="mr-2 h-4 w-4" /> Page publique
                 </Link>
