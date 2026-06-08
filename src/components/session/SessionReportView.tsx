@@ -282,24 +282,20 @@ export function SessionReportView({
         <span className={labelClass}>Résumé</span>
       </TabsTrigger>
       <TabsTrigger value="decision" className={triggerClass}>
-        <Target className="h-5 w-5" />
+        <FitScoreBadge score={fitScore} size={48} audioFailed={audioFailed} />
         <span className={labelClass}>Fit Poste</span>
-        <FitScoreBadge score={fitScore} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="voice" className={triggerClass}>
-        <Mic className="h-5 w-5" />
+        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={48} audioFailed={audioFailed} />
         <span className={labelClass}>Orale</span>
-        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="attitude" className={triggerClass}>
-        <User className="h-5 w-5" />
+        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={48} audioFailed={audioFailed} />
         <span className={labelClass}>Attitude</span>
-        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="bigfive" className={triggerClass}>
-        <Brain className="h-5 w-5" />
+        <BigFiveBadge profile={report?.personality_profile} size={48} audioFailed={audioFailed} />
         <span className={labelClass}>Big Five</span>
-        <BigFiveBadge profile={report?.personality_profile} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
       <TabsTrigger value="transcription" className={triggerClass}>
         <ScrollText className="h-5 w-5" />
