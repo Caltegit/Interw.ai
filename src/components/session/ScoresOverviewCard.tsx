@@ -112,11 +112,13 @@ function ScoreGauge({
   score,
   avg,
   unavailable,
+  onClick,
 }: {
   label: string;
   score: number | null;
   avg: number | null;
   unavailable: boolean;
+  onClick?: () => void;
 }) {
   const R = 42;
   const C = 2 * Math.PI * R; // 263.89
