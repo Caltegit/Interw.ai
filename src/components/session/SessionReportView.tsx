@@ -59,6 +59,7 @@ export interface SessionReportViewProps {
   onEmail?: () => void;
   onEditLinks?: () => void;
   onDelete?: () => void;
+  onOpenStats?: () => void;
   // Notes recruteur — masqué si readOnly
   recruiterNotes?: string;
   onRecruiterNotesChange?: (v: string) => void;
