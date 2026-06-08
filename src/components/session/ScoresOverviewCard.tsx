@@ -125,8 +125,8 @@ function ScoreGauge({
 
   if (unavailable) {
     return (
-      <div className="relative flex flex-col items-center p-5 bg-muted/30 border border-dashed border-border rounded-xl">
-        <div className="relative w-24 h-24 flex items-center justify-center mb-3 opacity-50">
+      <div className="relative flex flex-col items-center p-3 bg-muted/30 border border-dashed border-border rounded-xl">
+        <div className="relative w-16 h-16 flex items-center justify-center mb-2 opacity-50">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
             <circle
               cx="48"
@@ -140,11 +140,11 @@ function ScoreGauge({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-base font-bold text-muted-foreground">N/A</span>
+            <span className="text-sm font-bold text-muted-foreground">N/A</span>
           </div>
         </div>
-        <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
-        <p className="mt-1 text-[10px] text-muted-foreground/80 uppercase tracking-tight">
+        <h3 className="text-xs font-semibold text-muted-foreground">{label}</h3>
+        <p className="mt-0.5 text-[9px] text-muted-foreground/80 uppercase tracking-tight">
           Audio non détecté
         </p>
       </div>
@@ -152,8 +152,8 @@ function ScoreGauge({
   }
 
   return (
-    <div className="relative flex flex-col items-center p-5 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
-      <div className="relative w-24 h-24 flex items-center justify-center mb-3">
+    <div className="relative flex flex-col items-center p-3 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
+      <div className="relative w-16 h-16 flex items-center justify-center mb-2">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
           <circle
             cx="48"
@@ -178,19 +178,18 @@ function ScoreGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold text-foreground leading-tight text-center">
+          <span className="text-lg font-bold text-foreground leading-tight text-center">
             {score !== null ? Math.round(score) : "--"}
             <br />
-            <span className="text-[10px] font-semibold text-muted-foreground -mt-1 block">/100</span>
+            <span className="text-[8px] font-semibold text-muted-foreground -mt-1 block">/100</span>
           </span>
-          <div className="h-1" />
         </div>
       </div>
-      <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-      <div className="h-6 mt-1.5 flex items-center">
+      <h3 className="text-xs font-semibold text-foreground">{label}</h3>
+      <div className="h-5 mt-1 flex items-center">
         {delta !== null ? (
           <span
-            className={`text-sm font-bold tabular-nums ${
+            className={`text-xs font-bold tabular-nums ${
               delta > 0
                 ? "text-emerald-600"
                 : delta < 0
@@ -201,10 +200,10 @@ function ScoreGauge({
           >
             {delta > 0 ? "+" : ""}
             {delta}{" "}
-            <span className="text-[11px] font-medium text-muted-foreground">/moy.</span>
+            <span className="text-[10px] font-medium text-muted-foreground">/moy.</span>
           </span>
         ) : (
-          <span className="text-[11px] text-muted-foreground/60">—</span>
+          <span className="text-[10px] text-muted-foreground/60">—</span>
         )}
       </div>
     </div>
