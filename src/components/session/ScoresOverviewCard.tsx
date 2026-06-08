@@ -163,7 +163,12 @@ function ScoreGauge({
   }
 
   return (
-    <div className="relative flex flex-row items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/30 transition-colors">
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className="relative flex flex-row items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer"
+    >
       <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
           <circle
