@@ -123,6 +123,7 @@ export default function InterviewLanding() {
     trimmedName.length > 0 &&
     emailValid &&
     linkedinValid &&
+    phoneValid &&
     !missingRequired &&
     !starting;
 
