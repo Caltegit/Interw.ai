@@ -53,7 +53,7 @@ function KpiCard({ icon: Icon, label, value, subline, tone = "default" }: KpiCar
 
 export default function ProjectStats() {
   const { id } = useParams<{ id: string }>();
-  const [period, setPeriod] = useState<StatsPeriod>("30d");
+  const [period, setPeriod] = useState<StatsPeriod>("all");
   const { data, isLoading } = useProjectStats(id, period);
 
   const outcomeRows = useMemo(() => {
