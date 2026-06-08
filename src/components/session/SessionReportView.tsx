@@ -329,7 +329,7 @@ export function SessionReportView({
           )}
 
           {isPinned && (
-            <div className="fixed right-4 top-[68px] z-40">
+            <div className="fixed right-4 top-24 z-30">
               <div ref={setPinnedHost} className="w-[220px] overflow-hidden rounded-lg border bg-background shadow-lg" />
             </div>
           )}
