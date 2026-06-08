@@ -31,6 +31,7 @@ export default function InterviewLanding() {
   const [candidateFields, setCandidateFields] = useState<CandidateFieldsConfig>(DEFAULT_CANDIDATE_FIELDS);
   const [candidateJobTitle, setCandidateJobTitle] = useState("");
   const [candidateLinkedin, setCandidateLinkedin] = useState("");
+  const [candidatePhone, setCandidatePhone] = useState("");
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [coverLetterFile, setCoverLetterFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
