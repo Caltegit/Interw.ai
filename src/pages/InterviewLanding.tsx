@@ -76,6 +76,18 @@ export default function InterviewLanding() {
       setCandidateFields(mergeCandidateFields((proj as any).candidate_fields));
       setLoading(false);
 
+      // Tracking « clics » sur le lien candidat (déduplication quotidienne côté serveur)
+      if (!trackedRef.current && proj.id) {
+        trackedRef.current = true;
+        supabase.functions
+          .invoke("track-project-view", {
+            body: { project_id: proj.id, referrer: document.referrer || "" },
+          })
+          .catch(() => {
+            /* tracking best-effort */
+          });
+      }
+
       // Si l'option « intro en premier écran » est activée et qu'une intro est configurée,
       // on affiche l'intro avant le formulaire d'inscription.
       const projAny = proj as any;
