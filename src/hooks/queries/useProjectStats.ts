@@ -13,7 +13,8 @@ export interface ProjectStatsData {
   abandoned: number;
   pendingNotStarted: number;
   avgDurationSeconds: number | null;
-  medianDurationSeconds: number | null;
+  minDurationSeconds: number | null;
+  maxDurationSeconds: number | null;
   topReferrers: Array<{ host: string; count: number }>;
   timeseries: Array<{ day: string; clicks: number; forms: number; started: number; completed: number }>;
 }
@@ -97,7 +98,8 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
       const avgDurationSeconds = durations.length
         ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
         : null;
-      const medianDurationSeconds = median(durations) ? Math.round(median(durations)!) : null;
+      const minDurationSeconds = durations.length ? Math.min(...durations) : null;
+      const maxDurationSeconds = durations.length ? Math.max(...durations) : null;
 
       const refMap = new Map<string, number>();
       for (const v of views) {
@@ -132,7 +134,8 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
         abandoned,
         pendingNotStarted,
         avgDurationSeconds,
-        medianDurationSeconds,
+        minDurationSeconds,
+        maxDurationSeconds,
         topReferrers,
         timeseries,
       };

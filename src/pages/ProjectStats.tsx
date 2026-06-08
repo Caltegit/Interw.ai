@@ -165,7 +165,7 @@ export default function ProjectStats() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4" /> Durée d'entretien
+              <Clock className="h-4 w-4" /> Durée d'entretien sur {data.completed} session{data.completed > 1 ? "s" : ""}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -174,12 +174,12 @@ export default function ProjectStats() {
               <span className="font-medium">{formatDuration(data.avgDurationSeconds)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Médiane</span>
-              <span className="font-medium">{formatDuration(data.medianDurationSeconds)}</span>
+              <span className="text-muted-foreground">Min</span>
+              <span className="font-medium">{formatDuration(data.minDurationSeconds)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Échantillon</span>
-              <span className="font-medium">{data.completed} session{data.completed > 1 ? "s" : ""}</span>
+              <span className="text-muted-foreground">Max</span>
+              <span className="font-medium">{formatDuration(data.maxDurationSeconds)}</span>
             </div>
           </CardContent>
         </Card>
