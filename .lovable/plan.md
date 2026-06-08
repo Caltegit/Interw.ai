@@ -1,32 +1,16 @@
-## Problème
+## Objectif
+Améliorer la visibilité de la barre d'onglets du rapport de session (Résumé / Fit Poste / Orale / Attitude / Big Five / Texte) en l'agrandissant de ~50% et en rendant les pastilles de notes plus grosses.
 
-Sur la page Stats, "Entretiens démarrés" reste à 0 même quand des sessions sont complétées ou réellement démarrées.
+## Changements (un seul fichier)
 
-**Cause racine** : la colonne `sessions.started_at` n'est jamais renseignée en base. Sur les 497 sessions du projet (430 `completed`, 60 `cancelled`, 7 `pending`), **aucune** n'a `started_at` rempli. L'écriture dans `InterviewStart.tsx` ne se propage pas (probable blocage RLS côté candidat anonyme), mais la correction de cette écriture est hors périmètre de ce ticket d'affichage.
+**`src/components/session/SessionReportView.tsx`** (lignes 275-306)
 
-Le KPI est donc structurellement bloqué à 0, ce qui rend la métrique "0 démarré / 1 complété" incohérente.
+1. Sur `<TabsList>` : ajouter `h-14` (au lieu du `h-10` par défaut de shadcn → +40%, visuellement ~50% plus haut une fois le padding interne pris en compte).
+2. Sur chaque `<TabsTrigger>` : ajouter `h-12 text-sm font-medium` pour augmenter la hauteur du bouton actif et la lisibilité du libellé.
+3. Sur les 4 badges de score (`FitScoreBadge`, `ParaverbalBadge`, `NonverbalBadge`, `BigFiveBadge`) : passer `size={25}` → `size={32}` pour des pastilles plus visibles, avec un chiffre plus gros.
+4. Vérifier que les icônes Lucide `h-4 w-4` restent cohérentes (sinon passer à `h-5 w-5` si la balance icône/texte le demande après aperçu).
 
-## Correctif (affichage uniquement)
+Aucun autre fichier touché. Pas de logique métier modifiée.
 
-Dans `src/hooks/queries/useProjectStats.ts`, calculer `started` à partir de signaux fiables au lieu de `started_at` :
-
-Une session est considérée "démarrée" si **au moins une** des conditions est vraie :
-- `status ∈ { completed, cancelled }` (forcément passé par l'entretien)
-- `started_at` est renseigné (compat future)
-- `last_activity_at` est renseigné (pending qui a progressé)
-
-Les `pending` sans aucun signal restent comptées comme "non démarrées".
-
-Même logique appliquée au compteur `abandoned` (qui s'appuie aussi sur `started_at`) : on considère une session abandonnée si elle est `pending` ET a un signal d'activité (`started_at` ou `last_activity_at`) plus vieux que 30 min.
-
-Et `pendingNotStarted` = `pending` sans aucun signal.
-
-## Résultat attendu sur l'exemple
-
-1 session `completed` ⇒ Clics 1, Formulaires 1, **Démarrés 1**, Complétés 1.
-
-## Hors périmètre
-
-- Pas de fix du write `started_at` côté `InterviewStart` (autre ticket).
-- Pas de modification du RPC `get_project_stats_timeseries` (la courbe "started" peut rester à 0 jusqu'au fix de l'écriture).
-- Pas de schéma / pas de backfill.
+## Vérification
+Recharger `/projects/.../sessions/...` et confirmer visuellement que la barre est nettement plus haute et que les pastilles de note sont plus lisibles, sans casser le layout responsive (`grid-cols-6`).
