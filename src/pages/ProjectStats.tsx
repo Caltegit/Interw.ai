@@ -111,7 +111,7 @@ export default function ProjectStats() {
           icon={MousePointerClick}
           label="Clics"
           value={data.clicks}
-          subline="visites uniques de la page publique"
+          subline="visites uniques sur le lien candidat"
         />
         <KpiCard
           icon={FileText}
@@ -127,7 +127,7 @@ export default function ProjectStats() {
         />
         <KpiCard
           icon={CheckCircle2}
-          label="Complétés"
+          label="Entretiens complétés"
           value={data.completed}
           subline={`${pct(data.completed, data.started)} des démarrés`}
           tone="success"
@@ -135,10 +135,10 @@ export default function ProjectStats() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Issue des sessions */}
+        {/* Statut des sessions */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Issue des sessions</CardTitle>
+            <CardTitle className="text-base">Statut des sessions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {outcomeRows.every((r) => r.n === 0) ? (
