@@ -41,6 +41,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import ProjectPublicPageEditor from "./pages/ProjectPublicPageEditor";
 import ProjectPublicPage from "./pages/ProjectPublicPage";
 import ProjectCompare from "./pages/ProjectCompare";
+import ProjectStats from "./pages/ProjectStats";
 import SessionDetail from "./pages/SessionDetail";
 import SessionVideoExport from "./pages/SessionVideoExport";
 import Settings from "./pages/Settings";
