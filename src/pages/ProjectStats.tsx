@@ -191,50 +191,72 @@ export default function ProjectStats() {
           <CardTitle className="text-base">Activité dans le temps</CardTitle>
         </CardHeader>
         <CardContent>
-          {data.timeseries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Pas encore de données.</p>
-          ) : (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.timeseries}>
-                  <defs>
-                    <linearGradient id="g-clicks" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="g-forms" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--info))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--info))" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="g-completed" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
-                  <Area type="monotone" dataKey="clicks" name="Clics" stroke="hsl(var(--primary))" fill="url(#g-clicks)" />
-                  <Area type="monotone" dataKey="forms" name="Formulaires" stroke="hsl(var(--info))" fill="url(#g-forms)" />
-                  <Area
-                    type="monotone"
-                    dataKey="completed"
-                    name="Complétées"
-                    stroke="hsl(var(--success))"
-                    fill="url(#g-completed)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {(() => {
+            const firstIdx = data.timeseries.findIndex(
+              (d: any) => (d.clicks || 0) + (d.forms || 0) + (d.started || 0) + (d.completed || 0) > 0,
+            );
+            const trimmed = firstIdx >= 0 ? data.timeseries.slice(firstIdx) : [];
+            const formatDay = (d: string) => {
+              const parts = d.split("-"); // yyyy-mm-dd
+              if (parts.length === 3) return `${Number(parts[2])}/${Number(parts[1])}`;
+              const dt = new Date(d);
+              return Number.isNaN(dt.getTime()) ? d : `${dt.getDate()}/${dt.getMonth() + 1}`;
+            };
+            if (trimmed.length === 0) {
+              return <p className="text-sm text-muted-foreground">Pas encore de données.</p>;
+            }
+            return (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trimmed} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="g-clicks" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="g-forms" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--info))" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="hsl(var(--info))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="g-completed" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--success))" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="hsl(var(--success))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fontSize: 11 }}
+                      stroke="hsl(var(--muted-foreground))"
+                      tickFormatter={formatDay}
+                      interval={0}
+                      minTickGap={4}
+                    />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                    <Tooltip
+                      labelFormatter={(l) => formatDay(String(l))}
+                      contentStyle={{
+                        background: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
+                    <Area type="monotone" dataKey="clicks" name="Clics" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#g-clicks)" />
+                    <Area type="monotone" dataKey="forms" name="Formulaires" stroke="hsl(var(--info))" strokeWidth={2} fill="url(#g-forms)" />
+                    <Area
+                      type="monotone"
+                      dataKey="completed"
+                      name="Complétées"
+                      stroke="hsl(var(--success))"
+                      strokeWidth={2}
+                      fill="url(#g-completed)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 
