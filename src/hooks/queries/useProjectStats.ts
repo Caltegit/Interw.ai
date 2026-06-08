@@ -70,16 +70,26 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
 
       const completedSessions = sessions.filter((s) => s.status === "completed");
       const cancelled = sessions.filter((s) => s.status === "cancelled").length;
-      const startedCount = sessions.filter((s) => !!s.started_at).length;
+
+      // started_at n'est pas systématiquement renseigné en base : on s'appuie
+      // sur le statut et last_activity_at pour détecter qu'une session a démarré.
+      const hasStartSignal = (s: any) =>
+        s.status === "completed" ||
+        s.status === "cancelled" ||
+        !!s.started_at ||
+        !!s.last_activity_at;
+      const startedCount = sessions.filter(hasStartSignal).length;
 
       const now = Date.now();
       const abandoned = sessions.filter((s) => {
         if (s.status !== "pending") return false;
-        if (!s.started_at) return false;
-        const last = s.last_activity_at ?? s.started_at;
-        return now - new Date(last).getTime() > 30 * 60 * 1000;
+        const activitySignal = s.last_activity_at ?? s.started_at;
+        if (!activitySignal) return false;
+        return now - new Date(activitySignal).getTime() > 30 * 60 * 1000;
       }).length;
-      const pendingNotStarted = sessions.filter((s) => s.status === "pending" && !s.started_at).length;
+      const pendingNotStarted = sessions.filter(
+        (s) => s.status === "pending" && !s.started_at && !s.last_activity_at,
+      ).length;
 
       const durations = completedSessions
         .map((s) => Number(s.duration_seconds))
