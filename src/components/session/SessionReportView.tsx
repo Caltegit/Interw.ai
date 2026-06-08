@@ -88,6 +88,7 @@ export function SessionReportView({
   onEmail,
   onEditLinks,
   onDelete,
+  onOpenStats,
   recruiterNotes,
   onRecruiterNotesChange,
 }: SessionReportViewProps) {
