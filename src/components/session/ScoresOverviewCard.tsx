@@ -37,6 +37,7 @@ export function ScoresOverviewCard({
   nonverbalAnalysis,
   audioFailed,
   projectAverages,
+  onSelectTab,
 }: Props) {
   const bigFive = computeBigFiveAverage(personalityProfile);
   const paraverbal = audioFailed ? null : computeParaverbalAverage(paraverbalAnalysis);
@@ -61,24 +62,28 @@ export function ScoresOverviewCard({
       score: fitScore,
       avg: hasBenchmark ? projectAverages!.overallScore : null,
       unavailable: false,
+      tab: "decision",
     },
     {
       label: "Orale",
       score: paraverbal,
       avg: hasBenchmark ? projectAverages!.paraverbalScore : null,
       unavailable: !!audioFailed,
+      tab: "voice",
     },
     {
       label: "Attitude",
       score: nonverbal,
       avg: hasBenchmark ? projectAverages!.nonverbalScore : null,
       unavailable: !!audioFailed,
+      tab: "attitude",
     },
     {
       label: "Big Five",
       score: bigFive,
       avg: bigFiveProjectAvg,
       unavailable: false,
+      tab: "bigfive",
     },
   ];
 
@@ -93,6 +98,7 @@ export function ScoresOverviewCard({
               score={it.score}
               avg={it.avg}
               unavailable={it.unavailable}
+              onClick={onSelectTab ? () => onSelectTab(it.tab) : undefined}
             />
           ))}
         </div>
