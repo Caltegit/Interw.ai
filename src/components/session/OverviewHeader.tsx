@@ -32,6 +32,7 @@ export function OverviewHeader(props: OverviewHeaderProps) {
   const {
     candidateName,
     candidateEmail,
+    candidatePhone,
     jobTitle,
     projectTitle,
     createdAt,
