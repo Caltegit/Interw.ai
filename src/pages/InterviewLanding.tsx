@@ -590,6 +590,29 @@ export default function InterviewLanding() {
             </div>
 
             {/* Champs candidat configurables */}
+            {candidateFields.phone.enabled && (
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-sm font-medium">
+                  Tél. mobile {candidateFields.phone.required && "*"}
+                </Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="+33 6 12 34 56 78"
+                  value={candidatePhone}
+                  onChange={(e) => setCandidatePhone(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
+                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                />
+                {!phoneValid && (
+                  <p className="text-xs" style={{ color: "#f87171" }}>
+                    Numéro de téléphone invalide.
+                  </p>
+                )}
+              </div>
+            )}
+
             {candidateFields.job_title.enabled && (
               <div className="space-y-2">
                 <Label htmlFor="job-title" className="text-sm font-medium">
