@@ -42,6 +42,7 @@ export type RecruiterDecision = "none" | "in_progress" | "shortlisted" | "reject
 interface DecisionBannerProps {
   candidateName: string;
   candidateEmail?: string | null;
+  candidatePhone?: string | null;
   jobTitle?: string | null;
   projectTitle?: string | null;
   durationLabel?: string;
