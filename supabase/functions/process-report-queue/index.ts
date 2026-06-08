@@ -110,6 +110,7 @@ async function sendCandidateThankYou(
     recipientEmail: session.candidate_email,
     idempotencyKey: `candidate-thanks-${sessionId}`,
     replyTo,
+    metadata: { session_id: sessionId },
     templateData: {
       firstName,
       jobTitle,
