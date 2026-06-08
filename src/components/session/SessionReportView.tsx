@@ -322,7 +322,7 @@ export function SessionReportView({
 
         <div ref={setSentinelEl} aria-hidden className="h-px w-full" />
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {isPinned && (
             <div ref={setPinnedBar} className="sticky top-0 z-40 -mx-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-sm md:-mx-6">
               <div className="px-4 py-2">{tabsList}</div>
