@@ -273,32 +273,32 @@ export function SessionReportView({
   const audioFailed = isAudioFailed(audioHealth);
 
   const tabsList = (
-    <TabsList className="grid w-full grid-cols-6">
-      <TabsTrigger value="summary" className="gap-1">
+    <TabsList className="grid w-full grid-cols-6 h-14">
+      <TabsTrigger value="summary" className="gap-1.5 h-12 text-sm font-medium">
         <LayoutDashboard className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Résumé</span>
       </TabsTrigger>
-      <TabsTrigger value="decision" className="gap-1">
+      <TabsTrigger value="decision" className="gap-1.5 h-12 text-sm font-medium">
         <Target className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Fit Poste</span>
-        <FitScoreBadge score={fitScore} size={25} audioFailed={audioFailed} />
+        <FitScoreBadge score={fitScore} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="voice" className="gap-1">
+      <TabsTrigger value="voice" className="gap-1.5 h-12 text-sm font-medium">
         <Mic className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Orale</span>
-        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={25} audioFailed={audioFailed} />
+        <ParaverbalBadge analysis={report?.paraverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="attitude" className="gap-1">
+      <TabsTrigger value="attitude" className="gap-1.5 h-12 text-sm font-medium">
         <User className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Attitude</span>
-        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={25} audioFailed={audioFailed} />
+        <NonverbalBadge analysis={(report as any)?.nonverbal_analysis} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="bigfive" className="gap-1">
+      <TabsTrigger value="bigfive" className="gap-1.5 h-12 text-sm font-medium">
         <Brain className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Big Five</span>
-        <BigFiveBadge profile={report?.personality_profile} size={25} audioFailed={audioFailed} />
+        <BigFiveBadge profile={report?.personality_profile} size={32} audioFailed={audioFailed} />
       </TabsTrigger>
-      <TabsTrigger value="transcription" className="gap-1">
+      <TabsTrigger value="transcription" className="gap-1.5 h-12 text-sm font-medium">
         <ScrollText className="h-4 w-4" />
         <span className={copilotOpen ? "hidden xl:inline" : "hidden sm:inline"}>Texte</span>
       </TabsTrigger>
