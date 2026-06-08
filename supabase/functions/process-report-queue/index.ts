@@ -53,16 +53,16 @@ async function sendCandidateThankYou(
     .maybeSingle();
   if (!session?.candidate_email) return;
 
-  // Idempotence stricte : si un thank-you a déjà été envoyé à ce candidat
-  // sur les 30 derniers jours, skip. (cf. fix du spam 30+ emails)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  // Idempotence par session : un seul thank-you par session, peu importe
+  // les autres entretiens du même candidat. (cf. fix précédent du spam :
+  // on conserve la garde, mais scopée au session_id via metadata.)
   const { data: alreadySent } = await supabase
     .from("email_send_log")
     .select("id")
     .eq("template_name", "candidate-thank-you")
     .eq("recipient_email", session.candidate_email)
     .in("status", ["pending", "sent"])
-    .gte("created_at", thirtyDaysAgo)
+    .contains("metadata", { session_id: sessionId })
     .limit(1);
   if (alreadySent && alreadySent.length > 0) return;
 
@@ -110,6 +110,7 @@ async function sendCandidateThankYou(
     recipientEmail: session.candidate_email,
     idempotencyKey: `candidate-thanks-${sessionId}`,
     replyTo,
+    metadata: { session_id: sessionId },
     templateData: {
       firstName,
       jobTitle,

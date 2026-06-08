@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
   let templateData: Record<string, any> = {}
   let replyTo: string | undefined
   let fromName: string | undefined
+  let metadata: Record<string, any> | undefined
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
@@ -154,6 +155,9 @@ Deno.serve(async (req) => {
     if (typeof fn === 'string') {
       const cleaned = fn.replace(/[<>"\r\n]/g, '').trim().slice(0, 60)
       if (cleaned.length > 0) fromName = cleaned
+    }
+    if (body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)) {
+      metadata = body.metadata as Record<string, any>
     }
   } catch {
     return new Response(
@@ -389,7 +393,7 @@ Deno.serve(async (req) => {
   // Garde-fou : dédup en rafale. Si un mail identique (template + recipient)
   // est pending/sent dans les 5 dernières minutes, on court-circuite l'enqueue.
   // Évite les boucles où un cron rappelle plusieurs fois la même fonction.
-  if (body.idempotencyKey || body.idempotency_key) {
+  if (idempotencyKey && idempotencyKey !== messageId) {
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
     const { data: recent } = await supabase
       .from('email_send_log')
@@ -424,6 +428,7 @@ Deno.serve(async (req) => {
     template_name: templateName,
     recipient_email: effectiveRecipient,
     status: 'pending',
+    metadata: metadata ?? null,
   })
 
 
