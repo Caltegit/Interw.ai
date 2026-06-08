@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
   let templateData: Record<string, any> = {}
   let replyTo: string | undefined
   let fromName: string | undefined
+  let metadata: Record<string, any> | undefined
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name
