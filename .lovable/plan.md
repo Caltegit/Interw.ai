@@ -1,26 +1,29 @@
-## Objectif
-Sur la barre d'onglets du rapport de session, pour les 4 onglets avec note (Fit Poste, Orale, Attitude, Big Five) : retirer le picto, placer la pastille de note **au-dessus** du libellé et l'agrandir x1,5. Garder Résumé et Texte tels quels (picto + libellé).
+# Fix: téléphone candidat absent du rapport
 
-## Changements (un seul fichier)
+## Diagnostic
 
-**`src/components/session/SessionReportView.tsx`** — bloc `tabsList` (lignes 275-310 environ)
+C'est bien un bug. La chaîne d'affichage est correcte :
 
-1. **Fit Poste / Orale / Attitude / Big Five** : supprimer l'icône Lucide (`Target`, `Mic`, `User`, `Brain`). Conserver le `flex flex-col items-center justify-center` du `TabsTrigger`, mais ne garder que :
-   - `<XxxBadge ... size={48} />` en premier (au-dessus)
-   - `<span>` libellé en second (en-dessous)
-   Imports devenus inutiles (`Target`, `Mic`, `User`, `Brain`) à retirer du `import { … } from "lucide-react"`.
+- `DecisionBanner.tsx` affiche déjà `candidatePhone` (lignes 314 et 343) sous l'email.
+- `SessionReportView.tsx` (ligne 343) lui passe `session.candidate_phone`.
+- Le formulaire candidat (`InterviewLanding.tsx`) enregistre bien `candidate_phone` en base.
 
-2. **Taille pastille** : passer `size={32}` → `size={48}` pour `FitScoreBadge`, `ParaverbalBadge`, `NonverbalBadge`, `BigFiveBadge`.
+**Mais** dans `src/hooks/queries/useSessionDetail.ts` (ligne 18), la colonne `candidate_phone` n'est pas listée dans le `SELECT` envoyé à `sessions`. Du coup `session.candidate_phone` vaut toujours `undefined` côté client, et le `{candidatePhone && ...}` ne rend rien — même quand le numéro est bien stocké en base.
 
-3. **Résumé / Texte** : inchangés (icône + libellé empilés comme aujourd'hui).
+## Changement
 
-4. **Hauteur de la barre** : conserver `h-20` actuel ; il accueille déjà confortablement une pastille de 48px + libellé.
+Ajouter `candidate_phone` à la liste des colonnes sélectionnées dans `useSessionDetail.ts` (un seul fichier, une seule ligne).
 
-5. Aucun autre fichier touché. Pas de logique métier modifiée.
+Avant :
+```
+"id, candidate_name, candidate_email, candidate_linkedin_url, ..."
+```
+
+Après :
+```
+"id, candidate_name, candidate_email, candidate_phone, candidate_linkedin_url, ..."
+```
 
 ## Vérification
-Recharger `/sessions/...`, capturer la barre d'onglets et confirmer :
-- Pictos absents sur les 4 onglets concernés.
-- Pastille de note plus grosse, placée au-dessus du libellé.
-- Onglets Résumé / Texte intacts.
-- Onglet actif toujours bien différencié.
+
+Recharger `/sessions/fa739e5d-...` et confirmer que le téléphone apparaît sous l'email dans le bandeau de décision (vues mobile et desktop, déjà gérées par `DecisionBanner`).
