@@ -54,6 +54,15 @@ export default function ProjectPublicPage() {
 
       setData({ ...page, project: proj, org });
       setLoading(false);
+
+      // Fire-and-forget tracking (dédup serveur par jour)
+      if (page.project_id) {
+        supabase.functions
+          .invoke("track-project-view", {
+            body: { project_id: page.project_id, referrer: document.referrer ?? "" },
+          })
+          .catch(() => {});
+      }
     })();
   }, [slugPublic]);
 
