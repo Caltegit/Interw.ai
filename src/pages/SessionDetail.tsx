@@ -311,6 +311,7 @@ export default function SessionDetail() {
         onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
         onEditLinks={() => setLinksOpen(true)}
         onDelete={() => setDeleteOpen(true)}
+        onOpenStats={session.project_id ? () => navigate(`/projects/${session.project_id}/stats`) : undefined}
         recruiterNotes={recruiterNotes}
         onRecruiterNotesChange={(v) => { noteDirtyRef.current = true; setRecruiterNotes(v); }}
       />
