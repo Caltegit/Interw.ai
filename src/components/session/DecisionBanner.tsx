@@ -142,6 +142,7 @@ export function DecisionBanner(props: DecisionBannerProps) {
     coverLetterFilename,
     candidateJobTitle,
     onEditLinks,
+    onOpenStats,
     audioFailed,
     videoSlot,
     videoSlotWidth = 320,
