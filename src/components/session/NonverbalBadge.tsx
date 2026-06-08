@@ -76,8 +76,8 @@ export function NonverbalBadge({ analysis, size = 24, audioFailed }: Props) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full border text-[10px] font-semibold leading-none ${colorClass}`}
-      style={{ width: size, height: size }}
+      className={`inline-flex items-center justify-center rounded-full border font-semibold leading-none ${colorClass}`}
+      style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.32)) }}
       title={value === null ? "Analyse corporelle non disponible" : `Score d'attitude : ${value}/100`}
     >
       {value === null ? "—" : value}
