@@ -110,7 +110,7 @@ export default function Dashboard() {
   const credits = data?.credits ?? { unlimited: true, total: null as number | null, used: 0 };
   const recentProjects = data?.recentProjects ?? [];
   const toProcess = data?.toProcess ?? [];
-  const last5Sessions = recentSessions.slice(0, 5);
+  const last5Sessions = recentSessions.filter((s: any) => s.status !== "pending").slice(0, 5);
   const creditsPct =
     !credits.unlimited && credits.total && credits.total > 0
       ? Math.min(100, Math.round((credits.used / credits.total) * 100))
