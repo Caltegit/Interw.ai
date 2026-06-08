@@ -69,6 +69,9 @@ export function OverviewHeader(props: OverviewHeaderProps) {
             {candidateEmail && (
               <p className="text-xs text-muted-foreground">{candidateEmail}</p>
             )}
+            {candidatePhone && (
+              <p className="text-xs text-muted-foreground">{candidatePhone}</p>
+            )}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               {recommendation && <RecommendationBadge recommendation={recommendation} />}
               {overallGrade && <Badge variant="outline">{overallGrade}</Badge>}
