@@ -104,13 +104,16 @@ export default function InterviewLanding() {
   const trimmedName = candidateName.trim();
   const trimmedJobTitle = candidateJobTitle.trim();
   const trimmedLinkedin = candidateLinkedin.trim();
+  const trimmedPhone = candidatePhone.trim();
   const emailValid = emailRegex.test(trimmedEmail);
   const showEmailError = candidateEmail.length > 0 && !emailValid;
 
   const linkedinValid = !trimmedLinkedin || /^https?:\/\//i.test(trimmedLinkedin);
+  const phoneValid = !trimmedPhone || /^[+0-9 ().-]{6,}$/.test(trimmedPhone);
 
   // Validation des champs additionnels selon la config du projet
   const missingRequired =
+    (candidateFields.phone.enabled && candidateFields.phone.required && !trimmedPhone) ||
     (candidateFields.job_title.enabled && candidateFields.job_title.required && !trimmedJobTitle) ||
     (candidateFields.linkedin.enabled && candidateFields.linkedin.required && !trimmedLinkedin) ||
     (candidateFields.cv.enabled && candidateFields.cv.required && !cvFile) ||
