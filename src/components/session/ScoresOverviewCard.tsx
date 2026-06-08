@@ -224,6 +224,6 @@ function ScoreGauge({
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
