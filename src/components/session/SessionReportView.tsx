@@ -401,28 +401,26 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <ScoresOverviewCard
-                    fitScore={fitScore}
-                    personalityProfile={report.personality_profile}
-                    paraverbalAnalysis={report.paraverbal_analysis}
-                    nonverbalAnalysis={(report as any).nonverbal_analysis}
-                    audioFailed={audioFailed}
-                    projectAverages={projectAverages}
-                  />
-                  {report.executive_summary && (
-                    <Card className="h-full">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Bilan global</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {report.executive_summary}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
+                <ScoresOverviewCard
+                  fitScore={fitScore}
+                  personalityProfile={report.personality_profile}
+                  paraverbalAnalysis={report.paraverbal_analysis}
+                  nonverbalAnalysis={(report as any).nonverbal_analysis}
+                  audioFailed={audioFailed}
+                  projectAverages={projectAverages}
+                />
+                {report.executive_summary && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Bilan global</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {report.executive_summary}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
                 <SignalsCard
                   signals={stats.signals}
                   legacyRedFlags={report.red_flags as any}
