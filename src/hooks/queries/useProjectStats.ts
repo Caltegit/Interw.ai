@@ -155,7 +155,7 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
         "7ea73a6b-27d6-4dac-916b-2157a09a323d": 120,
       };
       const baseline = FORCED_CLICKS_BASELINE[projectId!] ?? 0;
-      const clicks = baseline ? baseline + Math.max(0, views.length - 1) + 0 : views.length;
+      const clicks = baseline ? baseline + Math.max(0, views.length - 1) : views.length;
 
       return {
         project: projRes.data ?? null,
