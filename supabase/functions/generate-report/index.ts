@@ -1311,6 +1311,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         method: "hybrid_v1",
       },
       timestamps_algo_version: 2,
+      report_anomalies: reportAnomalies,
     };
 
     // Filet de sécurité : garantir un personality_profile complet
