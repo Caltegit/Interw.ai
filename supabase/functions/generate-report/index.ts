@@ -500,7 +500,25 @@ Champs secondaires (toujours produits, format inchangé) :
         },
       ],
       tool_choice: { type: "function", function: { name: "generate_report" } },
+      max_tokens: 8192,
     });
+
+    // Validation minimale du payload — détecte les troncatures où l'IA renvoie
+    // un JSON syntaxiquement valide mais avec tous les scores/arrays vides.
+    const isPayloadValid = (p: any): { ok: boolean; reason?: string } => {
+      if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
+      const fit = Array.isArray(p.fit_breakdown) ? p.fit_breakdown : [];
+      const fitOk = fit.length > 0 && fit.some(
+        (f: any) => (Number(f?.score) || 0) > 0 || (typeof f?.statement === "string" && f.statement.trim().length > 0),
+      );
+      if (!fitOk) return { ok: false, reason: "empty_fit_breakdown" };
+      const pp = p.personality_profile;
+      if (!pp || typeof pp !== "object") return { ok: false, reason: "missing_personality_profile" };
+      const traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
+      const ppOk = traits.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
+      if (!ppOk) return { ok: false, reason: "empty_personality_profile" };
+      return { ok: true };
+    };
 
     // Retry/fallback :
     //  - tentative 1 : gemini-2.5-pro
@@ -547,6 +565,7 @@ Champs secondaires (toujours produits, format inchangé) :
         }
 
         const aiData = await aiResponse.json();
+        const finishReason = aiData.choices?.[0]?.finish_reason;
         const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
         const argsStr = toolCall?.function?.arguments;
 
@@ -555,13 +574,36 @@ Champs secondaires (toujours produits, format inchangé) :
           // ou réponse vide après reasoning. On retry.
           const inlineErr = aiData.choices?.[0]?.error;
           const reason = inlineErr?.metadata?.error_type || inlineErr?.message || "no_tool_call";
-          console.error(`[generate-report] AI ${attempt.label} no tool_call. reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
+          console.error(`[generate-report] AI ${attempt.label} no tool_call. finish_reason=${finishReason} reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
           lastFailure = { status: 502, reason: "no_tool_call", detail: String(reason) };
           continue;
         }
 
-        parsed = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
-        console.log(`[generate-report] AI ${attempt.label} OK`);
+        let candidate: any;
+        try {
+          candidate = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
+        } catch (parseErr) {
+          console.error(`[generate-report] AI ${attempt.label} JSON parse failed. finish_reason=${finishReason} size=${argsStr.length}`, parseErr);
+          lastFailure = { status: 502, reason: "json_parse_error", detail: String(parseErr) };
+          continue;
+        }
+
+        // Si le modèle a été coupé (length / max_tokens), on retry avec le suivant.
+        if (finishReason && finishReason !== "stop" && finishReason !== "tool_calls") {
+          console.error(`[generate-report] AI ${attempt.label} bad finish_reason=${finishReason} size=${argsStr.length}`);
+          lastFailure = { status: 502, reason: `finish_reason_${finishReason}`, detail: `finish_reason=${finishReason}` };
+          continue;
+        }
+
+        const validation = isPayloadValid(candidate);
+        if (!validation.ok) {
+          console.error(`[generate-report] AI ${attempt.label} invalid payload reason=${validation.reason} finish_reason=${finishReason} size=${argsStr.length}`);
+          lastFailure = { status: 502, reason: `invalid_payload_${validation.reason}`, detail: validation.reason ?? "invalid" };
+          continue;
+        }
+
+        parsed = candidate;
+        console.log(`[generate-report] AI ${attempt.label} OK finish_reason=${finishReason} size=${argsStr.length}`);
         break;
       } catch (e) {
         console.error(`[generate-report] AI ${attempt.label} exception:`, e);
