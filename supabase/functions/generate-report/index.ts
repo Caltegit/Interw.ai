@@ -500,7 +500,25 @@ Champs secondaires (toujours produits, format inchangé) :
         },
       ],
       tool_choice: { type: "function", function: { name: "generate_report" } },
+      max_tokens: 8192,
     });
+
+    // Validation minimale du payload — détecte les troncatures où l'IA renvoie
+    // un JSON syntaxiquement valide mais avec tous les scores/arrays vides.
+    const isPayloadValid = (p: any): { ok: boolean; reason?: string } => {
+      if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
+      const fit = Array.isArray(p.fit_breakdown) ? p.fit_breakdown : [];
+      const fitOk = fit.length > 0 && fit.some(
+        (f: any) => (Number(f?.score) || 0) > 0 || (typeof f?.statement === "string" && f.statement.trim().length > 0),
+      );
+      if (!fitOk) return { ok: false, reason: "empty_fit_breakdown" };
+      const pp = p.personality_profile;
+      if (!pp || typeof pp !== "object") return { ok: false, reason: "missing_personality_profile" };
+      const traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
+      const ppOk = traits.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
+      if (!ppOk) return { ok: false, reason: "empty_personality_profile" };
+      return { ok: true };
+    };
 
     // Retry/fallback :
     //  - tentative 1 : gemini-2.5-pro
