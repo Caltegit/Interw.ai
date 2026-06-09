@@ -565,6 +565,7 @@ Champs secondaires (toujours produits, format inchangé) :
         }
 
         const aiData = await aiResponse.json();
+        const finishReason = aiData.choices?.[0]?.finish_reason;
         const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
         const argsStr = toolCall?.function?.arguments;
 
@@ -573,13 +574,36 @@ Champs secondaires (toujours produits, format inchangé) :
           // ou réponse vide après reasoning. On retry.
           const inlineErr = aiData.choices?.[0]?.error;
           const reason = inlineErr?.metadata?.error_type || inlineErr?.message || "no_tool_call";
-          console.error(`[generate-report] AI ${attempt.label} no tool_call. reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
+          console.error(`[generate-report] AI ${attempt.label} no tool_call. finish_reason=${finishReason} reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
           lastFailure = { status: 502, reason: "no_tool_call", detail: String(reason) };
           continue;
         }
 
-        parsed = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
-        console.log(`[generate-report] AI ${attempt.label} OK`);
+        let candidate: any;
+        try {
+          candidate = typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr;
+        } catch (parseErr) {
+          console.error(`[generate-report] AI ${attempt.label} JSON parse failed. finish_reason=${finishReason} size=${argsStr.length}`, parseErr);
+          lastFailure = { status: 502, reason: "json_parse_error", detail: String(parseErr) };
+          continue;
+        }
+
+        // Si le modèle a été coupé (length / max_tokens), on retry avec le suivant.
+        if (finishReason && finishReason !== "stop" && finishReason !== "tool_calls") {
+          console.error(`[generate-report] AI ${attempt.label} bad finish_reason=${finishReason} size=${argsStr.length}`);
+          lastFailure = { status: 502, reason: `finish_reason_${finishReason}`, detail: `finish_reason=${finishReason}` };
+          continue;
+        }
+
+        const validation = isPayloadValid(candidate);
+        if (!validation.ok) {
+          console.error(`[generate-report] AI ${attempt.label} invalid payload reason=${validation.reason} finish_reason=${finishReason} size=${argsStr.length}`);
+          lastFailure = { status: 502, reason: `invalid_payload_${validation.reason}`, detail: validation.reason ?? "invalid" };
+          continue;
+        }
+
+        parsed = candidate;
+        console.log(`[generate-report] AI ${attempt.label} OK finish_reason=${finishReason} size=${argsStr.length}`);
         break;
       } catch (e) {
         console.error(`[generate-report] AI ${attempt.label} exception:`, e);
