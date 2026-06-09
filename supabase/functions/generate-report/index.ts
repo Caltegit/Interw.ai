@@ -503,9 +503,15 @@ Champs secondaires (toujours produits, format inchangé) :
       max_tokens: 8192,
     });
 
-    // Validation minimale du payload — détecte les troncatures où l'IA renvoie
-    // un JSON syntaxiquement valide mais avec tous les scores/arrays vides.
-    const isPayloadValid = (p: any): { ok: boolean; reason?: string } => {
+    // Validation du payload :
+    //   - fatal (recoverable=false)  : structure vide → on doit refaire un appel complet.
+    //   - recoverable (=true)        : payload globalement bon mais une section a
+    //                                  un score < 20 suspect (statement absent ou
+    //                                  trait Big Five à 0 sans confidence "low").
+    //                                  On peut tenter une repair ciblée plutôt que
+    //                                  de tout relancer.
+    const TRAIT_KEYS = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
+    const isPayloadValid = (p: any): { ok: boolean; reason?: string; recoverable?: boolean } => {
       if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
       const fit = Array.isArray(p.fit_breakdown) ? p.fit_breakdown : [];
       const fitOk = fit.length > 0 && fit.some(
@@ -514,9 +520,25 @@ Champs secondaires (toujours produits, format inchangé) :
       if (!fitOk) return { ok: false, reason: "empty_fit_breakdown" };
       const pp = p.personality_profile;
       if (!pp || typeof pp !== "object") return { ok: false, reason: "missing_personality_profile" };
-      const traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
-      const ppOk = traits.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
+      const ppOk = TRAIT_KEYS.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
       if (!ppOk) return { ok: false, reason: "empty_personality_profile" };
+
+      // Planchers anti-notes-aberrantes (recoverable).
+      for (const f of fit) {
+        const score = Number(f?.score) || 0;
+        const statement = typeof f?.statement === "string" ? f.statement.trim() : "";
+        if (score < 20 && statement.length < 20) {
+          return { ok: false, reason: `low_fit_score:${f?.criterion ?? "?"}`, recoverable: true };
+        }
+      }
+      for (const t of TRAIT_KEYS) {
+        const trait = pp?.[t];
+        const score = Number(trait?.score) || 0;
+        const confidence = trait?.confidence;
+        if (score < 20 && confidence !== "low") {
+          return { ok: false, reason: `low_big_five:${t}`, recoverable: true };
+        }
+      }
       return { ok: true };
     };
 
