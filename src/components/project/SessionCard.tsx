@@ -155,7 +155,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                 {scoreVal != null ? scoreVal : "—"}
               </span>
               <span className="text-[9px] font-medium uppercase tracking-wide opacity-90">
-                Note IA
+                Fit Poste
               </span>
             </span>
             {reco && (
