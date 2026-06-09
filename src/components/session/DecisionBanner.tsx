@@ -101,8 +101,8 @@ export const decisionConfig: Record<RecruiterDecision, { label: string; tone: st
 
 function fitColor(score: number | null) {
   if (score === null) return "text-muted-foreground";
-  if (score >= 75) return "text-success";
-  if (score >= 55) return "text-warning";
+  if (score >= 70) return "text-success";
+  if (score >= 45) return "text-warning";
   return "text-destructive";
 }
 
