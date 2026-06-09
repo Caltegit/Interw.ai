@@ -1,57 +1,49 @@
-# Diagnostic : email candidat non envoyé après l'entretien
+## Problème observé
 
-## Ce que dit la base
+Session `7a1c7299` (Manon Micellis, projet Morning) :
+- L'IA a produit un résumé exécutif cohérent, un `verdict_headline` correct, et un `ai_score = 76`
+- MAIS tous les champs structurés sont vides : `fit_breakdown` (4 critères à 0), `personality_profile` Big Five (5 traits à 0, confidence "low", evidences vides), `strengths`, `areas_for_improvement`, `decision_drivers`, `signals`
+- Conséquence sur le rapport :
+  - **Fit Poste = 0** (moyenne pondérée des critères à 0)
+  - **Big Five = 0**
+  - Score global affiché = 38 (mélange hybride `(76 + 0) / 2`)
 
-- Session `fa739e5d…` : `status = completed`, terminée le **8 juin 20:40 UTC**, `last_candidate_email_key = NULL`.
-- Aucun envoi `candidate-thank-you` après le 8 juin dans `email_send_log`.
-- Le candidat `clement.alteresco@gmail.com` a déjà reçu/eu en file un `candidate-thank-you` le **6 juin** (plusieurs lignes `pending` et `suppressed` avec `purged_after_duplicate_storm`).
+C'est un classique de **réponse LLM tronquée ou partiellement valide** : Gemini 2.5 Pro a écrit les blocs texte au début, puis a été coupé (max output tokens, reasoning budget, ou tool-call partiel) avant de remplir les tableaux. Le parseur prend le JSON tel quel et stocke 0/[] partout.
 
-## Cause
+Dans `supabase/functions/generate-report/index.ts` lignes 549-565, on lit `tool_calls[0].function.arguments` sans vérifier :
+- `finish_reason` (`length`, `content_filter`...)
+- la cohérence du payload (arrays non-vides, traits Big Five remplis)
 
-Dans `supabase/functions/process-report-queue/index.ts` (lignes 56–67), il y a une garde d'idempotence stricte ajoutée pour corriger un ancien bug de spam :
+Aucun `max_tokens` n'est défini → on hérite du défaut du gateway, qui peut être trop bas pour un entretien de 15 réponses.
 
-```ts
-// Si un thank-you a déjà été envoyé à ce candidat sur les 30 derniers jours, skip.
-const { data: alreadySent } = await supabase
-  .from("email_send_log")
-  .select("id")
-  .eq("template_name", "candidate-thank-you")
-  .eq("recipient_email", session.candidate_email)
-  .in("status", ["pending", "sent"])
-  .gte("created_at", thirtyDaysAgo)
-  .limit(1);
-if (alreadySent && alreadySent.length > 0) return;
-```
+## Plan
 
-Ce filtre est **par email candidat sur 30 jours**, sans tenir compte du `session_id`. Conséquences pour ton cas :
-- Le candidat a reçu un thank-you le 6 juin (pour une autre session).
-- Quand la session du 8 juin se termine, la garde trouve cette ligne et **skip silencieusement** l'envoi.
-- Pas d'erreur, pas de DLQ, pas de ligne `email_send_log` pour la session du 8 juin → c'est "normal" au sens du code actuel, mais pas du point de vue produit.
+### 1. Garde-fou côté `generate-report`
 
-À noter : il reste aussi plusieurs lignes `pending` jamais envoyées du 6 juin (probablement orphelines suite au purge). Tant qu'elles ne sont pas dépassées des 30 jours, **aucun candidat n'ayant déjà passé un entretien dans le mois ne recevra de thank-you** pour un nouvel entretien.
+Dans la boucle de retry (lignes 518-571), après `JSON.parse(argsStr)` :
 
-## Options de correction (à choisir)
+- Inspecter `aiData.choices[0].finish_reason`. Si différent de `stop`/`tool_calls`, logger et **considérer la tentative comme un échec** (`continue` vers le retry suivant).
+- Ajouter une validation minimale du payload :
+  - `parsed.fit_breakdown` doit être un tableau non vide ET au moins une entrée doit avoir `score > 0` OU `statement` non vide
+  - `parsed.personality_profile` doit avoir au moins un trait avec `score > 0` OU `confidence !== "low"` avec evidences
+  - Si check KO → marquer la tentative comme `invalid_payload` et passer au modèle suivant
+- Augmenter explicitement la marge de tokens dans `buildBody` : ajouter `max_tokens: 8000` (ou la limite supportée par le gateway pour Gemini Pro) pour éviter la troncature sur les entretiens longs.
 
-**Option A — recommandée : scoper l'idempotence à la session.**
-Ajouter `session_id` dans `metadata` lors du send (ou utiliser `idempotencyKey = candidate-thanks-${sessionId}` déjà présent) et filtrer dessus :
+### 2. Logger pour traçabilité
 
-```ts
-.eq("template_name", "candidate-thank-you")
-.contains("metadata", { session_id: sessionId })
-```
+Ajouter dans la table existante (ou via `console.log` structurés déjà branchés) la valeur de `finish_reason` et la taille du payload, pour pouvoir détecter ce cas en monitoring sans re-déboguer en SQL.
 
-Avantage : chaque session = un email maximum, mais un même candidat peut en recevoir un par session. Comportement attendu pour un repassage / multi-postes.
+### 3. Régénérer ce rapport
 
-**Option B — garder le 30j mais ignorer les lignes `pending` orphelines.**
-Restreindre à `status = 'sent'` uniquement. Un peu plus risqué : si la file est lente, deux sends peuvent partir en parallèle.
+Enqueue un `report_job` pour la session `7a1c7299-cac9-4051-927c-7a35e1f6a864` une fois le correctif déployé, et vérifier en base que `fit_breakdown` et `personality_profile` sont remplis avec des scores > 0.
 
-**Option C — purger les lignes `pending` du 6 juin et relancer manuellement.**
-Quick fix ponctuel pour ta session du 8 juin, ne résout pas le problème de fond.
+### Non-objectifs
 
-Je recommande **Option A** (1 fichier modifié : `process-report-queue/index.ts`, déploiement de la function), avec en plus un **renvoi manuel one-shot** du thank-you pour la session `fa739e5d…` une fois le code corrigé.
+- Pas de refonte du prompt ni de la pondération `score_breakdown`
+- Pas de migration DB (tout se passe dans l'edge function)
+- Pas de changement d'UI
 
-## Vérification après fix
+### Risques
 
-1. Appel manuel `process-report-queue` pour `fa739e5d…` (ou attendre le prochain tick cron).
-2. Vérifier qu'une nouvelle ligne `email_send_log` apparaît avec `status = pending` puis `sent`.
-3. Confirmer la réception côté boîte mail.
+- Si le payload reste invalide après les 3 tentatives, on renvoie 502 → le job sera retenté par le worker (déjà géré, `max_attempts=6`). Acceptable.
+- L'augmentation de `max_tokens` consomme plus de crédits IA par rapport long. Marginal sur volume actuel.
