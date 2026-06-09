@@ -503,9 +503,15 @@ Champs secondaires (toujours produits, format inchangé) :
       max_tokens: 8192,
     });
 
-    // Validation minimale du payload — détecte les troncatures où l'IA renvoie
-    // un JSON syntaxiquement valide mais avec tous les scores/arrays vides.
-    const isPayloadValid = (p: any): { ok: boolean; reason?: string } => {
+    // Validation du payload :
+    //   - fatal (recoverable=false)  : structure vide → on doit refaire un appel complet.
+    //   - recoverable (=true)        : payload globalement bon mais une section a
+    //                                  un score < 20 suspect (statement absent ou
+    //                                  trait Big Five à 0 sans confidence "low").
+    //                                  On peut tenter une repair ciblée plutôt que
+    //                                  de tout relancer.
+    const TRAIT_KEYS = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
+    const isPayloadValid = (p: any): { ok: boolean; reason?: string; recoverable?: boolean } => {
       if (!p || typeof p !== "object") return { ok: false, reason: "not_object" };
       const fit = Array.isArray(p.fit_breakdown) ? p.fit_breakdown : [];
       const fitOk = fit.length > 0 && fit.some(
@@ -514,9 +520,25 @@ Champs secondaires (toujours produits, format inchangé) :
       if (!fitOk) return { ok: false, reason: "empty_fit_breakdown" };
       const pp = p.personality_profile;
       if (!pp || typeof pp !== "object") return { ok: false, reason: "missing_personality_profile" };
-      const traits = ["openness", "conscientiousness", "extraversion", "agreeableness", "emotional_stability"];
-      const ppOk = traits.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
+      const ppOk = TRAIT_KEYS.some((t) => (Number(pp?.[t]?.score) || 0) > 0);
       if (!ppOk) return { ok: false, reason: "empty_personality_profile" };
+
+      // Planchers anti-notes-aberrantes (recoverable).
+      for (const f of fit) {
+        const score = Number(f?.score) || 0;
+        const statement = typeof f?.statement === "string" ? f.statement.trim() : "";
+        if (score < 20 && statement.length < 20) {
+          return { ok: false, reason: `low_fit_score:${f?.criterion ?? "?"}`, recoverable: true };
+        }
+      }
+      for (const t of TRAIT_KEYS) {
+        const trait = pp?.[t];
+        const score = Number(trait?.score) || 0;
+        const confidence = trait?.confidence;
+        if (score < 20 && confidence !== "low") {
+          return { ok: false, reason: `low_big_five:${t}`, recoverable: true };
+        }
+      }
       return { ok: true };
     };
 
@@ -532,6 +554,10 @@ Champs secondaires (toujours produits, format inchangé) :
 
     let parsed: any = null;
     let lastFailure: { status: number; reason: string; detail: string } | null = null;
+    // Si toutes les tentatives échouent uniquement à cause de scores < 20 (recoverable),
+    // on conserve le meilleur candidat pour le réparer section par section ensuite.
+    let lastRecoverableCandidate: any = null;
+    let lastRecoverableReason: string | null = null;
 
     for (const attempt of attempts) {
       try {
@@ -547,7 +573,6 @@ Champs secondaires (toujours produits, format inchangé) :
         if (!aiResponse.ok) {
           const errText = await aiResponse.text();
           console.error(`[generate-report] AI ${attempt.label} HTTP ${aiResponse.status}:`, errText.slice(0, 500));
-          // 429 / 402 : pas de retry, on remonte tout de suite.
           if (aiResponse.status === 429) {
             return new Response(JSON.stringify({ error: "Limite de requêtes IA atteinte. Réessayez dans quelques instants." }), {
               status: 429,
@@ -561,7 +586,7 @@ Champs secondaires (toujours produits, format inchangé) :
             });
           }
           lastFailure = { status: aiResponse.status, reason: "http_error", detail: errText.slice(0, 200) };
-          continue; // 5xx → retry
+          continue;
         }
 
         const aiData = await aiResponse.json();
@@ -570,8 +595,6 @@ Champs secondaires (toujours produits, format inchangé) :
         const argsStr = toolCall?.function?.arguments;
 
         if (!argsStr) {
-          // Cas typique : HTTP 200 avec `error` inline (provider_unavailable / upstream timeout)
-          // ou réponse vide après reasoning. On retry.
           const inlineErr = aiData.choices?.[0]?.error;
           const reason = inlineErr?.metadata?.error_type || inlineErr?.message || "no_tool_call";
           console.error(`[generate-report] AI ${attempt.label} no tool_call. finish_reason=${finishReason} reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
@@ -588,7 +611,6 @@ Champs secondaires (toujours produits, format inchangé) :
           continue;
         }
 
-        // Si le modèle a été coupé (length / max_tokens), on retry avec le suivant.
         if (finishReason && finishReason !== "stop" && finishReason !== "tool_calls") {
           console.error(`[generate-report] AI ${attempt.label} bad finish_reason=${finishReason} size=${argsStr.length}`);
           lastFailure = { status: 502, reason: `finish_reason_${finishReason}`, detail: `finish_reason=${finishReason}` };
@@ -599,6 +621,11 @@ Champs secondaires (toujours produits, format inchangé) :
         if (!validation.ok) {
           console.error(`[generate-report] AI ${attempt.label} invalid payload reason=${validation.reason} finish_reason=${finishReason} size=${argsStr.length}`);
           lastFailure = { status: 502, reason: `invalid_payload_${validation.reason}`, detail: validation.reason ?? "invalid" };
+          if (validation.recoverable) {
+            // On garde le dernier candidat "presque bon" — il sera réparé en aval.
+            lastRecoverableCandidate = candidate;
+            lastRecoverableReason = validation.reason ?? null;
+          }
           continue;
         }
 
@@ -612,6 +639,14 @@ Champs secondaires (toujours produits, format inchangé) :
       }
     }
 
+    // Fallback : aucun essai complet n'a passé la validation stricte, mais on a un
+    // candidat "presque valide" (juste des scores aberrants). On l'utilise et on
+    // tentera une repair ciblée sur les sections suspectes.
+    if (!parsed && lastRecoverableCandidate) {
+      console.warn(`[generate-report] using recoverable candidate (reason=${lastRecoverableReason}) — repair pass will run`);
+      parsed = lastRecoverableCandidate;
+    }
+
     if (!parsed) {
       return new Response(
         JSON.stringify({
@@ -622,6 +657,225 @@ Champs secondaires (toujours produits, format inchangé) :
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    // ============================================================
+    // REPAIR PASS — corrige les sections aberrantes (score < 20 sans justification)
+    // ============================================================
+    const reportAnomalies: Array<Record<string, unknown>> = [];
+
+    const repairFitCriterion = async (criterionLabel: string): Promise<any | null> => {
+      const fitItemSchema = {
+        type: "object",
+        properties: {
+          criterion: { type: "string" },
+          score: { type: "number", minimum: 0, maximum: 100 },
+          level: { type: "string", enum: ["excellent", "solid", "partial", "gap"] },
+          statement: { type: "string", description: "1 phrase concrète, min 20 caractères" },
+          quote: { type: "string" },
+          message_id: { type: "string" },
+          start_seconds: { type: "number" },
+        },
+        required: ["criterion", "score", "statement", "level"],
+      };
+      const body = {
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Réévalue UNIQUEMENT le critère "${criterionLabel}" pour ce candidat (${session.candidate_name}, poste ${project.job_title}).
+
+Transcription complète :
+${fullText}
+
+Messages du candidat avec identifiants :
+${candidateMessagesForPrompt}
+
+Règles :
+- Donne un score 0-100 cohérent avec ce qui a réellement été dit.
+- Si tu mets un score < 20, justifie explicitement avec un statement détaillé et une citation.
+- Si la transcription est trop pauvre pour conclure sur ce critère, mets un score neutre (40-60) et précise-le.
+- Statement OBLIGATOIRE (1 phrase concrète, ≥ 20 caractères).
+- Pas de jargon RH.`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "repair_fit_criterion",
+              description: "Renvoie une évaluation corrigée d'un seul critère",
+              parameters: fitItemSchema,
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "repair_fit_criterion" } },
+        max_tokens: 2048,
+      };
+      for (let i = 0; i < 2; i++) {
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) {
+            console.error(`[repair] fit "${criterionLabel}" attempt ${i + 1} HTTP ${r.status}`);
+            continue;
+          }
+          const d = await r.json();
+          const args = d.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+          if (!args) continue;
+          const obj = typeof args === "string" ? JSON.parse(args) : args;
+          const score = Number(obj?.score) || 0;
+          const statement = typeof obj?.statement === "string" ? obj.statement.trim() : "";
+          if (score >= 20 && statement.length >= 20) {
+            console.log(`[repair] fit "${criterionLabel}" OK score=${score}`);
+            return obj;
+          }
+          console.warn(`[repair] fit "${criterionLabel}" attempt ${i + 1} still suspect score=${score} stmt=${statement.length}`);
+        } catch (e) {
+          console.error(`[repair] fit "${criterionLabel}" exception`, e);
+        }
+      }
+      return null;
+    };
+
+    const repairBigFiveTrait = async (traitKey: string): Promise<any | null> => {
+      const traitSchema = {
+        type: "object",
+        properties: {
+          score: { type: "number", minimum: 0, maximum: 100 },
+          interpretation: { type: "string" },
+          confidence: { type: "string", enum: ["low", "medium", "high"] },
+          evidences: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                quote: { type: "string" },
+                message_id: { type: "string" },
+                start_seconds: { type: "number" },
+              },
+            },
+          },
+        },
+        required: ["score", "confidence"],
+      };
+      const body = {
+        model: "google/gemini-2.5-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Réévalue UNIQUEMENT le trait Big Five "${traitKey}" pour ce candidat (${session.candidate_name}).
+
+Transcription complète :
+${fullText}
+
+Messages du candidat avec identifiants :
+${candidateMessagesForPrompt}
+
+Règles :
+- Score 0-100 sur ce trait précis.
+- Si les indices sont faibles, mets confidence = "low" et un score neutre proche de 50 — n'invente pas un score bas.
+- Un score < 20 doit être justifié par au moins 1 evidence (quote + message_id) et confidence "medium" ou "high".`,
+          },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "repair_big_five_trait",
+              description: `Renvoie une évaluation corrigée du trait ${traitKey}`,
+              parameters: traitSchema,
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "repair_big_five_trait" } },
+        max_tokens: 1024,
+      };
+      for (let i = 0; i < 2; i++) {
+        try {
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) {
+            console.error(`[repair] big_five "${traitKey}" attempt ${i + 1} HTTP ${r.status}`);
+            continue;
+          }
+          const d = await r.json();
+          const args = d.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+          if (!args) continue;
+          const obj = typeof args === "string" ? JSON.parse(args) : args;
+          const score = Number(obj?.score) || 0;
+          const confidence = obj?.confidence;
+          if (score >= 20 || confidence === "low") {
+            console.log(`[repair] big_five "${traitKey}" OK score=${score} confidence=${confidence}`);
+            return obj;
+          }
+          console.warn(`[repair] big_five "${traitKey}" attempt ${i + 1} still suspect score=${score} confidence=${confidence}`);
+        } catch (e) {
+          console.error(`[repair] big_five "${traitKey}" exception`, e);
+        }
+      }
+      return null;
+    };
+
+    // Détecte et répare les critères Fit aberrants.
+    if (Array.isArray(parsed.fit_breakdown)) {
+      for (let i = 0; i < parsed.fit_breakdown.length; i++) {
+        const f = parsed.fit_breakdown[i];
+        const score = Number(f?.score) || 0;
+        const statement = typeof f?.statement === "string" ? f.statement.trim() : "";
+        if (score < 20 && statement.length < 20) {
+          const label = f?.criterion ?? `criterion_${i}`;
+          console.warn(`[repair] fit anomalie détectée "${label}" score=${score} → repair`);
+          const repaired = await repairFitCriterion(String(label));
+          if (repaired) {
+            parsed.fit_breakdown[i] = { ...f, ...repaired, criterion: f?.criterion ?? repaired.criterion };
+          } else {
+            reportAnomalies.push({
+              kind: "fit_criterion",
+              target: label,
+              kept_score: score,
+              attempts: 2,
+            });
+          }
+        }
+      }
+    }
+
+    // Détecte et répare les traits Big Five aberrants.
+    if (parsed.personality_profile && typeof parsed.personality_profile === "object") {
+      for (const traitKey of TRAIT_KEYS) {
+        const trait = parsed.personality_profile[traitKey];
+        const score = Number(trait?.score) || 0;
+        const confidence = trait?.confidence;
+        if (score < 20 && confidence !== "low") {
+          console.warn(`[repair] big_five anomalie détectée "${traitKey}" score=${score} → repair`);
+          const repaired = await repairBigFiveTrait(traitKey);
+          if (repaired) {
+            parsed.personality_profile[traitKey] = { ...trait, ...repaired };
+          } else {
+            reportAnomalies.push({
+              kind: "big_five_trait",
+              target: traitKey,
+              kept_score: score,
+              attempts: 2,
+            });
+          }
+        }
+      }
+    }
+
+    if (reportAnomalies.length > 0) {
+      console.warn(`[generate-report] ${reportAnomalies.length} anomalies non réparées`, reportAnomalies);
+    }
+
+
 
 
     // ============================================================
@@ -1057,6 +1311,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         method: "hybrid_v1",
       },
       timestamps_algo_version: 2,
+      report_anomalies: reportAnomalies,
     };
 
     // Filet de sécurité : garantir un personality_profile complet

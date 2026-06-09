@@ -1,49 +1,50 @@
-## Problème observé
+## Objectif
 
-Session `7a1c7299` (Manon Micellis, projet Morning) :
-- L'IA a produit un résumé exécutif cohérent, un `verdict_headline` correct, et un `ai_score = 76`
-- MAIS tous les champs structurés sont vides : `fit_breakdown` (4 critères à 0), `personality_profile` Big Five (5 traits à 0, confidence "low", evidences vides), `strengths`, `areas_for_improvement`, `decision_drivers`, `signals`
-- Conséquence sur le rapport :
-  - **Fit Poste = 0** (moyenne pondérée des critères à 0)
-  - **Big Five = 0**
-  - Score global affiché = 38 (mélange hybride `(76 + 0) / 2`)
+Garantir qu'aucun rapport publié ne contienne de note aberrante (score < 20 sur un critère Fit Poste ou un trait Big Five) due à une réponse IA partielle. Aujourd'hui `isPayloadValid` ne détecte que les payloads totalement vides : un rapport où **un seul** critère sort à 0/15 passe en production (cas Manon Micellis).
 
-C'est un classique de **réponse LLM tronquée ou partiellement valide** : Gemini 2.5 Pro a écrit les blocs texte au début, puis a été coupé (max output tokens, reasoning budget, ou tool-call partiel) avant de remplir les tableaux. Le parseur prend le JSON tel quel et stocke 0/[] partout.
+## 1. Validation renforcée dans `generate-report`
 
-Dans `supabase/functions/generate-report/index.ts` lignes 549-565, on lit `tool_calls[0].function.arguments` sans vérifier :
-- `finish_reason` (`length`, `content_filter`...)
-- la cohérence du payload (arrays non-vides, traits Big Five remplis)
+Dans `isPayloadValid` (lignes 508-521 de `supabase/functions/generate-report/index.ts`), ajouter :
 
-Aucun `max_tokens` n'est défini → on hérite du défaut du gateway, qui peut être trop bas pour un entretien de 15 réponses.
+- **Plancher Fit Poste** : pour chaque entrée de `fit_breakdown`, si `score < 20` ET `statement` vide ou < 20 caractères → invalide (raison `low_fit_score:<criterion>`).
+- **Plancher Big Five** : pour chaque trait, si `score < 20` ET `confidence !== "low"` → invalide (raison `low_big_five:<trait>`). On garde la tolérance pour transcriptions courtes via `confidence:"low"` neutre ~50 (imposé par le prompt ligne 348).
 
-## Plan
+Conséquence directe : la boucle existante (pro-1 → pro-2 → flash) repasse automatiquement. Coût zéro à ajouter, on capitalise sur l'infra de retry déjà en place.
 
-### 1. Garde-fou côté `generate-report`
+## 2. Régénération ciblée (section-level repair)
 
-Dans la boucle de retry (lignes 518-571), après `JSON.parse(argsStr)` :
+Plutôt que de tout relancer si le 3e essai foire sur **un seul** critère, mode "repair" :
 
-- Inspecter `aiData.choices[0].finish_reason`. Si différent de `stop`/`tool_calls`, logger et **considérer la tentative comme un échec** (`continue` vers le retry suivant).
-- Ajouter une validation minimale du payload :
-  - `parsed.fit_breakdown` doit être un tableau non vide ET au moins une entrée doit avoir `score > 0` OU `statement` non vide
-  - `parsed.personality_profile` doit avoir au moins un trait avec `score > 0` OU `confidence !== "low"` avec evidences
-  - Si check KO → marquer la tentative comme `invalid_payload` et passer au modèle suivant
-- Augmenter explicitement la marge de tokens dans `buildBody` : ajouter `max_tokens: 8000` (ou la limite supportée par le gateway pour Gemini Pro) pour éviter la troncature sur les entretiens longs.
+- Nouvelle fonction interne `repairSection(parsed, sessionId, kind, target)` dans `generate-report/index.ts` où `kind ∈ {"fit_criterion", "big_five_trait"}`.
+- Elle rappelle Gemini 2.5 Pro avec un prompt restreint : seulement le critère/trait suspect, la transcription complète, et un tool schema réduit à cet objet.
+- Si la repair-call renvoie un score ≥ 20 cohérent (ou `confidence:"low"` + score neutre ~50 pour Big Five), on patche `parsed` à cet endroit et le pipeline continue normalement.
+- Si la repair échoue 2× sur le même champ, on garde le score initial mais on marque `stats.report_anomalies = [{kind, target, kept_score, attempts}]` pour traçabilité.
 
-### 2. Logger pour traçabilité
+Avantages : pas de surcoût IA quand tout est correct, et on n'écrase pas un rapport globalement bon à cause d'un seul champ aberrant.
 
-Ajouter dans la table existante (ou via `console.log` structurés déjà branchés) la valeur de `finish_reason` et la taille du payload, pour pouvoir détecter ce cas en monitoring sans re-déboguer en SQL.
+## Détails techniques
 
-### 3. Régénérer ce rapport
+### Seuils
+- Critère : `score < 20` considéré anormal.
+- Trait : `score < 20` sans `confidence:"low"`.
+- Plafond repair : 2 tentatives par section, puis on conserve.
 
-Enqueue un `report_job` pour la session `7a1c7299-cac9-4051-927c-7a35e1f6a864` une fois le correctif déployé, et vérifier en base que `fit_breakdown` et `personality_profile` sont remplis avec des scores > 0.
+### Fichiers touchés
+- `supabase/functions/generate-report/index.ts` uniquement : enrichir `isPayloadValid`, ajouter `repairSection`, écrire `stats.report_anomalies` si fallback.
 
 ### Non-objectifs
-
-- Pas de refonte du prompt ni de la pondération `score_breakdown`
-- Pas de migration DB (tout se passe dans l'edge function)
-- Pas de changement d'UI
+- Pas de sweep périodique (sera réévalué plus tard si nécessaire).
+- Pas de changement UI/admin.
+- Pas de refonte du prompt ni du `score_breakdown`.
+- Pas de migration de schéma (anomalies tiennent dans `reports.stats` JSONB).
 
 ### Risques
+- Surcoût IA marginal : repair = ~10× moins de tokens qu'une régénération complète.
+- Risque "yo-yo" si Gemini renvoie systématiquement un score bas légitime → mitigé par le plafond 2 tentatives par section.
 
-- Si le payload reste invalide après les 3 tentatives, on renvoie 502 → le job sera retenté par le worker (déjà géré, `max_attempts=6`). Acceptable.
-- L'augmentation de `max_tokens` consomme plus de crédits IA par rapport long. Marginal sur volume actuel.
+## Étapes d'implémentation
+
+1. Patch `isPayloadValid` avec les nouveaux planchers.
+2. Implémenter `repairSection` + intégration dans le flux après validation.
+3. Régénérer le rapport `7a1c7299` (Manon Micellis) en mode `force` pour vérifier que la repair patche bien les champs.
+4. Vérifier en base que `stats.fit_breakdown` et `personality_profile` n'ont plus de scores < 20 injustifiés.
