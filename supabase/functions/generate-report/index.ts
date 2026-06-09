@@ -554,6 +554,10 @@ Champs secondaires (toujours produits, format inchangé) :
 
     let parsed: any = null;
     let lastFailure: { status: number; reason: string; detail: string } | null = null;
+    // Si toutes les tentatives échouent uniquement à cause de scores < 20 (recoverable),
+    // on conserve le meilleur candidat pour le réparer section par section ensuite.
+    let lastRecoverableCandidate: any = null;
+    let lastRecoverableReason: string | null = null;
 
     for (const attempt of attempts) {
       try {
@@ -569,7 +573,6 @@ Champs secondaires (toujours produits, format inchangé) :
         if (!aiResponse.ok) {
           const errText = await aiResponse.text();
           console.error(`[generate-report] AI ${attempt.label} HTTP ${aiResponse.status}:`, errText.slice(0, 500));
-          // 429 / 402 : pas de retry, on remonte tout de suite.
           if (aiResponse.status === 429) {
             return new Response(JSON.stringify({ error: "Limite de requêtes IA atteinte. Réessayez dans quelques instants." }), {
               status: 429,
@@ -583,7 +586,7 @@ Champs secondaires (toujours produits, format inchangé) :
             });
           }
           lastFailure = { status: aiResponse.status, reason: "http_error", detail: errText.slice(0, 200) };
-          continue; // 5xx → retry
+          continue;
         }
 
         const aiData = await aiResponse.json();
@@ -592,8 +595,6 @@ Champs secondaires (toujours produits, format inchangé) :
         const argsStr = toolCall?.function?.arguments;
 
         if (!argsStr) {
-          // Cas typique : HTTP 200 avec `error` inline (provider_unavailable / upstream timeout)
-          // ou réponse vide après reasoning. On retry.
           const inlineErr = aiData.choices?.[0]?.error;
           const reason = inlineErr?.metadata?.error_type || inlineErr?.message || "no_tool_call";
           console.error(`[generate-report] AI ${attempt.label} no tool_call. finish_reason=${finishReason} reason=${reason}`, JSON.stringify(aiData).slice(0, 800));
@@ -610,7 +611,6 @@ Champs secondaires (toujours produits, format inchangé) :
           continue;
         }
 
-        // Si le modèle a été coupé (length / max_tokens), on retry avec le suivant.
         if (finishReason && finishReason !== "stop" && finishReason !== "tool_calls") {
           console.error(`[generate-report] AI ${attempt.label} bad finish_reason=${finishReason} size=${argsStr.length}`);
           lastFailure = { status: 502, reason: `finish_reason_${finishReason}`, detail: `finish_reason=${finishReason}` };
@@ -621,6 +621,11 @@ Champs secondaires (toujours produits, format inchangé) :
         if (!validation.ok) {
           console.error(`[generate-report] AI ${attempt.label} invalid payload reason=${validation.reason} finish_reason=${finishReason} size=${argsStr.length}`);
           lastFailure = { status: 502, reason: `invalid_payload_${validation.reason}`, detail: validation.reason ?? "invalid" };
+          if (validation.recoverable) {
+            // On garde le dernier candidat "presque bon" — il sera réparé en aval.
+            lastRecoverableCandidate = candidate;
+            lastRecoverableReason = validation.reason ?? null;
+          }
           continue;
         }
 
@@ -632,6 +637,14 @@ Champs secondaires (toujours produits, format inchangé) :
         lastFailure = { status: 500, reason: "exception", detail: e instanceof Error ? e.message : String(e) };
         continue;
       }
+    }
+
+    // Fallback : aucun essai complet n'a passé la validation stricte, mais on a un
+    // candidat "presque valide" (juste des scores aberrants). On l'utilise et on
+    // tentera une repair ciblée sur les sections suspectes.
+    if (!parsed && lastRecoverableCandidate) {
+      console.warn(`[generate-report] using recoverable candidate (reason=${lastRecoverableReason}) — repair pass will run`);
+      parsed = lastRecoverableCandidate;
     }
 
     if (!parsed) {
