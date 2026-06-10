@@ -25,12 +25,15 @@ interface QuestionMediaPlayerProps {
 const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaPlayerProps>(({
   type,
   content,
+  displayText,
   audioUrl,
   videoUrl,
   variant,
   autoPlay = false,
   onPlaybackEnd,
 }, ref) => {
+  const shownText = (displayText ?? "").trim();
+  const hasShownText = shownText.length > 0;
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
