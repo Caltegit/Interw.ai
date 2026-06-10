@@ -457,10 +457,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
       {type === "video" && videoUrl && (
         <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            <Video className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-            <p className="text-xs sm:text-sm text-muted-foreground italic">{content}</p>
-          </div>
+          {hasShownText && (
+            <div className="flex items-start gap-2">
+              <Video className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{shownText}</p>
+            </div>
+          )}
           <div className="ml-5 relative rounded-md overflow-hidden bg-black aspect-video max-w-[180px]">
             <video
               ref={videoPlayerRef}
