@@ -13,6 +13,8 @@ export interface QuestionMediaPlayerHandle {
 interface QuestionMediaPlayerProps {
   type: "written" | "audio" | "video";
   content: string;
+  /** Texte affiché au candidat (questions.hint_text). Si vide, aucun bloc texte n'est rendu. */
+  displayText?: string | null;
   audioUrl?: string | null;
   videoUrl?: string | null;
   variant: "featured" | "inline";
@@ -23,12 +25,15 @@ interface QuestionMediaPlayerProps {
 const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaPlayerProps>(({
   type,
   content,
+  displayText,
   audioUrl,
   videoUrl,
   variant,
   autoPlay = false,
   onPlaybackEnd,
 }, ref) => {
+  const shownText = (displayText ?? "").trim();
+  const hasShownText = shownText.length > 0;
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -331,17 +336,19 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
     return (
       <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm p-5 sm:p-6">
-        {type === "written" && (
+        {type === "written" && hasShownText && (
           <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
-            <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed">{content}</p>
+            <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">{shownText}</p>
           </div>
         )}
 
         {type === "audio" && audioUrl && (
           <div className="space-y-3">
-            <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
-              <p className="text-base sm:text-lg italic mb-2 opacity-90">{content}</p>
-            </div>
+            {hasShownText && (
+              <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
+                <p className="text-base sm:text-lg mb-2 opacity-90 whitespace-pre-wrap">{shownText}</p>
+              </div>
+            )}
             <audio
               ref={audioRef}
               src={audioUrl}
@@ -396,19 +403,21 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   // ─── INLINE variant ───
   return (
     <div>
-      {type === "written" && (
+      {type === "written" && hasShownText && (
         <div className="flex items-start gap-2">
           <FileText className="h-3.5 w-3.5 text-blue-400 mt-0.5 shrink-0" />
-          <p className="text-xs sm:text-sm">{content}</p>
+          <p className="text-xs sm:text-sm whitespace-pre-wrap">{shownText}</p>
         </div>
       )}
 
       {type === "audio" && audioUrl && (
         <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            <Mic className="h-3.5 w-3.5 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs sm:text-sm text-muted-foreground italic">{content}</p>
-          </div>
+          {hasShownText && (
+            <div className="flex items-start gap-2">
+              <Mic className="h-3.5 w-3.5 text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{shownText}</p>
+            </div>
+          )}
           <audio
             ref={audioRef}
             src={audioUrl}
@@ -448,10 +457,12 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
       {type === "video" && videoUrl && (
         <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            <Video className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
-            <p className="text-xs sm:text-sm text-muted-foreground italic">{content}</p>
-          </div>
+          {hasShownText && (
+            <div className="flex items-start gap-2">
+              <Video className="h-3.5 w-3.5 text-emerald-400 mt-0.5 shrink-0" />
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{shownText}</p>
+            </div>
+          )}
           <div className="ml-5 relative rounded-md overflow-hidden bg-black aspect-video max-w-[180px]">
             <video
               ref={videoPlayerRef}

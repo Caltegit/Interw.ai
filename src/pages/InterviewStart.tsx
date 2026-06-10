@@ -3957,6 +3957,7 @@ export default function InterviewStart() {
                       ref={featuredPlayerRef}
                       type="video"
                       content={currentQ.content}
+                      displayText={currentQ.hint_text}
                       videoUrl={currentQ.video_url}
                       variant="featured"
                       autoPlay={shouldAutoPlay}
@@ -4082,6 +4083,7 @@ export default function InterviewStart() {
                     ref={featuredPlayerRef}
                     type={questionType}
                     content={currentQ.content}
+                    displayText={currentQ.hint_text}
                     audioUrl={currentQ.audio_url}
                     variant="featured"
                     autoPlay={shouldAutoPlay}
@@ -4096,14 +4098,14 @@ export default function InterviewStart() {
                   />
                 )}
 
-                {/* Pour les questions vidéo, on affiche aussi le contenu texte (texte de secours) */}
-                {currentQ && questionType === "video" && currentQ.content?.trim() && !interviewFinished && (
+                {/* Pour les questions vidéo, on affiche le texte candidat (hint_text) sous la vidéo */}
+                {currentQ && questionType === "video" && currentQ.hint_text?.trim() && !interviewFinished && (
                   <div
                     className="rounded-xl border-l-2 border bg-card/80 p-4"
                     style={{ borderLeftColor: "hsl(var(--l-accent))" }}
                   >
                     <p className="text-sm sm:text-base font-medium leading-relaxed text-foreground whitespace-pre-wrap">
-                      {currentQ.content}
+                      {currentQ.hint_text}
                     </p>
                   </div>
                 )}
@@ -4128,16 +4130,6 @@ export default function InterviewStart() {
                       <span className="text-sm font-bold text-warning">{autoSkipCountdown}</span>
                     </div>
                     <span className="text-xs text-warning font-medium">Passage auto dans {autoSkipCountdown}s...</span>
-                  </div>
-                )}
-
-                {/* Indication candidat */}
-                {currentQ?.hint_text?.trim() && (
-                  <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-2 flex items-start gap-2">
-                    <span aria-hidden="true">💡</span>
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
-                      {currentQ.hint_text}
-                    </p>
                   </div>
                 )}
 
