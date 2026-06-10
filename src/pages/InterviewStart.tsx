@@ -3957,6 +3957,7 @@ export default function InterviewStart() {
                       ref={featuredPlayerRef}
                       type="video"
                       content={currentQ.content}
+                      displayText={currentQ.hint_text}
                       videoUrl={currentQ.video_url}
                       variant="featured"
                       autoPlay={shouldAutoPlay}
