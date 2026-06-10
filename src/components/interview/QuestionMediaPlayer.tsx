@@ -403,19 +403,21 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
   // ─── INLINE variant ───
   return (
     <div>
-      {type === "written" && (
+      {type === "written" && hasShownText && (
         <div className="flex items-start gap-2">
           <FileText className="h-3.5 w-3.5 text-blue-400 mt-0.5 shrink-0" />
-          <p className="text-xs sm:text-sm">{content}</p>
+          <p className="text-xs sm:text-sm whitespace-pre-wrap">{shownText}</p>
         </div>
       )}
 
       {type === "audio" && audioUrl && (
         <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            <Mic className="h-3.5 w-3.5 text-amber-400 mt-0.5 shrink-0" />
-            <p className="text-xs sm:text-sm text-muted-foreground italic">{content}</p>
-          </div>
+          {hasShownText && (
+            <div className="flex items-start gap-2">
+              <Mic className="h-3.5 w-3.5 text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{shownText}</p>
+            </div>
+          )}
           <audio
             ref={audioRef}
             src={audioUrl}
