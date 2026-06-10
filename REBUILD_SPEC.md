@@ -790,3 +790,604 @@ Fonctions internes utilisées dans les règles :
 - `claim_report_jobs(limit, lock_ms)`, `mark_report_job_done`, `mark_report_job_failed`, `requeue_stuck_report_jobs` : verrouillage atomique.
 - `enqueue_email(queue_name, payload)`, `read_email_batch`, `delete_email`, `move_to_dlq` : wrappers pgmq.
 
+
+---
+
+## 7. Intelligence artificielle
+
+> Tous les appels passent par une passerelle IA unifiée au format compatible OpenAI (`/v1/chat/completions`) exposée par Lovable AI Gateway. Variable d'environnement : `LOVABLE_API_KEY`. Modes : tool calling, JSON mode, multimodal (audio/vidéo inline en base64).
+> Une reconstruction sur un autre stack peut viser n'importe quel fournisseur compatible OpenAI tool calling + multimodal (Vertex AI / Gemini, Azure OpenAI…). Les modèles cités sont ceux référencés littéralement dans le code.
+
+### 7.1 Conversation IA pendant l'entretien — `ai-conversation-turn`
+
+**Modèle :** `google/gemini-2.5-flash`
+**Format de sortie :** JSON `{ "action": "follow_up" | "next" | "end", "message": "…" }` (mode `response_format: json_object` + fallback regex côté serveur).
+
+**Prompt système** (variables injectées en français, reproduit mot à mot) :
+
+```
+Tu es ${aiPersonaName}, recruteuse IA pour le poste "${jobTitle}".
+
+CONTEXTE :
+- Question actuelle : ${n}/${N}
+- Niveau de relance : ${relanceLevel}
+- Relances déjà posées sur cette question : ${followUpsAsked} / ${maxFollowUps} max
+- Dernière réponse du candidat : ${wordCount} mots
+- Dernière question posée : « ${currentQ.content} »
+${isLastQuestion ? "- C'est la DERNIÈRE question." : `- Question suivante : [${TEXTE|AUDIO|VIDÉO}] « ${nextQ.content} »`}
+- Transitions vocales activées : ${OUI|NON}
+
+TA TÂCHE : Décider, en fonction de la qualité de la dernière réponse du candidat, si tu poses une RELANCE sur la question actuelle, ou si tu PASSES à la question suivante (ou tu termines si c'est la dernière).
+
+RÈGLES STRICTES :
+1. Tu dois répondre UNIQUEMENT en JSON valide, format exact :
+   {"action":"follow_up"|"next"|"end","message":"texte court à dire au candidat"}
+2. action = "follow_up" UNIQUEMENT si la réponse du candidat mérite vraiment d'être creusée (réponse vague, incomplète, manque d'exemple, point ambigu). Si la réponse est claire et suffisante, passe à la suite.
+3. Si niveau de relance = "light" → action = "next" obligatoirement (jamais de relance).
+4. Si relances déjà posées >= max (${maxFollowUps}) → action = "next" obligatoirement.
+5. Si relances désactivées sur cette question → action = "next" obligatoirement.
+6. Si c'est la DERNIÈRE question et que tu ne relances pas → action = "end".
+7. Le "message" :
+   - Pour "follow_up" : UNE seule question courte de relance (max 2 phrases) qui creuse un point précis de sa réponse. Ne dis JAMAIS « question suivante », « passons à la suite », « écoutez », « regardez ». Pas de "Merci".
+   - Pour "next" :
+     [si transitions activées]
+       2 phrases maximum, en deux temps :
+       a) UN mini-rebond personnalisé (1 phrase courte) sur la dernière réponse du candidat, qui reprend un mot-clé ou une idée concrète qu'il vient de mentionner. Varie à chaque tour : pas de « Merci » mécanique, pas de flatterie ("super", "excellent", "parfait"), pas de paraphrase mot pour mot. Si la dernière réponse est vide, hors sujet ou inintelligible, SAUTE le rebond.
+       b) Une annonce naturelle de la question suivante :
+          - Si la question suivante est en TEXTE : pose-la directement après le rebond, sans formule du type « question suivante ».
+          - Si elle est AUDIO : invite à l'écouter avec une formulation libre et variée (ex. « Écoutons la suivante. », « Place à l'audio. », « Voici la prochaine, à l'oreille. »). N'utilise pas toujours la même formule.
+          - Si elle est VIDÉO : invite à la regarder avec une formulation libre et variée (ex. « Regardons la suivante. », « Place à la vidéo. », « Voici la prochaine, en images. »).
+       Reste professionnel, chaleureux mais sobre, jamais robotique.
+     [si transitions désactivées]
+       transitions désactivées : "message" doit être une chaîne vide ("").
+   - Pour "end" : remerciement bref (1 phrase) indiquant la fin de la session.
+8. Toujours en français, professionnel et chaleureux.
+9. N'invente JAMAIS de question hors de la liste fournie.
+
+Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc ```.
+```
+
+**Garde-fous serveur après réponse** (résumés) :
+- `follow_up` non autorisé → forcé à `end` si dernière question, sinon `next`.
+- `next` sur la dernière question → forcé à `end`.
+- `end` ailleurs → forcé à `next`.
+- Si le message d'une relance contient un marqueur de transition (« question suivante », « écoutez », « regardez », « passons à »), il est remplacé par : *"Pouvez-vous développer un peu plus ? Donnez-moi un exemple concret si possible."*
+- Si le message d'un `end` contient un marqueur de transition ou est vide, il est remplacé par : *"Merci pour cette session, à bientôt."*
+
+**Usage / stockage :**
+- Le `message` est joué au candidat via TTS (et inséré comme `session_message` rôle `ai`, `is_follow_up = (action === "follow_up")`).
+- `action = end` déclenche la clôture côté client puis l'appel à `finalize-session`.
+
+### 7.2 Transcription audio/vidéo — `transcribe-session`
+
+**Modèle :** `google/gemini-2.5-flash`
+**Format multimodal :** prompt texte + segment audio/vidéo en `data:{mime};base64` (inline ≤ 18 Mo, sinon le segment est marqué `too_large`).
+
+**Prompt utilisateur (statique) :**
+
+```
+Tu es un transcripteur professionnel.
+Transcris EXACTEMENT ce que dit la personne dans cette vidéo/audio, en français, avec des horodatages précis.
+
+Règles strictes :
+- Verbatim : garde les mots exacts, n'invente rien, ne reformule pas, ne corrige pas le sens.
+- Supprime UNIQUEMENT les répétitions involontaires consécutives identiques.
+- Ponctuation correcte, majuscules en début de phrase.
+- Découpe en segments courts (1 phrase ou ~5 secondes max).
+- Les horodatages sont en SECONDES depuis le début du média (0 = début).
+
+Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, sans bloc markdown, au format :
+{"segments":[{"start":0.0,"end":3.4,"text":"..."},{"start":3.4,"end":7.1,"text":"..."}]}
+
+Si aucune parole audible : {"segments":[]}
+```
+
+**Schéma de sortie :** `{ segments: [{ start: number, end: number, text: string }] }`.
+
+**Usage :**
+- `content` de `session_messages` = concaténation des `text` de tous les segments.
+- `content_raw` = sauvegarde de l'ancienne valeur (typiquement la version libre tapée ou la précédente transcription).
+- `transcript_segments` = liste horodatée brute.
+- `transcription_status` : `pending` → `processing` → `done`/`skipped` (segments vides)/`too_large`/`failed`.
+- Préférence : si un fichier audio existe, on l'utilise ; sinon le fichier vidéo.
+- Plafond : 8 segments par appel. Limite candidats : seuls les segments candidats avec média.
+- Sécurité : si Authorization est fourni, l'appelant doit être membre de l'organisation du projet.
+
+### 7.3 Rapport principal — `generate-report`
+
+**Modèles, dans l'ordre :**
+1. `google/gemini-2.5-pro` (tentative 1)
+2. `google/gemini-2.5-pro` (retry — 502 fréquent côté provider)
+3. `google/gemini-2.5-flash` (fallback)
+
+Tool calling forcé sur une fonction unique `generate_report`. Outputs stockés en JSON dans plusieurs colonnes/champs de `reports`.
+
+**Prompt système (mot à mot) :**
+
+```
+Tu es un expert en recrutement qui produit des RAPPORTS DE DÉCISION pour des recruteurs pressés.
+Ton objectif n'est pas de produire une analyse exhaustive : c'est d'aider à prendre une décision claire (shortlister, creuser, ou rejeter) en moins de 2 minutes de lecture.
+Tu es factuel, direct, et tu cites systématiquement le candidat pour appuyer chaque affirmation.
+Tu n'utilises JAMAIS de jargon RH ou psy : tu parles le langage d'un manager qui recrute.
+```
+
+**Prompt utilisateur (template, variables `${...}`) :**
+
+```
+Analyse cette transcription d'entretien pour le poste de ${project.job_title}.
+
+Candidat : ${session.candidate_name}
+
+Questions posées :
+${"1. ... (type: open)\n2. ..." }
+
+Critères du poste (à utiliser pour fit_breakdown) :
+${"- <label> (poids: <w>%, échelle: <0-5|0-10>): <description>" | "Aucun critère spécifique défini. Évalue sur: communication, pertinence des réponses, motivation, compétences techniques."}
+
+Transcription complète :
+${fullText}
+
+Messages du candidat avec identifiants (à utiliser dans message_id / evidence_message_id) :
+${"[id=<uuid>] <texte du message candidat>" }
+
+Règles ABSOLUES :
+1. Chaque affirmation (driver, fit, signal, dimension de communication) doit s'appuyer sur une citation EXACTE du candidat avec son message_id.
+2. N'invente jamais un message_id : si tu ne peux pas citer, omets le champ.
+3. Si la transcription est trop courte ou vague pour conclure, dis-le explicitement plutôt que d'inventer.
+4. Pas de jargon RH/psy dans verdict_headline, decision_drivers, fit_breakdown.statement, signals : du français concret de manager.
+5. À chaque fois que tu fournis un message_id (ou evidence_message_id), fournis aussi start_seconds : la seconde approximative où commence la phrase citée DANS la réponse vidéo (0 = début). Le serveur recalculera ensuite l'horodatage exact à partir de la transcription : ton estimation sert de filet de secours.
+
+Produis un rapport orienté DÉCISION en utilisant l'outil generate_report.
+
+Champs prioritaires :
+- verdict_headline : UNE phrase max 100 caractères qu'un recruteur dirait à son manager. Pas une description, un verdict ("Profil senior solide, à valider sur la dimension management").
+- recommendation : strong_yes / yes / maybe / no
+- decision_drivers : 2 à 4 raisons CLÉS de cette reco. Chacune = label court (max 80 car), sentiment (positive/neutral/negative), citation + message_id.
+- fit_breakdown : UNE entrée par critère du poste (utilise le label exact). score 0-100, level (excellent/solid/partial/gap), statement (1 phrase concrète "Maîtrise X mais aucune expérience démontrée sur Y"), citation + message_id.
+- signals : signaux à creuser ou questions à reposer en entretien physique. Chacun = label, severity, description, citation, ET suggested_question (la question précise à poser pour lever le doute).
+- communication_profile : scores 0-10 sur clarity, structure, concision, posture, energy. Chaque dim a un commentaire 1 ligne et idéalement une citation.
+- question_evaluations : OBLIGATOIRE. Tu DOIS retourner UNE entrée pour CHAQUE question posée (indexée par "0","1","2"… dans l'ordre des questions ci-dessus), même si la réponse du candidat est vague, courte, hors-sujet ou absente. Ne saute jamais une question. Pour chaque question : question (texte exact), score 0-10 (voir grille ci-dessous), summary (1 phrase qui résume la réponse du candidat), comment (1-2 phrases d'analyse), key_quote, evidence_message_id, depth_level (surface/concret/expert), had_followup (true si une relance a été déclenchée), followup_helped (true si la relance a fait progresser la réponse).
+  Grille de notation /10 (selon ton impression globale : clarté + pertinence + profondeur) :
+  • 1-3 : réponse absente, hors-sujet, ou très superficielle
+  • 4-6 : réponse correcte mais générique, peu d'exemples concrets
+  • 7-8 : réponse claire avec exemples concrets et structure
+  • 9-10 : réponse experte, structurée, démonstrative
+
+Champs secondaires (toujours produits, format inchangé) :
+- executive_summary : 3-5 phrases bilan global
+- overall_score : 0-100 (cohérent avec recommendation)
+- overall_grade : A/B/C/D/E
+- personality_profile (Big Five) : OBLIGATOIRE. Tu dois TOUJOURS retourner les 5 traits (openness, conscientiousness, extraversion, agreeableness, emotional_stability) avec un score 0-100 et une confidence (low/medium/high). Si la transcription est courte ou les indices faibles, mets confidence à "low" et un score neutre proche de 50, mais ne saute jamais ce bloc. Fournis 1 à 2 evidences par trait quand c'est possible.
+- soft_skills : 3 à 6 entrées avec quote + evidence_message_id obligatoires.
+- highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.
+```
+
+**Schéma de l'outil `generate_report` (sortie JSON imposée) :**
+
+- `verdict_headline` *(string, ≤100 c)* — requis
+- `decision_drivers` *(array)* — requis ; items `{ label, sentiment ∈ [positive,neutral,negative], quote, message_id, start_seconds }` (label + sentiment requis).
+- `fit_breakdown` *(array)* — requis ; items `{ criterion, score 0-100, level ∈ [excellent,solid,partial,gap], statement, quote, message_id, start_seconds }` (criterion + score + statement requis).
+- `signals` *(array)* — items `{ label, description, severity ∈ [low,medium,high], quote, message_id, start_seconds, suggested_question }`.
+- `communication_profile.{clarity,structure,concision,posture,energy}` : `{ score 0-10, comment, quote, message_id, start_seconds }`.
+- `executive_summary` *(string)* — requis.
+- `overall_score` *(number 0-100)* — requis.
+- `overall_grade` *(enum A,B,C,D,E)*.
+- `recommendation` *(enum strong_yes,yes,maybe,no)* — requis.
+- `question_evaluations` *(map<string, {question, score 0-10, summary, comment, key_quote, evidence_message_id, evidence_start_seconds, depth_level ∈ [surface,concret,expert], had_followup:bool, followup_helped:bool}>)* — requis.
+- `personality_profile` *(Big Five)* — requis ; pour chaque trait `{ score 0-100, interpretation, confidence ∈ [low,medium,high], evidences[] }`.
+- `soft_skills` *(array)* — items `{ skill, score 0-10, quote, evidence_message_id, evidence_start_seconds }`.
+- `highlights` *(array)* — items `{ question_index, kind ∈ [force,personnalite,vigilance], label, why, start_seconds, end_seconds }` (tous requis).
+
+**Validation et réparation :**
+- Validation stricte avant acceptation : `fit_breakdown` non vide ; `personality_profile` complet avec ≥ un score > 0.
+- **Planchers anti-aberration** : un critère `fit` avec score < 20 et statement < 20 caractères, ou un trait Big Five avec score < 20 sans `confidence = "low"`, est considéré récupérable.
+- **Passes de réparation ciblées** : pour chaque anomalie, un appel `gemini-2.5-pro` dédié rééavalue uniquement le critère / trait concerné (jusqu'à 2 essais), avec un mini-prompt explicite. Trace dans `stats.report_anomalies` si la réparation échoue.
+
+**Pipeline d'écriture :**
+- `fit_breakdown` est remappé sur les critères réels du projet (label exact, puis index).
+- `fit_score` global = moyenne pondérée par poids critères (×100).
+- Score final stocké = moyenne du score IA global et du `fit_score` (méthode `hybrid_v1`).
+- `criteria_scores` legacy reconstruit pour compatibilité (score arrondi sur l'échelle du critère).
+- `start_seconds` recalculés par méthode proportionnelle (position du 1er mot de la citation dans la transcription du message, ramenée à la durée du clip) via `resolve-start-seconds.ts`. Aucun fallback IA.
+- `question_evaluations` : garantit une entrée par question. Si l'IA en a omis, **retry ciblé** (`gemini-2.5-flash`, tool `evaluate_questions`) avec prompt :
+  ```
+  Tu as oublié d'évaluer certaines questions de cet entretien. Évalue MAINTENANT, et seulement, les questions ci-dessous, en te basant sur la transcription.
+  
+  Candidat : ${name}
+  Poste : ${jobTitle}
+  
+  Questions à évaluer (index → texte) :
+  ${index. texte}
+  
+  Transcription complète :
+  ${fullText}
+  
+  Pour chaque question, retourne :
+  - question (texte exact)
+  - score 0-10 (1-3 absente/hors-sujet, 4-6 générique, 7-8 claire avec exemples, 9-10 experte)
+  - summary (1 phrase qui résume la réponse)
+  - comment (1-2 phrases d'analyse)
+  - key_quote (citation exacte si possible)
+  - depth_level (surface/concret/expert)
+  
+  Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute aucune question listée.
+  ```
+- `audio_health` calculé : un segment est silencieux si transcript < 5 caractères ou peak_rms < 0.05 ; `failed` si > 80 % silencieux, `degraded` si > 30 %, sinon `ok`.
+- `highlight_clips` : sélection de 3 clips, déduplique sur les questions, fenêtre 10-30 s.
+
+**Garde-fous d'entrée :**
+- Sessions démo (`is_demo`) ignorées.
+- Aucun enregistrement candidat → erreur `no_recordings`.
+- Si des segments candidats n'ont pas encore été transcrits, lance jusqu'à 15 itérations de `transcribe-session` avant d'abandonner (avec tolérance : ≥70 % terminaux et ≥3 `done` → on génère partiellement).
+- Si transcript total candidat < 200 caractères pour > 120 s de session → erreur `transcript_incomplete` (HTTP 422) pour éviter un rapport à 0/100.
+
+**Email recruteur :** après écriture du rapport, déclenche `analyze-paraverbal` et `analyze-nonverbal` en parallèle ; quand les deux ont rendu (succès ou non), construit l'email `interview-report` enrichi des deux analyses et l'enqueue pour chaque destinataire de `report_recipient_user_ids` (filtré sur la même organisation, suppression / unsubscribe respectés, `reply_to` = email candidat si valide). Si la liste est vide, **aucun email** n'est envoyé (opt-out volontaire).
+
+### 7.4 Analyse para-verbale (voix) — `analyze-paraverbal`
+
+**Modèle :** `google/gemini-2.5-flash`
+**Inputs :** jusqu'à 8 segments audio candidats inline base64 (≤ 20 Mo chacun), avec transcription jointe.
+**Tool :** `report_paraverbal` (forcé).
+
+**Prompt système (mot à mot) :**
+
+```
+Tu es un coach vocal. Analyse uniquement la dimension PARA-VERBALE (la voix elle-même, pas le contenu) des réponses du candidat ${candidateName} pour le poste ${jobTitle}.
+Tu écoutes l'audio fourni en plus de la transcription. Note 6 dimensions sur 10 :
+- fluency (débit, articulation)
+- hesitation (peu d'« euh » = note haute)
+- intonation (vivante vs monotone)
+- energy (engagement vocal)
+- vocal_confidence (assurance)
+- vocal_stress (10 = aucun stress audible)
+Pour chaque dimension : 1 phrase concrète (langage manager, sans jargon) ET, dès que possible, l'evidence du segment le plus représentatif : evidence_message_id, evidence_start_seconds (position EN SECONDES depuis le début de la réponse correspondante, pas depuis le début de l'entretien) et evidence_quote (≤ 20 mots tirés de la transcription à ce moment). Ces 3 champs sont fortement encouragés pour permettre au recruteur de sauter directement au moment clé dans la vidéo.
+Retourne le résultat via l'outil report_paraverbal.
+```
+
+**Schéma de sortie :** `{ paraverbal_profile: { fluency, hesitation, intonation, energy, vocal_confidence, vocal_stress }, summary }` ; chaque dimension : `{ score 0-10, comment, evidence_message_id, evidence_start_seconds, evidence_quote }`.
+
+**Effets :** stocke dans `reports.paraverbal_analysis` un objet `{ status: ok|skipped|failed|rate_limited|no_credits|running, attempt, profile, summary, segments_analyzed, generated_at, model }`. 3 tentatives max. Retries 2s/5s sur 5xx. Skip si `audio_analysis_enabled = false`.
+
+### 7.5 Analyse non-verbale (corps) — `analyze-nonverbal`
+
+**Modèle :** `google/gemini-2.5-pro`
+**Inputs :** jusqu'à 4 segments vidéo (≤ 6 Mo chacun, plafond global 20 Mo), répartis également (début/milieu/fin).
+**Tool :** `report_nonverbal` (forcé).
+
+**Prompt système (mot à mot) :**
+
+```
+Tu es un expert en communication non-verbale en entretien d'embauche VIDÉO À DISTANCE (le candidat répond à un avatar IA affiché à l'écran). Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat.
+
+Note 4 dimensions sur 10 :
+- eye_contact : présence et stabilité du regard. ATTENTION : dans ce format, le candidat regarde l'avatar À L'ÉCRAN, pas la lentille de la caméra. Un regard orienté vers l'écran de façon stable et engagée = 8-10. Ne pénalise que les vraies fuites de regard (plafond, sol, côté répété, lecture visible de notes). Ne JAMAIS pénaliser le fait de ne pas fixer la caméra : c'est attendu dans ce format.
+- posture (10 = ouverte, droite, stable)
+- gestures (10 = expressive et adaptée, ni figée ni agitée)
+- facial_expressivity (10 = visage vivant et congruent)
+
+GRILLE D'ÉVALUATION — utilise TOUTE la plage, pas seulement 4-6 :
+- 10 : exceptionnel, niveau commercial/média
+- 8-9 : très bon, naturel et engageant (cible standard d'un bon candidat)
+- 6-7 : correct, quelques points d'amélioration mineurs (MOYENNE ATTENDUE d'un candidat normal)
+- 4-5 : inconfort ou rigidité visible, sans bloquer la communication
+- 2-3 : gêne marquée qui nuit clairement à l'échange
+- 0-1 : extrêmement problématique
+Un candidat "moyen normal" se situe à 6-7, PAS à 5. N'utilise pas 5 par défaut. Si rien de clairement négatif n'est observable, la note est ≥7.
+
+Pour chaque dimension : 1 phrase concrète ET, dès que possible, l'evidence du segment vidéo le plus représentatif : evidence_message_id, evidence_start_seconds (position EN SECONDES depuis le début de la réponse correspondante, pas depuis le début de l'entretien) et evidence_quote (≤ 20 mots décrivant factuellement ce qui s'observe à ce moment précis, ou courte citation du candidat). Ces 3 champs permettent au recruteur de sauter directement au moment clé dans la vidéo.
+Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…). Pour chacune : message_id, description factuelle (1 phrase) et start_seconds (position en secondes depuis le début de la réponse). S'il n'y en a pas, retourne une liste vide.
+
+Ne juge JAMAIS l'apparence physique, l'âge, le genre, l'origine ou le handicap. Reste factuel et bienveillant.
+Retourne le résultat via l'outil report_nonverbal.
+```
+
+**Schéma de sortie :** `{ nonverbal_profile: { eye_contact, posture, gestures, facial_expressivity }, micro_tensions: [{message_id, description, start_seconds}], summary }` ; chaque dimension : `{ score 0-10, comment, evidence_message_id, evidence_start_seconds, evidence_quote }`.
+
+**Effets :** stocke dans `reports.nonverbal_analysis` `{ status, profile, micro_tensions, summary, attempt, ... }`. 3 tentatives max. Skip si `record_video = false` ET aucun segment vidéo n'a été réellement uploadé.
+
+### 7.6 Copilote IA — `copilot-chat`
+
+**Modèle :** `google/gemini-3-flash-preview`
+**Historique :** 30 derniers messages du fil.
+**Mode :** chat libre (pas de tool calling), réponse en Markdown.
+
+#### 7.6.1 Mode analyse (prompt système, mot à mot, lignes générées) :
+
+```
+Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project.title}" (poste : ${project.job_title}).
+Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux quand pertinent).
+Appuie tes réponses uniquement sur les données fournies ci-dessous. Si tu n'as pas l'info, dis-le clairement.
+Cite toujours les candidats par leur nom. Refuse poliment toute comparaison fondée sur des critères discriminatoires (origine, âge, genre, religion, apparence physique, situation familiale, etc.).
+
+## Critères d'évaluation du projet
+- **<label>** (poids <w>) : <description>
+…
+
+## Candidats évalués (<N>)
+### <Nom candidat>
+- Score global : **<X>/10** (<grade>)
+- Recommandation IA : <strong_yes|yes|maybe|no>
+- Décision recruteur : <decision>
+- Résumé : <executive_summary_short ou 400 premiers caractères de executive_summary>
+- Forces : <jusqu'à 5 strengths, séparés par " ; ">
+- Axes d'amélioration : <jusqu'à 5 areas_for_improvement, séparés par " ; ">
+- Scores critères : <jusqu'à 8 entrées "label: score" séparées par " · ">
+- Soft skills : <jusqu'à 6 entrées "skill: score" séparées par " · ">
+- Points de vigilance : <jusqu'à 3 red_flags>
+- Note du recruteur : <recruiter_note, 200 premiers caractères>
+```
+
+#### 7.6.2 Mode design (prompt système, mot à mot) :
+
+```
+Tu es un assistant IA expert en conception d'entretiens structurés. Tu aides un recruteur à construire l'entretien du projet "${project.title}" (poste : ${project.job_title}, langue : ${project.language}, durée cible : ${project.max_duration_minutes} min).
+Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux). Justifie brièvement chaque suggestion (« pourquoi »).
+Privilégie des questions ouvertes, comportementales (méthode STAR) et alignées sur le poste. Refuse toute question discriminatoire (origine, âge, genre, religion, situation familiale, etc.).
+**Très important** : à chaque fois que tu proposes des éléments concrets activables (questions ou critères), ajoute en plus de ton explication un bloc de code Markdown ```json (et seulement ces blocs au format suivant) que l'application parsera pour afficher des boutons d'ajout :
+```json
+{ "type": "questions_suggestion", "items": [ { "title": "Titre court", "content": "Énoncé complet de la question", "type": "open", "rationale": "pourquoi cette question" } ] }
+```
+```json
+{ "type": "criteria_suggestion", "items": [ { "label": "Nom du critère", "description": "Ce qu'on évalue concrètement", "weight": 10, "rationale": "pourquoi ce critère" } ] }
+```
+Chaque bloc JSON doit être valide et autonome. Tu peux mettre plusieurs blocs dans une même réponse. N'invente pas d'autres types.
+
+## Projet
+- Description : <project.intro_text, 600 premiers caractères>
+
+## Questions actuelles du projet (<N>)
+<idx>. **<titre>** — <énoncé> _(type: <type>, relances: <oui (n) | non>)_
+
+## Critères d'évaluation actuels (<N>)
+- **<label>** (poids <w>) : <description>
+
+## Bibliothèque de questions de l'organisation (échantillon de <N>)
+- <titre> _[<catégorie>]_ — <énoncé tronqué>
+
+## Bibliothèque de critères de l'organisation (échantillon de <N>)
+- **<label>** _[<catégorie>]_ — <description tronquée>
+```
+
+**Effets :** message utilisateur et réponse insérés dans `copilot_messages`. Si le fil s'appelle encore `Nouvelle conversation`, son titre est remplacé par les 60 premiers caractères du premier message utilisateur.
+
+### 7.7 Import d'offre d'emploi — `import-job-offer`
+
+**Étape 1 :** scrape via service externe Firecrawl (`https://api.firecrawl.dev/v2/scrape`, format markdown, `onlyMainContent: true`, clé `FIRECRAWL_API_KEY`). Tronqué à 12 000 caractères.
+
+**Étape 2 — IA :**
+- Modèle : `google/gemini-2.5-flash`
+- Tool : `build_interview_draft` (forcé), schéma : `{ title, questions: [{title, content}], criteria: [{label, description, weight}] }` avec `minItems = maxItems = questionsCount/criteriaCount`.
+- Normalisation serveur : poids renormalisés sur 100 si écart > 1.
+
+**Prompt système (mot à mot) :**
+
+```
+Tu es un expert en recrutement et en conduite d'entretiens en français.
+À partir d'une offre d'emploi réelle, tu génères un entretien de pré-sélection sur-mesure.
+
+Structure obligatoire de la liste de questions (dans cet ordre) :
+1. Une question d'introduction chaleureuse pour mettre le candidat à l'aise (ex : "Bonjour, comment allez-vous aujourd'hui ? Prenez un instant pour vous présenter brièvement.").
+2. Les questions du cœur de l'entretien : ouvertes, comportementales ou de mise en situation, SPÉCIFIQUES à l'offre (missions, compétences, secteur, environnement).
+3. Une question de conclusion qui ouvre la parole au candidat (ex : "Avez-vous un dernier mot à ajouter, ou une question à nous poser ?").
+
+Règles strictes :
+- Le nombre total de questions doit être exactement celui demandé (intro + cœur + conclusion compris).
+- Pas de questions génériques type "parlez-moi de vous" ou "quelles sont vos qualités" dans le cœur de l'entretien.
+- Les critères d'évaluation sont calibrés sur les compétences clés de l'offre.
+- Somme des poids des critères = exactement 100.
+- Tout en français.
+```
+
+**Prompt utilisateur (template) :**
+
+```
+Voici une offre d'emploi extraite d'une page web :
+
+---
+${markdownExtrait}
+---
+
+Génère :
+- un titre court pour le projet d'entretien (intitulé de poste + entreprise si trouvée)
+- exactement ${questionsCount} questions au total : la 1re est une question d'introduction (brise-glace), la dernière est une question de conclusion, les ${questionsCount-2} du milieu sont personnalisées à l'offre
+- exactement ${criteriaCount} critères d'évaluation pondérés (somme = 100)
+```
+
+### 7.8 Import de page publique depuis URL — `import-public-page-from-url`
+
+`[À VÉRIFIER]` : utilise probablement Firecrawl + un appel IA similaire pour pré-remplir le contenu de la page publique d'un projet. Fonction présente, prompt non détaillé ici.
+
+### 7.9 Récapitulatif des fournisseurs IA externes
+
+| Usage | Modèle / service | Variable d'env |
+|---|---|---|
+| Conversation entretien | Lovable AI Gateway → Gemini 2.5 Flash | `LOVABLE_API_KEY` |
+| Transcription audio/vidéo | Lovable AI Gateway → Gemini 2.5 Flash (multimodal) | `LOVABLE_API_KEY` |
+| Génération rapport | Lovable AI Gateway → Gemini 2.5 Pro (fallback Flash) | `LOVABLE_API_KEY` |
+| Analyse para-verbale | Gemini 2.5 Flash | `LOVABLE_API_KEY` |
+| Analyse non-verbale | Gemini 2.5 Pro | `LOVABLE_API_KEY` |
+| Copilote | Gemini 3 Flash Preview | `LOVABLE_API_KEY` |
+| Import offre | Gemini 2.5 Flash | `LOVABLE_API_KEY` |
+| Scrape pages web | Firecrawl v2 | `FIRECRAWL_API_KEY` |
+| TTS (voix IA) | ElevenLabs / OpenAI / Gemini (au choix) ; cache navigateur | `ELEVENLABS_API_KEY` `[À VÉRIFIER]`, `OPENAI_API_KEY` `[À VÉRIFIER]`, `GEMINI_API_KEY` `[À VÉRIFIER]` |
+| Clonage voix | ElevenLabs | `ELEVENLABS_API_KEY` `[À VÉRIFIER]` |
+
+---
+
+## 8. Authentification et comptes
+
+### 8.1 Méthodes de connexion
+
+- **Email + mot de passe** (par défaut).
+- **Lien magique** demandé sur `/auth/magic-link`, consommé sur `/m/:token`.
+- **Magic link super admin** : un super admin peut générer un lien à durée limitée pour n'importe quel email (table `superadmin_magic_links`), envoyé par email.
+- **Aucune inscription publique anonyme** : un compte ne peut être créé qu'en consommant une invitation (`/invite/:token`) ou via la console super admin.
+
+### 8.2 Récupération de mot de passe
+
+- Page `/reset-password` envoie un email de recovery basé sur le template `recovery.tsx`. Validité : 15 minutes (TTL auth par défaut).
+
+### 8.3 Inscription par invitation
+
+- Un admin d'organisation ou un super admin crée une `organization_invitation` (jeton 32 octets hex, expiration 7 jours).
+- L'email d'invitation pointe sur `/invite/:token`. La policy RLS autorise un accès anonyme à l'invitation tant qu'elle est `pending` et non expirée.
+- L'utilisateur crée un mot de passe ; à l'acceptation, il est rattaché à l'organisation (`organization_members`), un profil est créé, et l'invitation passe en `accepted`.
+
+### 8.4 Rôles et permissions
+
+- Rôles stockés exclusivement dans `user_roles` (jamais sur `profiles`), avec un enum `app_role`.
+- Fonction `has_role(user, role)` SECURITY DEFINER utilisée par les policies pour éviter les boucles RLS.
+- Permissions par rôle :
+  - **Super admin** : accès cross-organisations, création/suppression d'organisations, impersonation, magic links, files système, monitoring email, super admin pages.
+  - **Admin d'organisation** : gestion des membres, invitations, et de la configuration de son organisation.
+  - **Membre** (recruteur standard) : CRUD sur projets, sessions, bibliothèques, rapports, copilote dans son organisation.
+  - **Candidat anonyme** (non authentifié) : passe les entretiens via jetons publics et lit la page publique des projets actifs.
+
+### 8.5 Impersonation
+
+- Un super admin appelle `superadmin-impersonate` ; reçoit un jeton lui permettant d'agir en tant qu'un autre utilisateur.
+- Une **bannière permanente** est affichée tant que l'impersonation est active, avec un bouton pour la quitter.
+
+### 8.6 Suppression de compte
+
+- Pas d'auto-suppression utilisateur dans l'UI vue. `[INCOMPLET]` : un utilisateur ne peut pas supprimer son compte lui-même via une page dédiée.
+- Suppression par un super admin via `superadmin-manage-user`.
+- Un candidat (non utilisateur) peut supprimer SA session et ses fichiers via `/session/:slug/privacy/:token`.
+
+---
+
+## 9. Fichiers et médias
+
+### 9.1 Bucket `media`
+
+- Bucket de stockage public en lecture (URLs directes utilisables dans le navigateur).
+- Préfixe par session : `interviews/{sessionId}/...` contenant :
+  - chunks vidéo (par segment et par réponse),
+  - fichiers audio extraits (préférés pour la transcription),
+  - thumbnails,
+  - manifestes de chunks vidéo (json),
+  - CV et lettre de motivation candidat (sous une sous-clé `[À VÉRIFIER]`).
+- Insertion possible côté candidat anonyme dans son propre préfixe (policy storage).
+- Suppression coordonnée via `_shared/session-storage-cleanup.ts` (`purgeSessionStorageFiles` + `nullifySessionMediaUrls`).
+- Limites de taille effectives (pas de limites RLS, limites applicatives) :
+  - Transcription inline : ≤ 18 Mo par segment.
+  - Analyse para-verbale : ≤ 20 Mo par segment audio, 8 segments max.
+  - Analyse non-verbale : ≤ 6 Mo par segment vidéo, plafond global 20 Mo, 4 segments max.
+- Rétention : 12 mois après `completed_at`, le contenu vidéo/audio est purgé par cron RGPD.
+
+### 9.2 Bucket `tutorials`
+
+- Bucket public en lecture.
+- Écriture super admin uniquement.
+- Sert le contenu de la page tutoriel.
+
+### 9.3 Avatars, intros, logos
+
+- **Logos d'organisation** : upload via `OrgLogoUpload`, stocké sur `media` `[À VÉRIFIER]` (sous-préfixe).
+- **Avatars de projet / question** : images uploadées, URL stockée dans `projects.avatar_image_url`, `questions.avatar_image_url`.
+- **Médias de question** : vidéo et audio préenregistrés par le recruteur, URLs dans `questions.video_url` / `questions.audio_url`.
+- **Intros** : `intro_audio_url`, `intro_text`, idem pour les templates.
+- **Voix clonées** : aucun fichier stocké côté Interw — l'identifiant ElevenLabs est stocké sur le profil. La voix elle-même réside chez ElevenLabs.
+
+### 9.4 Export vidéo MP4
+
+- Réalisé côté client (page `/sessions/:id/export`) avec `ffmpeg-core.js` (`public/ffmpeg/`) dans un worker. Aucune dépendance serveur. Sortie : un MP4 téléchargeable.
+
+---
+
+## 10. Emails transactionnels
+
+> Tous les emails de l'application passent par une file pgmq (`auth_emails`, `transactional_emails`) consommée toutes les 5 secondes par `process-email-queue`. Le domaine d'envoi est `notify.interw.ai` ; expéditeur `hello@notify.interw.ai`, marque "Interw". Tous les corps sont rendus depuis des templates React Email et incluent un pied de page avec lien de désabonnement automatique. Idempotence par `idempotencyKey`.
+
+### 10.1 Emails utilisateur (auth)
+
+| Template | Déclencheur | Destinataire | Objet (par défaut) | Contenu résumé |
+|---|---|---|---|---|
+| `signup` | Création de compte (rare en production : pas d'inscription publique) | Utilisateur | "Confirmez votre compte" `[À VÉRIFIER]` | Lien de confirmation. |
+| `magic-link` | Demande magic link | Utilisateur | "Votre lien de connexion" `[À VÉRIFIER]` | Lien unique de connexion. |
+| `recovery` | Reset mot de passe | Utilisateur | "Réinitialiser votre mot de passe" `[À VÉRIFIER]` | Lien de reset (TTL 15 min). |
+| `invite` | Invitation à rejoindre une organisation | Email invité | "Vous êtes invité chez <org>" `[À VÉRIFIER]` | CTA vers `/invite/:token`. |
+| `email-change` | Changement d'email | Nouvelle adresse | "Confirmez votre nouvelle adresse" `[À VÉRIFIER]` | Lien de confirmation. |
+| `reauthentication` | Étape de réauthentification | Utilisateur | "Confirmez votre identité" `[À VÉRIFIER]` | Code ou lien. |
+
+### 10.2 Emails applicatifs (registry `transactional-email-templates`)
+
+| Template | Déclencheur | Destinataire | Objet | Contenu résumé |
+|---|---|---|---|---|
+| `candidate-thank-you` | Fin du pipeline rapport (par session, idempotent) | Candidat | Personnalisable, défaut « Merci pour cet entretien : « <poste> » » | Remerciement, mention nom de l'organisation, lien vers la page vie privée pour gérer ses données. Le sujet et le corps peuvent être surchargés au niveau projet (`candidate_email_subject`/`body`) ou organisation (`candidate_message_templates` clé `candidate-thank-you`). Variables : `{firstName}`, `{jobTitle}`, `{orgName}`. |
+| `candidate-abandon-reminder` | Cron `send-abandon-reminders` (1 fois par session, ≥ 30 min d'inactivité, < 24 h) | Candidat | « Reprenez votre entretien : <projet> » | Salutation, mention de l'abandon, CTA "Reprendre l'entretien" pointant sur l'URL nominative. |
+| `interview-report` | Fin de `generate-report` (après analyses para+non verbale) | Chaque utilisateur listé dans `report_recipient_user_ids` du projet (filtré par organisation, suppression respectée) | « Rapport d'entretien : <candidat> – <poste> » `[À VÉRIFIER]` | Présentation du candidat, score global, recommandation, verdict en 1 phrase, résumé exécutif, drivers de décision, fit breakdown, soft skills, red flags, follow-up questions, scores critères et par question, profils para et non verbal résumés, lien vers le rapport complet. `reply_to` = email candidat si valide. |
+| `bulk-candidate-message` | Action recruteur "Envoyer un message groupé" depuis une session ou projet | Liste de candidats sélectionnés | Sujet libre saisi par le recruteur | Corps libre, paragraphes auto-séparés, liens cliquables détectés via regex. |
+| `weekly-project-recap` | Cron hebdo `send-weekly-recaps` | Destinataires du projet | « Récap hebdo : <poste> » `[À VÉRIFIER]` | Liste des candidats de la semaine (date, score, recommandation, lien rapport), totaux et moyennes, distribution des recommandations. |
+| `interview-issue-report` | `report-interview-issue` (candidat signale un problème) | Équipe interne (`hello@interw.ai`) | « Problème signalé pendant un entretien » `[À VÉRIFIER]` | Nom et email candidat, poste, projet, message du candidat, lien vers la session côté admin. |
+| `demo-request` | Soumission `DemoRequestDialog` sur la landing | Équipe (`hello@interw.ai`) | « Demande de démo » | Email du prospect, message libre. |
+| `email-failure-alert` | `check-email-failures` quand le seuil de la config alerte est atteint dans la fenêtre | Destinataires d'alerte `[À VÉRIFIER]` | « Alerte : échecs d'envoi email » `[À VÉRIFIER]` | Nombre d'échecs, fenêtre, seuil, détails ; respect du cooldown configuré. |
+
+### 10.3 Politique commune
+
+- Vérification de suppression (`suppressed_emails`) avant tout envoi.
+- Un jeton de désabonnement unique par email est généré/réutilisé (`email_unsubscribe_tokens`) et lié au pied de page.
+- Log dans `email_send_log` : `pending` → `sent` / `failed`, message id, metadata (peut contenir `session_id`).
+- `reply_to` paramétrable au cas par cas (rapport → candidat ; sinon adresse organisation).
+
+---
+
+## 11. Intégrations externes
+
+| Service | Rôle | Points d'intégration | Variables d'environnement |
+|---|---|---|---|
+| Lovable AI Gateway | Passerelle IA unifiée (Gemini Flash/Pro/3, multimodal, tool calling, JSON mode) | `ai-conversation-turn`, `generate-report`, `transcribe-session`, `analyze-paraverbal`, `analyze-nonverbal`, `copilot-chat`, `import-job-offer`, `import-public-page-from-url` | `LOVABLE_API_KEY` |
+| Firecrawl | Scrape de pages web (markdown) | `import-job-offer`, `import-public-page-from-url` | `FIRECRAWL_API_KEY` |
+| ElevenLabs | TTS premium et clonage de voix | `tts-elevenlabs`, `clone-voice`, `delete-cloned-voice` | `ELEVENLABS_API_KEY` `[À VÉRIFIER]` |
+| OpenAI | TTS alternatif | `tts-openai` | `OPENAI_API_KEY` `[À VÉRIFIER]` |
+| Gemini (API directe) | TTS alternatif | `tts-gemini-direct` | `GEMINI_API_KEY` `[À VÉRIFIER]` |
+| Fournisseur email (Mailgun via API interne) | Envoi des emails | `process-email-queue` | Géré via Vault interne (`email_queue_service_role_key`, etc.). Domaine `notify.interw.ai`. |
+| (Remotion) | Composition vidéo marketing / démo en local dans le dossier `remotion/` | Hors application web | — (build local) |
+| ffmpeg.wasm | Export MP4 côté client | `useMp4Download`, workers d'export | Fichiers servis depuis `public/ffmpeg/` |
+
+Aucun fournisseur de paiement n'est intégré dans le code (pas de Stripe, Paddle, etc.).
+
+---
+
+## 12. Design et ton
+
+- **Identité de marque :** "Interw" / "interw.ai".
+- **Couleur primaire :** indigo `#6366F1` (HSL `239 84% 67%`), utilisée pour CTA, accents, sidebar, focus ring.
+- **Couleurs sémantiques :** `success` vert (HSL `152 60% 52%`), `warning` orange (HSL `38 92% 50%`), `destructive` rouge (HSL `0 84% 60%`), `info` bleu (HSL `205 90% 60%`), neutres carte/fond blancs.
+- **Mode sombre** prévu (palette dédiée sur `.dark`).
+- **Typographie :** Inter pondérations 300/400/500/600/700, depuis Google Fonts. Aucune fonte serif.
+- **Rayons et ombres :** rayon de base `0.5rem`. Esthétique sobre, minimaliste, "Apple-like".
+- **Code couleur des scores :**
+  - Fit Poste : ≥ 70 vert, ≥ 45 orange, < 45 rouge.
+  - Big Five : score 0-100 avec interprétation.
+- **Langue :** interface 100 % française, tutoiement de l'utilisateur recruteur dans certains contextes IA, vouvoiement du candidat dans les emails et l'entretien.
+- **Ton :** sobre, factuel, langage de manager — proscrire le jargon RH/psy. Les prompts IA imposent ce ton à toutes les sorties (verdict, drivers, fit, signals, summary).
+- **Anti-discrimination :** mention explicite dans tous les prompts critiques (copilote, génération rapport, non-verbal, import offre).
+- **Bannière disclaimer IA** affichée sur les rapports candidat (`AiAnalysisDisclaimer`).
+
+---
+
+## 13. Dette et trous connus
+
+- **Statut "in_progress"** sur sessions : pas de garantie qu'une session restée en `in_progress` longtemps sans média ait été correctement nettoyée — le cron `cleanup-abandoned-sessions` couvre les cas standards mais s'appuie sur l'existence de fichiers pour décider entre récupération et purge.
+- **Réparations IA partielles non garanties** : `generate-report` enregistre les anomalies non réparées (`stats.report_anomalies`) mais ne re-bloque pas le rapport. Un rapport peut donc afficher un score < 20 sur un critère avec une justification courte si la passe de réparation échoue après 2 essais.
+- **`enable_bias_detection`** existe sur `organizations` mais aucun code applicatif lu ne l'utilise. `[INCOMPLET]`
+- **Suppression de compte utilisateur** : absente côté utilisateur, uniquement réalisable par super admin. `[INCOMPLET]`
+- **`copilot_messages.parts`** (jsonb) : présent en BDD mais usage non confirmé dans le rendu courant. `[À VÉRIFIER]`
+- **`visible_to_user_ids`** sur `projects` : champ présent, mais les policies RLS lues n'imposent pas une restriction stricte basée dessus (l'appartenance à l'organisation suffit). `[À VÉRIFIER]` : le filtrage peut n'être réalisé que côté UI.
+- **Templates email auth** : sujets et contenu exacts non lus pour chaque template (signup, magic-link, recovery, invite, email-change, reauthentication). `[À VÉRIFIER]`
+- **Pricing organisation** : champ texte libre, aucune logique de quota fortement appliquée (`session_credits_total` non décrémentée automatiquement dans le code lu). `[INCOMPLET]`
+- **`weekly-project-recap`, `check-email-failures`, `purge-old-videos`, `process-email-queue`, `process-report-queue`** : aucune migration `cron.schedule` n'apparaît dans le code pour ces jobs ; leur planification est gérée par un mécanisme interne distinct (outils d'infrastructure). La reconstruction doit reproduire ces crons explicitement.
+- **Duplication des champs entre `projects` et `interview_templates`** : presque tous les paramètres de configuration d'entretien sont dupliqués entre les deux tables (TTS, intro, IA, candidate_fields, messages, etc.). La reconstruction gagnerait à factoriser ces réglages dans une structure réutilisable.
+- **Duplication des champs entre `questions` et `interview_template_questions`** + entre `evaluation_criteria` et `interview_template_criteria`. Idem côté factorisation.
+- **Routes héritées `/interview/...`** sont redirigées en dur sur `/session/...` ; à conserver pendant une période de transition pour ne pas casser les emails déjà envoyés.
+- **Modèle `gemini-3-flash-preview`** utilisé par le copilote — modèle preview, sujet à dépréciation rapide.
+- **Sessions démo** : marquées `is_demo`, mais les contrôles d'écriture des messages reposent uniquement sur le statut du projet — `[À VÉRIFIER]` : aucune limite stricte de durée ou de stockage spécifique au démo.
+- **Crédits TTS** : pas de cache server-side ni de limite par organisation visible ; coût TTS supporté par défaut sur le compte fournisseur configuré.
+- **Pas de gestion de plusieurs langues** au-delà du français pour les prompts IA : tout est codé en dur en français, y compris les enums de transitions ("Écoutons", "Regardons", etc.).
+- **Pas de tests unitaires d'évaluation IA** : la qualité des sorties est testée uniquement via des heuristiques de validation post-réponse (planchers anti-aberration, retry ciblé) — pas de jeu d'évaluation reproductible.
+- **`finalize-session`** est conservée pour rétro-compatibilité — toute la logique réelle est dans `process-report-queue`. Une reconstruction peut fusionner les deux.
+
+---
+
+*Fin du document.*
