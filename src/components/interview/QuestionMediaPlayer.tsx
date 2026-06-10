@@ -13,6 +13,8 @@ export interface QuestionMediaPlayerHandle {
 interface QuestionMediaPlayerProps {
   type: "written" | "audio" | "video";
   content: string;
+  /** Texte affiché au candidat (questions.hint_text). Si vide, aucun bloc texte n'est rendu. */
+  displayText?: string | null;
   audioUrl?: string | null;
   videoUrl?: string | null;
   variant: "featured" | "inline";
