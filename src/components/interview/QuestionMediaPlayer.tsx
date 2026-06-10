@@ -336,17 +336,19 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
 
     return (
       <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm p-5 sm:p-6">
-        {type === "written" && (
+        {type === "written" && hasShownText && (
           <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
-            <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed">{content}</p>
+            <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed whitespace-pre-wrap">{shownText}</p>
           </div>
         )}
 
         {type === "audio" && audioUrl && (
           <div className="space-y-3">
-            <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
-              <p className="text-base sm:text-lg italic mb-2 opacity-90">{content}</p>
-            </div>
+            {hasShownText && (
+              <div className="border-l-2 pl-4" style={{ borderColor: "hsl(var(--l-accent) / 0.5)" }}>
+                <p className="text-base sm:text-lg mb-2 opacity-90 whitespace-pre-wrap">{shownText}</p>
+              </div>
+            )}
             <audio
               ref={audioRef}
               src={audioUrl}
