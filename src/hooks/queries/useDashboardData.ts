@@ -97,15 +97,14 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
-  // Derniers projets actifs : on priorise ceux qui ont au moins 1 entretien
-  // (triés par date du dernier entretien), puis on complète avec les projets
-  // les plus récents pour afficher jusqu'à 5 cartes.
+  // Derniers projets actifs : on priorise ceux qui viennent de recevoir un
+  // entretien (triés par date du dernier entretien, du plus récent au plus
+  // ancien), puis on complète avec les projets sans entretien les plus récents.
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
     .select("id, title, job_title, created_at, sessions(count), sessions_dates:sessions(created_at)")
     .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(200);
   const mapped = (recentProjectsRaw ?? []).map((p: any) => {
     const dates = Array.isArray(p.sessions_dates)
       ? p.sessions_dates.map((s: any) => s?.created_at).filter(Boolean)
@@ -123,10 +122,12 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     };
   });
   const withSessions = mapped
-    .filter((p) => p.sessionCount > 0)
+    .filter((p) => p.sessionCount > 0 && p.lastSessionAt)
     .sort((a, b) => (b.lastSessionAt ?? "").localeCompare(a.lastSessionAt ?? ""))
     .slice(0, 5);
-  const withoutSessions = mapped.filter((p) => p.sessionCount === 0);
+  const withoutSessions = mapped
+    .filter((p) => p.sessionCount === 0)
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
   const recentProjects = [
     ...withSessions,
     ...withoutSessions.slice(0, Math.max(0, 5 - withSessions.length)),
