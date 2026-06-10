@@ -1,50 +1,54 @@
 ## Objectif
 
-Garantir qu'aucun rapport publié ne contienne de note aberrante (score < 20 sur un critère Fit Poste ou un trait Big Five) due à une réponse IA partielle. Aujourd'hui `isPayloadValid` ne détecte que les payloads totalement vides : un rapport où **un seul** critère sort à 0/15 passe en production (cas Manon Micellis).
+Produire `REBUILD_SPEC.md` à la racine du projet : spécification fonctionnelle complète et fidèle au code réellement présent, destinée à reconstruire l'application sur un autre stack technique.
 
-## 1. Validation renforcée dans `generate-report`
+## Méthode d'exploration (avant écriture)
 
-Dans `isPayloadValid` (lignes 508-521 de `supabase/functions/generate-report/index.ts`), ajouter :
+Avant de rédiger, je vais parcourir systématiquement :
 
-- **Plancher Fit Poste** : pour chaque entrée de `fit_breakdown`, si `score < 20` ET `statement` vide ou < 20 caractères → invalide (raison `low_fit_score:<criterion>`).
-- **Plancher Big Five** : pour chaque trait, si `score < 20` ET `confidence !== "low"` → invalide (raison `low_big_five:<trait>`). On garde la tolérance pour transcriptions courtes via `confidence:"low"` neutre ~50 (imposé par le prompt ligne 348).
+1. **Routes & écrans** — `src/App.tsx` (déjà vu, ~60 routes), puis chaque fichier de `src/pages/` (≈60 pages) pour extraire URL, contrôle d'accès, contenu, actions.
+2. **Composants métier** — `src/components/session/`, `src/components/project/`, `src/components/copilot/`, `src/components/interview/`, `src/components/library/`, `src/components/superadmin/`, `src/components/feedback/`, layouts.
+3. **Hooks & libs** — `src/hooks/queries/`, `src/lib/` (calculs, slug, decisionAuthor, rebalanceWeights, videoComposer, etc.), `src/contexts/`.
+4. **Base de données** — schéma de toutes les tables listées (35+ tables) avec colonnes, enums, contraintes, et toutes les policies RLS via `security--get_table_schema` + `supabase--read_query`.
+5. **Edge functions** — listing complet de `supabase/functions/`, lecture de chaque `index.ts` pour déclencheurs, entrées, effets, IA, emails.
+6. **Templates email** — lecture exhaustive de `supabase/functions/_shared/transactional-email-templates/` et `_shared/email-templates/`.
+7. **Prompts IA** — extraction mot-à-mot des system prompts dans `generate-report`, `transcribe-session`, `copilot`, `ai-text-customizer`, `process-report-queue`, etc.
+8. **Config** — `supabase/config.toml`, `tailwind.config.ts`, `src/index.css`, `package.json`, fichiers `.lovable/`.
+9. **Jobs planifiés** — recherche `pg_cron` / `cron.schedule` dans les migrations.
+10. **Storage** — buckets via schéma storage.
 
-Conséquence directe : la boucle existante (pro-1 → pro-2 → flash) repasse automatiquement. Coût zéro à ajouter, on capitalise sur l'infra de retry déjà en place.
+## Plan de rédaction de `REBUILD_SPEC.md`
 
-## 2. Régénération ciblée (section-level repair)
+Fichier unique, écrit en 2 passes pour ne rien tronquer :
 
-Plutôt que de tout relancer si le 3e essai foire sur **un seul** critère, mode "repair" :
+**Passe 1 — Sections 1 à 6**
+1. Vue d'ensemble (produit, personas recruteur/candidat/admin/superadmin, modèle économique tel qu'implémenté).
+2. Inventaire exhaustif des fonctionnalités — une sous-section par feature détectée (projets, bibliothèques questions/critères/intros/templates entretien/emails, sessions candidat, transcription, génération rapport, partage rapport, comparaison candidats, stats projet, copilote IA, feedback, admin org, superadmin, impersonation, magic link, invitations, page publique projet, page publique org, highlights, export vidéo, unsubscribe…). Pour chacune : flux pas à pas, états, règles, cas limites, marquage `[INCOMPLET]` / `[À VÉRIFIER]`.
+3. Carte des écrans — tableau route par route.
+4. Modèle de données — table par table en langage neutre.
+5. Règles d'accès — chaque policy RLS traduite en français.
+6. Logique backend — chaque edge function, trigger SQL, cron.
 
-- Nouvelle fonction interne `repairSection(parsed, sessionId, kind, target)` dans `generate-report/index.ts` où `kind ∈ {"fit_criterion", "big_five_trait"}`.
-- Elle rappelle Gemini 2.5 Pro avec un prompt restreint : seulement le critère/trait suspect, la transcription complète, et un tool schema réduit à cet objet.
-- Si la repair-call renvoie un score ≥ 20 cohérent (ou `confidence:"low"` + score neutre ~50 pour Big Five), on patche `parsed` à cet endroit et le pipeline continue normalement.
-- Si la repair échoue 2× sur le même champ, on garde le score initial mais on marque `stats.report_anomalies = [{kind, target, kept_score, attempts}]` pour traçabilité.
+**Passe 2 — Sections 7 à 13**
+7. IA — prompts reproduits **intégralement et mot-à-mot** (generate-report, copilot, ai-text-customizer, transcription, tout autre appel détecté), modèles utilisés, schémas JSON attendus.
+8. Authentification & comptes — login, magic link, invitations, reset password, rôles (superadmin / org admin / membre / candidat anonyme), suppression.
+9. Fichiers & médias — buckets, types, limites, flux d'upload vidéo/audio candidat, lecture, export MP4.
+10. Emails transactionnels — chaque template (déclencheur, destinataire, objet, résumé contenu).
+11. Intégrations externes — IA (modèle), email (provider), TTS, Remotion vidéo, etc., avec **noms de variables d'environnement uniquement**.
+12. Design & ton — indigo #6366F1, Inter, langue FR, ton.
+13. Dette & trous connus — fragilités, doublons, mocks, incohérences relevés pendant l'exploration.
 
-Avantages : pas de surcoût IA quand tout est correct, et on n'écrase pas un rapport globalement bon à cause d'un seul champ aberrant.
+## Règles que je m'impose
 
-## Détails techniques
+- Lecture exclusive du code/schéma/config présents — aucune référence aux conversations passées.
+- Vocabulaire agnostique : pas de mention de frameworks frontend ni de noms de librairies internes ; on garde uniquement les services externes (modèle IA nommé, fournisseur email, moteur vidéo).
+- Aucune valeur de secret ni clé : uniquement les noms de variables et leur rôle.
+- Aucune URL de dashboard ni identifiant interne du backend hébergé.
+- Marquage explicite `[INCOMPLET]` (UI sans backend, à moitié câblé) et `[À VÉRIFIER]` (comportement non confirmé par le code lu).
+- Aucune embellissement, aucune feature inventée.
 
-### Seuils
-- Critère : `score < 20` considéré anormal.
-- Trait : `score < 20` sans `confidence:"low"`.
-- Plafond repair : 2 tentatives par section, puis on conserve.
+## Livrable
 
-### Fichiers touchés
-- `supabase/functions/generate-report/index.ts` uniquement : enrichir `isPayloadValid`, ajouter `repairSection`, écrire `stats.report_anomalies` si fallback.
+Un seul fichier `REBUILD_SPEC.md` à la racine. Aucune autre modification de code. Sections 1–6 écrites en premier appel d'édition, sections 7–13 en second appel, sans résumer ni tronquer.
 
-### Non-objectifs
-- Pas de sweep périodique (sera réévalué plus tard si nécessaire).
-- Pas de changement UI/admin.
-- Pas de refonte du prompt ni du `score_breakdown`.
-- Pas de migration de schéma (anomalies tiennent dans `reports.stats` JSONB).
-
-### Risques
-- Surcoût IA marginal : repair = ~10× moins de tokens qu'une régénération complète.
-- Risque "yo-yo" si Gemini renvoie systématiquement un score bas légitime → mitigé par le plafond 2 tentatives par section.
-
-## Étapes d'implémentation
-
-1. Patch `isPayloadValid` avec les nouveaux planchers.
-2. Implémenter `repairSection` + intégration dans le flux après validation.
-3. Régénérer le rapport `7a1c7299` (Manon Micellis) en mode `force` pour vérifier que la repair patche bien les champs.
-4. Vérifier en base que `stats.fit_breakdown` et `personality_profile` n'ont plus de scores < 20 injustifiés.
+Dis-moi si tu veux ajuster le périmètre (par ex. exclure le superadmin, ou inclure les tests E2E comme source de vérité comportementale) avant que je lance l'exploration et la rédaction.
