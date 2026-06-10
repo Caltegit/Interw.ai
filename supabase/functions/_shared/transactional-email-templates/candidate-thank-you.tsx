@@ -102,7 +102,7 @@ const CandidateThankYouEmail = ({
           {/* Footer identitaire */}
           <Section style={footer}>
             <Text style={footerText}>
-              <strong>Interw</strong> — Plateforme d'entretien assistée par IA
+              <strong>Interw</strong> — Plateforme d'entretien digitale
             </Text>
             <Text style={footerText}>
               <Link href="https://interw.ai" style={footerLink}>interw</Link>
