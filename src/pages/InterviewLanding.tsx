@@ -245,13 +245,14 @@ export default function InterviewLanding() {
   };
 
   const handlePlayMedia = async () => {
+    setMediaError(false);
     if (introMediaType === "audio" && introAudioRef.current) {
-      introAudioRef.current.play().catch(() => setMediaFinished(true));
+      introAudioRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
       introVideoRef.current.muted = false;
       introVideoRef.current.volume = 1;
-      introVideoRef.current.play().catch(() => setMediaFinished(true));
+      introVideoRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMediaType === "tts") {
       const text = (project?.intro_text || "").trim();
