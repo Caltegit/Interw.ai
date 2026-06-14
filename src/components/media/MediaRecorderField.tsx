@@ -271,7 +271,25 @@ export function MediaRecorderField({
         recordStream = composerRef.current!.getOutputStream();
       }
 
-      const mimeType = type === "audio" ? "audio/webm" : "video/webm";
+      const pickMime = (candidates: string[]) =>
+        candidates.find((m) => {
+          try {
+            return typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m);
+          } catch {
+            return false;
+          }
+        }) ?? (type === "audio" ? "audio/webm" : "video/webm");
+      const mimeType =
+        type === "audio"
+          ? pickMime(["audio/mp4;codecs=mp4a.40.2", "audio/mp4", "audio/webm;codecs=opus", "audio/webm"])
+          : pickMime([
+              "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+              "video/mp4;codecs=avc1,mp4a",
+              "video/mp4",
+              "video/webm;codecs=vp9,opus",
+              "video/webm;codecs=vp8,opus",
+              "video/webm",
+            ]);
       const mr = new MediaRecorder(recordStream, { mimeType });
       mediaRecorderRef.current = mr;
       chunksRef.current = [];

@@ -30,6 +30,7 @@ export default function InterviewDemoLanding() {
   const [phase, setPhase] = useState<"ready" | "intro" | "navigating">("ready");
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -176,13 +177,14 @@ export default function InterviewDemoLanding() {
   };
 
   const handlePlayMedia = async () => {
+    setMediaError(false);
     if (introMode === "audio" && audioRef.current) {
-      audioRef.current.play().catch(() => setMediaFinished(true));
+      audioRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMode === "video" && videoRef.current) {
       videoRef.current.muted = false;
       videoRef.current.volume = 1;
-      videoRef.current.play().catch(() => setMediaFinished(true));
+      videoRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMode === "tts") {
       await playTts();
@@ -290,6 +292,7 @@ export default function InterviewDemoLanding() {
                     setMediaPlaying(false);
                     setMediaFinished(true);
                   }}
+                  onError={() => setMediaError(true)}
                   className="hidden"
                 />
               )}
@@ -302,6 +305,7 @@ export default function InterviewDemoLanding() {
                     setMediaPlaying(false);
                     setMediaFinished(true);
                   }}
+                  onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
                   className="w-full rounded-xl border"
@@ -319,6 +323,16 @@ export default function InterviewDemoLanding() {
                   Continuer
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
+              ) : mediaError ? (
+                <div className="space-y-3 animate-fade-in">
+                  <p className="text-sm text-warning">
+                    Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
+                  </p>
+                  <Button size="lg" className="w-full" onClick={handleProceed}>
+                    Continuer sans visionner
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               ) : (
                 <>
                   {!mediaPlaying && !mediaFinished && (

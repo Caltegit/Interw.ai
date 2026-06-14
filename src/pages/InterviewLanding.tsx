@@ -42,6 +42,7 @@ export default function InterviewLanding() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
   // Quand l'intro est jouée AVANT le formulaire d'inscription
   const [preFormIntro, setPreFormIntro] = useState(false);
@@ -244,13 +245,14 @@ export default function InterviewLanding() {
   };
 
   const handlePlayMedia = async () => {
+    setMediaError(false);
     if (introMediaType === "audio" && introAudioRef.current) {
-      introAudioRef.current.play().catch(() => setMediaFinished(true));
+      introAudioRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMediaType === "video" && introVideoRef.current) {
       introVideoRef.current.muted = false;
       introVideoRef.current.volume = 1;
-      introVideoRef.current.play().catch(() => setMediaFinished(true));
+      introVideoRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMediaType === "tts") {
       const text = (project?.intro_text || "").trim();
@@ -470,7 +472,13 @@ export default function InterviewLanding() {
               </div>
 
               {introMediaType === "audio" && (
-                <audio ref={introAudioRef} src={project.intro_audio_url} onEnded={handleMediaEnded} className="hidden" />
+                <audio
+                  ref={introAudioRef}
+                  src={project.intro_audio_url}
+                  onEnded={handleMediaEnded}
+                  onError={() => setMediaError(true)}
+                  className="hidden"
+                />
               )}
 
               {introMediaType === "video" && (
@@ -478,6 +486,7 @@ export default function InterviewLanding() {
                   ref={introVideoRef}
                   src={project.presentation_video_url}
                   onEnded={handleMediaEnded}
+                  onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
                   className="w-full rounded-xl border transition-all duration-300"
@@ -499,6 +508,16 @@ export default function InterviewLanding() {
                   <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
                   J'ai lu, continuer
                 </Button>
+              ) : mediaError ? (
+                <div className="space-y-3 animate-fade-in">
+                  <p className="text-sm" style={{ color: "#f59e0b" }}>
+                    Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
+                  </p>
+                  <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
+                    <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                    Continuer sans visionner
+                  </Button>
+                </div>
               ) : (
                 <>
                   {!mediaPlaying && !mediaFinished && (

@@ -13,6 +13,7 @@ import {
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { extFromMime, contentTypeOf } from "@/lib/mediaExt";
 import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
 import {
   DEFAULT_CANDIDATE_EMAIL_BODY,
@@ -278,10 +279,10 @@ export default function ProjectNew() {
           : null;
 
       if (s.introEnabled && s.introMode === "audio" && s.introAudioBlob) {
-        const introPath = `intro/${project.id}.webm`;
+        const introPath = `intro/${project.id}.${extFromMime(s.introAudioBlob.type, "audio")}`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
-          .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
+          .upload(introPath, s.introAudioBlob, { contentType: contentTypeOf(s.introAudioBlob, "audio"), upsert: true });
         if (introUploadError) throw introUploadError;
         const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
         finalIntroAudioUrl = introUrlData.publicUrl;
@@ -293,10 +294,10 @@ export default function ProjectNew() {
       }
 
       if (s.introEnabled && s.introMode === "video" && s.introVideoFile) {
-        const videoPath = `presentation/${project.id}.webm`;
+        const videoPath = `presentation/${project.id}.${extFromMime(s.introVideoFile.type, "video")}`;
         const { error: videoUploadError } = await supabase.storage
           .from("media")
-          .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
+          .upload(videoPath, s.introVideoFile, { contentType: contentTypeOf(s.introVideoFile, "video"), upsert: true });
         if (videoUploadError) throw videoUploadError;
         const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
         finalIntroVideoUrl = videoUrlData.publicUrl;
@@ -358,10 +359,10 @@ export default function ProjectNew() {
             const updates: Record<string, string> = {};
 
             if (q.audioBlob) {
-              const audioPath = `questions/${qId}_audio.webm`;
+              const audioPath = `questions/${qId}_audio.${extFromMime(q.audioBlob.type, "audio")}`;
               const { error: aErr } = await supabase.storage
                 .from("media")
-                .upload(audioPath, q.audioBlob, { contentType: "audio/webm", upsert: true });
+                .upload(audioPath, q.audioBlob, { contentType: contentTypeOf(q.audioBlob, "audio"), upsert: true });
               if (!aErr) {
                 const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
                 updates.audio_url = aUrl.publicUrl;
@@ -371,10 +372,10 @@ export default function ProjectNew() {
             }
 
             if (q.videoBlob) {
-              const videoPath = `questions/${qId}_video.webm`;
+              const videoPath = `questions/${qId}_video.${extFromMime(q.videoBlob.type, "video")}`;
               const { error: vErr } = await supabase.storage
                 .from("media")
-                .upload(videoPath, q.videoBlob, { contentType: "video/webm", upsert: true });
+                .upload(videoPath, q.videoBlob, { contentType: contentTypeOf(q.videoBlob, "video"), upsert: true });
               if (!vErr) {
                 const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
                 updates.video_url = vUrl.publicUrl;
