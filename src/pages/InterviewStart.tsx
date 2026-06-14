@@ -3151,6 +3151,7 @@ export default function InterviewStart() {
     const isLast = currentQuestionIndex >= questions.length - 1;
     // Sur la dernière question, "Passer" termine la session.
     if (isLast) {
+      setQuestionLoading({ label: "Finalisation de la session…", percent: 30 });
       try { featuredPlayerRef.current?.stop(); } catch {}
       featuredPlayerRef.current = null;
       stopListening();
@@ -3159,6 +3160,7 @@ export default function InterviewStart() {
     }
 
     setIsProcessing(true);
+    setQuestionLoading({ label: "Préparation de la question suivante…", percent: 30 });
     // Nouveau bloc question : invalide tout watchdog/callback antérieur.
     currentBlockIdRef.current += 1;
     const skipBlock = currentBlockIdRef.current;
@@ -3259,11 +3261,16 @@ export default function InterviewStart() {
           .eq("id", session.id);
       }
 
+      setQuestionLoading((prev) => (prev ? { ...prev, percent: 70, label: "Lecture imminente…" } : prev));
+
       // 5. Speak transition + auto-play next question media (or start listening for written)
       if (transition) await speak(transition);
       if (skipBlock !== currentBlockIdRef.current) return;
 
-      if (isPausedRef.current) return;
+      if (isPausedRef.current) {
+        setQuestionLoading(null);
+        return;
+      }
       if (nMediaType !== "written") {
         setIsSpeaking(true);
         setShouldAutoPlay(false);
@@ -3276,6 +3283,7 @@ export default function InterviewStart() {
       } else {
         void enterListeningPhase("skip-written", skipBlock);
       }
+      setQuestionLoading(null);
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
       logger.error("interview_skip_failed", {
@@ -3283,6 +3291,7 @@ export default function InterviewStart() {
         questionIndex: currentQuestionIndex,
         error: e instanceof Error ? e.message : String(e),
       });
+      setQuestionLoading(null);
     } finally {
       // Toujours débloquer l'UI, sinon le bouton "Passer" disparaît à jamais.
       setIsProcessing(false);
