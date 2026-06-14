@@ -3151,6 +3151,7 @@ export default function InterviewStart() {
     const isLast = currentQuestionIndex >= questions.length - 1;
     // Sur la dernière question, "Passer" termine la session.
     if (isLast) {
+      setQuestionLoading({ label: "Finalisation de la session…", percent: 30 });
       try { featuredPlayerRef.current?.stop(); } catch {}
       featuredPlayerRef.current = null;
       stopListening();
@@ -3159,6 +3160,7 @@ export default function InterviewStart() {
     }
 
     setIsProcessing(true);
+    setQuestionLoading({ label: "Préparation de la question suivante…", percent: 30 });
     // Nouveau bloc question : invalide tout watchdog/callback antérieur.
     currentBlockIdRef.current += 1;
     const skipBlock = currentBlockIdRef.current;
