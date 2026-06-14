@@ -30,6 +30,7 @@ export default function InterviewDemoLanding() {
   const [phase, setPhase] = useState<"ready" | "intro" | "navigating">("ready");
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
