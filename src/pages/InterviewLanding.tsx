@@ -508,6 +508,16 @@ export default function InterviewLanding() {
                   <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
                   J'ai lu, continuer
                 </Button>
+              ) : mediaError ? (
+                <div className="space-y-3 animate-fade-in">
+                  <p className="text-sm" style={{ color: "#f59e0b" }}>
+                    Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
+                  </p>
+                  <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
+                    <Mic className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                    Continuer sans visionner
+                  </Button>
+                </div>
               ) : (
                 <>
                   {!mediaPlaying && !mediaFinished && (
