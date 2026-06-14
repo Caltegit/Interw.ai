@@ -292,6 +292,7 @@ export default function InterviewDemoLanding() {
                     setMediaPlaying(false);
                     setMediaFinished(true);
                   }}
+                  onError={() => setMediaError(true)}
                   className="hidden"
                 />
               )}
@@ -304,6 +305,7 @@ export default function InterviewDemoLanding() {
                     setMediaPlaying(false);
                     setMediaFinished(true);
                   }}
+                  onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
                   className="w-full rounded-xl border"
