@@ -3261,11 +3261,16 @@ export default function InterviewStart() {
           .eq("id", session.id);
       }
 
+      setQuestionLoading((prev) => (prev ? { ...prev, percent: 70, label: "Lecture imminente…" } : prev));
+
       // 5. Speak transition + auto-play next question media (or start listening for written)
       if (transition) await speak(transition);
       if (skipBlock !== currentBlockIdRef.current) return;
 
-      if (isPausedRef.current) return;
+      if (isPausedRef.current) {
+        setQuestionLoading(null);
+        return;
+      }
       if (nMediaType !== "written") {
         setIsSpeaking(true);
         setShouldAutoPlay(false);
@@ -3278,6 +3283,7 @@ export default function InterviewStart() {
       } else {
         void enterListeningPhase("skip-written", skipBlock);
       }
+      setQuestionLoading(null);
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
       logger.error("interview_skip_failed", {
@@ -3285,6 +3291,7 @@ export default function InterviewStart() {
         questionIndex: currentQuestionIndex,
         error: e instanceof Error ? e.message : String(e),
       });
+      setQuestionLoading(null);
     } finally {
       // Toujours débloquer l'UI, sinon le bouton "Passer" disparaît à jamais.
       setIsProcessing(false);
