@@ -1,11 +1,9 @@
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { CopilotProvider } from "@/contexts/CopilotContext";
 import { CopilotFloatingButton } from "@/components/copilot/CopilotFloatingButton";
 import { CopilotSidePanel } from "@/components/copilot/CopilotSidePanel";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const AUTO_COLLAPSE_THRESHOLD = 1440;
@@ -47,22 +45,6 @@ function useAutoCollapseSidebar(copilotOpen: boolean) {
   }, [copilotOpen, state, setOpen]);
 }
 
-function BackButton() {
-  const navigate = useNavigate();
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => navigate(-1)}
-      className="h-7 gap-1 px-2 -ml-2 text-muted-foreground"
-      aria-label="Retour"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      <span className="text-sm">Retour</span>
-    </Button>
-  );
-}
-
 import { useCopilot } from "@/contexts/CopilotContext";
 
 function AppShell() {
@@ -77,8 +59,7 @@ function AppShell() {
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <main className={copilotOpen ? "flex-1 px-4 pb-4 pt-1" : "flex-1 px-6 pb-6 pt-1"}>
-          <BackButton />
-          <div className="-mt-[3px]"><Outlet /></div>
+          <Outlet />
         </main>
       </div>
       <CopilotSidePanel />
