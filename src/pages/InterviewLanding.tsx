@@ -42,6 +42,7 @@ export default function InterviewLanding() {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [mediaPlaying, setMediaPlaying] = useState(false);
   const [mediaFinished, setMediaFinished] = useState(false);
+  const [mediaError, setMediaError] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
   // Quand l'intro est jouée AVANT le formulaire d'inscription
   const [preFormIntro, setPreFormIntro] = useState(false);
