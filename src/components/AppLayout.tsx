@@ -1,4 +1,4 @@
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet, useNavigate } from "react-router-dom";
 import { CopilotProvider } from "@/contexts/CopilotContext";
@@ -70,6 +70,10 @@ function AppShell() {
   useAutoCollapseSidebar(copilotOpen);
   return (
     <div className="min-h-screen flex w-full">
+      <SidebarTrigger
+        aria-label="Ouvrir le menu"
+        className="md:hidden fixed top-2 left-2 z-40 h-9 w-9 rounded-md bg-background/90 backdrop-blur border shadow-sm"
+      />
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <main className={copilotOpen ? "flex-1 px-4 pb-4 pt-1" : "flex-1 px-6 pb-6 pt-1"}>
