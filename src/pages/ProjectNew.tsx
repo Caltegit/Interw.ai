@@ -13,6 +13,7 @@ import {
   mergeTemplateIntoState,
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
+import { extFromMime, contentTypeOf } from "@/lib/mediaExt";
 import { DEFAULT_CANDIDATE_FIELDS, type CandidateFieldsConfig } from "@/lib/candidateFields";
 import {
   DEFAULT_CANDIDATE_EMAIL_BODY,
