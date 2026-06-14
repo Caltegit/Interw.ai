@@ -1,41 +1,59 @@
-# Plan — N'afficher QUE `hint_text` à côté de l'avatar / vidéo
+# Vidéo d'intro illisible sur mobile — diagnostic et plan
 
-## Règle (confirmée)
+## Cause
 
-Pendant la question, à droite de la photo / vidéo côté candidat, le **seul** texte visible est celui saisi dans le champ « Texte affiché au candidat pendant sa réponse » (`questions.hint_text`).
+Les vidéos d'intro sont enregistrées et uploadées en `video/webm` (`MediaRecorder` navigateur, puis upload dans le bucket avec `contentType: "video/webm"` et chemin `presentation/{id}.webm`). **iOS Safari ne lit pas le WebM** : la balise `<video>` affiche l'icône « play barré » visible sur la capture.
 
-- **Aucun fallback sur `content`.** Si `hint_text` est vide → aucun bloc texte n'est affiché.
-- Aucune pastille 💡, aucune carte « texte de secours », aucun doublon.
-- `content` reste utilisé en interne comme script TTS / prompt IA (zéro changement backend).
+Aggravant : dans `src/pages/InterviewLanding.tsx`, `handlePlayMedia` et l'autoplay font `play().catch(() => setMediaFinished(true))`. Sur iPhone, l'échec de lecture est donc masqué et l'écran affiche faussement « Vidéo visionnée » + « Commencer la session », alors que le candidat n'a rien vu.
 
-## Modifications
+Confirmé par :
+- `src/pages/ProjectNew.tsx` L296-304 : upload `presentation/{id}.webm` / `video/webm`
+- `src/pages/ProjectEdit.tsx` L271-281 : idem côté édition
+- `src/components/media/MediaRecorderField.tsx` L274 : `mimeType = "video/webm"` côté enregistrement
+- `src/pages/InterviewLanding.tsx` L246-254, L341-352 : `setMediaFinished(true)` silencieux sur erreur
 
-### 1. `src/components/interview/QuestionMediaPlayer.tsx`
-- Ajouter une prop `displayText?: string | null`.
-- Calculer `shownText = displayText?.trim() || ""` (pas de fallback sur `content`).
-- Pour la variante `featured` :
-  - Vidéo : aucun changement (le bloc texte vit dans `InterviewStart`, pas ici).
-  - Écrit : afficher `shownText` à la place de `content`. Si vide, ne pas rendre le bloc texte.
-  - Audio : afficher `shownText` au-dessus du player. Si vide, ne pas rendre le bloc texte (player seul).
-- Variante `inline` : idem, remplacer `content` par `shownText` et masquer le `<p>` si vide.
+## Plan
 
-### 2. `src/pages/InterviewStart.tsx`
-- Aux deux appels `<QuestionMediaPlayer …/>` (vidéo ~3955, audio/écrit ~4080), ajouter `displayText={currentQ?.hint_text}`.
-- **Supprimer** la carte « texte de secours » lignes ~4099-4109 (qui affiche `currentQ.content` sous la vidéo).
-- **Supprimer** la pastille 💡 lignes ~4134-4142 (qui affiche `currentQ.hint_text` en doublon).
-- Résultat : pour une question vidéo, le seul texte de la colonne droite est rendu par `QuestionMediaPlayer` à partir de `hint_text` ; si `hint_text` est vide, la colonne droite n'a plus de bloc texte du tout.
+### 1. Arrêter de mentir au candidat (correctif immédiat, frontend uniquement)
 
-### 3. Aucune migration BDD, aucun changement edge function, aucun changement de formulaire d'édition.
+`src/pages/InterviewLanding.tsx` :
+- Ne plus appeler `setMediaFinished(true)` quand `play()` échoue. À la place, déclencher un état `mediaError = true`.
+- Brancher `onError` sur le `<video>` et le `<audio>` pour passer en `mediaError`.
+- Quand `mediaError` est vrai, afficher un message clair : « Lecture impossible sur cet appareil » + bouton **Continuer sans vidéo** (qui appelle `handleProceedToInterview`).
+- Pareil dans `src/pages/InterviewDemoLanding.tsx` (même motif de code).
 
-## Vérification
+Bénéfice : plus jamais de faux « Vidéo visionnée ». Le candidat peut continuer l'entretien.
 
-1. Recharger l'entretien du projet `53c69e5e-…`.
-2. Pour chaque question (vidéo / audio / écrite) : le seul texte visible à droite est exactement la valeur du champ « Texte affiché au candidat pendant sa réponse ».
-3. Vider `hint_text` sur une question test → aucun bloc texte n'apparaît (player seul, ou avatar seul).
-4. Plus aucune occurrence de `currentQ.content` rendue visible côté candidat.
+### 2. Servir des vidéos lisibles partout (correctif de fond)
+
+Forcer le format **MP4 H.264 / AAC** côté capture et upload, qui est lu par iOS, Android, desktop.
+
+`src/components/media/MediaRecorderField.tsx` :
+- Choisir dynamiquement le meilleur `mimeType` supporté par le navigateur, en priorisant MP4 :
+  - `video/mp4;codecs=avc1.42E01E,mp4a.40.2` → `video/mp4` → sinon fallback `video/webm`.
+- Exposer le mime/extension réels du blob via `onMediaReady` (déjà passé en `blob.type`).
+
+`src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx` (uploads `presentation/...` et `intro/...`) :
+- Déduire l'extension depuis `blob.type` (`.mp4` si `video/mp4`, sinon `.webm`) au lieu de figer `.webm`.
+- Passer le `contentType` réel du blob.
+- Idem pour les fichiers importés : conserver l'extension/mime d'origine (`.mp4`, `.mov`, `.webm`).
+
+Note : Safari iOS enregistre déjà en MP4 (`MediaRecorder` y supporte `video/mp4`). Chrome desktop enregistrera en WebM mais ces vidéos seront ensuite consultées sur les mêmes navigateurs Chrome côté candidat (problème surtout quand le candidat ouvre depuis iPhone une vidéo enregistrée depuis Chrome desktop par le RH).
+
+### 3. Vidéos déjà uploadées en .webm (existant)
+
+Aucune migration automatique dans ce lot. Deux options à valider :
+- **(a)** ne rien faire — les RH ré-enregistreront leurs intros, et le correctif #1 évite la fausse validation.
+- **(b)** ajouter un transcodage serveur (edge function + ffmpeg) pour convertir les `.webm` existants en `.mp4`. Plus lourd, à faire dans un second lot si besoin.
 
 ## Hors scope
 
-- Pas de renommage de colonne BDD.
-- Pas de changement du TTS / prompt IA.
-- Pas de modification des formulaires RH.
+- Pas de modification du schéma BDD.
+- Pas de transcodage navigateur (ffmpeg.wasm) : trop lourd pour un correctif rapide ; on s'appuie sur le `MediaRecorder` MP4 natif de Safari.
+- Pas de retouche du player des questions (`QuestionMediaPlayer`) : le bug rapporté concerne l'intro projet.
+
+## Vérification
+
+1. Recharger `interw.ai/interview/<slug>` sur iPhone Safari, projet avec vidéo d'intro existante : doit afficher « Lecture impossible » + bouton Continuer, plus jamais « Vidéo visionnée » par erreur.
+2. Ré-enregistrer une intro depuis iPhone (Safari) : upload `.mp4`, lecture OK sur iPhone et sur desktop.
+3. Ré-enregistrer une intro depuis Chrome desktop : si MP4 supporté → `.mp4`, sinon `.webm` (lecture OK desktop, le candidat iPhone tombera sur le message d'erreur du #1 jusqu'à ré-enregistrement).
