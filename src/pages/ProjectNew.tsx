@@ -279,10 +279,10 @@ export default function ProjectNew() {
           : null;
 
       if (s.introEnabled && s.introMode === "audio" && s.introAudioBlob) {
-        const introPath = `intro/${project.id}.webm`;
+        const introPath = `intro/${project.id}.${extFromMime(s.introAudioBlob.type, "audio")}`;
         const { error: introUploadError } = await supabase.storage
           .from("media")
-          .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
+          .upload(introPath, s.introAudioBlob, { contentType: contentTypeOf(s.introAudioBlob, "audio"), upsert: true });
         if (introUploadError) throw introUploadError;
         const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
         finalIntroAudioUrl = introUrlData.publicUrl;
@@ -294,10 +294,10 @@ export default function ProjectNew() {
       }
 
       if (s.introEnabled && s.introMode === "video" && s.introVideoFile) {
-        const videoPath = `presentation/${project.id}.webm`;
+        const videoPath = `presentation/${project.id}.${extFromMime(s.introVideoFile.type, "video")}`;
         const { error: videoUploadError } = await supabase.storage
           .from("media")
-          .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
+          .upload(videoPath, s.introVideoFile, { contentType: contentTypeOf(s.introVideoFile, "video"), upsert: true });
         if (videoUploadError) throw videoUploadError;
         const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
         finalIntroVideoUrl = videoUrlData.publicUrl;
