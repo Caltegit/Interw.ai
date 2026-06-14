@@ -177,13 +177,14 @@ export default function InterviewDemoLanding() {
   };
 
   const handlePlayMedia = async () => {
+    setMediaError(false);
     if (introMode === "audio" && audioRef.current) {
-      audioRef.current.play().catch(() => setMediaFinished(true));
+      audioRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMode === "video" && videoRef.current) {
       videoRef.current.muted = false;
       videoRef.current.volume = 1;
-      videoRef.current.play().catch(() => setMediaFinished(true));
+      videoRef.current.play().catch(() => setMediaError(true));
       setMediaPlaying(true);
     } else if (introMode === "tts") {
       await playTts();
