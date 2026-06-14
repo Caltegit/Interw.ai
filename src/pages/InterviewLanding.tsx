@@ -472,7 +472,13 @@ export default function InterviewLanding() {
               </div>
 
               {introMediaType === "audio" && (
-                <audio ref={introAudioRef} src={project.intro_audio_url} onEnded={handleMediaEnded} className="hidden" />
+                <audio
+                  ref={introAudioRef}
+                  src={project.intro_audio_url}
+                  onEnded={handleMediaEnded}
+                  onError={() => setMediaError(true)}
+                  className="hidden"
+                />
               )}
 
               {introMediaType === "video" && (
@@ -480,6 +486,7 @@ export default function InterviewLanding() {
                   ref={introVideoRef}
                   src={project.presentation_video_url}
                   onEnded={handleMediaEnded}
+                  onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
                   className="w-full rounded-xl border transition-all duration-300"
