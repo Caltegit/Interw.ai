@@ -96,17 +96,49 @@ const QuestionMediaPlayer = forwardRef<QuestionMediaPlayerHandle, QuestionMediaP
     const el = getEl();
     if (!el) return;
     setNeedsManualPlay(false);
-    const p = el.play();
-    if (p && typeof p.catch === "function") {
-      p.catch((err) => {
-        console.warn("[QuestionMediaPlayer] play() rejected", err);
-        setIsBuffering(false);
-        setNeedsManualPlay(true);
-      });
-    }
+    const tryPlay = () => {
+      const p = el.play();
+      if (p && typeof p.catch === "function") {
+        p.catch((err) => {
+          // Mobile : si la lecture avec son est bloquée (geste utilisateur expiré),
+          // on retente en muet — toujours autorisé — puis on réactive le son dès
+          // que la lecture est effective. La perte audio est imperceptible (<100 ms).
+          if (!el.muted) {
+            console.warn("[QuestionMediaPlayer] play() rejected with sound — retrying muted", err);
+            try {
+              el.muted = true;
+              const onPlayingUnmute = () => {
+                el.removeEventListener("playing", onPlayingUnmute);
+                try { el.muted = false; } catch {}
+              };
+              el.addEventListener("playing", onPlayingUnmute);
+              const p2 = el.play();
+              if (p2 && typeof p2.catch === "function") {
+                p2.catch((err2) => {
+                  console.warn("[QuestionMediaPlayer] muted play() also rejected", err2);
+                  el.removeEventListener("playing", onPlayingUnmute);
+                  try { el.muted = false; } catch {}
+                  setIsBuffering(false);
+                  setNeedsManualPlay(true);
+                });
+              }
+            } catch {
+              setIsBuffering(false);
+              setNeedsManualPlay(true);
+            }
+          } else {
+            console.warn("[QuestionMediaPlayer] play() rejected", err);
+            setIsBuffering(false);
+            setNeedsManualPlay(true);
+          }
+        });
+      }
+    };
+    tryPlay();
     setIsPlaying(true);
     animFrameRef.current = requestAnimationFrame(updateProgress);
   };
+
 
   const doPlay = () => {
     const el = getEl();
