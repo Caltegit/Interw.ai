@@ -14,6 +14,7 @@ import {
   type ProjectFormState,
 } from "@/components/project/ProjectForm";
 import { mergeCandidateFields } from "@/lib/candidateFields";
+import { extFromMime, contentTypeOf } from "@/lib/mediaExt";
 import {
   DEFAULT_CANDIDATE_EMAIL_BODY,
   DEFAULT_CANDIDATE_EMAIL_SUBJECT,
