@@ -323,6 +323,16 @@ export default function InterviewDemoLanding() {
                   Continuer
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
+              ) : mediaError ? (
+                <div className="space-y-3 animate-fade-in">
+                  <p className="text-sm text-warning">
+                    Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
+                  </p>
+                  <Button size="lg" className="w-full" onClick={handleProceed}>
+                    Continuer sans visionner
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               ) : (
                 <>
                   {!mediaPlaying && !mediaFinished && (
