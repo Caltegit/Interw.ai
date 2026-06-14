@@ -1,59 +1,48 @@
-# Vidéo d'intro illisible sur mobile — diagnostic et plan
+# Autoplay vidéo des questions sur mobile
 
-## Cause
+## Constat
 
-Les vidéos d'intro sont enregistrées et uploadées en `video/webm` (`MediaRecorder` navigateur, puis upload dans le bucket avec `contentType: "video/webm"` et chemin `presentation/{id}.webm`). **iOS Safari ne lit pas le WebM** : la balise `<video>` affiche l'icône « play barré » visible sur la capture.
+Sur mobile (iOS Safari + Android Chrome), quand une question est une vidéo, le candidat doit appuyer sur « Lire la question » au lieu d'une lecture automatique.
 
-Aggravant : dans `src/pages/InterviewLanding.tsx`, `handlePlayMedia` et l'autoplay font `play().catch(() => setMediaFinished(true))`. Sur iPhone, l'échec de lecture est donc masqué et l'écran affiche faussement « Vidéo visionnée » + « Commencer la session », alors que le candidat n'a rien vu.
-
-Confirmé par :
-- `src/pages/ProjectNew.tsx` L296-304 : upload `presentation/{id}.webm` / `video/webm`
-- `src/pages/ProjectEdit.tsx` L271-281 : idem côté édition
-- `src/components/media/MediaRecorderField.tsx` L274 : `mimeType = "video/webm"` côté enregistrement
-- `src/pages/InterviewLanding.tsx` L246-254, L341-352 : `setMediaFinished(true)` silencieux sur erreur
+Cause : `video.play()` est appelé via `useEffect` après plusieurs étapes asynchrones (TTS de transition, attente `canplaythrough`). Le « jeton de geste utilisateur » du clic initial est consommé / expiré bien avant, donc le navigateur rejette `play()` avec son. Le composant bascule alors sur `needsManualPlay` → bouton « Lire la question ».
 
 ## Plan
 
-### 1. Arrêter de mentir au candidat (correctif immédiat, frontend uniquement)
+Débloquer la balise `<video>` pendant un geste utilisateur récent, pour que les `play()` ultérieurs (déclenchés par le code après TTS) soient autorisés.
 
-`src/pages/InterviewLanding.tsx` :
-- Ne plus appeler `setMediaFinished(true)` quand `play()` échoue. À la place, déclencher un état `mediaError = true`.
-- Brancher `onError` sur le `<video>` et le `<audio>` pour passer en `mediaError`.
-- Quand `mediaError` est vrai, afficher un message clair : « Lecture impossible sur cet appareil » + bouton **Continuer sans vidéo** (qui appelle `handleProceedToInterview`).
-- Pareil dans `src/pages/InterviewDemoLanding.tsx` (même motif de code).
+### 1. Pré-déverrouiller la vidéo au clic « Commencer la session »
 
-Bénéfice : plus jamais de faux « Vidéo visionnée ». Le candidat peut continuer l'entretien.
+Dans `src/pages/InterviewStart.tsx` (handler du bouton « Commencer la session » / au moment où l'overlay de démarrage est validé) :
 
-### 2. Servir des vidéos lisibles partout (correctif de fond)
+- Récupérer l'élément `<video>` du `featuredPlayerRef` (ajouter une méthode `unlock()` à `QuestionMediaPlayerHandle`).
+- Dans `unlock()` (côté `QuestionMediaPlayer.tsx`) : appeler `el.play()` puis `el.pause()` immédiatement, en muet temporaire si nécessaire, pour « consommer » le geste et marquer cet élément comme autorisé à jouer du son ensuite.
+- Faire de même pour l'élément `<audio>` (questions audio).
 
-Forcer le format **MP4 H.264 / AAC** côté capture et upload, qui est lu par iOS, Android, desktop.
+Cela respecte la règle iOS : un `play()` synchrone dans le handler du clic suffit à autoriser tous les `play()` ultérieurs sur ce même élément.
 
-`src/components/media/MediaRecorderField.tsx` :
-- Choisir dynamiquement le meilleur `mimeType` supporté par le navigateur, en priorisant MP4 :
-  - `video/mp4;codecs=avc1.42E01E,mp4a.40.2` → `video/mp4` → sinon fallback `video/webm`.
-- Exposer le mime/extension réels du blob via `onMediaReady` (déjà passé en `blob.type`).
+### 2. Re-déverrouiller à chaque changement de question
 
-`src/pages/ProjectNew.tsx` et `src/pages/ProjectEdit.tsx` (uploads `presentation/...` et `intro/...`) :
-- Déduire l'extension depuis `blob.type` (`.mp4` si `video/mp4`, sinon `.webm`) au lieu de figer `.webm`.
-- Passer le `contentType` réel du blob.
-- Idem pour les fichiers importés : conserver l'extension/mime d'origine (`.mp4`, `.mov`, `.webm`).
+Le même élément vidéo est réutilisé d'une question à l'autre (même ref), donc l'autorisation persiste — pas besoin d'action additionnelle entre questions.
 
-Note : Safari iOS enregistre déjà en MP4 (`MediaRecorder` y supporte `video/mp4`). Chrome desktop enregistrera en WebM mais ces vidéos seront ensuite consultées sur les mêmes navigateurs Chrome côté candidat (problème surtout quand le candidat ouvre depuis iPhone une vidéo enregistrée depuis Chrome desktop par le RH).
+### 3. Fallback inchangé
 
-### 3. Vidéos déjà uploadées en .webm (existant)
+Si malgré tout `play()` est rejeté (cas extrême), on garde le bouton « Lire la question » actuel comme filet de sécurité.
 
-Aucune migration automatique dans ce lot. Deux options à valider :
-- **(a)** ne rien faire — les RH ré-enregistreront leurs intros, et le correctif #1 évite la fausse validation.
-- **(b)** ajouter un transcodage serveur (edge function + ffmpeg) pour convertir les `.webm` existants en `.mp4`. Plus lourd, à faire dans un second lot si besoin.
+## Détails techniques
+
+- `QuestionMediaPlayer.tsx` :
+  - Ajouter `unlock: () => void` à `QuestionMediaPlayerHandle`.
+  - Implémentation : `el.muted = true; el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; }).catch(() => {})`.
+- `InterviewStart.tsx` :
+  - Appeler `featuredPlayerRef.current?.unlock()` à l'intérieur du handler `onClick` qui démarre la session (le geste utilisateur), avant tout `await`.
 
 ## Hors scope
 
-- Pas de modification du schéma BDD.
-- Pas de transcodage navigateur (ffmpeg.wasm) : trop lourd pour un correctif rapide ; on s'appuie sur le `MediaRecorder` MP4 natif de Safari.
-- Pas de retouche du player des questions (`QuestionMediaPlayer`) : le bug rapporté concerne l'intro projet.
+- Pas de modification du backend, du schéma, ni de la logique de TTS.
+- Pas de changement sur la variante `inline` (vignettes dans l'historique) — autoplay reste manuel comme aujourd'hui.
 
 ## Vérification
 
-1. Recharger `interw.ai/interview/<slug>` sur iPhone Safari, projet avec vidéo d'intro existante : doit afficher « Lecture impossible » + bouton Continuer, plus jamais « Vidéo visionnée » par erreur.
-2. Ré-enregistrer une intro depuis iPhone (Safari) : upload `.mp4`, lecture OK sur iPhone et sur desktop.
-3. Ré-enregistrer une intro depuis Chrome desktop : si MP4 supporté → `.mp4`, sinon `.webm` (lecture OK desktop, le candidat iPhone tombera sur le message d'erreur du #1 jusqu'à ré-enregistrement).
+1. iPhone Safari + Android Chrome : passer une session avec une question vidéo → la vidéo doit démarrer seule après la transition TTS, sans afficher « Lire la question ».
+2. Desktop : comportement inchangé.
+3. Si le geste a expiré pour une raison réseau : le bouton « Lire la question » s'affiche toujours en filet de sécurité.
