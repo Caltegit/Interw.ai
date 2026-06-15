@@ -927,7 +927,7 @@ export default function ProjectDetail() {
                   </Button>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {filteredSessions.length} / {visibleSessions.length}
+                  {filteredSessions.length} / {readySessions.length}
                 </span>
                 <Input
                   placeholder="Rechercher"
