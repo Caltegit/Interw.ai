@@ -103,17 +103,17 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
     .select(
-      "id, title, job_title, created_at, sessions(count), sessions_done:sessions(completed_at, created_at, status, is_demo)",
+      "id, title, job_title, created_at, sessions_done:sessions(completed_at, created_at, status, is_demo)",
     )
     .eq("status", "active")
     .limit(200);
   const mapped = (recentProjectsRaw ?? []).map((p: any) => {
-    const completedDates = Array.isArray(p.sessions_done)
-      ? p.sessions_done
-          .filter((s: any) => s && s.is_demo === false && s.status === "completed")
-          .map((s: any) => s?.completed_at ?? s?.created_at)
-          .filter(Boolean)
+    const completedSessions = Array.isArray(p.sessions_done)
+      ? p.sessions_done.filter((s: any) => s && s.is_demo === false && s.status === "completed")
       : [];
+    const completedDates = completedSessions
+      .map((s: any) => s?.completed_at ?? s?.created_at)
+      .filter(Boolean);
     const lastCompletedAt = completedDates.length
       ? completedDates.reduce((a: string, b: string) => (a > b ? a : b))
       : null;
@@ -122,7 +122,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       title: p.title as string,
       job_title: (p.job_title ?? null) as string | null,
       created_at: p.created_at as string,
-      sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
+      sessionCount: completedSessions.length,
       lastCompletedAt: lastCompletedAt as string | null,
     };
   });
