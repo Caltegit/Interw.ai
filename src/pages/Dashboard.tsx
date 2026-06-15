@@ -359,23 +359,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Alerte candidats inactifs */}
-      {stats.pendingStale > 0 && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
-              <span>
-                <strong>{stats.pendingStale}</strong> candidat{stats.pendingStale > 1 ? "s" : ""} n'
-                {stats.pendingStale > 1 ? "ont" : "a"} pas démarré depuis plus de 7 jours
-              </span>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => navigate("/projects")}>
-              Voir la liste
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Top candidats + Distribution */}
       <div className="grid gap-4 lg:grid-cols-2">
