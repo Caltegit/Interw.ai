@@ -97,20 +97,25 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
-  // Derniers projets actifs : on priorise ceux qui viennent de recevoir un
-  // entretien (triés par date du dernier entretien, du plus récent au plus
-  // ancien), puis on complète avec les projets sans entretien les plus récents.
+  // Derniers projets actifs : on priorise ceux où un entretien a réellement été
+  // passé (sessions complétées non démo), triés par date du dernier entretien
+  // terminé. Puis on complète avec les projets sans entretien terminé.
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
-    .select("id, title, job_title, created_at, sessions(count), sessions_dates:sessions(created_at)")
+    .select(
+      "id, title, job_title, created_at, sessions(count), sessions_done:sessions(completed_at, created_at, status, is_demo)",
+    )
     .eq("status", "active")
     .limit(200);
   const mapped = (recentProjectsRaw ?? []).map((p: any) => {
-    const dates = Array.isArray(p.sessions_dates)
-      ? p.sessions_dates.map((s: any) => s?.created_at).filter(Boolean)
+    const completedDates = Array.isArray(p.sessions_done)
+      ? p.sessions_done
+          .filter((s: any) => s && s.is_demo === false && s.status === "completed")
+          .map((s: any) => s?.completed_at ?? s?.created_at)
+          .filter(Boolean)
       : [];
-    const lastSessionAt = dates.length
-      ? dates.reduce((a: string, b: string) => (a > b ? a : b))
+    const lastCompletedAt = completedDates.length
+      ? completedDates.reduce((a: string, b: string) => (a > b ? a : b))
       : null;
     return {
       id: p.id as string,
@@ -118,20 +123,20 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       job_title: (p.job_title ?? null) as string | null,
       created_at: p.created_at as string,
       sessionCount: Array.isArray(p.sessions) ? (p.sessions[0]?.count ?? 0) : 0,
-      lastSessionAt: lastSessionAt as string | null,
+      lastCompletedAt: lastCompletedAt as string | null,
     };
   });
-  const withSessions = mapped
-    .filter((p) => p.sessionCount > 0 && p.lastSessionAt)
-    .sort((a, b) => (b.lastSessionAt ?? "").localeCompare(a.lastSessionAt ?? ""))
+  const withCompleted = mapped
+    .filter((p) => p.lastCompletedAt)
+    .sort((a, b) => (b.lastCompletedAt ?? "").localeCompare(a.lastCompletedAt ?? ""))
     .slice(0, 5);
-  const withoutSessions = mapped
-    .filter((p) => p.sessionCount === 0)
+  const withoutCompleted = mapped
+    .filter((p) => !p.lastCompletedAt)
     .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
   const recentProjects = [
-    ...withSessions,
-    ...withoutSessions.slice(0, Math.max(0, 5 - withSessions.length)),
-  ].map(({ lastSessionAt: _omit, ...rest }) => rest);
+    ...withCompleted,
+    ...withoutCompleted.slice(0, Math.max(0, 5 - withCompleted.length)),
+  ].map(({ lastCompletedAt: _omit, ...rest }) => rest);
 
   // Candidats "à traiter" : sessions complétées dans des projets actifs de l'org,
   // avec un rapport généré, et sans décision recruteur (null ou "none").
