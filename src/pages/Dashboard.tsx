@@ -43,6 +43,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 const RECO_LABELS: Record<string, string> = {
   strong_yes: "Fortement recommandé",
@@ -134,7 +135,8 @@ export default function Dashboard() {
           <p className="text-sm italic text-muted-foreground mt-1">« {quote.text} »</p>
           <p className="text-xs text-muted-foreground/70 mt-0.5">— {quote.author}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <GlobalSearch />
           <Button asChild size="sm">
             <Link to="/projects/new">
               <Plus className="h-4 w-4" />
