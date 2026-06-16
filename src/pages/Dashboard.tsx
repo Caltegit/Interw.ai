@@ -43,6 +43,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 const RECO_LABELS: Record<string, string> = {
   strong_yes: "Fortement recommandé",
