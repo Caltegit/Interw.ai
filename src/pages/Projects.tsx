@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Archive, Link2 } from "lucide-react";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useToast } from "@/hooks/use-toast";
 import { useProjectsList } from "@/hooks/queries/useProjectsList";
 import { queryKeys } from "@/lib/queryClient";
