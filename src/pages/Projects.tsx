@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Archive, Link2 } from "lucide-react";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { useToast } from "@/hooks/use-toast";
 import { useProjectsList } from "@/hooks/queries/useProjectsList";
 import { queryKeys } from "@/lib/queryClient";
@@ -93,19 +94,22 @@ export default function Projects() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild>
           <Link to="/projects/new">
             <Plus className="mr-2 h-4 w-4" />
             Nouveau projet
           </Link>
         </Button>
-        <Button asChild variant="outline">
-          <Link to="/projects/archives">
-            <Archive className="mr-2 h-4 w-4" />
-            Archives
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <GlobalSearch />
+          <Button asChild variant="outline">
+            <Link to="/projects/archives">
+              <Archive className="mr-2 h-4 w-4" />
+              Archives
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {projects.length === 0 ? (
