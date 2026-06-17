@@ -16,14 +16,20 @@ export interface ProjectListItem {
 async function fetchProjects(): Promise<ProjectListItem[]> {
   const { data, error } = await supabase
     .from("projects")
-    .select("id, title, status, slug, created_at, created_by, sessions(count)")
+    .select(
+      "id, title, status, slug, created_at, created_by, sessions(status, is_demo)",
+    )
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  const projects = (data ?? []) as Omit<ProjectListItem, "created_by_name">[];
+  const raw = (data ?? []) as Array<
+    Omit<ProjectListItem, "created_by_name" | "sessions"> & {
+      sessions: { status: string; is_demo: boolean | null }[] | null;
+    }
+  >;
 
   const creatorIds = Array.from(
-    new Set(projects.map((p) => p.created_by).filter((v): v is string => !!v)),
+    new Set(raw.map((p) => p.created_by).filter((v): v is string => !!v)),
   );
 
   let nameMap: Record<string, string> = {};
@@ -37,10 +43,16 @@ async function fetchProjects(): Promise<ProjectListItem[]> {
     );
   }
 
-  return projects.map((p) => ({
-    ...p,
-    created_by_name: p.created_by ? nameMap[p.created_by] ?? null : null,
-  }));
+  return raw.map((p) => {
+    const completed = (p.sessions ?? []).filter(
+      (s) => s && s.is_demo === false && s.status === "completed",
+    ).length;
+    return {
+      ...p,
+      sessions: [{ count: completed }],
+      created_by_name: p.created_by ? nameMap[p.created_by] ?? null : null,
+    };
+  });
 }
 
 export function useProjectsList(userId: string | undefined) {
