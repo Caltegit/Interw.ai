@@ -18,6 +18,7 @@ interface Question {
   order_index: number;
   content: string;
   title?: string | null;
+  hint_text?: string | null;
 }
 
 interface SessionLite {
@@ -246,7 +247,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
                           <span className="flex items-center gap-2 whitespace-nowrap">
                             <span className="font-medium shrink-0">Q{i + 1}</span>
                             {q && (
-                              <span className="truncate text-muted-foreground">— {q.content}</span>
+                              <span className="truncate text-muted-foreground">— {q.hint_text?.trim() || q.title?.trim() || q.content}</span>
                             )}
                             {c.isFollowUp && (
                               <Badge variant="outline" className="ml-1 text-[10px] shrink-0">Relance</Badge>
