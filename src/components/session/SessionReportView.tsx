@@ -258,14 +258,33 @@ export function SessionReportView({
   const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!sentinelEl) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-      },
-      { threshold: 0 },
-    );
-    obs.observe(sentinelEl);
-    return () => obs.disconnect();
+    // Hystérésis : on épingle quand le sentinel est sous −24px,
+    // on désépingle seulement quand il repasse au-dessus de +24px.
+    // Cette zone morte absorbe les micro-reflows causés par le changement
+    // d'état lui-même et évite le tremblement sur les pages courtes.
+    let ticking = false;
+    const PIN_THRESHOLD = -24;
+    const UNPIN_THRESHOLD = 24;
+    const update = () => {
+      ticking = false;
+      const top = sentinelEl.getBoundingClientRect().top;
+      setIsPinned((prev) => {
+        if (prev) return top < UNPIN_THRESHOLD;
+        return top < PIN_THRESHOLD;
+      });
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [sentinelEl]);
   const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
 
@@ -374,7 +393,7 @@ export function SessionReportView({
               candidateJobTitle={(session as any).candidate_job_title ?? null}
               audioFailed={audioFailed}
               videoSlotWidth={copilotOpen ? 299 : 368}
-              videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full" /> : undefined}
+              videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full w-full aspect-video lg:aspect-auto lg:min-h-[200px]" /> : undefined}
               notesSlot={
                 !readOnly && report ? (
                   <Textarea
