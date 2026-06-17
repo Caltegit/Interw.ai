@@ -258,14 +258,33 @@ export function SessionReportView({
   const [pinnedBar, setPinnedBar] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!sentinelEl) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        setIsPinned(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-      },
-      { threshold: 0 },
-    );
-    obs.observe(sentinelEl);
-    return () => obs.disconnect();
+    // Hystérésis : on épingle quand le sentinel est sous −24px,
+    // on désépingle seulement quand il repasse au-dessus de +24px.
+    // Cette zone morte absorbe les micro-reflows causés par le changement
+    // d'état lui-même et évite le tremblement sur les pages courtes.
+    let ticking = false;
+    const PIN_THRESHOLD = -24;
+    const UNPIN_THRESHOLD = 24;
+    const update = () => {
+      ticking = false;
+      const top = sentinelEl.getBoundingClientRect().top;
+      setIsPinned((prev) => {
+        if (prev) return top < UNPIN_THRESHOLD;
+        return top < PIN_THRESHOLD;
+      });
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [sentinelEl]);
   const portalHost = isPinned ? (pinnedHost ?? inlineHost) : inlineHost;
 
