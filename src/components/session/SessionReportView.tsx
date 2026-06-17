@@ -393,7 +393,7 @@ export function SessionReportView({
               candidateJobTitle={(session as any).candidate_job_title ?? null}
               audioFailed={audioFailed}
               videoSlotWidth={copilotOpen ? 299 : 368}
-              videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full" /> : undefined}
+              videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full w-full aspect-video lg:aspect-auto lg:min-h-[200px]" /> : undefined}
               notesSlot={
                 !readOnly && report ? (
                   <Textarea
