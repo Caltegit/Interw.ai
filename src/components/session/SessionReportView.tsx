@@ -174,6 +174,7 @@ export function SessionReportView({
           questionLabel: num ? `Question ${num}` : "Question",
           questionText: projectQ?.content ?? "",
           questionTitle: (projectQ?.title as string) ?? null,
+          questionHint: (projectQ?.hint_text as string) ?? null,
           isFollowUp: !!m.is_follow_up,
           messageId: m.id as string,
         };
@@ -614,7 +615,7 @@ export function SessionReportView({
                         <div key={clip.messageId ?? i} className="space-y-2">
                           <div className="flex items-baseline gap-2">
                             <Badge variant="secondary" className="shrink-0">{clip.questionLabel}</Badge>
-                            <p className="text-sm font-medium text-foreground">{clip.questionText}</p>
+                            <p className="text-sm font-medium text-foreground">{clip.questionHint?.trim() || clip.questionTitle?.trim() || clip.questionText}</p>
                           </div>
                           <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground pl-1">
                             {text || "Texte non disponible."}

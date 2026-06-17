@@ -1,37 +1,40 @@
 ## Problème
 
-Sur le rapport candidat, la vidéo passe d'inline (dans `DecisionBanner`) à épinglée en haut à droite via un `IntersectionObserver` qui observe un sentinel placé juste sous `DecisionBanner` (`SessionReportView.tsx` ligne 254-270).
+Dans le sélecteur de questions sous la vidéo du rapport candidat (et dans le sélecteur équivalent de la vue tableau d'un projet), la liste affiche actuellement le **contenu interne** (`questions.content`) au lieu du **« Texte affiché au candidat pendant sa réponse »** (`questions.hint_text`) saisi dans le formulaire de question.
 
-Quand la page est courte :
-1. On scrolle → sentinel sort → `isPinned = true` → la vidéo quitte `videoSlot` et le `DecisionBanner` se contracte (le slot vidéo disparaît) → la hauteur de la page diminue → le sentinel remonte et revient dans le viewport → `isPinned = false` → la vidéo réintègre `videoSlot`, la page rallonge → boucle infinie = tremblement.
+C'est pour ça qu'on voit dans la capture des libellés comme « Tu penses quoi de Morning ? » (contenu interne) à côté de « Parcours pro » (titre interne) — deux champs différents mélangés.
 
-La cause racine est la **reflow du layout** déclenchée par le pin lui-même, pas le seuil.
+## Règle d'affichage demandée
 
-## Correction
+Pour chaque entrée de la liste : afficher `question.hint_text` (le texte que le candidat voyait pendant qu'il répondait).
 
-Deux ajustements complémentaires dans `src/components/session/SessionReportView.tsx` :
+Repli si `hint_text` est vide :
+1. `question.title` (titre interne)
+2. sinon `question.content`
 
-### 1. Réserver l'espace du slot vidéo quand la vidéo est épinglée
+Format : `Question N — <hint_text|title|content>`.
 
-Le `videoSlot` passé à `DecisionBanner` (ligne 377) doit toujours occuper la même place. Au lieu de :
-```tsx
-videoSlot={sessionClips.length > 0 ? <div ref={setInlineHost} className="h-full" /> : undefined}
-```
-garder le slot monté en permanence et masquer visuellement son contenu quand `isPinned` (en gardant les mêmes dimensions via `visibility: hidden` ou un placeholder de même ratio). Le portail React `portalHost` continue de basculer vers `pinnedHost` ; le `inlineHost` reste dans le DOM avec sa hauteur réservée, donc le layout ne bouge plus.
+## Modifications
 
-### 2. Hystérésis sur le seuil d'épinglage (ceinture + bretelles)
+### 1. `src/hooks/queries/useSessionDetail.ts`
+- Ajouter `hint_text` au select des questions du projet (ligne ~17) : `questions(id, content, order_index, title, hint_text)`.
 
-Remplacer le `IntersectionObserver` mono-seuil par une logique avec deux seuils :
-- pin quand `sentinel.top < -16px`
-- unpin quand `sentinel.top > 16px`
+### 2. `src/components/session/SessionReportView.tsx`
+- Étendre l'objet `SessionVideoClip` mappé (ligne 171-179) avec `questionHint: projectQ?.hint_text ?? null`.
+- Utiliser ce champ dans le rendu de la transcription (ligne 617) avec le repli décrit.
 
-Implémentation : conserver `IntersectionObserver` mais avec deux observers (un avec `rootMargin: "16px 0px 0px 0px"` pour le pin, l'autre avec `rootMargin: "-16px 0px 0px 0px"` pour l'unpin), ou plus simple : un `scroll` listener léger qui lit `sentinelEl.getBoundingClientRect().top` et applique l'hystérésis. La zone morte de 32px absorbe tout micro-jitter résiduel.
+### 3. `src/components/session/SessionVideoNavigator.tsx`
+- Ajouter `questionHint?: string | null` à l'interface `SessionVideoClip` (ligne 13-21).
+- Dans le dropdown (ligne 819-831), afficher `c.questionHint || c.questionTitle || c.questionText`.
+- Mettre à jour aussi le fallback ligne 615 (overlay d'erreur média) avec la même règle, pour cohérence.
 
-## Fichier modifié
-
-- `src/components/session/SessionReportView.tsx` (lignes 254-270 et 377)
+### 4. `src/components/project/SessionCard.tsx`
+- Étendre l'interface `Question` (ligne 16-21) avec `hint_text?: string | null`.
+- Dans le dropdown (ligne 248-250), afficher `q.hint_text || q.title || q.content`.
+- Le composant parent `ProjectDetail.tsx` charge déjà `hint_text` (ligne 282) — aucune modification de requête nécessaire ici.
 
 ## Hors périmètre
 
-- Pas de changement visuel de la vidéo épinglée ni de son emplacement.
-- Pas de changement sur `DecisionBanner` lui-même (le slot existe déjà, on l'utilise juste différemment).
+- Pas de changement sur l'overlay « titre » sous le player vidéo (`questionTitle`) — il reste un libellé court par design.
+- Pas de modification du modèle de données ni des requêtes côté projet.
+- Aucune modification visuelle hors de ce texte.

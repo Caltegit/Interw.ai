@@ -16,6 +16,7 @@ export interface SessionVideoClip {
   questionLabel: string;
   questionText: string;
   questionTitle?: string | null;
+  questionHint?: string | null;
   isFollowUp: boolean;
   messageId?: string;
 }
@@ -612,7 +613,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </p>
               <p className="text-xs text-white/70">
                 {current.questionLabel}
-                {current.questionText ? ` — ${current.questionText}` : ""}
+                {(() => {
+                  const label = current.questionHint?.trim() || current.questionTitle?.trim() || current.questionText;
+                  return label ? ` — ${label}` : "";
+                })()}
               </p>
               {current.audioUrl && (
                 <audio
@@ -820,7 +824,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   <SelectItem key={i} value={String(i)}>
                     <span className="flex items-center gap-2 whitespace-nowrap">
                       <span className="font-medium shrink-0">Question {i + 1}</span>
-                      <span className="truncate text-muted-foreground">— {c.questionText}</span>
+                      <span className="truncate text-muted-foreground">— {c.questionHint?.trim() || c.questionTitle?.trim() || c.questionText}</span>
                       {c.isFollowUp && (
                         <Badge variant="outline" className="ml-1 text-[10px] shrink-0">
                           Relance
