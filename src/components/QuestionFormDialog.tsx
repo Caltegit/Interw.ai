@@ -57,7 +57,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   title: "",
   content: "",
   category: "",
-  mediaType: "written",
+  mediaType: "video",
   followUp: false,
   relanceLevel: "light",
   maxFollowUps: 0,
