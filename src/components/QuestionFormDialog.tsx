@@ -88,11 +88,11 @@ const FORMAT_OPTIONS: {
   description: string;
 }[] = [
   {
-    value: "written",
-    label: "Lu par IA",
-    hint: "Lu par l'IA",
-    icon: Type,
-    description: "La question sera lue à voix haute par l'IA du projet.",
+    value: "video",
+    label: "Vidéo",
+    hint: "Vous à l'écran",
+    icon: Video,
+    description: "Filmez-vous en train de poser la question. Le texte n'est pas nécessaire.",
   },
   {
     value: "audio",
@@ -102,11 +102,11 @@ const FORMAT_OPTIONS: {
     description: "Enregistrez votre voix. Aucun texte n'est affiché au candidat.",
   },
   {
-    value: "video",
-    label: "Vidéo",
-    hint: "Vous à l'écran",
-    icon: Video,
-    description: "Filmez-vous en train de poser la question. Le texte n'est pas nécessaire.",
+    value: "written",
+    label: "Lu par IA",
+    hint: "Lu par l'IA",
+    icon: Type,
+    description: "La question sera lue à voix haute par l'IA du projet.",
   },
 ];
 
