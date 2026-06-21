@@ -14,24 +14,26 @@ interface Props {
   projectId: string;
   userId: string | null;
   mode: CopilotMode;
+  sessionId?: string | null;
   activeThreadId: string | null;
   onSelect: (id: string | null) => void;
 }
 
-export function CopilotThreadSwitcher({ projectId, userId, mode, activeThreadId, onSelect }: Props) {
-  const { data: threads = [] } = useCopilotThreads(projectId, userId, mode);
+export function CopilotThreadSwitcher({ projectId, userId, mode, sessionId = null, activeThreadId, onSelect }: Props) {
+  const { data: threads = [] } = useCopilotThreads(projectId, userId, mode, sessionId);
   const create = useCreateCopilotThread();
   const del = useDeleteCopilotThread();
 
   const handleCreate = async () => {
     if (!userId) return;
     try {
-      const t = await create.mutateAsync({ projectId, userId, mode });
+      const t = await create.mutateAsync({ projectId, userId, mode, sessionId });
       onSelect(t.id);
     } catch (e: any) {
       toast.error(e?.message || "Impossible de créer la conversation");
     }
   };
+
 
   const handleDelete = async () => {
     if (!activeThreadId || !userId) return;

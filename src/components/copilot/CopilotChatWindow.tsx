@@ -24,6 +24,8 @@ interface Props {
   projectId: string;
   userId: string | null;
   mode: CopilotMode;
+  sessionId?: string | null;
+  candidateName?: string | null;
   threadId: string | null;
   onCreatedThread: (id: string) => void;
 }
@@ -40,6 +42,16 @@ const SUGGESTIONS_DESIGN = [
   "Suggère 3 critères d'évaluation manquants.",
   "Améliore la formulation de mes questions actuelles.",
 ];
+
+function suggestionsForCandidate(name: string): string[] {
+  return [
+    `Quels sont les points forts et faiblesses de ${name} ?`,
+    `Rédige 5 questions de relance à poser à ${name} en second entretien.`,
+    `Quels axes approfondir sur le profil de ${name} ?`,
+    `Compare ${name} à la moyenne des autres candidats du projet.`,
+  ];
+}
+
 
 type SuggestionBlock =
   | { kind: "questions"; items: QuestionSuggestion[] }
