@@ -1,13 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useLocation, useParams, matchPath } from "react-router-dom";
 import type { CopilotMode } from "@/hooks/queries/useCopilot";
+import { useSessionContext } from "@/hooks/queries/useSessionContext";
 
 interface CopilotContextValue {
   open: boolean;
   setOpen: (v: boolean) => void;
   toggle: () => void;
-  /** Projet actif détecté via la route, ou null. */
+  /** Projet actif détecté via la route (projet ou session), ou null. */
   activeProjectId: string | null;
+  /** Session active détectée via la route, ou null. */
+  activeSessionId: string | null;
+  /** Nom du candidat de la session active, si connu. */
+  activeCandidateName: string | null;
   /** True si le bouton flottant doit être visible. */
   visible: boolean;
   /** État persistant entre navigations. */
@@ -28,12 +33,6 @@ const PROJECT_ROUTE_PATTERNS = [
   "/projects/:id/compare",
 ];
 
-const HIDDEN_PREFIXES = [
-  "/admin",
-  "/superadmin",
-  "/sessions/",
-];
-
 export function CopilotProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<CopilotMode>("analysis");
@@ -42,7 +41,18 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const params = useParams();
 
-  const activeProjectId = useMemo<string | null>(() => {
+  const sessionMatch = useMemo(
+    () => matchPath({ path: "/sessions/:id", end: false }, location.pathname),
+    [location.pathname],
+  );
+  const routeSessionId = sessionMatch?.params?.id ?? null;
+  // Exclure les sous-routes type /sessions/:id/export
+  const activeSessionId =
+    routeSessionId && !location.pathname.endsWith("/export") ? routeSessionId : null;
+
+  const { data: sessionCtx } = useSessionContext(activeSessionId);
+
+  const projectFromRoute = useMemo<string | null>(() => {
     for (const pattern of PROJECT_ROUTE_PATTERNS) {
       const match = matchPath({ path: pattern, end: false }, location.pathname);
       if (match?.params?.id) return match.params.id;
@@ -51,9 +61,12 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     return null;
   }, [location.pathname, params]);
 
+  const activeProjectId = projectFromRoute ?? sessionCtx?.project_id ?? null;
+  const activeCandidateName = sessionCtx?.candidate_name ?? null;
+
   const visible = useMemo(() => {
     const path = location.pathname;
-    if (HIDDEN_PREFIXES.some((p) => path.startsWith(p) && path.endsWith("/export"))) return false;
+    if (path.endsWith("/export")) return false;
     if (path.startsWith("/admin") || path.startsWith("/superadmin")) return false;
     return true;
   }, [location.pathname]);
@@ -62,11 +75,16 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     if (!visible && open) setOpen(false);
   }, [visible, open]);
 
-  // Reset thread quand projet effectif ou mode change
+  // En page session, on force le mode analyse
+  useEffect(() => {
+    if (activeSessionId && mode !== "analysis") setMode("analysis");
+  }, [activeSessionId, mode]);
+
+  // Reset thread quand projet/session effectif ou mode change
   const effectiveProjectId = activeProjectId ?? pickedProjectId;
   useEffect(() => {
     setActiveThreadId(null);
-  }, [effectiveProjectId, mode]);
+  }, [effectiveProjectId, activeSessionId, mode]);
 
   const value = useMemo<CopilotContextValue>(
     () => ({
@@ -74,6 +92,8 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
       setOpen,
       toggle: () => setOpen((v) => !v),
       activeProjectId,
+      activeSessionId,
+      activeCandidateName,
       visible,
       mode,
       setMode,
@@ -82,7 +102,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
       activeThreadId,
       setActiveThreadId,
     }),
-    [open, activeProjectId, visible, mode, pickedProjectId, activeThreadId],
+    [open, activeProjectId, activeSessionId, activeCandidateName, visible, mode, pickedProjectId, activeThreadId],
   );
 
   return <CopilotContext.Provider value={value}>{children}</CopilotContext.Provider>;
