@@ -216,13 +216,14 @@ Deno.serve(async (req) => {
 
     const { data: thread, error: threadErr } = await admin
       .from("copilot_threads")
-      .select("id, project_id, created_by, title, mode")
+      .select("id, project_id, session_id, created_by, title, mode")
       .eq("id", threadId)
       .maybeSingle();
     if (threadErr || !thread) return jsonResponse({ error: "Thread introuvable" }, 404);
     if (thread.created_by !== userId) return jsonResponse({ error: "Accès refusé" }, 403);
 
     const mode: "analysis" | "design" = (thread as any).mode === "design" ? "design" : "analysis";
+    const focusSessionId: string | null = (thread as any).session_id ?? null;
 
     const { data: insertedUser, error: insUserErr } = await admin
       .from("copilot_messages")
@@ -232,16 +233,20 @@ Deno.serve(async (req) => {
     if (insUserErr) return jsonResponse({ error: "Erreur sauvegarde message" }, 500);
 
     let systemPrompt = "";
+    let focusName: string | null = null;
     if (mode === "analysis") {
+      const sessionsQuery = admin
+        .from("sessions")
+        .select(
+          "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
+        )
+        .eq("project_id", thread.project_id);
+      if (focusSessionId) sessionsQuery.eq("id", focusSessionId);
+
       const [{ data: project }, { data: criteria }, { data: sessionsData }] = await Promise.all([
         admin.from("projects").select("id, title, job_title").eq("id", thread.project_id).maybeSingle(),
         admin.from("evaluation_criteria").select("label, description, weight").eq("project_id", thread.project_id).order("order_index"),
-        admin
-          .from("sessions")
-          .select(
-            "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
-          )
-          .eq("project_id", thread.project_id),
+        sessionsQuery,
       ]);
 
       const reports = (sessionsData ?? [])
@@ -254,8 +259,13 @@ Deno.serve(async (req) => {
           ...(Array.isArray(s.reports) ? s.reports[0] : s.reports),
         }));
 
-      systemPrompt = buildAnalysisSystemPrompt(project, criteria ?? [], reports);
+      if (focusSessionId && sessionsData && sessionsData.length > 0) {
+        focusName = (sessionsData[0] as any).candidate_name || null;
+      }
+
+      systemPrompt = buildAnalysisSystemPrompt(project, criteria ?? [], reports, focusName);
     } else {
+
       const { data: project } = await admin
         .from("projects")
         .select("id, title, job_title, language, max_duration_minutes, intro_text, organization_id")
