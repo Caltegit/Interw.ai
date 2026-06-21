@@ -79,15 +79,17 @@ export function useCreateCopilotThread() {
       projectId,
       userId,
       mode = "analysis",
-    }: { projectId: string; userId: string; mode?: CopilotMode }) => {
+      sessionId = null,
+    }: { projectId: string; userId: string; mode?: CopilotMode; sessionId?: string | null }) => {
       const { data, error } = await supabase
         .from("copilot_threads")
-        .insert({ project_id: projectId, created_by: userId, mode })
-        .select("id, project_id, created_by, title, mode, created_at, updated_at")
+        .insert({ project_id: projectId, created_by: userId, mode, session_id: sessionId })
+        .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
         .single();
       if (error) throw error;
       return data as CopilotThread;
     },
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["copilot", "threads"] });
     },
