@@ -28,11 +28,20 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]): string {
+function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[], focusName: string | null): string {
   const lines: string[] = [];
-  lines.push(
-    `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
-  );
+  if (focusName) {
+    lines.push(
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à approfondir le profil de **${focusName}**, candidat sur le projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+    );
+    lines.push(
+      "Concentre toutes tes réponses sur ce candidat précis. Tu peux comparer ses scores aux critères du projet, suggérer des questions de relance pour un second entretien, repérer des zones à creuser, et reformuler les forces/faiblesses.",
+    );
+  } else {
+    lines.push(
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+    );
+  }
   lines.push(
     "Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux quand pertinent).",
   );
@@ -50,13 +59,13 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
     }
   }
 
-  lines.push(`\n## Candidats évalués (${reports.length})`);
+  lines.push(focusName ? `\n## Profil de ${focusName}` : `\n## Candidats évalués (${reports.length})`);
   if (reports.length === 0) {
     lines.push("Aucun rapport d'évaluation disponible pour le moment.");
   } else {
     for (const r of reports) {
       const name = r.candidate_name || r.candidate_email || "Candidat anonyme";
-      lines.push(`\n### ${name}`);
+      if (!focusName) lines.push(`\n### ${name}`);
       if (typeof r.overall_score === "number") {
         lines.push(`- Score global : **${r.overall_score}/10**${r.overall_grade ? ` (${r.overall_grade})` : ""}`);
       }
@@ -67,16 +76,16 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
       if (r.executive_summary_short) {
         lines.push(`- Résumé : ${r.executive_summary_short}`);
       } else if (r.executive_summary) {
-        lines.push(`- Résumé : ${String(r.executive_summary).slice(0, 400)}`);
+        lines.push(`- Résumé : ${String(r.executive_summary).slice(0, focusName ? 1200 : 400)}`);
       }
       if (Array.isArray(r.strengths) && r.strengths.length) {
-        lines.push(`- Forces : ${r.strengths.slice(0, 5).join(" ; ")}`);
+        lines.push(`- Forces : ${r.strengths.slice(0, focusName ? 10 : 5).join(" ; ")}`);
       }
       if (Array.isArray(r.areas_for_improvement) && r.areas_for_improvement.length) {
-        lines.push(`- Axes d'amélioration : ${r.areas_for_improvement.slice(0, 5).join(" ; ")}`);
+        lines.push(`- Axes d'amélioration : ${r.areas_for_improvement.slice(0, focusName ? 10 : 5).join(" ; ")}`);
       }
       if (r.criteria_scores && typeof r.criteria_scores === "object") {
-        const entries = Object.entries(r.criteria_scores).slice(0, 8);
+        const entries = Object.entries(r.criteria_scores).slice(0, focusName ? 20 : 8);
         if (entries.length) {
           const fmt = entries
             .map(([k, v]: [string, any]) => {
@@ -89,7 +98,7 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
         }
       }
       if (r.soft_skills && typeof r.soft_skills === "object") {
-        const ss = Object.entries(r.soft_skills).slice(0, 6)
+        const ss = Object.entries(r.soft_skills).slice(0, focusName ? 12 : 6)
           .map(([k, v]: [string, any]) => {
             const score = typeof v === "number" ? v : v?.score;
             return score != null ? `${k}: ${score}` : null;
@@ -99,17 +108,18 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
         if (ss) lines.push(`- Soft skills : ${ss}`);
       }
       if (Array.isArray(r.red_flags) && r.red_flags.length) {
-        const rf = r.red_flags.slice(0, 3).map((f: any) => f?.label || f?.text || String(f)).join(" ; ");
+        const rf = r.red_flags.slice(0, focusName ? 8 : 3).map((f: any) => f?.label || f?.text || String(f)).join(" ; ");
         lines.push(`- Points de vigilance : ${rf}`);
       }
       if (r.recruiter_note) {
-        lines.push(`- Note du recruteur : ${String(r.recruiter_note).slice(0, 200)}`);
+        lines.push(`- Note du recruteur : ${String(r.recruiter_note).slice(0, focusName ? 600 : 200)}`);
       }
     }
   }
 
   return lines.join("\n");
 }
+
 
 function buildDesignSystemPrompt(
   project: any,
@@ -206,13 +216,14 @@ Deno.serve(async (req) => {
 
     const { data: thread, error: threadErr } = await admin
       .from("copilot_threads")
-      .select("id, project_id, created_by, title, mode")
+      .select("id, project_id, session_id, created_by, title, mode")
       .eq("id", threadId)
       .maybeSingle();
     if (threadErr || !thread) return jsonResponse({ error: "Thread introuvable" }, 404);
     if (thread.created_by !== userId) return jsonResponse({ error: "Accès refusé" }, 403);
 
     const mode: "analysis" | "design" = (thread as any).mode === "design" ? "design" : "analysis";
+    const focusSessionId: string | null = (thread as any).session_id ?? null;
 
     const { data: insertedUser, error: insUserErr } = await admin
       .from("copilot_messages")
@@ -222,16 +233,20 @@ Deno.serve(async (req) => {
     if (insUserErr) return jsonResponse({ error: "Erreur sauvegarde message" }, 500);
 
     let systemPrompt = "";
+    let focusName: string | null = null;
     if (mode === "analysis") {
+      const sessionsQuery = admin
+        .from("sessions")
+        .select(
+          "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
+        )
+        .eq("project_id", thread.project_id);
+      if (focusSessionId) sessionsQuery.eq("id", focusSessionId);
+
       const [{ data: project }, { data: criteria }, { data: sessionsData }] = await Promise.all([
         admin.from("projects").select("id, title, job_title").eq("id", thread.project_id).maybeSingle(),
         admin.from("evaluation_criteria").select("label, description, weight").eq("project_id", thread.project_id).order("order_index"),
-        admin
-          .from("sessions")
-          .select(
-            "id, candidate_name, candidate_email, recruiter_decision, recruiter_note, reports(overall_score, overall_grade, recommendation, executive_summary, executive_summary_short, strengths, areas_for_improvement, criteria_scores, soft_skills, red_flags)",
-          )
-          .eq("project_id", thread.project_id),
+        sessionsQuery,
       ]);
 
       const reports = (sessionsData ?? [])
@@ -244,8 +259,13 @@ Deno.serve(async (req) => {
           ...(Array.isArray(s.reports) ? s.reports[0] : s.reports),
         }));
 
-      systemPrompt = buildAnalysisSystemPrompt(project, criteria ?? [], reports);
+      if (focusSessionId && sessionsData && sessionsData.length > 0) {
+        focusName = (sessionsData[0] as any).candidate_name || null;
+      }
+
+      systemPrompt = buildAnalysisSystemPrompt(project, criteria ?? [], reports, focusName);
     } else {
+
       const { data: project } = await admin
         .from("projects")
         .select("id, title, job_title, language, max_duration_minutes, intro_text, organization_id")
@@ -342,7 +362,10 @@ Deno.serve(async (req) => {
     }
 
     if (thread.title === "Nouvelle conversation") {
-      const newTitle = userMessage.replace(/\s+/g, " ").slice(0, 60);
+      const newTitle = focusName
+        ? `Approfondir ${focusName}`.slice(0, 60)
+        : userMessage.replace(/\s+/g, " ").slice(0, 60);
+
       await admin
         .from("copilot_threads")
         .update({ title: newTitle, updated_at: new Date().toISOString() })

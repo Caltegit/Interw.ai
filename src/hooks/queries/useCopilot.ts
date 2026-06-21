@@ -6,6 +6,7 @@ export type CopilotMode = "analysis" | "design";
 export interface CopilotThread {
   id: string;
   project_id: string;
+  session_id: string | null;
   created_by: string;
   title: string;
   mode: CopilotMode;
@@ -21,31 +22,39 @@ export interface CopilotMessage {
   created_at: string;
 }
 
-const threadsKey = (projectId: string, userId: string | null, mode?: CopilotMode) =>
-  ["copilot", "threads", projectId, userId, mode ?? "all"] as const;
+const threadsKey = (
+  projectId: string,
+  userId: string | null,
+  mode?: CopilotMode,
+  sessionId?: string | null,
+) => ["copilot", "threads", projectId, userId, mode ?? "all", sessionId ?? "no-session"] as const;
 const messagesKey = (threadId: string) => ["copilot", "messages", threadId] as const;
 
 export function useCopilotThreads(
   projectId: string | null,
   userId: string | null,
   mode?: CopilotMode,
+  sessionId?: string | null,
 ) {
   return useQuery({
-    queryKey: threadsKey(projectId ?? "", userId, mode),
+    queryKey: threadsKey(projectId ?? "", userId, mode, sessionId),
     enabled: !!projectId && !!userId,
     queryFn: async () => {
       let q = supabase
         .from("copilot_threads")
-        .select("id, project_id, created_by, title, mode, created_at, updated_at")
+        .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
         .eq("project_id", projectId as string)
         .order("updated_at", { ascending: false });
       if (mode) q = q.eq("mode", mode);
+      if (sessionId) q = q.eq("session_id", sessionId);
+      else q = q.is("session_id", null);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as CopilotThread[];
     },
   });
 }
+
 
 export function useCopilotMessages(threadId: string | null) {
   return useQuery({
@@ -70,15 +79,17 @@ export function useCreateCopilotThread() {
       projectId,
       userId,
       mode = "analysis",
-    }: { projectId: string; userId: string; mode?: CopilotMode }) => {
+      sessionId = null,
+    }: { projectId: string; userId: string; mode?: CopilotMode; sessionId?: string | null }) => {
       const { data, error } = await supabase
         .from("copilot_threads")
-        .insert({ project_id: projectId, created_by: userId, mode })
-        .select("id, project_id, created_by, title, mode, created_at, updated_at")
+        .insert({ project_id: projectId, created_by: userId, mode, session_id: sessionId })
+        .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
         .single();
       if (error) throw error;
       return data as CopilotThread;
     },
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["copilot", "threads"] });
     },

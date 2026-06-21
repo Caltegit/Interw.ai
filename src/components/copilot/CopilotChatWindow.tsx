@@ -24,6 +24,8 @@ interface Props {
   projectId: string;
   userId: string | null;
   mode: CopilotMode;
+  sessionId?: string | null;
+  candidateName?: string | null;
   threadId: string | null;
   onCreatedThread: (id: string) => void;
 }
@@ -40,6 +42,16 @@ const SUGGESTIONS_DESIGN = [
   "Suggère 3 critères d'évaluation manquants.",
   "Améliore la formulation de mes questions actuelles.",
 ];
+
+function suggestionsForCandidate(name: string): string[] {
+  return [
+    `Quels sont les points forts et faiblesses de ${name} ?`,
+    `Rédige 5 questions de relance à poser à ${name} en second entretien.`,
+    `Quels axes approfondir sur le profil de ${name} ?`,
+    `Compare ${name} à la moyenne des autres candidats du projet.`,
+  ];
+}
+
 
 type SuggestionBlock =
   | { kind: "questions"; items: QuestionSuggestion[] }
@@ -73,7 +85,7 @@ function parseAssistantContent(content: string): Parsed {
   return { text: text.trim(), blocks };
 }
 
-export function CopilotChatWindow({ projectId, userId, mode, threadId, onCreatedThread }: Props) {
+export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, candidateName = null, threadId, onCreatedThread }: Props) {
   const { data: messages = [], isLoading } = useCopilotMessages(threadId);
   const create = useCreateCopilotThread();
   const send = useSendCopilotMessage();
@@ -94,7 +106,7 @@ export function CopilotChatWindow({ projectId, userId, mode, threadId, onCreated
     let activeId = threadId;
     try {
       if (!activeId) {
-        const t = await create.mutateAsync({ projectId, userId, mode });
+        const t = await create.mutateAsync({ projectId, userId, mode, sessionId });
         activeId = t.id;
         onCreatedThread(t.id);
       }
@@ -115,9 +127,15 @@ export function CopilotChatWindow({ projectId, userId, mode, threadId, onCreated
 
   const isSending = send.isPending || create.isPending;
   const hasMessages = messages.length > 0;
-  const suggestions = mode === "design" ? SUGGESTIONS_DESIGN : SUGGESTIONS_ANALYSIS;
-  const placeholder =
-    mode === "design"
+  const candidateLabel = candidateName?.trim() || "ce candidat";
+  const suggestions = sessionId
+    ? suggestionsForCandidate(candidateLabel)
+    : mode === "design"
+      ? SUGGESTIONS_DESIGN
+      : SUGGESTIONS_ANALYSIS;
+  const placeholder = sessionId
+    ? `Posez une question sur ${candidateLabel}…`
+    : mode === "design"
       ? "Posez une question sur la conception de l'entretien…"
       : "Posez une question sur les candidats…";
 
@@ -128,15 +146,20 @@ export function CopilotChatWindow({ projectId, userId, mode, threadId, onCreated
           <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
             <Sparkles className="h-8 w-8 text-primary" />
             <p className="text-sm font-medium">
-              {mode === "design"
-                ? "Co-construisez votre entretien avec l'IA"
-                : "Posez une question sur les candidats du projet"}
+              {sessionId
+                ? `Approfondir le profil de ${candidateLabel}`
+                : mode === "design"
+                  ? "Co-construisez votre entretien avec l'IA"
+                  : "Posez une question sur les candidats du projet"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {mode === "design"
-                ? "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux."
-                : "Le copilote s'appuie sur les rapports d'évaluation déjà générés."}
+              {sessionId
+                ? "Le copilote s'appuie sur le rapport d'évaluation de ce candidat."
+                : mode === "design"
+                  ? "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux."
+                  : "Le copilote s'appuie sur les rapports d'évaluation déjà générés."}
             </p>
+
             <div className="mt-2 flex flex-col gap-2">
               {suggestions.map((s) => (
                 <button
