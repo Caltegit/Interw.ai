@@ -362,7 +362,10 @@ Deno.serve(async (req) => {
     }
 
     if (thread.title === "Nouvelle conversation") {
-      const newTitle = userMessage.replace(/\s+/g, " ").slice(0, 60);
+      const newTitle = focusName
+        ? `Approfondir ${focusName}`.slice(0, 60)
+        : userMessage.replace(/\s+/g, " ").slice(0, 60);
+
       await admin
         .from("copilot_threads")
         .update({ title: newTitle, updated_at: new Date().toISOString() })
