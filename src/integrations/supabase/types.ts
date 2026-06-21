@@ -94,6 +94,7 @@ export type Database = {
           id: string
           mode: string
           project_id: string
+          session_id: string | null
           title: string
           updated_at: string
         }
@@ -103,6 +104,7 @@ export type Database = {
           id?: string
           mode?: string
           project_id: string
+          session_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -112,6 +114,7 @@ export type Database = {
           id?: string
           mode?: string
           project_id?: string
+          session_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -121,6 +124,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copilot_threads_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]

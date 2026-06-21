@@ -1,0 +1,2 @@
+ALTER TABLE public.copilot_threads ADD COLUMN IF NOT EXISTS session_id uuid NULL REFERENCES public.sessions(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS copilot_threads_session_id_idx ON public.copilot_threads(session_id);
