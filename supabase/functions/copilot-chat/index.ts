@@ -28,11 +28,20 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]): string {
+function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[], focusName: string | null): string {
   const lines: string[] = [];
-  lines.push(
-    `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
-  );
+  if (focusName) {
+    lines.push(
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à approfondir le profil de **${focusName}**, candidat sur le projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+    );
+    lines.push(
+      "Concentre toutes tes réponses sur ce candidat précis. Tu peux comparer ses scores aux critères du projet, suggérer des questions de relance pour un second entretien, repérer des zones à creuser, et reformuler les forces/faiblesses.",
+    );
+  } else {
+    lines.push(
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+    );
+  }
   lines.push(
     "Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux quand pertinent).",
   );
@@ -50,13 +59,13 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
     }
   }
 
-  lines.push(`\n## Candidats évalués (${reports.length})`);
+  lines.push(focusName ? `\n## Profil de ${focusName}` : `\n## Candidats évalués (${reports.length})`);
   if (reports.length === 0) {
     lines.push("Aucun rapport d'évaluation disponible pour le moment.");
   } else {
     for (const r of reports) {
       const name = r.candidate_name || r.candidate_email || "Candidat anonyme";
-      lines.push(`\n### ${name}`);
+      if (!focusName) lines.push(`\n### ${name}`);
       if (typeof r.overall_score === "number") {
         lines.push(`- Score global : **${r.overall_score}/10**${r.overall_grade ? ` (${r.overall_grade})` : ""}`);
       }
@@ -67,16 +76,16 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
       if (r.executive_summary_short) {
         lines.push(`- Résumé : ${r.executive_summary_short}`);
       } else if (r.executive_summary) {
-        lines.push(`- Résumé : ${String(r.executive_summary).slice(0, 400)}`);
+        lines.push(`- Résumé : ${String(r.executive_summary).slice(0, focusName ? 1200 : 400)}`);
       }
       if (Array.isArray(r.strengths) && r.strengths.length) {
-        lines.push(`- Forces : ${r.strengths.slice(0, 5).join(" ; ")}`);
+        lines.push(`- Forces : ${r.strengths.slice(0, focusName ? 10 : 5).join(" ; ")}`);
       }
       if (Array.isArray(r.areas_for_improvement) && r.areas_for_improvement.length) {
-        lines.push(`- Axes d'amélioration : ${r.areas_for_improvement.slice(0, 5).join(" ; ")}`);
+        lines.push(`- Axes d'amélioration : ${r.areas_for_improvement.slice(0, focusName ? 10 : 5).join(" ; ")}`);
       }
       if (r.criteria_scores && typeof r.criteria_scores === "object") {
-        const entries = Object.entries(r.criteria_scores).slice(0, 8);
+        const entries = Object.entries(r.criteria_scores).slice(0, focusName ? 20 : 8);
         if (entries.length) {
           const fmt = entries
             .map(([k, v]: [string, any]) => {
@@ -89,7 +98,7 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
         }
       }
       if (r.soft_skills && typeof r.soft_skills === "object") {
-        const ss = Object.entries(r.soft_skills).slice(0, 6)
+        const ss = Object.entries(r.soft_skills).slice(0, focusName ? 12 : 6)
           .map(([k, v]: [string, any]) => {
             const score = typeof v === "number" ? v : v?.score;
             return score != null ? `${k}: ${score}` : null;
@@ -99,17 +108,18 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
         if (ss) lines.push(`- Soft skills : ${ss}`);
       }
       if (Array.isArray(r.red_flags) && r.red_flags.length) {
-        const rf = r.red_flags.slice(0, 3).map((f: any) => f?.label || f?.text || String(f)).join(" ; ");
+        const rf = r.red_flags.slice(0, focusName ? 8 : 3).map((f: any) => f?.label || f?.text || String(f)).join(" ; ");
         lines.push(`- Points de vigilance : ${rf}`);
       }
       if (r.recruiter_note) {
-        lines.push(`- Note du recruteur : ${String(r.recruiter_note).slice(0, 200)}`);
+        lines.push(`- Note du recruteur : ${String(r.recruiter_note).slice(0, focusName ? 600 : 200)}`);
       }
     }
   }
 
   return lines.join("\n");
 }
+
 
 function buildDesignSystemPrompt(
   project: any,
