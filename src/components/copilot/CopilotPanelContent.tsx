@@ -104,6 +104,8 @@ export function CopilotPanelContent({ inline = false }: Props) {
               mode={mode}
               sessionId={sessionScope}
               candidateName={activeCandidateName}
+              openedContext={openedContext}
+
               threadId={activeThreadId}
               onCreatedThread={setActiveThreadId}
             />
