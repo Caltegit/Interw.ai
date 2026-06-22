@@ -1,65 +1,79 @@
 ## Objectif
 
-Quand on ouvre le copilote depuis la page d'un rapport (`/sessions/:id`), il doit :
-1. Détecter automatiquement le projet et le candidat — pas de sélecteur de projet.
-2. Forcer le mode « Analyser les candidats ».
-3. Proposer des suggestions de questions ciblées sur **ce candidat précis**.
-4. Centrer toute la conversation sur ce candidat (le système prompt ne contient que son rapport, pas tous les candidats du projet).
+Quand on ouvre le copilote IA, les suggestions de questions (état vide) s'adaptent à la page courante. Une fois le copilote ouvert, la liste reste figée tant qu'on ne le rouvre pas (snapshot à l'ouverture).
 
-## Détection du contexte
+## Contextes détectés et suggestions associées
 
-Dans `src/contexts/CopilotContext.tsx` :
-- Ajouter le pattern `/sessions/:id` à la détection.
-- Exposer `activeSessionId: string | null` en plus de `activeProjectId`.
-- Sur une page session, résoudre `project_id` + `candidate_name` via un petit hook `useSessionContext(sessionId)` (lecture de `sessions` : `id, project_id, candidate_name`). Le résultat alimente `activeProjectId` quand on est sur `/sessions/:id`.
-- Quand `activeSessionId` est défini, forcer `mode = "analysis"` et désactiver le sélecteur d'onglet (ou le masquer).
+Détection via `location.pathname` au moment où `open` passe à `true`.
 
-## UI
+1. **Liste des projets** (`/projects`, `/dashboard`)
+   - "Quels projets ont le plus de candidats à départager ?"
+   - "Sur quels projets manque-t-il des critères d'évaluation ?"
+   - "Résume l'avancement de mes projets en cours."
 
-`CopilotPanelContent.tsx` :
-- Si `activeSessionId`, ne pas afficher `CopilotProjectPicker` même sans projet picked — attendre la résolution puis afficher directement le chat.
-- Afficher en en-tête une petite ligne contextuelle : `Candidat : {nom} — Projet : {titre}`.
-- Masquer le sélecteur de mode (analyse/conception) sur une page session.
+2. **Détail projet** (`/projects/:id`) — liste des candidats
+   - "Quels sont les 3 candidats les plus prometteurs ?"
+   - "Compare les deux meilleurs profils."
+   - "Quels candidats présentent des points de vigilance ?"
 
-`CopilotChatWindow.tsx` :
-- Recevoir un prop optionnel `sessionId` + `candidateName`.
-- Nouvelle liste de suggestions quand `sessionId` est présent (4 items) :
-  - « Quels sont les points forts et faiblesses de {nom} ? »
-  - « Rédige 5 questions de relance à poser à {nom} en second entretien. »
-  - « Quels axes approfondir sur le profil de {nom} ? »
-  - « Compare {nom} à la moyenne des autres candidats du projet. »
-- Modifier l'état vide : titre « Approfondir le profil de {nom} ».
+3. **Comparateur** (`/projects/:id/compare`)
+   - "Quelles différences clés entre les candidats sélectionnés ?"
+   - "Lequel recommander pour un second entretien et pourquoi ?"
+   - "Quel profil correspond le mieux aux critères prioritaires ?"
 
-## Threads scopés à la session
+4. **Statistiques projet** (`/projects/:id/stats`)
+   - "Quels critères discriminent le plus les candidats ?"
+   - "Identifie les tendances sur les soft skills."
+   - "Quelle question génère les réponses les plus pauvres ?"
 
-- Migration : ajouter `session_id uuid null references public.sessions(id) on delete cascade` à `copilot_threads` + index `(session_id)`.
-- `useCopilotThreads` : nouveau paramètre optionnel `sessionId`. Quand fourni, filtrer `eq("session_id", sessionId)` ; sinon `is("session_id", null)` pour ne pas mélanger avec les conversations « projet entier ».
-- `useCreateCopilotThread` : accepter `sessionId?` et l'insérer.
-- `CopilotContext` : réinitialiser `activeThreadId` quand `activeSessionId` change.
+5. **Création / édition projet** (`/projects/new`, `/projects/:id/edit`)
+   - "Propose-moi 5 questions pour ce poste."
+   - "Suggère 3 critères d'évaluation manquants."
+   - "Améliore la formulation de mes questions actuelles."
+   - "Mes questions couvrent-elles bien tous les critères ?"
+   - Force `mode = "design"` à l'ouverture.
 
-## Edge function `copilot-chat`
+6. **Page publique projet** (`/projects/:id/public-page`)
+   - "Rédige une description attractive du poste."
+   - "Propose un titre accrocheur pour cette annonce."
+   - "Quels avantages mettre en avant ?"
 
-- Lire `thread.session_id` en plus de `project_id`.
-- En mode `analysis`, si `session_id` est présent :
-  - Charger seulement la session ciblée (`sessions` + `reports` joints) au lieu de toutes les sessions du projet.
-  - Adapter `buildAnalysisSystemPrompt` : prompt recentré sur **un seul candidat** (« Tu aides le recruteur à approfondir le profil de {nom} »), avec rapport complet (forces, axes, scores critères, soft skills, red flags, note recruteur), plus les critères du projet pour cadrer.
-  - Auto-titre du thread : `Approfondir {nom}` à la première question si titre par défaut.
+7. **Détail session / rapport** (`/sessions/:id`) — déjà en place
+   - Suggestions candidat conservées (forces/faiblesses, relances, etc.).
+
+8. **Bibliothèque questions / critères / intros / sessions** (`/library/*`)
+   - "Propose 5 nouvelles questions à ajouter à ma bibliothèque."
+   - "Quels critères génériques manque-t-il dans mes ressources ?"
+   - "Suggère des questions adaptées à un poste de [type]."
+
+9. **Fallback** (autres pages : Settings, Feedback, etc.)
+   - Suggestions génériques actuelles (analyse).
 
 ## Détails techniques
 
-Fichiers modifiés :
-- `src/contexts/CopilotContext.tsx` (détection `/sessions/:id`, résolution projet)
-- `src/components/copilot/CopilotPanelContent.tsx` (pas de picker, en-tête contexte, mode forcé)
-- `src/components/copilot/CopilotChatWindow.tsx` (suggestions candidat, prop session)
-- `src/hooks/queries/useCopilot.ts` (paramètre `sessionId` sur threads + création)
-- `supabase/functions/copilot-chat/index.ts` (branche analyse mono-candidat)
-- Nouveau hook `src/hooks/queries/useSessionContext.ts` (lookup léger projet+nom à partir de l'id de session)
+### `src/contexts/CopilotContext.tsx`
+- Ajouter `openedContext: CopilotOpenContext | null` au state, où `CopilotOpenContext = { kind: "projects-list" | "project-detail" | "compare" | "stats" | "project-edit" | "public-page" | "session" | "library" | "generic"; projectId?: string; sessionId?: string }`.
+- Capturer `location.pathname` dans un wrapper `openCopilot()` qui calcule `openedContext` une seule fois. Exposer ce wrapper à la place du `setOpen(true)` direct utilisé par le bouton flottant.
+- Reset `openedContext = null` lors de la fermeture.
+- Si `kind === "project-edit"`, forcer `mode = "design"` au moment de l'ouverture (pas à chaque render).
 
-Migration SQL :
-```sql
-alter table public.copilot_threads
-  add column session_id uuid null references public.sessions(id) on delete cascade;
-create index copilot_threads_session_id_idx on public.copilot_threads(session_id);
-```
+### `src/components/copilot/CopilotFloatingButton.tsx`
+- Remplacer l'appel `toggle()` par `open ? setOpen(false) : openCopilot()` afin que le snapshot du contexte se fasse à l'ouverture uniquement.
 
-Hors périmètre : pas de changement sur le mode « Conception », pas de refonte du panneau, pas de partage de conversations entre recruteurs.
+### `src/components/copilot/CopilotChatWindow.tsx`
+- Accepter une prop `openedContext` (passée par `CopilotPanelContent`).
+- Remplacer le calcul actuel `suggestions = sessionId ? ... : mode === "design" ? ... : ...` par une fonction `suggestionsFor(openedContext, mode, candidateName)` qui retourne le tableau correspondant au tableau ci-dessus.
+- Adapter le placeholder + le titre de l'état vide aux mêmes cas (1–2 phrases courtes par contexte, sans verbiage).
+
+### `src/components/copilot/CopilotPanelContent.tsx`
+- Lire `openedContext` depuis le contexte et le transmettre à `CopilotChatWindow`.
+- Pas de changement de structure (project picker, threads, mode tabs restent identiques).
+
+### Hors périmètre
+- Pas de modification du backend (`copilot-chat`) : seul l'UX des suggestions change.
+- Pas de modification du schéma DB.
+- Pas de touche aux pages elles-mêmes.
+
+## Vérification
+- Ouvrir le copilote successivement depuis `/projects`, `/projects/:id`, `/projects/:id/compare`, `/projects/:id/edit`, `/sessions/:id` et confirmer que les suggestions affichées correspondent.
+- Vérifier qu'en naviguant après ouverture, les suggestions ne changent pas tant qu'on ne ferme/rouvre pas le panneau.
