@@ -251,9 +251,71 @@ export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, c
             <p className="text-sm font-medium">{title}</p>
             <p className="text-xs text-muted-foreground">{hint}</p>
 
+            <div className="mt-2 flex flex-col gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleSubmit(s)}
+                  disabled={isSending}
+                  className="rounded-md border bg-card px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4">
+          {messages.map((m) => (
+            <MessageBubble
+              key={m.id}
+              role={m.role}
+              content={m.content}
+              projectId={projectId}
+              userId={userId}
+            />
+          ))}
+          {isSending && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-primary" />
+              Réflexion…
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t bg-background p-3">
+        <div className="flex items-end gap-2">
+          <Textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={placeholder}
+            rows={2}
+            className="min-h-[60px] resize-none text-sm"
+            disabled={isSending}
+          />
+          <Button
+            type="button"
+            size="icon"
+            onClick={() => handleSubmit(input)}
+            disabled={isSending || !input.trim()}
+            aria-label="Envoyer"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
+          Entrée pour envoyer · Maj+Entrée pour aller à la ligne
+        </p>
+      </div>
     </div>
   );
 }
+
 
 function MessageBubble({
   role,
