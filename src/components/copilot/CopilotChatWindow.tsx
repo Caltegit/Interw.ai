@@ -20,12 +20,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
+import type { CopilotOpenContext } from "@/contexts/CopilotContext";
+
 interface Props {
   projectId: string;
   userId: string | null;
   mode: CopilotMode;
   sessionId?: string | null;
   candidateName?: string | null;
+  openedContext?: CopilotOpenContext | null;
   threadId: string | null;
   onCreatedThread: (id: string) => void;
 }
@@ -51,6 +54,111 @@ function suggestionsForCandidate(name: string): string[] {
     `Compare ${name} à la moyenne des autres candidats du projet.`,
   ];
 }
+
+interface EmptyStateCopy {
+  suggestions: string[];
+  title: string;
+  hint: string;
+  placeholder: string;
+}
+
+function emptyStateFor(
+  ctx: CopilotOpenContext | null | undefined,
+  mode: CopilotMode,
+  sessionId: string | null | undefined,
+  candidateLabel: string,
+): EmptyStateCopy {
+  if (sessionId || ctx?.kind === "session") {
+    return {
+      suggestions: suggestionsForCandidate(candidateLabel),
+      title: `Approfondir le profil de ${candidateLabel}`,
+      hint: "Le copilote s'appuie sur le rapport d'évaluation de ce candidat.",
+      placeholder: `Posez une question sur ${candidateLabel}…`,
+    };
+  }
+  switch (ctx?.kind) {
+    case "projects-list":
+      return {
+        suggestions: [
+          "Quels projets ont le plus de candidats à départager ?",
+          "Sur quels projets manque-t-il des critères d'évaluation ?",
+          "Résume l'avancement de mes projets en cours.",
+        ],
+        title: "Vue d'ensemble de vos projets",
+        hint: "Le copilote analyse l'ensemble de vos projets et candidats.",
+        placeholder: "Posez une question sur vos projets…",
+      };
+    case "compare":
+      return {
+        suggestions: [
+          "Quelles différences clés entre les candidats sélectionnés ?",
+          "Lequel recommander pour un second entretien et pourquoi ?",
+          "Quel profil correspond le mieux aux critères prioritaires ?",
+        ],
+        title: "Comparer les candidats",
+        hint: "Le copilote compare les profils du projet en cours.",
+        placeholder: "Posez une question de comparaison…",
+      };
+    case "stats":
+      return {
+        suggestions: [
+          "Quels critères discriminent le plus les candidats ?",
+          "Identifie les tendances sur les soft skills.",
+          "Quelle question génère les réponses les plus pauvres ?",
+        ],
+        title: "Lire les statistiques du projet",
+        hint: "Le copilote s'appuie sur les évaluations agrégées.",
+        placeholder: "Posez une question sur les statistiques…",
+      };
+    case "project-edit":
+      return {
+        suggestions: SUGGESTIONS_DESIGN,
+        title: "Co-construire l'entretien",
+        hint: "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux.",
+        placeholder: "Posez une question sur la conception de l'entretien…",
+      };
+    case "public-page":
+      return {
+        suggestions: [
+          "Rédige une description attractive du poste.",
+          "Propose un titre accrocheur pour cette annonce.",
+          "Quels avantages mettre en avant ?",
+        ],
+        title: "Améliorer la page publique",
+        hint: "Le copilote vous aide à rédiger une annonce engageante.",
+        placeholder: "Posez une question sur la page publique…",
+      };
+    case "library":
+      return {
+        suggestions: [
+          "Propose 5 nouvelles questions à ajouter à ma bibliothèque.",
+          "Quels critères génériques manque-t-il dans mes ressources ?",
+          "Suggère des questions adaptées à un poste commercial.",
+        ],
+        title: "Enrichir vos ressources",
+        hint: "Le copilote vous aide à étoffer votre bibliothèque.",
+        placeholder: "Posez une question sur vos ressources…",
+      };
+    case "project-detail":
+      return {
+        suggestions: SUGGESTIONS_ANALYSIS,
+        title: "Analyser les candidats du projet",
+        hint: "Le copilote s'appuie sur les rapports d'évaluation déjà générés.",
+        placeholder: "Posez une question sur les candidats…",
+      };
+    default:
+      return {
+        suggestions: mode === "design" ? SUGGESTIONS_DESIGN : SUGGESTIONS_ANALYSIS,
+        title: mode === "design" ? "Co-construisez votre entretien avec l'IA" : "Posez une question sur les candidats du projet",
+        hint:
+          mode === "design"
+            ? "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux."
+            : "Le copilote s'appuie sur les rapports d'évaluation déjà générés.",
+        placeholder: mode === "design" ? "Posez une question sur la conception de l'entretien…" : "Posez une question sur les candidats…",
+      };
+  }
+}
+
 
 
 type SuggestionBlock =
@@ -85,7 +193,7 @@ function parseAssistantContent(content: string): Parsed {
   return { text: text.trim(), blocks };
 }
 
-export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, candidateName = null, threadId, onCreatedThread }: Props) {
+export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, candidateName = null, openedContext = null, threadId, onCreatedThread }: Props) {
   const { data: messages = [], isLoading } = useCopilotMessages(threadId);
   const create = useCreateCopilotThread();
   const send = useSendCopilotMessage();
@@ -128,16 +236,11 @@ export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, c
   const isSending = send.isPending || create.isPending;
   const hasMessages = messages.length > 0;
   const candidateLabel = candidateName?.trim() || "ce candidat";
-  const suggestions = sessionId
-    ? suggestionsForCandidate(candidateLabel)
-    : mode === "design"
-      ? SUGGESTIONS_DESIGN
-      : SUGGESTIONS_ANALYSIS;
-  const placeholder = sessionId
-    ? `Posez une question sur ${candidateLabel}…`
-    : mode === "design"
-      ? "Posez une question sur la conception de l'entretien…"
-      : "Posez une question sur les candidats…";
+  const empty = useMemo(
+    () => emptyStateFor(openedContext, mode, sessionId, candidateLabel),
+    [openedContext, mode, sessionId, candidateLabel],
+  );
+  const { suggestions, title, hint, placeholder } = empty;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -145,20 +248,8 @@ export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, c
         {!hasMessages && !isLoading && (
           <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
             <Sparkles className="h-8 w-8 text-primary" />
-            <p className="text-sm font-medium">
-              {sessionId
-                ? `Approfondir le profil de ${candidateLabel}`
-                : mode === "design"
-                  ? "Co-construisez votre entretien avec l'IA"
-                  : "Posez une question sur les candidats du projet"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {sessionId
-                ? "Le copilote s'appuie sur le rapport d'évaluation de ce candidat."
-                : mode === "design"
-                  ? "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux."
-                  : "Le copilote s'appuie sur les rapports d'évaluation déjà générés."}
-            </p>
+            <p className="text-sm font-medium">{title}</p>
+            <p className="text-xs text-muted-foreground">{hint}</p>
 
             <div className="mt-2 flex flex-col gap-2">
               {suggestions.map((s) => (
@@ -224,6 +315,7 @@ export function CopilotChatWindow({ projectId, userId, mode, sessionId = null, c
     </div>
   );
 }
+
 
 function MessageBubble({
   role,

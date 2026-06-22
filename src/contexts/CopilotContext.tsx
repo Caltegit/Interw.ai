@@ -1,18 +1,38 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
 import { useLocation, useParams, matchPath } from "react-router-dom";
 import type { CopilotMode } from "@/hooks/queries/useCopilot";
 import { useSessionContext } from "@/hooks/queries/useSessionContext";
+
+export type CopilotContextKind =
+  | "projects-list"
+  | "project-detail"
+  | "compare"
+  | "stats"
+  | "project-edit"
+  | "public-page"
+  | "session"
+  | "library"
+  | "generic";
+
+export interface CopilotOpenContext {
+  kind: CopilotContextKind;
+  projectId?: string;
+  sessionId?: string;
+}
 
 interface CopilotContextValue {
   open: boolean;
   setOpen: (v: boolean) => void;
   toggle: () => void;
+  openCopilot: () => void;
   /** Projet actif détecté via la route (projet ou session), ou null. */
   activeProjectId: string | null;
   /** Session active détectée via la route, ou null. */
   activeSessionId: string | null;
   /** Nom du candidat de la session active, si connu. */
   activeCandidateName: string | null;
+  /** Contexte capturé au moment de l'ouverture du copilote. */
+  openedContext: CopilotOpenContext | null;
   /** True si le bouton flottant doit être visible. */
   visible: boolean;
   /** État persistant entre navigations. */
@@ -31,13 +51,38 @@ const PROJECT_ROUTE_PATTERNS = [
   "/projects/:id/edit",
   "/projects/:id/public-page",
   "/projects/:id/compare",
+  "/projects/:id/stats",
 ];
 
+function detectContext(pathname: string): CopilotOpenContext {
+  const session = matchPath({ path: "/sessions/:id", end: false }, pathname);
+  if (session && !pathname.endsWith("/export")) {
+    return { kind: "session", sessionId: session.params.id };
+  }
+  const compare = matchPath({ path: "/projects/:id/compare", end: false }, pathname);
+  if (compare) return { kind: "compare", projectId: compare.params.id };
+  const stats = matchPath({ path: "/projects/:id/stats", end: false }, pathname);
+  if (stats) return { kind: "stats", projectId: stats.params.id };
+  const pub = matchPath({ path: "/projects/:id/public-page", end: false }, pathname);
+  if (pub) return { kind: "public-page", projectId: pub.params.id };
+  const edit = matchPath({ path: "/projects/:id/edit", end: false }, pathname);
+  if (edit) return { kind: "project-edit", projectId: edit.params.id };
+  if (pathname === "/projects/new") return { kind: "project-edit" };
+  const detail = matchPath({ path: "/projects/:id", end: true }, pathname);
+  if (detail) return { kind: "project-detail", projectId: detail.params.id };
+  if (pathname === "/projects" || pathname === "/dashboard" || pathname === "/projects/archives") {
+    return { kind: "projects-list" };
+  }
+  if (pathname.startsWith("/library")) return { kind: "library" };
+  return { kind: "generic" };
+}
+
 export function CopilotProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
   const [mode, setMode] = useState<CopilotMode>("analysis");
   const [pickedProjectId, setPickedProjectId] = useState<string | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [openedContext, setOpenedContext] = useState<CopilotOpenContext | null>(null);
   const location = useLocation();
   const params = useParams();
 
@@ -46,7 +91,6 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     [location.pathname],
   );
   const routeSessionId = sessionMatch?.params?.id ?? null;
-  // Exclure les sous-routes type /sessions/:id/export
   const activeSessionId =
     routeSessionId && !location.pathname.endsWith("/export") ? routeSessionId : null;
 
@@ -71,14 +115,34 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     return true;
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (!visible && open) setOpen(false);
-  }, [visible, open]);
+  const setOpen = useCallback((v: boolean) => {
+    setOpenState(v);
+    if (!v) setOpenedContext(null);
+  }, []);
 
-  // En page session, on force le mode analyse
+  const openCopilot = useCallback(() => {
+    const ctx = detectContext(location.pathname);
+    setOpenedContext(ctx);
+    if (ctx.kind === "project-edit") setMode("design");
+    else if (ctx.kind === "session") setMode("analysis");
+    setOpenState(true);
+  }, [location.pathname]);
+
+  const toggle = useCallback(() => {
+    if (open) {
+      setOpenState(false);
+      setOpenedContext(null);
+    } else {
+      openCopilot();
+    }
+  }, [open, openCopilot]);
+
   useEffect(() => {
-    if (activeSessionId && mode !== "analysis") setMode("analysis");
-  }, [activeSessionId, mode]);
+    if (!visible && open) {
+      setOpenState(false);
+      setOpenedContext(null);
+    }
+  }, [visible, open]);
 
   // Reset thread quand projet/session effectif ou mode change
   const effectiveProjectId = activeProjectId ?? pickedProjectId;
@@ -90,10 +154,12 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     () => ({
       open,
       setOpen,
-      toggle: () => setOpen((v) => !v),
+      toggle,
+      openCopilot,
       activeProjectId,
       activeSessionId,
       activeCandidateName,
+      openedContext,
       visible,
       mode,
       setMode,
@@ -102,7 +168,7 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
       activeThreadId,
       setActiveThreadId,
     }),
-    [open, activeProjectId, activeSessionId, activeCandidateName, visible, mode, pickedProjectId, activeThreadId],
+    [open, setOpen, toggle, openCopilot, activeProjectId, activeSessionId, activeCandidateName, openedContext, visible, mode, pickedProjectId, activeThreadId],
   );
 
   return <CopilotContext.Provider value={value}>{children}</CopilotContext.Provider>;
@@ -113,3 +179,4 @@ export function useCopilot() {
   if (!ctx) throw new Error("useCopilot doit être utilisé dans <CopilotProvider>");
   return ctx;
 }
+

@@ -20,6 +20,7 @@ export function CopilotPanelContent({ inline = false }: Props) {
     activeProjectId,
     activeSessionId,
     activeCandidateName,
+    openedContext,
     mode,
     setMode,
     pickedProjectId,
@@ -27,6 +28,7 @@ export function CopilotPanelContent({ inline = false }: Props) {
     activeThreadId,
     setActiveThreadId,
   } = useCopilot();
+
   const { user } = useAuth();
   const projectId = activeProjectId ?? pickedProjectId;
   const sessionScope = activeSessionId ?? null;
@@ -102,6 +104,8 @@ export function CopilotPanelContent({ inline = false }: Props) {
               mode={mode}
               sessionId={sessionScope}
               candidateName={activeCandidateName}
+              openedContext={openedContext}
+
               threadId={activeThreadId}
               onCreatedThread={setActiveThreadId}
             />
