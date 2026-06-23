@@ -1,79 +1,52 @@
-## Objectif
+## Diagnostic
 
-Quand on ouvre le copilote IA, les suggestions de questions (état vide) s'adaptent à la page courante. Une fois le copilote ouvert, la liste reste figée tant qu'on ne le rouvre pas (snapshot à l'ouverture).
+La session de Stéphanie Goldité (id `8cbd5ba7-2a4a-4d21-afcd-ff58d188972a`) a ses 8 fichiers vidéo stockés avec l'extension `.webm` et servis par Supabase Storage avec `Content-Type: video/webm`.
 
-## Contextes détectés et suggestions associées
+Mais quand on télécharge `q0.webm` et qu'on l'inspecte avec `ffprobe`, le conteneur réel est **MP4** (H.264 + AAC) :
 
-Détection via `location.pathname` au moment où `open` passe à `true`.
+```
+format_name = mov,mp4,m4a,3gp,3g2,mj2
+codec_name  = h264 / aac
+```
 
-1. **Liste des projets** (`/projects`, `/dashboard`)
-   - "Quels projets ont le plus de candidats à départager ?"
-   - "Sur quels projets manque-t-il des critères d'évaluation ?"
-   - "Résume l'avancement de mes projets en cours."
+Autrement dit, le fichier est un MP4 déguisé en WebM. Sur Chromium ça passe parfois en force, mais le `<video>` refuse souvent de décoder, et sur Safari/Firefox la lecture échoue silencieusement. C'est ce qui se passe sur ce rapport.
 
-2. **Détail projet** (`/projects/:id`) — liste des candidats
-   - "Quels sont les 3 candidats les plus prometteurs ?"
-   - "Compare les deux meilleurs profils."
-   - "Quels candidats présentent des points de vigilance ?"
+La cause amont : la candidate a passé l'entretien sur un navigateur (très probablement Safari iOS/macOS) où `MediaRecorder` ne sait pas produire de WebM et retombe sur du MP4, mais notre code d'upload garde quand même l'extension `.webm` et le `contentType: "video/webm"`.
 
-3. **Comparateur** (`/projects/:id/compare`)
-   - "Quelles différences clés entre les candidats sélectionnés ?"
-   - "Lequel recommander pour un second entretien et pourquoi ?"
-   - "Quel profil correspond le mieux aux critères prioritaires ?"
+## Plan
 
-4. **Statistiques projet** (`/projects/:id/stats`)
-   - "Quels critères discriminent le plus les candidats ?"
-   - "Identifie les tendances sur les soft skills."
-   - "Quelle question génère les réponses les plus pauvres ?"
+### 1. Réparer la session de Stéphanie (correctif immédiat)
 
-5. **Création / édition projet** (`/projects/new`, `/projects/:id/edit`)
-   - "Propose-moi 5 questions pour ce poste."
-   - "Suggère 3 critères d'évaluation manquants."
-   - "Améliore la formulation de mes questions actuelles."
-   - "Mes questions couvrent-elles bien tous les critères ?"
-   - Force `mode = "design"` à l'ouverture.
+Créer une edge function `repair-session-media` qui :
 
-6. **Page publique projet** (`/projects/:id/public-page`)
-   - "Rédige une description attractive du poste."
-   - "Propose un titre accrocheur pour cette annonce."
-   - "Quels avantages mettre en avant ?"
+- Pour chaque `session_messages.video_segment_url` et `audio_segment_url` de la session ciblée :
+  - télécharge les 16 premiers octets et détecte la signature (`ftyp` à l'offset 4 → MP4 ; `1A 45 DF A3` → WebM)
+  - si la signature ne correspond pas à l'extension :
+    - réuploade le fichier sous le même chemin avec `contentType` correct (`video/mp4` ou `audio/mp4`)
+    - duplique aussi le fichier sous la bonne extension (`q0.mp4`) pour les navigateurs qui se fient à l'URL
+    - met à jour `video_segment_url` / `audio_segment_url` en base vers la version `.mp4`
+- Met aussi à jour `sessions.video_recording_url`
 
-7. **Détail session / rapport** (`/sessions/:id`) — déjà en place
-   - Suggestions candidat conservées (forces/faiblesses, relances, etc.).
+Lancer cette fonction une fois sur `session_id = 8cbd5ba7-2a4a-4d21-afcd-ff58d188972a` pour débloquer la lecture du rapport.
 
-8. **Bibliothèque questions / critères / intros / sessions** (`/library/*`)
-   - "Propose 5 nouvelles questions à ajouter à ma bibliothèque."
-   - "Quels critères génériques manque-t-il dans mes ressources ?"
-   - "Suggère des questions adaptées à un poste de [type]."
+### 2. Corriger l'enregistrement (correctif durable)
 
-9. **Fallback** (autres pages : Settings, Feedback, etc.)
-   - Suggestions génériques actuelles (analyse).
+Dans le code d'upload des segments d'entretien (côté `InterviewStart` / hook MediaRecorder), au lieu de forcer `.webm` :
 
-## Détails techniques
+- lire `mediaRecorder.mimeType` réel après instanciation
+- dériver l'extension (`webm` / `mp4`) et le `contentType` à partir de cette valeur
+- construire le chemin de stockage avec la bonne extension
+- enregistrer cette URL exacte dans `session_messages`
 
-### `src/contexts/CopilotContext.tsx`
-- Ajouter `openedContext: CopilotOpenContext | null` au state, où `CopilotOpenContext = { kind: "projects-list" | "project-detail" | "compare" | "stats" | "project-edit" | "public-page" | "session" | "library" | "generic"; projectId?: string; sessionId?: string }`.
-- Capturer `location.pathname` dans un wrapper `openCopilot()` qui calcule `openedContext` une seule fois. Exposer ce wrapper à la place du `setOpen(true)` direct utilisé par le bouton flottant.
-- Reset `openedContext = null` lors de la fermeture.
-- Si `kind === "project-edit"`, forcer `mode = "design"` au moment de l'ouverture (pas à chaque render).
+Comme ça les futures sessions Safari arrivent directement en `.mp4` propre et lisibles partout.
 
-### `src/components/copilot/CopilotFloatingButton.tsx`
-- Remplacer l'appel `toggle()` par `open ? setOpen(false) : openCopilot()` afin que le snapshot du contexte se fasse à l'ouverture uniquement.
+### 3. Garde-fou côté lecteur
 
-### `src/components/copilot/CopilotChatWindow.tsx`
-- Accepter une prop `openedContext` (passée par `CopilotPanelContent`).
-- Remplacer le calcul actuel `suggestions = sessionId ? ... : mode === "design" ? ... : ...` par une fonction `suggestionsFor(openedContext, mode, candidateName)` qui retourne le tableau correspondant au tableau ci-dessus.
-- Adapter le placeholder + le titre de l'état vide aux mêmes cas (1–2 phrases courtes par contexte, sans verbiage).
+Dans `SessionVideoNavigator` (et `HighlightReelPlayer`), ne pas hardcoder l'attribut `type` du `<video>` ; laisser le navigateur sniffer, ce qui rend le lecteur robuste si un fichier mal taggué passe encore en prod.
 
-### `src/components/copilot/CopilotPanelContent.tsx`
-- Lire `openedContext` depuis le contexte et le transmettre à `CopilotChatWindow`.
-- Pas de changement de structure (project picker, threads, mode tabs restent identiques).
+### Détails techniques
 
-### Hors périmètre
-- Pas de modification du backend (`copilot-chat`) : seul l'UX des suggestions change.
-- Pas de modification du schéma DB.
-- Pas de touche aux pages elles-mêmes.
-
-## Vérification
-- Ouvrir le copilote successivement depuis `/projects`, `/projects/:id`, `/projects/:id/compare`, `/projects/:id/edit`, `/sessions/:id` et confirmer que les suggestions affichées correspondent.
-- Vérifier qu'en naviguant après ouverture, les suggestions ne changent pas tant qu'on ne ferme/rouvre pas le panneau.
+- La détection MP4 vs WebM se fait sur la signature binaire, pas sur l'extension ni le `Content-Type` du storage (qui est justement faux).
+- Le réupload via l'API Storage avec `upsert: true` et `contentType` correct écrase le metadata HTTP servi par le CDN.
+- L'edge function est idempotente : si la signature correspond déjà à l'extension, elle ne touche à rien.
+- On garde l'ancien fichier `.webm` en place pour ne pas casser d'éventuels partages déjà émis ; on ajoute juste le doublon `.mp4` et on bascule les URLs en base.
