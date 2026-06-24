@@ -148,6 +148,13 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     }
   }, [visible, open]);
 
+  // Réinitialise le projet sélectionné si la route impose un projet invalide
+  useEffect(() => {
+    if (location.pathname === "/projects/new" && pickedProjectId !== null) {
+      setPickedProjectId(null);
+    }
+  }, [location.pathname, pickedProjectId]);
+
   // Reset thread quand projet/session effectif ou mode change
   const effectiveProjectId = activeProjectId ?? pickedProjectId;
   useEffect(() => {
