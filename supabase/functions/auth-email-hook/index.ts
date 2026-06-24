@@ -237,12 +237,30 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
+  // Pour magiclink et recovery, on remplace l'URL Supabase (consommée au 1er GET
+  // par les scanners anti-spam type Outlook Safe Links / Defender / Proofpoint…)
+  // par une URL vers notre page /auth/confirm qui exige un clic utilisateur explicite.
+  const tokenHash = (payload.data as Record<string, unknown>).token_hash as string | undefined
+  const redirectTo = (payload.data as Record<string, unknown>).redirect_to as string | undefined
+
+  let confirmationUrl = payload.data.url
+  if (tokenHash && (emailType === 'magiclink' || emailType === 'recovery')) {
+    const next = emailType === 'recovery' ? '/reset-password' : (redirectTo || '/dashboard')
+    const nextParam = next.startsWith('http') ? new URL(next).pathname + new URL(next).search : next
+    const params = new URLSearchParams({
+      token_hash: tokenHash,
+      type: emailType,
+      next: nextParam,
+    })
+    confirmationUrl = `https://${ROOT_DOMAIN}/auth/confirm?${params.toString()}`
+  }
+
   // Build template props from payload.data (HookData structure)
   const templateProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
+    confirmationUrl,
     token: payload.data.token,
     email: payload.data.email,
     newEmail: payload.data.new_email,

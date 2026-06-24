@@ -37,12 +37,8 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/magic-link`,
-            shouldCreateUser: false,
-          },
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
         });
         if (error) throw error;
         setSentToEmail(email);
