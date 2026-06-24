@@ -86,9 +86,13 @@ export function useCreateCopilotThread() {
       mode = "analysis",
       sessionId = null,
     }: { projectId: string; userId: string; mode?: CopilotMode; sessionId?: string | null }) => {
+      if (!isUuid(projectId)) {
+        throw new Error("Choisissez d'abord un projet existant.");
+      }
+      const safeSessionId = isUuid(sessionId) ? sessionId : null;
       const { data, error } = await supabase
         .from("copilot_threads")
-        .insert({ project_id: projectId, created_by: userId, mode, session_id: sessionId })
+        .insert({ project_id: projectId, created_by: userId, mode, session_id: safeSessionId })
         .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
         .single();
       if (error) throw error;
