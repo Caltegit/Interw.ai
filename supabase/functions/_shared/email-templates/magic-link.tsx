@@ -42,6 +42,9 @@ export const MagicLinkEmail = ({
           Me connecter à {siteName}
         </Button>
         <Text style={smallText}>
+          Une page de confirmation s'ouvrira ; cliquez sur « Me connecter » pour finaliser.
+        </Text>
+        <Text style={smallText}>
           Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :
         </Text>
         <Text style={linkText}>
