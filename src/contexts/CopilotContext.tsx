@@ -54,6 +54,9 @@ const PROJECT_ROUTE_PATTERNS = [
   "/projects/:id/stats",
 ];
 
+const RESERVED_PROJECT_IDS = new Set(["new", "archives"]);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function detectContext(pathname: string): CopilotOpenContext {
   const session = matchPath({ path: "/sessions/:id", end: false }, pathname);
   if (session && !pathname.endsWith("/export")) {
@@ -99,7 +102,8 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
   const projectFromRoute = useMemo<string | null>(() => {
     for (const pattern of PROJECT_ROUTE_PATTERNS) {
       const match = matchPath({ path: pattern, end: false }, location.pathname);
-      if (match?.params?.id) return match.params.id;
+      const id = match?.params?.id;
+      if (id && !RESERVED_PROJECT_IDS.has(id) && UUID_RE.test(id)) return id;
     }
     void params;
     return null;
