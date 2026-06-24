@@ -42,6 +42,9 @@ export const RecoveryEmail = ({
           Choisir un nouveau mot de passe
         </Button>
         <Text style={smallText}>
+          Une page de confirmation s'ouvrira ; cliquez sur « Continuer » pour valider la demande.
+        </Text>
+        <Text style={smallText}>
           Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :
         </Text>
         <Text style={linkText}>

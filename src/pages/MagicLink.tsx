@@ -43,7 +43,7 @@ export default function MagicLink() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/magic-link`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=magiclink&next=/dashboard`,
           shouldCreateUser: false,
         },
       });
