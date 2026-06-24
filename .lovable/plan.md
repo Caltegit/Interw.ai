@@ -1,35 +1,30 @@
-## Bug
+## Problème
+Le Copilote IA reçoit encore `project_id = "new"` lors d’une action sur `/projects/new`. La correction précédente filtre la route dans `CopilotContext`, mais il reste des chemins où une valeur non UUID peut atteindre les requêtes Copilot, notamment création de fil, chargement des fils et envoi depuis l’état du panneau.
 
-Sur l'URL `/projects/new` (création de projet), le copilote IA appelle la base avec `project_id = "new"`, ce qui déclenche `invalid input syntax for type uuid: "new"`.
+## Plan de correction
+1. **Centraliser la validation UUID Copilot**
+   - Ajouter un garde-fou unique côté hooks Copilot pour refuser tout `projectId` qui n’est pas un UUID valide.
+   - Empêcher les requêtes `.eq("project_id", projectId)` et les insertions `copilot_threads` si `projectId` vaut `new`, `archives`, ou toute autre chaîne non UUID.
 
-**Cause** : dans `CopilotContext.tsx`, `PROJECT_ROUTE_PATTERNS` inclut `"/projects/:id"`. Or `matchPath("/projects/:id", "/projects/new")` matche et renvoie `params.id = "new"`. → `activeProjectId = "new"` → `useCopilotThreads` exécute `.eq("project_id", "new")` → erreur Postgres.
+2. **Sécuriser l’interface du panneau**
+   - Dans `CopilotPanelContent`, ne passer au chat que si le projet effectif est un UUID valide.
+   - Sinon, afficher le sélecteur de projet plutôt que le chat, pour éviter toute requête invalide.
 
-## Correctif
+3. **Nettoyer l’état persistant du Copilot**
+   - Réinitialiser `pickedProjectId` et `activeThreadId` quand la route change vers `/projects/new` ou quand le projet détecté n’est pas exploitable.
+   - Éviter qu’un ancien état du panneau continue d’utiliser une valeur invalide.
 
-Dans `src/contexts/CopilotContext.tsx`, ignorer la valeur `"new"` (et toute valeur non-UUID) lors de l'extraction de `projectFromRoute` :
+4. **Améliorer l’erreur utilisateur**
+   - Remplacer le toast technique `invalid input syntax for type uuid: "new"` par un message français simple si le contexte projet est invalide : `Choisissez d’abord un projet existant.`
 
-```ts
-const RESERVED_PROJECT_IDS = new Set(["new", "archives"]);
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+5. **Vérification obligatoire**
+   - Tester dans le navigateur : `/projects/new` → ouvrir Copilote → cliquer une suggestion → aucun toast SQL.
+   - Vérifier aussi une page projet existante → le Copilote charge/crée une conversation normalement.
 
-const projectFromRoute = useMemo<string | null>(() => {
-  for (const pattern of PROJECT_ROUTE_PATTERNS) {
-    const match = matchPath({ path: pattern, end: false }, location.pathname);
-    const id = match?.params?.id;
-    if (id && !RESERVED_PROJECT_IDS.has(id) && UUID_RE.test(id)) return id;
-  }
-  return null;
-}, [location.pathname]);
-```
+## Fichiers concernés
+- `src/hooks/queries/useCopilot.ts`
+- `src/components/copilot/CopilotPanelContent.tsx`
+- éventuellement `src/contexts/CopilotContext.tsx` pour nettoyer l’état sur changement de contexte
 
-Sur `/projects/new`, `activeProjectId` redevient `null` → le copilote affiche `CopilotProjectPicker` (déjà géré) au lieu de planter.
-
-## Fichier touché
-
-- `src/contexts/CopilotContext.tsx` — garde-fou sur `projectFromRoute`.
-
-## Validation
-
-- Naviguer sur `/projects/new`, ouvrir le copilote → plus d'erreur SQL, le picker s'affiche.
-- Naviguer sur un projet existant (`/projects/<uuid>`) → le copilote charge bien les threads.
-- Naviguer sur `/projects/archives` → idem, pas de plantage (même si la route est gérée séparément, ça blinde).
+## Résultat attendu
+Le Copilote ne peut plus envoyer `"new"` à la base, même si l’état React, la route ou une ancienne conversation garde une valeur incorrecte.

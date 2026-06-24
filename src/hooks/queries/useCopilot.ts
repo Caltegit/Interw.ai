@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type CopilotMode = "analysis" | "design";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
+
 export interface CopilotThread {
   id: string;
   project_id: string;
@@ -36,17 +39,19 @@ export function useCopilotThreads(
   mode?: CopilotMode,
   sessionId?: string | null,
 ) {
+  const validProjectId = isUuid(projectId) ? projectId : null;
+  const validSessionId = isUuid(sessionId) ? sessionId : null;
   return useQuery({
-    queryKey: threadsKey(projectId ?? "", userId, mode, sessionId),
-    enabled: !!projectId && !!userId,
+    queryKey: threadsKey(validProjectId ?? "", userId, mode, validSessionId),
+    enabled: !!validProjectId && !!userId,
     queryFn: async () => {
       let q = supabase
         .from("copilot_threads")
         .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
-        .eq("project_id", projectId as string)
+        .eq("project_id", validProjectId as string)
         .order("updated_at", { ascending: false });
       if (mode) q = q.eq("mode", mode);
-      if (sessionId) q = q.eq("session_id", sessionId);
+      if (validSessionId) q = q.eq("session_id", validSessionId);
       else q = q.is("session_id", null);
       const { data, error } = await q;
       if (error) throw error;
@@ -81,9 +86,13 @@ export function useCreateCopilotThread() {
       mode = "analysis",
       sessionId = null,
     }: { projectId: string; userId: string; mode?: CopilotMode; sessionId?: string | null }) => {
+      if (!isUuid(projectId)) {
+        throw new Error("Choisissez d'abord un projet existant.");
+      }
+      const safeSessionId = isUuid(sessionId) ? sessionId : null;
       const { data, error } = await supabase
         .from("copilot_threads")
-        .insert({ project_id: projectId, created_by: userId, mode, session_id: sessionId })
+        .insert({ project_id: projectId, created_by: userId, mode, session_id: safeSessionId })
         .select("id, project_id, session_id, created_by, title, mode, created_at, updated_at")
         .single();
       if (error) throw error;

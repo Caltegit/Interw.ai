@@ -30,7 +30,9 @@ export function CopilotPanelContent({ inline = false }: Props) {
   } = useCopilot();
 
   const { user } = useAuth();
-  const projectId = activeProjectId ?? pickedProjectId;
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const rawProjectId = activeProjectId ?? pickedProjectId;
+  const projectId = rawProjectId && UUID_RE.test(rawProjectId) ? rawProjectId : null;
   const sessionScope = activeSessionId ?? null;
 
   const { data: threads } = useCopilotThreads(projectId, user?.id ?? null, mode, sessionScope);
