@@ -558,6 +558,7 @@ export default function InterviewStart() {
   type PauseSource = "manual" | "auto-silence" | "auto-network";
   const pauseInterviewRef = useRef<((source?: PauseSource) => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
+  const resetSilenceTimerRef = useRef<(() => void) | null>(null);
 
   const clearEndCountdown = useCallback(() => {
     if (silenceEndWarningTimerRef.current) {
@@ -674,6 +675,12 @@ export default function InterviewStart() {
   useEffect(() => {
     armEndWarningRef.current = armEndWarning;
   }, [armEndWarning]);
+
+  // Synchronise le ref de resetSilenceTimer (utilisé depuis le mic watcher
+  // via onVoice — on évite ainsi une dépendance circulaire dans le hook).
+  useEffect(() => {
+    resetSilenceTimerRef.current = resetSilenceTimer;
+  }, [resetSilenceTimer]);
 
   // Mode « salle d'examen » — listeners actifs uniquement quand la session tourne
   useEffect(() => {
