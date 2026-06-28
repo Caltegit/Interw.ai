@@ -3487,16 +3487,9 @@ export default function InterviewStart() {
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
 
-  // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
-  // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
-  // serait sans cesse réarmé par les transitions et les pauses pourraient se
-  // déclencher au mauvais moment.
-  useEffect(() => {
-    if (!liveTranscript) return;
-    if (!isListening || isPaused || isSpeaking || isProcessing) return;
-    if (interviewFinished) return;
-    resetSilenceTimer();
-  }, [liveTranscript, isListening, isPaused, isSpeaking, isProcessing, interviewFinished, resetSilenceTimer]);
+  // Le réarmement du minuteur de silence est désormais piloté par le
+  // `useMicHealthWatcher` via son callback `onVoice` (basé sur le signal RMS).
+  // Plus besoin d'effet React déclenché par une transcription live.
 
   // Quand on quitte la phase d'écoute (IA parle, traitement, pause, fin),
   // on désarme proprement le minuteur de silence pour éviter toute pause auto
