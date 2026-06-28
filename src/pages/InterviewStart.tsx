@@ -1608,7 +1608,7 @@ export default function InterviewStart() {
   // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
   // ─────────────────────────────────────────────────────────────────────────
   const micWatchActive = isListening && !isSpeaking && !isPaused && !isProcessing;
-  const { status: micHealthStatus, hasVoiceSignal } = useMicHealthWatcher({
+  const { status: micHealthStatus, hasVoiceSignal, peak: micHealthPeak } = useMicHealthWatcher({
     stream: streamRef.current,
     active: micWatchActive,
     sessionId: session?.id ?? null,
