@@ -797,13 +797,46 @@ export default function InterviewStart() {
   // module a été tree-shaké.
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void ensureAudioContextRunning();
-      }
+      if (document.visibilityState !== "visible") return;
+      void ensureAudioContextRunning();
+      // iOS Safari peut mettre MediaRecorder en "paused" quand l'onglet
+      // passe en arrière-plan. On reprend best-effort.
+      try {
+        const rec = questionRecorderRef.current;
+        if (rec && rec.state === "paused") rec.resume();
+      } catch { /* ignore */ }
+      try {
+        const arec = questionAudioRecorderRef.current;
+        if (arec && arec.state === "paused") arec.resume();
+      } catch { /* ignore */ }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
+  // Watchdog MediaRecorder : sur certains Android Chrome, recorder.state peut
+  // basculer en "inactive" sans déclencher onstop. Toutes les 5 s pendant un
+  // enregistrement, on vérifie et on redémarre en préservant chunkIdxBase.
+  useEffect(() => {
+    if (!isRecordingActive || isPaused) return;
+    const t = setInterval(() => {
+      const rec = questionRecorderRef.current;
+      if (!rec) return;
+      if (rec.state === "inactive") {
+        logger.warn("interview_recorder_state_watchdog", {
+          sessionId: session?.id ?? null,
+          state: rec.state,
+        });
+        void restartActiveRecorderAfterAudioSwapRef.current?.();
+      } else if (rec.state === "paused") {
+        try { rec.resume(); } catch { /* ignore */ }
+      }
+    }, 5000);
+    return () => clearInterval(t);
+    // restartActiveRecorderAfterAudioSwap lu via ref pour éviter ré-installation
+    // à chaque re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRecordingActive, isPaused, session?.id]);
+
 
   // Ref miroir vers reacquireMic, pour usage dans listeners async.
   const reacquireMicRef = useRef<(() => Promise<void>) | null>(null);
@@ -1522,6 +1555,16 @@ export default function InterviewStart() {
           stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: buildAudioConstraints(null) });
         }
         streamRef.current = stream;
+        // Log unique des contraintes réellement appliquées (diagnostic post-mortem).
+        try {
+          const aTrack = stream.getAudioTracks()[0];
+          const vTrack = stream.getVideoTracks()[0];
+          logger.warn("interview_media_acquired", {
+            sessionId: session?.id ?? null,
+            audio: aTrack?.getSettings?.() ?? null,
+            videoLabel: vTrack?.label ?? null,
+          });
+        } catch { /* ignore */ }
       }
       reattachAllSelfViews();
     } catch (err) {
@@ -1550,6 +1593,7 @@ export default function InterviewStart() {
   // courant, puis on redémarre un nouveau MediaRecorder sur le stream mis à
   // jour. La numérotation des chunks continue (chunkIdxBase) pour ne pas
   // écraser les chunks précédents déjà uploadés.
+  const restartActiveRecorderAfterAudioSwapRef = useRef<(() => Promise<void>) | null>(null);
   const restartActiveRecorderAfterAudioSwap = useCallback(async () => {
     const previous = activeQuestionRecordingRef.current;
     if (!previous) return;
@@ -1603,12 +1647,17 @@ export default function InterviewStart() {
       setSwitchingDevice(false);
     }
   }, [toast, session?.id]);
+  useEffect(() => {
+    restartActiveRecorderAfterAudioSwapRef.current = restartActiveRecorderAfterAudioSwap;
+  }, [restartActiveRecorderAfterAudioSwap]);
+
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
   // ─────────────────────────────────────────────────────────────────────────
   const micWatchActive = isListening && !isSpeaking && !isPaused && !isProcessing;
-  const { status: micHealthStatus, hasVoiceSignal } = useMicHealthWatcher({
+  const { status: micHealthStatus, hasVoiceSignal, peak: micHealthPeak } = useMicHealthWatcher({
     stream: streamRef.current,
     active: micWatchActive,
     sessionId: session?.id ?? null,
@@ -1861,6 +1910,17 @@ export default function InterviewStart() {
         );
         recording.uploadPromises.push(uploadPromise);
       };
+      recorder.onerror = (ev) => {
+        const err = (ev as unknown as { error?: { name?: string; message?: string } }).error;
+        logger.error("interview_video_recorder_error", {
+          sessionId,
+          questionIndex,
+          name: err?.name ?? null,
+          message: err?.message ?? null,
+        });
+        // Tentative de récupération : redémarrer le recorder en préservant le chunkIdxBase.
+        void restartActiveRecorderAfterAudioSwap();
+      };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
       // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
       // Sur Safari, le MIME demandé peut être ignoré silencieusement.
@@ -1901,6 +1961,15 @@ export default function InterviewStart() {
             if (activeQuestionRecordingRef.current !== recording) return;
             if (recording.audioRecorder !== audioRec) return;
             audioChunks.push(e.data);
+          };
+          audioRecorder.onerror = (ev) => {
+            const err = (ev as unknown as { error?: { name?: string; message?: string } }).error;
+            logger.error("interview_audio_recorder_error", {
+              sessionId: session?.id ?? null,
+              questionIndex,
+              name: err?.name ?? null,
+              message: err?.message ?? null,
+            });
           };
           audioRecorder.start(1000);
           // SOURCE DE VÉRITÉ pour l'audio aussi.
@@ -4255,6 +4324,7 @@ export default function InterviewStart() {
                             status={micHealthStatus}
                             reacquiring={reacquiringMic}
                             onReacquire={reacquireMic}
+                            peak={micHealthPeak}
                           />
                         )}
                         <div className="flex items-center justify-center gap-3 py-2">
