@@ -8,6 +8,8 @@ interface MicFailureBannerProps {
   reacquiring?: boolean;
   onReacquire: () => void;
   onChangeDevice?: () => void;
+  /** Pic RMS instantané (0 → 1) du flux micro, pour mini vu-mètre. */
+  peak?: number;
 }
 
 /**
