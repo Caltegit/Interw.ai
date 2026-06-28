@@ -4007,7 +4007,7 @@ export default function InterviewStart() {
                 {/* Bandeau d'état */}
                 {(() => {
                   if (interviewFinished) return null;
-                  const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                  const hasVoice = hasVoiceSignal;
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
                   const configuredMax = currentQ?.max_response_seconds as number | null | undefined;
                   const hasTimeLimit = Boolean(configuredMax && configuredMax > 0);
@@ -4084,7 +4084,7 @@ export default function InterviewStart() {
 
                   // État "listening" : on fusionne le vu-mètre et le bouton dans une seule carte
                   if (isListening && !isProcessing && !isSpeaking && !interviewFinished) {
-                    const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                    const hasVoice = hasVoiceSignal;
                     return (
                       <div
                         className="rounded-2xl border p-3 sm:p-4 space-y-3 shadow-lg"
