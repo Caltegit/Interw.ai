@@ -353,6 +353,15 @@ export default function InterviewStart() {
   const currentAudioDeviceIdRef = useRef<string | null>(null);
   useEffect(() => { currentAudioDeviceIdRef.current = currentAudioDeviceId; }, [currentAudioDeviceId]);
   const [micCalibration, setMicCalibration] = useState<MicCalibration | null>(null);
+  // Chargement de la calibration depuis le sessionStorage du test technique.
+  // Reste null si le candidat n'a pas (encore) passé le test → seuils par défaut.
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const cal = loadMicCalibration(token);
+      if (cal) setMicCalibration(cal);
+    } catch { /* ignore */ }
+  }, [token]);
   const [switchingDevice, setSwitchingDevice] = useState(false);
   const pausedDuringQuestionRef = useRef(false);
   // Snapshot of the presentation at pause-time, used by resumeInterview
