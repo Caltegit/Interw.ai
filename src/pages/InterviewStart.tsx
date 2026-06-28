@@ -1714,8 +1714,8 @@ export default function InterviewStart() {
     // handlers). On expose les références partagées pour la lecture par
     // stopAndUploadQuestionVideo, mais aucun ancien handler ne peut plus écrire
     // dedans car ils ont été détachés ci-dessus.
-    const videoChunks: Blob[] = [];
-    const audioChunks: Blob[] = [];
+    const videoChunks: Blob[] = opts?.carryVideoChunks ? [...opts.carryVideoChunks] : [];
+    const audioChunks: Blob[] = opts?.carryAudioChunks ? [...opts.carryAudioChunks] : [];
     const chunkIdxBase = opts?.chunkIdxBase ?? 0;
     let localChunkIdx = 0;
     questionVideoChunksRef.current = videoChunks;
