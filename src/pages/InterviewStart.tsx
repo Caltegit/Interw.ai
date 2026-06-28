@@ -1861,6 +1861,17 @@ export default function InterviewStart() {
         );
         recording.uploadPromises.push(uploadPromise);
       };
+      recorder.onerror = (ev) => {
+        const err = (ev as unknown as { error?: { name?: string; message?: string } }).error;
+        logger.error("interview_video_recorder_error", {
+          sessionId,
+          questionIndex,
+          name: err?.name ?? null,
+          message: err?.message ?? null,
+        });
+        // Tentative de récupération : redémarrer le recorder en préservant le chunkIdxBase.
+        void restartActiveRecorderAfterAudioSwap();
+      };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
       // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
       // Sur Safari, le MIME demandé peut être ignoré silencieusement.
