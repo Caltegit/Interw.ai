@@ -813,6 +813,30 @@ export default function InterviewStart() {
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
+  // Watchdog MediaRecorder : sur certains Android Chrome, recorder.state peut
+  // basculer en "inactive" sans déclencher onstop. Toutes les 5 s pendant un
+  // enregistrement, on vérifie et on redémarre en préservant chunkIdxBase.
+  useEffect(() => {
+    if (!isRecordingActive || isPaused) return;
+    const t = setInterval(() => {
+      const rec = questionRecorderRef.current;
+      if (!rec) return;
+      if (rec.state === "inactive") {
+        logger.warn("interview_recorder_state_watchdog", {
+          sessionId: session?.id ?? null,
+          state: rec.state,
+        });
+        void restartActiveRecorderAfterAudioSwapRef.current?.();
+      } else if (rec.state === "paused") {
+        try { rec.resume(); } catch { /* ignore */ }
+      }
+    }, 5000);
+    return () => clearInterval(t);
+    // restartActiveRecorderAfterAudioSwap lu via ref pour éviter ré-installation
+    // à chaque re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRecordingActive, isPaused, session?.id]);
+
 
   // Ref miroir vers reacquireMic, pour usage dans listeners async.
   const reacquireMicRef = useRef<(() => Promise<void>) | null>(null);
