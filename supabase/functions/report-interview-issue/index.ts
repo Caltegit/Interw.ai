@@ -128,6 +128,29 @@ Deno.serve(async (req) => {
       return json(500, { error: `Enregistrement du message impossible : ${mErr.message}` })
     }
 
+    // Copie email vers hello@interw.ai (fire-and-forget)
+    try {
+      const reportedAt = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
+      await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'interview-issue-report',
+          recipientEmail: 'hello@interw.ai',
+          idempotencyKey: `interview-issue-${thread.id}`,
+          templateData: {
+            candidateName,
+            candidateEmail: session.candidate_email || '',
+            jobTitle,
+            projectTitle,
+            message,
+            sessionUrl: `https://interw.ai/sessions/${session.id}`,
+            reportedAt,
+          },
+        },
+      })
+    } catch (e) {
+      console.warn('[report-issue] copie email échouée', e)
+    }
+
     console.log('[report-issue] success', { thread_id: thread.id })
     return json(200, { ok: true, threadId: thread.id })
   } catch (e) {
