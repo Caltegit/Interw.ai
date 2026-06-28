@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,10 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
-import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints, loadMicCalibration, type MicCalibration } from "@/lib/micLevel";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
+import { extFromMime } from "@/lib/mediaExt";
+import { ensureAudioContextRunning } from "@/lib/audioContext";
 import DeviceSelector from "@/components/interview/DeviceSelector";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
@@ -346,6 +348,20 @@ export default function InterviewStart() {
   // Liste des micros détectés (utile sur l'écran de pause auto-silence).
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [currentAudioDeviceId, setCurrentAudioDeviceId] = useState<string | null>(null);
+  // Ref miroir : permet aux callbacks async (devicechange, reacquire) de lire
+  // la valeur courante sans attendre le prochain render.
+  const currentAudioDeviceIdRef = useRef<string | null>(null);
+  useEffect(() => { currentAudioDeviceIdRef.current = currentAudioDeviceId; }, [currentAudioDeviceId]);
+  const [micCalibration, setMicCalibration] = useState<MicCalibration | null>(null);
+  // Chargement de la calibration depuis le sessionStorage du test technique.
+  // Reste null si le candidat n'a pas (encore) passé le test → seuils par défaut.
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const cal = loadMicCalibration(token);
+      if (cal) setMicCalibration(cal);
+    } catch { /* ignore */ }
+  }, [token]);
   const [switchingDevice, setSwitchingDevice] = useState(false);
   const pausedDuringQuestionRef = useRef(false);
   // Snapshot of the presentation at pause-time, used by resumeInterview
@@ -423,6 +439,9 @@ export default function InterviewStart() {
     audioChunks: Blob[];
     uploadedChunkPaths: string[];
     uploadPromises: Promise<unknown>[];
+    /** Offset ajouté au compteur de chunks local — utile lors d'un restart à chaud
+     *  (changement de micro, réacquisition) pour ne pas écraser les chunks précédents. */
+    chunkIdxBase: number;
   };
   const activeQuestionRecordingRef = useRef<ActiveQuestionRecording | null>(null);
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
@@ -742,6 +761,53 @@ export default function InterviewStart() {
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [readyToStart, interviewFinished, session?.id, currentQuestionIndex]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Surveillance périphériques : si le micro courant disparaît (débranchement,
+  // changement d'OS), on déclenche une réacquisition automatique. Sans ça,
+  // le candidat continue d'enregistrer dans le vide jusqu'au prochain
+  // diagnostic visuel.
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) return;
+    const handler = async () => {
+      const currentId = currentAudioDeviceIdRef.current;
+      if (!currentId) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const stillThere = devices.some((d) => d.kind === "audioinput" && d.deviceId === currentId);
+        if (!stillThere) {
+          logger.warn("interview_audio_device_disappeared", {
+            sessionId: session?.id ?? null,
+            previousDeviceId: currentId,
+          });
+          // Déclenche une réacquisition (qui retombera sur le device par défaut).
+          await reacquireMicRef.current?.();
+        }
+      } catch { /* ignore */ }
+    };
+    navigator.mediaDevices.addEventListener("devicechange", handler);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", handler);
+  }, [session?.id]);
+
+  // visibilitychange : quand on revient sur l'onglet, l'AudioContext peut
+  // avoir été suspendu par le navigateur (iOS Safari notamment). On le
+  // réveille de façon best-effort. Le watcher d'audioContext.ts ajoute déjà
+  // un listener global, mais on garde un appel local pour les cas où le
+  // module a été tree-shaké.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void ensureAudioContextRunning();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Ref miroir vers reacquireMic, pour usage dans listeners async.
+  const reacquireMicRef = useRef<(() => Promise<void>) | null>(null);
+
 
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
@@ -1475,6 +1541,29 @@ export default function InterviewStart() {
   // Change le micro à chaud (utilisé depuis l'écran d'aide « auto-silence »).
   // On stoppe les tracks audio actuels et on rebranche un nouveau MediaStream
   // qui combine la vidéo existante + l'audio du nouveau périphérique.
+  // Ref forward-déclarée pour éviter le TDZ : startQuestionRecording est
+  // défini plus bas dans la portée mais ce helper doit pouvoir y faire appel.
+  const startQuestionRecordingRef = useRef<((opts?: { chunkIdxBase?: number; carryChunkPaths?: string[]; carryVideoChunks?: Blob[]; carryAudioChunks?: Blob[] }) => Promise<void>) | null>(null);
+
+  // Helper partagé : après une bascule de piste audio (changement de micro,
+  // réacquisition après perte), on FLUSH puis on stoppe proprement le recorder
+  // courant, puis on redémarre un nouveau MediaRecorder sur le stream mis à
+  // jour. La numérotation des chunks continue (chunkIdxBase) pour ne pas
+  // écraser les chunks précédents déjà uploadés.
+  const restartActiveRecorderAfterAudioSwap = useCallback(async () => {
+    const previous = activeQuestionRecordingRef.current;
+    if (!previous) return;
+    const starter = startQuestionRecordingRef.current;
+    if (!starter) return;
+    const carryChunkPaths = [...previous.uploadedChunkPaths];
+    const carryVideoChunks = [...previous.videoChunks];
+    const carryAudioChunks = [...previous.audioChunks];
+    const nextChunkBase = (previous.chunkIdxBase ?? 0) + previous.videoChunks.length + 1;
+    try { previous.recorder.requestData(); } catch { /* ignore */ }
+    try { previous.audioRecorder?.requestData(); } catch { /* ignore */ }
+    await starter({ chunkIdxBase: nextChunkBase, carryChunkPaths, carryVideoChunks, carryAudioChunks });
+  }, []);
+
   const switchAudioDevice = useCallback(async (deviceId: string) => {
     if (!deviceId) return;
     setSwitchingDevice(true);
@@ -1493,6 +1582,11 @@ export default function InterviewStart() {
         try { existing?.addTrack(t); } catch { /* ignore */ }
       });
       setCurrentAudioDeviceId(deviceId);
+      // CRUCIAL : MediaRecorder ne re-souscrit pas aux nouvelles pistes ajoutées.
+      // Il faut le redémarrer pour que la nouvelle source audio soit réellement
+      // capturée. Sans ça, le swap ne corrige rien — l'enregistreur continue à
+      // lire la piste morte. Voir useMicHealthWatcher (track-dead → reacquire).
+      await restartActiveRecorderAfterAudioSwap();
       toast({ title: "Micro changé", description: "Cliquez sur Reprendre pour continuer." });
     } catch (err) {
       logger.warn("interview_switch_audio_device_failed", {
@@ -1518,6 +1612,7 @@ export default function InterviewStart() {
     stream: streamRef.current,
     active: micWatchActive,
     sessionId: session?.id ?? null,
+    calibration: micCalibration,
     onVoice: () => resetSilenceTimerRef.current?.(),
   });
   const [reacquiringMic, setReacquiringMic] = useState(false);
@@ -1555,6 +1650,8 @@ export default function InterviewStart() {
       });
       const newDeviceId = newAudio.getAudioTracks()[0]?.getSettings?.().deviceId || null;
       if (newDeviceId) setCurrentAudioDeviceId(newDeviceId);
+      // Recorder doit être redémarré sur le stream rafraîchi (cf. switchAudioDevice).
+      await restartActiveRecorderAfterAudioSwap();
       toast({
         title: "Micro réactivé",
         description: "Vous pouvez reprendre votre réponse.",
@@ -1579,6 +1676,12 @@ export default function InterviewStart() {
     }
   }, [reacquiringMic, currentAudioDeviceId, toast, session?.id]);
 
+  // Sync de la ref pour permettre aux listeners (devicechange) d'invoquer
+  // la dernière version de reacquireMic sans dépendance directe.
+  useEffect(() => {
+    reacquireMicRef.current = reacquireMic;
+  }, [reacquireMic]);
+
 
 
 
@@ -1595,10 +1698,11 @@ export default function InterviewStart() {
     ) => {
       // Mode démo : aucun upload, aucun enregistrement persisté.
       if (isDemoRef.current) return null;
-      // Utiliser l'extension réelle (mp4 sur Safari/iOS, webm sinon) pour que
-      // les chunks correspondent au contenu et que la reconstruction serveur
-      // les retrouve sans deviner.
-      const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+      // Extension dérivée du MIME réel produit par MediaRecorder (mp4 sur
+      // Safari/iOS, webm sinon, m4a pour l'audio AAC). Évite les chunks
+      // étiquetés .webm contenant en réalité de l'AAC → décodeur perdu.
+      const kind: "audio" | "video" = mime.startsWith("audio/") ? "audio" : "video";
+      const ext = extFromMime(mime, kind);
       const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.${ext}`;
       const backoffs = [500, 1500, 4000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
@@ -1621,23 +1725,60 @@ export default function InterviewStart() {
   );
 
   // Démarre l'enregistrement d'une question en streamant les chunks vers Storage à la volée.
+  // Détection Safari pour prioriser MP4 (seul format réellement supporté).
+  // Sur Chrome/Firefox, on reste sur WebM/Opus (meilleur compromis taille/qualité).
+  const isSafari = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /Safari/.test(ua) && !/Chrome|CriOS|Chromium|Edg|OPR/.test(ua);
+  }, []);
+
   const getSupportedMimeType = useCallback(() => {
-    const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
+    // Ordre : Safari → MP4 explicite en tête, sinon WebM en tête.
+    const safariFirst = [
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4;codecs=avc1,mp4a",
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+    const chromeFirst = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4;codecs=avc1,mp4a",
+      "video/mp4",
+    ];
+    const types = isSafari ? safariFirst : chromeFirst;
     for (const t of types) {
       if (MediaRecorder.isTypeSupported(t)) return t;
     }
     return undefined;
-  }, []);
+  }, [isSafari]);
 
   const getSupportedAudioMimeType = useCallback(() => {
-    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+    const safariFirst = [
+      "audio/mp4;codecs=mp4a.40.2",
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+    ];
+    const chromeFirst = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4;codecs=mp4a.40.2",
+      "audio/mp4",
+    ];
+    const types = isSafari ? safariFirst : chromeFirst;
     for (const t of types) {
       if (MediaRecorder.isTypeSupported(t)) return t;
     }
     return undefined;
-  }, []);
+  }, [isSafari]);
 
-  const startQuestionRecording = useCallback(async () => {
+  const startQuestionRecording = useCallback(async (opts?: { chunkIdxBase?: number; carryChunkPaths?: string[]; carryVideoChunks?: Blob[]; carryAudioChunks?: Blob[] }) => {
     if (!streamRef.current) return;
 
     const previous = activeQuestionRecordingRef.current;
@@ -1666,8 +1807,9 @@ export default function InterviewStart() {
     // handlers). On expose les références partagées pour la lecture par
     // stopAndUploadQuestionVideo, mais aucun ancien handler ne peut plus écrire
     // dedans car ils ont été détachés ci-dessus.
-    const videoChunks: Blob[] = [];
-    const audioChunks: Blob[] = [];
+    const videoChunks: Blob[] = opts?.carryVideoChunks ? [...opts.carryVideoChunks] : [];
+    const audioChunks: Blob[] = opts?.carryAudioChunks ? [...opts.carryAudioChunks] : [];
+    const chunkIdxBase = opts?.chunkIdxBase ?? 0;
     let localChunkIdx = 0;
     questionVideoChunksRef.current = videoChunks;
     questionAudioChunksRef.current = audioChunks;
@@ -1692,8 +1834,9 @@ export default function InterviewStart() {
         audioMime: "audio/webm;codecs=opus",
         videoChunks,
         audioChunks,
-        uploadedChunkPaths: [],
+        uploadedChunkPaths: opts?.carryChunkPaths ? [...opts.carryChunkPaths] : [],
         uploadPromises: [],
+        chunkIdxBase,
       };
       activeQuestionRecordingRef.current = recording;
 
@@ -1702,7 +1845,7 @@ export default function InterviewStart() {
         if (activeQuestionRecordingRef.current !== recording) return;
         videoChunks.push(e.data);
         if (!sessionId) return;
-        const idx = localChunkIdx++;
+        const idx = chunkIdxBase + localChunkIdx++;
         setPendingChunkUploads((n) => n + 1);
         const uploadPromise = trackBackground(
           uploadChunk(sessionId, questionIndex, idx, e.data, recording.chunkMime)
@@ -1719,9 +1862,14 @@ export default function InterviewStart() {
         recording.uploadPromises.push(uploadPromise);
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
+      // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
+      // Sur Safari, le MIME demandé peut être ignoré silencieusement.
+      try {
+        if (recorder.mimeType) recording.chunkMime = recorder.mimeType;
+      } catch { /* ignore */ }
 
-      // Recorder audio séparé (Opus mono ~24 kbps) — utilisé par l'IA pour la transcription.
-      // Permet des réponses bien plus longues (~10 min ≈ 2 Mo) sans dépasser la limite Gateway.
+      // Recorder audio séparé — utilisé par la transcription serveur. Bitrate
+      // remonté à 48 kbps (optimal Gemini Flash audio, voix douces mieux captées).
       try {
         const audioTracks = streamRef.current.getAudioTracks();
         if (audioTracks.length > 0) {
@@ -1732,7 +1880,7 @@ export default function InterviewStart() {
           try {
             const audioOptions: MediaRecorderOptions = {
               ...(audioMime ? { mimeType: audioMime } : {}),
-              audioBitsPerSecond: 24_000,
+              audioBitsPerSecond: 48_000,
             };
             audioRecorder = new MediaRecorder(audioStream, audioOptions);
           } catch (initErr) {
@@ -1755,6 +1903,10 @@ export default function InterviewStart() {
             audioChunks.push(e.data);
           };
           audioRecorder.start(1000);
+          // SOURCE DE VÉRITÉ pour l'audio aussi.
+          try {
+            if (audioRecorder.mimeType) recording.audioMime = audioRecorder.mimeType;
+          } catch { /* ignore */ }
         }
       } catch (e) {
         // Non-bloquant : si l'audio recorder échoue, on retombe sur la vidéo pour la transcription.
@@ -1777,6 +1929,14 @@ export default function InterviewStart() {
       });
     }
   }, [getSupportedMimeType, getSupportedAudioMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
+
+  // Synchronise la ref forward-déclarée pour que restartActiveRecorderAfterAudioSwap
+  // puisse invoquer la dernière version de startQuestionRecording.
+  useEffect(() => {
+    startQuestionRecordingRef.current = startQuestionRecording;
+  }, [startQuestionRecording]);
+
+
 
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
@@ -1843,12 +2003,13 @@ export default function InterviewStart() {
       // Safari/iOS c'est `video/mp4`, sur Chrome/Firefox c'est `video/webm`.
       // Forcer `.webm` partout produisait un fichier illisible sur le rapport
       // (MIME ↔ contenu incohérents → MEDIA_ERR_DECODE).
-      const ext = realMime.startsWith("video/mp4") ? "mp4" : "webm";
+      const ext = extFromMime(realMime, "video");
+      const audioExt = extFromMime(audioMime, "audio");
       const blob = new Blob(videoBufferLocal, { type: realMime });
       const audioChunks = [...audioBufferLocal];
       const chunkPaths = chunkPathsLocal;
       const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
-      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
+      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.${audioExt}`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {
@@ -2107,6 +2268,13 @@ export default function InterviewStart() {
       });
       return;
     }
+
+    // Débloque l'AudioContext partagé (iOS Safari le suspend par défaut).
+    // Doit être appelé depuis un handler d'interaction utilisateur — c'est
+    // bien le cas ici (clic sur « Commencer l'entretien »).
+    void ensureAudioContextRunning();
+
+
 
     // Traçabilité légale du consentement (best-effort, non bloquant)
     if (token && !session.consent_accepted_at && !isDemoRef.current) {

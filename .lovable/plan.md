@@ -1,90 +1,148 @@
-## Idée directrice
-Couper complètement la reconnaissance vocale en direct (`SpeechRecognition`) pendant l'entretien. Toute la détection de présence vocale passe sur une seule mesure RMS (Web Audio). La transcription officielle reste celle générée côté serveur après l'entretien (`transcribe-session`), inchangée.
+# Plan consolidé — fiabilité micro candidat (tout en une fois, sans interférences)
 
-## Pourquoi ça va régler le ressenti « micro qui coupe »
-1. Plus de cycle `recognition.onend → start()` qui perd 100-300 ms d'audio à chaque relance Chrome (~toutes les 30-60 s en `continuous`).
-2. Plus de watchdog STT à 15 s qui tue et relance la reconnaissance.
-3. Plus de transcription affichée qui se fige : l'utilisateur ne peut plus « voir » une coupure qui n'existait pas dans l'enregistrement.
-4. Un seul consommateur audio (le `MediaRecorder`) + un `AnalyserNode` léger → moins de pression CPU sur mobile bas de gamme.
-5. La détection de silence devient purement acoustique (RMS), donc fiable même pour les voix douces — on règle un seuil, pas un parseur de mots.
+J'ai relu les 15 correctifs ensemble pour identifier les dépendances croisées. Plusieurs étaient redondants ou risquaient de se neutraliser. Je les ai regroupés en **5 chantiers ordonnés**, chacun s'appuyant sur le précédent. Une seule passe d'implémentation, testable à la fin.
 
-## Ce qu'on perd (et comment compenser)
-| Perte | Compensation |
-|---|---|
-| Sous-titre live « ce que vous dites » | À retirer de l'UI ; pas de remplacement (de toute façon souvent imprécis, source de stress candidat). |
-| Détection de silence basée sur l'absence de mots transcrits | Détection RMS dans `useMicHealthWatcher` (déjà en place) + nouveau palier « voix faible ». |
-| Auto-relance STT après reprise mobile | Plus nécessaire — le `MediaRecorder` ne dépend pas du gesture iOS. |
-| `liveTranscript` envoyé au backend pendant la session | Inutile : la transcription serveur post-session reste la source de vérité. |
+---
 
-## Plan d'implémentation
+## Carte des dépendances (lue avant de regrouper)
 
-### Étape 1 — Couper la STT côté candidat
-Dans `src/pages/InterviewStart.tsx` :
-- Vider `startListening` / `stopListening` (les laisser comme no-ops ou les remplacer par un `setIsListening(true/false)` purement d'état logique).
-- Supprimer toutes les références à `recognitionRef`, `sttWatchdogRef`, `lastSttResultAtRef`, `candidateTranscriptRef`, `liveTranscript`, `setLiveTranscript`.
-- Supprimer l'écran/élément qui affiche le `liveTranscript` (sous-titre temps réel).
-- Garder `isListening` comme état logique (= « phase d'écoute candidat en cours ») piloté par le flux de question, plus par la STT.
+- **AudioContext singleton** doit exister avant tout le reste : sinon les seuils adaptatifs (chantier 3) et le vu-mètre (chantier 5) restent suspended sur iOS.
+- **MIME effectif via `recorder.mimeType`** doit être posé avant la liste de fallback Safari : sinon on corrige la liste mais on continue d'étiqueter le blob avec l'ancienne valeur.
+- **Reconstruction propre du MediaRecorder lors d'un switch/réacquisition** doit être en place avant d'ajouter le listener `devicechange` : sinon le listener déclenche un bug pire (recorder zombie).
+- **Streaming chunks audio** doit utiliser la même fonction `uploadChunk` que la vidéo et le même MIME effectif : à faire après la fix MIME.
+- **Seuils adaptatifs** doivent lire des valeurs stockées par le test technique : le test technique doit donc d'abord persister `peakUser` et `noiseFloor`.
+- **Visibilitychange pause/resume** doit cohabiter avec le `pagehide` existant sans le doublonner.
 
-### Étape 2 — Contraintes audio explicites (déjà dans le plan précédent, on garde)
-Dans les 3 `getUserMedia` (l.1567, 1605, 1665) + `InterviewDeviceTest.tsx` :
-```ts
-audio: {
-  ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-  echoCancellation: true,
-  noiseSuppression: false,   // cause principale des trous sur voix douces
-  autoGainControl: true,
-  channelCount: 1,
-}
-```
-Centraliser dans `src/lib/micLevel.ts` (`DEFAULT_AUDIO_CONSTRAINTS`).
+Conséquence : l'ordre des chantiers ci-dessous n'est pas négociable.
 
-### Étape 3 — Détection de silence 100 % RMS
-Dans `src/hooks/useMicHealthWatcher.ts` :
-- Retirer le paramètre `liveTranscript` et tout le `useEffect` associé.
-- Baisser `rmsSilenceMax` de 0,015 à 0,008.
-- Ajouter un nouveau status `"weak"` : signal présent mais < 0,02 RMS moyen sur 5 s → bannière informative non bloquante.
-- Garder `silent` (silence total > seuil prolongé) et `track-dead` (track ended).
+---
 
-### Étape 4 — Paliers de silence assouplis
-Dans `InterviewStart.tsx` (l.504-508) :
-- `SILENCE_HINT_MS` : 6 s → 8 s
-- `SILENCE_TIER3_MS` : 12 s → 18 s
-- `SILENCE_AUTOPAUSE_MS` : 20 s → 30 s
-- Avant d'auto-pauser, vérifier `micHealth.peak` moyen sur 5 s : si > 0,008 le candidat émet du son → ne pas pauser, afficher seulement « Parlez un peu plus fort ».
+## Chantier 1 — Socle audio partagé (préalable à tout le reste)
 
-### Étape 5 — Bannière « voix faible »
-Étendre `src/components/interview/MicFailureBanner.tsx` :
-- Variante `weak` (ton neutre, non bloquante) : « On vous entend faiblement. Rapprochez-vous du micro ou changez de périphérique. » + bouton « Changer de micro » (réutilise `switchAudioDevice`).
-- Garder les variantes `silent` (pause auto imminente) et `track-dead` (réacquisition).
+**Objectif : un seul `AudioContext` créé sur geste utilisateur, repris automatiquement, réutilisé partout.**
 
-### Étape 6 — Nettoyage backend léger (optionnel mais propre)
-- Si `session_messages` recevait jusqu'ici un champ avec la transcription live côté candidat, le laisser vide. Le `transcribe-session` post-entretien remplit la transcription finale comme avant.
-- Vérifier qu'aucune logique IA en cours n'utilise `live_transcript` (à confirmer par recherche `rg "liveTranscript|live_transcript"` avant de couper).
+- Nouveau `src/lib/audioContext.ts` : `getSharedAudioContext()` (singleton lazy, `latencyHint: 'interactive'`, `sampleRate: 48000`) + `ensureAudioContextRunning()` + listener interne `visibilitychange → resume()`.
+- Initialisé dès le clic « Commencer l'entretien » dans `InterviewStart.tsx` (dans le même handler que le déblocage TTS).
+- `useMicHealthWatcher`, `MicVolumeMeter`, `MicLevelMeter`, `measureMicLevel` : reçoivent ce contexte en option et ne créent plus le leur. Fallback : si l'option n'est pas passée, comportement actuel conservé.
+- `buildAudioConstraints` enrichi avec `sampleRate: { ideal: 48000, min: 16000 }`.
 
-### Étape 7 — Télémétrie
-Ajouter dans les logs `interview_silence_pause_shown` :
-- `rmsPeak5s` (pic des 5 dernières secondes)
-- `audioSettings` (sortie de `track.getSettings()`)
-Permet de vérifier après mise en prod qu'on n'auto-pause plus que de vrais silences.
+**Pourquoi en premier :** corrige iOS muet, conditionne la fiabilité des seuils et du vu-mètre des chantiers suivants.
 
-## Détails techniques
+---
 
-| Fichier | Changement |
-|---|---|
-| `src/pages/InterviewStart.tsx` | Supprime tout le bloc STT (l.1115-1267 environ), assouplit silences, plug `useMicHealthWatcher` sans `liveTranscript`, retire l'UI sous-titre live |
-| `src/hooks/useMicHealthWatcher.ts` | Retire `liveTranscript`, ajoute status `weak`, baisse seuil |
-| `src/lib/micLevel.ts` | + `DEFAULT_AUDIO_CONSTRAINTS` |
-| `src/pages/InterviewDeviceTest.tsx` | Mêmes contraintes audio + retrait des tests STT si présents |
-| `src/components/interview/MicFailureBanner.tsx` | Variante `weak` |
+## Chantier 2 — Encodage et MIME : une seule source de vérité
 
-Aucune migration BDD, aucune fonction edge à toucher. Réversible (on peut rebrancher la STT plus tard si besoin).
+**Objectif : ce qu'on étiquette = ce qu'on a réellement encodé. Plus de blob AAC marqué webm.**
 
-## Gains attendus
-- Disparition du ressenti « ça coupe » sur 80-90 % des profils touchés.
-- Charge CPU candidat ↓ (mobile bas de gamme).
-- Code candidat ~300 lignes plus court, beaucoup moins de cas limites.
-- Pas d'effet de bord sur le rapport : la transcription finale reste serveur.
+- `getSupportedMimeType` / `getSupportedAudioMimeType` dans `InterviewStart.tsx` :
+  - Vidéo : prioriser `video/mp4;codecs=avc1.42E01E,mp4a.40.2`, puis `video/mp4;codecs=avc1,mp4a`, puis webm vp9/vp8, puis fallback nu.
+  - Audio : prioriser `audio/mp4;codecs=mp4a.40.2` puis `audio/mp4` quand Safari détecté, sinon webm/opus en tête.
+- Après `recorder.start()`, lire `recorder.mimeType` et écraser `recording.videoMime` / `recording.audioMime` avec cette valeur réelle. Utiliser cette valeur pour : `new Blob({ type })`, `uploadChunk(contentType)`, extension Storage (via `extFromMime`).
+- Bitrates : `audioBitsPerSecond: 48_000` (entretien) et `64_000` côté `MediaRecorderField` (intro), `videoBitsPerSecond: 800_000` côté `MediaRecorderField`.
+- `MediaRecorderField.initCamera` : `getUserMedia` avec `buildAudioConstraints(null)` au lieu de `{ audio: true }` brut. `onMediaReady(blob, url, mimeType)` enrichi pour que les appelants utilisent le MIME effectif.
+- `mediaExt.ts` : détection magic bytes (`ftyp`, `OggS`, `1A 45 DF A3`) en fallback si `blob.type` vide.
 
-## Hors-scope
-- Réactiver une STT live conditionnelle (ex. uniquement pour live coaching côté RH) → à reproposer plus tard si besoin produit.
-- Couper aussi la STT côté écran de test technique (`InterviewDeviceTest`) — à voir ; aujourd'hui elle sert à valider que le navigateur supporte la voix, plus à grand-chose si on ne l'utilise plus.
+**Pas d'interférence :** ce chantier ne touche pas le flow de start/stop, juste les étiquettes. Sécurise le chantier 4 (streaming chunks audio) qui repose sur des MIME corrects.
+
+---
+
+## Chantier 3 — Cycle de vie du recorder : switch micro, debranchement, background
+
+**Objectif : ne plus jamais avoir un MediaRecorder qui tourne sur un stream qu'on a muté → cause #1 d'enregistrements silencieux.**
+
+Sous-chantier 3a — **reconstruction propre du recorder** (utilisée par 3b et 3c) :
+- Nouvelle fonction interne `restartRecorderWithStream(newStream)` dans `InterviewStart.tsx` :
+  1. `recorder.requestData()` puis attendre le `ondataavailable` final
+  2. uploader ce chunk partiel via `uploadChunk` (numérotation séquentielle conservée)
+  3. `recorder.stop()` proprement
+  4. créer un nouveau `MediaRecorder` avec mêmes options et le MIME du chantier 2
+  5. recâbler les handlers `ondataavailable` / `onstop` sur le nouveau recorder
+  6. `recorder.start(1000)`
+- `switchAudioDevice` et `reacquireMic` arrêtent d'utiliser `addTrack`/`removeTrack` sur le stream du recorder et appellent `restartRecorderWithStream(reconstructedStream)`.
+- `currentAudioDeviceId` doublé en `useRef` pour être lu immédiatement par les chemins async.
+
+Sous-chantier 3b — **détection débranchement** :
+- Listener `navigator.mediaDevices.addEventListener('devicechange', ...)` enregistré une seule fois dans le `useEffect` de boot.
+- Sur événement : vérifier `track.readyState` ; si non-`live` → `reacquireMic()` (qui passe maintenant par `restartRecorderWithStream`).
+
+Sous-chantier 3c — **visibilitychange** :
+- Sur `hidden` : `recorder.requestData()` puis `recorder.pause()`. Ne touche pas à `pagehide` (qui sert au beacon abandon).
+- Sur `visible` : `ensureAudioContextRunning()` puis `recorder.resume()`.
+- Garde : ne rien faire si le recorder n'est pas en `recording`.
+
+Sous-chantier 3d — **flush final** :
+- Avant chaque `recorder.stop()` planifié (fin de question, fin de session), appeler `requestData()` et attendre le dernier `ondataavailable`. Évite de perdre jusqu'à 999 ms.
+
+**Aucune interférence interne :** 3a fournit la primitive, 3b/3c/3d sont trois consommateurs indépendants.
+
+---
+
+## Chantier 4 — Streaming des chunks audio (parité avec la vidéo)
+
+**Objectif : ne plus perdre l'audio en cas de crash navigateur / OOM mobile.**
+
+- Dans `startQuestionRecording`, l'`audioRecorder.ondataavailable` appelle `uploadChunk` vers `q{n}/audio/chunk-XXXXX.<ext>` (où `<ext>` vient de `extFromMime(recorder.mimeType, 'audio')`).
+- Le blob audio consolidé continue d'être uploadé en fin de question (pour rétro-compatibilité de `transcribe-session`), mais devient « best effort » : si l'upload consolidé échoue après 3 retries, on déclenche `recover-session-video` (qui sait déjà reconstruire depuis les chunks — à vérifier côté edge function et étendre si besoin pour l'audio).
+- Numérotation des chunks audio synchronisée avec celle de la vidéo pour faciliter la reconstruction.
+
+**Dépend du chantier 2 :** sans MIME correct, les chunks audio uploadés seraient mal étiquetés. Dépend du chantier 3a : si on switch micro en cours de question, `restartRecorderWithStream` continue la numérotation au lieu de la repartir à zéro.
+
+---
+
+## Chantier 5 — Détection vocale adaptative et UX
+
+**Objectif : ne plus auto-pauser un candidat qui parle bas. Lui dire ce qui se passe.**
+
+Sous-chantier 5a — **calibration au test technique** :
+- `InterviewDeviceTest.tsx` : pendant les 500 premières ms, mesurer `noiseFloor` (RMS moyen avant que le candidat parle). Après le test, stocker dans sessionStorage à côté de `mic-test-validated:{token}` : `{ peakUser, noiseFloor }`.
+
+Sous-chantier 5b — **seuils adaptatifs dans le watcher** :
+- `useMicHealthWatcher` lit ces deux valeurs (nouveau prop optionnel `calibration?: { peakUser, noiseFloor }`).
+- `rmsSilenceMax = max(0.008, noiseFloor × 1.5)`
+- `VOICE_RMS_THRESHOLD = max(0.015, peakUser × 0.4)`
+- Tracking `lastSignalAtRef` : déclenché uniquement par `rms > VOICE_RMS_THRESHOLD` (vraie voix), plus par `rms > rmsSilenceMax` (bruit de fond périodique ne réarme plus le timer indéfiniment).
+- Nouveau statut `"too-quiet"` : RMS entre `rmsSilenceMax` et `VOICE_RMS_THRESHOLD` pendant > 15 s.
+
+Sous-chantier 5c — **UX bannière et vu-mètre** :
+- `MicFailureBanner` : variante `too-quiet` (« Votre voix est captée mais trop faible. Rapprochez-vous du micro ou changez de périphérique. » + bouton changer micro). Variante `weak` du plan initial fusionnée avec celle-ci pour éviter le doublon.
+- `MicVolumeMeter` : si l'`AudioContext` partagé reste suspended après tentative de resume, afficher un overlay « Touchez pour activer le vu-mètre » (réutilise le pattern d'`AudioUnlockOverlay`).
+
+Sous-chantier 5d — **nettoyage check bloquant Firefox** :
+- `browserCompat.ts` : retirer `hasSpeechRecognition` des critères `blocked` (la STT live est désactivée depuis le chantier précédent). Le passer en warning silencieux ou supprimer.
+- Vérifier `MediaRecorder` présent → downgrade FxiOS en `warning` si présent.
+
+**Dépend des chantiers 1 et 3 :** seuils calibrés inutiles si l'AudioContext est suspended ou si le recorder enregistre dans le vide.
+
+---
+
+## Vérifications post-implémentation (avant de dire « c'est prêt »)
+
+1. **Lint + build** (auto par le harnais).
+2. **Playwright headless** sur `tests/e2e/interview-mic-failure.spec.ts` et `interview-start-resume.spec.ts` pour vérifier qu'aucune régression sur les flows existants.
+3. **Test manuel scripté** via Playwright : ouvrir un entretien, simuler `visibilitychange` hidden/visible, vérifier que le recorder reprend et qu'un chunk est uploadé après resume.
+4. **Lecture des edge functions** `recover-session-video`, `repair-session-media`, `analyze-paraverbal` pour confirmer qu'elles tolèrent le nouveau format de manifest (chunks audio numérotés). Si non → patch minimal côté edge.
+5. **Logs ajoutés** : `mic_recorder_restarted`, `mic_devicechange_reacquired`, `mic_visibility_paused`, `mic_visibility_resumed`, `mic_too_quiet`, `mic_calibration_loaded`. Permettront de mesurer l'impact en production.
+
+---
+
+## Ce que je ne fais PAS (volontairement)
+
+- Pas de checksum d'intégrité par chunk (correctif G-3 de l'audit) : coût d'implémentation élevé, gain marginal vu les autres correctifs. À reproposer si on observe encore de la corruption.
+- Pas de revue des contraintes vidéo (deviceId exact vs ideal) : hors scope micro, et l'utilisateur a explicitement demandé « micro ».
+- Pas de modification du flow `pagehide` / abandon : intentionnellement séparé du visibilitychange pour ne pas changer la sémantique « candidat parti ».
+- Pas de réactivation de la STT live : décision produit déjà actée, hors scope.
+
+---
+
+## Estimation et livraison
+
+Un seul commit logique, fichiers touchés :
+- `src/lib/audioContext.ts` (nouveau)
+- `src/lib/micLevel.ts`, `src/lib/mediaExt.ts`, `src/lib/browserCompat.ts`
+- `src/hooks/useMicHealthWatcher.ts`
+- `src/pages/InterviewStart.tsx`, `src/pages/InterviewDeviceTest.tsx`
+- `src/components/interview/MicFailureBanner.tsx`, `MicVolumeMeter.tsx`
+- `src/components/media/MediaRecorderField.tsx` (+ ses 2-3 appelants pour le nouveau `onMediaReady`)
+- Éventuellement `supabase/functions/recover-session-video/index.ts` si le manifest audio doit être étendu.
+
+Une fois le plan validé, je passe en mode build et j'enchaîne les 5 chantiers dans l'ordre, sans pause intermédiaire, avec vérifs à la fin.

@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
+import { getSharedAudioContext } from "@/lib/audioContext";
+import type { MicCalibration } from "@/lib/micLevel";
 
-export type MicHealthStatus = "ok" | "silent" | "track-dead";
+export type MicHealthStatus = "ok" | "too-quiet" | "silent" | "track-dead";
 
 interface UseMicHealthWatcherOptions {
   /** MediaStream à surveiller. */
@@ -14,6 +16,13 @@ interface UseMicHealthWatcherOptions {
   rmsSilenceMax?: number;
   /** Identifiant de session pour les logs. */
   sessionId?: string | null;
+  /**
+   * Calibration issue du test technique (pic vocal du candidat + bruit
+   * ambiant). Utilisée pour rendre les seuils adaptatifs : un candidat à
+   * voix douce ne sera plus auto-pausé à tort, et un environnement bruyant
+   * ne masquera plus la détection de silence.
+   */
+  calibration?: MicCalibration | null;
   /**
    * Appelé (throttlé à ~500 ms) chaque fois qu'une présence vocale est détectée.
    * Remplace l'ancien réarmement basé sur la transcription live.
@@ -31,23 +40,26 @@ interface MicHealthState {
   hasVoiceSignal: boolean;
 }
 
-const SILENT_THRESHOLD_DEFAULT = 30000;
-// Seuil bas : on veut détecter même les voix douces. La détection se fait
-// purement sur le signal acoustique, plus sur la transcription.
+const SILENT_THRESHOLD_DEFAULT = 30_000;
+// Seuil bas par défaut : on veut détecter même les voix douces. Adapté
+// runtime via calibration.noiseFloor × 1.5.
 const RMS_SILENCE_MAX_DEFAULT = 0.008;
 const SILENT_CONFIRM_TICKS = 3;
-// Seuil au-dessus duquel on considère qu'il y a une vraie voix (pas du bruit ambiant).
-const VOICE_RMS_THRESHOLD = 0.03;
+// Seuil par défaut au-dessus duquel on considère qu'il y a une vraie voix
+// (pas du bruit ambiant). Adapté runtime via calibration.peakUser × 0.4.
+const VOICE_RMS_THRESHOLD_DEFAULT = 0.03;
+const VOICE_RMS_THRESHOLD_MIN = 0.015;
 const VOICE_CONFIRM_TICKS = 3;
 const VOICE_CALLBACK_THROTTLE_MS = 500;
+// Durée (ms) où le RMS reste entre silence et voix sans dépasser le seuil voix
+// avant d'afficher la bannière "trop faible".
+const TOO_QUIET_THRESHOLD_MS = 15_000;
 
 /**
  * Surveille en continu la santé du micro candidat pendant un entretien :
  * - écoute track.onended → bascule en "track-dead"
- * - mesure RMS via AnalyserNode → bascule en "silent" si pas de signal
- *   pendant `silentThresholdMs`
- * - expose un drapeau `hasVoiceSignal` et un callback `onVoice` pour piloter
- *   le réarmement des minuteries de silence sans dépendre d'une STT live.
+ * - mesure RMS via AnalyserNode → "silent" si rien, "too-quiet" si voix
+ *   présente mais trop faible.
  *
  * Ne s'active que quand `active` est vrai (typiquement isListening && !isSpeaking).
  */
@@ -55,17 +67,34 @@ export function useMicHealthWatcher({
   stream,
   active,
   silentThresholdMs = SILENT_THRESHOLD_DEFAULT,
-  rmsSilenceMax = RMS_SILENCE_MAX_DEFAULT,
+  rmsSilenceMax,
   sessionId,
+  calibration,
   onVoice,
 }: UseMicHealthWatcherOptions): MicHealthState {
   const [status, setStatus] = useState<MicHealthStatus>("ok");
   const [peak, setPeak] = useState(0);
   const [hasVoiceSignal, setHasVoiceSignal] = useState(false);
   const lastSignalAtRef = useRef<number>(Date.now());
+  const lastFaintAtRef = useRef<number>(Date.now());
   const statusRef = useRef<MicHealthStatus>("ok");
   const onVoiceRef = useRef<typeof onVoice>(onVoice);
   useEffect(() => { onVoiceRef.current = onVoice; }, [onVoice]);
+
+  // Seuils adaptatifs déduits de la calibration (avec garde-fous).
+  const { effectiveSilenceMax, effectiveVoiceThreshold } = useMemo(() => {
+    const baseSilence = typeof rmsSilenceMax === "number" ? rmsSilenceMax : RMS_SILENCE_MAX_DEFAULT;
+    const noiseFloor = calibration?.noiseFloor ?? 0;
+    const peakUser = calibration?.peakUser ?? 0;
+    const adaptedSilence = Math.max(baseSilence, noiseFloor * 1.5);
+    const adaptedVoice = peakUser > 0
+      ? Math.max(VOICE_RMS_THRESHOLD_MIN, peakUser * 0.4)
+      : VOICE_RMS_THRESHOLD_DEFAULT;
+    // Voix doit toujours être strictement au-dessus du seuil silence,
+    // sinon les deux zones (silence / trop-faible) deviennent incohérentes.
+    const finalVoice = Math.max(adaptedVoice, adaptedSilence * 1.5);
+    return { effectiveSilenceMax: adaptedSilence, effectiveVoiceThreshold: finalVoice };
+  }, [calibration, rmsSilenceMax]);
 
   // Surveille les events natifs de la piste audio.
   useEffect(() => {
@@ -94,19 +123,21 @@ export function useMicHealthWatcher({
   // Boucle de mesure RMS.
   useEffect(() => {
     if (!stream || !active) {
-      // Reset état quand on devient inactif (TTS qui parle, pause, etc.).
       if (statusRef.current !== "ok") {
         statusRef.current = "ok";
         setStatus("ok");
       }
       lastSignalAtRef.current = Date.now();
+      lastFaintAtRef.current = Date.now();
       setPeak(0);
       setHasVoiceSignal(false);
       return;
     }
     if (stream.getAudioTracks().length === 0) return;
 
-    lastSignalAtRef.current = Date.now();
+    const now0 = Date.now();
+    lastSignalAtRef.current = now0;
+    lastFaintAtRef.current = now0;
     let silentTickCount = 0;
     let voiceTickCount = 0;
     let lastVoiceCallback = 0;
@@ -117,10 +148,16 @@ export function useMicHealthWatcher({
     let ctx: AudioContext | null = null;
     let analyser: AnalyserNode | null = null;
     let source: MediaStreamAudioSourceNode | null = null;
+    let ownsCtx = false;
 
     try {
-      const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new Ctor();
+      // Priorité au contexte partagé (débloqué par geste utilisateur sur iOS).
+      ctx = getSharedAudioContext();
+      if (!ctx) {
+        const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        ctx = new Ctor();
+        ownsCtx = true;
+      }
       if (ctx.state === "suspended") ctx.resume().catch(() => {});
       source = ctx.createMediaStreamSource(stream);
       analyser = ctx.createAnalyser();
@@ -139,45 +176,61 @@ export function useMicHealthWatcher({
         }
         const rms = Math.sqrt(sum / buffer.length);
         const now = Date.now();
-        // Throttle setPeak pour limiter le re-render (~10 fps suffit pour le vu-mètre).
         if (now - lastPeakSet > 100) {
           setPeak(rms);
           lastPeakSet = now;
         }
 
-        // Détection de voix soutenue → notifier le parent (réarme les minuteries de silence).
-        if (rms > VOICE_RMS_THRESHOLD) {
+        const isVoice = rms > effectiveVoiceThreshold;
+        const isFaint = !isVoice && rms > effectiveSilenceMax;
+
+        // Détection de voix soutenue → notifier le parent et réarmer les
+        // chronos. ATTENTION : on ne réarme `lastSignalAtRef` que sur vraie
+        // voix, pas sur bruit ambiant, pour éviter qu'un ventilateur
+        // empêche l'auto-pause indéfiniment.
+        if (isVoice) {
           voiceTickCount += 1;
+          lastSignalAtRef.current = now;
+          lastFaintAtRef.current = now;
+          silentTickCount = 0;
           if (voiceTickCount >= VOICE_CONFIRM_TICKS) {
             if (!hasVoiceSignal) setHasVoiceSignal(true);
             if (now - lastVoiceCallback > VOICE_CALLBACK_THROTTLE_MS) {
               lastVoiceCallback = now;
               try { onVoiceRef.current?.(); } catch { /* ignore */ }
             }
+            // Sortie de tout statut dégradé sur retour de voix nette.
+            if (statusRef.current !== "ok" && statusRef.current !== "track-dead") {
+              statusRef.current = "ok";
+              setStatus("ok");
+              logger.warn("mic_health_recovered", { sessionId });
+            }
           }
         } else {
           voiceTickCount = 0;
-        }
-
-        if (rms > rmsSilenceMax) {
-          lastSignalAtRef.current = now;
-          silentTickCount = 0;
-          if (statusRef.current === "silent") {
-            statusRef.current = "ok";
-            setStatus("ok");
-            logger.warn("mic_health_recovered_from_silent", { sessionId });
-          }
-        } else if (statusRef.current === "ok") {
-          const silentFor = now - lastSignalAtRef.current;
-          if (silentFor > silentThresholdMs) {
-            silentTickCount += 1;
-            if (silentTickCount >= SILENT_CONFIRM_TICKS) {
-              statusRef.current = "silent";
-              setStatus("silent");
-              logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+          if (isFaint) {
+            // Signal présent mais trop faible : pas un silence, juste à risque.
+            const faintFor = now - lastFaintAtRef.current;
+            if (
+              faintFor > TOO_QUIET_THRESHOLD_MS &&
+              statusRef.current === "ok"
+            ) {
+              statusRef.current = "too-quiet";
+              setStatus("too-quiet");
+              logger.warn("mic_too_quiet", { sessionId, faintMs: faintFor, rms });
             }
-          } else {
-            silentTickCount = 0;
+          } else if (statusRef.current === "ok" || statusRef.current === "too-quiet") {
+            const silentFor = now - lastSignalAtRef.current;
+            if (silentFor > silentThresholdMs) {
+              silentTickCount += 1;
+              if (silentTickCount >= SILENT_CONFIRM_TICKS) {
+                statusRef.current = "silent";
+                setStatus("silent");
+                logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
+              }
+            } else {
+              silentTickCount = 0;
+            }
           }
         }
         rafId = requestAnimationFrame(tick);
@@ -194,12 +247,13 @@ export function useMicHealthWatcher({
       cancelled = true;
       if (rafId) cancelAnimationFrame(rafId);
       try { source?.disconnect(); } catch { /* noop */ }
-      try { ctx?.close(); } catch { /* noop */ }
+      if (ownsCtx) {
+        try { ctx?.close(); } catch { /* noop */ }
+      }
     };
-    // hasVoiceSignal volontairement absent des deps : c'est un drapeau monotone
-    // pendant la durée de vie de la session d'écoute, lu via une closure.
+    // hasVoiceSignal volontairement absent des deps : drapeau monotone lu via closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stream, active, sessionId, silentThresholdMs, rmsSilenceMax]);
+  }, [stream, active, sessionId, silentThresholdMs, effectiveSilenceMax, effectiveVoiceThreshold]);
 
   return { status, lastSpokeAt: lastSignalAtRef.current, peak, hasVoiceSignal };
 }

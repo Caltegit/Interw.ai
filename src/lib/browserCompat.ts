@@ -99,7 +99,11 @@ export function detectBrowserCompat(): BrowserCompatResult {
   const hasGetUserMedia = typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
   const hasMediaRecorder = typeof window !== "undefined" && "MediaRecorder" in window;
   const hasAudioContext = typeof window !== "undefined" && ("AudioContext" in window || "webkitAudioContext" in window);
+  // SpeechRecognition n'est plus utilisée côté candidat (la STT live est désactivée,
+  // toute la transcription est faite côté serveur après l'entretien). On conserve
+  // la détection à titre informatif mais elle n'entre plus dans la décision.
   const hasSpeechRecognition = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
+  void hasSpeechRecognition;
 
   const base = {
     browser: browser.name,
@@ -138,9 +142,7 @@ export function detectBrowserCompat(): BrowserCompatResult {
   if (!hasAudioContext) {
     return { ...base, level: "blocked", reason: "Votre navigateur ne prend pas en charge l'audio Web.", isInAppWebview: false };
   }
-  if (!hasSpeechRecognition) {
-    return { ...base, level: "blocked", reason: "Votre navigateur ne prend pas en charge la reconnaissance vocale nécessaire à l'entretien. Ouvrez ce lien dans Chrome (Android, Mac, PC) ou Safari (iPhone).", isInAppWebview: false };
-  }
+  // (Reconnaissance vocale en direct désactivée — plus de check bloquant.)
 
   // 4) Avertissements (compatible mais à risque)
   const major = browser.version ? parseInt(browser.version.split(".")[0], 10) : 0;

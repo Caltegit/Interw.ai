@@ -4,6 +4,8 @@
  * à l'entrée de session, et le watchdog pendant l'entretien.
  */
 
+import { getSharedAudioContext } from "./audioContext";
+
 /**
  * Contraintes audio standard utilisées par l'entretien candidat.
  * - `noiseSuppression: false` : la suppression de bruit agressive de Chrome/Edge
@@ -13,6 +15,8 @@
  *   dans l'enregistrement.
  * - `autoGainControl: true` : remonte automatiquement le niveau d'entrée.
  * - `channelCount: 1` : audio mono, suffisant et plus léger à uploader.
+ * - `sampleRate: { ideal: 48000, min: 16000 }` : évite que le navigateur
+ *   tombe sur 8 kHz (iOS 16+) ce qui dégrade fortement la transcription.
  */
 export function buildAudioConstraints(deviceId?: string | null): MediaTrackConstraints {
   const base: MediaTrackConstraints = {
@@ -20,6 +24,7 @@ export function buildAudioConstraints(deviceId?: string | null): MediaTrackConst
     noiseSuppression: false,
     autoGainControl: true,
     channelCount: 1,
+    sampleRate: { ideal: 48000, min: 16000 } as ConstrainULong,
   };
   if (deviceId) {
     return { ...base, deviceId: { exact: deviceId } };
@@ -35,6 +40,8 @@ export interface MicMeasurement {
   activeMs: number;
   /** Pourcentage du temps où le signal était au-dessus du seuil. */
   activeRatio: number;
+  /** Plancher de bruit (RMS moyen des 500 premières ms, avant que le candidat parle). */
+  noiseFloor: number;
   /** True si la piste audio est marquée muted (système ou navigateur). */
   muted: boolean;
   /** True si la mesure a pu se dérouler (AudioContext disponible et actif). */
@@ -43,8 +50,11 @@ export interface MicMeasurement {
 
 /**
  * Mesure le niveau micro pendant `durationMs`. Renvoie le pic + la durée
- * cumulée au-dessus de `activeThreshold`. Ne bloque pas si l'AudioContext
- * ne démarre pas — renvoie `ok: false` dans ce cas.
+ * cumulée au-dessus de `activeThreshold` + le plancher de bruit.
+ * Ne bloque pas si l'AudioContext ne démarre pas — renvoie `ok: false`.
+ *
+ * Utilise l'AudioContext partagé (singleton) si disponible. Sinon, en
+ * crée un dédié et le ferme à la fin.
  */
 export async function measureMicLevel(
   stream: MediaStream,
@@ -53,23 +63,33 @@ export async function measureMicLevel(
 ): Promise<MicMeasurement> {
   const audioTracks = stream.getAudioTracks();
   if (audioTracks.length === 0) {
-    return { peak: 0, activeMs: 0, activeRatio: 0, muted: true, ok: false };
+    return { peak: 0, activeMs: 0, activeRatio: 0, noiseFloor: 0, muted: true, ok: false };
   }
   const track = audioTracks[0];
   const muted = track.muted === true || track.readyState !== "live";
 
-  const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-  if (!Ctor) {
-    return { peak: 0, activeMs: 0, activeRatio: 0, muted, ok: false };
+  // Priorité au contexte partagé (déjà débloqué par geste utilisateur sur iOS).
+  let ctx: AudioContext | null = getSharedAudioContext();
+  let ownsCtx = false;
+  if (!ctx) {
+    const Ctor = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
+    if (!Ctor) {
+      return { peak: 0, activeMs: 0, activeRatio: 0, noiseFloor: 0, muted, ok: false };
+    }
+    try {
+      ctx = new Ctor();
+      ownsCtx = true;
+    } catch {
+      return { peak: 0, activeMs: 0, activeRatio: 0, noiseFloor: 0, muted, ok: false };
+    }
   }
-  const ctx = new Ctor();
   try {
     if (ctx.state === "suspended") {
       try { await ctx.resume(); } catch { /* ignore */ }
     }
     if (ctx.state !== "running") {
-      try { await ctx.close(); } catch { /* ignore */ }
-      return { peak: 0, activeMs: 0, activeRatio: 0, muted, ok: false };
+      if (ownsCtx) { try { await ctx.close(); } catch { /* ignore */ } }
+      return { peak: 0, activeMs: 0, activeRatio: 0, noiseFloor: 0, muted, ok: false };
     }
     const source = ctx.createMediaStreamSource(stream);
     const analyser = ctx.createAnalyser();
@@ -83,6 +103,11 @@ export async function measureMicLevel(
     let activeMs = 0;
     let lastTick = start;
     let samples = 0;
+    // Plancher de bruit : moyenne RMS sur les 500 premières ms, avant que
+    // le candidat ne commence à parler.
+    let noiseFloorSum = 0;
+    let noiseFloorSamples = 0;
+    const NOISE_FLOOR_WINDOW_MS = 500;
 
     return await new Promise<MicMeasurement>((resolve) => {
       const tick = () => {
@@ -98,15 +123,21 @@ export async function measureMicLevel(
         const rms = Math.sqrt(sum / buffer.length);
         if (rms > peak) peak = rms;
         if (rms > activeThreshold) activeMs += dt;
+        if (now - start < NOISE_FLOOR_WINDOW_MS) {
+          noiseFloorSum += rms;
+          noiseFloorSamples += 1;
+        }
         samples++;
         if (now - start >= durationMs) {
           try { source.disconnect(); } catch { /* ignore */ }
-          try { ctx.close(); } catch { /* ignore */ }
+          if (ownsCtx) { try { ctx!.close(); } catch { /* ignore */ } }
           const elapsed = now - start;
+          const noiseFloor = noiseFloorSamples > 0 ? noiseFloorSum / noiseFloorSamples : 0;
           resolve({
             peak,
             activeMs,
             activeRatio: elapsed > 0 ? activeMs / elapsed : 0,
+            noiseFloor,
             muted: track.muted === true || track.readyState !== "live",
             ok: samples > 5,
           });
@@ -117,8 +148,8 @@ export async function measureMicLevel(
       requestAnimationFrame(tick);
     });
   } catch {
-    try { await ctx.close(); } catch { /* ignore */ }
-    return { peak: 0, activeMs: 0, activeRatio: 0, muted, ok: false };
+    if (ownsCtx) { try { await ctx.close(); } catch { /* ignore */ } }
+    return { peak: 0, activeMs: 0, activeRatio: 0, noiseFloor: 0, muted, ok: false };
   }
 }
 
@@ -141,11 +172,19 @@ export const MIC_THRESHOLDS = {
 /** Durée pendant laquelle une validation de test technique reste valable (30 min). */
 export const MIC_TEST_VALIDITY_MS = 30 * 60 * 1000;
 
+export interface MicCalibration {
+  /** Pic vocal mesuré pendant le test (sert à calibrer le seuil voix runtime). */
+  peakUser: number;
+  /** Plancher de bruit ambiant mesuré au tout début du test. */
+  noiseFloor: number;
+}
+
 interface MicTestValidation {
   deviceId: string | null;
   validatedAt: number;
   peak?: number;
   activeMs?: number;
+  noiseFloor?: number;
 }
 
 /**
@@ -173,3 +212,23 @@ export function isMicTestStillValid(
   }
 }
 
+/**
+ * Récupère la calibration micro persistée par le test technique. Renvoie null
+ * si non disponible ou expirée.
+ */
+export function loadMicCalibration(token: string | null | undefined): MicCalibration | null {
+  if (!token) return null;
+  try {
+    const raw = sessionStorage.getItem(`mic-test-validated:${token}`);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as MicTestValidation;
+    if (!data?.validatedAt) return null;
+    if (Date.now() - data.validatedAt > MIC_TEST_VALIDITY_MS) return null;
+    const peakUser = typeof data.peak === "number" ? data.peak : 0;
+    const noiseFloor = typeof data.noiseFloor === "number" ? data.noiseFloor : 0;
+    if (peakUser <= 0) return null;
+    return { peakUser, noiseFloor };
+  } catch {
+    return null;
+  }
+}
