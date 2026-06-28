@@ -40,13 +40,8 @@ import DeviceSelector from "@/components/interview/DeviceSelector";
 const SILENT_AUDIO_DATA_URI =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
-// Extend window for webkitSpeechRecognition
-declare global {
-  interface Window {
-    webkitSpeechRecognition: any;
-    SpeechRecognition: any;
-  }
-}
+// (retiré) déclarations globales webkitSpeechRecognition / SpeechRecognition :
+// la reconnaissance vocale live a été désactivée côté candidat.
 
 // Précharge un fichier média (audio/vidéo) dans le cache HTTP du navigateur
 // pour permettre une lecture immédiate au moment de l'affichage. Important sur
@@ -331,7 +326,7 @@ export default function InterviewStart() {
   const [restoringMessages, setRestoringMessages] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
+  // (retiré) liveTranscript : la reconnaissance vocale live est désactivée côté candidat.
   // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
   // on affiche un bandeau permettant au candidat de la relancer ou de passer.
   const [interviewStuck, setInterviewStuck] = useState(false);
@@ -369,8 +364,7 @@ export default function InterviewStart() {
     | { kind: "media"; mediaType: "audio" | "video" }
     | null;
   const currentPresentationRef = useRef<Presentation>(null);
-  const recognitionRef = useRef<any>(null);
-  const candidateTranscriptRef = useRef("");
+  // (retiré) recognitionRef + candidateTranscriptRef : plus de STT live.
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -406,8 +400,7 @@ export default function InterviewStart() {
   }, [attachStreamTo]);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSttResultAtRef = useRef<number>(0);
+  // (retiré) sttWatchdogRef + lastSttResultAtRef : plus de STT live à surveiller.
   type StartListeningOptions = { force?: boolean; reason?: string; questionIndex?: number };
   const startListeningRef = useRef<((options?: StartListeningOptions) => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
