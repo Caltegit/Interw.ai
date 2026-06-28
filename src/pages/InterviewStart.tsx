@@ -2206,6 +2206,13 @@ export default function InterviewStart() {
       return;
     }
 
+    // Débloque l'AudioContext partagé (iOS Safari le suspend par défaut).
+    // Doit être appelé depuis un handler d'interaction utilisateur — c'est
+    // bien le cas ici (clic sur « Commencer l'entretien »).
+    void ensureAudioContextRunning();
+
+
+
     // Traçabilité légale du consentement (best-effort, non bloquant)
     if (token && !session.consent_accepted_at && !isDemoRef.current) {
       supabase
