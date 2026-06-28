@@ -762,6 +762,53 @@ export default function InterviewStart() {
     };
   }, [readyToStart, interviewFinished, session?.id, currentQuestionIndex]);
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Surveillance périphériques : si le micro courant disparaît (débranchement,
+  // changement d'OS), on déclenche une réacquisition automatique. Sans ça,
+  // le candidat continue d'enregistrer dans le vide jusqu'au prochain
+  // diagnostic visuel.
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) return;
+    const handler = async () => {
+      const currentId = currentAudioDeviceIdRef.current;
+      if (!currentId) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const stillThere = devices.some((d) => d.kind === "audioinput" && d.deviceId === currentId);
+        if (!stillThere) {
+          logger.warn("interview_audio_device_disappeared", {
+            sessionId: session?.id ?? null,
+            previousDeviceId: currentId,
+          });
+          // Déclenche une réacquisition (qui retombera sur le device par défaut).
+          await reacquireMicRef.current?.();
+        }
+      } catch { /* ignore */ }
+    };
+    navigator.mediaDevices.addEventListener("devicechange", handler);
+    return () => navigator.mediaDevices.removeEventListener("devicechange", handler);
+  }, [session?.id]);
+
+  // visibilitychange : quand on revient sur l'onglet, l'AudioContext peut
+  // avoir été suspendu par le navigateur (iOS Safari notamment). On le
+  // réveille de façon best-effort. Le watcher d'audioContext.ts ajoute déjà
+  // un listener global, mais on garde un appel local pour les cas où le
+  // module a été tree-shaké.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        void ensureAudioContextRunning();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Ref miroir vers reacquireMic, pour usage dans listeners async.
+  const reacquireMicRef = useRef<(() => Promise<void>) | null>(null);
+
+
   // Ref to endInterview so timers can call it without stale closures
   const endInterviewRef = useRef<(() => void) | null>(null);
 
