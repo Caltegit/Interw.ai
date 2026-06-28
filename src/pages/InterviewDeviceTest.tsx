@@ -346,6 +346,7 @@ export default function InterviewDeviceTest() {
                 validatedAt: Date.now(),
                 peak: measurement.peak,
                 activeMs: measurement.activeMs,
+                noiseFloor: measurement.noiseFloor,
               }),
             );
           }
