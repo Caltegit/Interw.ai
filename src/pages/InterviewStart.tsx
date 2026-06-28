@@ -1503,6 +1503,11 @@ export default function InterviewStart() {
         try { existing?.addTrack(t); } catch { /* ignore */ }
       });
       setCurrentAudioDeviceId(deviceId);
+      // CRUCIAL : MediaRecorder ne re-souscrit pas aux nouvelles pistes ajoutées.
+      // Il faut le redémarrer pour que la nouvelle source audio soit réellement
+      // capturée. Sans ça, le swap ne corrige rien — l'enregistreur continue à
+      // lire la piste morte. Voir useMicHealthWatcher (track-dead → reacquire).
+      await restartActiveRecorderAfterAudioSwap();
       toast({ title: "Micro changé", description: "Cliquez sur Reprendre pour continuer." });
     } catch (err) {
       logger.warn("interview_switch_audio_device_failed", {
