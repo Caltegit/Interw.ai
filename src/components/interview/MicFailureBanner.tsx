@@ -81,6 +81,20 @@ export default function MicFailureBanner({
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-semibold">{title}</p>
         <p className="mt-0.5 leading-snug opacity-90">{description}</p>
+        {typeof peak === "number" && !isDead && (
+          <div className="mt-2 flex items-center gap-1.5" aria-hidden>
+            {Array.from({ length: 8 }).map((_, i) => {
+              const active = Math.min(1, peak * 8) > i;
+              return (
+                <span
+                  key={i}
+                  className="h-2 w-3 rounded-sm transition-colors"
+                  style={{ background: active ? "currentColor" : "currentColor", opacity: active ? 0.9 : 0.18 }}
+                />
+              );
+            })}
+          </div>
+        )}
         {(isDead || isTooQuiet) && (
           <div className="mt-2 flex flex-wrap gap-2">
             {isDead && (
