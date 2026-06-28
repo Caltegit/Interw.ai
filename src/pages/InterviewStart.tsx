@@ -797,9 +797,18 @@ export default function InterviewStart() {
   // module a été tree-shaké.
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === "visible") {
-        void ensureAudioContextRunning();
-      }
+      if (document.visibilityState !== "visible") return;
+      void ensureAudioContextRunning();
+      // iOS Safari peut mettre MediaRecorder en "paused" quand l'onglet
+      // passe en arrière-plan. On reprend best-effort.
+      try {
+        const rec = questionRecorderRef.current;
+        if (rec && rec.state === "paused") rec.resume();
+      } catch { /* ignore */ }
+      try {
+        const arec = questionAudioRecorderRef.current;
+        if (arec && arec.state === "paused") arec.resume();
+      } catch { /* ignore */ }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
