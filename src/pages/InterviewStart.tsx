@@ -3358,16 +3358,19 @@ export default function InterviewStart() {
           .eq("id", session.id);
       }
 
-      setQuestionLoading((prev) => (prev ? { ...prev, percent: 70, label: "Lecture imminente…" } : prev));
+      // 5. Amène la barre à 100 % puis retire l'overlay AVANT toute lecture audio/vidéo.
+      setQuestionLoading((prev) => (prev ? { ...prev, percent: 100, label: "Lecture imminente…" } : prev));
+      await new Promise((r) => setTimeout(r, 250));
+      if (skipBlock !== currentBlockIdRef.current) return;
+      setQuestionLoading(null);
 
-      // 5. Speak transition + auto-play next question media (or start listening for written)
+      if (isPausedRef.current) return;
+
+      // 6. Speak transition + auto-play next question media (or start listening for written)
       if (transition) await speak(transition);
       if (skipBlock !== currentBlockIdRef.current) return;
+      if (isPausedRef.current) return;
 
-      if (isPausedRef.current) {
-        setQuestionLoading(null);
-        return;
-      }
       if (nMediaType !== "written") {
         setIsSpeaking(true);
         setShouldAutoPlay(false);
@@ -3380,7 +3383,6 @@ export default function InterviewStart() {
       } else {
         void enterListeningPhase("skip-written", skipBlock);
       }
-      setQuestionLoading(null);
     } catch (e) {
       console.error("[interview] handleSkipQuestion failed", e);
       logger.error("interview_skip_failed", {
