@@ -499,11 +499,12 @@ export default function InterviewStart() {
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
-  // Cadence du silence côté candidat.
-  // Aucune relance vocale : un indice visuel discret puis une pause automatique.
-  const SILENCE_HINT_MS = 6 * 1000;          // 6s — indice visuel discret
-  const SILENCE_TIER3_MS = 12 * 1000;        // 12s — bouton « Passer » mis en avant
-  const SILENCE_AUTOPAUSE_MS = 20 * 1000;    // 20s — mise en pause automatique
+  // Cadence du silence côté candidat — détection 100 % acoustique (RMS).
+  // Paliers assouplis car on ne dépend plus d'une transcription live qui
+  // pouvait redémarrer en boucle et donner de faux silences.
+  const SILENCE_HINT_MS = 8 * 1000;          // 8s — indice visuel discret
+  const SILENCE_TIER3_MS = 18 * 1000;        // 18s — bouton « Passer » mis en avant
+  const SILENCE_AUTOPAUSE_MS = 30 * 1000;    // 30s — mise en pause automatique
   const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 115 * 1000; // pause + 1 min 55 s — avertissement de fin
   const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
   const END_COUNTDOWN_SECONDS = 5;
@@ -1112,114 +1113,16 @@ export default function InterviewStart() {
     [playMediaUrl, speak],
   );
 
-  // STT: start listening
+  // STT live désactivée : aucune transcription côté candidat. La transcription
+  // officielle est faite côté serveur après l'entretien (`transcribe-session`).
+  // `startListening` / `stopListening` ne pilotent plus que l'état logique
+  // « le candidat est en phase de réponse », pour rester compatibles avec
+  // l'ensemble du flow (timers, UI, watchdogs).
   const startListening = useCallback((options?: StartListeningOptions) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const reason = options?.reason ?? "default";
     const questionIndex = options?.questionIndex ?? currentQuestionIndex;
     const forceRestart = options?.force === true;
     if (isListeningRef.current && !forceRestart) {
-      console.log("[interview] startListening skipped — already listening", { reason, questionIndex });
-      return;
-    }
-    if (forceRestart && recognitionRef.current) {
-      try { recognitionRef.current.onend = null; } catch {}
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-      isListeningRef.current = false;
-      setIsListening(false);
-    }
-    if (!SpeechRecognition) {
-      listeningTransitionRef.current = null;
-      toast({
-        title: "Erreur",
-        description: "La reconnaissance vocale n'est pas supportée par ce navigateur.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "fr-FR";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-    recognitionRef.current = recognition;
-
-    candidateTranscriptRef.current = "";
-    setLiveTranscript("");
-
-    recognition.onresult = (event: any) => {
-      // IMPORTANT : ne traiter que les NOUVEAUX résultats (event.resultIndex).
-      // Sinon, en mode continu avec auto-restart, on ré-ajoute à chaque
-      // événement tous les résultats finaux passés → duplication massive
-      // de la transcription (croissance quadratique).
-      let interim = "";
-      let final = "";
-      const startIdx = typeof event.resultIndex === "number" ? event.resultIndex : 0;
-      for (let i = startIdx; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          final += transcript + " ";
-        } else {
-          interim += transcript;
-        }
-      }
-      if (final) {
-        candidateTranscriptRef.current += final;
-      }
-      setLiveTranscript(candidateTranscriptRef.current + interim);
-      // Watchdog : on a reçu de l'audio reconnu → la STT est vivante.
-      lastSttResultAtRef.current = Date.now();
-    };
-
-    recognition.onerror = (event: any) => {
-      console.warn("[interview] STT onerror:", event.error);
-      // "no-speech" is benign on Chrome — let onend auto-restart, don't tear down
-      if (event.error === "no-speech" || event.error === "aborted") {
-        return;
-      }
-      logger.error("interview_stt_failed", {
-        sessionId: session?.id ?? null,
-        errorCode: event?.error ?? "unknown",
-      });
-      // Other errors: stop listening
-      isListeningRef.current = false;
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
-      // Auto-restart if we should still be listening (use ref, not stale state)
-      if (isListeningRef.current && !isPausedRef.current) {
-        try {
-          recognitionRef.current?.start();
-          console.log("[interview] STT auto-restarted");
-        } catch (e) {
-          console.warn("[interview] STT restart failed — recreating instance:", e);
-          // Fallback : l'instance est probablement morte, on en recrée une neuve.
-          isListeningRef.current = false;
-          if (recognitionRef.current) {
-            try { recognitionRef.current.onend = null; } catch {}
-            recognitionRef.current = null;
-          }
-          setTimeout(() => {
-            if (!isPausedRef.current) startListeningRef.current?.();
-          }, 200);
-        }
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      console.warn("[interview] STT start() threw:", e, { reason });
-      logger.error("interview_stt_start_failed", {
-        sessionId: session?.id ?? null,
-        error: e instanceof Error ? e.message : String(e),
-      });
-      isListeningRef.current = false;
-      setIsListening(false);
-      listeningTransitionRef.current = null;
       return;
     }
     isListeningRef.current = true;
@@ -1231,38 +1134,13 @@ export default function InterviewStart() {
       source: reason,
       startedAt: Date.now(),
     };
-
-    // Watchdog STT minimal : si aucun onresult depuis 15 s pendant l'écoute
-    // active, on force un redémarrage de la recognition. Plus de mesure RMS
-    // ici — le `useMicHealthWatcher` est seul responsable de la santé micro.
-    if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
-    lastSttResultAtRef.current = Date.now();
-    sttWatchdogRef.current = setInterval(() => {
-      if (!isListeningRef.current || isPausedRef.current) return;
-      const sttIdle = Date.now() - lastSttResultAtRef.current;
-      if (sttIdle > 15000 && !candidateTranscriptRef.current.trim()) {
-        console.warn("[interview] STT watchdog : silence > 15s, redémarrage de la reconnaissance.");
-        lastSttResultAtRef.current = Date.now();
-        try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-      }
-    }, 3000);
-  }, [toast]);
+  }, [currentQuestionIndex]);
 
 
-  // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
     listeningTransitionRef.current = null;
     activeRecorderMetaRef.current = null;
-    if (sttWatchdogRef.current) {
-      clearInterval(sttWatchdogRef.current);
-      sttWatchdogRef.current = null;
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null;
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-    }
     setIsListening(false);
   }, []);
 
