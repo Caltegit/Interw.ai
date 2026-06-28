@@ -1556,6 +1556,7 @@ export default function InterviewStart() {
     stream: streamRef.current,
     active: micWatchActive,
     sessionId: session?.id ?? null,
+    calibration: micCalibration,
     onVoice: () => resetSilenceTimerRef.current?.(),
   });
   const [reacquiringMic, setReacquiringMic] = useState(false);
