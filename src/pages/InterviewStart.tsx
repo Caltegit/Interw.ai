@@ -4255,6 +4255,7 @@ export default function InterviewStart() {
                             status={micHealthStatus}
                             reacquiring={reacquiringMic}
                             onReacquire={reacquireMic}
+                            peak={micHealthPeak}
                           />
                         )}
                         <div className="flex items-center justify-center gap-3 py-2">
