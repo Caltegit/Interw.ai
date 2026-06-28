@@ -1485,6 +1485,32 @@ export default function InterviewStart() {
   // Change le micro à chaud (utilisé depuis l'écran d'aide « auto-silence »).
   // On stoppe les tracks audio actuels et on rebranche un nouveau MediaStream
   // qui combine la vidéo existante + l'audio du nouveau périphérique.
+  // Helper partagé : après une bascule de piste audio (changement de micro,
+  // réacquisition après perte), on FLUSH puis on stoppe proprement le recorder
+  // courant, puis on redémarre un nouveau MediaRecorder sur le stream mis à
+  // jour. La numérotation des chunks continue (chunkIdxBase) pour ne pas
+  // écraser les chunks précédents déjà uploadés.
+  const restartActiveRecorderAfterAudioSwap = useCallback(async () => {
+    const previous = activeQuestionRecordingRef.current;
+    if (!previous) return; // pas d'enregistrement en cours → rien à faire
+    const carryChunkPaths = [...previous.uploadedChunkPaths];
+    const carryVideoChunks = [...previous.videoChunks];
+    const carryAudioChunks = [...previous.audioChunks];
+    // Compteur de chunks suivant = nombre de chunks déjà émis (uploadés OU bufferisés).
+    // On utilise videoChunks.length qui inclut tout ce que MediaRecorder a poussé.
+    const nextChunkBase = (previous.chunkIdxBase ?? 0) + previous.videoChunks.length + 1;
+    // Demande un flush du dernier chunk en cours avant l'arrêt.
+    try { previous.recorder.requestData(); } catch { /* ignore */ }
+    try { previous.audioRecorder?.requestData(); } catch { /* ignore */ }
+    // startQuestionRecording fait déjà un stop défensif → on délègue.
+    await startQuestionRecording({
+      chunkIdxBase: nextChunkBase,
+      carryChunkPaths,
+      carryVideoChunks,
+      carryAudioChunks,
+    });
+  }, []); // startQuestionRecording lu via ref interne (useCallback stable)
+
   const switchAudioDevice = useCallback(async (deviceId: string) => {
     if (!deviceId) return;
     setSwitchingDevice(true);
