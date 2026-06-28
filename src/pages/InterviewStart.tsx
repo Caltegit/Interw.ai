@@ -3356,14 +3356,13 @@ export default function InterviewStart() {
         if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) return;
       }
       if (isPaused || interviewFinished || isSpeaking || isProcessing || !isListening) return;
-      const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
-      if (!hasVoice) return;
+      if (!hasVoiceSignal) return;
       e.preventDefault();
       handleSendResponseRef.current?.();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isPaused, interviewFinished, isSpeaking, isProcessing, isListening, liveTranscript]);
+  }, [isPaused, interviewFinished, isSpeaking, isProcessing, isListening, hasVoiceSignal]);
 
   // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
   const clearAutoSkip = useCallback(() => {
@@ -3401,14 +3400,13 @@ export default function InterviewStart() {
     }, 3000);
   }, [project?.auto_skip_silence, clearAutoSkip]);
 
-  // Reset auto-skip when candidate speaks
+  // Reset auto-skip when candidate's voice is detected
   useEffect(() => {
-    if (liveTranscript && isListening) {
+    if (hasVoiceSignal && isListening) {
       clearAutoSkip();
-      // Restart timer for next silence window
       startAutoSkipTimer();
     }
-  }, [liveTranscript, isListening, clearAutoSkip, startAutoSkipTimer]);
+  }, [hasVoiceSignal, isListening, clearAutoSkip, startAutoSkipTimer]);
 
   // Start auto-skip timer when listening starts, clear when it stops
   useEffect(() => {
