@@ -3038,10 +3038,8 @@ export default function InterviewStart() {
     currentBlockIdRef.current += 1;
     const skipBlock = currentBlockIdRef.current;
     try {
-      // 1. Stop listening + reset transcript + stop any media playback in progress
+      // 1. Stop listening + stop any media playback in progress
       stopListening();
-      candidateTranscriptRef.current = "";
-      setLiveTranscript("");
       clearAutoSkip();
       cancelAll();
       featuredPlayerRef.current = null;
