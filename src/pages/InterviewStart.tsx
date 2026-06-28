@@ -1446,14 +1446,14 @@ export default function InterviewStart() {
           video: preferredVideo
             ? { ...videoBase, deviceId: { exact: preferredVideo } }
             : videoBase,
-          audio: preferredAudio ? { deviceId: { exact: preferredAudio } } : true,
+          audio: buildAudioConstraints(preferredAudio),
         };
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch {
           // Fallback : si le device préféré n'est plus disponible, on retombe sur le défaut système
-          stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: buildAudioConstraints(null) });
         }
         streamRef.current = stream;
       }
@@ -1481,7 +1481,7 @@ export default function InterviewStart() {
     try {
       setStoredDeviceId("audio", deviceId);
       const newAudio = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: deviceId } },
+        audio: buildAudioConstraints(deviceId),
       });
       const existing = streamRef.current;
       // Stop des anciennes pistes audio uniquement (on garde la vidéo).
@@ -1540,14 +1540,10 @@ export default function InterviewStart() {
         navigator.mediaDevices.getUserMedia(constraints);
       let newAudio: MediaStream | null = null;
       try {
-        newAudio = await tryGet({
-          audio: currentAudioDeviceId
-            ? { deviceId: { exact: currentAudioDeviceId } }
-            : true,
-        });
+        newAudio = await tryGet({ audio: buildAudioConstraints(currentAudioDeviceId) });
       } catch {
         // Fallback : périphérique par défaut.
-        newAudio = await tryGet({ audio: true });
+        newAudio = await tryGet({ audio: buildAudioConstraints(null) });
       }
       const existing = streamRef.current;
       existing?.getAudioTracks().forEach((t) => {
