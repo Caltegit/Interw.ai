@@ -41,7 +41,7 @@ import {
   type DeviceLists,
 } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
-import { measureMicLevel, MIC_THRESHOLDS } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, buildAudioConstraints } from "@/lib/micLevel";
 import {
   Dialog,
   DialogContent,
@@ -241,9 +241,7 @@ export default function InterviewDeviceTest() {
     let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
     const acquireStream = async (id?: string | null) => {
-      const constraints: MediaStreamConstraints = id
-        ? { audio: { deviceId: { exact: id } } }
-        : { audio: true };
+      const constraints: MediaStreamConstraints = { audio: buildAudioConstraints(id ?? null) };
       try {
         return await navigator.mediaDevices.getUserMedia(constraints);
       } catch (err) {
@@ -251,7 +249,7 @@ export default function InterviewDeviceTest() {
         if (id && (err as { name?: string }).name === "OverconstrainedError") {
           setStoredDeviceId("audio", null);
           setSelectedAudioId(null);
-          return await navigator.mediaDevices.getUserMedia({ audio: true });
+          return await navigator.mediaDevices.getUserMedia({ audio: buildAudioConstraints(null) });
         }
         throw err;
       }

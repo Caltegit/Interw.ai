@@ -31,7 +31,7 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
-import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints } from "@/lib/micLevel";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
 
@@ -40,13 +40,8 @@ import DeviceSelector from "@/components/interview/DeviceSelector";
 const SILENT_AUDIO_DATA_URI =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
-// Extend window for webkitSpeechRecognition
-declare global {
-  interface Window {
-    webkitSpeechRecognition: any;
-    SpeechRecognition: any;
-  }
-}
+// (retiré) déclarations globales webkitSpeechRecognition / SpeechRecognition :
+// la reconnaissance vocale live a été désactivée côté candidat.
 
 // Précharge un fichier média (audio/vidéo) dans le cache HTTP du navigateur
 // pour permettre une lecture immédiate au moment de l'affichage. Important sur
@@ -331,7 +326,7 @@ export default function InterviewStart() {
   const [restoringMessages, setRestoringMessages] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
+  // (retiré) liveTranscript : la reconnaissance vocale live est désactivée côté candidat.
   // Garde-fou : si l'écoute du micro ne démarre jamais après une transition,
   // on affiche un bandeau permettant au candidat de la relancer ou de passer.
   const [interviewStuck, setInterviewStuck] = useState(false);
@@ -369,8 +364,7 @@ export default function InterviewStart() {
     | { kind: "media"; mediaType: "audio" | "video" }
     | null;
   const currentPresentationRef = useRef<Presentation>(null);
-  const recognitionRef = useRef<any>(null);
-  const candidateTranscriptRef = useRef("");
+  // (retiré) recognitionRef + candidateTranscriptRef : plus de STT live.
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -406,8 +400,7 @@ export default function InterviewStart() {
   }, [attachStreamTo]);
   const interviewStartTimeRef = useRef<number | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sttWatchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSttResultAtRef = useRef<number>(0);
+  // (retiré) sttWatchdogRef + lastSttResultAtRef : plus de STT live à surveiller.
   type StartListeningOptions = { force?: boolean; reason?: string; questionIndex?: number };
   const startListeningRef = useRef<((options?: StartListeningOptions) => void) | null>(null);
   const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -499,11 +492,12 @@ export default function InterviewStart() {
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
   // pour limiter coût et latence sur les sessions longs.
   const AI_HISTORY_WINDOW = 12;
-  // Cadence du silence côté candidat.
-  // Aucune relance vocale : un indice visuel discret puis une pause automatique.
-  const SILENCE_HINT_MS = 6 * 1000;          // 6s — indice visuel discret
-  const SILENCE_TIER3_MS = 12 * 1000;        // 12s — bouton « Passer » mis en avant
-  const SILENCE_AUTOPAUSE_MS = 20 * 1000;    // 20s — mise en pause automatique
+  // Cadence du silence côté candidat — détection 100 % acoustique (RMS).
+  // Paliers assouplis car on ne dépend plus d'une transcription live qui
+  // pouvait redémarrer en boucle et donner de faux silences.
+  const SILENCE_HINT_MS = 8 * 1000;          // 8s — indice visuel discret
+  const SILENCE_TIER3_MS = 18 * 1000;        // 18s — bouton « Passer » mis en avant
+  const SILENCE_AUTOPAUSE_MS = 30 * 1000;    // 30s — mise en pause automatique
   const SILENCE_END_WARNING_MS = SILENCE_AUTOPAUSE_MS + 115 * 1000; // pause + 1 min 55 s — avertissement de fin
   const SILENCE_TIMEOUT_MS = SILENCE_AUTOPAUSE_MS + 120 * 1000;     // pause + 2 min — arrêt forcé
   const END_COUNTDOWN_SECONDS = 5;
@@ -557,6 +551,7 @@ export default function InterviewStart() {
   type PauseSource = "manual" | "auto-silence" | "auto-network";
   const pauseInterviewRef = useRef<((source?: PauseSource) => void) | null>(null);
   const armEndWarningRef = useRef<(() => void) | null>(null);
+  const resetSilenceTimerRef = useRef<(() => void) | null>(null);
 
   const clearEndCountdown = useCallback(() => {
     if (silenceEndWarningTimerRef.current) {
@@ -673,6 +668,12 @@ export default function InterviewStart() {
   useEffect(() => {
     armEndWarningRef.current = armEndWarning;
   }, [armEndWarning]);
+
+  // Synchronise le ref de resetSilenceTimer (utilisé depuis le mic watcher
+  // via onVoice — on évite ainsi une dépendance circulaire dans le hook).
+  useEffect(() => {
+    resetSilenceTimerRef.current = resetSilenceTimer;
+  }, [resetSilenceTimer]);
 
   // Mode « salle d'examen » — listeners actifs uniquement quand la session tourne
   useEffect(() => {
@@ -1112,114 +1113,16 @@ export default function InterviewStart() {
     [playMediaUrl, speak],
   );
 
-  // STT: start listening
+  // STT live désactivée : aucune transcription côté candidat. La transcription
+  // officielle est faite côté serveur après l'entretien (`transcribe-session`).
+  // `startListening` / `stopListening` ne pilotent plus que l'état logique
+  // « le candidat est en phase de réponse », pour rester compatibles avec
+  // l'ensemble du flow (timers, UI, watchdogs).
   const startListening = useCallback((options?: StartListeningOptions) => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const reason = options?.reason ?? "default";
     const questionIndex = options?.questionIndex ?? currentQuestionIndex;
     const forceRestart = options?.force === true;
     if (isListeningRef.current && !forceRestart) {
-      console.log("[interview] startListening skipped — already listening", { reason, questionIndex });
-      return;
-    }
-    if (forceRestart && recognitionRef.current) {
-      try { recognitionRef.current.onend = null; } catch {}
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-      isListeningRef.current = false;
-      setIsListening(false);
-    }
-    if (!SpeechRecognition) {
-      listeningTransitionRef.current = null;
-      toast({
-        title: "Erreur",
-        description: "La reconnaissance vocale n'est pas supportée par ce navigateur.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "fr-FR";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-    recognitionRef.current = recognition;
-
-    candidateTranscriptRef.current = "";
-    setLiveTranscript("");
-
-    recognition.onresult = (event: any) => {
-      // IMPORTANT : ne traiter que les NOUVEAUX résultats (event.resultIndex).
-      // Sinon, en mode continu avec auto-restart, on ré-ajoute à chaque
-      // événement tous les résultats finaux passés → duplication massive
-      // de la transcription (croissance quadratique).
-      let interim = "";
-      let final = "";
-      const startIdx = typeof event.resultIndex === "number" ? event.resultIndex : 0;
-      for (let i = startIdx; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          final += transcript + " ";
-        } else {
-          interim += transcript;
-        }
-      }
-      if (final) {
-        candidateTranscriptRef.current += final;
-      }
-      setLiveTranscript(candidateTranscriptRef.current + interim);
-      // Watchdog : on a reçu de l'audio reconnu → la STT est vivante.
-      lastSttResultAtRef.current = Date.now();
-    };
-
-    recognition.onerror = (event: any) => {
-      console.warn("[interview] STT onerror:", event.error);
-      // "no-speech" is benign on Chrome — let onend auto-restart, don't tear down
-      if (event.error === "no-speech" || event.error === "aborted") {
-        return;
-      }
-      logger.error("interview_stt_failed", {
-        sessionId: session?.id ?? null,
-        errorCode: event?.error ?? "unknown",
-      });
-      // Other errors: stop listening
-      isListeningRef.current = false;
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      console.log("[interview] STT onend (isListeningRef:", isListeningRef.current, ", paused:", isPausedRef.current, ")");
-      // Auto-restart if we should still be listening (use ref, not stale state)
-      if (isListeningRef.current && !isPausedRef.current) {
-        try {
-          recognitionRef.current?.start();
-          console.log("[interview] STT auto-restarted");
-        } catch (e) {
-          console.warn("[interview] STT restart failed — recreating instance:", e);
-          // Fallback : l'instance est probablement morte, on en recrée une neuve.
-          isListeningRef.current = false;
-          if (recognitionRef.current) {
-            try { recognitionRef.current.onend = null; } catch {}
-            recognitionRef.current = null;
-          }
-          setTimeout(() => {
-            if (!isPausedRef.current) startListeningRef.current?.();
-          }, 200);
-        }
-      }
-    };
-
-    try {
-      recognition.start();
-    } catch (e) {
-      console.warn("[interview] STT start() threw:", e, { reason });
-      logger.error("interview_stt_start_failed", {
-        sessionId: session?.id ?? null,
-        error: e instanceof Error ? e.message : String(e),
-      });
-      isListeningRef.current = false;
-      setIsListening(false);
-      listeningTransitionRef.current = null;
       return;
     }
     isListeningRef.current = true;
@@ -1231,38 +1134,13 @@ export default function InterviewStart() {
       source: reason,
       startedAt: Date.now(),
     };
-
-    // Watchdog STT minimal : si aucun onresult depuis 15 s pendant l'écoute
-    // active, on force un redémarrage de la recognition. Plus de mesure RMS
-    // ici — le `useMicHealthWatcher` est seul responsable de la santé micro.
-    if (sttWatchdogRef.current) clearInterval(sttWatchdogRef.current);
-    lastSttResultAtRef.current = Date.now();
-    sttWatchdogRef.current = setInterval(() => {
-      if (!isListeningRef.current || isPausedRef.current) return;
-      const sttIdle = Date.now() - lastSttResultAtRef.current;
-      if (sttIdle > 15000 && !candidateTranscriptRef.current.trim()) {
-        console.warn("[interview] STT watchdog : silence > 15s, redémarrage de la reconnaissance.");
-        lastSttResultAtRef.current = Date.now();
-        try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-      }
-    }, 3000);
-  }, [toast]);
+  }, [currentQuestionIndex]);
 
 
-  // STT: stop listening
   const stopListening = useCallback(() => {
     isListeningRef.current = false;
     listeningTransitionRef.current = null;
     activeRecorderMetaRef.current = null;
-    if (sttWatchdogRef.current) {
-      clearInterval(sttWatchdogRef.current);
-      sttWatchdogRef.current = null;
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null;
-      try { recognitionRef.current.stop(); } catch {}
-      recognitionRef.current = null;
-    }
     setIsListening(false);
   }, []);
 
@@ -1568,14 +1446,14 @@ export default function InterviewStart() {
           video: preferredVideo
             ? { ...videoBase, deviceId: { exact: preferredVideo } }
             : videoBase,
-          audio: preferredAudio ? { deviceId: { exact: preferredAudio } } : true,
+          audio: buildAudioConstraints(preferredAudio),
         };
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch {
           // Fallback : si le device préféré n'est plus disponible, on retombe sur le défaut système
-          stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: true });
+          stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: buildAudioConstraints(null) });
         }
         streamRef.current = stream;
       }
@@ -1603,7 +1481,7 @@ export default function InterviewStart() {
     try {
       setStoredDeviceId("audio", deviceId);
       const newAudio = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: deviceId } },
+        audio: buildAudioConstraints(deviceId),
       });
       const existing = streamRef.current;
       // Stop des anciennes pistes audio uniquement (on garde la vidéo).
@@ -1636,11 +1514,11 @@ export default function InterviewStart() {
   // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
   // ─────────────────────────────────────────────────────────────────────────
   const micWatchActive = isListening && !isSpeaking && !isPaused && !isProcessing;
-  const { status: micHealthStatus } = useMicHealthWatcher({
+  const { status: micHealthStatus, hasVoiceSignal } = useMicHealthWatcher({
     stream: streamRef.current,
     active: micWatchActive,
-    liveTranscript,
     sessionId: session?.id ?? null,
+    onVoice: () => resetSilenceTimerRef.current?.(),
   });
   const [reacquiringMic, setReacquiringMic] = useState(false);
   const reacquireAttemptsRef = useRef(0);
@@ -1662,14 +1540,10 @@ export default function InterviewStart() {
         navigator.mediaDevices.getUserMedia(constraints);
       let newAudio: MediaStream | null = null;
       try {
-        newAudio = await tryGet({
-          audio: currentAudioDeviceId
-            ? { deviceId: { exact: currentAudioDeviceId } }
-            : true,
-        });
+        newAudio = await tryGet({ audio: buildAudioConstraints(currentAudioDeviceId) });
       } catch {
         // Fallback : périphérique par défaut.
-        newAudio = await tryGet({ audio: true });
+        newAudio = await tryGet({ audio: buildAudioConstraints(null) });
       }
       const existing = streamRef.current;
       existing?.getAudioTracks().forEach((t) => {
@@ -2629,20 +2503,10 @@ export default function InterviewStart() {
     try { featuredPlayerRef.current?.stop(); } catch {}
     // On libère la ref pour qu'elle se rebinde proprement sur le nouveau composant.
     featuredPlayerRef.current = null;
-    const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
-
-    if (!transcript) {
-      toast({
-        title: "Aucune réponse",
-        description: "Veuillez parler avant d'envoyer votre réponse.",
-        variant: "destructive",
-      });
-      startListening({ reason: "empty-transcript" });
-      // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
-      resetSilenceTimer();
-      setIsProcessing(false);
-      return;
-    }
+    // Plus de transcription live côté candidat : on garde un placeholder vide.
+    // La transcription officielle sera générée côté serveur (`transcribe-session`)
+    // à partir de l'audio enregistré.
+    const transcript = "";
 
     // Snapshot context
     const questionIdx = currentQuestionIndex;
@@ -2662,8 +2526,6 @@ export default function InterviewStart() {
       return updated;
     });
     setAiMessages(aiHistorySnapshot);
-    setLiveTranscript("");
-    candidateTranscriptRef.current = "";
 
     // ── 2. Upload + persist en parallèle de l'appel IA, mais on conservera la
     // Promise pour pouvoir l'awaiter AVANT la bascule (CLOSE_PREV solide).
@@ -3165,10 +3027,8 @@ export default function InterviewStart() {
     currentBlockIdRef.current += 1;
     const skipBlock = currentBlockIdRef.current;
     try {
-      // 1. Stop listening + reset transcript + stop any media playback in progress
+      // 1. Stop listening + stop any media playback in progress
       stopListening();
-      candidateTranscriptRef.current = "";
-      setLiveTranscript("");
       clearAutoSkip();
       cancelAll();
       featuredPlayerRef.current = null;
@@ -3485,14 +3345,13 @@ export default function InterviewStart() {
         if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) return;
       }
       if (isPaused || interviewFinished || isSpeaking || isProcessing || !isListening) return;
-      const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
-      if (!hasVoice) return;
+      if (!hasVoiceSignal) return;
       e.preventDefault();
       handleSendResponseRef.current?.();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isPaused, interviewFinished, isSpeaking, isProcessing, isListening, liveTranscript]);
+  }, [isPaused, interviewFinished, isSpeaking, isProcessing, isListening, hasVoiceSignal]);
 
   // Auto-skip 3s: when listening and no speech for 3s, show countdown then auto-send
   const clearAutoSkip = useCallback(() => {
@@ -3530,14 +3389,13 @@ export default function InterviewStart() {
     }, 3000);
   }, [project?.auto_skip_silence, clearAutoSkip]);
 
-  // Reset auto-skip when candidate speaks
+  // Reset auto-skip when candidate's voice is detected
   useEffect(() => {
-    if (liveTranscript && isListening) {
+    if (hasVoiceSignal && isListening) {
       clearAutoSkip();
-      // Restart timer for next silence window
       startAutoSkipTimer();
     }
-  }, [liveTranscript, isListening, clearAutoSkip, startAutoSkipTimer]);
+  }, [hasVoiceSignal, isListening, clearAutoSkip, startAutoSkipTimer]);
 
   // Start auto-skip timer when listening starts, clear when it stops
   useEffect(() => {
@@ -3618,16 +3476,9 @@ export default function InterviewStart() {
     }
   }, [responseElapsedSec, isListening, isPaused, currentQuestionIndex, questions, toast]);
 
-  // Reset du minuteur de silence : uniquement pendant la vraie phase d'écoute
-  // candidat (IA silencieuse, pas de traitement, pas en pause). Sinon le minuteur
-  // serait sans cesse réarmé par les transitions et les pauses pourraient se
-  // déclencher au mauvais moment.
-  useEffect(() => {
-    if (!liveTranscript) return;
-    if (!isListening || isPaused || isSpeaking || isProcessing) return;
-    if (interviewFinished) return;
-    resetSilenceTimer();
-  }, [liveTranscript, isListening, isPaused, isSpeaking, isProcessing, interviewFinished, resetSilenceTimer]);
+  // Le réarmement du minuteur de silence est désormais piloté par le
+  // `useMicHealthWatcher` via son callback `onVoice` (basé sur le signal RMS).
+  // Plus besoin d'effet React déclenché par une transcription live.
 
   // Quand on quitte la phase d'écoute (IA parle, traitement, pause, fin),
   // on désarme proprement le minuteur de silence pour éviter toute pause auto
@@ -4145,7 +3996,7 @@ export default function InterviewStart() {
                 {/* Bandeau d'état */}
                 {(() => {
                   if (interviewFinished) return null;
-                  const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                  const hasVoice = hasVoiceSignal;
                   const showBigCta = isListening && !isSpeaking && !isProcessing && !hasVoice;
                   const configuredMax = currentQ?.max_response_seconds as number | null | undefined;
                   const hasTimeLimit = Boolean(configuredMax && configuredMax > 0);
@@ -4222,7 +4073,7 @@ export default function InterviewStart() {
 
                   // État "listening" : on fusionne le vu-mètre et le bouton dans une seule carte
                   if (isListening && !isProcessing && !isSpeaking && !interviewFinished) {
-                    const hasVoice = Boolean(liveTranscript || candidateTranscriptRef.current);
+                    const hasVoice = hasVoiceSignal;
                     return (
                       <div
                         className="rounded-2xl border p-3 sm:p-4 space-y-3 shadow-lg"

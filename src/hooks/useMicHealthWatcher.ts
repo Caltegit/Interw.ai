@@ -8,69 +8,66 @@ interface UseMicHealthWatcherOptions {
   stream: MediaStream | null;
   /** Vrai uniquement pendant l'enregistrement candidat (pas pendant TTS). */
   active: boolean;
-  /** Texte transcrit en direct par STT — si change, on considère que le micro capte. */
-  liveTranscript?: string;
-  /** Durée (ms) sans signal RMS et sans STT avant de basculer en "silent". */
+  /** Durée (ms) sans signal RMS avant de basculer en "silent". */
   silentThresholdMs?: number;
   /** Seuil RMS sous lequel on considère le micro muet. */
   rmsSilenceMax?: number;
   /** Identifiant de session pour les logs. */
   sessionId?: string | null;
+  /**
+   * Appelé (throttlé à ~500 ms) chaque fois qu'une présence vocale est détectée.
+   * Remplace l'ancien réarmement basé sur la transcription live.
+   */
+  onVoice?: () => void;
 }
 
 interface MicHealthState {
   status: MicHealthStatus;
-  /** Timestamp ms du dernier signal détecté (RMS ou STT). */
+  /** Timestamp ms du dernier signal détecté. */
   lastSpokeAt: number | null;
   /** Pic RMS instantané (0 → 1). */
   peak: number;
+  /** Vrai dès qu'une voix a été captée pendant la phase d'écoute en cours. */
+  hasVoiceSignal: boolean;
 }
 
-const SILENT_THRESHOLD_DEFAULT = 20000;
-const RMS_SILENCE_MAX_DEFAULT = 0.015;
+const SILENT_THRESHOLD_DEFAULT = 30000;
+// Seuil bas : on veut détecter même les voix douces. La détection se fait
+// purement sur le signal acoustique, plus sur la transcription.
+const RMS_SILENCE_MAX_DEFAULT = 0.008;
 const SILENT_CONFIRM_TICKS = 3;
-
+// Seuil au-dessus duquel on considère qu'il y a une vraie voix (pas du bruit ambiant).
+const VOICE_RMS_THRESHOLD = 0.03;
+const VOICE_CONFIRM_TICKS = 3;
+const VOICE_CALLBACK_THROTTLE_MS = 500;
 
 /**
  * Surveille en continu la santé du micro candidat pendant un entretien :
- * - écoute track.onmute / onended → bascule en "track-dead"
- * - mesure RMS via AnalyserNode → bascule en "silent" si pas de signal ni
- *   d'événement STT pendant `silentThresholdMs`
+ * - écoute track.onended → bascule en "track-dead"
+ * - mesure RMS via AnalyserNode → bascule en "silent" si pas de signal
+ *   pendant `silentThresholdMs`
+ * - expose un drapeau `hasVoiceSignal` et un callback `onVoice` pour piloter
+ *   le réarmement des minuteries de silence sans dépendre d'une STT live.
  *
  * Ne s'active que quand `active` est vrai (typiquement isListening && !isSpeaking).
  */
 export function useMicHealthWatcher({
   stream,
   active,
-  liveTranscript,
   silentThresholdMs = SILENT_THRESHOLD_DEFAULT,
   rmsSilenceMax = RMS_SILENCE_MAX_DEFAULT,
   sessionId,
+  onVoice,
 }: UseMicHealthWatcherOptions): MicHealthState {
   const [status, setStatus] = useState<MicHealthStatus>("ok");
   const [peak, setPeak] = useState(0);
+  const [hasVoiceSignal, setHasVoiceSignal] = useState(false);
   const lastSignalAtRef = useRef<number>(Date.now());
-  const lastTranscriptRef = useRef<string>("");
   const statusRef = useRef<MicHealthStatus>("ok");
-  const transitionAtRef = useRef<Record<MicHealthStatus, number>>({ ok: Date.now(), silent: 0, "track-dead": 0 });
-
-  // Reset signal timer dès que STT renvoie un nouveau texte.
-  useEffect(() => {
-    const lt = liveTranscript ?? "";
-    if (lt && lt !== lastTranscriptRef.current) {
-      lastTranscriptRef.current = lt;
-      lastSignalAtRef.current = Date.now();
-      if (statusRef.current === "silent") {
-        statusRef.current = "ok";
-        setStatus("ok");
-      }
-    }
-  }, [liveTranscript]);
+  const onVoiceRef = useRef<typeof onVoice>(onVoice);
+  useEffect(() => { onVoiceRef.current = onVoice; }, [onVoice]);
 
   // Surveille les events natifs de la piste audio.
-  // Important : on NE bascule PAS en "track-dead" sur `track.muted` — c'est un
-  // évènement transient sur Chrome/macOS (notamment au démarrage) qui causait
-  // énormément de faux positifs. Seul `ended` ou `readyState !== "live"` compte.
   useEffect(() => {
     if (!stream || !active) return;
     const track = stream.getAudioTracks()[0];
@@ -79,7 +76,6 @@ export function useMicHealthWatcher({
     const setTrackDead = (reason: string) => {
       if (statusRef.current === "track-dead") return;
       statusRef.current = "track-dead";
-      transitionAtRef.current["track-dead"] = Date.now();
       setStatus("track-dead");
       logger.warn("mic_health_track_dead", { sessionId, reason });
     };
@@ -95,7 +91,6 @@ export function useMicHealthWatcher({
     };
   }, [stream, active, sessionId]);
 
-
   // Boucle de mesure RMS.
   useEffect(() => {
     if (!stream || !active) {
@@ -106,14 +101,16 @@ export function useMicHealthWatcher({
       }
       lastSignalAtRef.current = Date.now();
       setPeak(0);
+      setHasVoiceSignal(false);
       return;
     }
     if (stream.getAudioTracks().length === 0) return;
 
-    // Reset du chrono à chaque (ré)activation : évite de basculer en "silent"
-    // juste après que l'IA ait fini de parler (TTS > silentThresholdMs).
     lastSignalAtRef.current = Date.now();
     let silentTickCount = 0;
+    let voiceTickCount = 0;
+    let lastVoiceCallback = 0;
+    let lastPeakSet = 0;
 
     let cancelled = false;
     let rafId: number | null = null;
@@ -141,8 +138,27 @@ export function useMicHealthWatcher({
           sum += v * v;
         }
         const rms = Math.sqrt(sum / buffer.length);
-        setPeak(rms);
         const now = Date.now();
+        // Throttle setPeak pour limiter le re-render (~10 fps suffit pour le vu-mètre).
+        if (now - lastPeakSet > 100) {
+          setPeak(rms);
+          lastPeakSet = now;
+        }
+
+        // Détection de voix soutenue → notifier le parent (réarme les minuteries de silence).
+        if (rms > VOICE_RMS_THRESHOLD) {
+          voiceTickCount += 1;
+          if (voiceTickCount >= VOICE_CONFIRM_TICKS) {
+            if (!hasVoiceSignal) setHasVoiceSignal(true);
+            if (now - lastVoiceCallback > VOICE_CALLBACK_THROTTLE_MS) {
+              lastVoiceCallback = now;
+              try { onVoiceRef.current?.(); } catch { /* ignore */ }
+            }
+          }
+        } else {
+          voiceTickCount = 0;
+        }
+
         if (rms > rmsSilenceMax) {
           lastSignalAtRef.current = now;
           silentTickCount = 0;
@@ -155,10 +171,8 @@ export function useMicHealthWatcher({
           const silentFor = now - lastSignalAtRef.current;
           if (silentFor > silentThresholdMs) {
             silentTickCount += 1;
-            // Anti-glitch : exiger N ticks consécutifs sous le seuil avant de basculer.
             if (silentTickCount >= SILENT_CONFIRM_TICKS) {
               statusRef.current = "silent";
-              transitionAtRef.current.silent = now;
               setStatus("silent");
               logger.warn("mic_health_silent", { sessionId, silentMs: silentFor });
             }
@@ -182,7 +196,10 @@ export function useMicHealthWatcher({
       try { source?.disconnect(); } catch { /* noop */ }
       try { ctx?.close(); } catch { /* noop */ }
     };
+    // hasVoiceSignal volontairement absent des deps : c'est un drapeau monotone
+    // pendant la durée de vie de la session d'écoute, lu via une closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream, active, sessionId, silentThresholdMs, rmsSilenceMax]);
 
-  return { status, lastSpokeAt: lastSignalAtRef.current, peak };
+  return { status, lastSpokeAt: lastSignalAtRef.current, peak, hasVoiceSignal };
 }

@@ -4,6 +4,30 @@
  * à l'entrée de session, et le watchdog pendant l'entretien.
  */
 
+/**
+ * Contraintes audio standard utilisées par l'entretien candidat.
+ * - `noiseSuppression: false` : la suppression de bruit agressive de Chrome/Edge
+ *   coupe régulièrement les voix douces ou éloignées du micro, ce qui produit
+ *   l'impression que « le micro coupe ». On la désactive volontairement.
+ * - `echoCancellation: true` : indispensable pour éviter que le TTS revienne
+ *   dans l'enregistrement.
+ * - `autoGainControl: true` : remonte automatiquement le niveau d'entrée.
+ * - `channelCount: 1` : audio mono, suffisant et plus léger à uploader.
+ */
+export function buildAudioConstraints(deviceId?: string | null): MediaTrackConstraints {
+  const base: MediaTrackConstraints = {
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: true,
+    channelCount: 1,
+  };
+  if (deviceId) {
+    return { ...base, deviceId: { exact: deviceId } };
+  }
+  return base;
+}
+
+
 export interface MicMeasurement {
   /** Pic de RMS observé (0 → 1). */
   peak: number;
