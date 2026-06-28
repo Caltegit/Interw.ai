@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -31,8 +31,10 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
-import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints, loadMicCalibration, type MicCalibration } from "@/lib/micLevel";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
+import { extFromMime } from "@/lib/mediaExt";
+import { ensureAudioContextRunning } from "@/lib/audioContext";
 import DeviceSelector from "@/components/interview/DeviceSelector";
 
 // Source data-URI silencieuse (~0,1 s) utilisée pour débloquer l'instance Audio
@@ -346,6 +348,11 @@ export default function InterviewStart() {
   // Liste des micros détectés (utile sur l'écran de pause auto-silence).
   const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
   const [currentAudioDeviceId, setCurrentAudioDeviceId] = useState<string | null>(null);
+  // Ref miroir : permet aux callbacks async (devicechange, reacquire) de lire
+  // la valeur courante sans attendre le prochain render.
+  const currentAudioDeviceIdRef = useRef<string | null>(null);
+  useEffect(() => { currentAudioDeviceIdRef.current = currentAudioDeviceId; }, [currentAudioDeviceId]);
+  const [micCalibration, setMicCalibration] = useState<MicCalibration | null>(null);
   const [switchingDevice, setSwitchingDevice] = useState(false);
   const pausedDuringQuestionRef = useRef(false);
   // Snapshot of the presentation at pause-time, used by resumeInterview
@@ -423,6 +430,9 @@ export default function InterviewStart() {
     audioChunks: Blob[];
     uploadedChunkPaths: string[];
     uploadPromises: Promise<unknown>[];
+    /** Offset ajouté au compteur de chunks local — utile lors d'un restart à chaud
+     *  (changement de micro, réacquisition) pour ne pas écraser les chunks précédents. */
+    chunkIdxBase: number;
   };
   const activeQuestionRecordingRef = useRef<ActiveQuestionRecording | null>(null);
   const [pendingChunkUploads, setPendingChunkUploads] = useState(0);
@@ -1595,10 +1605,11 @@ export default function InterviewStart() {
     ) => {
       // Mode démo : aucun upload, aucun enregistrement persisté.
       if (isDemoRef.current) return null;
-      // Utiliser l'extension réelle (mp4 sur Safari/iOS, webm sinon) pour que
-      // les chunks correspondent au contenu et que la reconstruction serveur
-      // les retrouve sans deviner.
-      const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+      // Extension dérivée du MIME réel produit par MediaRecorder (mp4 sur
+      // Safari/iOS, webm sinon, m4a pour l'audio AAC). Évite les chunks
+      // étiquetés .webm contenant en réalité de l'AAC → décodeur perdu.
+      const kind: "audio" | "video" = mime.startsWith("audio/") ? "audio" : "video";
+      const ext = extFromMime(mime, kind);
       const path = `interviews/${sessionId}/q${questionIndex}/chunk-${String(chunkIdx).padStart(5, "0")}.${ext}`;
       const backoffs = [500, 1500, 4000];
       for (let attempt = 0; attempt < backoffs.length; attempt++) {
@@ -1621,21 +1632,58 @@ export default function InterviewStart() {
   );
 
   // Démarre l'enregistrement d'une question en streamant les chunks vers Storage à la volée.
-  const getSupportedMimeType = useCallback(() => {
-    const types = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm", "video/mp4"];
-    for (const t of types) {
-      if (MediaRecorder.isTypeSupported(t)) return t;
-    }
-    return undefined;
+  // Détection Safari pour prioriser MP4 (seul format réellement supporté).
+  // Sur Chrome/Firefox, on reste sur WebM/Opus (meilleur compromis taille/qualité).
+  const isSafari = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /Safari/.test(ua) && !/Chrome|CriOS|Chromium|Edg|OPR/.test(ua);
   }, []);
 
-  const getSupportedAudioMimeType = useCallback(() => {
-    const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  const getSupportedMimeType = useCallback(() => {
+    // Ordre : Safari → MP4 explicite en tête, sinon WebM en tête.
+    const safariFirst = [
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4;codecs=avc1,mp4a",
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+    const chromeFirst = [
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+      "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+      "video/mp4;codecs=avc1,mp4a",
+      "video/mp4",
+    ];
+    const types = isSafari ? safariFirst : chromeFirst;
     for (const t of types) {
       if (MediaRecorder.isTypeSupported(t)) return t;
     }
     return undefined;
-  }, []);
+  }, [isSafari]);
+
+  const getSupportedAudioMimeType = useCallback(() => {
+    const safariFirst = [
+      "audio/mp4;codecs=mp4a.40.2",
+      "audio/mp4",
+      "audio/webm;codecs=opus",
+      "audio/webm",
+    ];
+    const chromeFirst = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4;codecs=mp4a.40.2",
+      "audio/mp4",
+    ];
+    const types = isSafari ? safariFirst : chromeFirst;
+    for (const t of types) {
+      if (MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return undefined;
+  }, [isSafari]);
 
   const startQuestionRecording = useCallback(async () => {
     if (!streamRef.current) return;
@@ -1719,9 +1767,14 @@ export default function InterviewStart() {
         recording.uploadPromises.push(uploadPromise);
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
+      // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
+      // Sur Safari, le MIME demandé peut être ignoré silencieusement.
+      try {
+        if (recorder.mimeType) recording.chunkMime = recorder.mimeType;
+      } catch { /* ignore */ }
 
-      // Recorder audio séparé (Opus mono ~24 kbps) — utilisé par l'IA pour la transcription.
-      // Permet des réponses bien plus longues (~10 min ≈ 2 Mo) sans dépasser la limite Gateway.
+      // Recorder audio séparé — utilisé par la transcription serveur. Bitrate
+      // remonté à 48 kbps (optimal Gemini Flash audio, voix douces mieux captées).
       try {
         const audioTracks = streamRef.current.getAudioTracks();
         if (audioTracks.length > 0) {
@@ -1732,7 +1785,7 @@ export default function InterviewStart() {
           try {
             const audioOptions: MediaRecorderOptions = {
               ...(audioMime ? { mimeType: audioMime } : {}),
-              audioBitsPerSecond: 24_000,
+              audioBitsPerSecond: 48_000,
             };
             audioRecorder = new MediaRecorder(audioStream, audioOptions);
           } catch (initErr) {
@@ -1755,6 +1808,10 @@ export default function InterviewStart() {
             audioChunks.push(e.data);
           };
           audioRecorder.start(1000);
+          // SOURCE DE VÉRITÉ pour l'audio aussi.
+          try {
+            if (audioRecorder.mimeType) recording.audioMime = audioRecorder.mimeType;
+          } catch { /* ignore */ }
         }
       } catch (e) {
         // Non-bloquant : si l'audio recorder échoue, on retombe sur la vidéo pour la transcription.
@@ -1843,12 +1900,13 @@ export default function InterviewStart() {
       // Safari/iOS c'est `video/mp4`, sur Chrome/Firefox c'est `video/webm`.
       // Forcer `.webm` partout produisait un fichier illisible sur le rapport
       // (MIME ↔ contenu incohérents → MEDIA_ERR_DECODE).
-      const ext = realMime.startsWith("video/mp4") ? "mp4" : "webm";
+      const ext = extFromMime(realMime, "video");
+      const audioExt = extFromMime(audioMime, "audio");
       const blob = new Blob(videoBufferLocal, { type: realMime });
       const audioChunks = [...audioBufferLocal];
       const chunkPaths = chunkPathsLocal;
       const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
-      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.webm`;
+      const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.${audioExt}`;
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {

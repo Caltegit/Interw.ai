@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MicOff, AlertTriangle, Loader2, RotateCcw } from "lucide-react";
+import { MicOff, AlertTriangle, Loader2, RotateCcw, Volume1 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { MicHealthStatus } from "@/hooks/useMicHealthWatcher";
 
@@ -12,10 +12,11 @@ interface MicFailureBannerProps {
 
 /**
  * Bannière affichée pendant l'entretien lorsque le micro tombe :
+ * - "too-quiet" → conseil (voix captée mais trop faible)
  * - "silent" → avertissement (le candidat parle peut-être dans le vide)
- * - "track-dead" → blocant, action requise pour réactiver le micro
+ * - "track-dead" → bloquant, action requise pour réactiver le micro
  *
- * Debounce : on attend 1.5 s de stabilité avant de masquer une bannière
+ * Debounce : on attend ~1.5 s de stabilité avant de masquer une bannière
  * déjà visible, pour éviter les clignotements.
  */
 export default function MicFailureBanner({
@@ -28,14 +29,15 @@ export default function MicFailureBanner({
 
   useEffect(() => {
     if (status === "track-dead") {
-      // Vrai problème bloquant : afficher immédiatement.
       setVisible("track-dead");
       return;
     }
     if (status === "silent") {
-      // Debounce d'affichage : 800 ms pour éviter tout clignotement
-      // sur de courtes pauses de réflexion.
       const t = setTimeout(() => setVisible("silent"), 800);
+      return () => clearTimeout(t);
+    }
+    if (status === "too-quiet") {
+      const t = setTimeout(() => setVisible("too-quiet"), 800);
       return () => clearTimeout(t);
     }
     // status === "ok" : debounce de fermeture pour éviter le flicker.
@@ -46,49 +48,56 @@ export default function MicFailureBanner({
   if (visible === "ok") return null;
 
   const isDead = visible === "track-dead";
+  const isTooQuiet = visible === "too-quiet";
+
+  const palette = isDead
+    ? { bg: "hsl(var(--destructive) / 0.12)", border: "hsl(var(--destructive) / 0.5)", color: "hsl(var(--destructive))" }
+    : { bg: "hsl(var(--warning) / 0.15)", border: "hsl(var(--warning) / 0.5)", color: "hsl(var(--warning-foreground, var(--foreground)))" };
+
+  const Icon = isDead ? MicOff : isTooQuiet ? Volume1 : AlertTriangle;
+
+  const title = isDead
+    ? "Micro déconnecté"
+    : isTooQuiet
+      ? "Voix trop faible"
+      : "Aucun son détecté";
+
+  const description = isDead
+    ? "La connexion à votre micro a été perdue. Cliquez sur Réactiver pour le rebrancher."
+    : isTooQuiet
+      ? "On vous entend faiblement. Rapprochez-vous du micro ou changez de périphérique."
+      : "Nous ne captons plus votre voix. Parlez plus fort ou vérifiez votre micro.";
 
   return (
     <div
       role="alert"
       className="flex items-start gap-3 rounded-xl border px-3 py-2.5 shadow-sm"
-      style={{
-        background: isDead ? "hsl(var(--destructive) / 0.12)" : "hsl(var(--warning) / 0.15)",
-        borderColor: isDead ? "hsl(var(--destructive) / 0.5)" : "hsl(var(--warning) / 0.5)",
-        color: isDead ? "hsl(var(--destructive))" : "hsl(var(--warning-foreground, var(--foreground)))",
-      }}
+      style={{ background: palette.bg, borderColor: palette.border, color: palette.color }}
     >
-      {isDead ? (
-        <MicOff className="mt-0.5 h-5 w-5 shrink-0" />
-      ) : (
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-      )}
+      <Icon className="mt-0.5 h-5 w-5 shrink-0" />
       <div className="min-w-0 flex-1 text-sm">
-        <p className="font-semibold">
-          {isDead ? "Micro déconnecté" : "Aucun son détecté"}
-        </p>
-        <p className="mt-0.5 leading-snug opacity-90">
-          {isDead
-            ? "La connexion à votre micro a été perdue. Cliquez sur Réactiver pour le rebrancher."
-            : "Nous ne captons plus votre voix. Parlez plus fort ou vérifiez votre micro."}
-        </p>
-        {isDead && (
+        <p className="font-semibold">{title}</p>
+        <p className="mt-0.5 leading-snug opacity-90">{description}</p>
+        {(isDead || isTooQuiet) && (
           <div className="mt-2 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onReacquire}
-              disabled={reacquiring}
-              className="h-8"
-            >
-              {reacquiring ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              {reacquiring ? "Réactivation…" : "Réactiver le micro"}
-            </Button>
+            {isDead && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onReacquire}
+                disabled={reacquiring}
+                className="h-8"
+              >
+                {reacquiring ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                {reacquiring ? "Réactivation…" : "Réactiver le micro"}
+              </Button>
+            )}
             {onChangeDevice && (
-              <Button size="sm" variant="ghost" onClick={onChangeDevice} className="h-8">
+              <Button size="sm" variant={isDead ? "ghost" : "outline"} onClick={onChangeDevice} className="h-8">
                 Changer de micro
               </Button>
             )}
