@@ -26,6 +26,7 @@ export default function MicFailureBanner({
   reacquiring,
   onReacquire,
   onChangeDevice,
+  peak,
 }: MicFailureBannerProps) {
   const [visible, setVisible] = useState<MicHealthStatus>(status === "track-dead" ? "track-dead" : "ok");
 
