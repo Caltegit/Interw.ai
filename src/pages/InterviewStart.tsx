@@ -1685,7 +1685,7 @@ export default function InterviewStart() {
     return undefined;
   }, [isSafari]);
 
-  const startQuestionRecording = useCallback(async () => {
+  const startQuestionRecording = useCallback(async (opts?: { chunkIdxBase?: number; carryChunkPaths?: string[] }) => {
     if (!streamRef.current) return;
 
     const previous = activeQuestionRecordingRef.current;
@@ -1716,6 +1716,7 @@ export default function InterviewStart() {
     // dedans car ils ont été détachés ci-dessus.
     const videoChunks: Blob[] = [];
     const audioChunks: Blob[] = [];
+    const chunkIdxBase = opts?.chunkIdxBase ?? 0;
     let localChunkIdx = 0;
     questionVideoChunksRef.current = videoChunks;
     questionAudioChunksRef.current = audioChunks;
@@ -1740,8 +1741,9 @@ export default function InterviewStart() {
         audioMime: "audio/webm;codecs=opus",
         videoChunks,
         audioChunks,
-        uploadedChunkPaths: [],
+        uploadedChunkPaths: opts?.carryChunkPaths ? [...opts.carryChunkPaths] : [],
         uploadPromises: [],
+        chunkIdxBase,
       };
       activeQuestionRecordingRef.current = recording;
 
@@ -1750,7 +1752,7 @@ export default function InterviewStart() {
         if (activeQuestionRecordingRef.current !== recording) return;
         videoChunks.push(e.data);
         if (!sessionId) return;
-        const idx = localChunkIdx++;
+        const idx = chunkIdxBase + localChunkIdx++;
         setPendingChunkUploads((n) => n + 1);
         const uploadPromise = trackBackground(
           uploadChunk(sessionId, questionIndex, idx, e.data, recording.chunkMime)
