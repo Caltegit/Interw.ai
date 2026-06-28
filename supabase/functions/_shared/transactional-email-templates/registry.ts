@@ -17,6 +17,7 @@ import { template as bulkCandidateMessage } from './bulk-candidate-message.tsx'
 import { template as candidateThankYou } from './candidate-thank-you.tsx'
 import { template as weeklyProjectRecap } from './weekly-project-recap.tsx'
 import { template as candidateAbandonReminder } from './candidate-abandon-reminder.tsx'
+import { template as feedbackCopy } from './feedback-copy.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'interview-report': interviewReport,
@@ -27,5 +28,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'candidate-thank-you': candidateThankYou,
   'weekly-project-recap': weeklyProjectRecap,
   'candidate-abandon-reminder': candidateAbandonReminder,
+  'feedback-copy': feedbackCopy,
 }
 

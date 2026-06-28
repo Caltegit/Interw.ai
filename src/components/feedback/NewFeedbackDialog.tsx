@@ -102,6 +102,37 @@ export function NewFeedbackDialog() {
       return;
     }
 
+    // Copie email vers hello@interw.ai (fire-and-forget)
+    try {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const authorName = prof?.full_name?.trim() || user.email || "Utilisateur";
+      const authorEmail = prof?.email || user.email || "";
+      void supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "feedback-copy",
+          recipientEmail: "hello@interw.ai",
+          idempotencyKey: `feedback-copy-${thread.id}`,
+          templateData: {
+            authorName,
+            authorEmail,
+            subject: subject.trim(),
+            message: message.trim(),
+            threadUrl: `https://interw.ai/feedback/${thread.id}`,
+            submittedAt: new Date().toLocaleString("fr-FR", {
+              dateStyle: "long",
+              timeStyle: "short",
+            }),
+          },
+        },
+      });
+    } catch (e) {
+      console.warn("[feedback] copie email échouée", e);
+    }
+
     toast.success("Feedback envoyé");
     setOpen(false);
     reset();
