@@ -1522,6 +1522,16 @@ export default function InterviewStart() {
           stream = await navigator.mediaDevices.getUserMedia({ video: videoBase, audio: buildAudioConstraints(null) });
         }
         streamRef.current = stream;
+        // Log unique des contraintes réellement appliquées (diagnostic post-mortem).
+        try {
+          const aTrack = stream.getAudioTracks()[0];
+          const vTrack = stream.getVideoTracks()[0];
+          logger.warn("interview_media_acquired", {
+            sessionId: session?.id ?? null,
+            audio: aTrack?.getSettings?.() ?? null,
+            videoLabel: vTrack?.label ?? null,
+          });
+        } catch { /* ignore */ }
       }
       reattachAllSelfViews();
     } catch (err) {
