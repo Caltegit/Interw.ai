@@ -1593,6 +1593,8 @@ export default function InterviewStart() {
       });
       const newDeviceId = newAudio.getAudioTracks()[0]?.getSettings?.().deviceId || null;
       if (newDeviceId) setCurrentAudioDeviceId(newDeviceId);
+      // Recorder doit être redémarré sur le stream rafraîchi (cf. switchAudioDevice).
+      await restartActiveRecorderAfterAudioSwap();
       toast({
         title: "Micro réactivé",
         description: "Vous pouvez reprendre votre réponse.",
