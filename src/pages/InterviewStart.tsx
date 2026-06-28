@@ -31,7 +31,7 @@ import {
   prefetchTransitionPhrases,
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
-import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid } from "@/lib/micLevel";
+import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints } from "@/lib/micLevel";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
 import DeviceSelector from "@/components/interview/DeviceSelector";
 
