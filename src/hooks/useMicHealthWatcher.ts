@@ -115,12 +115,38 @@ export function useMicHealthWatcher({
 
     const handleEnded = () => setTrackDead("track_ended");
 
+    // Mute/unmute : iOS et Android coupent brièvement la piste lors de notifications,
+    // bascule Bluetooth, appel entrant... On tolère 5 s de mute (blip) avant de
+    // basculer en track-dead, et on récupère immédiatement sur unmute.
+    let muteTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleMute = () => {
+      if (muteTimer) clearTimeout(muteTimer);
+      muteTimer = setTimeout(() => setTrackDead("track_muted_persistent"), 5000);
+    };
+    const handleUnmute = () => {
+      if (muteTimer) { clearTimeout(muteTimer); muteTimer = null; }
+      if (statusRef.current === "track-dead") {
+        // Retour à la vie : reset et laisser la boucle RMS reconfirmer l'état.
+        statusRef.current = "ok";
+        setStatus("ok");
+        lastSignalAtRef.current = Date.now();
+        lastFaintAtRef.current = Date.now();
+        logger.warn("mic_health_unmuted", { sessionId });
+      }
+    };
+
     if (track.readyState !== "live") {
       setTrackDead("track_not_live_initial");
     }
+    if (track.muted) handleMute();
     track.addEventListener("ended", handleEnded);
+    track.addEventListener("mute", handleMute);
+    track.addEventListener("unmute", handleUnmute);
     return () => {
+      if (muteTimer) clearTimeout(muteTimer);
       track.removeEventListener("ended", handleEnded);
+      track.removeEventListener("mute", handleMute);
+      track.removeEventListener("unmute", handleUnmute);
     };
   }, [stream, active, sessionId]);
 
