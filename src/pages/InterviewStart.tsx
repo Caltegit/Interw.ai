@@ -1685,7 +1685,7 @@ export default function InterviewStart() {
     return undefined;
   }, [isSafari]);
 
-  const startQuestionRecording = useCallback(async (opts?: { chunkIdxBase?: number; carryChunkPaths?: string[] }) => {
+  const startQuestionRecording = useCallback(async (opts?: { chunkIdxBase?: number; carryChunkPaths?: string[]; carryVideoChunks?: Blob[]; carryAudioChunks?: Blob[] }) => {
     if (!streamRef.current) return;
 
     const previous = activeQuestionRecordingRef.current;
