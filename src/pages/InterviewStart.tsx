@@ -1676,6 +1676,12 @@ export default function InterviewStart() {
     }
   }, [reacquiringMic, currentAudioDeviceId, toast, session?.id]);
 
+  // Sync de la ref pour permettre aux listeners (devicechange) d'invoquer
+  // la dernière version de reacquireMic sans dépendance directe.
+  useEffect(() => {
+    reacquireMicRef.current = reacquireMic;
+  }, [reacquireMic]);
+
 
 
 
