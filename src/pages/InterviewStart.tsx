@@ -1514,11 +1514,11 @@ export default function InterviewStart() {
   // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
   // ─────────────────────────────────────────────────────────────────────────
   const micWatchActive = isListening && !isSpeaking && !isPaused && !isProcessing;
-  const { status: micHealthStatus } = useMicHealthWatcher({
+  const { status: micHealthStatus, hasVoiceSignal } = useMicHealthWatcher({
     stream: streamRef.current,
     active: micWatchActive,
-    liveTranscript,
     sessionId: session?.id ?? null,
+    onVoice: () => resetSilenceTimerRef.current?.(),
   });
   const [reacquiringMic, setReacquiringMic] = useState(false);
   const reacquireAttemptsRef = useRef(0);
