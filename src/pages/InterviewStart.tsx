@@ -1865,6 +1865,14 @@ export default function InterviewStart() {
     }
   }, [getSupportedMimeType, getSupportedAudioMimeType, session?.id, trackBackground, uploadChunk, currentQuestionIndex]);
 
+  // Synchronise la ref forward-déclarée pour que restartActiveRecorderAfterAudioSwap
+  // puisse invoquer la dernière version de startQuestionRecording.
+  useEffect(() => {
+    startQuestionRecordingRef.current = startQuestionRecording;
+  }, [startQuestionRecording]);
+
+
+
   // Arrête le recorder, finalise l'upload du blob assemblé + écrit le manifest des chunks.
   const stopAndUploadQuestionVideo = useCallback(
     async (
