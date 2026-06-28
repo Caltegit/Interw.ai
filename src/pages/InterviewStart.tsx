@@ -1593,6 +1593,7 @@ export default function InterviewStart() {
   // courant, puis on redémarre un nouveau MediaRecorder sur le stream mis à
   // jour. La numérotation des chunks continue (chunkIdxBase) pour ne pas
   // écraser les chunks précédents déjà uploadés.
+  const restartActiveRecorderAfterAudioSwapRef = useRef<(() => Promise<void>) | null>(null);
   const restartActiveRecorderAfterAudioSwap = useCallback(async () => {
     const previous = activeQuestionRecordingRef.current;
     if (!previous) return;
