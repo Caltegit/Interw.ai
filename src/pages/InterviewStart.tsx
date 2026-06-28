@@ -1647,6 +1647,11 @@ export default function InterviewStart() {
       setSwitchingDevice(false);
     }
   }, [toast, session?.id]);
+  useEffect(() => {
+    restartActiveRecorderAfterAudioSwapRef.current = restartActiveRecorderAfterAudioSwap;
+  }, [restartActiveRecorderAfterAudioSwap]);
+
+
 
   // ─────────────────────────────────────────────────────────────────────────
   // Surveillance santé micro pendant l'enregistrement (track mort, RMS plat).
