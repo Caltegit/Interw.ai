@@ -1913,6 +1913,15 @@ export default function InterviewStart() {
             if (recording.audioRecorder !== audioRec) return;
             audioChunks.push(e.data);
           };
+          audioRecorder.onerror = (ev) => {
+            const err = (ev as unknown as { error?: { name?: string; message?: string } }).error;
+            logger.error("interview_audio_recorder_error", {
+              sessionId: session?.id ?? null,
+              questionIndex,
+              name: err?.name ?? null,
+              message: err?.message ?? null,
+            });
+          };
           audioRecorder.start(1000);
           // SOURCE DE VÉRITÉ pour l'audio aussi.
           try {
