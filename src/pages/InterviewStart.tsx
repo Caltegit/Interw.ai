@@ -2514,20 +2514,10 @@ export default function InterviewStart() {
     try { featuredPlayerRef.current?.stop(); } catch {}
     // On libère la ref pour qu'elle se rebinde proprement sur le nouveau composant.
     featuredPlayerRef.current = null;
-    const transcript = candidateTranscriptRef.current.trim() || liveTranscript.trim();
-
-    if (!transcript) {
-      toast({
-        title: "Aucune réponse",
-        description: "Veuillez parler avant d'envoyer votre réponse.",
-        variant: "destructive",
-      });
-      startListening({ reason: "empty-transcript" });
-      // Le compteur de silence doit repartir, sinon la session peut s'auto-terminer.
-      resetSilenceTimer();
-      setIsProcessing(false);
-      return;
-    }
+    // Plus de transcription live côté candidat : on garde un placeholder vide.
+    // La transcription officielle sera générée côté serveur (`transcribe-session`)
+    // à partir de l'audio enregistré.
+    const transcript = "";
 
     // Snapshot context
     const questionIdx = currentQuestionIndex;
@@ -2547,8 +2537,6 @@ export default function InterviewStart() {
       return updated;
     });
     setAiMessages(aiHistorySnapshot);
-    setLiveTranscript("");
-    candidateTranscriptRef.current = "";
 
     // ── 2. Upload + persist en parallèle de l'appel IA, mais on conservera la
     // Promise pour pouvoir l'awaiter AVANT la bascule (CLOSE_PREV solide).
