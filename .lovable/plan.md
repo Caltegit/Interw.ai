@@ -1,32 +1,49 @@
-# Bug : la question se lit pendant que l'overlay « Lecture imminente » est encore affiché (clic sur « Passer la question »)
+## Origine du bug
 
-## Cause
+L'invitation d'Eva reste `pending` alors que son compte existe, avec `profiles.organization_id = NULL`. Trois maillons cumulés :
 
-Dans `src/pages/InterviewStart.tsx`, `handleSkipQuestion` :
-1. monte l'overlay à 70 % avec le libellé « Lecture imminente… »,
-2. appelle `speak(transition)` (TTS de transition) pendant que l'overlay est encore visible,
-3. déclenche `setShouldAutoPlay(true)` immédiatement après,
-4. ne masque l'overlay qu'ensuite via `setQuestionLoading(null)`.
+1. **Lien d'invitation non protégé contre les scanners.** Dans `auth-email-hook`, seuls `magiclink` et `recovery` sont réécrits vers `/auth/confirm`. Le type `invite` utilise directement l'URL Supabase `/verify?…&redirect_to=/invite/{token}`, à usage unique — Outlook Safe Links / Defender / Proofpoint (souvent actifs sur un domaine pro type `@alboteam.com`) pré-visitent le lien et le consomment. Quand Eva a cliqué, elle a eu "lien expiré".
 
-Résultat : la voix/vidéo démarre alors que l'écran de préparation est encore affiché (capture à 70 %).
+2. **Le trigger `handle_new_user` ignore le contexte d'invitation.** Il crée toujours un profil avec `organization_id = NULL` sans consulter les `organization_invitations` correspondant à l'email.
 
-À comparer avec le flux normal (ligne ~3156) qui passe à 90 % puis fait `setQuestionLoading(null)` AVANT de parler — comportement attendu.
+3. **Le rattachement à l'org n'a lieu que via `/invite/{token}` → `accept_invitation`.** Après l'échec du lien, Eva a créé son compte autrement (reset password ou signup direct) et n'est jamais passée par cette page. Résultat : compte orphelin côté Eva, invitation toujours "pending" côté Benjamin.
 
-## Correctif
+## Étape 1 — Suppression complète d'Eva
 
-Aligner `handleSkipQuestion` sur le flux normal : tout ce qui est audible doit se produire APRÈS la disparition de l'overlay.
+Data-change unique pour repartir de zéro :
+- `organization_invitations` : suppression de la ligne `8085ad13-b61a-4299-b401-072f103bb5e7` (eva@alboteam.com, org Albo).
+- `auth.users` : suppression de l'utilisateur `836a791b-6ebf-4e3c-8c87-e2ce43fa32a1` (cascade → `profiles`, `organization_members`, `user_roles` éventuels).
 
-Dans `src/pages/InterviewStart.tsx` (`handleSkipQuestion`, ~3361-3383) :
+Après ça, Benjamin peut relancer une invitation propre depuis l'UI.
 
-1. Avant de parler/jouer, passer l'overlay à 100 % avec le libellé « Lecture imminente… ».
-2. Laisser un court délai (~250 ms) pour que la barre atteigne visuellement 100 %, puis `setQuestionLoading(null)`.
-3. SEULEMENT ENSUITE : `await speak(transition)` puis `setShouldAutoPlay(true)` / `enterListeningPhase(...)`.
-4. Conserver toutes les vérifications d'annulation (`skipBlock !== currentBlockIdRef.current`, `isPausedRef.current`) entre chaque étape pour ne pas démarrer une lecture si l'utilisateur a re-cliqué entre temps.
+## Étape 2 — Correctifs structurels
 
-Aucun changement de logique métier, aucun nouveau composant : on réordonne simplement les étapes pour que la TTS de transition et l'autoplay du média s'exécutent après la fin visuelle de l'overlay.
+### 2.1 Protéger le lien d'invitation contre les scanners
+`supabase/functions/auth-email-hook/index.ts` : étendre la réécriture existante au type `invite`.
+- Générer `https://{ROOT_DOMAIN}/auth/confirm?token_hash=…&type=invite&next=/invite/{token}`.
+- `next` reconstruit à partir de `redirect_to` (qui contient déjà `/invite/{token}`).
+- Redéployer `auth-email-hook`.
+
+Effet : le token n'est consommé qu'après un clic humain sur `/auth/confirm` (comportement déjà en place pour magic link et reset password).
+
+### 2.2 Rattachement automatique au signup
+Modifier `handle_new_user` : si l'email du nouvel utilisateur correspond à une `organization_invitations` en `pending` non expirée, exécuter les mêmes actions que `accept_invitation` :
+- créer le membership,
+- renseigner `profiles.organization_id`,
+- marquer l'invitation `accepted`.
+
+Idempotent, sans effet sur les signups hors invitation.
+
+### 2.3 Filet de sécurité côté client
+Dans `src/contexts/AuthContext.tsx`, après hydratation du profil : si `profile.organization_id` est nul, chercher une `organization_invitations` `pending` non expirée pour l'email de l'utilisateur et appeler `accept_invitation`. Rattrape les comptes créés en dehors du flux invitation.
+
+## Fichiers touchés
+- Data-change (suppression Eva).
+- Migration (mise à jour `handle_new_user`).
+- `supabase/functions/auth-email-hook/index.ts`.
+- `src/contexts/AuthContext.tsx`.
 
 ## Vérification
-
-- Cliquer « Passer la question » → la barre va à 100 %, l'overlay disparaît, PUIS la voix/vidéo démarre.
-- Tester aussi sur la dernière question (le flux « Finalisation » reste inchangé).
-- Tester pause/reprise pendant le skip pour confirmer qu'aucune lecture ne se déclenche après annulation.
+- Eva n'existe plus (ni auth, ni profil, ni invitation).
+- Benjamin relance l'invitation.
+- Eva clique le lien depuis sa boîte pro : passage par `/auth/confirm` puis `/invite/{token}`, rattachement automatique, apparition de l'organisation Albo dans son dashboard, invitation "acceptée" côté Benjamin.

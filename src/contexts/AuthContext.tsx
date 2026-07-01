@@ -50,14 +50,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        setProfile(data);
-      });
+    (async () => {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, organization_id")
+        .eq("user_id", user.id)
+        .single();
+      setProfile(prof);
+
+      // Filet de sécurité : si aucune org rattachée, accepter une éventuelle invitation en cours
+      const email = (prof?.email || user.email || "").toLowerCase();
+      if (prof && !prof.organization_id && email) {
+        const { data: inv } = await supabase
+          .from("organization_invitations")
+          .select("token")
+          .ilike("email", email)
+          .eq("status", "pending")
+          .gt("expires_at", new Date().toISOString())
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (inv?.token) {
+          const { error: acceptErr } = await supabase.rpc("accept_invitation", {
+            _token: inv.token,
+            _user_id: user.id,
+          });
+          if (!acceptErr) {
+            const { data: refreshed } = await supabase
+              .from("profiles")
+              .select("id, full_name, email")
+              .eq("user_id", user.id)
+              .single();
+            setProfile(refreshed);
+          }
+        }
+      }
+    })();
   }, [user]);
 
   const signOut = async () => {

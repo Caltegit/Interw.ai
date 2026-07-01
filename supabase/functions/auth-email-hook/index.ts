@@ -244,8 +244,10 @@ async function handleWebhook(req: Request): Promise<Response> {
   const redirectTo = (payload.data as Record<string, unknown>).redirect_to as string | undefined
 
   let confirmationUrl = payload.data.url
-  if (tokenHash && (emailType === 'magiclink' || emailType === 'recovery')) {
-    const next = emailType === 'recovery' ? '/reset-password' : (redirectTo || '/dashboard')
+  if (tokenHash && (emailType === 'magiclink' || emailType === 'recovery' || emailType === 'invite' || emailType === 'signup')) {
+    let nextDefault = '/dashboard'
+    if (emailType === 'recovery') nextDefault = '/reset-password'
+    const next = redirectTo || nextDefault
     const nextParam = next.startsWith('http') ? new URL(next).pathname + new URL(next).search : next
     const params = new URLSearchParams({
       token_hash: tokenHash,
