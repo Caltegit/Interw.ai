@@ -2052,6 +2052,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      link_pending_invitation: {
+        Args: { _email: string; _user_id: string }
+        Returns: undefined
+      }
       mark_attempt_proceeded: {
         Args: { _attempt_id: string }
         Returns: undefined

@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get organization name for the email
+    // Get organization name
     const { data: org } = await supabase
       .from("organizations")
       .select("name")
@@ -58,42 +58,52 @@ Deno.serve(async (req) => {
     const orgName = org?.name || "votre organisation";
     const inviterName = callerProfile?.full_name || "Un recruteur";
 
-    // Determine the app URL from the request origin or referer
-    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || supabaseUrl;
+    // Build the applicative invitation link (opens InviteSignup page).
+    // We deliberately do NOT use supabase.auth.admin.inviteUserByEmail because
+    // it creates the auth user immediately and lets the invitee sign in without
+    // setting a password. Here the user only exists after they submit the
+    // signup form on /invite/{token}.
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "https://interw.ai";
     const inviteLink = `${origin}/invite/${invitationToken}`;
 
-    // Send invite email using Supabase Auth admin
-    const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: inviteLink,
-      data: {
-        invitation_token: invitationToken,
-        organization_id: organizationId,
+    // Send invitation email via our transactional email function
+    const { error: sendError } = await supabase.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "organization-invite",
+        recipientEmail: email,
+        templateData: {
+          inviterName,
+          organizationName: orgName,
+          inviteUrl: inviteLink,
+          recipientEmail: email,
+        },
+      },
+      headers: {
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "x-internal-secret": serviceRoleKey,
       },
     });
 
-    if (inviteError) {
-      // If user already exists, just return success - they can use the link
-      if (inviteError.message?.includes("already been registered")) {
-        return new Response(JSON.stringify({ 
-          success: true, 
-          inviteLink,
-          message: "Cet utilisateur existe déjà. Partagez-lui le lien d'invitation." 
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw inviteError;
+    if (sendError) {
+      console.error("send-invitation: email dispatch failed", sendError);
+      return new Response(JSON.stringify({
+        error: "L'invitation a été créée mais l'email n'a pas pu être envoyé.",
+        inviteLink,
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    return new Response(JSON.stringify({
+      success: true,
       inviteLink,
-      message: `Invitation envoyée à ${email}` 
+      message: `Invitation envoyée à ${email}`,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: (error as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
