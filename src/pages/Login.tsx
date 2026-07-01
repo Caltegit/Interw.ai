@@ -37,14 +37,14 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
           redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
         });
         if (error) throw error;
         setSentToEmail(email);
         setShowSentDialog(true);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
         if (error) throw error;
         navigate("/dashboard");
       }
