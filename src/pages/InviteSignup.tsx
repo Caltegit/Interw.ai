@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { validatePassword, normalizeEmail } from "@/lib/auth-utils";
 
 export default function InviteSignup() {
   const { token } = useParams<{ token: string }>();
@@ -79,14 +80,18 @@ export default function InviteSignup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast({ title: "Le mot de passe doit contenir au moins 6 caractères.", variant: "destructive" });
+    
+    const errorMsg = validatePassword(password);
+    if (errorMsg) {
+      toast({ title: "Mot de passe invalide", description: errorMsg, variant: "destructive" });
       return;
     }
+
     setSubmitting(true);
     try {
+      const normalized = normalizeEmail(email);
       const { error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: normalized,
         password,
         options: {
           data: { full_name: fullName, invitation_token: token },
@@ -123,7 +128,10 @@ export default function InviteSignup() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ 
+        email: normalizeEmail(email), 
+        password 
+      });
       if (signInError) throw signInError;
       // Le useEffect ci-dessus s'occupe ensuite d'accept_invitation et de la redirection.
     } catch (e) {
@@ -136,8 +144,8 @@ export default function InviteSignup() {
 
   const handleForgotPassword = async () => {
     if (!email) return;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
+      redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
     });
     if (resetError) {
       toast({ title: "Erreur", description: resetError.message, variant: "destructive" });
@@ -231,9 +239,8 @@ export default function InviteSignup() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 caractères"
+                  placeholder="Min. 8 caractères, un chiffre, un caractère spécial"
                   required
-                  minLength={6}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={submitting}>
