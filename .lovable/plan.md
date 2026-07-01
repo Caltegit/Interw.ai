@@ -1,49 +1,46 @@
-## Origine du bug
+## Ce qui s'est réellement passé
 
-L'invitation d'Eva reste `pending` alors que son compte existe, avec `profiles.organization_id = NULL`. Trois maillons cumulés :
+Eva a bien été supprimée. Mais lors de la nouvelle invitation, la combinaison de deux mécanismes a produit l'effet « compte fantôme » :
 
-1. **Lien d'invitation non protégé contre les scanners.** Dans `auth-email-hook`, seuls `magiclink` et `recovery` sont réécrits vers `/auth/confirm`. Le type `invite` utilise directement l'URL Supabase `/verify?…&redirect_to=/invite/{token}`, à usage unique — Outlook Safe Links / Defender / Proofpoint (souvent actifs sur un domaine pro type `@alboteam.com`) pré-visitent le lien et le consomment. Quand Eva a cliqué, elle a eu "lien expiré".
+1. **`send-invitation` appelle `supabase.auth.admin.inviteUserByEmail`.** Cette API Supabase **crée immédiatement** une ligne dans `auth.users` (visible dans les données : user Eva créé 2 secondes après l'insertion de l'invitation, bien avant qu'elle ne clique). Le lien envoyé par mail est un lien magique type `invite` : cliquer suffit à signer la session — pas de mot de passe demandé, pas de page `/invite/{token}` avec formulaire.
 
-2. **Le trigger `handle_new_user` ignore le contexte d'invitation.** Il crée toujours un profil avec `organization_id = NULL` sans consulter les `organization_invitations` correspondant à l'email.
+2. **Le trigger `handle_new_user` (correctif précédent)** se déclenche sur `AFTER INSERT` de `auth.users`. Il rattache instantanément l'utilisateur fraîchement créé à l'invitation `pending` et bascule l'invitation en `accepted`. Résultat côté Benjamin : plus aucune invitation « en attente », Eva apparaît comme membre avant même d'avoir ouvert son mail.
 
-3. **Le rattachement à l'org n'a lieu que via `/invite/{token}` → `accept_invitation`.** Après l'échec du lien, Eva a créé son compte autrement (reset password ou signup direct) et n'est jamais passée par cette page. Résultat : compte orphelin côté Eva, invitation toujours "pending" côté Benjamin.
+Vérification base : invitation `accepted` à 13:16:32, user créé à 13:16:34, `email_confirmed_at` seulement à 13:19:45 (moment du clic). L'auto-linking a bien eu lieu avant tout acte d'Eva. Le compte est bien réel, mais il a été fabriqué par l'appel d'invitation lui-même — d'où l'illusion « son compte n'avait pas été supprimé ».
 
-## Étape 1 — Suppression complète d'Eva
+## Correctif
 
-Data-change unique pour repartir de zéro :
-- `organization_invitations` : suppression de la ligne `8085ad13-b61a-4299-b401-072f103bb5e7` (eva@alboteam.com, org Albo).
-- `auth.users` : suppression de l'utilisateur `836a791b-6ebf-4e3c-8c87-e2ce43fa32a1` (cascade → `profiles`, `organization_members`, `user_roles` éventuels).
+### 1. Ne rattacher qu'après confirmation réelle
+Remplacer le trigger `handle_new_user` par un trigger qui ne fait l'auto-link qu'à la **confirmation d'email** (première vraie action d'Eva), pas à la création de la ligne `auth.users` :
 
-Après ça, Benjamin peut relancer une invitation propre depuis l'UI.
+- Trigger `AFTER UPDATE ON auth.users` quand `OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL` → exécute la logique de rattachement (membership + `profiles.organization_id` + invitation `accepted`).
+- Garder aussi un trigger `AFTER INSERT` mais uniquement pour créer la ligne `profiles` vide (comportement historique) et rattacher **seulement si `NEW.email_confirmed_at IS NOT NULL`** (cas SSO/OAuth où la confirmation est simultanée).
 
-## Étape 2 — Correctifs structurels
+Effet : tant qu'Eva n'a pas cliqué son lien, l'invitation reste `pending` côté Benjamin.
 
-### 2.1 Protéger le lien d'invitation contre les scanners
-`supabase/functions/auth-email-hook/index.ts` : étendre la réécriture existante au type `invite`.
-- Générer `https://{ROOT_DOMAIN}/auth/confirm?token_hash=…&type=invite&next=/invite/{token}`.
-- `next` reconstruit à partir de `redirect_to` (qui contient déjà `/invite/{token}`).
-- Redéployer `auth-email-hook`.
+### 2. Exiger la création d'un mot de passe
+Le flux actuel via `inviteUserByEmail` donne accès sans mot de passe. On revient à un flux « invitation → page publique → création de compte » :
 
-Effet : le token n'est consommé qu'après un clic humain sur `/auth/confirm` (comportement déjà en place pour magic link et reset password).
+- `send-invitation` : ne plus appeler `auth.admin.inviteUserByEmail`. À la place, envoyer un email transactionnel (`send-transactional-email`) avec un lien direct vers `https://interw.ai/invite/{token}`.
+- La page `InviteSignup` existante prend le relais : vérification du token, saisie nom + mot de passe, `signUp` classique, puis `accept_invitation`.
+- Le lien contient uniquement le token d'invitation applicatif (pas un OTP Supabase), donc il n'est pas consommé par les scanners anti-spam et reste valide jusqu'à `expires_at`.
 
-### 2.2 Rattachement automatique au signup
-Modifier `handle_new_user` : si l'email du nouvel utilisateur correspond à une `organization_invitations` en `pending` non expirée, exécuter les mêmes actions que `accept_invitation` :
-- créer le membership,
-- renseigner `profiles.organization_id`,
-- marquer l'invitation `accepted`.
+### 3. Filet de sécurité `AuthContext` conservé
+Il reste utile pour les cas limites (utilisateur déjà existant qui reçoit une nouvelle invitation, changement d'email, etc.) — pas de changement.
 
-Idempotent, sans effet sur les signups hors invitation.
-
-### 2.3 Filet de sécurité côté client
-Dans `src/contexts/AuthContext.tsx`, après hydratation du profil : si `profile.organization_id` est nul, chercher une `organization_invitations` `pending` non expirée pour l'email de l'utilisateur et appeler `accept_invitation`. Rattrape les comptes créés en dehors du flux invitation.
+### 4. Nettoyage d'Eva pour retester proprement
+Suppression cascade : `auth.users` (id `d4dbd7e9…`), `profiles`, `organization_members`, et `organization_invitations` `accepted` associée. Benjamin pourra relancer une invitation propre pour valider le nouveau flux.
 
 ## Fichiers touchés
-- Data-change (suppression Eva).
-- Migration (mise à jour `handle_new_user`).
-- `supabase/functions/auth-email-hook/index.ts`.
-- `src/contexts/AuthContext.tsx`.
 
-## Vérification
-- Eva n'existe plus (ni auth, ni profil, ni invitation).
-- Benjamin relance l'invitation.
-- Eva clique le lien depuis sa boîte pro : passage par `/auth/confirm` puis `/invite/{token}`, rattachement automatique, apparition de l'organisation Albo dans son dashboard, invitation "acceptée" côté Benjamin.
+- Migration : refonte de `handle_new_user` en deux triggers (INSERT confirmé / UPDATE confirmation).
+- `supabase/functions/send-invitation/index.ts` : passage au mail transactionnel + lien `/invite/{token}` (plus d'`inviteUserByEmail`).
+- Nouveau template email d'invitation dans `_shared/transactional-email-templates/`.
+- Data-change : suppression complète d'Eva.
+
+## Vérification attendue
+
+- Benjamin invite Eva → invitation `pending` visible.
+- Eva reçoit l'email, clique → arrive sur `/invite/{token}`, doit choisir un mot de passe.
+- Après validation → rattachée à Albo, invitation `accepted`, Benjamin voit le changement.
+- Aucun compte auth n'est créé tant qu'Eva n'a pas soumis le formulaire.
