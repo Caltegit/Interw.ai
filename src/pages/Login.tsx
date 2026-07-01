@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { normalizeEmail } from "@/lib/auth-utils";
 
 export default function Login() {
   const [mode, setMode] = useState<"login" | "forgot">("login");
@@ -35,16 +36,20 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const normalizedEmail = normalizeEmail(email);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
           redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
         });
         if (error) throw error;
-        setSentToEmail(email);
+        setSentToEmail(normalizedEmail);
         setShowSentDialog(true);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ 
+          email: normalizedEmail, 
+          password 
+        });
         if (error) throw error;
         navigate("/dashboard");
       }
@@ -61,7 +66,7 @@ export default function Login() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Interw</CardTitle>
           <CardDescription>
-            {mode === "forgot" ? "Recevez un lien de connexion" : "LOGIN"}
+            {mode === "forgot" ? "Réinitialisation du mot de passe" : "CONNEXION"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +93,6 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
                 />
               </div>
             )}
@@ -96,7 +100,7 @@ export default function Login() {
               {loading
                 ? "Chargement..."
                 : mode === "forgot"
-                  ? "​Envoyer"
+                  ? "Envoyer le lien"
                   : "Se connecter"}
             </Button>
             {mode === "forgot" && (
@@ -111,9 +115,6 @@ export default function Login() {
               </Button>
             )}
           </form>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            {"\n"}
-          </p>
         </CardContent>
       </Card>
 
@@ -125,9 +126,9 @@ export default function Login() {
               <div className="space-y-3 text-left">
                 <p>
                   Si un compte existe pour <strong>{sentToEmail}</strong>, vous allez recevoir un email contenant un{" "}
-                  <strong>lien de connexion automatique</strong>. Cliquez dessus pour vous connecter directement, sans mot de passe.
+                  <strong>lien de réinitialisation</strong>. 
                 </p>
-                <p>Le lien est valable 24h et utilisable une seule fois.</p>
+                <p>Cliquez dessus pour choisir un nouveau mot de passe et accéder à votre compte.</p>
                 <p>
                   <strong>Pensez à vérifier vos spams</strong> si vous ne voyez pas l'email d'ici quelques minutes.
                 </p>

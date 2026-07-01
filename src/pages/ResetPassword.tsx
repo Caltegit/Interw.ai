@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { validatePassword } from "@/lib/auth-utils";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -17,16 +18,21 @@ export default function ResetPassword() {
 
   useEffect(() => {
     // Supabase pose un access_token dans le hash après clic sur lien recovery
-    // → onAuthStateChange détecte automatiquement la session
+    // Si on passe par AuthConfirm, la session est déjà là.
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setReady(true);
+      }
+    };
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         setReady(true);
       }
     });
-    // Si on arrive sans hash de recovery, on vérifie quand même la session
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
+
+    checkSession();
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -36,10 +42,13 @@ export default function ResetPassword() {
       toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
       return;
     }
-    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-      toast({ title: "Erreur", description: "Minimum 8 caractères, avec au moins une lettre et un chiffre.", variant: "destructive" });
+    
+    const errorMsg = validatePassword(password);
+    if (errorMsg) {
+      toast({ title: "Mot de passe invalide", description: errorMsg, variant: "destructive" });
       return;
     }
+
     setLoading(true);
     try {
       const { error } = await supabase.auth.updateUser({ password });
@@ -67,23 +76,26 @@ export default function ResetPassword() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Nouveau mot de passe</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
                 <p className="text-xs text-muted-foreground">
-                  Minimum 8 caractères, avec au moins une lettre et un chiffre.
+                  Minimum 8 caractères, avec au moins une lettre, un chiffre et un caractère spécial.
                 </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirm">Confirmer</Label>
-                <Input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} />
+                <Input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Mise à jour..." : "Mettre à jour"}
               </Button>
             </form>
           ) : (
-            <p className="text-sm text-muted-foreground text-center">
-              Si rien ne se passe, redemande un lien depuis la page de connexion.
-            </p>
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Si rien ne se passe, redemande un lien depuis la page de connexion.
+              </p>
+              <Button variant="ghost" onClick={() => navigate("/login")}>Retour à la connexion</Button>
+            </div>
           )}
         </CardContent>
       </Card>
