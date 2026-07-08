@@ -97,6 +97,9 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const caller = await requireCallerOrInternal(req, corsHeaders);
+  if (!caller.ok) return caller.response;
+
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
