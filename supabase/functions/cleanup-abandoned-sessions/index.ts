@@ -2,11 +2,12 @@
 // sans activité depuis plus de 2 heures). Supprime les fichiers du bucket
 // `media/interviews/{sessionId}/...`, puis les messages et la session.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { requireInternal } from "../_shared/auth-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-internal-secret",
 };
 
 const ABANDON_HOURS = 2;
@@ -15,6 +16,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const authFail = requireInternal(req, corsHeaders);
+  if (authFail) return authFail;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,

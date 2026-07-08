@@ -9,10 +9,11 @@
 //  - sinon l'extension du fichier final existant,
 //  - sinon l'extension majoritaire des chunks du dossier.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -321,6 +322,8 @@ async function rebuild(session_id: string, question_index: number, force = false
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  const caller = await requireCallerOrInternal(req, cors);
+  if (!caller.ok) return caller.response;
   try {
     const { session_id, question_index, sync, force } = await req.json();
     if (!session_id || typeof question_index !== "number") {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
@@ -98,6 +99,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const caller = await requireCallerOrInternal(req, corsHeaders);
+  if (!caller.ok) return caller.response;
 
   try {
     const { session_id, force: forceRegenerate } = await req.json();
