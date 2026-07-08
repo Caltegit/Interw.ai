@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
     if (!userId) return json({ success: true })
 
     const code = generateSixDigitCode()
+    console.log('password reset code generated', { code_length: code.length })
     const codeHash = await hashCode(code, email, userId, Deno.env.get('PASSWORD_RESET_CODE_PEPPER') || serviceKey)
     const expiresAt = new Date(Date.now() + CODE_TTL_MINUTES * 60 * 1000).toISOString()
 
