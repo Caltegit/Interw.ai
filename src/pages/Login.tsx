@@ -5,15 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { normalizeEmail } from "@/lib/auth-utils";
@@ -23,8 +14,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showSentDialog, setShowSentDialog] = useState(false);
-  const [sentToEmail, setSentToEmail] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session } = useAuth();
@@ -39,16 +28,22 @@ export default function Login() {
     const normalizedEmail = normalizeEmail(email);
     try {
       if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-          redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
+        // Envoie un email contenant un code à 6 chiffres (via template recovery)
+        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
+        // On ne révèle jamais l'existence du compte : succès affiché même en cas d'erreur
+        if (error) {
+          // Log silencieux, mais on continue vers la page de saisie du code
+          console.warn("resetPasswordForEmail:", error.message);
+        }
+        toast({
+          title: "Code envoyé",
+          description: "Si un compte existe pour cette adresse, vous recevez un code à 6 chiffres.",
         });
-        if (error) throw error;
-        setSentToEmail(normalizedEmail);
-        setShowSentDialog(true);
+        navigate(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ 
-          email: normalizedEmail, 
-          password 
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
         });
         if (error) throw error;
         navigate("/dashboard");
@@ -96,11 +91,16 @@ export default function Login() {
                 />
               </div>
             )}
+            {mode === "forgot" && (
+              <p className="text-xs text-muted-foreground">
+                Vous recevrez un code à 6 chiffres par email pour choisir un nouveau mot de passe.
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading
                 ? "Chargement..."
                 : mode === "forgot"
-                  ? "Envoyer le lien"
+                  ? "Envoyer le code"
                   : "Se connecter"}
             </Button>
             {mode === "forgot" && (
@@ -117,36 +117,6 @@ export default function Login() {
           </form>
         </CardContent>
       </Card>
-
-      <AlertDialog open={showSentDialog} onOpenChange={setShowSentDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Vérifiez votre boîte mail</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-left">
-                <p>
-                  Si un compte existe pour <strong>{sentToEmail}</strong>, vous allez recevoir un email contenant un{" "}
-                  <strong>lien de réinitialisation</strong>. 
-                </p>
-                <p>Cliquez dessus pour choisir un nouveau mot de passe et accéder à votre compte.</p>
-                <p>
-                  <strong>Pensez à vérifier vos spams</strong> si vous ne voyez pas l'email d'ici quelques minutes.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => {
-                setShowSentDialog(false);
-                setMode("login");
-              }}
-            >
-              J'ai compris
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
