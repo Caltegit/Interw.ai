@@ -28,7 +28,7 @@ export default function Login() {
     const normalizedEmail = normalizeEmail(email);
     try {
       if (mode === "forgot") {
-        // Envoie un email contenant un code à 8 chiffres (via template recovery)
+        // Envoie un email contenant un code à 6 chiffres (via template recovery)
         const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
         // On ne révèle jamais l'existence du compte : succès affiché même en cas d'erreur
         if (error) {
@@ -37,7 +37,7 @@ export default function Login() {
         }
         toast({
           title: "Code envoyé",
-          description: "Si un compte existe pour cette adresse, vous recevez un code à 8 chiffres.",
+          description: "Si un compte existe pour cette adresse, vous recevez un code à 6 chiffres.",
         });
         navigate(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
       } else {
@@ -93,7 +93,7 @@ export default function Login() {
             )}
             {mode === "forgot" && (
               <p className="text-xs text-muted-foreground">
-                Vous recevrez un code à 8 chiffres par email pour choisir un nouveau mot de passe.
+                Vous recevrez un code à 6 chiffres par email pour choisir un nouveau mot de passe.
               </p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
