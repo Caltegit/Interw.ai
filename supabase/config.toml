@@ -70,3 +70,9 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.redeem-magic-link]
     verify_jwt = false
+
+  [functions.request-password-reset-code]
+    verify_jwt = false
+
+  [functions.complete-password-reset]
+    verify_jwt = false

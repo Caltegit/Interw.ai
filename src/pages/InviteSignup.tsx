@@ -144,17 +144,19 @@ export default function InviteSignup() {
 
   const handleForgotPassword = async () => {
     if (!email) return;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizeEmail(email), {
-      redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/reset-password`,
+    const normalizedEmail = normalizeEmail(email);
+    const { error: resetError } = await supabase.functions.invoke("request-password-reset-code", {
+      body: { email: normalizedEmail },
     });
     if (resetError) {
       toast({ title: "Erreur", description: resetError.message, variant: "destructive" });
       return;
     }
     toast({
-      title: "Email envoyé",
-      description: "Consultez votre boîte mail pour réinitialiser votre mot de passe.",
+      title: "Code envoyé",
+      description: "Si un compte existe, vous recevez un code à 6 chiffres.",
     });
+    navigate(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
   };
 
   if (loading) {
