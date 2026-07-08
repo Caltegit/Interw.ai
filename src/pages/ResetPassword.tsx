@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ export default function ResetPassword() {
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -27,15 +30,24 @@ export default function ResetPassword() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
+  const parseErrorMessage = (raw: unknown): string => {
+    const msg = raw instanceof Error ? raw.message : typeof raw === "string" ? raw : "";
+    if (/expired|expiré/i.test(msg)) return "Ce code a expiré. Demandez-en un nouveau.";
+    if (/incorrect|invalid|invalide/i.test(msg)) return "Code incorrect. Vérifiez les 6 chiffres saisis.";
+    if (/attempts|tentatives/i.test(msg)) return "Trop de tentatives. Demandez un nouveau code.";
+    return msg || "Code incorrect ou expiré. Demandez un nouveau code.";
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
-      toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
+      setErrorMessage("Renseignez votre adresse email.");
       return;
     }
     if (code.length !== 6) {
-      toast({ title: "Code invalide", description: "Saisissez les 6 chiffres reçus par email.", variant: "destructive" });
+      setErrorMessage("Saisissez les 6 chiffres reçus par email.");
       return;
     }
     setLoading(true);
@@ -55,36 +67,36 @@ export default function ResetPassword() {
 
       toast({ title: "Connexion réussie", description: "Vous êtes maintenant connecté." });
       navigate("/dashboard", { replace: true });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e.message || "Vérifiez le code ou demandez-en un nouveau.",
-        variant: "destructive",
-      });
+    } catch (e: unknown) {
+      const message = parseErrorMessage(e);
+      setErrorMessage(message);
+      setCode("");
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
+    setErrorMessage(null);
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
-      toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
+      setErrorMessage("Renseignez votre adresse email.");
       return;
     }
-    setLoading(true);
+    setResending(true);
     try {
       const { error } = await supabase.functions.invoke("request-password-reset-code", {
         body: { email: normalizedEmail },
       });
       if (error) console.warn("request-password-reset-code:", error.message);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setCode("");
       toast({
         title: "Code renvoyé",
         description: "Si un compte existe, un nouveau code vient d'être envoyé.",
       });
     } finally {
-      setLoading(false);
+      setResending(false);
     }
   };
 
@@ -112,7 +124,15 @@ export default function ResetPassword() {
             <div className="space-y-2">
               <Label>Code à 6 chiffres</Label>
               <div className="flex justify-center">
-                <InputOTP maxLength={6} value={code} onChange={setCode}>
+                <InputOTP
+                  maxLength={6}
+                  value={code}
+                  onChange={(v) => {
+                    setCode(v);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  disabled={loading}
+                >
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
@@ -124,14 +144,27 @@ export default function ResetPassword() {
                 </InputOTP>
               </div>
             </div>
+            {errorMessage && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {errorMessage}
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={loading || resendCooldown > 0}
+                disabled={loading || resending || resendCooldown > 0}
                 className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
               >
-                {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "Renvoyer le code"}
+                {resending
+                  ? "Envoi..."
+                  : resendCooldown > 0
+                    ? `Renvoyer dans ${resendCooldown}s`
+                    : "Renvoyer le code"}
               </button>
               <button
                 type="button"
@@ -142,7 +175,14 @@ export default function ResetPassword() {
               </button>
             </div>
             <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Vérification du code...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </Button>
           </form>
         </CardContent>
