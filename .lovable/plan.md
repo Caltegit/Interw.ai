@@ -1,46 +1,70 @@
-## Ce qui s'est réellement passé
 
-Eva a bien été supprimée. Mais lors de la nouvelle invitation, la combinaison de deux mécanismes a produit l'effet « compte fantôme » :
+# Mot de passe oublié : passage au code à 6 chiffres
 
-1. **`send-invitation` appelle `supabase.auth.admin.inviteUserByEmail`.** Cette API Supabase **crée immédiatement** une ligne dans `auth.users` (visible dans les données : user Eva créé 2 secondes après l'insertion de l'invitation, bien avant qu'elle ne clique). Le lien envoyé par mail est un lien magique type `invite` : cliquer suffit à signer la session — pas de mot de passe demandé, pas de page `/invite/{token}` avec formulaire.
+## Objectif
+Aujourd'hui, quand un utilisateur clique sur "Mot de passe oublié ?", il reçoit un email avec un lien magique qui l'authentifie puis le redirige vers `/reset-password`. On remplace ce mécanisme par un **code à 6 chiffres** saisi manuellement dans l'app, puis choix du nouveau mot de passe.
 
-2. **Le trigger `handle_new_user` (correctif précédent)** se déclenche sur `AFTER INSERT` de `auth.users`. Il rattache instantanément l'utilisateur fraîchement créé à l'invitation `pending` et bascule l'invitation en `accepted`. Résultat côté Benjamin : plus aucune invitation « en attente », Eva apparaît comme membre avant même d'avoir ouvert son mail.
+Ce changement ne touche **que le flux "mot de passe oublié"**. La connexion normale (email + mot de passe), les invitations, les magic links super-admin et la confirmation d'email restent inchangés.
 
-Vérification base : invitation `accepted` à 13:16:32, user créé à 13:16:34, `email_confirmed_at` seulement à 13:19:45 (moment du clic). L'auto-linking a bien eu lieu avant tout acte d'Eva. Le compte est bien réel, mais il a été fabriqué par l'appel d'invitation lui-même — d'où l'illusion « son compte n'avait pas été supprimé ».
+## Parcours utilisateur cible
 
-## Correctif
+```text
+1. Page Login → clic "Mot de passe oublié ?"
+2. Saisie de l'email → clic "Envoyer le code"
+3. Email reçu avec un code à 6 chiffres (valable 1 h, à usage unique)
+4. Nouvel écran : champ email (pré-rempli) + champ code 6 chiffres
+5. Vérification du code → si OK, écran "nouveau mot de passe"
+6. Saisie + confirmation → mot de passe changé → redirection dashboard
+```
 
-### 1. Ne rattacher qu'après confirmation réelle
-Remplacer le trigger `handle_new_user` par un trigger qui ne fait l'auto-link qu'à la **confirmation d'email** (première vraie action d'Eva), pas à la création de la ligne `auth.users` :
+Points clés côté UX :
+- Message clair "Si un compte existe, un code a été envoyé" (pas de fuite d'existence de compte).
+- Bouton "Renvoyer le code" avec compte à rebours de 60 s.
+- Message d'erreur explicite si le code est faux ou expiré, avec possibilité d'en redemander un.
+- Le code reste valable même si l'utilisateur ferme l'onglet : il peut revenir depuis n'importe quel appareil.
 
-- Trigger `AFTER UPDATE ON auth.users` quand `OLD.email_confirmed_at IS NULL AND NEW.email_confirmed_at IS NOT NULL` → exécute la logique de rattachement (membership + `profiles.organization_id` + invitation `accepted`).
-- Garder aussi un trigger `AFTER INSERT` mais uniquement pour créer la ligne `profiles` vide (comportement historique) et rattacher **seulement si `NEW.email_confirmed_at IS NOT NULL`** (cas SSO/OAuth où la confirmation est simultanée).
+## Détails techniques
 
-Effet : tant qu'Eva n'a pas cliqué son lien, l'invitation reste `pending` côté Benjamin.
+### Comment fonctionne le code 6 chiffres
+Le backend d'authentification génère déjà, pour chaque email de recovery, à la fois un lien magique **et** un code numérique (`{{ .Token }}`). Aujourd'hui le template affiche uniquement le lien. Il suffit de :
+1. Modifier le template `recovery.tsx` pour afficher le code à 6 chiffres au lieu (ou en plus) du bouton lien.
+2. Côté front, vérifier le code avec `supabase.auth.verifyOtp({ email, token, type: "recovery" })`. Cet appel ouvre une session temporaire de type "recovery" qui autorise `updateUser({ password })`.
 
-### 2. Exiger la création d'un mot de passe
-Le flux actuel via `inviteUserByEmail` donne accès sans mot de passe. On revient à un flux « invitation → page publique → création de compte » :
+### Fichiers modifiés
 
-- `send-invitation` : ne plus appeler `auth.admin.inviteUserByEmail`. À la place, envoyer un email transactionnel (`send-transactional-email`) avec un lien direct vers `https://interw.ai/invite/{token}`.
-- La page `InviteSignup` existante prend le relais : vérification du token, saisie nom + mot de passe, `signUp` classique, puis `accept_invitation`.
-- Le lien contient uniquement le token d'invitation applicatif (pas un OTP Supabase), donc il n'est pas consommé par les scanners anti-spam et reste valide jusqu'à `expires_at`.
+**Front (React)**
+- `src/pages/Login.tsx` : après envoi de `resetPasswordForEmail`, rediriger vers `/reset-password?email=...&step=code` au lieu d'afficher le dialogue actuel.
+- `src/pages/ResetPassword.tsx` : refonte en machine à 2 étapes :
+  - Étape 1 : email (pré-rempli via query param) + champ code 6 chiffres + bouton "Vérifier" + bouton "Renvoyer" (cooldown 60 s).
+  - Étape 2 : nouveau mot de passe + confirmation (logique actuelle conservée : `validatePassword`, `updateUser`).
+  - L'écran s'active directement en étape 1 sans dépendre de `PASSWORD_RECOVERY` event.
+- `src/pages/AuthConfirm.tsx` : conserver le support `type=recovery` pour rétro-compat pendant quelques jours (anciens emails déjà envoyés). À supprimer une fois le stock d'emails purgé si souhaité.
 
-### 3. Filet de sécurité `AuthContext` conservé
-Il reste utile pour les cas limites (utilisateur déjà existant qui reçoit une nouvelle invitation, changement d'email, etc.) — pas de changement.
+**Email template**
+- `supabase/functions/_shared/email-templates/recovery.tsx` : afficher le code 6 chiffres (`{{ .Token }}`) en gros, garder un texte court, retirer le bouton "Réinitialiser mon mot de passe" (ou le laisser en repli discret). Ajout d'un rappel de la durée de validité et de l'expéditeur.
+- Redéploiement de `auth-email-hook` après modification.
 
-### 4. Nettoyage d'Eva pour retester proprement
-Suppression cascade : `auth.users` (id `d4dbd7e9…`), `profiles`, `organization_members`, et `organization_invitations` `accepted` associée. Benjamin pourra relancer une invitation propre pour valider le nouveau flux.
+**Configuration Supabase Auth**
+- Vérifier que la durée d'expiration OTP est ≤ 3600 s (déjà demandé par l'audit sécurité). Le code 6 chiffres suit ce paramètre.
 
-## Fichiers touchés
+### Points de vigilance
 
-- Migration : refonte de `handle_new_user` en deux triggers (INSERT confirmé / UPDATE confirmation).
-- `supabase/functions/send-invitation/index.ts` : passage au mail transactionnel + lien `/invite/{token}` (plus d'`inviteUserByEmail`).
-- Nouveau template email d'invitation dans `_shared/transactional-email-templates/`.
-- Data-change : suppression complète d'Eva.
+- **Rate limiting** : `resetPasswordForEmail` a un rate limit natif (émission des emails). Ajout côté UI d'un cooldown "Renvoyer" pour éviter les 429.
+- **Emails déjà en circulation** : les liens envoyés avant le déploiement continueront à fonctionner via `/auth/confirm` tant que la page est là.
+- **Message d'erreur unifié** à l'envoi (pas de distinction "email inconnu" vs "email envoyé") pour ne pas révéler l'existence d'un compte.
+- **Tests E2E** : mettre à jour `tests/e2e/` si un scénario couvrait le lien magique de recovery (à vérifier lors de l'implémentation).
+- **Aucune migration SQL** requise.
 
-## Vérification attendue
+## Ce qui n'est PAS changé
+- Connexion classique email/mot de passe.
+- Magic links super-admin (`superadmin-impersonate`, `redeem-magic-link`).
+- Invitations d'organisation.
+- Confirmation d'inscription / changement d'email.
+- Politique de mot de passe (`validatePassword`).
 
-- Benjamin invite Eva → invitation `pending` visible.
-- Eva reçoit l'email, clique → arrive sur `/invite/{token}`, doit choisir un mot de passe.
-- Après validation → rattachée à Albo, invitation `accepted`, Benjamin voit le changement.
-- Aucun compte auth n'est créé tant qu'Eva n'a pas soumis le formulaire.
+## Livrables
+1. `Login.tsx` : redirection vers la nouvelle page après envoi.
+2. `ResetPassword.tsx` : formulaire à 2 étapes (code puis mot de passe).
+3. `recovery.tsx` (template email) : affichage du code 6 chiffres.
+4. Redéploiement de `auth-email-hook`.
+5. Vérification manuelle bout-en-bout avec un compte de test avant publication.
