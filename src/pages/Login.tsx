@@ -28,7 +28,7 @@ export default function Login() {
     const normalizedEmail = normalizeEmail(email);
     try {
       if (mode === "forgot") {
-        // Envoie un email contenant un code à 6 chiffres (via template recovery)
+        // Envoie un email contenant un code à 8 chiffres (via template recovery)
         const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
         // On ne révèle jamais l'existence du compte : succès affiché même en cas d'erreur
         if (error) {
