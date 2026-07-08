@@ -16,15 +16,6 @@ function normalizeEmail(email: unknown): string {
   return typeof email === 'string' ? email.trim().toLowerCase() : ''
 }
 
-function validatePassword(password: unknown): string | null {
-  if (typeof password !== 'string') return 'Mot de passe invalide.'
-  if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.'
-  if (!/[A-Za-z]/.test(password)) return 'Le mot de passe doit contenir au moins une lettre.'
-  if (!/\d/.test(password)) return 'Le mot de passe doit contenir au moins un chiffre.'
-  if (!/[^A-Za-z0-9]/.test(password)) return 'Le mot de passe doit contenir au moins un caractère spécial.'
-  return null
-}
-
 async function hashCode(code: string, email: string, userId: string, secret: string): Promise<string> {
   const data = new TextEncoder().encode(`${code}:${email}:${userId}:${secret}`)
   const digest = await crypto.subtle.digest('SHA-256', data)
@@ -45,19 +36,15 @@ Deno.serve(async (req) => {
 
   let email = ''
   let code = ''
-  let password = ''
   try {
     const body = await req.json()
     email = normalizeEmail(body.email)
     code = typeof body.code === 'string' ? body.code.trim() : ''
-    password = typeof body.password === 'string' ? body.password : ''
   } catch {
     return json({ error: 'Requête invalide' }, 400)
   }
 
   if (!email || !/^\d{6}$/.test(code)) return json({ error: 'Code incorrect ou expiré' }, 400)
-  const passwordError = validatePassword(password)
-  if (passwordError) return json({ error: passwordError }, 400)
 
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -90,10 +77,15 @@ Deno.serve(async (req) => {
     return json({ error: 'Code incorrect ou expiré' }, 400)
   }
 
-  const { error: updateError } = await admin.auth.admin.updateUserById(resetCode.user_id, { password })
-  if (updateError) {
-    console.error('complete-password-reset update failed', updateError)
-    return json({ error: 'Impossible de mettre à jour le mot de passe' }, 500)
+  // Génère un lien magique dont le hash de jeton sera vérifié côté client
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
+    type: 'magiclink',
+    email,
+  })
+
+  if (linkError || !linkData?.properties?.hashed_token) {
+    console.error('complete-password-reset generateLink failed', linkError)
+    return json({ error: 'Impossible de créer la session' }, 500)
   }
 
   await admin
@@ -101,5 +93,9 @@ Deno.serve(async (req) => {
     .update({ consumed_at: new Date().toISOString() })
     .eq('id', resetCode.id)
 
-  return json({ success: true })
+  return json({
+    success: true,
+    token_hash: linkData.properties.hashed_token,
+    email,
+  })
 })
