@@ -29,15 +29,24 @@ export default function ResetPassword() {
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
+  const parseErrorMessage = (raw: unknown): string => {
+    const msg = raw instanceof Error ? raw.message : typeof raw === "string" ? raw : "";
+    if (/expired|expiré/i.test(msg)) return "Ce code a expiré. Demandez-en un nouveau.";
+    if (/incorrect|invalid|invalide/i.test(msg)) return "Code incorrect. Vérifiez les 6 chiffres saisis.";
+    if (/attempts|tentatives/i.test(msg)) return "Trop de tentatives. Demandez un nouveau code.";
+    return msg || "Code incorrect ou expiré. Demandez un nouveau code.";
+  };
+
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
-      toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
+      setErrorMessage("Renseignez votre adresse email.");
       return;
     }
     if (code.length !== 6) {
-      toast({ title: "Code invalide", description: "Saisissez les 6 chiffres reçus par email.", variant: "destructive" });
+      setErrorMessage("Saisissez les 6 chiffres reçus par email.");
       return;
     }
     setLoading(true);
@@ -57,36 +66,36 @@ export default function ResetPassword() {
 
       toast({ title: "Connexion réussie", description: "Vous êtes maintenant connecté." });
       navigate("/dashboard", { replace: true });
-    } catch (e: any) {
-      toast({
-        title: "Erreur",
-        description: e.message || "Vérifiez le code ou demandez-en un nouveau.",
-        variant: "destructive",
-      });
+    } catch (e: unknown) {
+      const message = parseErrorMessage(e);
+      setErrorMessage(message);
+      setCode("");
     } finally {
       setLoading(false);
     }
   };
 
   const handleResend = async () => {
+    setErrorMessage(null);
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
-      toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
+      setErrorMessage("Renseignez votre adresse email.");
       return;
     }
-    setLoading(true);
+    setResending(true);
     try {
       const { error } = await supabase.functions.invoke("request-password-reset-code", {
         body: { email: normalizedEmail },
       });
       if (error) console.warn("request-password-reset-code:", error.message);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setCode("");
       toast({
         title: "Code renvoyé",
         description: "Si un compte existe, un nouveau code vient d'être envoyé.",
       });
     } finally {
-      setLoading(false);
+      setResending(false);
     }
   };
 
