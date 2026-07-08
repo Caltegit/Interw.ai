@@ -28,12 +28,14 @@ export default function Login() {
     const normalizedEmail = normalizeEmail(email);
     try {
       if (mode === "forgot") {
-        // Envoie un email contenant un code à 6 chiffres (via template recovery)
-        const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
+        // Envoie un email contenant un code à 6 chiffres généré par le backend.
+        const { error } = await supabase.functions.invoke("request-password-reset-code", {
+          body: { email: normalizedEmail },
+        });
         // On ne révèle jamais l'existence du compte : succès affiché même en cas d'erreur
         if (error) {
           // Log silencieux, mais on continue vers la page de saisie du code
-          console.warn("resetPasswordForEmail:", error.message);
+          console.warn("request-password-reset-code:", error.message);
         }
         toast({
           title: "Code envoyé",

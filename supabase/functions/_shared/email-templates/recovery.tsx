@@ -24,7 +24,7 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="fr" dir="ltr">
     <Head />
-    <Preview>Votre code de réinitialisation {siteName} — valable 1 heure.</Preview>
+    <Preview>Votre code de réinitialisation {siteName} à 6 chiffres — valable 15 minutes.</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Réinitialisation de votre mot de passe</Heading>
@@ -36,7 +36,7 @@ export const RecoveryEmail = ({
         </Text>
         <Text style={codeStyle}>{token}</Text>
         <Text style={smallText}>
-          Ce code est valable 1 heure et à usage unique.
+          Ce code à 6 chiffres est valable 15 minutes et à usage unique.
         </Text>
         <Hr style={hr} />
         <Text style={footer}>

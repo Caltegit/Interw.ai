@@ -9,8 +9,6 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { useToast } from "@/hooks/use-toast";
 import { normalizeEmail, validatePassword } from "@/lib/auth-utils";
 
-type Step = "code" | "password";
-
 const RESEND_COOLDOWN_SECONDS = 60;
 
 export default function ResetPassword() {
@@ -18,7 +16,6 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [step, setStep] = useState<Step>("code");
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -26,26 +23,13 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Si l'utilisateur arrive déjà en session recovery (ancien lien magique), passer direct à l'étape mot de passe.
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setStep("password");
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
-        setStep("password");
-      }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const t = setTimeout(() => setResendCooldown((v) => v - 1), 1000);
     return () => clearTimeout(t);
   }, [resendCooldown]);
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
@@ -56,18 +40,31 @@ export default function ResetPassword() {
       toast({ title: "Code invalide", description: "Saisissez les 6 chiffres reçus par email.", variant: "destructive" });
       return;
     }
+    if (password !== confirm) {
+      toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
+      return;
+    }
+    const errorMsg = validatePassword(password);
+    if (errorMsg) {
+      toast({ title: "Mot de passe invalide", description: errorMsg, variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: normalizedEmail,
-        token: code,
-        type: "recovery",
+      const { error } = await supabase.functions.invoke("complete-password-reset", {
+        body: { email: normalizedEmail, code, password },
       });
       if (error) throw error;
-      setStep("password");
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+      if (signInError) throw signInError;
+      toast({ title: "Mot de passe mis à jour", description: "Vous êtes maintenant connecté." });
+      navigate("/dashboard", { replace: true });
     } catch (e: any) {
       toast({
-        title: "Code incorrect ou expiré",
+        title: "Erreur",
         description: e.message || "Vérifiez le code ou demandez-en un nouveau.",
         variant: "destructive",
       });
@@ -84,8 +81,10 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail);
-      if (error) console.warn("resetPasswordForEmail:", error.message);
+      const { error } = await supabase.functions.invoke("request-password-reset-code", {
+        body: { email: normalizedEmail },
+      });
+      if (error) console.warn("request-password-reset-code:", error.message);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
       toast({
         title: "Code renvoyé",
@@ -96,46 +95,19 @@ export default function ResetPassword() {
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password !== confirm) {
-      toast({ title: "Erreur", description: "Les mots de passe ne correspondent pas.", variant: "destructive" });
-      return;
-    }
-    const errorMsg = validatePassword(password);
-    if (errorMsg) {
-      toast({ title: "Mot de passe invalide", description: errorMsg, variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      toast({ title: "Mot de passe mis à jour", description: "Vous êtes maintenant connecté." });
-      navigate("/dashboard", { replace: true });
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">
-            {step === "code" ? "Vérification du code" : "Nouveau mot de passe"}
+            Réinitialisation du mot de passe
           </CardTitle>
           <CardDescription>
-            {step === "code"
-              ? "Saisissez le code à 6 chiffres reçu par email."
-              : "Choisissez un nouveau mot de passe pour votre compte."}
+            Saisissez le code à 6 chiffres reçu par email.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === "code" ? (
-            <form onSubmit={handleVerifyCode} className="space-y-4">
+            <form onSubmit={handleUpdatePassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -162,7 +134,7 @@ export default function ResetPassword() {
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
-                {loading ? "Vérification..." : "Vérifier"}
+                {loading ? "Mise à jour..." : "Mettre à jour"}
               </Button>
               <div className="flex items-center justify-between text-sm">
                 <button
@@ -181,9 +153,6 @@ export default function ResetPassword() {
                   Retour à la connexion
                 </button>
               </div>
-            </form>
-          ) : (
-            <form onSubmit={handleUpdatePassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">Nouveau mot de passe</Label>
                 <Input
@@ -207,11 +176,7 @@ export default function ResetPassword() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Mise à jour..." : "Mettre à jour"}
-              </Button>
             </form>
-          )}
         </CardContent>
       </Card>
     </div>
