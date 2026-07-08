@@ -147,9 +147,9 @@ export default function ResetPassword() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Code à 6 chiffres</Label>
+                <Label>Code à 8 chiffres</Label>
                 <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={code} onChange={setCode}>
+                  <InputOTP maxLength={8} value={code} onChange={setCode}>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -157,11 +157,13 @@ export default function ResetPassword() {
                       <InputOTPSlot index={3} />
                       <InputOTPSlot index={4} />
                       <InputOTPSlot index={5} />
+                      <InputOTPSlot index={6} />
+                      <InputOTPSlot index={7} />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 8}>
                 {loading ? "Vérification..." : "Vérifier"}
               </Button>
               <div className="flex items-center justify-between text-sm">
