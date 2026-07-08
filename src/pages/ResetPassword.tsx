@@ -133,9 +133,6 @@ export default function ResetPassword() {
                   </InputOTP>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
-                {loading ? "Mise à jour..." : "Mettre à jour"}
-              </Button>
               <div className="flex items-center justify-between text-sm">
                 <button
                   type="button"
@@ -176,6 +173,9 @@ export default function ResetPassword() {
                   required
                 />
               </div>
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+                {loading ? "Mise à jour..." : "Mettre à jour"}
+              </Button>
             </form>
         </CardContent>
       </Card>
