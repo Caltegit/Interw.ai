@@ -52,8 +52,8 @@ export default function ResetPassword() {
       toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
       return;
     }
-    if (code.length !== 8) {
-      toast({ title: "Code invalide", description: "Saisissez les 8 chiffres reçus par email.", variant: "destructive" });
+    if (code.length !== 6) {
+      toast({ title: "Code invalide", description: "Saisissez les 6 chiffres reçus par email.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -129,7 +129,7 @@ export default function ResetPassword() {
           </CardTitle>
           <CardDescription>
             {step === "code"
-              ? "Saisissez le code à 8 chiffres reçu par email."
+              ? "Saisissez le code à 6 chiffres reçu par email."
               : "Choisissez un nouveau mot de passe pour votre compte."}
           </CardDescription>
         </CardHeader>
@@ -147,9 +147,9 @@ export default function ResetPassword() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Code à 8 chiffres</Label>
+                <Label>Code à 6 chiffres</Label>
                 <div className="flex justify-center">
-                  <InputOTP maxLength={8} value={code} onChange={setCode}>
+                  <InputOTP maxLength={6} value={code} onChange={setCode}>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -157,13 +157,11 @@ export default function ResetPassword() {
                       <InputOTPSlot index={3} />
                       <InputOTPSlot index={4} />
                       <InputOTPSlot index={5} />
-                      <InputOTPSlot index={6} />
-                      <InputOTPSlot index={7} />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={loading || code.length !== 8}>
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
                 {loading ? "Vérification..." : "Vérifier"}
               </Button>
               <div className="flex items-center justify-between text-sm">
