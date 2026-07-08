@@ -83,6 +83,7 @@ Deno.serve(async (req) => {
       .from('password_reset_codes')
       .select('id')
       .eq('email', email)
+      .is('consumed_at', null)
       .gte('created_at', since)
       .limit(1)
 
