@@ -52,8 +52,8 @@ export default function ResetPassword() {
       toast({ title: "Email requis", description: "Renseignez votre adresse email.", variant: "destructive" });
       return;
     }
-    if (code.length !== 6) {
-      toast({ title: "Code invalide", description: "Saisissez les 6 chiffres reçus par email.", variant: "destructive" });
+    if (code.length !== 8) {
+      toast({ title: "Code invalide", description: "Saisissez les 8 chiffres reçus par email.", variant: "destructive" });
       return;
     }
     setLoading(true);
