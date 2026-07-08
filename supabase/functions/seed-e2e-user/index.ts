@@ -5,7 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-e2e-seed-secret",
 };
 
 const FIXED = {
@@ -33,6 +33,18 @@ const FIXED = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Cette fonction crée/reset un compte utilisateur avec un mot de passe connu.
+  // Elle DOIT rester inaccessible publiquement : on exige un secret partagé
+  // (`E2E_SEED_SECRET`) fourni par la CI E2E via l'entête `x-e2e-seed-secret`.
+  const expected = Deno.env.get("E2E_SEED_SECRET");
+  const provided = req.headers.get("x-e2e-seed-secret");
+  if (!expected || !provided || provided !== expected) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   try {
     const admin = createClient(
