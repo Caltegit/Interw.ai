@@ -129,7 +129,7 @@ export default function ResetPassword() {
           </CardTitle>
           <CardDescription>
             {step === "code"
-              ? "Saisissez le code à 6 chiffres reçu par email."
+              ? "Saisissez le code à 8 chiffres reçu par email."
               : "Choisissez un nouveau mot de passe pour votre compte."}
           </CardDescription>
         </CardHeader>
