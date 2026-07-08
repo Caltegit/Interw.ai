@@ -37,7 +37,7 @@ export default function Login() {
         }
         toast({
           title: "Code envoyé",
-          description: "Si un compte existe pour cette adresse, vous recevez un code à 6 chiffres.",
+          description: "Si un compte existe pour cette adresse, vous recevez un code à 8 chiffres.",
         });
         navigate(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
       } else {
