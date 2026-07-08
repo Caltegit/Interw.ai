@@ -123,7 +123,15 @@ export default function ResetPassword() {
             <div className="space-y-2">
               <Label>Code à 6 chiffres</Label>
               <div className="flex justify-center">
-                <InputOTP maxLength={6} value={code} onChange={setCode}>
+                <InputOTP
+                  maxLength={6}
+                  value={code}
+                  onChange={(v) => {
+                    setCode(v);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  disabled={loading}
+                >
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
@@ -135,14 +143,27 @@ export default function ResetPassword() {
                 </InputOTP>
               </div>
             </div>
+            {errorMessage && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {errorMessage}
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={loading || resendCooldown > 0}
+                disabled={loading || resending || resendCooldown > 0}
                 className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
               >
-                {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "Renvoyer le code"}
+                {resending
+                  ? "Envoi..."
+                  : resendCooldown > 0
+                    ? `Renvoyer dans ${resendCooldown}s`
+                    : "Renvoyer le code"}
               </button>
               <button
                 type="button"
@@ -153,7 +174,14 @@ export default function ResetPassword() {
               </button>
             </div>
             <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Vérification du code...
+                </>
+              ) : (
+                "Se connecter"
+              )}
             </Button>
           </form>
         </CardContent>
