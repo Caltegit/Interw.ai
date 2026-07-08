@@ -93,7 +93,7 @@ export default function Login() {
             )}
             {mode === "forgot" && (
               <p className="text-xs text-muted-foreground">
-                Vous recevrez un code à 6 chiffres par email pour choisir un nouveau mot de passe.
+                Vous recevrez un code à 8 chiffres par email pour choisir un nouveau mot de passe.
               </p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
