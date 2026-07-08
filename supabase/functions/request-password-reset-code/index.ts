@@ -34,6 +34,12 @@ function generateSixDigitCode(): string {
   return String(bytes[0] % 1_000_000).padStart(6, '0')
 }
 
+function generateToken(): string {
+  const bytes = new Uint8Array(32)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 async function hashCode(code: string, email: string, userId: string, secret: string): Promise<string> {
   const data = new TextEncoder().encode(`${code}:${email}:${userId}:${secret}`)
   const digest = await crypto.subtle.digest('SHA-256', data)
@@ -124,6 +130,20 @@ Deno.serve(async (req) => {
     const text = await renderAsync(React.createElement(RecoveryEmail, templateProps), { plainText: true })
     const messageId = crypto.randomUUID()
 
+    const { data: existingToken } = await admin
+      .from('email_unsubscribe_tokens')
+      .select('token')
+      .eq('email', email)
+      .maybeSingle()
+
+    let unsubscribeToken = existingToken?.token as string | undefined
+    if (!unsubscribeToken) {
+      unsubscribeToken = generateToken()
+      await admin
+        .from('email_unsubscribe_tokens')
+        .upsert({ token: unsubscribeToken, email }, { onConflict: 'email', ignoreDuplicates: true })
+    }
+
     await admin.from('email_send_log').insert({
       message_id: messageId,
       template_name: 'recovery',
@@ -146,6 +166,7 @@ Deno.serve(async (req) => {
         purpose: 'transactional',
         label: 'recovery',
         idempotency_key: `password-reset-${email}-${Date.now()}`,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
       },
     })
