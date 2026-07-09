@@ -1,47 +1,34 @@
-Objectif : garantir que le parcours de réinitialisation utilise réellement un code à 6 chiffres, côté backend comme côté interface.
+## Problème
 
-## Plan
+La page publique `/highlights/:token` (`HighlightsPublic.tsx`) interroge directement `report_shares`, `reports` et `sessions` avec le client `anon`. La migration de durcissement (08/07) a supprimé les policies `anon` sur `report_shares` et `reports` → la page est cassée (écran "Lien introuvable ou expiré").
 
-1. **Remplacer la dépendance au code natif actuel**
-   - Ne plus utiliser le code de réinitialisation généré automatiquement s’il n’est pas configurable à 6 chiffres.
-   - Mettre en place un flux backend maîtrisé qui génère toujours un code numérique de 6 chiffres.
+## Solution : réutiliser l'edge function `consume-report-share`
 
-2. **Créer le flux backend sécurisé**
-   - Ajouter une table dédiée aux codes de réinitialisation avec : email normalisé, utilisateur lié, code haché, expiration, nombre d’essais, date d’utilisation.
-   - Générer le code côté backend avec un générateur sécurisé.
-   - Stocker uniquement une version hachée du code.
-   - Expirer les codes rapidement et limiter les essais.
-   - Répondre de manière générique à la demande d’envoi pour éviter de révéler si un compte existe.
+L'edge function `consume-report-share` existe déjà, tourne en `service_role` (contourne RLS proprement), gère expiration/désactivation/verrouillage par `viewer_secret`, et renvoie déjà `report`, `session`, `messages`. C'est ce que `SharedReport.tsx` utilise déjà. On l'étend légèrement pour couvrir les highlights.
 
-3. **Envoyer le bon code par email**
-   - Adapter l’envoi d’email de réinitialisation pour injecter le code généré par ce nouveau backend.
-   - Faire apparaître clairement “code à 6 chiffres” dans le contenu de l’email.
-   - Utiliser un exemple de prévisualisation à 6 chiffres.
+### Étape 1 — Étendre `consume-report-share`
 
-4. **Adapter l’interface utilisateur**
-   - Page de connexion : le bouton “mot de passe oublié” déclenchera le nouveau backend d’envoi de code.
-   - Page de réinitialisation : conserver uniquement 6 cases de saisie.
-   - Validation : bloquer la vérification tant que les 6 chiffres ne sont pas saisis.
-   - Étape mot de passe : finaliser la réinitialisation via le backend après validation du code.
-   - Remplacer toutes les mentions visibles restantes de 8 chiffres par 6 chiffres.
+- Ajouter dans la réponse le `project.title` (déjà dispo via la jointure `sessions.projects.title`) et `session.candidate_name` (déjà là).
+- Aucun changement de sécurité : la fonction fait déjà tout le travail de validation du token.
 
-5. **Sécuriser les cas limites**
-   - Code expiré.
-   - Code déjà utilisé.
-   - Trop d’essais incorrects.
-   - Email inexistant sans fuite d’information.
-   - Mot de passe non conforme aux règles existantes.
+### Étape 2 — Refactor `HighlightsPublic.tsx`
 
-6. **Vérification globale**
-   - Rechercher dans le code toutes les mentions de “8 chiffres”, `maxLength={8}`, validations à 8 caractères et anciens appels de réinitialisation.
-   - Tester visuellement la page `/reset-password` : 6 cases uniquement.
-   - Tester le bouton : désactivé avant 6 chiffres, activé à 6 chiffres.
-   - Tester un envoi de code et vérifier côté backend que le code généré et envoyé contient exactement 6 chiffres.
-   - Tester la réinitialisation complète : demande du code, saisie du code, nouveau mot de passe, connexion possible ensuite.
+- Supprimer les 3 appels directs à `supabase.from(...)`.
+- Faire un seul appel `supabase.functions.invoke("consume-report-share", { body: { token, viewerSecret } })`, aligné sur `SharedReport.tsx` (même storageKey `report-share:${token}`, même gestion du `viewerSecret` renvoyé).
+- Extraire `clips` depuis `report.highlight_clips`, `candidateName` depuis `session.candidate_name`, `projectTitle` depuis `session.projects.title`.
+- Conserver l'UI et le lien "Voir le rapport complet" tels quels.
 
-## Détails techniques
+### Étape 3 — Effet de bord à valider
 
-- Le réglage natif de longueur OTP n’est pas exposé ici, donc le plan prévoit un flux backend contrôlé plutôt qu’un simple changement d’affichage.
-- Le code ne sera jamais stocké en clair.
-- Les accès directs à la table seront fermés côté utilisateur ; seules les fonctions backend pourront créer, vérifier et consommer les codes.
-- Les emails resteront en français et cohérents avec l’interface actuelle.
+`HighlightsPublic` et `SharedReport` partagent maintenant la même `storageKey` → un candidat qui ouvre le lien highlights *puis* le rapport complet (ou l'inverse) sur le même navigateur reste autorisé (même `viewer_secret`). C'est le comportement voulu. Sur un autre appareil, le lien reste verrouillé — cohérent avec la sécurité en place.
+
+## Ce que je ne touche PAS
+
+- Aucune modification RLS / migration SQL.
+- Aucun changement à `SharedReport.tsx`.
+- Aucun changement aux autres points audités (session_attempts anon, user_roles, organizations anon columns) — soit intentionnels, soit non liés.
+
+## Fichiers modifiés
+
+- `supabase/functions/consume-report-share/index.ts` — s'assurer que la réponse contient bien `session.candidate_name` et `session.projects.title` (déjà le cas — vérif seulement, sans doute 0 changement).
+- `src/pages/HighlightsPublic.tsx` — bascule sur l'edge function.

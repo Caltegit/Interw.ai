@@ -17,49 +17,32 @@ export default function HighlightsPublic() {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data: share } = await supabase
-        .from("report_shares")
-        .select("report_id, is_active, expires_at")
-        .eq("share_token", token)
-        .maybeSingle();
+      const storageKey = `report-share:${token}`;
+      const storedSecret =
+        typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
 
-      if (!share) {
-        setError("Lien introuvable ou expiré.");
-        setLoading(false);
-        return;
-      }
-      if (!share.is_active) {
-        setError("Ce lien a été désactivé.");
-        setLoading(false);
-        return;
-      }
-      if (share.expires_at && new Date(share.expires_at) < new Date()) {
-        setError("Ce lien a expiré.");
+      const { data, error: fnError } = await supabase.functions.invoke("consume-report-share", {
+        body: { token, viewerSecret: storedSecret ?? undefined },
+      });
+
+      if (fnError || !data || (data as any).error) {
+        setError((data as any)?.error ?? "Lien introuvable ou expiré.");
         setLoading(false);
         return;
       }
 
-      const { data: report } = await supabase
-        .from("reports")
-        .select("highlight_clips, session_id")
-        .eq("id", share.report_id)
-        .single();
+      const issued = (data as any).viewerSecret;
+      if (issued && typeof window !== "undefined") {
+        window.localStorage.setItem(storageKey, issued);
+      }
+
+      const report = (data as any).report;
+      const session = (data as any).session;
 
       const list = (report?.highlight_clips as unknown as HighlightClip[]) ?? [];
       setClips(list);
-
-      if (report?.session_id) {
-        const { data: s } = await supabase
-          .from("sessions")
-          .select("candidate_name, projects(title)")
-          .eq("id", report.session_id)
-          .single();
-        if (s) {
-          setCandidateName(s.candidate_name ?? "");
-          setProjectTitle((s as any).projects?.title ?? "");
-        }
-      }
-
+      setCandidateName(session?.candidate_name ?? "");
+      setProjectTitle(session?.projects?.title ?? "");
       setLoading(false);
     })();
   }, [token]);
