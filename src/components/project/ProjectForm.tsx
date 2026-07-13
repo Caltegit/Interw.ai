@@ -450,13 +450,14 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
   const canProceed = () => {
     if (step === 0) return !!title.trim();
+    if (step === 1) return criteria.some((c) => c.label.trim());
     if (step === 2)
       return questions.some(
         (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
       );
-    if (step === 3) return criteria.some((c) => c.label.trim());
     return true;
   };
+
 
   const handleSubmit = () => {
     onSubmit({
