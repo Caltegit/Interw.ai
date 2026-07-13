@@ -61,7 +61,7 @@ import {
   DEFAULT_AI_TRANSITION_TEXT,
 } from "@/components/project/AiTextCustomizerDialog";
 
-const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publier"];
+const STEPS = ["Infos", "Critères", "Questions", "Intro", "Publier"];
 export const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 export const DEFAULT_PRE_SESSION_MESSAGE = "Soyez naturel.le et souriez, vous êtes filmé.e !";
 
