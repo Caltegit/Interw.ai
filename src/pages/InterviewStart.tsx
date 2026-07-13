@@ -4070,7 +4070,7 @@ export default function InterviewStart() {
                       }}
                     />
                     <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/60 text-white px-2 py-1 rounded text-xs font-medium z-10">
-                      {project?.ai_persona_name || "Marie"} — IA
+                      {project?.ai_persona_name || "Marie"}
                     </div>
                   </div>
                 ) : (
@@ -4112,7 +4112,7 @@ export default function InterviewStart() {
                         className="absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-1 rounded text-xs font-medium backdrop-blur-md"
                         style={{ background: "hsl(var(--l-bg) / 0.6)", color: "hsl(var(--l-fg))" }}
                       >
-                        {project?.ai_persona_name || "Marie"} — IA
+                        {project?.ai_persona_name || "Marie"}
                       </div>
                     </div>
                   </div>
