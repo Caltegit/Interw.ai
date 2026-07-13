@@ -61,7 +61,7 @@ import {
   DEFAULT_AI_TRANSITION_TEXT,
 } from "@/components/project/AiTextCustomizerDialog";
 
-const STEPS = ["Infos", "Intro", "Questions", "Critères", "Publier"];
+const STEPS = ["Infos", "Critères", "Questions", "Intro", "Publier"];
 export const DEFAULT_COMPLETION_MESSAGE = "Les meilleures équipes ne se recrutent pas. Elles se reconnaissent.";
 export const DEFAULT_PRE_SESSION_MESSAGE = "Soyez naturel.le et souriez, vous êtes filmé.e !";
 
@@ -450,13 +450,14 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
   const canProceed = () => {
     if (step === 0) return !!title.trim();
+    if (step === 1) return criteria.some((c) => c.label.trim());
     if (step === 2)
       return questions.some(
         (q) => q.content.trim() || q.audioBlob || q.videoBlob || q.audioPreviewUrl || q.videoPreviewUrl,
       );
-    if (step === 3) return criteria.some((c) => c.label.trim());
     return true;
   };
+
 
   const handleSubmit = () => {
     onSubmit({
@@ -1130,7 +1131,17 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
+
+          {step === 2 && (
+            <StepQuestions
+              questions={questions}
+              setQuestions={setQuestions}
+              projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
+            />
+          )}
+
+          {step === 3 && (
             <StepIntro
               introEnabled={introEnabled}
               setIntroEnabled={setIntroEnabled}
@@ -1152,15 +1163,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             />
           )}
 
-          {step === 2 && (
-            <StepQuestions
-              questions={questions}
-              setQuestions={setQuestions}
-              projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
-            />
-          )}
-
-          {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
           {step === 4 && (
             <div className="space-y-4">

@@ -15,15 +15,7 @@ test("RH peut créer un projet via le wizard", async ({ page }) => {
   await page.getByLabel(/description/i).first().fill("Description E2E auto-générée.");
   await page.getByRole("button", { name: /suivant|continuer/i }).first().click();
 
-  // Step 2: questions — open library, pick first 2
-  await page.getByRole("button", { name: /bibliothèque/i }).first().click();
-  const libCheckboxes = page.locator('[role="dialog"] input[type="checkbox"], [role="dialog"] [role="checkbox"]');
-  await libCheckboxes.nth(0).click();
-  await libCheckboxes.nth(1).click();
-  await page.getByRole("button", { name: /ajouter/i }).last().click();
-  await page.getByRole("button", { name: /suivant|continuer/i }).first().click();
-
-  // Step 3: criteria — open library, pick first 2
+  // Step 2: critères — ouvrir la bibliothèque, cocher 2
   await page.getByRole("button", { name: /bibliothèque/i }).first().click();
   const critCheckboxes = page.locator('[role="dialog"] input[type="checkbox"], [role="dialog"] [role="checkbox"]');
   await critCheckboxes.nth(0).click();
@@ -31,8 +23,20 @@ test("RH peut créer un projet via le wizard", async ({ page }) => {
   await page.getByRole("button", { name: /ajouter/i }).last().click();
   await page.getByRole("button", { name: /suivant|continuer/i }).first().click();
 
-  // Step 4: validate creation
+  // Step 3: questions — ouvrir la bibliothèque, cocher 2
+  await page.getByRole("button", { name: /bibliothèque/i }).first().click();
+  const libCheckboxes = page.locator('[role="dialog"] input[type="checkbox"], [role="dialog"] [role="checkbox"]');
+  await libCheckboxes.nth(0).click();
+  await libCheckboxes.nth(1).click();
+  await page.getByRole("button", { name: /ajouter/i }).last().click();
+  await page.getByRole("button", { name: /suivant|continuer/i }).first().click();
+
+  // Step 4: intro — passer sans configurer
+  await page.getByRole("button", { name: /suivant|continuer/i }).first().click();
+
+  // Step 5: valider la création
   await page.getByRole("button", { name: /créer|valider|terminer/i }).last().click();
+
 
   // Assert: redirected to project detail
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}/, { timeout: 15_000 });
