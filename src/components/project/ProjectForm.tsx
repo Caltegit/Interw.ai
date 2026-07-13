@@ -1131,7 +1131,17 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
+
+          {step === 2 && (
+            <StepQuestions
+              questions={questions}
+              setQuestions={setQuestions}
+              projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
+            />
+          )}
+
+          {step === 3 && (
             <StepIntro
               introEnabled={introEnabled}
               setIntroEnabled={setIntroEnabled}
@@ -1153,15 +1163,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             />
           )}
 
-          {step === 2 && (
-            <StepQuestions
-              questions={questions}
-              setQuestions={setQuestions}
-              projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
-            />
-          )}
-
-          {step === 3 && <StepCriteria criteria={criteria} setCriteria={setCriteria} totalWeight={totalWeight} />}
 
           {step === 4 && (
             <div className="space-y-4">
