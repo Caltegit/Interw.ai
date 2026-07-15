@@ -77,5 +77,3 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.complete-password-reset]
     verify_jwt = false
 
-  [functions.generate-fit-matrix]
-    verify_jwt = false
