@@ -37,7 +37,7 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
           </div>
         )}
         <div className="flex flex-col gap-1">
-          <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
             <Upload className="h-4 w-4" />
             Télécharger
           </Button>
