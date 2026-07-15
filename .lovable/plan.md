@@ -1,23 +1,29 @@
-## Problème
+## Objectif
 
-Sur l'écran de préparation affiché juste avant la première question (session candidat et démo), une des étapes s'appelle « **Préparation de la voix de l'IA** ». Or la voix peut être une vraie voix humaine clonée — le libellé est donc trompeur.
+Sur l'étape 1 de création de projet (champ « Photo de l'intervieweur »), n'afficher que l'avatar **Léa** dans la grille de photos prédéfinies. Tous les autres avatars (Camille, Isabelle, Catherine, Mei, Charlotte, Antoine, Karim, Hugo, Philippe, Marc, Tom) sont retirés de la sélection.
 
-## Correction
+## Aperçu de ce que ça donne
 
-Remplacer le libellé par un terme neutre qui ne présume pas de la nature de la voix.
+La grille « Photos » (aujourd'hui 4×3 = 12 vignettes) devient une seule vignette ronde avec Léa, à côté du bouton « Télécharger » (qui reste disponible pour importer une photo personnalisée).
 
-**Nouveau libellé :** « Préparation de la voix »
+```text
+Avant :                        Après :
+[C][I][L][C]                   [L]
+[M][C][A][K]
+[H][P][M][T]
+```
 
-### Fichiers modifiés
+Le reste ne change pas : bouton Télécharger, aperçu de la photo sélectionnée, croix pour retirer, dialog de recadrage.
 
-1. `src/pages/InterviewStart.tsx`
-   - Ligne 2400 : `label: "Préparation de la voix de l'IA"` → `label: "Préparation de la voix"`
-   - Ligne 2549 : idem
+## Changements
 
-2. `src/components/interview/InterviewBootProgress.tsx`
-   - Ligne 20 (commentaire interne) : « la voix IA est chaude » → « la voix est chaude »
+- `src/components/project/AvatarPicker.tsx` : réduire `PHOTO_AVATARS` à la seule entrée Léa (`woman-3`). Supprimer les imports d'images devenus inutilisés (woman-1/2/4/5/6, man-1…6).
+- `src/pages/ProjectNew.tsx` : l'avatar par défaut pour un nouveau projet est aujourd'hui `woman-1` (Camille). Le remplacer par `woman-3` (Léa) pour rester cohérent avec la seule option disponible. Renommer la variable `defaultCamilleAvatar` → `defaultLeaAvatar`.
 
 ## Hors périmètre
 
-- Les autres mentions de « voix IA » ailleurs dans l'app (page Landing FAQ, page IntroLibrary) : elles décrivent une fonctionnalité produit distincte (TTS pur, sans clonage), le terme y reste correct. Rien à changer.
-- L'écran de préparation lui-même (design, autres étapes) : inchangé.
+- `QuestionAvatarDialog` utilise `AvatarPicker` avec `uploadOnly`, donc la grille n'y est pas affichée : rien à changer là.
+- Les fichiers d'images dans `src/assets/avatars/` sont conservés (au cas où on veuille en réintroduire), seuls les imports sont retirés.
+- Aucune modification back-end, ni des projets existants (leurs `interviewer_avatar_url` restent tels quels).
+
+Confirme et je passe en implémentation.
