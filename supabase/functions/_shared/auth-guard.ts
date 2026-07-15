@@ -70,24 +70,12 @@ export async function requireCallerOrInternal(
     const token = authHeader.slice("Bearer ".length);
     if (isInternalToken(token)) return { ok: true, internal: true, userId: null };
     try {
+      // Utilise SERVICE_ROLE (garanti présent) pour valider le token utilisateur
+      // via l'API GoTrue — évite les surprises de config sur SUPABASE_ANON_KEY.
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } },
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
-      // Tentative 1 : signing keys (rapide, sans round-trip)
-      try {
-        const { data, error } = await supabase.auth.getClaims(token);
-        if (!error && data?.claims?.sub) {
-          return {
-            ok: true,
-            internal: false,
-            userId: String(data.claims.sub),
-            email: typeof data.claims.email === "string" ? data.claims.email : undefined,
-          };
-        }
-      } catch (_) { /* fallback getUser */ }
-      // Tentative 2 : validation classique via GoTrue (compat toutes configs)
       const { data: userData, error: userErr } = await supabase.auth.getUser(token);
       if (!userErr && userData?.user?.id) {
         return {
@@ -97,8 +85,9 @@ export async function requireCallerOrInternal(
           email: userData.user.email ?? undefined,
         };
       }
-    } catch (_) {
-      /* fall through to 401 */
+      console.warn("[auth-guard] getUser failed", userErr?.message ?? "no user");
+    } catch (e) {
+      console.warn("[auth-guard] exception", e instanceof Error ? e.message : String(e));
     }
   }
 
