@@ -94,10 +94,8 @@ export function QuestionAvatarDialog({
 
           <AvatarPicker
             value={displayValue}
-            onSelectPreset={(url) => setValue(url)}
             onUpload={handleUpload}
             onClear={() => setValue(null)}
-            uploadOnly
           />
         </div>
 
