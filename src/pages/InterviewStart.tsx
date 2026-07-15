@@ -3477,6 +3477,29 @@ export default function InterviewStart() {
           ? Math.round((Date.now() - startedAt) / 1000)
           : null;
 
+        // Garde-fou : ne pas marquer completed si aucun média candidat n'a été
+        // enregistré. Sinon la session apparaît "complétée" dans le dashboard
+        // alors qu'aucun rapport ne pourra être généré. On bascule en cancelled,
+        // ce qui empêche aussi le trigger d'enqueue un job de rapport orphelin.
+        const { count: mediaCount } = await supabase
+          .from("session_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", sessionId)
+          .eq("role", "candidate")
+          .or("video_segment_url.not.is.null,audio_segment_url.not.is.null");
+
+        if (!mediaCount || mediaCount === 0) {
+          await supabase
+            .from("sessions")
+            .update({
+              status: "cancelled" as any,
+              cancelled_at: new Date().toISOString(),
+            })
+            .eq("id", sessionId);
+          logger.warn("interview_finalize_no_media", { sessionId });
+          return;
+        }
+
         await supabase
           .from("sessions")
           .update({
@@ -3485,6 +3508,7 @@ export default function InterviewStart() {
             ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
           })
           .eq("id", sessionId);
+
 
         // Re-transcribe candidate videos with Gemini (cleans STT artifacts)
         // before generating the report so analysis uses clean text.
