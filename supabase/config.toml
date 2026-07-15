@@ -76,3 +76,4 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.complete-password-reset]
     verify_jwt = false
+
