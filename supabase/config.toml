@@ -2,25 +2,25 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
 [functions]
   [functions.auth-email-hook]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.send-transactional-email]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.report-interview-issue]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.preview-transactional-email]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.handle-email-unsubscribe]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.handle-email-suppression]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.get-email-template-defaults]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.process-email-queue]
     verify_jwt = true
@@ -29,31 +29,31 @@ project_id = "qxszgsxdktnwqabsdfvw"
     verify_jwt = true
 
   [functions.seed-e2e-user]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.tts-elevenlabs]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.superadmin-impersonate]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.transcribe-session]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.tts-openai]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.tts-gemini-direct]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.finalize-session]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.finalize-abandoned-session]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.candidate-self-delete]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.purge-old-videos]
     verify_jwt = true
@@ -66,16 +66,16 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
 
   [functions.consume-report-share]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.redeem-magic-link]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.request-password-reset-code]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.complete-password-reset]
-    verify_jwt = true
+    verify_jwt = false
 
   [functions.generate-fit-matrix]
-    verify_jwt = true
+    verify_jwt = false
