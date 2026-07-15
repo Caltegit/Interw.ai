@@ -81,7 +81,6 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
 
   const rowAverages = useMemo(() => {
     if (!hasMatrix || !matrix) return {} as Record<string, number | null>;
-    const totalWeight = matrix.criteria.reduce((s, c) => s + (c.weight || 0), 0) || 1;
     const out: Record<string, number | null> = {};
     for (const r of matrix.rows) {
       let sum = 0;
@@ -95,8 +94,6 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
       }
       out[r.question_id] = weight > 0 ? Math.round(sum / weight) : null;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    void totalWeight;
     return out;
   }, [matrix, hasMatrix]);
 
