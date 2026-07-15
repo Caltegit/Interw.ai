@@ -17,17 +17,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-  return new Response(JSON.stringify({ debug: "reached", method: req.method }), {
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-  // eslint-disable-next-line no-unreachable
-  const authHdr = req.headers.get("Authorization") ?? "";
-  console.log("[generate-fit-matrix] entry", { hasAuth: authHdr.startsWith("Bearer "), len: authHdr.length });
   const caller = await requireCallerOrInternal(req, corsHeaders);
-  if (!caller.ok) {
-    console.warn("[generate-fit-matrix] unauthorized");
-    return caller.response;
-  }
+  if (!caller.ok) return caller.response;
 
   try {
     const { session_id, force } = await req.json().catch(() => ({}));
