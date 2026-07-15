@@ -36,17 +36,12 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
             Aucun avatar
           </div>
         )}
-        <div className="flex flex-1 items-center gap-3">
-          <div className="flex flex-col gap-1">
-            <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
-              <Upload className="h-4 w-4" />
-              Télécharger
-            </Button>
-            <p className="text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
-          </div>
-          <p className="text-xs text-muted-foreground leading-snug">
-            Importez votre photo pour personnaliser l'expérience !
-          </p>
+        <div className="flex flex-col gap-1">
+          <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Télécharger
+          </Button>
+          <p className="text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
         </div>
       </div>
 
