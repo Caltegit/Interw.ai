@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { createEmptyQuestion } from "@/components/project/StepQuestions";
-import defaultLeaAvatar from "@/assets/avatars/woman-3.jpg";
+import defaultCamilleAvatar from "@/assets/avatars/woman-1.jpg";
 import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDialog";
 import {
   ProjectForm,
@@ -32,8 +32,8 @@ const initialState: ProjectFormState = {
   aiPersonaName: "Léa",
   aiVoice: "female_fr",
   avatarFile: null,
-  avatarPreview: defaultLeaAvatar,
-  presetAvatarUrl: defaultLeaAvatar,
+  avatarPreview: defaultCamilleAvatar,
+  presetAvatarUrl: defaultCamilleAvatar,
   introEnabled: false,
   introMode: "text",
   introText: "",
