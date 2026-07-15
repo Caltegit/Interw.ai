@@ -1410,6 +1410,22 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       });
     }
 
+    // Génère la matrice Fit Poste détaillée en arrière-plan (n'allonge pas la
+    // génération du rapport). Si l'appel échoue, le bouton "Voir les détails"
+    // côté UI permet de la générer à la demande.
+    try {
+      fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ session_id }),
+      }).catch((e) => console.error("[generate-report] fit-matrix bg call failed", e));
+    } catch (e) {
+      console.error("[generate-report] fit-matrix bg dispatch error", e);
+    }
+
     // Send email to assigned user (fallback: project creator, then org owner)
     // L'email est envoyé APRÈS les analyses orale + non-verbale pour pouvoir
     // inclure leur synthèse.
