@@ -14,6 +14,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("[generate-fit-matrix] hit", req.method, new Date().toISOString());
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
