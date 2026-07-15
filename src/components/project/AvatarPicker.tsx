@@ -13,7 +13,7 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         {value ? (
           <div className="relative">
             <img
@@ -35,17 +35,20 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
             Aucun avatar
           </div>
         )}
-        <div className="flex-1 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setUploadOpen(true)}
-            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
-          >
-            <Upload className="h-4 w-4" />
-            Télécharger
-          </button>
-          <p className="text-xs text-muted-foreground leading-snug">
-            Importez votre photo pour personnaliser l'expérience ! Recadrage et aperçu inclus
+        <div className="flex flex-1 items-start gap-3">
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setUploadOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
+            >
+              <Upload className="h-4 w-4" />
+              Télécharger
+            </button>
+            <p className="text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
+          </div>
+          <p className="text-xs text-muted-foreground leading-snug pt-1">
+            Importez votre photo pour personnaliser l'expérience !
           </p>
         </div>
       </div>
