@@ -75,13 +75,26 @@ export async function requireCallerOrInternal(
         Deno.env.get("SUPABASE_ANON_KEY")!,
         { global: { headers: { Authorization: authHeader } } },
       );
-      const { data, error } = await supabase.auth.getClaims(token);
-      if (!error && data?.claims?.sub) {
+      // Tentative 1 : signing keys (rapide, sans round-trip)
+      try {
+        const { data, error } = await supabase.auth.getClaims(token);
+        if (!error && data?.claims?.sub) {
+          return {
+            ok: true,
+            internal: false,
+            userId: String(data.claims.sub),
+            email: typeof data.claims.email === "string" ? data.claims.email : undefined,
+          };
+        }
+      } catch (_) { /* fallback getUser */ }
+      // Tentative 2 : validation classique via GoTrue (compat toutes configs)
+      const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+      if (!userErr && userData?.user?.id) {
         return {
           ok: true,
           internal: false,
-          userId: String(data.claims.sub),
-          email: typeof data.claims.email === "string" ? data.claims.email : undefined,
+          userId: userData.user.id,
+          email: userData.user.email ?? undefined,
         };
       }
     } catch (_) {
