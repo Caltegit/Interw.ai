@@ -17,7 +17,7 @@ interface InterviewBootProgressProps {
 /**
  * Écran de boot affiché juste après le clic « Lancer la session » et avant que
  * la première question ne soit prononcée. Garantit que :
- *   - la voix IA est chaude (warm-up TTS),
+ *   - la voix est chaude (warm-up TTS),
  *   - la connexion a été mesurée,
  *   - le média de la 1ère question est en cache.
  */

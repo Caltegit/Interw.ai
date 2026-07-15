@@ -2397,7 +2397,7 @@ export default function InterviewStart() {
           : "written";
       const earlyMediaUrl = q0Early?.video_url || q0Early?.audio_url || null;
       setBootSteps([
-        { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
+        { key: "voice", label: "Préparation de la voix", status: "pending" },
         { key: "network", label: "Test de la connexion", status: "pending" },
         {
           key: "media",
@@ -2546,7 +2546,7 @@ export default function InterviewStart() {
     // beginInterview() pour éviter le flash de la Q1. On rafraîchit ici le
     // libellé de l'étape « media » au cas où questions[0] aurait évolué.
     setBootSteps([
-      { key: "voice", label: "Préparation de la voix de l'IA", status: "pending" },
+      { key: "voice", label: "Préparation de la voix", status: "pending" },
       { key: "network", label: "Test de la connexion", status: "pending" },
       {
         key: "media",
