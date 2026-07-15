@@ -480,12 +480,20 @@ export function SessionReportView({
 
           <TabsContent value="decision" className="mt-4 space-y-4">
             {report ? (
-              <FitBreakdownCard
-                items={stats.fit_breakdown}
-                legacyCriteriaScores={criteriaScores as any}
-                onGoToMessage={goToMessage}
-                questionNumberByMessageId={questionNumberByMessageId}
-              />
+              <>
+                <FitBreakdownCard
+                  items={stats.fit_breakdown}
+                  legacyCriteriaScores={criteriaScores as any}
+                  onGoToMessage={goToMessage}
+                  questionNumberByMessageId={questionNumberByMessageId}
+                />
+                <FitMatrixCard
+                  matrix={stats.fit_matrix}
+                  sessionId={sessionId}
+                  readOnly={readOnly}
+                  onGoToMessage={goToMessage}
+                />
+              </>
             ) : (
               <Card>
                 <CardContent className="py-8 text-center">
