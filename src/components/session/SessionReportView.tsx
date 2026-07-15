@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SessionVideoNavigator, SessionVideoClip, SessionVideoNavigatorHandle } from "@/components/session/SessionVideoNavigator";
 import { DecisionBanner, type RecruiterDecision } from "@/components/session/DecisionBanner";
 import { FitBreakdownCard } from "@/components/session/FitBreakdownCard";
+import { FitMatrixCard } from "@/components/session/FitMatrixCard";
 import { SignalsCard } from "@/components/session/SignalsCard";
 import { CommunicationProfileCard } from "@/components/session/CommunicationProfileCard";
 import { ParaverbalProfileCard } from "@/components/session/ParaverbalProfileCard";
