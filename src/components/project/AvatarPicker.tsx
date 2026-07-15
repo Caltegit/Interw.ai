@@ -2,32 +2,10 @@ import { useState } from "react";
 import { Check, Upload, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AvatarUploadDialog } from "./AvatarUploadDialog";
-import woman1 from "@/assets/avatars/woman-1.jpg";
-import woman2 from "@/assets/avatars/woman-2.jpg";
 import woman3 from "@/assets/avatars/woman-3.jpg";
-import woman4 from "@/assets/avatars/woman-4.jpg";
-import woman5 from "@/assets/avatars/woman-5.jpg";
-import woman6 from "@/assets/avatars/woman-6.jpg";
-import man1 from "@/assets/avatars/man-1.jpg";
-import man2 from "@/assets/avatars/man-2.jpg";
-import man3 from "@/assets/avatars/man-3.jpg";
-import man4 from "@/assets/avatars/man-4.jpg";
-import man5 from "@/assets/avatars/man-5.jpg";
-import man6 from "@/assets/avatars/man-6.jpg";
 
 const PHOTO_AVATARS = [
-  { url: woman1, name: "Camille" },
-  { url: woman2, name: "Isabelle" },
   { url: woman3, name: "Léa" },
-  { url: woman4, name: "Catherine" },
-  { url: woman5, name: "Mei" },
-  { url: woman6, name: "Charlotte" },
-  { url: man1, name: "Antoine" },
-  { url: man2, name: "Karim" },
-  { url: man3, name: "Hugo" },
-  { url: man4, name: "Philippe" },
-  { url: man5, name: "Marc" },
-  { url: man6, name: "Tom" },
 ];
 
 interface Props {
