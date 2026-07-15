@@ -17,8 +17,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  const authHdr = req.headers.get("Authorization") ?? "";
+  console.log("[generate-fit-matrix] entry", { hasAuth: authHdr.startsWith("Bearer "), len: authHdr.length });
   const caller = await requireCallerOrInternal(req, corsHeaders);
-  if (!caller.ok) return caller.response;
+  if (!caller.ok) {
+    console.warn("[generate-fit-matrix] unauthorized");
+    return caller.response;
+  }
 
   try {
     const { session_id, force } = await req.json().catch(() => ({}));
