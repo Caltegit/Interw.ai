@@ -14,10 +14,13 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log("[generate-fit-matrix] hit", req.method, new Date().toISOString());
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+  return new Response(JSON.stringify({ debug: "reached", method: req.method }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+  // eslint-disable-next-line no-unreachable
   const authHdr = req.headers.get("Authorization") ?? "";
   console.log("[generate-fit-matrix] entry", { hasAuth: authHdr.startsWith("Bearer "), len: authHdr.length });
   const caller = await requireCallerOrInternal(req, corsHeaders);
