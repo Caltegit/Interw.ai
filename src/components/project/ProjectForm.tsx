@@ -871,17 +871,6 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                 <div className="mt-2">
                   <AvatarPicker
                     value={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
-                    onSelectPreset={(url) => {
-                      if (isEdit) {
-                        setAvatarFile(null);
-                        setAvatarPreview(url);
-                        setPresetAvatarUrl(url);
-                      } else {
-                        setPresetAvatarUrl(url);
-                        setAvatarFile(null);
-                        setAvatarPreview(null);
-                      }
-                    }}
                     onUpload={(file) => {
                       setAvatarFile(file);
                       setAvatarPreview(URL.createObjectURL(file));

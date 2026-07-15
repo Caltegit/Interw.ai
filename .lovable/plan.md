@@ -1,29 +1,36 @@
 ## Objectif
 
-Sur l'étape 1 de création de projet (champ « Photo de l'intervieweur »), n'afficher que l'avatar **Léa** dans la grille de photos prédéfinies. Tous les autres avatars (Camille, Isabelle, Catherine, Mei, Charlotte, Antoine, Karim, Hugo, Philippe, Marc, Tom) sont retirés de la sélection.
+Sur l'étape 1 du wizard, retirer la grille « PHOTOS » et afficher à droite du bouton « Télécharger » le texte : **« Importez votre photo pour personnaliser l'expérience ! Recadrage et aperçu inclus »**. La photo par défaut (Camille) reste affichée au chargement.
 
-## Aperçu de ce que ça donne
-
-La grille « Photos » (aujourd'hui 4×3 = 12 vignettes) devient une seule vignette ronde avec Léa, à côté du bouton « Télécharger » (qui reste disponible pour importer une photo personnalisée).
+## Aperçu
 
 ```text
-Avant :                        Après :
-[C][I][L][C]                   [L]
-[M][C][A][K]
-[H][P][M][T]
+Avant :                                              Après :
+Photo du recruteur                                   Photo du recruteur
+[avatar] [Télécharger]                               [avatar] [Télécharger]  Importez votre photo
+         Recadrage et aperçu inclus                                          pour personnaliser
+PHOTOS                                                                       l'expérience !
+[Léa]                                                                        Recadrage et aperçu inclus
+─────                                                ─────
+Fonctionnalités avancées ▾                           Fonctionnalités avancées ▾
 ```
-
-Le reste ne change pas : bouton Télécharger, aperçu de la photo sélectionnée, croix pour retirer, dialog de recadrage.
 
 ## Changements
 
-- `src/components/project/AvatarPicker.tsx` : réduire `PHOTO_AVATARS` à la seule entrée Léa (`woman-3`). Supprimer les imports d'images devenus inutilisés (woman-1/2/4/5/6, man-1…6).
-- `src/pages/ProjectNew.tsx` : l'avatar par défaut pour un nouveau projet est aujourd'hui `woman-1` (Camille). Le remplacer par `woman-3` (Léa) pour rester cohérent avec la seule option disponible. Renommer la variable `defaultCamilleAvatar` → `defaultLeaAvatar`.
+- `src/components/project/AvatarPicker.tsx`
+  - Supprimer entièrement le bloc `!uploadOnly` (grille « PHOTOS » + message « Photo personnalisée sélectionnée »).
+  - Retirer l'import `woman-3` et la constante `PHOTO_AVATARS`.
+  - À droite du bouton « Télécharger », afficher : « Importez votre photo pour personnaliser l'expérience ! Recadrage et aperçu inclus » (`text-xs text-muted-foreground`, sur la même colonne à côté du bouton).
+  - Retirer la prop `uploadOnly` et `onSelectPreset` de l'interface (plus utilisées).
+
+- `src/components/project/ProjectForm.tsx` (ligne ~872)
+  - Retirer les props `onSelectPreset` du `<AvatarPicker>`.
+
+- `src/components/project/QuestionAvatarDialog.tsx` (si utilise `uploadOnly` / `onSelectPreset`)
+  - Nettoyer les props supprimées.
 
 ## Hors périmètre
 
-- `QuestionAvatarDialog` utilise `AvatarPicker` avec `uploadOnly`, donc la grille n'y est pas affichée : rien à changer là.
-- Les fichiers d'images dans `src/assets/avatars/` sont conservés (au cas où on veuille en réintroduire), seuls les imports sont retirés.
-- Aucune modification back-end, ni des projets existants (leurs `interviewer_avatar_url` restent tels quels).
-
-Confirme et je passe en implémentation.
+- Photo par défaut Camille : **conservée** (aucun changement dans `ProjectNew.tsx`).
+- Fichiers d'avatars dans `src/assets/avatars/` : laissés en place.
+- Aucune modification back-end.

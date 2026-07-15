@@ -1,29 +1,18 @@
 import { useState } from "react";
-import { Check, Upload, X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Upload, X } from "lucide-react";
 import { AvatarUploadDialog } from "./AvatarUploadDialog";
-import woman3 from "@/assets/avatars/woman-3.jpg";
-
-const PHOTO_AVATARS = [
-  { url: woman3, name: "Léa" },
-];
 
 interface Props {
   value: string | null;
-  onSelectPreset: (url: string) => void;
   onUpload: (file: File) => void;
   onClear: () => void;
-  uploadOnly?: boolean;
 }
 
-export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadOnly = false }: Props) {
+export function AvatarPicker({ value, onUpload, onClear }: Props) {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const isPhoto = value && PHOTO_AVATARS.some((a) => a.url === value);
-  const isCustom = value && !isPhoto;
 
   return (
     <div className="space-y-3">
-      {/* Selected preview + clear */}
       <div className="flex items-center gap-4">
         {value ? (
           <div className="relative">
@@ -46,61 +35,22 @@ export function AvatarPicker({ value, onSelectPreset, onUpload, onClear, uploadO
             Aucun avatar
           </div>
         )}
-        <div className="flex-1">
+        <div className="flex-1 flex items-center gap-3">
           <button
             type="button"
             onClick={() => setUploadOpen(true)}
-            className="mt-2 inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
           >
             <Upload className="h-4 w-4" />
             Télécharger
           </button>
-          <p className="mt-1 text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
+          <p className="text-xs text-muted-foreground leading-snug">
+            Importez votre photo pour personnaliser l'expérience ! Recadrage et aperçu inclus
+          </p>
         </div>
       </div>
 
       <AvatarUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} onUpload={onUpload} />
-
-      {!uploadOnly && (
-        <div>
-          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Photos</p>
-          <div className="grid grid-cols-4 gap-3 sm:grid-cols-6">
-            {PHOTO_AVATARS.map((avatar) => {
-              const selected = value === avatar.url;
-              return (
-                <button
-                  key={avatar.name}
-                  type="button"
-                  onClick={() => onSelectPreset(avatar.url)}
-                  className={cn(
-                    "relative aspect-square rounded-full border-2 bg-muted overflow-hidden transition-all hover:scale-105",
-                    selected
-                      ? "border-primary ring-2 ring-primary ring-offset-2"
-                      : "border-border hover:border-primary/50",
-                  )}
-                  aria-label={`Photo ${avatar.name}`}
-                  title={avatar.name}
-                >
-                  <img
-                    src={avatar.url}
-                    alt=""
-                    className="h-full w-full object-cover object-top"
-                    loading="lazy"
-                  />
-                  {selected && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-primary/30">
-                      <div className="rounded-full bg-primary p-1">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {isCustom && <p className="mt-2 text-xs text-muted-foreground">Photo personnalisée sélectionnée.</p>}
-        </div>
-      )}
     </div>
   );
 }
