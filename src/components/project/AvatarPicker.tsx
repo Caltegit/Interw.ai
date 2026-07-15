@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AvatarUploadDialog } from "./AvatarUploadDialog";
 
 interface Props {
@@ -13,7 +14,7 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         {value ? (
           <div className="relative">
             <img
@@ -35,19 +36,15 @@ export function AvatarPicker({ value, onUpload, onClear }: Props) {
             Aucun avatar
           </div>
         )}
-        <div className="flex flex-1 items-start gap-3">
+        <div className="flex flex-1 items-center gap-3">
           <div className="flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={() => setUploadOpen(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
-            >
+            <Button type="button" variant="outline" onClick={() => setUploadOpen(true)}>
               <Upload className="h-4 w-4" />
               Télécharger
-            </button>
+            </Button>
             <p className="text-xs text-muted-foreground">Recadrage et aperçu inclus</p>
           </div>
-          <p className="text-xs text-muted-foreground leading-snug pt-1">
+          <p className="text-xs text-muted-foreground leading-snug">
             Importez votre photo pour personnaliser l'expérience !
           </p>
         </div>
