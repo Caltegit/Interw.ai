@@ -60,7 +60,13 @@ function barColor(level?: FitItem["level"]) {
   }
 }
 
-export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage, questionNumberByMessageId }: Props) {
+export function FitBreakdownCard({
+  items,
+  legacyCriteriaScores,
+  criteriaWeights,
+  onGoToMessage,
+  questionNumberByMessageId,
+}: Props) {
   let list: FitItem[] = [];
   if (items && items.length > 0) {
     list = items.map((it) => ({ ...it, level: it.level ?? inferLevel(it.score) }));
@@ -83,6 +89,20 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage, q
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base text-left">
           <Target className="h-4 w-4 text-primary" /> Adéquation selon les critères définis
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="ml-auto text-muted-foreground hover:text-foreground">
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-xs">
+                  Chaque score est la moyenne du détail question par question pour ce critère. Le Fit Poste global est la moyenne pondérée de ces scores.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
