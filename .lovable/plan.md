@@ -1,59 +1,61 @@
-## Objectif
+# Audit des régressions du 8 juillet 2026
 
-Permettre de modifier le contenu du modèle d'email « Reprise entretien » directement depuis l'interface admin, une seule fois, et que **tous les envois suivants** (unitaires ou groupés, y compris les témoins) utilisent cette version modifiée.
+## Ce qui s'est passé le 8 juillet
 
-Approche volontairement simple : un seul modèle partagé, éditable, avec aperçu — pas de personnalisation par candidat.
+Migrations de durcissement sécurité qui ont provoqué :
 
-## UX proposée
+1. **`organizations`** : révocation du `SELECT` anon global, remplacé par un GRANT limité aux colonnes `id, name, slug, logo_url, created_at`.
+2. **`report_shares` + `reports`** : suppression des policies anon (accès forcé via edge function).
+3. **`storage.objects`** : suppression de `Anon can view media`, `Public can view media`, `Tutorials public read`, `Public can read feedback attachments`.
 
-Sur la page `/admin/candidates-to-recover`, ajouter en haut de la carte **Candidats impactés** un bouton **Modifier le modèle d'email**.
+## Régressions déjà corrigées
 
-Au clic, une popup s'ouvre avec :
+- **9 juillet** — visibilité `organizations` pour utilisateurs authentifiés restaurée (super-admins + membres).
+- **15 juillet 22h** — uploads candidats restaurés (`Anon can update interview media` + `Anon can view interview media` sur préfixe `interviews/`) → c'est la fameuse régression "Candidats à repasser".
 
-1. **Sujet** — champ texte.
-2. **Message d'introduction** (avant le bouton) — zone de texte.
-3. **Message de clôture** (après le bouton) — zone de texte.
-4. Aide affichée sous les champs : variables disponibles `{prenom}`, `{poste}`, `{entreprise}`.
-5. **Aperçu** à droite (ou en dessous en mobile) qui se met à jour en direct avec des valeurs d'exemple.
-6. Boutons : **Réinitialiser au texte d'origine**, **Annuler**, **Enregistrer**.
+## Résultat de mon audit du reste du code
 
-Zones **non modifiables** (affichées en lecture seule dans l'aperçu, pour cadrer les attentes) : en-tête « Interw », bouton d'action, lien de secours, encart légal / désinscription — gérés par le système pour ne pas casser la délivrabilité.
+Aucun autre build cassé détecté. Détail des vérifications :
 
-Après enregistrement, un petit badge « Modèle personnalisé » s'affiche à côté du bouton, avec date de dernière modification et auteur.
+- **Pages publiques anon lisant `organizations`** : `OrgPublic.tsx`, `ProjectPublicPage.tsx`, `CandidateLayout.tsx` — toutes limitent leur `select()` à des colonnes autorisées (id / name / slug / logo_url). Aucune colonne interdite lue.
+- **`SharedReport.tsx`** : consomme déjà l'edge function `consume-report-share`, pas d'accès direct anon à `report_shares` / `reports`. OK.
+- **Buckets `media`, `tutorials`, `feedback-attachments`** : tous en `public:true`. Les URLs servies via `getPublicUrl()` passent par le CDN et **ne dépendent pas** des policies SELECT droppées. Aucun `.list()` anon dans le client.
+- **Uploads authentifiés (`ProjectEdit`, `ProjectNew`, `InterviewTemplateEdit`, `IntroLibrary`, `OrgLogoUpload`)** : couverts par `Org members can view media` + `Auth can update media` + `Org members can upload media`. Pas de risque de rejeu du bug upsert.
+- **Autres tables sensibles** (`report_shares`, `reports`) : plus aucune requête client en anon.
 
-## Comportement
+Conclusion : les deux régressions identifiées sont les seules impacts du 8 juillet. Rien d'autre à réparer.
 
-- Modèle unique partagé par tous les envois de type `candidate-recovery-invite`.
-- Si aucun enregistrement n'existe : le template par défaut actuel est utilisé (comportement inchangé).
-- Modification prise en compte immédiatement pour tous les envois suivants.
-- Réservé aux super-admins.
+## Garde-fous à intégrer à chaque future demande
 
-## Détails techniques
+Pour chaque migration ou modif sécurité, j'ajouterai systématiquement une **checklist "impact sur les builds existants"** dans le plan, avant de coder :
 
-### Base de données
+### Grille d'analyse d'une migration/sécu
 
-Réutiliser la table existante `email_template_overrides` (déjà présente dans le schéma) si sa structure convient : une ligne par `template_name`, colonnes `subject`, `intro_html`, `outro_html`, `updated_by`, `updated_at`.
+```text
+1. GRANT/REVOKE sur table         → lister les fichiers client qui font .from("<table>")
+                                    et vérifier les colonnes lues côté anon
+2. DROP POLICY (SELECT)           → si bucket public → CDN OK, sinon parcourir
+                                    les usages anon (.list, .download, .select)
+3. DROP POLICY (INSERT/UPDATE)    → tout upload `upsert:true` en anon exige
+                                    SELECT + INSERT + UPDATE : les trois
+                                    policies doivent coexister
+4. Nouvelle table publique        → GRANT (roles adaptés) + RLS + POLICY,
+                                    dans le même fichier de migration
+5. Edge function servant anon     → vérifier que la route publique passe
+                                    bien par la fonction (pas de fallback
+                                    direct client → table)
+```
 
-Si la structure actuelle ne couvre pas ces trois champs, ajouter les colonnes manquantes via migration. RLS : lecture/écriture réservée à `has_role(auth.uid(), 'super_admin')`.
+### Format que j'ajouterai à chaque réponse
 
-### Edge function `resend-impacted-candidate`
+Section "Impact build" en fin de plan, avec 3 champs courts :
 
-Avant l'appel à `send-transactional-email`, charger la ligne `email_template_overrides` pour `template_name = 'candidate-recovery-invite'` et transmettre `subject_override`, `intro_html`, `outro_html` dans `templateData`.
+- **Zones touchées** : quelles tables/policies/edges sont modifiées
+- **Risque de casse** : `aucun` / `faible` / `à valider` + une phrase
+- **Vérifications faites** : quels fichiers/routes j'ai relus avant de valider
 
-### Template `candidate-recovery-invite.tsx`
+Si `à valider`, je m'arrête et je demande avant de coder.
 
-Étendre les props avec `subject_override`, `intro_html`, `outro_html`. Substitution simple des placeholders `{prenom}`, `{poste}`, `{entreprise}` côté serveur avant rendu. Si un champ override est vide → fallback vers le texte d'origine. Le sujet exporté (`subject: (data) => ...`) prend l'override en priorité.
+## Aucune action code proposée ici
 
-Sanitisation : caractères de contrôle strippés, longueur limitée (~4000 par champ), balises HTML restreintes à `<strong>`, `<em>`, `<br>`, `<p>`, `<a href>`.
-
-### Frontend
-
-- Nouveau composant `EditRecoveryTemplateDialog` sous `src/components/superadmin/`.
-- Charge la ligne existante à l'ouverture, propose « Réinitialiser » qui supprime la ligne.
-- Aperçu rendu côté client à partir des mêmes chaînes (pas d'appel réseau).
-
-## Hors périmètre
-
-- Pas de personnalisation par candidat.
-- Pas d'éditeur riche WYSIWYG.
-- Pas d'historique des versions (seule la dernière version est conservée).
+Cet audit ne déclenche pas de fix : rien de cassé n'a été trouvé au-delà de ce qui a déjà été patché les 9 et 15 juillet. La suite = j'applique la grille ci-dessus à chaque prochaine demande.
