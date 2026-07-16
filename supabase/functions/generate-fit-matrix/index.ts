@@ -347,16 +347,29 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
         ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
         : Math.max(0, Math.min(100, Number(reportRes.data.overall_score) || matrixFitScore));
-      const finalScore = Math.round(Math.min(100, Math.max(0, (aiScore + matrixFitScore) / 2)));
+      const finalScore = matrixFitScore;
       nextStats.score_breakdown = {
         ...prevBreakdown,
         ai_score: aiScore,
         weighted_criteria_score: matrixFitScore,
         final_score: finalScore,
         fit_score_source: "fit_matrix",
+        method: "matrix_v2",
       };
       reportPatch.overall_score = finalScore;
       reportPatch.recommendation = recommendationFromScore(finalScore);
+      reportPatch.criteria_scores = criteria.reduce((acc: Record<string, any>, c: any) => {
+        const avg = criterion_averages[c.id];
+        if (typeof avg !== "number") return acc;
+        const maxScale = c.scoring_scale === "0-10" ? 10 : 5;
+        acc[c.id] = {
+          label: c.label,
+          score: Math.round((avg / 100) * maxScale),
+          max: maxScale,
+          comment: "Moyenne issue de la matrice détaillée.",
+        };
+        return acc;
+      }, {});
     }
 
     const { error: updateError } = await supabase
