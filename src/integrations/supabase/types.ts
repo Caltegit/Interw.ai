@@ -1719,6 +1719,79 @@ export type Database = {
           },
         ]
       }
+      session_reinvitations: {
+        Row: {
+          candidate_email: string
+          candidate_name: string
+          created_at: string
+          email_message_id: string | null
+          email_sent_at: string | null
+          email_status: string | null
+          id: string
+          is_witness: boolean
+          new_session_id: string | null
+          original_session_id: string
+          project_id: string
+          reason: string
+          resent_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          candidate_email: string
+          candidate_name: string
+          created_at?: string
+          email_message_id?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
+          id?: string
+          is_witness?: boolean
+          new_session_id?: string | null
+          original_session_id: string
+          project_id: string
+          reason?: string
+          resent_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          candidate_email?: string
+          candidate_name?: string
+          created_at?: string
+          email_message_id?: string | null
+          email_sent_at?: string | null
+          email_status?: string | null
+          id?: string
+          is_witness?: boolean
+          new_session_id?: string | null
+          original_session_id?: string
+          project_id?: string
+          reason?: string
+          resent_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_reinvitations_new_session_id_fkey"
+            columns: ["new_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_reinvitations_original_session_id_fkey"
+            columns: ["original_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_reinvitations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           abandon_reminder_sent_at: string | null
@@ -1979,6 +2052,23 @@ export type Database = {
       admin_force_report_job: {
         Args: { p_session_id: string }
         Returns: undefined
+      }
+      admin_list_impacted_candidates: {
+        Args: never
+        Returns: {
+          candidate_email: string
+          candidate_name: string
+          created_at: string
+          new_session_id: string
+          organization_name: string
+          project_id: string
+          project_title: string
+          reinvitation_id: string
+          reinvitation_sent_at: string
+          reinvitation_status: string
+          session_id: string
+          session_status: string
+        }[]
       }
       admin_search_sessions: {
         Args: {

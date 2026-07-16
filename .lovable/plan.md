@@ -1,80 +1,125 @@
-# Régression upload media — cause identifiée + correctif
+# Récupération des 21 candidats + validation bloquante du correctif
 
-## Verdict de l'audit : cause quasi-certaine trouvée
+## Réponses aux deux garanties demandées
 
-**Chronologie exacte :**
+### 1. Zéro envoi automatique — 100 % manuel depuis un écran super-admin
 
-| Date | Uploads `storage.objects` `interviews/*` | Événement code |
-|---|---|---|
-| ≤ 2026-07-08 | 300 à 3 300 objets/jour, sessions saines | — |
-| **2026-07-08 13:41** | — | **Commit `46df84d8` : bump `@supabase/supabase-js` `^2.102.1` → `^2.110.1`** |
-| 2026-07-08 (fin de journée) | 1 789 objets (sessions démarrées avant déploiement) | — |
-| 2026-07-09 → 2026-07-14 | **0 objet**, 100 % des sessions annulées | — |
-| 2026-07-15 | 25 (tests internes) | — |
+- Nouvel écran `/admin/candidates-to-recover` réservé `SuperAdminRoute`.
+- Chaque envoi = clic explicite + dialogue de confirmation.
+- Bouton « Renvoyer à tous » = un seul dialogue listant nommément les destinataires cochés, aucune action déclenchée avant ce clic.
+- **Aucun cron, aucun trigger, aucun webhook** ne peut déclencher l'envoi. La migration ne crée que la table et les policies ; le déploiement de l'edge function ne l'exécute pas.
+- L'edge function `resend-impacted-candidate` refuse tout appel non authentifié en super-admin (garde `requireCallerOrInternal` + `has_role(auth.uid(),'super_admin')` en tête).
+- Idempotence : si `session_reinvitations` a déjà une ligne `email_sent_at IS NOT NULL` pour la session d'origine, la function refuse (aucun double envoi possible par erreur).
 
-Le bump embarque `@supabase/storage-js@2.110.1`, qui a introduit une **nouvelle dépendance `iceberg-js@^0.8.1`** et réécrit le chemin d'upload (chunked/resumable). C'est la seule modification de comportement runtime datée du 8 juillet capable d'affecter *tous* les candidats.
+### 2. Correctif upload — état vérifié, validation end-to-end bloquante
 
-**Preuves complémentaires que le serveur va bien :**
-- Test `curl` anon `POST /storage/v1/object/media/interviews/…` → **200 OK** (upload accepté).
-- Test `curl` anon `PATCH /rest/v1/sessions?id=eq.<sid>` avec `status='in_progress'` + `started_at` → **200 OK**.
-- Policies RLS `Anon can upload media`, `Anon can update sessions on active projects` en place, projets `active`.
-- Bucket `media` toujours public, pas de `file_size_limit`.
-- Migrations 08–09 juillet ne touchent que `organizations`, `password_reset_codes` et des policies SELECT (jamais INSERT storage).
+**Vérifié ce soir (RLS en place)** — les 3 policies anon sur `storage.objects` pour `interviews/` existent :
 
-**Ce que j'ai écarté :**
-- Le symptôme « `started_at NULL` » n'est **pas** lié : `sessions.started_at` est NULL sur les **546 sessions depuis le 1er mai** — la ligne 2438 de `InterviewStart.tsx` est un fire-and-forget déjà buggé mais indépendant.
-- La régression ne vient pas d'un patch récent sur `InterviewStart.tsx` : aucun commit entre le 28/06 et le 13/07 sur ce fichier.
+| Policy | Command | Rôle | Condition |
+|---|---|---|---|
+| `Anon can upload media` | INSERT | anon | `bucket_id = 'media'` |
+| `Anon can view interview media` | SELECT | anon | `bucket_id = 'media' AND foldername[1] = 'interviews'` |
+| `Anon can update interview media` | UPDATE | anon | `bucket_id = 'media' AND foldername[1] = 'interviews'` |
 
-## Correctif (par ordre d'exécution)
+**Pas encore vérifié** : aucun candidat réel n'a repassé d'entretien depuis 22:20 UTC hier (0 fichier réel dans `storage.objects` sur `interviews/*` depuis le fix). La condition nécessaire est là ; la condition suffisante (PUT MediaRecorder → 200 + `session_messages.video_segment_url` peuplé) reste à prouver.
 
-### 1. Rollback ciblé du SDK Storage (fix immédiat)
-Repasser `@supabase/supabase-js` sur la dernière `2.102.x` connue-fonctionnelle :
+## Plan (ordre strict d'exécution)
 
-```
-package.json
-- "@supabase/supabase-js": "^2.110.1",
-+ "@supabase/supabase-js": "2.102.1",
-```
+### Étape 0 — Validation end-to-end du correctif (BLOQUANTE)
 
-Version **pinnée** (pas `^`) pour éviter qu'`update` du lock ne remonte à 2.110 automatiquement. `bun.lock` régénéré. Cible : downgrade uniquement du client SDK, aucune autre dépendance touchée.
+Test Playwright dédié `tests/e2e/interview-upload-anon.spec.ts` :
+1. Créer via `supabase--insert` une session témoin sur un projet actif.
+2. Ouvrir l'URL candidat anonyme avec caméra/micro factices (config déjà en place dans `playwright.config.ts`).
+3. Enregistrer ~10 s sur la première question.
+4. Capturer les réponses réseau `POST/PUT /storage/v1/object/media/interviews/…` et **exiger status 200**.
+5. Poller `storage.objects` : au moins 1 fichier > 10 Ko sous `interviews/<sid>/`.
+6. Poller `session_messages` : ligne candidate avec `video_segment_url` OU `audio_segment_url` non null.
 
-### 2. Vérification en Playwright (bloquante avant de conclure)
-Avant de dire au user que c'est réparé :
-- Ouvrir `/session/<slug>/start/<token>` sur une session de test dans un projet actif (créer une session dédiée via `supabase--insert`).
-- Faire tourner ~15 s d'enregistrement pour Q1 (Chromium `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream`).
-- Vérifier en base :
-  - `storage.objects` contient bien `interviews/<sid>/q0/chunk-*.webm`.
-  - `session_messages` du candidat obtient un `audio_segment_url` non null.
-- Screenshot du réseau (`page.on('response')`) pour confirmer que les `POST /storage/v1/object/media/…` renvoient 200.
+Si un seul critère échoue → **arrêt total**, on n'écrit ni la migration, ni la function, ni l'écran, ni le template. Aucun candidat n'est relancé tant que ce test n'est pas vert.
 
-Si la validation échoue → passer au plan B (§4).
+### Étape 1 — Migration `session_reinvitations`
 
-### 3. Télémétrie serveur légère (défense en profondeur)
-Pour ne plus jamais être aveugle sur un échec d'upload en prod côté candidat :
-- Nouvelle edge function `log-client-event` (verify_jwt=false, CORS ouvert), écrit dans `public.client_events(session_id uuid, event text, data jsonb, created_at timestamptz)`.
-- RLS : INSERT ouvert à `anon` avec `WITH CHECK (EXISTS session sur projet actif)` ; SELECT réservé aux org members + super admin ; GRANTs alignés.
-- `src/lib/logger.ts` : quand `event` commence par `interview_`, `fetch()` fire-and-forget vers cette function en plus de la console.
-- Événements critiques à instrumenter côté `InterviewStart.tsx` : `interview_recorder_started`, `interview_chunk_upload_failed`, `interview_final_upload_failed`, `interview_no_chunks_after_5s`, `interview_no_media_at_finalize`.
+Table dédiée pour tracer chaque tentative de re-invitation (audit, idempotence, affichage) :
 
-Objectif : sur la prochaine session cassée éventuelle, on saura immédiatement *quelle étape* échoue sans redemander au candidat.
+- `id`, `original_session_id` uuid FK sessions, `new_session_id` uuid nullable FK sessions
+- `candidate_email`, `candidate_name`, `project_id`
+- `reason` text default `'upload_regression_july_2026'`
+- `is_witness` boolean default false (marque les sessions témoins internes pour distinction visuelle)
+- `email_sent_at`, `email_status`, `email_message_id`
+- `resent_by` uuid (auth user id du super-admin qui a cliqué)
+- `created_at`, `updated_at` (trigger `update_updated_at_column`)
 
-### 4. Plan B si le rollback ne suffit pas
-Si l'étape 2 échoue avec le SDK downgradé, la piste devient un problème réseau/CORS spécifique — dans ce cas :
-- Reproduire dans Chromium DevTools et lire précisément l'erreur `supabase.storage.from('media').upload(...)`.
-- Vérifier si `iceberg-js` (nouvelle dep 2.110) fait un `PUT` chunké différent (endpoint `/upload/resumable` au lieu de `/object`) que la CDN Storage rejette pour anon.
-- Envisager de coller sur `2.108.x` puis `2.106.x` par bissection pour identifier la version qui casse.
+GRANTs : `SELECT, INSERT, UPDATE ON authenticated`, `ALL ON service_role`, **pas d'anon**.
+RLS : lecture réservée aux super-admins (`has_role(auth.uid(),'super_admin')`), écriture uniquement via service_role.
 
-## Ce que je ne fais PAS
-- Aucun rollback des migrations RLS du 8–9 juillet : elles sont saines, testées serveur, non liées.
-- Aucune purge des sessions annulées : elles restent en base comme trace ; on décidera après stabilisation si on veut proposer aux candidats de repasser.
-- Aucun changement du garde-fou « no media → cancelled » ligne 3491 : c'est un bon filet de sécurité, il continue son travail.
-- Aucun refactor du `.update()` fire-and-forget ligne 2438 : bug pré-existant hors du scope de cette régression (à traiter dans un ticket séparé si on veut fiabiliser `started_at`/`last_activity_at`).
+### Étape 2 — Edge function `resend-impacted-candidate`
 
-## Détails techniques (pour référence)
-- Fichier client : `src/pages/InterviewStart.tsx` (recorder 1740-2200, finalize 3480-3510).
-- Chemin uploads : `interviews/<sessionId>/q<idx>/chunk-<NNNNN>.<ext>` + `interviews/<sessionId>/q<idx>.<ext>` + `.../thumbnail.jpg`.
-- Bucket : `media` (public, INSERT anon `bucket_id = 'media'`).
-- Commit à contourner : `46df84d8` (2026-07-08 13:41) — bump supabase-js.
-- Table télémétrie à créer : `public.client_events` avec GRANTs standard (`GRANT INSERT ON … TO anon`, `GRANT SELECT ON … TO authenticated`, `GRANT ALL … TO service_role`).
+Payload : `{ original_session_id: uuid, is_witness?: boolean }`. Comportement :
+1. Vérifier super-admin appelant.
+2. Charger la session ; **refuser** si un fichier > 1 Ko existe déjà sous `interviews/<sid>/` (session non impactée).
+3. **Refuser** si `session_reinvitations` a déjà `email_sent_at IS NOT NULL` pour ce `original_session_id`.
+4. Créer une nouvelle session `pending` dans le même projet, copier `candidate_name`, `candidate_email`, `candidate_fields`, générer nouveau `session_token`.
+5. Marquer l'ancienne session `cancelled` si encore `pending`/`completed`, ajouter `admin_notes` pointant la reprise.
+6. Envoyer l'e-mail via la function transactionnelle existante avec le template §3.
+7. Insérer la ligne `session_reinvitations` avec `email_sent_at`, `email_status`, `email_message_id`, `resent_by`, `is_witness`.
 
-Dès approbation, j'applique §1 immédiatement, je lance §2, et si tout est vert je pose §3 dans la foulée pour éviter la répétition.
+### Étape 3 — Template d'e-mail d'excuse (français, sobre)
+
+Objet : « Nous vous invitons à repasser votre entretien »
+
+Corps :
+
+> Bonjour {{prenom}},
+>
+> Suite à un incident technique survenu entre le 9 et le 15 juillet, votre entretien pour le poste « {{poste}} » chez {{entreprise}} n'a pas pu être enregistré. Nous en sommes sincèrement désolés.
+>
+> Nous vous invitons à le repasser via le lien ci-dessous. Vous disposez de 7 jours.
+>
+> {{cta_link}}
+>
+> Si vous rencontrez la moindre difficulté, répondez à cet e-mail — nous vous accompagnons.
+>
+> L'équipe Interw
+
+### Étape 4 — Écran `/admin/candidates-to-recover`
+
+Sous `SuperAdminRoute` uniquement.
+
+**Zone A — Candidats témoins (haut de page, section « Tester avant d'envoyer »)** :
+- Champ « Ajouter un candidat témoin » : nom + e-mail + choix du projet actif → bouton « Créer session témoin ».
+- Chaque témoin créé apparaît dans une liste dédiée avec :
+  - Lien candidat (à ouvrir dans un navigateur privé pour tester le parcours réel)
+  - Bouton « Copier le lien »
+  - Bouton « Envoyer l'invitation à cet e-mail » (utilise la même function que la campagne, avec `is_witness: true`)
+  - Statut live : `pending` / `in_progress` / `completed` + nombre de fichiers réels uploadés (poll 5 s)
+  - Badge vert « Upload OK » dès qu'un fichier > 10 Ko apparaît sous `interviews/<sid>/`
+- Ajouter autant de témoins que voulu (aucune limite) — utile pour tester sur plusieurs postes, plusieurs navigateurs, plusieurs collègues.
+
+**Zone B — Les 21 candidats impactés** :
+- Tableau : date, nom, e-mail, projet, statut session d'origine, colonne « Renvoyé le » (depuis `session_reinvitations`).
+- Bouton « Renvoyer » par ligne → dialogue de confirmation → appel edge function.
+- Bouton « Renvoyer à tous » en haut → dialogue listant les destinataires nom + e-mail, cases à décocher individuellement possibles → itération côté function.
+- Filtres : « À renvoyer » (défaut) / « Déjà renvoyés » / « Tous ».
+- Toast succès/échec par candidat.
+
+### Étape 5 — Campagne
+
+Après validation visuelle de l'écran par toi :
+- Créer 2 à 3 témoins (toi + collègues), tester chaque parcours de bout en bout, confirmer les fichiers en base.
+- Puis clic « Renvoyer à tous » depuis ton compte super-admin, quand tu le décides.
+
+## Ce que ce plan ne fait toujours PAS
+
+- Aucun envoi automatique, aucun cron, aucun trigger.
+- Aucune tentative de reconstruction de média (impossible, 0 fichier réel côté serveur).
+- Aucune modification du parcours candidat standard (le correctif RLS d'hier suffit).
+- Aucun changement du template d'invitation standard (seul un template d'excuse dédié est ajouté).
+
+## Ordre récapitulatif
+
+0. Test Playwright end-to-end → **doit être vert**
+1. Migration `session_reinvitations` (avec flag `is_witness`)
+2. Edge function `resend-impacted-candidate`
+3. Template d'e-mail d'excuse
+4. Écran `/admin/candidates-to-recover` avec zone témoins multiples + zone campagne
+5. Envoi manuel par toi, après tests témoins concluants

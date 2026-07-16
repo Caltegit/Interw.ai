@@ -70,6 +70,7 @@ import OrgPublic from "./pages/OrgPublic";
 import Unsubscribe from "./pages/Unsubscribe";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminOrgDetail from "./pages/SuperAdminOrgDetail";
+import AdminCandidatesToRecover from "./pages/AdminCandidatesToRecover";
 import AdminEmails from "./pages/AdminEmails";
 import AdminTuto from "./pages/AdminTuto";
 import AdminTtsCompare from "./pages/AdminTtsCompare";
@@ -171,6 +172,7 @@ const App = () => (
               <Route path="/admin/tts-compare" element={<SuperAdminRoute><AdminTtsCompare /></SuperAdminRoute>} />
               <Route path="/admin/report-jobs" element={<SuperAdminRoute><AdminReportJobs /></SuperAdminRoute>} />
               <Route path="/admin/sessions-queue" element={<SuperAdminRoute><AdminSessionsQueue /></SuperAdminRoute>} />
+              <Route path="/admin/candidates-to-recover" element={<SuperAdminRoute><AdminCandidatesToRecover /></SuperAdminRoute>} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

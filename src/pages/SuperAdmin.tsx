@@ -19,12 +19,17 @@ export default function SuperAdmin() {
           <h1 className="text-3xl font-bold">Console Super Admin</h1>
           <p className="text-muted-foreground">Gérez la plateforme : organisations, utilisateurs et statistiques.</p>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/admin/tts-compare">
-            <AudioLines className="mr-2 h-4 w-4" />
-            Comparer les voix TTS
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/admin/candidates-to-recover">Candidats à repasser</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/admin/tts-compare">
+              <AudioLines className="mr-2 h-4 w-4" />
+              Comparer les voix TTS
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <StatsOverview />
