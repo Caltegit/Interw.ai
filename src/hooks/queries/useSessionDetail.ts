@@ -179,10 +179,51 @@ export function useRegenerateReport(sessionId: string | undefined) {
         p_session_id: sessionId,
       });
       if (error) throw error;
+      return { enqueuedAt: new Date().toISOString() };
     },
     onSuccess: () => {
       if (sessionId) qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
     },
   });
 }
+
+export type ReportJobStatus = "queued" | "processing" | "done" | "failed" | "cancelled";
+
+export interface ReportJobRow {
+  status: ReportJobStatus;
+  attempts: number | null;
+  last_error: string | null;
+  updated_at: string | null;
+  completed_at: string | null;
+}
+
+/**
+ * Poll léger sur la dernière ligne report_jobs d'une session.
+ * `enabled` contrôle l'activation ; `sinceIso` sert à ignorer un job antérieur
+ * déjà terminé avant l'ouverture de la modale.
+ */
+export function useReportJobStatus(
+  sessionId: string | undefined,
+  options: { enabled: boolean; sinceIso?: string | null } = { enabled: false },
+) {
+  return useQuery<ReportJobRow | null>({
+    queryKey: ["report-job", sessionId, options.sinceIso ?? null],
+    enabled: !!sessionId && options.enabled,
+    refetchInterval: options.enabled ? 3000 : false,
+    refetchIntervalInBackground: true,
+    queryFn: async () => {
+      if (!sessionId) return null;
+      const { data, error } = await (supabase as any)
+        .from("report_jobs")
+        .select("status, attempts, last_error, updated_at, completed_at")
+        .eq("session_id", sessionId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as ReportJobRow | null) ?? null;
+    },
+  });
+}
+
 
