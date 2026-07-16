@@ -237,6 +237,9 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       );
     }
 
+    // Résolveur de timestamps (mêmes règles que backfill-report-timestamps).
+    const resolveStart = resolveStartFactory(messages as any);
+
     // Normalisation : matrice indexée par question_id + criterion_id.
     const rows: Array<any> = [];
     for (let i = 0; i < questions.length; i++) {
