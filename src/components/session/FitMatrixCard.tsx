@@ -37,9 +37,16 @@ export interface FitMatrixData {
   rows: FitMatrixRow[];
 }
 
+interface QuestionRef {
+  id: string;
+  title?: string | null;
+  content?: string | null;
+}
+
 interface Props {
   matrix?: FitMatrixData | null;
   sessionId?: string;
+  questions?: QuestionRef[];
   readOnly?: boolean;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
 }
