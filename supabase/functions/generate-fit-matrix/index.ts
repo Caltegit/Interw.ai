@@ -273,6 +273,36 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       });
     }
 
+    // Moyenne par critère (colonne), en ignorant les cases non évaluées
+    const criterion_averages: Record<string, number | null> = {};
+    for (const c of criteria) {
+      const vals: number[] = [];
+      for (const r of rows) {
+        const s = r.cells[c.id]?.score;
+        if (typeof s === "number" && Number.isFinite(s)) vals.push(s);
+      }
+      criterion_averages[c.id] = vals.length > 0
+        ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+        : null;
+    }
+
+    // Fit score global = moyenne pondérée des moyennes-critères (par le poids du critère).
+    // Les critères sans aucune note sont exclus du dénominateur.
+    let matrixFitScore: number | null = null;
+    let sumWeighted = 0;
+    let sumWeights = 0;
+    for (const c of criteria) {
+      const avg = criterion_averages[c.id];
+      if (avg === null) continue;
+      const w = Math.max(0, Number(c.weight) || 0);
+      if (w <= 0) continue;
+      sumWeighted += avg * w;
+      sumWeights += w;
+    }
+    if (sumWeights > 0) {
+      matrixFitScore = Math.round(sumWeighted / sumWeights);
+    }
+
     const fit_matrix = {
       version: 2,
       generated_at: new Date().toISOString(),
@@ -282,9 +312,20 @@ Renvoie la matrice avec l'outil fit_matrix.`;
         weight: Number(c.weight) || 0,
       })),
       rows,
+      criterion_averages,
     };
 
-    const nextStats = { ...existingStats, fit_matrix };
+    const nextStats: Record<string, any> = { ...existingStats, fit_matrix };
+    if (matrixFitScore !== null) {
+      nextStats.fit_score = matrixFitScore;
+      const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
+      nextStats.score_breakdown = {
+        ...prevBreakdown,
+        weighted_criteria_score: matrixFitScore,
+        fit_score_source: "fit_matrix",
+      };
+    }
+
     const { error: updateError } = await supabase
       .from("reports")
       .update({ stats: nextStats })
