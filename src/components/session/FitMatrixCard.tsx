@@ -66,10 +66,18 @@ function truncate(str: string, n: number) {
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }
 
-export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Props) {
+export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMessage }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [generating, setGenerating] = useState(false);
+
+  const questionTitles = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const q of questions ?? []) {
+      if (q.id) map[q.id] = q.title?.trim() || "";
+    }
+    return map;
+  }, [questions]);
 
   const hasMatrix = !!(matrix && matrix.rows && matrix.rows.length > 0);
 
