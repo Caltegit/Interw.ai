@@ -130,6 +130,13 @@ Deno.serve(async (req) => {
   const ctaLink = `${PUBLIC_APP_URL}/session/${project.slug}/start/${newSession.token}`;
   const prenom = String(original.candidate_name ?? "").trim().split(/\s+/)[0] || "";
 
+  // Charger l'override global du modèle (si un super-admin l'a personnalisé).
+  const { data: override } = await admin
+    .from("global_email_template_overrides")
+    .select("subject, intro_html, outro_html")
+    .eq("template_key", "candidate-recovery-invite")
+    .maybeSingle();
+
   const { error: sendErr, data: sendData } = await admin.functions.invoke("send-transactional-email", {
     body: {
       templateName: "candidate-recovery-invite",
@@ -139,6 +146,9 @@ Deno.serve(async (req) => {
         poste: project.job_title || project.title || "",
         entreprise: org.name || "",
         cta_link: ctaLink,
+        subject_override: override?.subject ?? "",
+        intro_html: override?.intro_html ?? "",
+        outro_html: override?.outro_html ?? "",
       },
     },
     headers: {
