@@ -32,7 +32,7 @@ export function DeepAnalysisAccordion({
         <AccordionTrigger className="px-4 py-3 hover:no-underline">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Brain className="h-4 w-4 text-muted-foreground" />
-            Analyse approfondie (Big Five & soft skills)
+            Analyse approfondie (Perso & soft skills)
           </div>
         </AccordionTrigger>
         <AccordionContent className="space-y-4 px-4 pb-4">

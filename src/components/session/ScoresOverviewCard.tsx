@@ -79,7 +79,7 @@ export function ScoresOverviewCard({
       tab: "attitude",
     },
     {
-      label: "Big Five",
+      label: "Perso",
       score: bigFive,
       avg: bigFiveProjectAvg,
       unavailable: false,

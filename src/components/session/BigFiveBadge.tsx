@@ -57,7 +57,7 @@ export function BigFiveBadge({ profile, size = 24, audioFailed }: Props) {
     <span
       className={`inline-flex items-center justify-center rounded-full border font-semibold leading-none ${colorClass}`}
       style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.32)) }}
-      title={value === null ? "Big Five non disponible" : `Score Big Five : ${value}/100`}
+      title={value === null ? "Perso non disponible" : `Score Perso : ${value}/100`}
     >
       {value === null ? "—" : value}
     </span>
