@@ -318,7 +318,7 @@ export default function SessionDetail() {
         canDownloadVideos={candidateVideos.length > 0 || !!session.video_recording_url}
         onDownloadVideos={() => window.open(`/sessions/${id}/export`, "_blank", "noopener")}
         onRegenerate={report ? handleRegenerate : undefined}
-        isRegenerating={regenerate.isPending}
+        isRegenerating={regenerate.isPending || regenOpen}
         onEmail={session.candidate_email ? () => setEmailOpen(true) : undefined}
         onEditLinks={() => setLinksOpen(true)}
         onDelete={() => setDeleteOpen(true)}
