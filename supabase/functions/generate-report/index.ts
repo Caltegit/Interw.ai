@@ -1292,7 +1292,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     });
 
     // Note hybride : moyenne note IA globale + score critères pondéré
-    const aiOverallScore = Math.min(Math.max(Number(parsed.overall_score) || 0, 0), 0), 100);
+    const aiOverallScore = Math.min(Math.max(Number(parsed.overall_score) || 0, 0), 100);
     let finalOverallScore =
       fitScore !== null
         ? Math.round(Math.min(100, Math.max(0, (aiOverallScore + fitScore) / 2)))
