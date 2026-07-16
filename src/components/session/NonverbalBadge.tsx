@@ -1,6 +1,6 @@
 import type { NonverbalAnalysis, NonverbalProfile } from "./NonverbalProfileCard";
 
-const KEYS = ["eye_contact", "posture", "gestures", "facial_expressivity"] as const;
+const KEYS = ["eye_contact", "posture", "gestures"] as const;
 
 // Table de mapping score brut /10 → affiché /100 (interpolation linéaire par morceaux).
 // Aligne la perception RH : un candidat "moyen normal" (≈6/10 chez Gemini) → 70/100.
