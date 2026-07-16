@@ -136,7 +136,7 @@ ${answersBlock}
 
 Règles :
 1. Produis UNE note 0-100 par couple (question, critère). Base-toi sur la réponse à CETTE question, pas sur la session entière.
-2. Si le critère n'est pas du tout couvert par la question (hors sujet, réponse absente), mets un score neutre 40-50 et indique-le dans la justification.
+2. Si le critère n'est pas du tout couvert par la question (hors sujet, réponse absente), mets un score neutre 50 et indique-le dans la justification.
 3. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
 4. Fournis, quand c'est possible, un extrait exact de la phrase du candidat (quote) et l'identifiant du message correspondant (message_id).
 5. N'invente jamais un message_id : si tu ne peux pas citer, omets quote et message_id.
@@ -273,21 +273,14 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       });
     }
 
-    // Une case est "informative" si l'IA a fourni une preuve (quote ou message_id).
-    // Sinon on la considère non évaluée et on l'exclut des moyennes.
-    const isInformative = (cell: any) =>
-      cell &&
-      typeof cell.score === "number" &&
-      Number.isFinite(cell.score) &&
-      (Boolean(cell.message_id) || Boolean(cell.quote));
-
-    // Moyenne par critère (colonne), en ignorant les cases non informatives
+    // Moyenne par critère (colonne) — toutes les cases avec un score numérique comptent,
+    // y compris les scores neutres par défaut (50) posés quand l'IA n'a rien à noter.
     const criterion_averages: Record<string, number | null> = {};
     for (const c of criteria) {
       const vals: number[] = [];
       for (const r of rows) {
-        const cell = r.cells[c.id];
-        if (isInformative(cell)) vals.push(cell.score as number);
+        const s = r.cells[c.id]?.score;
+        if (typeof s === "number" && Number.isFinite(s)) vals.push(s);
       }
       criterion_averages[c.id] = vals.length > 0
         ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)

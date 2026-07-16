@@ -95,9 +95,8 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
     const out: Record<string, number | null> = {};
     for (const c of matrix.criteria) {
       const scores = matrix.rows
-        .map((r) => r.cells[c.id])
-        .filter(isInformative)
-        .map((cell) => cell!.score as number);
+        .map((r) => r.cells[c.id]?.score)
+        .filter((v): v is number => typeof v === "number");
       out[c.id] = scores.length > 0
         ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
         : null;
@@ -112,11 +111,11 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
       let sum = 0;
       let weight = 0;
       for (const c of matrix.criteria) {
-        const cell = r.cells[c.id];
-        if (!isInformative(cell)) continue;
-        const s = cell!.score as number;
-        sum += s * (c.weight || 0);
-        weight += c.weight || 0;
+        const s = r.cells[c.id]?.score;
+        if (typeof s === "number") {
+          sum += s * (c.weight || 0);
+          weight += c.weight || 0;
+        }
       }
       out[r.question_id] = weight > 0 ? Math.round(sum / weight) : null;
     }
@@ -248,9 +247,12 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                       return (
                         <td key={c.id} className="p-0.5 align-top">
                           <div
-                            className="w-full h-12 rounded-md border border-dashed border-border/60 bg-background"
-                            aria-label="Non évalué"
-                          />
+                            className="flex w-full h-12 items-center justify-center rounded-md border border-dashed border-border/60 bg-background text-sm font-medium tabular-nums text-muted-foreground/70"
+                            title="Note par défaut : critère non couvert par la question"
+                            aria-label="Note par défaut, critère non couvert"
+                          >
+                            {typeof score === "number" ? score : "—"}
+                          </div>
                         </td>
                       );
                     }
