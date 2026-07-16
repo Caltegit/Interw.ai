@@ -522,7 +522,7 @@ export function SessionReportView({
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  Analyse Big Five non disponible.
+                  Analyse Perso non disponible.
                 </CardContent>
               </Card>
             )}
