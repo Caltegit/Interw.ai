@@ -273,21 +273,14 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       });
     }
 
-    // Une case est "informative" si l'IA a fourni une preuve (quote ou message_id).
-    // Sinon on la considère non évaluée et on l'exclut des moyennes.
-    const isInformative = (cell: any) =>
-      cell &&
-      typeof cell.score === "number" &&
-      Number.isFinite(cell.score) &&
-      (Boolean(cell.message_id) || Boolean(cell.quote));
-
-    // Moyenne par critère (colonne), en ignorant les cases non informatives
+    // Moyenne par critère (colonne) — toutes les cases avec un score numérique comptent,
+    // y compris les scores neutres par défaut (50) posés quand l'IA n'a rien à noter.
     const criterion_averages: Record<string, number | null> = {};
     for (const c of criteria) {
       const vals: number[] = [];
       for (const r of rows) {
-        const cell = r.cells[c.id];
-        if (isInformative(cell)) vals.push(cell.score as number);
+        const s = r.cells[c.id]?.score;
+        if (typeof s === "number" && Number.isFinite(s)) vals.push(s);
       }
       criterion_averages[c.id] = vals.length > 0
         ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
