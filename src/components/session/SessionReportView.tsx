@@ -456,6 +456,11 @@ export function SessionReportView({
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
                 />
+                <SoftSkillsCard
+                  skills={report.soft_skills as any}
+                  onGoToMessage={goToMessage}
+                  questionNumberByMessageId={questionNumberByMessageId}
+                />
                 {projectAverages && projectAverages.count >= 3 && (
                   <ProjectComparisonCard
                     candidateScore={fitScore}
@@ -505,20 +510,13 @@ export function SessionReportView({
           </TabsContent>
 
           <TabsContent value="bigfive" className="mt-4 space-y-4">
-            {report && (report.personality_profile || report.soft_skills) ? (
-              <>
-                <PersonalityRadar
-                  profile={report.personality_profile}
-                  onGoToMessage={goToMessage}
-                  projectAverages={projectAverages?.bigFive}
-                  questionNumberByMessageId={questionNumberByMessageId}
-                />
-                <SoftSkillsCard
-                  skills={report.soft_skills as any}
-                  onGoToMessage={goToMessage}
-                  questionNumberByMessageId={questionNumberByMessageId}
-                />
-              </>
+            {report && report.personality_profile ? (
+              <PersonalityRadar
+                profile={report.personality_profile}
+                onGoToMessage={goToMessage}
+                projectAverages={projectAverages?.bigFive}
+                questionNumberByMessageId={questionNumberByMessageId}
+              />
             ) : (
               <Card>
                 <CardContent className="py-8 text-center text-sm text-muted-foreground">
