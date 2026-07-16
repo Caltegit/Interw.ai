@@ -286,7 +286,8 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                     );
                   })}
                 </tr>
-              ))}
+              );
+            })}
               <tr>
                 <td className="bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
                   Moyenne
