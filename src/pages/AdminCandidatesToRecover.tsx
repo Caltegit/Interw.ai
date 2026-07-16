@@ -13,7 +13,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Send, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Copy, ExternalLink, Send, RefreshCw, CheckCircle2, AlertCircle, Mail } from "lucide-react";
+import { EditRecoveryTemplateDialog } from "@/components/superadmin/EditRecoveryTemplateDialog";
 
 type Impacted = {
   session_id: string;
@@ -63,6 +64,7 @@ export default function AdminCandidatesToRecover() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [singleConfirm, setSingleConfirm] = useState<Impacted | null>(null);
   const [sending, setSending] = useState(false);
+  const [editTemplateOpen, setEditTemplateOpen] = useState(false);
 
   // Zone témoins
   const [projects, setProjects] = useState<ProjectRow[]>([]);
@@ -377,6 +379,10 @@ export default function AdminCandidatesToRecover() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setEditTemplateOpen(true)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Modifier le modèle
+            </Button>
             <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue />
@@ -525,6 +531,11 @@ export default function AdminCandidatesToRecover() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditRecoveryTemplateDialog
+        open={editTemplateOpen}
+        onOpenChange={setEditTemplateOpen}
+      />
     </div>
   );
 }
