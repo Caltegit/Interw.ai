@@ -122,7 +122,7 @@ async function sendCandidateThankYou(
   });
 }
 
-async function processJob(sessionId: string) {
+async function processJob(sessionId: string, forceRegenerate = false) {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // Garde-fou : ne traiter que les sessions completed non-demo
@@ -141,14 +141,15 @@ async function processJob(sessionId: string) {
     return;
   }
 
-  // Si un rapport existe déjà, on saute la génération mais on tente l'email.
+  // Si un rapport existe déjà, on saute la génération automatique initiale,
+  // mais une régénération demandée depuis le front force une vraie recréation.
   const { data: existing } = await supabase
     .from("reports")
     .select("id")
     .eq("session_id", sessionId)
     .maybeSingle();
 
-  if (!existing) {
+  if (!existing || forceRegenerate) {
     // 1. Boucle de transcription (transcribe-session plafonne à 8 segments/run)
     const MAX_RUNS = 10;
     const startedAt = Date.now();
@@ -167,7 +168,11 @@ async function processJob(sessionId: string) {
     }
 
     // 2. Génération
-    await invoke("generate-report", { session_id: sessionId });
+    await invoke("generate-report", { session_id: sessionId, force: forceRegenerate });
+
+    // La matrice doit être recalculée avec le rapport, sinon l'UI peut afficher
+    // une ancienne matrice incohérente avec le nouveau score global.
+    await invoke("generate-fit-matrix", { session_id: sessionId, force: true });
   }
 
   // 3. Email (best-effort, n'échoue pas le job)
@@ -204,13 +209,13 @@ Deno.serve(async (req) => {
     );
   }
 
-  const claimed = (jobs ?? []) as Array<{ session_id: string; attempts: number }>;
+  const claimed = (jobs ?? []) as Array<{ session_id: string; attempts: number; force_regenerate?: boolean }>;
   const results: Array<{ session_id: string; status: "done" | "failed"; error?: string }> = [];
 
   for (let i = 0; i < claimed.length; i++) {
     const job = claimed[i];
     try {
-      await processJob(job.session_id);
+      await processJob(job.session_id, job.force_regenerate === true);
       results.push({ session_id: job.session_id, status: "done" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

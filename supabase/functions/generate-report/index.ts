@@ -1420,7 +1420,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
           "Content-Type": "application/json",
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
-        body: JSON.stringify({ session_id }),
+        body: JSON.stringify({ session_id, force: true }),
       }).catch((e) => console.error("[generate-report] fit-matrix bg call failed", e));
     } catch (e) {
       console.error("[generate-report] fit-matrix bg dispatch error", e);

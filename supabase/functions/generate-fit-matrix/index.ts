@@ -47,7 +47,7 @@ serve(async (req) => {
         .order("timestamp"),
       supabase
         .from("reports")
-        .select("id, stats")
+        .select("id, stats, overall_score")
         .eq("session_id", session_id)
         .maybeSingle(),
     ]);
@@ -332,20 +332,36 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       criterion_averages,
     };
 
+    const recommendationFromScore = (score: number) => {
+      if (score >= 80) return "strong_yes";
+      if (score >= 65) return "yes";
+      if (score >= 45) return "maybe";
+      return "no";
+    };
+
     const nextStats: Record<string, any> = { ...existingStats, fit_matrix };
+    const reportPatch: Record<string, any> = { stats: nextStats };
     if (matrixFitScore !== null) {
       nextStats.fit_score = matrixFitScore;
       const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
+      const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
+        ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
+        : Math.max(0, Math.min(100, Number(reportRes.data.overall_score) || matrixFitScore));
+      const finalScore = Math.round(Math.min(100, Math.max(0, (aiScore + matrixFitScore) / 2)));
       nextStats.score_breakdown = {
         ...prevBreakdown,
+        ai_score: aiScore,
         weighted_criteria_score: matrixFitScore,
+        final_score: finalScore,
         fit_score_source: "fit_matrix",
       };
+      reportPatch.overall_score = finalScore;
+      reportPatch.recommendation = recommendationFromScore(finalScore);
     }
 
     const { error: updateError } = await supabase
       .from("reports")
-      .update({ stats: nextStats })
+      .update(reportPatch)
       .eq("id", reportRes.data.id);
 
     if (updateError) {
