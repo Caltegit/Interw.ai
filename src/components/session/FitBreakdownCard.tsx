@@ -1,8 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
+import { Target, Info } from "lucide-react";
 import { EvidenceLink } from "./EvidenceLink";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface FitItem {
   criterion: string;
@@ -18,6 +24,7 @@ interface Props {
   items?: FitItem[] | null;
   // Fallback ancien format : criteria_scores { id: { label, score, max, comment } }
   legacyCriteriaScores?: Record<string, { label?: string; score: number; max: number; comment?: string }> | null;
+  criteriaWeights?: Record<string, number>;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
 }
