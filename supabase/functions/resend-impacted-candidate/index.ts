@@ -124,10 +124,10 @@ Deno.serve(async (req) => {
   // 7. Envoi de l'e-mail.
   const project = (original as any).projects ?? {};
   const org = project.organizations ?? {};
-  const origin = req.headers.get("origin")
-    || req.headers.get("referer")?.replace(/\/$/, "")
-    || "https://interw.ai";
-  const ctaLink = `${origin}/session/${project.slug}/start/${newSession.token}`;
+  // Domaine public fixe — jamais l'origine de la requête (preview Lovable
+  // ou autre) pour éviter de mettre un lien lovableproject.com dans l'e-mail.
+  const PUBLIC_APP_URL = (Deno.env.get("PUBLIC_APP_URL") || "https://interw.ai").replace(/\/$/, "");
+  const ctaLink = `${PUBLIC_APP_URL}/session/${project.slug}/start/${newSession.token}`;
   const prenom = String(original.candidate_name ?? "").trim().split(/\s+/)[0] || "";
 
   const { error: sendErr, data: sendData } = await admin.functions.invoke("send-transactional-email", {
