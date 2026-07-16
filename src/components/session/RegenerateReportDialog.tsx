@@ -105,6 +105,16 @@ export function RegenerateReportDialog({ open, onOpenChange, sessionId, startedA
     return { label: "Finalisation…", detail: "Presque terminé." };
   }, [job]);
 
+  // Progression estimée : asymptotique vers 95% sur ~60s, puis rampe lente jusqu'à 99%.
+  const progress = useMemo(() => {
+    const openedAt = openedAtRef.current ?? now;
+    const elapsed = Math.max(0, now - openedAt) / 1000; // secondes
+    // 1 - exp(-t/T) donne 63% à T=25s, ~95% à 75s
+    const base = 1 - Math.exp(-elapsed / 25);
+    const pct = Math.min(99, Math.round(base * 95 + Math.min(4, elapsed / 30)));
+    return pct;
+  }, [now]);
+
   return (
     <Dialog
       open={open}
@@ -129,16 +139,23 @@ export function RegenerateReportDialog({ open, onOpenChange, sessionId, startedA
           <DialogDescription>Cela prend en général 30 à 60 secondes.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-4">
-          <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{stage.label}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{stage.detail}</p>
-            {job?.attempts && job.attempts > 1 ? (
-              <p className="mt-1 text-xs text-muted-foreground">Tentative {job.attempts}.</p>
-            ) : null}
+        <div className="space-y-3 rounded-md border bg-muted/40 p-4">
+          <div className="flex items-start gap-3">
+            <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">{stage.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{stage.detail}</p>
+              {job?.attempts && job.attempts > 1 ? (
+                <p className="mt-1 text-xs text-muted-foreground">Tentative {job.attempts}.</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Progress value={progress} className="h-2" />
+            <p className="text-right text-xs tabular-nums text-muted-foreground">{progress}%</p>
           </div>
         </div>
+
 
         <DialogFooter className="sm:justify-end">
           <Button
