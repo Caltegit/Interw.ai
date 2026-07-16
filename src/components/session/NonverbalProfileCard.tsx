@@ -39,7 +39,6 @@ const DIMENSIONS: { key: keyof NonverbalProfile; label: string }[] = [
   { key: "eye_contact", label: "Présence du regard" },
   { key: "posture", label: "Posture" },
   { key: "gestures", label: "Gestuelle" },
-  { key: "facial_expressivity", label: "Expressivité du visage" },
 ];
 
 function scoreColor(score?: number) {
