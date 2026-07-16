@@ -208,13 +208,17 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
               </tr>
             </thead>
             <tbody>
-              {m.rows.map((r) => (
+              {m.rows.map((r) => {
+                const title = r.question_title?.trim() || questionTitles[r.question_id] || "";
+                return (
                 <tr key={r.question_id}>
                   <td className="bg-background align-top px-2 py-1">
                     <div className="text-xs font-semibold text-muted-foreground">
                       Q{(r.question_index ?? 0) + 1}
                     </div>
-                    <div className="text-sm break-words">{truncate(r.question_title?.trim() || r.question_content, 90)}</div>
+                    <div className="text-sm break-words" title={title || undefined}>
+                      {title ? truncate(title, 90) : "Question sans titre"}
+                    </div>
                   </td>
                   <td className="p-0.5 align-top bg-primary/5">
                     <div
