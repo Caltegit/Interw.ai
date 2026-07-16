@@ -24,14 +24,23 @@ export function RegenerateReportDialog({ open, onOpenChange, sessionId, startedA
   const openedAtRef = useRef<number | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const finishedRef = useRef(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (open) {
       openedAtRef.current = Date.now();
       setTimedOut(false);
       finishedRef.current = false;
+      setNow(Date.now());
     }
   }, [open, startedAt]);
+
+  // Tick pour animer la barre de progression
+  useEffect(() => {
+    if (!open) return;
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [open]);
 
   const { data: job } = useReportJobStatus(sessionId, {
     enabled: open,
