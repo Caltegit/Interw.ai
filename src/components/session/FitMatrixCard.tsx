@@ -305,10 +305,10 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => onGoToMessage(cell.message_id!)}
+                                onClick={() => onGoToMessage(cell.message_id!, cell.start_seconds)}
                               >
                                 <Play className="mr-2 h-3.5 w-3.5" />
-                                Voir la vidéo
+                                Q{(r.question_index ?? 0) + 1} · {formatSeconds(cell.start_seconds)}
                               </Button>
                             )}
                           </PopoverContent>
