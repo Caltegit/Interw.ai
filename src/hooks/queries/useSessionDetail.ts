@@ -15,7 +15,7 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     supabase
       .from("sessions")
       .select(
-        "id, candidate_name, candidate_email, candidate_phone, candidate_linkedin_url, candidate_cv_url, candidate_cv_filename, candidate_job_title, candidate_cover_letter_url, candidate_cover_letter_filename, status, created_at, started_at, completed_at, duration_seconds, video_recording_url, audio_recording_url, project_id, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note, projects(id, title, ai_persona_name, job_title, questions(id, content, order_index, title, hint_text))",
+        "id, candidate_name, candidate_email, candidate_phone, candidate_linkedin_url, candidate_cv_url, candidate_cv_filename, candidate_job_title, candidate_cover_letter_url, candidate_cover_letter_filename, status, created_at, started_at, completed_at, duration_seconds, video_recording_url, audio_recording_url, project_id, recruiter_decision, recruiter_decision_at, recruiter_decision_by, recruiter_note, projects(id, title, ai_persona_name, job_title, questions(id, content, order_index, title, hint_text), evaluation_criteria(id, label, weight, description, scoring_scale))",
       )
       .eq("id", sessionId)
       .single(),

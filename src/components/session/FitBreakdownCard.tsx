@@ -1,8 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Target } from "lucide-react";
+import { Target, Info } from "lucide-react";
 import { EvidenceLink } from "./EvidenceLink";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface FitItem {
   criterion: string;
@@ -18,6 +24,7 @@ interface Props {
   items?: FitItem[] | null;
   // Fallback ancien format : criteria_scores { id: { label, score, max, comment } }
   legacyCriteriaScores?: Record<string, { label?: string; score: number; max: number; comment?: string }> | null;
+  criteriaWeights?: Record<string, number>;
   onGoToMessage?: (id: string, startSeconds?: number) => void;
   questionNumberByMessageId?: Record<string, number>;
 }
@@ -53,7 +60,13 @@ function barColor(level?: FitItem["level"]) {
   }
 }
 
-export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage, questionNumberByMessageId }: Props) {
+export function FitBreakdownCard({
+  items,
+  legacyCriteriaScores,
+  criteriaWeights,
+  onGoToMessage,
+  questionNumberByMessageId,
+}: Props) {
   let list: FitItem[] = [];
   if (items && items.length > 0) {
     list = items.map((it) => ({ ...it, level: it.level ?? inferLevel(it.score) }));
@@ -76,16 +89,38 @@ export function FitBreakdownCard({ items, legacyCriteriaScores, onGoToMessage, q
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base text-left">
           <Target className="h-4 w-4 text-primary" /> Adéquation selon les critères définis
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="ml-auto text-muted-foreground hover:text-foreground">
+                  <Info className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <p className="text-xs">
+                  Chaque score est la moyenne du détail question par question pour ce critère. Le Fit Poste global est la moyenne pondérée de ces scores.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {list.map((item, i) => {
           const level = item.level ?? inferLevel(item.score);
           const score = Math.max(0, Math.min(100, item.score));
+          const weight = criteriaWeights?.[item.criterion];
           return (
             <div key={i}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{item.criterion}</span>
+                <span className="text-sm font-medium">
+                  {item.criterion}
+                  {typeof weight === "number" && (
+                    <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                      · poids {weight}%
+                    </span>
+                  )}
+                </span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wide", levelTone[level])}>
                     {levelLabel[level]}

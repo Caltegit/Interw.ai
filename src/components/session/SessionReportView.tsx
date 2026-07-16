@@ -210,6 +210,16 @@ export function SessionReportView({
         ? Number(report.overall_score)
         : null;
 
+  const criteriaWeights = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const c of (project?.evaluation_criteria ?? []) as any[]) {
+      if (c?.label && typeof c.weight === "number") {
+        map[c.label] = c.weight;
+      }
+    }
+    return map;
+  }, [project?.evaluation_criteria]);
+
   const rankLabel =
     projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
       ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
@@ -489,6 +499,7 @@ export function SessionReportView({
                 <FitBreakdownCard
                   items={stats.fit_breakdown}
                   legacyCriteriaScores={criteriaScores as any}
+                  criteriaWeights={criteriaWeights}
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
                 />

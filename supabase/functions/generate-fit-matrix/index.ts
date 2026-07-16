@@ -22,7 +22,7 @@ serve(async (req) => {
   if (!caller.ok) return caller.response;
 
   try {
-    const { session_id, force } = await req.json().catch(() => ({}));
+    const { session_id, force, update_report = true } = await req.json().catch(() => ({}));
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id is required" }), {
         status: 400,
@@ -59,15 +59,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!reportRes.data) {
+    if (update_report && !reportRes.data) {
       return new Response(JSON.stringify({ error: "Report not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const existingStats = (reportRes.data.stats as Record<string, any>) ?? {};
+    const existingStats = (reportRes.data?.stats as Record<string, any>) ?? {};
     if (
+      update_report &&
       !force &&
       existingStats.fit_matrix &&
       Array.isArray(existingStats.fit_matrix?.rows) &&
@@ -395,7 +396,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
       const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
         ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
-        : Math.max(0, Math.min(100, Number(reportRes.data.overall_score) || matrixFitScore));
+        : Math.max(0, Math.min(100, Number(reportRes.data?.overall_score) || matrixFitScore));
       const finalScore = matrixFitScore;
       nextStats.score_breakdown = {
         ...prevBreakdown,
@@ -421,21 +422,40 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       }, {});
     }
 
-    const { error: updateError } = await supabase
-      .from("reports")
-      .update(reportPatch)
-      .eq("id", reportRes.data.id);
+    if (update_report) {
+      if (!reportRes.data) {
+        return new Response(JSON.stringify({ error: "Report not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error: updateError } = await supabase
+        .from("reports")
+        .update(reportPatch)
+        .eq("id", reportRes.data.id);
 
-    if (updateError) {
-      console.error("[generate-fit-matrix] update error", updateError);
-      return new Response(
-        JSON.stringify({ error: "update_failed", detail: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      if (updateError) {
+        console.error("[generate-fit-matrix] update error", updateError);
+        return new Response(
+          JSON.stringify({ error: "update_failed", detail: updateError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     return new Response(
-      JSON.stringify({ ok: true, rows: rows.length, criteria: criteria.length }),
+      JSON.stringify({
+        ok: true,
+        rows: rows.length,
+        criteria: criteria.length,
+        fit_matrix: fit_matrix,
+        fit_breakdown: nextStats.fit_breakdown,
+        fit_score: nextStats.fit_score ?? null,
+        overall_score: reportPatch.overall_score ?? null,
+        recommendation: reportPatch.recommendation ?? null,
+        criteria_scores: reportPatch.criteria_scores ?? null,
+        score_breakdown: nextStats.score_breakdown ?? null,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
