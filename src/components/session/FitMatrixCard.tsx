@@ -247,9 +247,12 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                       return (
                         <td key={c.id} className="p-0.5 align-top">
                           <div
-                            className="w-full h-12 rounded-md border border-dashed border-border/60 bg-background"
-                            aria-label="Non évalué"
-                          />
+                            className="flex w-full h-12 items-center justify-center rounded-md border border-dashed border-border/60 bg-background text-sm font-medium tabular-nums text-muted-foreground/70"
+                            title="Note par défaut : critère non couvert par la question"
+                            aria-label="Note par défaut, critère non couvert"
+                          >
+                            {typeof score === "number" ? score : "—"}
+                          </div>
                         </td>
                       );
                     }
