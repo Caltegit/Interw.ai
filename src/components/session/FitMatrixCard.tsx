@@ -163,36 +163,53 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full border-separate border-spacing-1 text-sm">
+        <div className="w-full">
+          <table className="w-full table-fixed border-separate border-spacing-1 text-sm">
+            <colgroup>
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "10%" }} />
+              {m.criteria.map((c) => (
+                <col key={c.id} style={{ width: `${62 / m.criteria.length}%` }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-background text-left text-xs font-medium text-muted-foreground px-2 py-1 min-w-[220px]">
+                <th className="bg-background text-left text-xs font-medium text-muted-foreground px-2 py-1">
                   Question
+                </th>
+                <th className="px-2 py-2 text-xs font-semibold text-primary text-center bg-primary/10 rounded-md">
+                  Moyenne
                 </th>
                 {m.criteria.map((c) => (
                   <th
                     key={c.id}
-                    className="px-2 py-1 text-xs font-medium text-muted-foreground text-center min-w-[100px]"
+                    className="px-2 py-1 text-xs font-medium text-muted-foreground text-center align-bottom leading-tight break-words"
                     title={`${c.label} · poids ${c.weight}%`}
                   >
-                    <div className="truncate">{c.label}</div>
+                    <div className="break-words">{c.label}</div>
                     <div className="text-[10px] text-muted-foreground/70">{c.weight}%</div>
                   </th>
                 ))}
-                <th className="px-2 py-1 text-xs font-semibold text-muted-foreground text-center min-w-[80px]">
-                  Moyenne
-                </th>
               </tr>
             </thead>
             <tbody>
               {m.rows.map((r) => (
                 <tr key={r.question_id}>
-                  <td className="sticky left-0 z-10 bg-background align-top px-2 py-1">
+                  <td className="bg-background align-top px-2 py-1">
                     <div className="text-xs font-semibold text-muted-foreground">
                       Q{(r.question_index ?? 0) + 1}
                     </div>
-                    <div className="text-sm">{truncate(r.question_title?.trim() || r.question_content, 90)}</div>
+                    <div className="text-sm break-words">{truncate(r.question_title?.trim() || r.question_content, 90)}</div>
+                  </td>
+                  <td className="p-0.5 align-top bg-primary/5">
+                    <div
+                      className={cn(
+                        "flex h-12 items-center justify-center rounded-md border text-sm font-semibold tabular-nums ring-1 ring-primary/20",
+                        scoreTone(rowAverages[r.question_id] ?? null),
+                      )}
+                    >
+                      {rowAverages[r.question_id] ?? "—"}
+                    </div>
                   </td>
                   {m.criteria.map((c) => {
                     const cell = r.cells[c.id];
@@ -249,22 +266,13 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
                       </td>
                     );
                   })}
-                  <td className="p-0.5 align-top">
-                    <div
-                      className={cn(
-                        "flex h-12 items-center justify-center rounded-md border text-sm font-semibold tabular-nums",
-                        scoreTone(rowAverages[r.question_id] ?? null),
-                      )}
-                    >
-                      {rowAverages[r.question_id] ?? "—"}
-                    </div>
-                  </td>
                 </tr>
               ))}
               <tr>
-                <td className="sticky left-0 z-10 bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
+                <td className="bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
                   Moyenne
                 </td>
+                <td className="p-0.5 bg-primary/5" />
                 {m.criteria.map((c) => (
                   <td key={c.id} className="p-0.5">
                     <div
@@ -277,11 +285,11 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
                     </div>
                   </td>
                 ))}
-                <td className="p-0.5" />
               </tr>
             </tbody>
           </table>
         </div>
+
         <p className="mt-3 text-xs text-muted-foreground">
           Cliquez sur une note pour voir la justification et sauter à l'extrait vidéo.
         </p>

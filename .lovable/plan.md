@@ -1,26 +1,31 @@
 ## Objectif
-Dans le tableau de bord, à gauche du badge "Complété" de la carte "Dernières sessions candidats", afficher un petit rond contenant le score fit poste (ex. 37).
+Améliorer la mise en page de la matrice Fit :
+- Colonnes de critères de largeur égale et responsives (`table-fixed` + largeur en %).
+- Titres de colonnes lisibles sur plusieurs lignes (wrap au lieu de troncature).
+- Colonne « Moyenne » déplacée à gauche (juste après « Question ») avec un fond distinctif pour la faire ressortir.
 
-## Fichiers concernés
-- `src/pages/Dashboard.tsx`
-- `src/hooks/queries/useDashboardData.ts` (données déjà disponibles, pas de modification requise)
+## Changements — `src/components/session/FitMatrixCard.tsx`
 
-## Implémentation
-1. **Récupération du score** : le hook `useDashboardData` renvoie déjà `reportsBySession` indexé par `session_id` avec le champ `score`.
+1. **Table layout**
+   - Remplacer `w-full border-separate border-spacing-1` par `w-full table-fixed border-separate border-spacing-1`.
+   - Supprimer `overflow-x-auto` (plus nécessaire, largeurs adaptatives).
+   - Colonne « Question » : largeur fixe raisonnable (`w-[28%]` ou `min-w-[200px]`).
+   - Colonne « Moyenne » : largeur fixe (`w-[10%]`).
+   - Colonnes critères : partager équitablement le reste via `<colgroup>` avec `style={{ width: \`${62 / criteria.length}%\` }}`.
 
-2. **Affichage conditionnel** : dans la liste `last5Sessions`, avant le `<SessionStatusBadge />`, afficher un petit cercle si :
-   - `s.status === "completed"`
-   - `reportsBySession[s.id]?.score` existe
+2. **En-têtes critères multi-lignes**
+   - Retirer `truncate`, `min-w-[100px]` et `whitespace-nowrap`.
+   - Autoriser le retour à la ligne : `break-words leading-tight`.
+   - Garder le poids `%` en dessous.
 
-3. **Style du rond** :
-   - Taille ~20-24 px, plein cercle, texte en xs gras
-   - Couleur selon le score en réutilisant la logique existante `scoreColor` :
-     - `≥ 65` : vert (success)
-     - `≥ 45` : orange (warning)
-     - `< 45` : rouge (destructive)
-   - Pas de couleur codée en dur, utilisation des tokens sémantiques du design system
+3. **Déplacer « Moyenne » à gauche**
+   - Dans `<thead>` : ordre = Question → Moyenne → critères.
+   - Dans chaque `<tr>` du `<tbody>` : cellule moyenne juste après la question.
+   - Ligne « Moyenne » finale : mettre la case moyenne globale (ou vide) juste après le libellé, puis les moyennes par critère.
 
-4. **Accessibilité** : ajouter un `title` ou `aria-label` du type "Score fit poste : 37 %".
+4. **Style de mise en valeur de la colonne Moyenne**
+   - Header : `bg-primary/10 text-primary rounded-md`.
+   - Cellules moyennes : conserver `scoreTone(...)` mais ajouter un contour renforcé (`ring-1 ring-primary/20`) et un léger fond de colonne via une classe sur les `<td>` (`bg-primary/5`).
 
-## Résultat attendu
-Chaque session complétée dans la carte "Dernières sessions candidats" affiche un rond coloré avec son score fit poste juste à gauche du badge "Complété". Les autres statuts restent inchangés.
+## Non-changements
+Aucun changement de logique (calculs de moyennes inchangés), pas de modification back-end, pas de migration.
