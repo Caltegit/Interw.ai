@@ -130,19 +130,6 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
             </div>
           );
         })}
-        {lowConfidence.length > 0 && highConfidence.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 text-xs"
-            onClick={() => setShowLow((v) => !v)}
-          >
-            {showLow ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showLow
-              ? "Masquer les traits à faible confiance"
-              : `Voir ${lowConfidence.length} trait${lowConfidence.length > 1 ? "s" : ""} à faible confiance`}
-          </Button>
-        )}
         {projectAverages && Object.keys(projectAverages).length > 0 && (
           <p className="pt-1 text-[11px] text-muted-foreground">
             Le repère vertical sur chaque barre indique la moyenne du projet.
