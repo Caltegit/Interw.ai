@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Loader2, Sparkles } from "lucide-react";
 import { useReportJobStatus } from "@/hooks/queries/useSessionDetail";
 import { useQueryClient } from "@tanstack/react-query";
