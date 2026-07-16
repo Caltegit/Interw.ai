@@ -326,6 +326,14 @@ export default function SessionDetail() {
         recruiterNotes={recruiterNotes}
         onRecruiterNotesChange={(v) => { noteDirtyRef.current = true; setRecruiterNotes(v); }}
       />
+
+      <RegenerateReportDialog
+        open={regenOpen}
+        onOpenChange={setRegenOpen}
+        sessionId={id}
+        startedAt={regenStartedAt}
+      />
     </div>
   );
 }
+
