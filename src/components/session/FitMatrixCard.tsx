@@ -20,6 +20,7 @@ export interface FitMatrixCell {
   justification?: string;
   quote?: string;
   message_id?: string;
+  start_seconds?: number;
 }
 
 export interface FitMatrixRow {
@@ -64,6 +65,13 @@ function scoreTone(score: number | null | undefined) {
 function truncate(str: string, n: number) {
   if (!str) return "";
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
+}
+
+function formatSeconds(s?: number | null): string {
+  const total = Math.max(0, Math.round(Number(s) || 0));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 // Une case est considérée "informative" si l'IA a fourni une preuve
@@ -297,10 +305,10 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => onGoToMessage(cell.message_id!)}
+                                onClick={() => onGoToMessage(cell.message_id!, cell.start_seconds)}
                               >
                                 <Play className="mr-2 h-3.5 w-3.5" />
-                                Voir la vidéo
+                                Q{(r.question_index ?? 0) + 1} · {formatSeconds(cell.start_seconds)}
                               </Button>
                             )}
                           </PopoverContent>

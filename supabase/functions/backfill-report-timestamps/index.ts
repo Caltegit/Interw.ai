@@ -79,6 +79,15 @@ serve(async (req) => {
     if (Array.isArray(stats.fit_breakdown)) {
       stats.fit_breakdown.forEach((e: any) => fixEntry(e));
     }
+    // stats.fit_matrix.rows[*].cells[*]
+    if (stats.fit_matrix && Array.isArray(stats.fit_matrix.rows)) {
+      for (const row of stats.fit_matrix.rows) {
+        if (!row?.cells || typeof row.cells !== "object") continue;
+        for (const key of Object.keys(row.cells)) {
+          fixEntry(row.cells[key]);
+        }
+      }
+    }
     // stats.decision_drivers
     if (Array.isArray(stats.decision_drivers)) {
       stats.decision_drivers.forEach((e: any) => fixEntry(e));
