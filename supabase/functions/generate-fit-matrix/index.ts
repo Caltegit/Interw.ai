@@ -267,13 +267,14 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       rows.push({
         question_id: q.id,
         question_index: i,
+        question_title: q.title ?? null,
         question_content: q.content,
         cells,
       });
     }
 
     const fit_matrix = {
-      version: 1,
+      version: 2,
       generated_at: new Date().toISOString(),
       criteria: criteria.map((c: any) => ({
         id: c.id,
