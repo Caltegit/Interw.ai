@@ -1396,6 +1396,7 @@ export type Database = {
           attempts: number
           completed_at: string | null
           created_at: string
+          force_regenerate: boolean
           last_error: string | null
           locked_at: string | null
           locked_until: string | null
@@ -1410,6 +1411,7 @@ export type Database = {
           attempts?: number
           completed_at?: string | null
           created_at?: string
+          force_regenerate?: boolean
           last_error?: string | null
           locked_at?: string | null
           locked_until?: string | null
@@ -1424,6 +1426,7 @@ export type Database = {
           attempts?: number
           completed_at?: string | null
           created_at?: string
+          force_regenerate?: boolean
           last_error?: string | null
           locked_at?: string | null
           locked_until?: string | null
@@ -2151,6 +2154,7 @@ export type Database = {
           attempts: number
           completed_at: string | null
           created_at: string
+          force_regenerate: boolean
           last_error: string | null
           locked_at: string | null
           locked_until: string | null
@@ -2182,7 +2186,12 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
-      enqueue_report_job: { Args: { p_session_id: string }; Returns: undefined }
+      enqueue_report_job:
+        | { Args: { p_session_id: string }; Returns: undefined }
+        | {
+            Args: { p_force?: boolean; p_session_id: string }
+            Returns: undefined
+          }
       get_project_stats_timeseries: {
         Args: { p_from: string; p_project_id: string; p_to: string }
         Returns: {

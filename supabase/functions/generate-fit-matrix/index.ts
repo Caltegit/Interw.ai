@@ -47,7 +47,7 @@ serve(async (req) => {
         .order("timestamp"),
       supabase
         .from("reports")
-        .select("id, stats")
+        .select("id, stats, overall_score")
         .eq("session_id", session_id)
         .maybeSingle(),
     ]);
@@ -191,7 +191,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
 
     let parsed: any = null;
     let lastErr: string | null = null;
-    for (const model of ["google/gemini-2.5-pro", "google/gemini-2.5-flash"]) {
+    for (const model of ["google/gemini-2.5-flash", "google/gemini-2.5-pro"]) {
       try {
         const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -332,20 +332,49 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       criterion_averages,
     };
 
+    const recommendationFromScore = (score: number) => {
+      if (score >= 80) return "strong_yes";
+      if (score >= 65) return "yes";
+      if (score >= 45) return "maybe";
+      return "no";
+    };
+
     const nextStats: Record<string, any> = { ...existingStats, fit_matrix };
+    const reportPatch: Record<string, any> = { stats: nextStats };
     if (matrixFitScore !== null) {
       nextStats.fit_score = matrixFitScore;
       const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
+      const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
+        ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
+        : Math.max(0, Math.min(100, Number(reportRes.data.overall_score) || matrixFitScore));
+      const finalScore = matrixFitScore;
       nextStats.score_breakdown = {
         ...prevBreakdown,
+        ai_score: aiScore,
         weighted_criteria_score: matrixFitScore,
+        final_score: finalScore,
         fit_score_source: "fit_matrix",
+        method: "matrix_v2",
       };
+      reportPatch.overall_score = finalScore;
+      reportPatch.recommendation = recommendationFromScore(finalScore);
+      reportPatch.criteria_scores = criteria.reduce((acc: Record<string, any>, c: any) => {
+        const avg = criterion_averages[c.id];
+        if (typeof avg !== "number") return acc;
+        const maxScale = c.scoring_scale === "0-10" ? 10 : 5;
+        acc[c.id] = {
+          label: c.label,
+          score: Math.round((avg / 100) * maxScale),
+          max: maxScale,
+          comment: "Moyenne issue de la matrice détaillée.",
+        };
+        return acc;
+      }, {});
     }
 
     const { error: updateError } = await supabase
       .from("reports")
-      .update({ stats: nextStats })
+      .update(reportPatch)
       .eq("id", reportRes.data.id);
 
     if (updateError) {

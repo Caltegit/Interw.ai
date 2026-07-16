@@ -173,10 +173,11 @@ export function useRegenerateReport(sessionId: string | undefined) {
   return useMutation({
     mutationFn: async () => {
       if (!sessionId) throw new Error("Session manquante");
-      // Bouton « Régénérer » : on enqueue dans report_jobs (idempotent).
+      // Bouton « Régénérer » : on enqueue dans report_jobs en mode forcé.
       // Le worker process-report-queue traitera dans la minute.
       const { error } = await (supabase.rpc as any)("enqueue_report_job", {
         p_session_id: sessionId,
+        p_force: true,
       });
       if (error) throw error;
       return { enqueuedAt: new Date().toISOString() };

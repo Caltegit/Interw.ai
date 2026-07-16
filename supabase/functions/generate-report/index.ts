@@ -103,7 +103,7 @@ serve(async (req) => {
   if (!caller.ok) return caller.response;
 
   try {
-    const { session_id, force: forceRegenerate } = await req.json();
+    const { session_id, force: forceRegenerate, generate_fit_matrix = true } = await req.json();
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id is required" }), {
         status: 400,
@@ -1413,14 +1413,14 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     // Génère la matrice Fit Poste détaillée en arrière-plan (n'allonge pas la
     // génération du rapport). Si l'appel échoue, le bouton "Voir les détails"
     // côté UI permet de la générer à la demande.
-    try {
+    if (generate_fit_matrix !== false) try {
       fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
         },
-        body: JSON.stringify({ session_id }),
+        body: JSON.stringify({ session_id, force: true }),
       }).catch((e) => console.error("[generate-report] fit-matrix bg call failed", e));
     } catch (e) {
       console.error("[generate-report] fit-matrix bg dispatch error", e);
