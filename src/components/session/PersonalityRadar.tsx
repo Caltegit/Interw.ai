@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { Brain } from "lucide-react";
 import { EvidenceLink } from "./EvidenceLink";
 import { ScoreLevelBadge, inferLevel, levelBarColor } from "./scoreLevelBadge";
 import { cn } from "@/lib/utils";
@@ -56,18 +54,12 @@ interface Props {
 }
 
 export function PersonalityRadar({ profile, onGoToMessage, projectAverages, questionNumberByMessageId }: Props) {
-  const [showLow, setShowLow] = useState(false);
-
   if (!profile) return null;
   const all = (Object.keys(LABELS) as Array<keyof Profile>)
     .map((key) => ({ key, label: LABELS[key], trait: profile[key] }))
     .filter((e) => e.trait && typeof e.trait.score === "number");
 
   if (all.length === 0) return null;
-
-  const highConfidence = all.filter((e) => (e.trait?.confidence ?? "medium") !== "low");
-  const lowConfidence = all.filter((e) => e.trait?.confidence === "low");
-  const visible = showLow ? all : highConfidence.length > 0 ? highConfidence : all;
 
   return (
     <Card>
@@ -88,7 +80,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
             Lien Wikipedia
           </a>
         </div>
-        {visible.map(({ key, label, trait }) => {
+        {all.map(({ key, label, trait }) => {
           const score = Math.max(0, Math.min(100, trait!.score));
           const confidence = trait!.confidence ?? "medium";
           const avg = projectAverages?.[key];
@@ -138,19 +130,6 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
             </div>
           );
         })}
-        {lowConfidence.length > 0 && highConfidence.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 text-xs"
-            onClick={() => setShowLow((v) => !v)}
-          >
-            {showLow ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showLow
-              ? "Masquer les traits à faible confiance"
-              : `Voir ${lowConfidence.length} trait${lowConfidence.length > 1 ? "s" : ""} à faible confiance`}
-          </Button>
-        )}
         {projectAverages && Object.keys(projectAverages).length > 0 && (
           <p className="pt-1 text-[11px] text-muted-foreground">
             Le repère vertical sur chaque barre indique la moyenne du projet.
