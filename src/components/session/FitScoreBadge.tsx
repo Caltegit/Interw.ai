@@ -35,7 +35,11 @@ export function FitScoreBadge({ score, size = 22, audioFailed }: Props) {
     <span
       className={`inline-flex items-center justify-center rounded-full border font-semibold leading-none ${colorClass}`}
       style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.32)) }}
-      title={value === null ? "Score non disponible" : `Score global : ${value}/100`}
+      title={
+        value === null
+          ? "Score non disponible"
+          : `Fit Poste : ${value}/100 — moyenne pondérée des critères issue du détail question par question`
+      }
     >
       {value === null ? "—" : value}
     </span>
