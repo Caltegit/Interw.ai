@@ -191,7 +191,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
 
     let parsed: any = null;
     let lastErr: string | null = null;
-    for (const model of ["google/gemini-2.5-pro", "google/gemini-2.5-flash"]) {
+    for (const model of ["google/gemini-2.5-flash", "google/gemini-2.5-pro"]) {
       try {
         const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
