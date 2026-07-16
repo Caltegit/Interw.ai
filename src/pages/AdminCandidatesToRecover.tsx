@@ -64,6 +64,7 @@ export default function AdminCandidatesToRecover() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [singleConfirm, setSingleConfirm] = useState<Impacted | null>(null);
   const [sending, setSending] = useState(false);
+  const [editTemplateOpen, setEditTemplateOpen] = useState(false);
 
   // Zone témoins
   const [projects, setProjects] = useState<ProjectRow[]>([]);
