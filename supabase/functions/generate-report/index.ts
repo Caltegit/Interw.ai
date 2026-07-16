@@ -1394,7 +1394,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     if (generate_fit_matrix !== false && criteria.length > 0 && questions.length > 0) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 35000);
+        const timeoutId = setTimeout(() => controller.abort(), 55000);
         const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
           method: "POST",
           headers: {
