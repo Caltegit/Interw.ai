@@ -1386,6 +1386,60 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
           : null,
     };
 
+    // Génère la matrice Fit Poste de manière synchrone pour que le Fit Poste
+    // global et le détail par critère soient alignés avec le détail question
+    // par question. En cas d'échec ou de timeout, on conserve le calcul
+    // holistique initial et on laisse l'appel en arrière-plan tenter à nouveau.
+    let matrixResult: any = null;
+    if (generate_fit_matrix !== false && criteria.length > 0 && questions.length > 0) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 35000);
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+          },
+          body: JSON.stringify({ session_id, force: true, update_report: false }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (r.ok) {
+          matrixResult = await r.json().catch(() => null);
+        } else {
+          console.warn("[generate-report] generate-fit-matrix returned non-ok", r.status);
+        }
+      } catch (e) {
+        console.warn("[generate-report] generate-fit-matrix sync call failed", e);
+      }
+    }
+
+    if (
+      matrixResult?.ok &&
+      matrixResult.fit_matrix &&
+      typeof matrixResult.fit_score === "number"
+    ) {
+      fitScore = matrixResult.fit_score;
+      fitBreakdown = Array.isArray(matrixResult.fit_breakdown)
+        ? matrixResult.fit_breakdown
+        : fitBreakdown;
+      finalOverallScore = typeof matrixResult.overall_score === "number"
+        ? matrixResult.overall_score
+        : fitScore;
+      parsed.recommendation = matrixResult.recommendation || parsed.recommendation;
+      criteriaScores = matrixResult.criteria_scores || criteriaScores;
+      stats.fit_score = fitScore;
+      stats.fit_breakdown = fitBreakdown;
+      stats.score_breakdown = matrixResult.score_breakdown || {
+        ai_score: aiOverallScore,
+        weighted_criteria_score: fitScore,
+        final_score: finalOverallScore,
+        method: "matrix_v2",
+        fit_score_source: "fit_matrix",
+      };
+    }
+
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").upsert({
       session_id,
@@ -1417,10 +1471,9 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       });
     }
 
-    // Génère la matrice Fit Poste détaillée en arrière-plan (n'allonge pas la
-    // génération du rapport). Si l'appel échoue, le bouton "Voir les détails"
-    // côté UI permet de la générer à la demande.
-    if (generate_fit_matrix !== false) try {
+    // Si la matrice n'a pas pu être générée de manière synchrone, on tente
+    // une mise à jour en arrière-plan pour que le rapport soit corrigé plus tard.
+    if (generate_fit_matrix !== false && (!matrixResult?.ok || typeof matrixResult?.fit_score !== "number")) try {
       fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
         method: "POST",
         headers: {
