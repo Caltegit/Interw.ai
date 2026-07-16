@@ -499,6 +499,7 @@ export function SessionReportView({
                 <FitBreakdownCard
                   items={stats.fit_breakdown}
                   legacyCriteriaScores={criteriaScores as any}
+                  criteriaWeights={criteriaWeights}
                   onGoToMessage={goToMessage}
                   questionNumberByMessageId={questionNumberByMessageId}
                 />
