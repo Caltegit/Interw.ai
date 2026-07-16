@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.enqueue_report_job(uuid) TO authenticated;
