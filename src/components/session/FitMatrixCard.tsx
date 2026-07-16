@@ -25,6 +25,7 @@ export interface FitMatrixCell {
 export interface FitMatrixRow {
   question_id: string;
   question_index: number;
+  question_title?: string | null;
   question_content: string;
   cells: Record<string, FitMatrixCell>;
 }
