@@ -351,13 +351,14 @@ serve(async (req) => {
         "\n\nProduis maintenant l'analyse non-verbale via l'outil report_nonverbal en t'appuyant uniquement sur ce que tu vois.",
     });
 
-    const systemPrompt = `Tu es un expert en communication non-verbale en entretien d'embauche VIDÉO À DISTANCE (le candidat répond à un avatar IA affiché à l'écran). Analyse uniquement la dimension CORPORELLE (regard, posture, gestes, visage) du candidat.
+    const systemPrompt = `Tu es un expert en communication non-verbale en entretien d'embauche VIDÉO À DISTANCE (le candidat répond à un avatar IA affiché à l'écran). Analyse uniquement la dimension CORPORELLE du candidat (regard, posture, gestes).
 
-Note 4 dimensions sur 10 :
+IMPORTANT — CONFORMITÉ AI ACT : n'infère JAMAIS un état émotionnel, une humeur, un ressenti, ni une expression du visage. Reste sur des observations comportementales factuelles. Ne note pas l'expressivité faciale.
+
+Note 3 dimensions sur 10 :
 - eye_contact : présence et stabilité du regard. ATTENTION : dans ce format, le candidat regarde l'avatar À L'ÉCRAN, pas la lentille de la caméra. Un regard orienté vers l'écran de façon stable et engagée = 8-10. Ne pénalise que les vraies fuites de regard (plafond, sol, côté répété, lecture visible de notes). Ne JAMAIS pénaliser le fait de ne pas fixer la caméra : c'est attendu dans ce format.
 - posture (10 = ouverte, droite, stable)
 - gestures (10 = expressive et adaptée, ni figée ni agitée)
-- facial_expressivity (10 = visage vivant et congruent)
 
 GRILLE D'ÉVALUATION — utilise TOUTE la plage, pas seulement 4-6 :
 - 10 : exceptionnel, niveau commercial/média
@@ -369,7 +370,7 @@ GRILLE D'ÉVALUATION — utilise TOUTE la plage, pas seulement 4-6 :
 Un candidat "moyen normal" se situe à 6-7, PAS à 5. N'utilise pas 5 par défaut. Si rien de clairement négatif n'est observable, la note est ≥7.
 
 Pour chaque dimension : 1 phrase concrète ET, dès que possible, l'evidence du segment vidéo le plus représentatif : evidence_message_id, evidence_start_seconds (position EN SECONDES depuis le début de la réponse correspondante, pas depuis le début de l'entretien) et evidence_quote (≤ 20 mots décrivant factuellement ce qui s'observe à ce moment précis, ou courte citation du candidat). Ces 3 champs permettent au recruteur de sauter directement au moment clé dans la vidéo.
-Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…). Pour chacune : message_id, description factuelle (1 phrase) et start_seconds (position en secondes depuis le début de la réponse). S'il n'y en a pas, retourne une liste vide.
+Identifie ensuite jusqu'à 3 micro-tensions notables (raideur, fuite du regard répétée, geste parasite récurrent…). Pour chacune : message_id, description factuelle (1 phrase) et start_seconds (position en secondes depuis le début de la réponse). S'il n'y en a pas, retourne une liste vide. N'inclus jamais de tension basée sur une expression du visage ou un état émotionnel supposé.
 
 Ne juge JAMAIS l'apparence physique, l'âge, le genre, l'origine ou le handicap. Reste factuel et bienveillant.
 Retourne le résultat via l'outil report_nonverbal.`;
