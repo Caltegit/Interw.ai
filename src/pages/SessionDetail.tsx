@@ -32,6 +32,8 @@ import { CandidateLinksDialog } from "@/components/session/CandidateLinksDialog"
 import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { SessionReportView } from "@/components/session/SessionReportView";
+import { RegenerateReportDialog } from "@/components/session/RegenerateReportDialog";
+
 import { useCopilot } from "@/contexts/CopilotContext";
 
 export default function SessionDetail() {
@@ -65,6 +67,9 @@ export default function SessionDetail() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [linksOpen, setLinksOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenStartedAt, setRegenStartedAt] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -145,11 +150,17 @@ export default function SessionDetail() {
   };
 
   const handleRegenerate = () => {
+    const startedAt = new Date().toISOString();
+    setRegenStartedAt(startedAt);
+    setRegenOpen(true);
     regenerate.mutate(undefined, {
-      onSuccess: () => toast({ title: "Régénération lancée — patientez quelques instants." }),
-      onError: (e: any) => toast({ title: "Erreur", description: e.message, variant: "destructive" }),
+      onError: (e: any) => {
+        setRegenOpen(false);
+        toast({ title: "Erreur", description: e.message, variant: "destructive" });
+      },
     });
   };
+
 
   if (isLoading) {
     return (
