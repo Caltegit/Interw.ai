@@ -47,8 +47,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
 }
 
+// Domaine public réel envoyé aux candidats — jamais l'URL de preview Lovable.
+const PUBLIC_APP_URL = "https://interw.ai";
 function candidateUrl(slug: string, token: string) {
-  return `${window.location.origin}/session/${slug}/start/${token}`;
+  return `${PUBLIC_APP_URL}/session/${slug}/start/${token}`;
 }
 
 export default function AdminCandidatesToRecover() {
@@ -306,6 +308,9 @@ export default function AdminCandidatesToRecover() {
               Créer session témoin
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Les liens pointent vers <code>interw.ai</code> — domaine réel envoyé aux candidats.
+          </p>
 
           {witnesses.length > 0 && (
             <div className="space-y-2">
