@@ -316,7 +316,7 @@ export function SessionReportView({
       </TabsTrigger>
       <TabsTrigger value="bigfive" className={triggerClass}>
         <BigFiveBadge profile={report?.personality_profile} size={48} audioFailed={audioFailed} />
-        <span className={labelClass}>Big Five</span>
+        <span className={labelClass}>Perso</span>
       </TabsTrigger>
       <TabsTrigger value="transcription" className={triggerClass}>
         <ScrollText className="h-12 w-12" strokeWidth={1.5} />
