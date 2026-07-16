@@ -308,6 +308,9 @@ export default function AdminCandidatesToRecover() {
               Créer session témoin
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Les liens pointent vers <code>interw.ai</code> — domaine réel envoyé aux candidats.
+          </p>
 
           {witnesses.length > 0 && (
             <div className="space-y-2">
