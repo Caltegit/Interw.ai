@@ -168,7 +168,11 @@ async function processJob(sessionId: string, forceRegenerate = false) {
     }
 
     // 2. Génération
-    await invoke("generate-report", { session_id: sessionId, force: forceRegenerate });
+    await invoke("generate-report", {
+      session_id: sessionId,
+      force: forceRegenerate,
+      generate_fit_matrix: false,
+    });
 
     // La matrice doit être recalculée avec le rapport, sinon l'UI peut afficher
     // une ancienne matrice incohérente avec le nouveau score global.
