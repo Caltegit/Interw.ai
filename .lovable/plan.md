@@ -1,69 +1,59 @@
+## Objectif
 
-# Vérification E2E — Récupération candidats impactés
+Permettre de modifier le contenu du modèle d'email « Reprise entretien » directement depuis l'interface admin, une seule fois, et que **tous les envois suivants** (unitaires ou groupés, y compris les témoins) utilisent cette version modifiée.
 
-Boîte témoin confirmée : **eva@alboteam.com**. Aucun push tant que les 6 étapes ne sont pas vertes.
+Approche volontairement simple : un seul modèle partagé, éditable, avec aperçu — pas de personnalisation par candidat.
 
-## 1. Contrôle exhaustivité de la liste (lecture seule)
+## UX proposée
 
-Trois ensembles comparés via SQL :
-- **A** = sessions candidat créées entre le 8 et le 16 juillet 2026, hors `is_demo`, avec au moins un `session_message` de rôle `candidate`.
-- **B** = sous-ensemble de A sans aucun fichier > 1 Ko sous `interviews/<session_id>/` dans le bucket `media` (= impactés attendus).
-- **C** = ce que retourne `admin_list_impacted_candidates()`.
+Sur la page `/admin/candidates-to-recover`, ajouter en haut de la carte **Candidats impactés** un bouton **Modifier le modèle d'email**.
 
-Attendu : **B == C**. Écart → on liste les IDs manquants/en trop et on corrige la fonction avant tout push.
+Au clic, une popup s'ouvre avec :
 
-Cas limites vérifiés explicitement :
-- sessions déjà `cancelled` avant l'incident (ne doivent pas être proposées à tort)
-- sessions avec uniquement des messages `assistant` (pas candidat → hors périmètre)
-- sessions déjà réinvitées (doivent apparaître avec `reinvitation_id`, `email_status`, `new_session_id`, PAS être masquées)
+1. **Sujet** — champ texte.
+2. **Message d'introduction** (avant le bouton) — zone de texte.
+3. **Message de clôture** (après le bouton) — zone de texte.
+4. Aide affichée sous les champs : variables disponibles `{prenom}`, `{poste}`, `{entreprise}`.
+5. **Aperçu** à droite (ou en dessous en mobile) qui se met à jour en direct avec des valeurs d'exemple.
+6. Boutons : **Réinitialiser au texte d'origine**, **Annuler**, **Enregistrer**.
 
-## 2. Test E2E réel de `resend-impacted-candidate`
+Zones **non modifiables** (affichées en lecture seule dans l'aperçu, pour cadrer les attentes) : en-tête « Interw », bouton d'action, lien de secours, encart légal / désinscription — gérés par le système pour ne pas casser la délivrabilité.
 
-Test Deno `supabase/functions/resend-impacted-candidate/index.test.ts` exécuté via `supabase--test_edge_functions`. Tous les envois réels du scénario 6 vont uniquement vers **eva@alboteam.com**.
+Après enregistrement, un petit badge « Modèle personnalisé » s'affiche à côté du bouton, avec date de dernière modification et auteur.
 
-1. Appel non authentifié → 401
-2. Authentifié non super-admin → 403
-3. `original_session_id` inexistant → 404
-4. Session avec fichier média > 1 Ko (mode non-témoin) → 409 « contient des fichiers média »
-5. Session déjà réinvitée → 409 « déjà envoyée »
-6. **Cas nominal témoin** (`is_witness: true`) sur une session dédiée créée par le test, avec `candidate_email = eva@alboteam.com` :
-   - nouvelle session `pending` clonée
-   - ancienne passée `cancelled`
-   - e-mail réellement envoyé via `send-transactional-email` (message_id Resend récupéré)
-   - trace `session_reinvitations` : `email_status='sent'`, `email_message_id` non null, `is_witness=true`
-   - `cta_link` retourné commence par `https://interw.ai/session/…` — ne contient jamais `lovableproject`, `localhost` ou `lovable.app`
+## Comportement
 
-Nettoyage en fin de test : suppression de la session témoin et de sa trace `session_reinvitations`.
-
-## 3. Vérification du rendu e-mail
-
-Rendu HTML du template `candidate-recovery-invite` avec données réalistes (prenom Eva, poste, entreprise, `cta_link` `https://interw.ai/session/...`) sauvegardé sous `/mnt/documents/preview-recovery-email.html`. Contrôles automatiques :
-- absence stricte de `localhost`, `lovable.app`, `lovableproject`
-- présence du bouton + du lien texte complet
-- sujet = « Nous vous invitons à repasser votre entretien »
-
-## 4. Vérification du chemin candidat
-
-Playwright headless ouvre le `cta_link` généré au scénario 6 sur `http://localhost:8080` (même token, même chemin `/session/<slug>/start/<token>`) :
-- la landing candidat charge sans erreur console
-- la session est bien `pending` en base
-- pas d'écran « lien invalide / bloqué »
-- captures dans `/tmp/browser/recovery/`
-
-## 5. Vérification UI super-admin
-
-Playwright authentifié en super-admin (via injection de session Supabase) sur `/admin/candidates-to-recover` :
-- table chargée, pas de bandeau rouge
-- nombre de lignes == count SQL de l'étape 1 (ensemble B)
-- ligne de la session témoin apparaît comme « déjà envoyée » (bouton désactivé) après le scénario 6
-- capture d'écran archivée
-
-## 6. Rapport final
-
-Récap ✅/❌ pour chaque étape, avec preuves : counts SQL, `message_id` Resend, chemins des captures, extraits HTML. Remis avant toute décision de push.
+- Modèle unique partagé par tous les envois de type `candidate-recovery-invite`.
+- Si aucun enregistrement n'existe : le template par défaut actuel est utilisé (comportement inchangé).
+- Modification prise en compte immédiatement pour tous les envois suivants.
+- Réservé aux super-admins.
 
 ## Détails techniques
 
-- Zéro modification de code applicatif ou de schéma dans ce plan — uniquement lecture SQL, tests Deno et Playwright.
-- Boîte de réception réelle : eva@alboteam.com (unique destinataire du seul envoi réel, scénario 6).
-- Si l'étape 1 révèle un écart B ≠ C, on stoppe et on propose un correctif ciblé avant de continuer.
+### Base de données
+
+Réutiliser la table existante `email_template_overrides` (déjà présente dans le schéma) si sa structure convient : une ligne par `template_name`, colonnes `subject`, `intro_html`, `outro_html`, `updated_by`, `updated_at`.
+
+Si la structure actuelle ne couvre pas ces trois champs, ajouter les colonnes manquantes via migration. RLS : lecture/écriture réservée à `has_role(auth.uid(), 'super_admin')`.
+
+### Edge function `resend-impacted-candidate`
+
+Avant l'appel à `send-transactional-email`, charger la ligne `email_template_overrides` pour `template_name = 'candidate-recovery-invite'` et transmettre `subject_override`, `intro_html`, `outro_html` dans `templateData`.
+
+### Template `candidate-recovery-invite.tsx`
+
+Étendre les props avec `subject_override`, `intro_html`, `outro_html`. Substitution simple des placeholders `{prenom}`, `{poste}`, `{entreprise}` côté serveur avant rendu. Si un champ override est vide → fallback vers le texte d'origine. Le sujet exporté (`subject: (data) => ...`) prend l'override en priorité.
+
+Sanitisation : caractères de contrôle strippés, longueur limitée (~4000 par champ), balises HTML restreintes à `<strong>`, `<em>`, `<br>`, `<p>`, `<a href>`.
+
+### Frontend
+
+- Nouveau composant `EditRecoveryTemplateDialog` sous `src/components/superadmin/`.
+- Charge la ligne existante à l'ouverture, propose « Réinitialiser » qui supprime la ligne.
+- Aperçu rendu côté client à partir des mêmes chaînes (pas d'appel réseau).
+
+## Hors périmètre
+
+- Pas de personnalisation par candidat.
+- Pas d'éditeur riche WYSIWYG.
+- Pas d'historique des versions (seule la dernière version est conservée).
