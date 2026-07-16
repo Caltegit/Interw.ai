@@ -341,6 +341,47 @@ Renvoie la matrice avec l'outil fit_matrix.`;
 
     const nextStats: Record<string, any> = { ...existingStats, fit_matrix };
     const reportPatch: Record<string, any> = { stats: nextStats };
+
+    // Reconstruire fit_breakdown à partir de la matrice pour que la carte
+    // "Adéquation selon les critères définis" affiche exactement les moyennes
+    // de la matrice. On préserve les preuves (statement/quote/message_id) issues
+    // de la génération IA précédente lorsqu'elles existent.
+    const inferLevel = (s: number) => {
+      if (s >= 80) return "excellent";
+      if (s >= 60) return "solid";
+      if (s >= 40) return "partial";
+      return "gap";
+    };
+    const prevFitBreakdown: any[] = Array.isArray(existingStats?.fit_breakdown)
+      ? existingStats.fit_breakdown
+      : [];
+    const prevByCriterionId = new Map<string, any>();
+    const prevByLabel = new Map<string, any>();
+    for (const e of prevFitBreakdown) {
+      if (e?.criterion_id) prevByCriterionId.set(String(e.criterion_id), e);
+      if (e?.criterion) prevByLabel.set(String(e.criterion).toLowerCase(), e);
+    }
+    const newFitBreakdown: any[] = [];
+    for (const c of criteria) {
+      const avg = criterion_averages[c.id];
+      if (typeof avg !== "number") continue;
+      const prev =
+        prevByCriterionId.get(String(c.id)) ||
+        prevByLabel.get(String(c.label ?? "").toLowerCase()) ||
+        null;
+      newFitBreakdown.push({
+        criterion_id: c.id,
+        criterion: c.label,
+        score: avg,
+        level: inferLevel(avg),
+        statement: prev?.statement || prev?.comment || "",
+        quote: prev?.quote || null,
+        message_id: prev?.message_id || null,
+        start_seconds: typeof prev?.start_seconds === "number" ? prev.start_seconds : null,
+      });
+    }
+    nextStats.fit_breakdown = newFitBreakdown;
+
     if (matrixFitScore !== null) {
       nextStats.fit_score = matrixFitScore;
       const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
