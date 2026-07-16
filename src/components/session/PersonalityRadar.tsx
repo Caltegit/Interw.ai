@@ -54,18 +54,12 @@ interface Props {
 }
 
 export function PersonalityRadar({ profile, onGoToMessage, projectAverages, questionNumberByMessageId }: Props) {
-  const [showLow, setShowLow] = useState(false);
-
   if (!profile) return null;
   const all = (Object.keys(LABELS) as Array<keyof Profile>)
     .map((key) => ({ key, label: LABELS[key], trait: profile[key] }))
     .filter((e) => e.trait && typeof e.trait.score === "number");
 
   if (all.length === 0) return null;
-
-  const highConfidence = all.filter((e) => (e.trait?.confidence ?? "medium") !== "low");
-  const lowConfidence = all.filter((e) => e.trait?.confidence === "low");
-  const visible = showLow ? all : highConfidence.length > 0 ? highConfidence : all;
 
   return (
     <Card>
