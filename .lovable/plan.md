@@ -1,24 +1,26 @@
-# Afficher le titre interne des questions dans la matrice
+## Objectif
+Dans le tableau de bord, à gauche du badge "Complété" de la carte "Dernières sessions candidats", afficher un petit rond contenant le score fit poste (ex. 37).
 
-Actuellement `FitMatrixCard` affiche `question_content` (le texte complet posé au candidat). On veut afficher `questions.title` (titre interne court utilisé côté RH).
+## Fichiers concernés
+- `src/pages/Dashboard.tsx`
+- `src/hooks/queries/useDashboardData.ts` (données déjà disponibles, pas de modification requise)
 
-## Changements
+## Implémentation
+1. **Récupération du score** : le hook `useDashboardData` renvoie déjà `reportsBySession` indexé par `session_id` avec le champ `score`.
 
-### 1. `supabase/functions/generate-fit-matrix/index.ts`
-- Sélectionner `title` en plus de `content` sur `questions`.
-- Stocker `question_title` dans chaque row de `fit_matrix` (à côté de `question_content`, qu'on garde pour compat + tooltip éventuel).
-- Bump `fit_matrix.version` : 1 → 2.
+2. **Affichage conditionnel** : dans la liste `last5Sessions`, avant le `<SessionStatusBadge />`, afficher un petit cercle si :
+   - `s.status === "completed"`
+   - `reportsBySession[s.id]?.score` existe
 
-### 2. `src/components/session/FitMatrixCard.tsx`
-- Type `FitMatrixRow` : ajouter `question_title?: string`.
-- Cellule « Question » de la table : afficher `question_title` en priorité, fallback sur `question_content` tronqué pour les anciennes matrices (v1).
-- Popover d'une cellule : garder `Q{n} · {critère}` inchangé.
+3. **Style du rond** :
+   - Taille ~20-24 px, plein cercle, texte en xs gras
+   - Couleur selon le score en réutilisant la logique existante `scoreColor` :
+     - `≥ 65` : vert (success)
+     - `≥ 45` : orange (warning)
+     - `< 45` : rouge (destructive)
+   - Pas de couleur codée en dur, utilisation des tokens sémantiques du design system
 
-### 3. Rétrocompat
-- Les matrices v1 existantes n'ont pas `question_title` → fallback automatique sur `question_content` (comportement actuel). Aucun backfill forcé.
-- Un clic sur « Régénérer » (bouton existant si on force via `force: true`) suffit pour passer en v2 ; sinon les nouvelles générations sont v2 d'office.
+4. **Accessibilité** : ajouter un `title` ou `aria-label` du type "Score fit poste : 37 %".
 
-## Hors périmètre
-- Pas de migration DB.
-- Pas de changement de logique de scoring (calcul cellules inchangé).
-- Pas de changement sur `fit_breakdown` / `fit_score`.
+## Résultat attendu
+Chaque session complétée dans la carte "Dernières sessions candidats" affiche un rond coloré avec son score fit poste juste à gauche du badge "Complété". Les autres statuts restent inchangés.
