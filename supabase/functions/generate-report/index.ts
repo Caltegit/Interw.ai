@@ -891,7 +891,7 @@ Règles :
     // ============================================================
     // NOUVEAU : fit_breakdown — mappé sur les critères réels du projet
     // ============================================================
-    const fitBreakdown: Array<Record<string, unknown>> = [];
+    let fitBreakdown: Array<Record<string, unknown>> = [];
     const aiFit = Array.isArray(parsed.fit_breakdown) ? parsed.fit_breakdown : [];
 
     if (criteria.length > 0) {
