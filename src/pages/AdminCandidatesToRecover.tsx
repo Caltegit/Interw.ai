@@ -531,6 +531,11 @@ export default function AdminCandidatesToRecover() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditRecoveryTemplateDialog
+        open={editTemplateOpen}
+        onOpenChange={setEditTemplateOpen}
+      />
     </div>
   );
 }
