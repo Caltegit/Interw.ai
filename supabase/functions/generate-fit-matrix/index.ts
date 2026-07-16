@@ -396,7 +396,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
       const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
         ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
-        : Math.max(0, Math.min(100, Number(reportRes.data.overall_score) || matrixFitScore));
+        : Math.max(0, Math.min(100, Number(reportRes.data?.overall_score) || matrixFitScore));
       const finalScore = matrixFitScore;
       nextStats.score_breakdown = {
         ...prevBreakdown,
