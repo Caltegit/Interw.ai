@@ -243,6 +243,17 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                   {m.criteria.map((c) => {
                     const cell = r.cells[c.id];
                     const score = cell?.score;
+                    const informative = isInformative(cell);
+                    if (!informative) {
+                      return (
+                        <td key={c.id} className="p-0.5 align-top">
+                          <div
+                            className="w-full h-12 rounded-md border border-dashed border-border/60 bg-background"
+                            aria-label="Non évalué"
+                          />
+                        </td>
+                      );
+                    }
                     return (
                       <td key={c.id} className="p-0.5 align-top">
                         <Popover>
