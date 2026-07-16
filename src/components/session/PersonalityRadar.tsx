@@ -80,7 +80,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
             Lien Wikipedia
           </a>
         </div>
-        {visible.map(({ key, label, trait }) => {
+        {all.map(({ key, label, trait }) => {
           const score = Math.max(0, Math.min(100, trait!.score));
           const confidence = trait!.confidence ?? "medium";
           const avg = projectAverages?.[key];
