@@ -66,12 +66,19 @@ async function fetchSessionDetail(sessionId: string): Promise<SessionDetailData>
     const stats = (rRes.data.stats ?? {}) as Record<string, any>;
     const algoVersion = Number(stats.timestamps_algo_version) || 0;
     const fitBreakdown = stats.fit_breakdown;
+    const fitMatrixRows = stats?.fit_matrix?.rows;
     const needsBackfill =
-      Array.isArray(fitBreakdown) &&
-      fitBreakdown.some(
-        (e: any) =>
-          e?.message_id && (typeof e?.start_seconds !== "number" || e.start_seconds <= 0),
-      );
+      (Array.isArray(fitBreakdown) &&
+        fitBreakdown.some(
+          (e: any) =>
+            e?.message_id && (typeof e?.start_seconds !== "number" || e.start_seconds <= 0),
+        )) ||
+      (Array.isArray(fitMatrixRows) &&
+        fitMatrixRows.some((r: any) =>
+          r?.cells && Object.values(r.cells).some((c: any) =>
+            c?.message_id && (typeof c?.start_seconds !== "number" || c.start_seconds <= 0),
+          ),
+        ));
     if (algoVersion < 2 || needsBackfill) {
       // Fire-and-forget : on ne bloque pas l'affichage. La requête sera
       // rafraîchie au prochain refetch (refetchInterval 5s).
