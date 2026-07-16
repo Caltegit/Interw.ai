@@ -25,6 +25,7 @@ export interface FitMatrixCell {
 export interface FitMatrixRow {
   question_id: string;
   question_index: number;
+  question_title?: string | null;
   question_content: string;
   cells: Record<string, FitMatrixCell>;
 }
@@ -191,7 +192,7 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
                     <div className="text-xs font-semibold text-muted-foreground">
                       Q{(r.question_index ?? 0) + 1}
                     </div>
-                    <div className="text-sm">{truncate(r.question_content, 90)}</div>
+                    <div className="text-sm">{truncate(r.question_title?.trim() || r.question_content, 90)}</div>
                   </td>
                   {m.criteria.map((c) => {
                     const cell = r.cells[c.id];
