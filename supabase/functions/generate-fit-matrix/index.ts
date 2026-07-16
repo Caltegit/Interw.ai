@@ -136,7 +136,7 @@ ${answersBlock}
 
 Règles :
 1. Produis UNE note 0-100 par couple (question, critère). Base-toi sur la réponse à CETTE question, pas sur la session entière.
-2. Si le critère n'est pas du tout couvert par la question (hors sujet, réponse absente), mets un score neutre 40-50 et indique-le dans la justification.
+2. Si le critère n'est pas du tout couvert par la question (hors sujet, réponse absente), mets un score neutre 50 et indique-le dans la justification.
 3. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
 4. Fournis, quand c'est possible, un extrait exact de la phrase du candidat (quote) et l'identifiant du message correspondant (message_id).
 5. N'invente jamais un message_id : si tu ne peux pas citer, omets quote et message_id.
