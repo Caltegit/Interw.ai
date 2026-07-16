@@ -254,15 +254,29 @@ Renvoie la matrice avec l'outil fit_matrix.`;
           ) ??
           aiCells[j] ??
           null;
-        const rawScore = aiCell ? Number(aiCell.score) : NaN;
-        if (!Number.isFinite(rawScore)) {
-          cells[c.id] = { score: null, justification: "Non évalué" };
-        } else {
+        const evidence = String(aiCell?.evidence ?? "").toLowerCase();
+        if (evidence === "none") {
           cells[c.id] = {
-            score: Math.max(0, Math.min(100, Math.round(rawScore))),
-            justification: String(aiCell?.justification ?? "").slice(0, 400),
-            quote: aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined,
-            message_id: aiCell?.message_id ? String(aiCell.message_id) : undefined,
+            score: 50,
+            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
+          };
+        } else if (evidence === "clear") {
+          const rawScore = aiCell ? Number(aiCell.score) : NaN;
+          if (!Number.isFinite(rawScore)) {
+            cells[c.id] = { score: 50, justification: "Aucun élément dans la réponse pour évaluer ce critère." };
+          } else {
+            cells[c.id] = {
+              score: Math.max(0, Math.min(100, Math.round(rawScore))),
+              justification: String(aiCell?.justification ?? "").slice(0, 400),
+              quote: aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined,
+              message_id: aiCell?.message_id ? String(aiCell.message_id) : undefined,
+            };
+          }
+        } else {
+          // evidence absent/invalide → fallback neutre
+          cells[c.id] = {
+            score: 50,
+            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
           };
         }
       }
