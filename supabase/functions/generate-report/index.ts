@@ -95,6 +95,13 @@ function buildFallbackPersonalityProfile(existing: any) {
   return result;
 }
 
+function recommendationFromScore(score: number): string {
+  if (score >= 80) return "strong_yes";
+  if (score >= 65) return "yes";
+  if (score >= 45) return "maybe";
+  return "no";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
