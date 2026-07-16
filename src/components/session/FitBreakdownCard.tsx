@@ -109,10 +109,18 @@ export function FitBreakdownCard({
         {list.map((item, i) => {
           const level = item.level ?? inferLevel(item.score);
           const score = Math.max(0, Math.min(100, item.score));
+          const weight = criteriaWeights?.[item.criterion];
           return (
             <div key={i}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{item.criterion}</span>
+                <span className="text-sm font-medium">
+                  {item.criterion}
+                  {typeof weight === "number" && (
+                    <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                      · poids {weight}%
+                    </span>
+                  )}
+                </span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={cn("text-[10px] uppercase tracking-wide", levelTone[level])}>
                     {levelLabel[level]}
