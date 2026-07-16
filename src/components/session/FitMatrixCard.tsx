@@ -67,6 +67,13 @@ function truncate(str: string, n: number) {
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }
 
+function formatSeconds(s?: number | null): string {
+  const total = Math.max(0, Math.round(Number(s) || 0));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
 // Une case est considérée "informative" si l'IA a fourni une preuve
 // (citation ou message vidéo associé). Sinon on la traite comme non évaluée :
 // affichée blanche, non cliquable, exclue des moyennes.
