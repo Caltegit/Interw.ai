@@ -379,6 +379,10 @@ export default function AdminCandidatesToRecover() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setEditTemplateOpen(true)}>
+              <Mail className="mr-2 h-4 w-4" />
+              Modifier le modèle
+            </Button>
             <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue />
