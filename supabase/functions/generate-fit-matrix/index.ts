@@ -22,7 +22,7 @@ serve(async (req) => {
   if (!caller.ok) return caller.response;
 
   try {
-    const { session_id, force } = await req.json().catch(() => ({}));
+    const { session_id, force, update_report = true } = await req.json().catch(() => ({}));
     if (!session_id) {
       return new Response(JSON.stringify({ error: "session_id is required" }), {
         status: 400,
@@ -59,15 +59,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!reportRes.data) {
+    if (update_report && !reportRes.data) {
       return new Response(JSON.stringify({ error: "Report not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const existingStats = (reportRes.data.stats as Record<string, any>) ?? {};
+    const existingStats = (reportRes.data?.stats as Record<string, any>) ?? {};
     if (
+      update_report &&
       !force &&
       existingStats.fit_matrix &&
       Array.isArray(existingStats.fit_matrix?.rows) &&
