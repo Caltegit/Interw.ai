@@ -9,13 +9,44 @@ interface Props {
   poste?: string
   entreprise?: string
   cta_link?: string
+  subject_override?: string
+  intro_html?: string
+  outro_html?: string
 }
 
-const CandidateRecoveryInviteEmail = ({ prenom, poste, entreprise, cta_link }: Props) => {
+const DEFAULT_SUBJECT = 'Nous vous invitons à repasser votre entretien'
+
+function substitute(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{(prenom|poste|entreprise)\}/g, (_, k) => vars[k] ?? '')
+}
+
+// Sanitiseur minimal — n'autorise que <strong>, <em>, <br>, <p>, <a>.
+function sanitizeHtml(html: string): string {
+  if (!html) return ''
+  let s = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/on[a-z]+\s*=\s*(["'])[\s\S]*?\1/gi, '')
+    .replace(/javascript:/gi, '')
+  s = s.replace(/<(?!\/?(strong|em|br|p|a)(\s|>|\/))/gi, '&lt;')
+  return s
+}
+
+const CandidateRecoveryInviteEmail = ({
+  prenom, poste, entreprise, cta_link, intro_html, outro_html,
+}: Props) => {
   const name = (prenom && prenom.trim()) || ''
   const jobTitle = (poste && poste.trim()) || 'le poste'
   const company = (entreprise && entreprise.trim()) || ''
   const url = cta_link || 'https://interw.ai'
+  const vars = { prenom: name, poste: jobTitle, entreprise: company }
+
+  const introRendered = intro_html && intro_html.trim()
+    ? sanitizeHtml(substitute(intro_html, vars))
+    : null
+  const outroRendered = outro_html && outro_html.trim()
+    ? sanitizeHtml(substitute(outro_html, vars))
+    : null
 
   return (
     <Html lang="fr" dir="ltr">
@@ -29,17 +60,21 @@ const CandidateRecoveryInviteEmail = ({ prenom, poste, entreprise, cta_link }: P
 
           <Heading style={h1}>Nous vous invitons à repasser votre entretien</Heading>
 
-          <Text style={text}>Bonjour{name ? ` ${name}` : ''},</Text>
-
-          <Text style={text}>
-            Suite à un incident technique survenu entre le 9 et le 15 juillet, votre entretien
-            {' '}pour «&nbsp;<strong>{jobTitle}</strong>&nbsp;»{company ? <> chez <strong>{company}</strong></> : null}
-            {' '}n'a pas pu être enregistré. Nous en sommes sincèrement désolés.
-          </Text>
-
-          <Text style={text}>
-            Nous vous invitons à le repasser via le lien ci-dessous. Vous disposez de 7&nbsp;jours.
-          </Text>
+          {introRendered ? (
+            <div style={text} dangerouslySetInnerHTML={{ __html: introRendered }} />
+          ) : (
+            <>
+              <Text style={text}>Bonjour{name ? ` ${name}` : ''},</Text>
+              <Text style={text}>
+                Suite à un incident technique survenu entre le 9 et le 15 juillet, votre entretien
+                {' '}pour «&nbsp;<strong>{jobTitle}</strong>&nbsp;»{company ? <> chez <strong>{company}</strong></> : null}
+                {' '}n'a pas pu être enregistré. Nous en sommes sincèrement désolés.
+              </Text>
+              <Text style={text}>
+                Nous vous invitons à le repasser via le lien ci-dessous. Vous disposez de 7&nbsp;jours.
+              </Text>
+            </>
+          )}
 
           <Section style={{ textAlign: 'center' as const, margin: '28px 0' }}>
             <Button href={url} style={button}>Repasser l'entretien</Button>
@@ -50,11 +85,16 @@ const CandidateRecoveryInviteEmail = ({ prenom, poste, entreprise, cta_link }: P
             <Link href={url} style={footerLink}>{url}</Link>
           </Text>
 
-          <Text style={text}>
-            Si vous rencontrez la moindre difficulté, répondez à cet e-mail — nous vous accompagnons.
-          </Text>
-
-          <Text style={text}>L'équipe Interw</Text>
+          {outroRendered ? (
+            <div style={text} dangerouslySetInnerHTML={{ __html: outroRendered }} />
+          ) : (
+            <>
+              <Text style={text}>
+                Si vous rencontrez la moindre difficulté, répondez à cet e-mail — nous vous accompagnons.
+              </Text>
+              <Text style={text}>L'équipe Interw</Text>
+            </>
+          )}
         </Container>
       </Body>
     </Html>
@@ -63,7 +103,10 @@ const CandidateRecoveryInviteEmail = ({ prenom, poste, entreprise, cta_link }: P
 
 export const template = {
   component: CandidateRecoveryInviteEmail,
-  subject: () => 'Nous vous invitons à repasser votre entretien',
+  subject: (data: Record<string, any> = {}) => {
+    const override = typeof data.subject_override === 'string' ? data.subject_override.trim() : ''
+    return override || DEFAULT_SUBJECT
+  },
   displayName: 'Reprise entretien (incident juillet 2026)',
   previewData: {
     prenom: 'Camille',
