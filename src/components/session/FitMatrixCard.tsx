@@ -66,6 +66,15 @@ function truncate(str: string, n: number) {
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }
 
+// Une case est considérée "informative" si l'IA a fourni une preuve
+// (citation ou message vidéo associé). Sinon on la traite comme non évaluée :
+// affichée blanche, non cliquable, exclue des moyennes.
+function isInformative(cell: FitMatrixCell | undefined): boolean {
+  if (!cell) return false;
+  if (typeof cell.score !== "number") return false;
+  return Boolean(cell.message_id) || Boolean(cell.quote);
+}
+
 export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMessage }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
