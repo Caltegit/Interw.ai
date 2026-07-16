@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Brain, ChevronDown, ChevronUp } from "lucide-react";
+import { Brain } from "lucide-react";
 import { EvidenceLink } from "./EvidenceLink";
 import { ScoreLevelBadge, inferLevel, levelBarColor } from "./scoreLevelBadge";
 import { cn } from "@/lib/utils";
