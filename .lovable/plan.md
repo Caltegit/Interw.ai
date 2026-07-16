@@ -1,19 +1,31 @@
-## Ajustements demandés
+## Problème
 
-1. **Case "non informative" (pas de citation ni vidéo)** : la garder visuellement en fond blanc/discret et non cliquable (pas de popover), mais **afficher la note** à l'intérieur pour montrer qu'elle compte dans les moyennes.
-2. **Ré-inclure ces cases dans les moyennes** (ligne, colonne, Fit global). C'est-à-dire annuler l'exclusion posée au tour précédent, à la fois dans `FitMatrixCard.tsx` et dans `generate-fit-matrix/index.ts`.
-3. **Prompt IA** : dans `supabase/functions/generate-fit-matrix/index.ts` (règle 2 du prompt), remplacer *"score neutre 40-50"* par **"score neutre 50"** pour que l'IA ait une valeur par défaut unique et claire quand elle n'a rien à noter.
+Aujourd'hui le bouton « Régénérer le rapport » ne fait qu'une chose : envoyer la demande en file d'attente (`enqueue_report_job`), puis afficher un simple toast. La mutation se termine instantanément, le bouton arrête de tourner, et **aucun rafraîchissement n'est fait quand le worker a fini** — l'ancien rapport reste affiché. L'utilisateur pense qu'il ne s'est rien passé.
 
-## Fichiers modifiés
+## Solution
 
-- `src/components/session/FitMatrixCard.tsx`
-  - `columnAverages` et `rowAverages` : repasser à l'inclusion de toutes les cases avec un `score` numérique (peu importe la présence de `quote`/`message_id`).
-  - Rendu de la case non informative : conserver le style blanc (`bg-background`, bordure `border-dashed border-border/60`), non cliquable, mais afficher `{score}` en gris clair centré. Ajouter un `title="Note par défaut : critère non couvert par la question"` pour l'info au survol.
+Ajouter une **boîte de dialogue bloquante** pendant la régénération, avec suivi en direct de l'état du job, puis rafraîchissement automatique.
 
-- `supabase/functions/generate-fit-matrix/index.ts`
-  - Prompt ligne 139 : `mets un score neutre 50`.
-  - Retirer le filtre `isInformative` du calcul des moyennes et du Fit global — retour à la formule "toutes les cases avec `score` numérique comptent".
+### Nouveau comportement
+1. Clic sur « Régénérer le rapport » → enqueue immédiat.
+2. Ouverture d'une modale non fermable avec :
+   - Titre : « Régénération du rapport en cours »
+   - Icône animée + message d'étape (« En file d'attente… » → « Analyse en cours… »)
+   - Sous-texte : « Cela prend en général 30 à 60 secondes. »
+   - Un bouton discret « Fermer et continuer en arrière-plan ».
+3. Polling toutes les 3 s de `report_jobs` (dernière ligne pour la session).
+   - `queued` → « En file d'attente… »
+   - `processing` → « Analyse en cours… »
+   - `done` → refetch du rapport + fermeture + toast succès « Rapport mis à jour. »
+   - `failed` → fermeture + toast d'erreur avec le message.
+4. Timeout de sécurité à 3 min : on ferme la modale avec message « La régénération prend plus de temps que prévu, elle se poursuit en arrière-plan. Rafraîchissez la page dans une minute. »
+5. Si l'utilisateur ferme la modale volontairement, le polling continue silencieusement et un toast final s'affichera quand le rapport sera prêt.
 
-## Hors scope
-- Aucune modification du back `generate-report`.
-- Pas de migration rétroactive : les rapports existants restent tels quels jusqu'à un nouveau clic sur "Voir les détails".
+### Fichiers touchés (frontend uniquement)
+- `src/hooks/queries/useSessionDetail.ts` : `useRegenerateReport` renvoie aussi `jobStartedAt` ; nouveau hook `useReportJobStatus(sessionId, enabled)` qui poll `report_jobs` toutes les 3 s.
+- `src/components/session/RegenerateReportDialog.tsx` (nouveau) : modale d'attente avec les états `queued | processing | done | failed | timeout`.
+- `src/pages/SessionDetail.tsx` : orchestre — ouvre la modale au clic, écoute les statuts, invalide `queryKeys.session(id)` à la complétion.
+
+### Hors scope
+- Pas de changement backend : la table `report_jobs` et le worker `process-report-queue` existent déjà et exposent `status`, `last_error`, `completed_at`.
+- Pas de refonte du bouton lui-même dans `DecisionBanner` — on garde son état `isRegenerating` en le calant sur « job en cours OU mutation en vol ».
