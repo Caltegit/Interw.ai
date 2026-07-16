@@ -521,6 +521,36 @@ export type Database = {
         }
         Relationships: []
       }
+      global_email_template_overrides: {
+        Row: {
+          created_at: string
+          intro_html: string | null
+          outro_html: string | null
+          subject: string | null
+          template_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          intro_html?: string | null
+          outro_html?: string | null
+          subject?: string | null
+          template_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          intro_html?: string | null
+          outro_html?: string | null
+          subject?: string | null
+          template_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       interview_template_criteria: {
         Row: {
           anchors: Json | null
