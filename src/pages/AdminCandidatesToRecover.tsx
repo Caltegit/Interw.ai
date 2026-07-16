@@ -13,7 +13,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, ExternalLink, Send, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Copy, ExternalLink, Send, RefreshCw, CheckCircle2, AlertCircle, Mail } from "lucide-react";
+import { EditRecoveryTemplateDialog } from "@/components/superadmin/EditRecoveryTemplateDialog";
 
 type Impacted = {
   session_id: string;
