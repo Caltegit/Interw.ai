@@ -76,9 +76,8 @@ const TOOL_SCHEMA = {
             eye_contact: dim("Présence du regard vers l'écran (l'avatar est à l'écran, pas dans la caméra). 10 = regard stable et engagé vers l'écran"),
             posture: dim("Posture (10 = ouverte, droite, stable)"),
             gestures: dim("Gestuelle (10 = expressive et adaptée, ni figée ni agitée)"),
-            facial_expressivity: dim("Expressivité du visage (10 = vivante et congruente)"),
           },
-          required: ["eye_contact", "posture", "gestures", "facial_expressivity"],
+          required: ["eye_contact", "posture", "gestures"],
         },
         micro_tensions: {
           type: "array",
