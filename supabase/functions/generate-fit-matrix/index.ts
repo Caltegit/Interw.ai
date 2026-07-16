@@ -266,11 +266,15 @@ Renvoie la matrice avec l'outil fit_matrix.`;
           if (!Number.isFinite(rawScore)) {
             cells[c.id] = { score: 50, justification: "Aucun élément dans la réponse pour évaluer ce critère." };
           } else {
+            const message_id = aiCell?.message_id ? String(aiCell.message_id) : undefined;
+            const quote = aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined;
+            const start = message_id && quote ? resolveStart(message_id, quote) : null;
             cells[c.id] = {
               score: Math.max(0, Math.min(100, Math.round(rawScore))),
               justification: String(aiCell?.justification ?? "").slice(0, 400),
-              quote: aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined,
-              message_id: aiCell?.message_id ? String(aiCell.message_id) : undefined,
+              quote,
+              message_id,
+              start_seconds: typeof start === "number" ? start : undefined,
             };
           }
         } else {
