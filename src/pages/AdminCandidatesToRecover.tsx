@@ -57,6 +57,7 @@ export default function AdminCandidatesToRecover() {
   const { toast } = useToast();
   const [rows, setRows] = useState<Impacted[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"todo" | "sent" | "all">("todo");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -73,9 +74,16 @@ export default function AdminCandidatesToRecover() {
 
   async function loadImpacted() {
     setLoading(true);
+    setLoadError(null);
     const { data, error } = await (supabase.rpc as any)("admin_list_impacted_candidates");
     if (error) {
-      toast({ title: "Chargement impossible", description: error.message, variant: "destructive" });
+      const timeout = error.message?.toLowerCase().includes("timeout");
+      const message = timeout
+        ? "Le listing a expiré côté base. La requête a été optimisée, relancez le chargement."
+        : error.message;
+      setRows([]);
+      setLoadError(message);
+      toast({ title: "Chargement impossible", description: message, variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -394,6 +402,10 @@ export default function AdminCandidatesToRecover() {
         <CardContent>
           {loading ? (
             <p className="text-muted-foreground">Chargement…</p>
+          ) : loadError ? (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              {loadError}
+            </div>
           ) : filtered.length === 0 ? (
             <p className="text-muted-foreground">Aucun candidat pour ce filtre.</p>
           ) : (
