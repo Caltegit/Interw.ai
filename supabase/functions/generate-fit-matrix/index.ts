@@ -135,11 +135,12 @@ Réponses du candidat, question par question :
 ${answersBlock}
 
 Règles :
-1. Produis UNE note 0-100 par couple (question, critère). Base-toi sur la réponse à CETTE question, pas sur la session entière.
-2. Si le critère n'est pas du tout couvert par la question (hors sujet, réponse absente), mets un score neutre 50 et indique-le dans la justification.
+1. Pour chaque couple (question, critère), base-toi UNIQUEMENT sur la réponse à cette question, pas sur la session entière.
+2. Choisis obligatoirement une valeur "evidence" :
+   - "none" : la réponse ne contient aucun élément pour évaluer ce critère. Le score sera automatiquement fixé à 50 (neutre) côté serveur ; ne cherche pas à deviner.
+   - "clear" : la réponse contient un élément concret pour évaluer ce critère. Donne alors un score de 0 à 100 selon ton interprétation, et cite la phrase précise du candidat dans "quote".
 3. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
-4. Fournis, quand c'est possible, un extrait exact de la phrase du candidat (quote) et l'identifiant du message correspondant (message_id).
-5. N'invente jamais un message_id : si tu ne peux pas citer, omets quote et message_id.
+4. Avec "clear", fournis "quote" (extrait exact) et si possible "message_id". N'invente jamais un message_id.
 
 Renvoie la matrice avec l'outil fit_matrix.`;
 
@@ -147,12 +148,13 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       type: "object",
       properties: {
         criterion: { type: "string", description: "Label exact du critère" },
-        score: { type: "number", minimum: 0, maximum: 100 },
+        evidence: { type: "string", enum: ["none", "clear"], description: "none = aucun élément, clear = élément présent" },
+        score: { type: "number", minimum: 0, maximum: 100, description: "Ignoré si evidence=none (forcé à 50)" },
         justification: { type: "string", description: "1 phrase, max 140 caractères" },
         quote: { type: "string" },
         message_id: { type: "string" },
       },
-      required: ["criterion", "score", "justification"],
+      required: ["criterion", "evidence", "score", "justification"],
     };
 
     const rowSchema = {
@@ -252,15 +254,29 @@ Renvoie la matrice avec l'outil fit_matrix.`;
           ) ??
           aiCells[j] ??
           null;
-        const rawScore = aiCell ? Number(aiCell.score) : NaN;
-        if (!Number.isFinite(rawScore)) {
-          cells[c.id] = { score: null, justification: "Non évalué" };
-        } else {
+        const evidence = String(aiCell?.evidence ?? "").toLowerCase();
+        if (evidence === "none") {
           cells[c.id] = {
-            score: Math.max(0, Math.min(100, Math.round(rawScore))),
-            justification: String(aiCell?.justification ?? "").slice(0, 400),
-            quote: aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined,
-            message_id: aiCell?.message_id ? String(aiCell.message_id) : undefined,
+            score: 50,
+            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
+          };
+        } else if (evidence === "clear") {
+          const rawScore = aiCell ? Number(aiCell.score) : NaN;
+          if (!Number.isFinite(rawScore)) {
+            cells[c.id] = { score: 50, justification: "Aucun élément dans la réponse pour évaluer ce critère." };
+          } else {
+            cells[c.id] = {
+              score: Math.max(0, Math.min(100, Math.round(rawScore))),
+              justification: String(aiCell?.justification ?? "").slice(0, 400),
+              quote: aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined,
+              message_id: aiCell?.message_id ? String(aiCell.message_id) : undefined,
+            };
+          }
+        } else {
+          // evidence absent/invalide → fallback neutre
+          cells[c.id] = {
+            score: 50,
+            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
           };
         }
       }

@@ -1,47 +1,36 @@
 ## Problème
 
-Le rapport de la session `0979b322…` n'a pas changé malgré la régénération.
+Dans la matrice, quand l'IA n'a aucun élément pour noter un couple (question, critère), elle met parfois 40, parfois 60, au lieu du 50 neutre convenu.
 
-En base, `report_jobs` a bien été « touché » (`updated_at = 20:00:28`) mais `status = 'done'` et `completed_at = 15:27` — le worker n'a donc rien retraité.
+Le prompt actuel demande « mets un score neutre 50 » mais le modèle ne s'y tient pas — il continue à poser des scores légèrement dessous ou dessus quand la réponse est hors sujet.
 
-Cause racine dans la fonction SQL `enqueue_report_job` :
+## Correction (`supabase/functions/generate-fit-matrix/index.ts`)
 
-```sql
-ON CONFLICT (session_id) DO UPDATE
-  SET status = CASE
-    WHEN report_jobs.status IN ('done','processing') THEN report_jobs.status
-    ELSE 'queued'
-  END,
-  next_attempt_at = LEAST(next_attempt_at, now()),
-  updated_at = now();
-```
+Rendre la neutralité **déterministe côté code** au lieu de la déléguer au modèle, avec un champ à 2 états uniquement.
 
-Quand un job est déjà `done`, le statut est **conservé** à `done`. Résultat : la ligne est mise à jour mais le worker `process-report-queue` ne la reprend jamais (il ne claim que les jobs `queued`/`failed` avec `next_attempt_at <= now()`). L'utilisateur voit la modale se fermer sur timeout et l'ancien rapport reste affiché.
+1. **Ajouter un champ `evidence` au schéma de cellule**, requis, avec 2 valeurs :
+   - `none` : aucun élément dans la réponse pour évaluer ce critère → score forcé à 50 côté code.
+   - `clear` : la réponse contient un élément pour évaluer ce critère → score libre entre 0 et 100 selon l'interprétation de l'IA.
 
-## Correction
+2. **Mettre à jour le prompt** :
+   - Règle 2 réécrite : « Pour chaque couple (question, critère), choisis `evidence` :
+     - `none` si la réponse ne contient aucun élément pour évaluer ce critère. Le score sera automatiquement fixé à 50 (neutre). Ne cherche pas à deviner.
+     - `clear` si la réponse contient un élément pour évaluer ce critère. Donne alors un score de 0 à 100 selon ton interprétation. »
+   - Ajouter : « Avec `clear`, tu dois pouvoir citer une phrase précise du candidat dans `quote`. »
 
-Migration SQL qui remplace `enqueue_report_job` :
+3. **Post-traitement** dans la boucle de normalisation :
+   - Si `evidence === "none"` → forcer `score = 50`, `justification = "Aucun élément dans la réponse pour évaluer ce critère."`, ignorer `quote` et `message_id`.
+   - Si `evidence === "clear"` → garder le score du modèle (clampé 0-100 comme aujourd'hui) et sa justification/quote.
+   - Si `evidence` absent ou invalide → traiter comme `none` (fallback sûr).
 
-- Si le job est `processing` → ne rien changer (évite double-run concurrent).
-- Sinon (`done`, `failed`, `queued`) → forcer :
-  - `status = 'queued'`
-  - `attempts = 0`
-  - `locked_at = NULL`, `locked_until = NULL`
-  - `last_error = NULL`
-  - `completed_at = NULL`
-  - `next_attempt_at = now()`
-  - `updated_at = now()`
-
-Ainsi, un clic sur « Régénérer » remet toujours le job en file, et le worker le reprend au prochain tick (cron toutes les minutes, plus le déclenchement immédiat déjà présent côté client via `supabase.functions.invoke('process-report-queue')` s'il existe — sinon la modale attendra le prochain tick).
-
-## Vérification
-
-Après migration, relancer la régénération sur la session `0979b322…` et vérifier que :
-1. `report_jobs.status` passe à `queued` puis `processing` puis `done`.
-2. `reports.updated_at` (ou le score) évolue.
-3. La modale se ferme sur succès et le rapport affiché est le nouveau.
+4. **Moyennes et fit score** : inchangés — les 50 neutres continuent d'être comptés dans les moyennes de colonnes et le fit score, comme aujourd'hui.
 
 ## Hors périmètre
 
-- Pas de changement UI (la modale et le polling sont déjà en place et corrects).
-- Pas de changement du worker `process-report-queue`.
+- Pas de changement UI : la matrice affiche déjà la note telle quelle. Un 50 neutre s'affichera simplement comme 50.
+- Pas de rejeu automatique des rapports existants. L'utilisateur peut cliquer « Régénérer le rapport » sur les sessions concernées.
+- Pas de changement du calcul du fit score global.
+
+## Vérification
+
+Régénérer le rapport de la session `0979b322…` et vérifier que les cellules Q1 « Comment ça va ? » et Q2 « Quel poste ? » — qui ne contiennent aucun élément pour la plupart des critères — passent bien à 50 partout au lieu de 40/60.
