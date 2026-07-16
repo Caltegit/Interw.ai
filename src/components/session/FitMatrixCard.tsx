@@ -37,9 +37,16 @@ export interface FitMatrixData {
   rows: FitMatrixRow[];
 }
 
+interface QuestionRef {
+  id: string;
+  title?: string | null;
+  content?: string | null;
+}
+
 interface Props {
   matrix?: FitMatrixData | null;
   sessionId?: string;
+  questions?: QuestionRef[];
   readOnly?: boolean;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
 }
@@ -59,10 +66,18 @@ function truncate(str: string, n: number) {
   return str.length > n ? str.slice(0, n - 1) + "…" : str;
 }
 
-export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Props) {
+export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMessage }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [generating, setGenerating] = useState(false);
+
+  const questionTitles = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const q of questions ?? []) {
+      if (q.id) map[q.id] = q.title?.trim() || "";
+    }
+    return map;
+  }, [questions]);
 
   const hasMatrix = !!(matrix && matrix.rows && matrix.rows.length > 0);
 
@@ -193,13 +208,17 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
               </tr>
             </thead>
             <tbody>
-              {m.rows.map((r) => (
+              {m.rows.map((r) => {
+                const title = r.question_title?.trim() || questionTitles[r.question_id] || "";
+                return (
                 <tr key={r.question_id}>
                   <td className="bg-background align-top px-2 py-1">
                     <div className="text-xs font-semibold text-muted-foreground">
                       Q{(r.question_index ?? 0) + 1}
                     </div>
-                    <div className="text-sm break-words">{truncate(r.question_title?.trim() || r.question_content, 90)}</div>
+                    <div className="text-sm break-words" title={title || undefined}>
+                      {title ? truncate(title, 90) : "Question sans titre"}
+                    </div>
                   </td>
                   <td className="p-0.5 align-top bg-primary/5">
                     <div
@@ -267,7 +286,8 @@ export function FitMatrixCard({ matrix, sessionId, readOnly, onGoToMessage }: Pr
                     );
                   })}
                 </tr>
-              ))}
+              );
+            })}
               <tr>
                 <td className="bg-background px-2 py-1 text-xs font-semibold text-muted-foreground">
                   Moyenne

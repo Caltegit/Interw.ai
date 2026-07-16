@@ -490,6 +490,7 @@ export function SessionReportView({
                 <FitMatrixCard
                   matrix={stats.fit_matrix}
                   sessionId={sessionId}
+                  questions={project?.questions}
                   readOnly={readOnly}
                   onGoToMessage={goToMessage}
                 />
