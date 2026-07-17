@@ -189,7 +189,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   className="flex-[0.55] min-w-0 h-9"
                 />
 
-                <div className="flex items-center gap-2 shrink-0 flex-1 justify-end">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Slider
                     value={[c.weight || 0]}
                     min={0}
@@ -197,7 +197,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                     step={1}
                     disabled={isLocked}
                     onValueChange={(v) => handleSliderChange(i, v[0])}
-                    className={cn("w-36 sm:w-44", isLocked && "opacity-60")}
+                    className={cn("w-full", isLocked && "opacity-60")}
                   />
                   <span
                     className={cn(
