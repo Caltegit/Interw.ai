@@ -204,9 +204,39 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base text-left">
-          <LayoutGrid className="h-4 w-4 text-primary" /> Détail question par question
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base text-left">
+            <LayoutGrid className="h-4 w-4 text-primary" /> Détail question par question
+          </CardTitle>
+          {!readOnly && sessionId && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={generating}>
+                  {generating ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Régénérer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Régénérer la matrice ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    La matrice actuelle sera remplacée. Le score global et la recommandation peuvent être ajustés en conséquence.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleGenerate(true)}>
+                    Régénérer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="w-full">
