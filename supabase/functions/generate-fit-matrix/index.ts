@@ -138,11 +138,12 @@ ${answersBlock}
 
 Règles :
 1. Pour chaque couple (question, critère), base-toi UNIQUEMENT sur la réponse à cette question, pas sur la session entière.
-2. Choisis obligatoirement une valeur "evidence" :
+2. Le champ "question_index" doit reprendre EXACTEMENT la valeur indiquée dans le préfixe [question_index=…] du bloc de la question (numérotation 0-based : la première question a question_index=0, pas 1).
+3. Choisis obligatoirement une valeur "evidence" :
    - "none" : la réponse ne contient aucun élément pour évaluer ce critère. Le score sera automatiquement fixé à 50 (neutre) côté serveur ; ne cherche pas à deviner.
    - "clear" : la réponse contient un élément concret pour évaluer ce critère. Donne alors un score de 0 à 100 selon ton interprétation, et cite la phrase précise du candidat dans "quote".
-3. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
-4. Avec "clear", fournis "quote" (extrait exact) et si possible "message_id". N'invente jamais un message_id.
+4. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
+5. Avec "clear", fournis "quote" (extrait exact) et si possible "message_id" (l'id [id=…] du message cité). N'invente jamais un message_id.
 
 Renvoie la matrice avec l'outil fit_matrix.`;
 
