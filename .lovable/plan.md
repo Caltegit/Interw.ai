@@ -1,37 +1,46 @@
-# Correction du décalage matrice Fit — option (a)
+# Édition inline des critères — étape 2 création projet
 
-## Cause (rappel court)
+## Objectif
 
-Dans `supabase/functions/generate-fit-matrix/index.ts`, les questions sont envoyées à l'IA numérotées « Q1, Q2… » mais le schéma attend un `question_index` 0-based. L'IA renvoie donc `question_index=1` pour Q1, `2` pour Q2, etc. À la relecture, `find(r => Number(r.question_index) === i)` avec `i` commençant à 0 apparie **Q2 avec les cellules de Q1, Q3 avec celles de Q2**, etc. D'où pop-up et `message_id` décalés d'une question.
+Supprimer la popup `CriterionFormDialog` pour l'édition. Tout se passe directement dans la carte du critère sur la page : titre + slider de pondération sur une ligne, description dessous en édition directe.
 
-## Changements
+## Nouvelle structure de carte (fichier `src/components/project/StepCriteria.tsx`)
 
-### 1. `supabase/functions/generate-fit-matrix/index.ts` (edge function, seul fichier modifié)
+Chaque critère devient une carte auto-contenue :
 
-- Dans le prompt utilisateur : préfixer chaque bloc question par `[question_index=<i>]` (0-based) et ajouter une règle explicite : « `question_index` doit reprendre exactement la valeur du bloc, en commençant à 0. »
-- Dans la normalisation (autour de la ligne 249) : appariement strict par `question_index` **sans fallback positionnel** `parsed.rows[i]`. Ajouter un filet : si aucune ligne n'a `question_index === 0` mais qu'il en existe une à `questions.length`, décaler tout de −1 avant appariement (compat rétro si un modèle re-régresse). Les questions sans ligne IA correspondante retombent sur des cellules neutres (score 50, "aucun élément…"), comportement déjà en place pour `evidence: "none"`.
+```text
+┌───────────────────────────────────────────────────────────┐
+│ 🔒  [Libellé du critère...............]  ▬▬▬●▬▬  25%  🗑  │
+│     [Description (guide pour l'IA)........................│
+│      .....................................................│
+│      ...................................................] │
+└───────────────────────────────────────────────────────────┘
+```
 
-### 2. `src/components/session/FitMatrixCard.tsx` (front, ajout mineur)
+- **Ligne 1** : bouton lock (inchangé) · `Input` libellé (flex-1) · `Slider` (w-32 à w-40) · badge `xx%` · bouton supprimer.
+- **Ligne 2** : `Textarea` description (2 lignes, auto-grow léger), placeholder « Guide pour l'IA : ce qu'il faut évaluer... ».
+- Le bouton crayon disparaît (édition = directe).
+- L'ajout via « + Ajouter » insère une carte vide, focus automatique sur le libellé.
 
-- Ajouter un bouton discret « Régénérer la matrice » dans l'en-tête de la carte (visible uniquement si `!readOnly && sessionId`). Il appelle `generate-fit-matrix` avec `{ session_id, force: true }`, exactement comme le bouton « Voir les détails » existant mais avec `force`. Confirmation via `AlertDialog` (« Recalculer va remplacer la matrice actuelle et peut modifier le score global »).
-- Le paramètre `force` est déjà géré côté edge function (ligne 25), rien à changer sur le backend.
+## Éléments retirés
 
-## Impact build & risques
+- Ouverture du `CriterionFormDialog` sur clic carte / crayon → supprimé.
+- `openEdit`, `editingIndex`, `initialForm`, `formOpen`, `handleFormSubmit` → supprimés.
+- Le rendu `<CriterionFormDialog ... />` en bas → supprimé.
+- Le composant `CriterionFormDialog` **reste** dans le repo car utilisé ailleurs (à vérifier — `CriteriaLibraryManager.tsx` et `CriterionFormDialog.tsx` sont utilisés dans la page Ressources). On ne le supprime pas.
 
-**Build TypeScript / Vite** : aucun risque. Le seul changement front est un bouton + dialog utilisant des composants shadcn déjà importés ailleurs (`Button`, `AlertDialog`). Pas de nouvelle dépendance, pas de changement de types, pas de changement de contrat `FitMatrixData`. `tsgo` passera.
+## Éléments conservés
 
-**Edge function** : Deno, redéployée isolément via `supabase--deploy_edge_functions`. Une erreur de déploiement n'affecte que cette fonction, jamais le build de l'app. La signature d'entrée/sortie reste identique (`session_id`, `force`, `update_report`) — aucun autre appelant (`generate-report`, bouton « Voir les détails ») n'est impacté.
+- Système de lock, rebalance, égalisation, import depuis Ressources (`CriteriaLibraryDialog`).
+- Le champ « Ajouter à mes ressources » : déplacé en petit lien texte discret sous la description (« ✚ Ajouter à mes ressources ») avec une checkbox, uniquement pour les critères non issus de la bibliothèque. Alternative : bouton icône `BookmarkPlus` toggle dans la ligne 1 à droite. **Choix retenu** : icône toggle dans la ligne 1 (plus compact, cohérent avec les autres boutons icônes).
+- Champs `scoring_scale`, `applies_to`, `anchors`, `category` : conservés dans le state avec leurs valeurs par défaut (`0-5`, `all_questions`, `{}`, `""`) — non éditables ici puisque non utilisés dans le flux actuel de création. Les critères importés depuis Ressources gardent leurs valeurs.
 
-**Tests** : aucun test e2e ne cible la matrice Fit (`tests/e2e/*` couvre login, candidate-journey, project, media). Rien à mettre à jour. Le test `report-generation.spec.ts` vérifie juste qu'un score/critère apparaît — non affecté.
+## Fichier modifié
 
-**Données existantes** : les matrices déjà en base gardent le décalage tant que l'utilisateur ne clique pas « Régénérer ». Pas de migration SQL, pas de backfill automatique. Coût IA nul tant que personne ne régénère.
+- `src/components/project/StepCriteria.tsx` uniquement.
 
-**Effet de bord côté score** : régénérer une matrice recalcule `overall_score`, `recommendation`, `criteria_scores`, `fit_breakdown` (lignes 394-422 de l'edge function). C'est déjà le cas aujourd'hui pour toute (re)génération — le dialog de confirmation prévient l'utilisateur.
+Aucun impact sur : Ressources > Critères, modèles d'entretien, schéma DB.
 
-**Ce qui ne bouge pas** : `FitBreakdownCard`, `FitScoreBadge`, `SessionReportView`, `useSessionDetail`, le rendu vidéo, les partages de rapport, la génération initiale de rapport. Zéro effet sur les autres surfaces.
+## Preview
 
-## Vérification post-déploiement
-
-1. Déployer la fonction, ouvrir une session complétée avec matrice existante, cliquer « Régénérer ».
-2. Vérifier qu'une pop-up ouverte sur Q4 cite bien la réponse à Q4 (comparer avec la transcription à côté).
-3. Vérifier que le bouton « Aller à l'extrait » saute au message de Q4 et non Q3.
+Une fois implémenté, je te montre le rendu via un screenshot Playwright de `/projects/new` étape 2 avec 2–3 critères ajoutés.
