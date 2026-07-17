@@ -2,7 +2,18 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, LayoutGrid, Play, Sparkles } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, LayoutGrid, Play, RefreshCw, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -130,21 +141,24 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
     return out;
   }, [matrix, hasMatrix]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force = false) => {
     if (!sessionId) return;
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-fit-matrix", {
-        body: { session_id: sessionId },
+        body: { session_id: sessionId, force },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Matrice générée", description: "Les détails sont maintenant disponibles." });
+      toast({
+        title: force ? "Matrice régénérée" : "Matrice générée",
+        description: "Les détails sont à jour.",
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
       await queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
     } catch (e: any) {
       toast({
-        title: "Génération impossible",
+        title: force ? "Régénération impossible" : "Génération impossible",
         description: e?.message ?? "Réessayez dans un instant.",
         variant: "destructive",
       });
@@ -166,7 +180,7 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
             Visualisez la note de chaque critère pour chaque question posée, avec la justification associée.
           </p>
           {!readOnly && sessionId && (
-            <Button onClick={handleGenerate} disabled={generating} size="sm">
+            <Button onClick={() => handleGenerate(false)} disabled={generating} size="sm">
               {generating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -190,9 +204,39 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base text-left">
-          <LayoutGrid className="h-4 w-4 text-primary" /> Détail question par question
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base text-left">
+            <LayoutGrid className="h-4 w-4 text-primary" /> Détail question par question
+          </CardTitle>
+          {!readOnly && sessionId && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={generating}>
+                  {generating ? (
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                  )}
+                  Régénérer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Régénérer la matrice ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    La matrice actuelle sera remplacée. Le score global et la recommandation peuvent être ajustés en conséquence.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleGenerate(true)}>
+                    Régénérer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="w-full">
