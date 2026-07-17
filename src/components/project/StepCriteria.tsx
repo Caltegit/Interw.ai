@@ -186,10 +186,10 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   value={c.label}
                   onChange={(e) => updateField(i, { label: e.target.value })}
                   placeholder={`Critère ${i + 1}`}
-                  className="flex-1 min-w-0 h-9"
+                  className="flex-[0.55] min-w-0 h-9"
                 />
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-1 justify-end">
                   <Slider
                     value={[c.weight || 0]}
                     min={0}
@@ -197,7 +197,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                     step={1}
                     disabled={isLocked}
                     onValueChange={(v) => handleSliderChange(i, v[0])}
-                    className={cn("w-32 sm:w-40", isLocked && "opacity-60")}
+                    className={cn("w-36 sm:w-44", isLocked && "opacity-60")}
                   />
                   <span
                     className={cn(
@@ -239,9 +239,9 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
               <Textarea
                 value={c.description}
                 onChange={(e) => updateField(i, { description: e.target.value })}
-                placeholder="Guide pour l'IA : ce qu'il faut évaluer, indices à repérer, exemples attendus…"
+                placeholder="Guide pour l'IA : ce qu'il faut évaluer, indices ou mots clefs à repérer, exemple attendus, bonne réponse attendue..."
                 rows={2}
-                className="ml-10 w-[calc(100%-2.5rem)] resize-y text-sm"
+                className="ml-10 w-[calc(100%-2.5rem)] resize-y text-sm placeholder:text-primary"
               />
             </div>
           );
