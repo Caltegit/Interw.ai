@@ -180,7 +180,7 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
             Visualisez la note de chaque critère pour chaque question posée, avec la justification associée.
           </p>
           {!readOnly && sessionId && (
-            <Button onClick={handleGenerate} disabled={generating} size="sm">
+            <Button onClick={() => handleGenerate(false)} disabled={generating} size="sm">
               {generating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
