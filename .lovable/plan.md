@@ -1,38 +1,37 @@
-## Problème
-Le Fit Poste affiché dans le rapport est calculé à partir d'une évaluation holistique par critère (`fit_breakdown`) générée par l'IA. La matrice "Détail question par question" (`fit_matrix`) fournit des scores granulaires question × critère. Les deux peuvent diverger fortement, ce qui crée de l'incohérence pour le recruteur.
+# Correction du décalage matrice Fit — option (a)
 
-## Recommandation
-**Aligner le Fit Poste sur la matrice.** La matrice est plus transparente et vérifiable : chaque note est rattachée à une question, une justification et un extrait vidéo. L'évaluation holistique n'apporte pas de valeur suffisante pour justifier un second calcul parallèle.
+## Cause (rappel court)
 
-## Changements prévus
+Dans `supabase/functions/generate-fit-matrix/index.ts`, les questions sont envoyées à l'IA numérotées « Q1, Q2… » mais le schéma attend un `question_index` 0-based. L'IA renvoie donc `question_index=1` pour Q1, `2` pour Q2, etc. À la relecture, `find(r => Number(r.question_index) === i)` avec `i` commençant à 0 apparie **Q2 avec les cellules de Q1, Q3 avec celles de Q2**, etc. D'où pop-up et `message_id` décalés d'une question.
 
-### 1. Recalcul du Fit Poste global (`fit_score`)
-Dans `supabase/functions/generate-report/index.ts` :
-- Après génération ou récupération de `fit_matrix`, calculer `fit_score` comme la moyenne pondérée des scores par critère de la matrice.
-- Formule : `Σ(score_critère × poids_critère) / Σ(poids_critère)`, où `score_critère` est la moyenne des cases informatives de la colonne.
-- Conserver un fallback sur l'ancien calcul si `fit_matrix` est absente (rétrocompatibilité).
+## Changements
 
-### 2. Recalcul du `fit_breakdown`
-- Pour chaque critère, le score affiché dans `fit_breakdown` doit correspondre à la moyenne des scores informatifs de la matrice pour ce critère.
-- Le `statement` et les citations peuvent être conservés de l'évaluation IA holistique, ou remplacés par une synthèse des justifications de la matrice.
+### 1. `supabase/functions/generate-fit-matrix/index.ts` (edge function, seul fichier modifié)
 
-### 3. Affichage du calcul dans l'UI
-- Ajouter une infobulle / légende sur le badge Fit Poste et dans la carte `FitBreakdownCard` indiquant : "Moyenne pondérée des critères issue du détail question par question".
-- Afficher éventuellement le poids de chaque critère à côté de son score dans `FitBreakdownCard`.
+- Dans le prompt utilisateur : préfixer chaque bloc question par `[question_index=<i>]` (0-based) et ajouter une règle explicite : « `question_index` doit reprendre exactement la valeur du bloc, en commençant à 0. »
+- Dans la normalisation (autour de la ligne 249) : appariement strict par `question_index` **sans fallback positionnel** `parsed.rows[i]`. Ajouter un filet : si aucune ligne n'a `question_index === 0` mais qu'il en existe une à `questions.length`, décaler tout de −1 avant appariement (compat rétro si un modèle re-régresse). Les questions sans ligne IA correspondante retombent sur des cellules neutres (score 50, "aucun élément…"), comportement déjà en place pour `evidence: "none"`.
 
-### 4. Rétrocompatibilité
-- Les anciens rapports sans `fit_matrix` continuent d'utiliser le calcul holistique existant.
-- Pas de backfill obligatoire ; les rapports générés après le changement seront cohérents.
+### 2. `src/components/session/FitMatrixCard.tsx` (front, ajout mineur)
 
-## Fichiers concernés
-- `supabase/functions/generate-report/index.ts` : recalcul de `fit_score` et `fit_breakdown`.
-- `src/components/session/FitBreakdownCard.tsx` : ajout poids + explication.
-- `src/components/session/FitScoreBadge.tsx` ou `ScoresOverviewCard.tsx` : tooltip sur le score.
+- Ajouter un bouton discret « Régénérer la matrice » dans l'en-tête de la carte (visible uniquement si `!readOnly && sessionId`). Il appelle `generate-fit-matrix` avec `{ session_id, force: true }`, exactement comme le bouton « Voir les détails » existant mais avec `force`. Confirmation via `AlertDialog` (« Recalculer va remplacer la matrice actuelle et peut modifier le score global »).
+- Le paramètre `force` est déjà géré côté edge function (ligne 25), rien à changer sur le backend.
 
-## Non inclus
-- Modification du prompt IA pour supprimer `fit_breakdown` (on le garde comme source de texte/justifications, pas comme source du score).
-- Refonte complète de la matrice ou de son générateur.
+## Impact build & risques
 
-## Validation
-- Générer un rapport de test et vérifier que le Fit Poste global correspond bien à la moyenne pondérée des colonnes de la matrice.
-- Vérifier que les anciens rapports sans matrice s'affichent toujours correctement.
+**Build TypeScript / Vite** : aucun risque. Le seul changement front est un bouton + dialog utilisant des composants shadcn déjà importés ailleurs (`Button`, `AlertDialog`). Pas de nouvelle dépendance, pas de changement de types, pas de changement de contrat `FitMatrixData`. `tsgo` passera.
+
+**Edge function** : Deno, redéployée isolément via `supabase--deploy_edge_functions`. Une erreur de déploiement n'affecte que cette fonction, jamais le build de l'app. La signature d'entrée/sortie reste identique (`session_id`, `force`, `update_report`) — aucun autre appelant (`generate-report`, bouton « Voir les détails ») n'est impacté.
+
+**Tests** : aucun test e2e ne cible la matrice Fit (`tests/e2e/*` couvre login, candidate-journey, project, media). Rien à mettre à jour. Le test `report-generation.spec.ts` vérifie juste qu'un score/critère apparaît — non affecté.
+
+**Données existantes** : les matrices déjà en base gardent le décalage tant que l'utilisateur ne clique pas « Régénérer ». Pas de migration SQL, pas de backfill automatique. Coût IA nul tant que personne ne régénère.
+
+**Effet de bord côté score** : régénérer une matrice recalcule `overall_score`, `recommendation`, `criteria_scores`, `fit_breakdown` (lignes 394-422 de l'edge function). C'est déjà le cas aujourd'hui pour toute (re)génération — le dialog de confirmation prévient l'utilisateur.
+
+**Ce qui ne bouge pas** : `FitBreakdownCard`, `FitScoreBadge`, `SessionReportView`, `useSessionDetail`, le rendu vidéo, les partages de rapport, la génération initiale de rapport. Zéro effet sur les autres surfaces.
+
+## Vérification post-déploiement
+
+1. Déployer la fonction, ouvrir une session complétée avec matrice existante, cliquer « Régénérer ».
+2. Vérifier qu'une pop-up ouverte sur Q4 cite bien la réponse à Q4 (comparer avec la transcription à côté).
+3. Vérifier que le bouton « Aller à l'extrait » saute au message de Q4 et non Q3.

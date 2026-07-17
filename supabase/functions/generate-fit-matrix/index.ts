@@ -114,7 +114,7 @@ serve(async (req) => {
               }`,
           )
           .join("\n");
-        return `Q${i + 1} : ${q.content}\n${answers || "(aucune réponse enregistrée)"}`;
+        return `[question_index=${i}] Q${i + 1} : ${q.content}\n${answers || "(aucune réponse enregistrée)"}`;
       })
       .join("\n\n");
 
