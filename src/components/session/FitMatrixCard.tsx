@@ -141,21 +141,24 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
     return out;
   }, [matrix, hasMatrix]);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (force = false) => {
     if (!sessionId) return;
     setGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-fit-matrix", {
-        body: { session_id: sessionId },
+        body: { session_id: sessionId, force },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      toast({ title: "Matrice générée", description: "Les détails sont maintenant disponibles." });
+      toast({
+        title: force ? "Matrice régénérée" : "Matrice générée",
+        description: "Les détails sont à jour.",
+      });
       await queryClient.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
       await queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
     } catch (e: any) {
       toast({
-        title: "Génération impossible",
+        title: force ? "Régénération impossible" : "Génération impossible",
         description: e?.message ?? "Réessayez dans un instant.",
         variant: "destructive",
       });
