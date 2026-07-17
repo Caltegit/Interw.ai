@@ -243,11 +243,17 @@ Renvoie la matrice avec l'outil fit_matrix.`;
     const resolveStart = resolveStartFactory(messages as any);
 
     // Normalisation : matrice indexée par question_id + criterion_id.
+    // Filet de sécurité : si le modèle a renvoyé des index 1-based (aucune ligne à 0
+    // mais une ligne à questions.length), on décale de -1 avant appariement.
+    const aiRows: any[] = Array.isArray(parsed.rows) ? parsed.rows : [];
+    const hasZero = aiRows.some((r) => Number(r?.question_index) === 0);
+    const hasLen = aiRows.some((r) => Number(r?.question_index) === questions.length);
+    const indexOffset = !hasZero && hasLen ? -1 : 0;
+
     const rows: Array<any> = [];
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
-      const aiRow =
-        parsed.rows.find((r: any) => Number(r?.question_index) === i) ?? parsed.rows[i] ?? null;
+      const aiRow = aiRows.find((r: any) => Number(r?.question_index) + indexOffset === i) ?? null;
       const aiCells = Array.isArray(aiRow?.cells) ? aiRow.cells : [];
       const cells: Record<string, any> = {};
       for (let j = 0; j < criteria.length; j++) {
