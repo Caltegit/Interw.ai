@@ -1,46 +1,32 @@
-# Édition inline des critères — étape 2 création projet
+# Plan A1 — Ignorer et documenter le finding `PUBLIC_SENSITIVE_DATA` sur `organizations`
 
 ## Objectif
+Débloquer la publication en marquant comme "ignoré" un finding du scanner de sécurité qui est un faux positif, sans toucher au code ni à la base de données.
 
-Supprimer la popup `CriterionFormDialog` pour l'édition. Tout se passe directement dans la carte du critère sur la page : titre + slider de pondération sur une ligne, description dessous en édition directe.
+## Contexte
+Le scanner remonte une erreur `PUBLIC_SENSITIVE_DATA` sur la table `organizations` en se basant sur la policy RLS `Anon can read public org fields`. Cette policy autorise en effet la lecture pour les utilisateurs anonymes, mais la migration du 8 juillet a mis en place une protection **au niveau colonne** : les rôles `anon` et `authenticated` n'ont un `GRANT SELECT` que sur `id`, `name`, `slug`, `logo_url`, `created_at`. Les colonnes sensibles (`client_notes`, `pricing`, `owner_id`, crédits…) ne sont donc pas accessibles via l'API publique, malgré ce que suggère le scanner.
 
-## Nouvelle structure de carte (fichier `src/components/project/StepCriteria.tsx`)
+## Étapes
 
-Chaque critère devient une carte auto-contenue :
+1. **Ignorer le finding**
+   - Appel de l'outil de gestion des findings avec `operation: "ignore"` sur `PUBLIC_SENSITIVE_DATA` / `organizations`.
+   - Explication enregistrée : faux positif — protection assurée par les `GRANT` colonne-par-colonne posés le 8 juillet, les colonnes sensibles ne sont pas exposées à `anon`.
 
-```text
-┌───────────────────────────────────────────────────────────┐
-│ 🔒  [Libellé du critère...............]  ▬▬▬●▬▬  25%  🗑  │
-│     [Description (guide pour l'IA)........................│
-│      .....................................................│
-│      ...................................................] │
-└───────────────────────────────────────────────────────────┘
-```
+2. **Mettre à jour la mémoire sécurité**
+   - Documenter que la lecture anonyme de `organizations` est intentionnelle et limitée aux 5 colonnes publiques (`id`, `name`, `slug`, `logo_url`, `created_at`), nécessaire pour la page publique d'organisation et les pages publiques de projet.
+   - Ajouter une règle : toute nouvelle colonne ajoutée à `organizations` doit être explicitement exclue des `GRANT` accordés à `anon` / `authenticated`, sinon elle deviendrait publique.
+   - Rappeler que la policy RLS `Anon can read public org fields` est volontaire et complémentaire des grants colonne.
 
-- **Ligne 1** : bouton lock (inchangé) · `Input` libellé (flex-1) · `Slider` (w-32 à w-40) · badge `xx%` · bouton supprimer.
-- **Ligne 2** : `Textarea` description (2 lignes, auto-grow léger), placeholder « Guide pour l'IA : ce qu'il faut évaluer... ».
-- Le bouton crayon disparaît (édition = directe).
-- L'ajout via « + Ajouter » insère une carte vide, focus automatique sur le libellé.
+3. **Republier**
+   - Une fois le finding ignoré, la publication n'est plus bloquée. L'utilisateur peut cliquer sur "Publier" pour pousser les changements frontend (UI critères) en production.
 
-## Éléments retirés
+## Ce qui n'est PAS modifié
+- Aucun fichier applicatif.
+- Aucune policy RLS.
+- Aucun `GRANT`.
+- Aucune donnée.
+- Aucun redéploiement d'edge function ni migration.
 
-- Ouverture du `CriterionFormDialog` sur clic carte / crayon → supprimé.
-- `openEdit`, `editingIndex`, `initialForm`, `formOpen`, `handleFormSubmit` → supprimés.
-- Le rendu `<CriterionFormDialog ... />` en bas → supprimé.
-- Le composant `CriterionFormDialog` **reste** dans le repo car utilisé ailleurs (à vérifier — `CriteriaLibraryManager.tsx` et `CriterionFormDialog.tsx` sont utilisés dans la page Ressources). On ne le supprime pas.
-
-## Éléments conservés
-
-- Système de lock, rebalance, égalisation, import depuis Ressources (`CriteriaLibraryDialog`).
-- Le champ « Ajouter à mes ressources » : déplacé en petit lien texte discret sous la description (« ✚ Ajouter à mes ressources ») avec une checkbox, uniquement pour les critères non issus de la bibliothèque. Alternative : bouton icône `BookmarkPlus` toggle dans la ligne 1 à droite. **Choix retenu** : icône toggle dans la ligne 1 (plus compact, cohérent avec les autres boutons icônes).
-- Champs `scoring_scale`, `applies_to`, `anchors`, `category` : conservés dans le state avec leurs valeurs par défaut (`0-5`, `all_questions`, `{}`, `""`) — non éditables ici puisque non utilisés dans le flux actuel de création. Les critères importés depuis Ressources gardent leurs valeurs.
-
-## Fichier modifié
-
-- `src/components/project/StepCriteria.tsx` uniquement.
-
-Aucun impact sur : Ressources > Critères, modèles d'entretien, schéma DB.
-
-## Preview
-
-Une fois implémenté, je te montre le rendu via un screenshot Playwright de `/projects/new` étape 2 avec 2–3 critères ajoutés.
+## Risques
+- Nul côté runtime : rien ne change dans l'app.
+- Résiduel : si un futur développeur ajoute une colonne sensible à `organizations` sans mettre à jour les grants, le scanner ne re-signalera pas ce cas particulier. La règle ajoutée dans la mémoire sécurité vise précisément à alerter les prochains agents sur ce point.
