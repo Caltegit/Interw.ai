@@ -236,8 +236,8 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                 </Button>
               </div>
 
-              <p className="ml-10 text-xs text-primary">
-                Guide pour l'IA : ce qu'il faut évaluer, mots clefs ou indices à repérer, réponse attendue...
+              <p className="ml-10 my-2 text-xs text-primary">
+                Description : Guide pour l'IA
               </p>
 
               <Textarea
