@@ -219,7 +219,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                     )}
                     onClick={() => updateField(i, { save_to_library: !c.save_to_library })}
                     aria-label="Ajouter aux ressources"
-                    title={c.save_to_library ? "Sera ajouté aux ressources" : "Ajouter aux ressources"}
+                    title="Ajouter aux ressources"
                   >
                     <BookmarkPlus className="h-4 w-4" />
                   </Button>
@@ -235,6 +235,10 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
+
+              <p className="ml-10 text-xs text-primary">
+                Guide pour l'IA : ce qu'il faut évaluer, mots clefs ou indices à repérer, réponse attendue...
+              </p>
 
               <Textarea
                 value={c.description}
