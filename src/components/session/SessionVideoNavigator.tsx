@@ -72,6 +72,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
+  const [recoverLabel, setRecoverLabel] = useState<string>("");
+  // `true` = piste vidéo décodable ; `false` = fichier lisible en audio
+  // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
+  const [hasVideoTrack, setHasVideoTrack] = useState<boolean | null>(null);
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
   const getClipUrl = (clip: SessionVideoClip | undefined) => {
     if (!clip) return null;
