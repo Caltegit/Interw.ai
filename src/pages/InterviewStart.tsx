@@ -1594,19 +1594,71 @@ export default function InterviewStart() {
   // jour. La numérotation des chunks continue (chunkIdxBase) pour ne pas
   // écraser les chunks précédents déjà uploadés.
   const restartActiveRecorderAfterAudioSwapRef = useRef<(() => Promise<void>) | null>(null);
+  // IMPORTANT : ne JAMAIS redémarrer le MediaRecorder vidéo pendant une question.
+  // Chaque MediaRecorder produit son propre en-tête (EBML pour WebM, ftyp/moov pour
+  // MP4). Concaténer deux flux dans le même fichier casse le conteneur et donne
+  // une vidéo avec durée = Infinity, non seekable. On redémarre uniquement le
+  // recorder audio auxiliaire (utilisé pour la transcription), qui produit un
+  // fichier séparé (q{i}.audio.{ext}) et n'affecte pas la vidéo.
   const restartActiveRecorderAfterAudioSwap = useCallback(async () => {
     const previous = activeQuestionRecordingRef.current;
     if (!previous) return;
-    const starter = startQuestionRecordingRef.current;
-    if (!starter) return;
-    const carryChunkPaths = [...previous.uploadedChunkPaths];
-    const carryVideoChunks = [...previous.videoChunks];
-    const carryAudioChunks = [...previous.audioChunks];
-    const nextChunkBase = (previous.chunkIdxBase ?? 0) + previous.videoChunks.length + 1;
-    try { previous.recorder.requestData(); } catch { /* ignore */ }
-    try { previous.audioRecorder?.requestData(); } catch { /* ignore */ }
-    await starter({ chunkIdxBase: nextChunkBase, carryChunkPaths, carryVideoChunks, carryAudioChunks });
-  }, []);
+    const stream = streamRef.current;
+    if (!stream) return;
+    try {
+      if (previous.audioRecorder && previous.audioRecorder.state !== "inactive") {
+        await new Promise<void>((resolve) => {
+          const rec = previous.audioRecorder!;
+          const prevOnStop = rec.onstop;
+          rec.onstop = (event) => {
+            try { prevOnStop?.call(rec, event); } catch { /* noop */ }
+            resolve();
+          };
+          try { rec.stop(); } catch { resolve(); }
+        });
+      }
+    } catch { /* noop */ }
+    try {
+      const audioTracks = stream.getAudioTracks();
+      if (audioTracks.length === 0) return;
+      const audioStream = new MediaStream(audioTracks);
+      const audioMime = previous.audioMime || "audio/webm";
+      let audioRecorder: MediaRecorder;
+      try {
+        audioRecorder = new MediaRecorder(audioStream, { mimeType: audioMime, audioBitsPerSecond: 48_000 });
+      } catch {
+        audioRecorder = new MediaRecorder(audioStream);
+      }
+      const audioBuffer = previous.audioChunks;
+      const activeRef = previous;
+      audioRecorder.ondataavailable = (e) => {
+        if (e.data.size === 0) return;
+        if (activeQuestionRecordingRef.current !== activeRef) return;
+        if (activeRef.audioRecorder !== audioRecorder) return;
+        audioBuffer.push(e.data);
+      };
+      audioRecorder.onerror = (ev) => {
+        const err = (ev as unknown as { error?: { name?: string; message?: string } }).error;
+        logger.error("interview_audio_recorder_error", {
+          sessionId: session?.id ?? null,
+          questionIndex: previous.questionIndex,
+          name: err?.name ?? null,
+          message: err?.message ?? null,
+          phase: "swap-restart",
+        });
+      };
+      audioRecorder.start(1000);
+      previous.audioRecorder = audioRecorder;
+      questionAudioRecorderRef.current = audioRecorder;
+      try { if (audioRecorder.mimeType) previous.audioMime = audioRecorder.mimeType; } catch { /* ignore */ }
+    } catch (e) {
+      logger.error("interview_audio_recorder_failed", {
+        sessionId: session?.id ?? null,
+        phase: "swap-restart",
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }, [session?.id]);
 
   const switchAudioDevice = useCallback(async (deviceId: string) => {
     if (!deviceId) return;
@@ -1918,8 +1970,9 @@ export default function InterviewStart() {
           name: err?.name ?? null,
           message: err?.message ?? null,
         });
-        // Tentative de récupération : redémarrer le recorder en préservant le chunkIdxBase.
-        void restartActiveRecorderAfterAudioSwap();
+        // NE PAS redémarrer le recorder vidéo : concaténer deux flux MediaRecorder
+        // (avec deux en-têtes) casse le conteneur (durée = Infinity, non seekable).
+        // On garde ce qu'on a et on laisse la question se terminer normalement.
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
       // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
@@ -2079,6 +2132,28 @@ export default function InterviewStart() {
       const chunkPaths = chunkPathsLocal;
       const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
       const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.${audioExt}`;
+
+      // Contrôle d'intégrité : le blob final doit contenir un en-tête de conteneur
+      // valide (EBML pour WebM, ftyp pour MP4). Sans ça la vidéo sera illisible
+      // (durée = Infinity). On loggue pour détection proactive côté admin.
+      let headerValid = false;
+      try {
+        const headBuf = new Uint8Array(await blob.slice(0, 32).arrayBuffer());
+        if (ext === "webm") {
+          headerValid = headBuf.length >= 4 && headBuf[0] === 0x1a && headBuf[1] === 0x45 && headBuf[2] === 0xdf && headBuf[3] === 0xa3;
+        } else if (ext === "mp4") {
+          headerValid = headBuf.length >= 12 && headBuf[4] === 0x66 && headBuf[5] === 0x74 && headBuf[6] === 0x79 && headBuf[7] === 0x70;
+        }
+      } catch { /* noop */ }
+      if (!headerValid) {
+        logger.error("interview_video_header_missing", {
+          sessionId,
+          questionIndex,
+          mime: realMime,
+          chunkCount: videoBufferLocal.length,
+          blobSize: blob.size,
+        });
+      }
 
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {
