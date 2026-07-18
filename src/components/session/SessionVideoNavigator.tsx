@@ -90,6 +90,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
   useEffect(() => {
     setMediaError(null);
+    setHasVideoTrack(null);
   }, [index]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
