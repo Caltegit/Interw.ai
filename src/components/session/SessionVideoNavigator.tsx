@@ -732,7 +732,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                     ) : (
                       <Wrench className="h-3 w-3" />
                     )}
-                    Réparer la vidéo
+                    {recovering ? (recoverLabel || "Réparation…") : "Réparer la vidéo"}
                   </button>
                 )}
               </div>
