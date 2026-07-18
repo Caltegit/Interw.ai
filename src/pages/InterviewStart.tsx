@@ -1970,8 +1970,9 @@ export default function InterviewStart() {
           name: err?.name ?? null,
           message: err?.message ?? null,
         });
-        // Tentative de récupération : redémarrer le recorder en préservant le chunkIdxBase.
-        void restartActiveRecorderAfterAudioSwap();
+        // NE PAS redémarrer le recorder vidéo : concaténer deux flux MediaRecorder
+        // (avec deux en-têtes) casse le conteneur (durée = Infinity, non seekable).
+        // On garde ce qu'on a et on laisse la question se terminer normalement.
       };
       recorder.start(1000); // un chunk par seconde, suffisant pour l'upload incrémental
       // SOURCE DE VÉRITÉ : MIME effectif fourni par le navigateur après start().
