@@ -113,6 +113,14 @@ Deno.serve(async (req) => {
       .upload(targetPath, buffer, { contentType, upsert: true });
     if (upErr) throw upErr;
 
+    const publicUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/media/${targetPath}`;
+    const { error: msgErr } = await sb
+      .from("session_messages")
+      .update({ video_segment_url: publicUrl })
+      .eq("session_id", sessionId)
+      .like("video_segment_url", `%/interviews/${sessionId}/q${questionIndex}.%`);
+    if (msgErr) throw msgErr;
+
     // Si on a changé d'extension (WebM cassé → MP4), on efface l'ancien
     // pour que l'URL publique de la nouvelle extension soit la seule référence.
     try { await sb.storage.from("media").remove([siblingPath]); } catch { /* noop */ }
