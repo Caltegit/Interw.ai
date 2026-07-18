@@ -72,6 +72,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
+  const [recoverLabel, setRecoverLabel] = useState<string>("");
+  // `true` = piste vidéo décodable ; `false` = fichier lisible en audio
+  // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
+  const [hasVideoTrack, setHasVideoTrack] = useState<boolean | null>(null);
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
   const getClipUrl = (clip: SessionVideoClip | undefined) => {
     if (!clip) return null;
@@ -86,6 +90,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
   useEffect(() => {
     setMediaError(null);
+    setHasVideoTrack(null);
   }, [index]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
@@ -453,53 +458,125 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   })();
   const canRecover = !!parsedRecover;
 
+  // Lance un remux/transcode côté client via ffmpeg.wasm (voir
+  // `src/workers/videoRepair.worker.ts`) puis renvoie le blob réparé et son
+  // extension cible ("webm" en cas de remux propre, "mp4" en cas de
+  // ré-encodage de secours).
+  const runClientRepair = (url: string, onProgress: (label: string) => void) =>
+    new Promise<{ data: Uint8Array; extension: "webm" | "mp4"; contentType: string }>((resolve, reject) => {
+      const worker = new Worker(
+        new URL("@/workers/videoRepair.worker.ts", import.meta.url),
+        { type: "module" },
+      );
+      worker.onmessage = (e: MessageEvent) => {
+        const msg = e.data;
+        if (msg?.type === "progress") {
+          onProgress(msg.label || "");
+        } else if (msg?.type === "done") {
+          worker.terminate();
+          resolve({ data: msg.data as Uint8Array, extension: msg.extension, contentType: msg.contentType });
+        } else if (msg?.type === "error") {
+          worker.terminate();
+          reject(new Error(msg.message || "Réparation impossible"));
+        }
+      };
+      worker.onerror = (err) => {
+        worker.terminate();
+        reject(err);
+      };
+      worker.postMessage({ type: "start", url });
+    });
+
   const handleRecover = async () => {
     if (!parsedRecover || recovering) return;
     setRecovering(true);
+    setRecoverLabel("Reconstruction serveur…");
     toast({
       title: "Réparation en cours…",
-      description: "Reconstruction du fichier vidéo. Cela peut prendre quelques secondes.",
+      description: "Reconstruction du fichier vidéo. Cela peut prendre 10 à 30 secondes.",
     });
     try {
+      // 1) Reconstruction serveur depuis les chunks bruts. Peut ne pas suffire
+      //    si le premier chunk pris comme header n'était pas un vrai header
+      //    MediaRecorder (piste vidéo non décodable au final).
       const { data, error } = await supabase.functions.invoke("recover-session-video", {
         body: {
           session_id: parsedRecover.sessionId,
           question_index: parsedRecover.questionIndex,
           sync: true,
-          // Forcer la reconstruction depuis les chunks : si le RH a cliqué sur
-          // "Réparer", c'est que le fichier final est cassé même si son header
-          // semble valide. On ne retombe plus sur le "skip" trompeur.
           force: true,
         },
       });
       if (error) throw error;
-      const mode = (data as { mode?: string } | null)?.mode;
+      const rebuiltPath = (data as { path?: string } | null)?.path ?? null;
+      const rebuiltUrl = rebuiltPath
+        ? supabase.storage.from("media").getPublicUrl(rebuiltPath).data.publicUrl
+        : currentUrl;
+
+      // 2) Remux/transcode côté client via ffmpeg.wasm pour réparer un
+      //    header EBML incomplet + une durée `Infinity`.
+      setRecoverLabel("Analyse du flux vidéo…");
+      const cacheBust = `${rebuiltUrl}${rebuiltUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      const repaired = await runClientRepair(cacheBust, (label) => {
+        if (label) setRecoverLabel(label);
+      });
+
+      // 3) Ré-upload du fichier réparé à la place du fichier cassé, via edge
+      //    function service_role (le bucket n'autorise pas l'écriture directe
+      //    depuis un JWT utilisateur).
+      setRecoverLabel("Enregistrement du fichier réparé…");
+      const sessionRes = await supabase.auth.getSession();
+      const accessToken = sessionRes.data.session?.access_token;
+      if (!accessToken) throw new Error("Session expirée, reconnectez-vous.");
+      const supabaseUrl = (supabase as unknown as { supabaseUrl?: string }).supabaseUrl
+        ?? `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co`;
+      const uploadRes = await fetch(`${supabaseUrl}/functions/v1/store-repaired-video`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": repaired.contentType,
+          "x-session-id": parsedRecover.sessionId,
+          "x-question-index": String(parsedRecover.questionIndex),
+          "x-extension": repaired.extension,
+        },
+        body: new Blob([repaired.data as BlobPart], { type: repaired.contentType }),
+      });
+      if (!uploadRes.ok) {
+        const errBody = await uploadRes.text().catch(() => "");
+        throw new Error(`Upload réparé échoué (${uploadRes.status}) ${errBody}`);
+      }
+      const uploadJson = (await uploadRes.json().catch(() => null)) as { path?: string } | null;
+      const finalPath = uploadJson?.path ?? rebuiltPath;
+      const finalUrl = finalPath
+        ? supabase.storage.from("media").getPublicUrl(finalPath).data.publicUrl
+        : rebuiltUrl;
+
       toast({
-        title: mode === "skip" ? "Vidéo déjà valide" : "Réparation terminée",
-        description: mode === "skip" ? "Le fichier semble déjà sain ; rechargement du lecteur." : "Tentative de rechargement du lecteur.",
+        title: "Vidéo réparée",
+        description: repaired.extension === "mp4"
+          ? "Le conteneur WebM était irrécupérable ; la vidéo a été ré-encodée en MP4."
+          : "Le conteneur a été remuxé et devrait être lisible.",
       });
       setMediaError(null);
+      setHasVideoTrack(null);
       const v = videoRef.current;
       if (v) {
-        const repairedPath = (data as { path?: string } | null)?.path ?? null;
-        const repairedUrl = repairedPath
-          ? supabase.storage.from("media").getPublicUrl(repairedPath).data.publicUrl
-          : currentUrl;
-        const u = new URL(repairedUrl, window.location.href);
+        const u = new URL(finalUrl, window.location.href);
         u.searchParams.set("v", String(Date.now()));
         swapClipUrl(u.toString());
         v.src = u.toString();
         try { v.load(); } catch { /* noop */ }
       }
-      console.log("recover-session-video result:", data);
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
       toast({
         title: "Réparation impossible",
-        description: e?.message ?? "Le fichier n'a pas pu être récupéré.",
+        description: msg || "Le fichier n'a pas pu être récupéré.",
         variant: "destructive",
       });
     } finally {
       setRecovering(false);
+      setRecoverLabel("");
     }
   };
 
@@ -542,6 +619,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
               else if (d === Infinity) fixDuration();
+              // videoWidth === 0 → fichier lisible en audio uniquement
+              // (WebM reconstruit sans piste vidéo décodable). On masque les
+              // contrôles vidéo (play central, ±10s, vitesses, MP4).
+              setHasVideoTrack(e.currentTarget.videoWidth > 0);
               setMediaError(null);
             }}
             onError={(e) => {
@@ -651,7 +732,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                     ) : (
                       <Wrench className="h-3 w-3" />
                     )}
-                    Réparer la vidéo
+                    {recovering ? (recoverLabel || "Réparation…") : "Réparer la vidéo"}
                   </button>
                 )}
               </div>
@@ -662,7 +743,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               )}
             </div>
           )}
-          {!compact && (
+          {!compact && hasVideoTrack !== false && (
             <button
               type="button"
               aria-label={isPlaying ? "Mettre en pause" : "Lire"}
@@ -682,7 +763,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               )}
             </button>
           )}
-          {!compact && (
+          {!compact && hasVideoTrack !== false && (
             <>
               <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
                 <button
