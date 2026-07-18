@@ -619,6 +619,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
               else if (d === Infinity) fixDuration();
+              // videoWidth === 0 → fichier lisible en audio uniquement
+              // (WebM reconstruit sans piste vidéo décodable). On masque les
+              // contrôles vidéo (play central, ±10s, vitesses, MP4).
+              setHasVideoTrack(e.currentTarget.videoWidth > 0);
               setMediaError(null);
             }}
             onError={(e) => {
