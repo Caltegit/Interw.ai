@@ -539,7 +539,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           "x-question-index": String(parsedRecover.questionIndex),
           "x-extension": repaired.extension,
         },
-        body: repaired.data,
+        body: new Blob([repaired.data as BlobPart], { type: repaired.contentType }),
       });
       if (!uploadRes.ok) {
         const errBody = await uploadRes.text().catch(() => "");
