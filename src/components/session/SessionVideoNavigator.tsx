@@ -462,7 +462,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // `src/workers/videoRepair.worker.ts`) puis renvoie le blob réparé et son
   // extension cible ("webm" en cas de remux propre, "mp4" en cas de
   // ré-encodage de secours).
-  const runClientRepair = (url: string, onProgress: (label: string) => void) =>
+  const runClientRepair = (url: string, onProgress: (label: string) => void, preferTranscode = false) =>
     new Promise<{ data: Uint8Array; extension: "webm" | "mp4"; contentType: string }>((resolve, reject) => {
       const worker = new Worker(
         new URL("@/workers/videoRepair.worker.ts", import.meta.url),
@@ -484,8 +484,21 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         worker.terminate();
         reject(err);
       };
-      worker.postMessage({ type: "start", url });
+      worker.onmessageerror = () => {
+        worker.terminate();
+        reject(new Error("Réponse du réparateur vidéo illisible."));
+      };
+      worker.postMessage({ type: "start", url, preferTranscode });
     });
+
+  const explainFunctionError = async (error: unknown, fallback: string) => {
+    const maybeResponse = (error as { context?: Response } | null)?.context;
+    if (maybeResponse) {
+      const body = await maybeResponse.text().catch(() => "");
+      if (body) return body;
+    }
+    return error instanceof Error ? error.message || fallback : fallback;
+  };
 
   const handleRecover = async () => {
     if (!parsedRecover || recovering) return;
@@ -506,50 +519,45 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           sync: true,
           force: true,
         },
+        timeout: 120000,
       });
-      if (error) throw error;
+      if (error) throw new Error(await explainFunctionError(error, "Reconstruction serveur impossible."));
       const rebuiltPath = (data as { path?: string } | null)?.path ?? null;
       const rebuiltUrl = rebuiltPath
         ? supabase.storage.from("media").getPublicUrl(rebuiltPath).data.publicUrl
         : currentUrl;
+      if (!rebuiltUrl) throw new Error("Aucune vidéo source à réparer.");
 
       // 2) Remux/transcode côté client via ffmpeg.wasm pour réparer un
       //    header EBML incomplet + une durée `Infinity`.
       setRecoverLabel("Analyse du flux vidéo…");
       const cacheBust = `${rebuiltUrl}${rebuiltUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+      const shouldTranscode = hasVideoTrack === false || !!mediaError;
       const repaired = await runClientRepair(cacheBust, (label) => {
         if (label) setRecoverLabel(label);
-      });
+      }, shouldTranscode);
 
       // 3) Ré-upload du fichier réparé à la place du fichier cassé, via edge
       //    function service_role (le bucket n'autorise pas l'écriture directe
       //    depuis un JWT utilisateur).
       setRecoverLabel("Enregistrement du fichier réparé…");
-      const sessionRes = await supabase.auth.getSession();
-      const accessToken = sessionRes.data.session?.access_token;
-      if (!accessToken) throw new Error("Session expirée, reconnectez-vous.");
-      const supabaseUrl = (supabase as unknown as { supabaseUrl?: string }).supabaseUrl
-        ?? `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co`;
-      const uploadRes = await fetch(`${supabaseUrl}/functions/v1/store-repaired-video`, {
-        method: "POST",
+      const uploadBody = new Blob([repaired.data as BlobPart], { type: repaired.contentType });
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke("store-repaired-video", {
+        body: uploadBody,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": repaired.contentType,
           "x-session-id": parsedRecover.sessionId,
           "x-question-index": String(parsedRecover.questionIndex),
           "x-extension": repaired.extension,
         },
-        body: new Blob([repaired.data as BlobPart], { type: repaired.contentType }),
+        timeout: 120000,
       });
-      if (!uploadRes.ok) {
-        const errBody = await uploadRes.text().catch(() => "");
-        throw new Error(`Upload réparé échoué (${uploadRes.status}) ${errBody}`);
-      }
-      const uploadJson = (await uploadRes.json().catch(() => null)) as { path?: string } | null;
-      const finalPath = uploadJson?.path ?? rebuiltPath;
+      if (uploadError) throw new Error(await explainFunctionError(uploadError, "Enregistrement de la vidéo réparée impossible."));
+      const finalPath = (uploadData as { path?: string } | null)?.path ?? rebuiltPath;
       const finalUrl = finalPath
         ? supabase.storage.from("media").getPublicUrl(finalPath).data.publicUrl
         : rebuiltUrl;
+      if (!finalUrl) throw new Error("Vidéo réparée enregistrée, mais URL introuvable.");
 
       toast({
         title: "Vidéo réparée",

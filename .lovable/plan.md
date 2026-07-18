@@ -1,61 +1,30 @@
-# Réparer les vidéos reconstruites depuis chunks (Q15 de Joel + toutes les futures)
+## Objectif
+Faire en sorte que le bouton **« Réparer la vidéo »** déclenche une réparation réellement fiable et donne un retour clair si la vidéo ne peut pas être récupérée.
 
-## Problème confirmé
+## Ce que j’ai constaté
+- Le clic ne laisse pas de trace réseau vers `recover-session-video`, donc il est probable que le bouton ne déclenche pas correctement la chaîne complète dans l’état actuel affiché, ou que l’échec se produise avant l’appel visible.
+- La fonction `store-repaired-video` vient d’être ajoutée côté backend mais n’est pas encore déclarée dans la configuration des fonctions. Elle risque donc de ne pas être disponible côté production/prévisualisation.
+- Le code frontend construit manuellement l’URL `/functions/v1/store-repaired-video`, ce qui est fragile ; il vaut mieux utiliser l’appel backend standard déjà utilisé ailleurs.
 
-Sur `sessions/f456e99a…`, la question 15 (`q14.webm`) a été reconstruite par `recover-session-video` à partir de 54 chunks. Le fichier obtenu contient une piste audio Opus lisible mais une piste vidéo VP8/VP9 non décodable : le premier chunk pris comme header ne contient pas le vrai `EBML/Segment/TrackEntry` initial du `MediaRecorder`. Le navigateur affiche donc « Vidéo indisponible — lecture audio uniquement » et une durée `Infinity`.
+## Plan de correction
+1. **Rendre l’appel de sauvegarde fiable**
+   - Appeler `store-repaired-video` via le client backend standard au lieu d’un `fetch` manuel.
+   - Garder les en-têtes nécessaires : session, question, extension.
+   - Afficher une erreur lisible si la fonction n’est pas disponible ou refuse l’upload.
 
-Ce n'est pas propre à cette session : ça arrive à chaque fois qu'un candidat interrompt l'upload monolithique avant la fin et qu'on retombe sur les chunks bruts. Il faut corriger à la source, pas juste réparer une session.
+2. **Déclarer la fonction backend**
+   - Ajouter `store-repaired-video` dans la configuration des fonctions avec authentification activée.
+   - Vérifier aussi que `recover-session-video` est bien déclarée si elle ne l’est pas déjà dans la configuration effective.
 
-## Ce qu'on fait
+3. **Sécuriser le flux de réparation côté interface**
+   - Désactiver le bouton pendant toute la réparation.
+   - Afficher l’étape en cours directement dans le bouton : reconstruction, analyse, réparation, enregistrement.
+   - En cas d’échec, garder l’overlay propre et afficher le vrai message d’erreur.
 
-### 1. Ajouter une étape de remux ffmpeg dans `recover-session-video`
+4. **Corriger le cas “audio seulement”**
+   - Si la réparation réussit en MP4, remplacer immédiatement l’URL du clip courant par l’URL MP4 avec cache-bust.
+   - Recharger la vidéo et réinitialiser l’état `hasVideoTrack` pour forcer une nouvelle détection.
 
-Après la concaténation des chunks (code actuel), au lieu d'uploader directement le blob concaténé :
-
-- écrire le blob dans un fichier temporaire `/tmp/raw.webm`
-- lancer `ffmpeg -fflags +genpts -i /tmp/raw.webm -c copy -f webm /tmp/fixed.webm`
-  - `-c copy` = pas de ré-encodage, très rapide (~2-5s pour une réponse de 2min)
-  - `-fflags +genpts` = régénère des timestamps propres → fixe la duration `Infinity`
-  - ffmpeg reconstruit un header EBML cohérent à partir des paquets trouvés
-- si `ffmpeg` échoue avec « no video stream found » ou similaire, deuxième passe : `ffmpeg -i /tmp/raw.webm -c:v libvpx -b:v 1M -c:a copy /tmp/fixed.webm` (ré-encodage vidéo)
-- si les deux échouent, garder le comportement actuel (upload du blob concaténé) et logger un warning
-- uploader `/tmp/fixed.webm` à la place du blob brut sur `q{n}.webm`
-
-**Contrainte edge function** : Deno Deploy n'a pas ffmpeg natif. Deux options :
-- **A.** Utiliser `ffmpeg.wasm` (npm `@ffmpeg/ffmpeg`) chargé dans l'edge function. Plus lourd à cold-start (~200-400ms) mais 100% Deno-compatible.
-- **B.** Utiliser un binaire ffmpeg statique embarqué via `Deno.Command`. Plus rapide mais nécessite de packager le binaire dans la fonction.
-
-Je pars sur **A** (ffmpeg.wasm) : déjà utilisé côté client dans `public/ffmpeg/ffmpeg-core.js`, moins d'inconnues.
-
-### 2. Bouton « Réparer la vidéo » côté UI
-
-Le bouton existe déjà dans le player (visible sur ton screenshot). Vérifier qu'il rappelle bien `recover-session-video` avec un flag `force_remux=true` pour retraiter le fichier existant, et pas seulement les cas où `q{n}.webm` est absent. Aujourd'hui il ne fait rien si le fichier existe déjà.
-
-### 3. Nettoyer l'UI quand la vidéo est vraiment cassée
-
-Sur le screenshot on voit se superposer :
-- gros bouton Play central
-- boutons ±10s en haut
-- sélecteur de vitesse 1× 1.5× 2×
-- bandeau « Vidéo indisponible — lecture audio uniquement »
-- boutons « Réessayer / Réparer la vidéo »
-- timecode aberrant `277777746:40`
-
-Quand `video.videoWidth === 0` après `loadedmetadata` (= pas de piste vidéo décodable), masquer : le gros Play central, les ±10s, le sélecteur de vitesse, le download MP4 (impossible sans vidéo). Ne garder que la barre audio native et le bandeau + boutons de réparation. Cacher aussi la duration si elle est `Infinity`.
-
-### 4. Réparer la session de Joel
-
-Une fois le remux déployé, cliquer sur « Réparer la vidéo » sur Q15 de la session `f456e99a…` re-génère un `q14.webm` propre.
-
-Pour Q13 (transcription corrompue `{"segments":[{"`), c'est un autre problème (bug transcription, pas vidéo). Je propose de traiter séparément si tu veux — dis-le-moi.
-
-## Fichiers modifiés
-
-- `supabase/functions/recover-session-video/index.ts` — ajout étape remux ffmpeg.wasm + support `force_remux`
-- `src/components/session/SessionClipPlayer.tsx` — masquer contrôles vidéo quand pas de piste vidéo décodable, masquer duration `Infinity`
-- Éventuellement `src/components/session/SessionVideoNavigator.tsx` selon où sont câblés les boutons « Réessayer / Réparer »
-
-## Hors scope
-
-- Le bug de transcription Q13 (JSON tronqué) — à faire séparément
-- Empêcher en amont les uploads monolithiques ratés (nécessite retravailler le pipeline candidat, gros chantier)
+5. **Tester avant de conclure**
+   - Tester le parcours sur la session concernée en prévisualisation.
+   - Vérifier : clic sur « Réparer », affichage de progression, appels backend, puis rechargement de la vidéo ou message d’échec explicite.

@@ -12,6 +12,7 @@ import { toBlobURL } from "@ffmpeg/util";
 interface StartMessage {
   type: "start";
   url: string;
+  preferTranscode?: boolean;
 }
 
 type OutMessage =
@@ -24,13 +25,24 @@ function post(msg: OutMessage, transfer?: Transferable[]) {
 }
 
 async function loadFFmpeg(): Promise<FFmpeg> {
-  const bases = [
-    "/ffmpeg",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
-    "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
-  ];
+  const bases = ["/ffmpeg"];
   let lastErr: unknown = null;
   for (const baseURL of bases) {
+    try {
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: `${baseURL}/ffmpeg-core.js`,
+        wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+      });
+      return ffmpeg;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  for (const baseURL of [
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
+    "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
+  ]) {
     try {
       const ffmpeg = new FFmpeg();
       const [coreURL, wasmURL] = await Promise.all([
@@ -77,10 +89,16 @@ async function tryTranscodeMp4(ffmpeg: FFmpeg): Promise<Uint8Array | null> {
   // partiellement corrompue. `-err_detect ignore_err` évite l'abandon sur
   // paquet cassé.
   const attempts: string[][] = [
-    ["-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "mpeg4", "-q:v", "5",
+    ["-fflags", "+genpts", "-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
      "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
      "-movflags", "+faststart", "out.mp4"],
-    ["-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "mpeg4", "-q:v", "5",
+    ["-fflags", "+genpts", "-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "mpeg4", "-q:v", "5",
+     "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k",
+     "-movflags", "+faststart", "out.mp4"],
+    ["-fflags", "+genpts", "-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+     "-pix_fmt", "yuv420p", "-an",
+     "-movflags", "+faststart", "out.mp4"],
+    ["-fflags", "+genpts", "-err_detect", "ignore_err", "-i", "in.webm", "-c:v", "mpeg4", "-q:v", "5",
      "-pix_fmt", "yuv420p", "-an",
      "-movflags", "+faststart", "out.mp4"],
   ];
@@ -110,15 +128,17 @@ async function run(msg: StartMessage) {
     const ffmpeg = await loadFFmpeg();
     await ffmpeg.writeFile("in.webm", data);
 
-    post({ type: "progress", value: 50, label: "Réparation du conteneur…" });
-    const remuxed = await tryRemuxWebm(ffmpeg);
-    if (remuxed) {
-      post({ type: "progress", value: 100, label: "" });
-      post(
-        { type: "done", data: remuxed, extension: "webm", contentType: "video/webm" },
-        [remuxed.buffer],
-      );
-      return;
+    if (!msg.preferTranscode) {
+      post({ type: "progress", value: 50, label: "Réparation du conteneur…" });
+      const remuxed = await tryRemuxWebm(ffmpeg);
+      if (remuxed) {
+        post({ type: "progress", value: 100, label: "" });
+        post(
+          { type: "done", data: remuxed, extension: "webm", contentType: "video/webm" },
+          [remuxed.buffer],
+        );
+        return;
+      }
     }
 
     post({ type: "progress", value: 70, label: "Ré-encodage vidéo…" });
