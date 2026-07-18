@@ -2133,6 +2133,28 @@ export default function InterviewStart() {
       const fileName = `interviews/${sessionId}/q${questionIndex}.${ext}`;
       const audioFileName = `interviews/${sessionId}/q${questionIndex}.audio.${audioExt}`;
 
+      // Contrôle d'intégrité : le blob final doit contenir un en-tête de conteneur
+      // valide (EBML pour WebM, ftyp pour MP4). Sans ça la vidéo sera illisible
+      // (durée = Infinity). On loggue pour détection proactive côté admin.
+      let headerValid = false;
+      try {
+        const headBuf = new Uint8Array(await blob.slice(0, 32).arrayBuffer());
+        if (ext === "webm") {
+          headerValid = headBuf.length >= 4 && headBuf[0] === 0x1a && headBuf[1] === 0x45 && headBuf[2] === 0xdf && headBuf[3] === 0xa3;
+        } else if (ext === "mp4") {
+          headerValid = headBuf.length >= 12 && headBuf[4] === 0x66 && headBuf[5] === 0x74 && headBuf[6] === 0x79 && headBuf[7] === 0x70;
+        }
+      } catch { /* noop */ }
+      if (!headerValid) {
+        logger.error("interview_video_header_missing", {
+          sessionId,
+          questionIndex,
+          mime: realMime,
+          chunkCount: videoBufferLocal.length,
+          blobSize: blob.size,
+        });
+      }
+
       // Manifest des chunks pour fallback de lecture (en arrière-plan, non bloquant).
       if (chunkPaths.length > 0) {
         const manifest = {
