@@ -1,32 +1,61 @@
-# Plan A1 — Ignorer et documenter le finding `PUBLIC_SENSITIVE_DATA` sur `organizations`
+# Réparer les vidéos reconstruites depuis chunks (Q15 de Joel + toutes les futures)
 
-## Objectif
-Débloquer la publication en marquant comme "ignoré" un finding du scanner de sécurité qui est un faux positif, sans toucher au code ni à la base de données.
+## Problème confirmé
 
-## Contexte
-Le scanner remonte une erreur `PUBLIC_SENSITIVE_DATA` sur la table `organizations` en se basant sur la policy RLS `Anon can read public org fields`. Cette policy autorise en effet la lecture pour les utilisateurs anonymes, mais la migration du 8 juillet a mis en place une protection **au niveau colonne** : les rôles `anon` et `authenticated` n'ont un `GRANT SELECT` que sur `id`, `name`, `slug`, `logo_url`, `created_at`. Les colonnes sensibles (`client_notes`, `pricing`, `owner_id`, crédits…) ne sont donc pas accessibles via l'API publique, malgré ce que suggère le scanner.
+Sur `sessions/f456e99a…`, la question 15 (`q14.webm`) a été reconstruite par `recover-session-video` à partir de 54 chunks. Le fichier obtenu contient une piste audio Opus lisible mais une piste vidéo VP8/VP9 non décodable : le premier chunk pris comme header ne contient pas le vrai `EBML/Segment/TrackEntry` initial du `MediaRecorder`. Le navigateur affiche donc « Vidéo indisponible — lecture audio uniquement » et une durée `Infinity`.
 
-## Étapes
+Ce n'est pas propre à cette session : ça arrive à chaque fois qu'un candidat interrompt l'upload monolithique avant la fin et qu'on retombe sur les chunks bruts. Il faut corriger à la source, pas juste réparer une session.
 
-1. **Ignorer le finding**
-   - Appel de l'outil de gestion des findings avec `operation: "ignore"` sur `PUBLIC_SENSITIVE_DATA` / `organizations`.
-   - Explication enregistrée : faux positif — protection assurée par les `GRANT` colonne-par-colonne posés le 8 juillet, les colonnes sensibles ne sont pas exposées à `anon`.
+## Ce qu'on fait
 
-2. **Mettre à jour la mémoire sécurité**
-   - Documenter que la lecture anonyme de `organizations` est intentionnelle et limitée aux 5 colonnes publiques (`id`, `name`, `slug`, `logo_url`, `created_at`), nécessaire pour la page publique d'organisation et les pages publiques de projet.
-   - Ajouter une règle : toute nouvelle colonne ajoutée à `organizations` doit être explicitement exclue des `GRANT` accordés à `anon` / `authenticated`, sinon elle deviendrait publique.
-   - Rappeler que la policy RLS `Anon can read public org fields` est volontaire et complémentaire des grants colonne.
+### 1. Ajouter une étape de remux ffmpeg dans `recover-session-video`
 
-3. **Republier**
-   - Une fois le finding ignoré, la publication n'est plus bloquée. L'utilisateur peut cliquer sur "Publier" pour pousser les changements frontend (UI critères) en production.
+Après la concaténation des chunks (code actuel), au lieu d'uploader directement le blob concaténé :
 
-## Ce qui n'est PAS modifié
-- Aucun fichier applicatif.
-- Aucune policy RLS.
-- Aucun `GRANT`.
-- Aucune donnée.
-- Aucun redéploiement d'edge function ni migration.
+- écrire le blob dans un fichier temporaire `/tmp/raw.webm`
+- lancer `ffmpeg -fflags +genpts -i /tmp/raw.webm -c copy -f webm /tmp/fixed.webm`
+  - `-c copy` = pas de ré-encodage, très rapide (~2-5s pour une réponse de 2min)
+  - `-fflags +genpts` = régénère des timestamps propres → fixe la duration `Infinity`
+  - ffmpeg reconstruit un header EBML cohérent à partir des paquets trouvés
+- si `ffmpeg` échoue avec « no video stream found » ou similaire, deuxième passe : `ffmpeg -i /tmp/raw.webm -c:v libvpx -b:v 1M -c:a copy /tmp/fixed.webm` (ré-encodage vidéo)
+- si les deux échouent, garder le comportement actuel (upload du blob concaténé) et logger un warning
+- uploader `/tmp/fixed.webm` à la place du blob brut sur `q{n}.webm`
 
-## Risques
-- Nul côté runtime : rien ne change dans l'app.
-- Résiduel : si un futur développeur ajoute une colonne sensible à `organizations` sans mettre à jour les grants, le scanner ne re-signalera pas ce cas particulier. La règle ajoutée dans la mémoire sécurité vise précisément à alerter les prochains agents sur ce point.
+**Contrainte edge function** : Deno Deploy n'a pas ffmpeg natif. Deux options :
+- **A.** Utiliser `ffmpeg.wasm` (npm `@ffmpeg/ffmpeg`) chargé dans l'edge function. Plus lourd à cold-start (~200-400ms) mais 100% Deno-compatible.
+- **B.** Utiliser un binaire ffmpeg statique embarqué via `Deno.Command`. Plus rapide mais nécessite de packager le binaire dans la fonction.
+
+Je pars sur **A** (ffmpeg.wasm) : déjà utilisé côté client dans `public/ffmpeg/ffmpeg-core.js`, moins d'inconnues.
+
+### 2. Bouton « Réparer la vidéo » côté UI
+
+Le bouton existe déjà dans le player (visible sur ton screenshot). Vérifier qu'il rappelle bien `recover-session-video` avec un flag `force_remux=true` pour retraiter le fichier existant, et pas seulement les cas où `q{n}.webm` est absent. Aujourd'hui il ne fait rien si le fichier existe déjà.
+
+### 3. Nettoyer l'UI quand la vidéo est vraiment cassée
+
+Sur le screenshot on voit se superposer :
+- gros bouton Play central
+- boutons ±10s en haut
+- sélecteur de vitesse 1× 1.5× 2×
+- bandeau « Vidéo indisponible — lecture audio uniquement »
+- boutons « Réessayer / Réparer la vidéo »
+- timecode aberrant `277777746:40`
+
+Quand `video.videoWidth === 0` après `loadedmetadata` (= pas de piste vidéo décodable), masquer : le gros Play central, les ±10s, le sélecteur de vitesse, le download MP4 (impossible sans vidéo). Ne garder que la barre audio native et le bandeau + boutons de réparation. Cacher aussi la duration si elle est `Infinity`.
+
+### 4. Réparer la session de Joel
+
+Une fois le remux déployé, cliquer sur « Réparer la vidéo » sur Q15 de la session `f456e99a…` re-génère un `q14.webm` propre.
+
+Pour Q13 (transcription corrompue `{"segments":[{"`), c'est un autre problème (bug transcription, pas vidéo). Je propose de traiter séparément si tu veux — dis-le-moi.
+
+## Fichiers modifiés
+
+- `supabase/functions/recover-session-video/index.ts` — ajout étape remux ffmpeg.wasm + support `force_remux`
+- `src/components/session/SessionClipPlayer.tsx` — masquer contrôles vidéo quand pas de piste vidéo décodable, masquer duration `Infinity`
+- Éventuellement `src/components/session/SessionVideoNavigator.tsx` selon où sont câblés les boutons « Réessayer / Réparer »
+
+## Hors scope
+
+- Le bug de transcription Q13 (JSON tronqué) — à faire séparément
+- Empêcher en amont les uploads monolithiques ratés (nécessite retravailler le pipeline candidat, gros chantier)
