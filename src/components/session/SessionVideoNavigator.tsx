@@ -743,7 +743,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               )}
             </div>
           )}
-          {!compact && (
+          {!compact && hasVideoTrack !== false && (
             <button
               type="button"
               aria-label={isPlaying ? "Mettre en pause" : "Lire"}
