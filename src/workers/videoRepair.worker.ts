@@ -25,13 +25,24 @@ function post(msg: OutMessage, transfer?: Transferable[]) {
 }
 
 async function loadFFmpeg(): Promise<FFmpeg> {
-  const bases = [
-    "/ffmpeg",
-    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
-    "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
-  ];
+  const bases = ["/ffmpeg"];
   let lastErr: unknown = null;
   for (const baseURL of bases) {
+    try {
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: `${baseURL}/ffmpeg-core.js`,
+        wasmURL: `${baseURL}/ffmpeg-core.wasm`,
+      });
+      return ffmpeg;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  for (const baseURL of [
+    "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm",
+    "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm",
+  ]) {
     try {
       const ffmpeg = new FFmpeg();
       const [coreURL, wasmURL] = await Promise.all([
