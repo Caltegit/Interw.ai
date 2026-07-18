@@ -763,7 +763,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               )}
             </button>
           )}
-          {!compact && (
+          {!compact && hasVideoTrack !== false && (
             <>
               <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center gap-2">
                 <button
