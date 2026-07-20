@@ -1,74 +1,113 @@
-## Constat
 
-La vidéo Q15 de la session `f456e99a` est cassée parce que le pipeline d'enregistrement de l'entretien peut produire, dans certains cas, des chunks qui — une fois recollés côté serveur — ne forment pas un fichier lisible.
-
-Ce que j'ai vérifié dans le code actuel (`src/pages/InterviewStart.tsx`, `supabase/functions/finalize-abandoned-session/index.ts`) :
-
-1. `MediaRecorder.start(1000)` : le navigateur émet un chunk par seconde. **Seul le tout premier chunk contient l'en-tête EBML** (WebM) ou l'atome `ftyp`/`moov` (MP4). Si ce premier chunk est perdu, uploadé en retard, ou si le recorder est redémarré en cours de question (changement de micro, `onerror`), on obtient un flux sans header lisible.
-2. L'assemblage serveur (`finalize-abandoned-session`) fait un scan EBML pour retrouver le début, mais si aucun chunk ne contient l'en-tête (cas Q15), le fichier reconstitué est illisible : audio récupérable, piste vidéo décodable seulement partiellement, durée = `Infinity`.
-3. Les redémarrages de recorder (`restartActiveRecorderAfterAudioSwap`, `recorder.onerror`) créent un second flux MediaRecorder avec **son propre header**, concaténé au premier → conteneur invalide.
-4. Les uploads de chunks sont parallèles avec retry, mais rien ne garantit l'ordre d'écriture ni la présence effective du chunk 0 avant la fin.
-5. Aucun contrôle d'intégrité à la fin de la question : on passe à la suivante sans vérifier que le blob assemblé est lisible.
-
-Le bouton « Réparer » sert de filet de sécurité, mais la vraie correction est de garantir un fichier lisible dès l'enregistrement.
+# Rapport quotidien santé produit — email vers eva@alboteam.com
 
 ## Objectif
+Recevoir chaque matin à ~7h (Europe/Paris) un email récapitulatif des dernières 24h. Premier envoi rétroactif couvrant les 3 derniers jours dès le déploiement.
 
-Faire en sorte que chaque question produise, à la fin, un fichier vidéo **toujours** lisible, avec header et durée, sans dépendre d'une réparation ultérieure.
+## Contraintes validées
+- Destinataire unique : **eva@alboteam.com** (hardcodé côté serveur)
+- Réservé aux super admins : la fonction refuse d'envoyer ailleurs que vers cette adresse fixe (pas d'UI, pas de config user)
+- Aucune nouvelle page, aucun composant frontend, aucune nouvelle table
+- Cron 7h Paris (utilisation d'un cron `AT TIME ZONE 'Europe/Paris'` pour gérer été/hiver automatiquement)
 
-## Plan
+## Contenu de l'email
 
-### 1. Un seul flux MediaRecorder par question, jamais redémarré
+Email HTML mono-colonne, sobre, avec en tête un badge de sévérité globale (vert / orange / rouge) calculé à partir des compteurs.
 
-- Interdire tout redémarrage du `MediaRecorder` vidéo pendant l'enregistrement d'une question. Si un changement de micro survient, on ne touche qu'au recorder audio auxiliaire, jamais au recorder vidéo principal.
-- Si `recorder.onerror` se déclenche, on arrête proprement la question, on marque le segment comme partiel, et on passe à la suivante — plutôt que de recoller deux flux incompatibles.
+1. **Résumé chiffré (top)**
+   - Nb sessions terminées / démarrées / abandonnées
+   - Nb rapports générés OK / en erreur
+   - Nb transcriptions OK / failed / too_large / low_confidence
+   - Nb erreurs edge functions
+   - Nb nouveaux feedbacks utilisateurs
+   - Nb commits GitHub
 
-### 2. Garantir la présence de l'en-tête (chunk 0)
+2. **Edge functions & backend** (via `supabase.analytics_query` sur `function_edge_logs` + `postgres_logs`)
+   - Compteurs par fonction : invocations / erreurs / latence P95
+   - Top 5 messages d'erreur les plus fréquents avec `session_id` extrait si présent
+   - Fonctions à surveiller en priorité : `generate-report`, `generate-fit-matrix`, `transcribe-session`, `process-report-queue`, `backfill-report-timestamps`, `store-repaired-video`, `finalize-abandoned-session`, `send-transactional-email`
 
-- Garder `start(1000)` pour l'upload progressif, mais **bufferiser le chunk 0 en local** et l'uploader en priorité absolue, avec un retry infini borné en temps (jusqu'à la fin de la question). Aucun chunk suivant n'est considéré comme "committable" tant que le chunk 0 n'est pas confirmé.
-- Écrire dans le manifest un champ `header_chunk_confirmed: true/false` pour que le serveur sache immédiatement si le fichier sera lisible.
+3. **Sessions candidats anormales**
+   - Sessions `failed` sur la fenêtre
+   - Sessions terminées sans row dans `reports`
+   - `report_jobs` avec `status = 'failed'` + `last_error`
+   - Messages avec `transcription_status IN ('failed','too_large','low_confidence')`
+   - Sessions bloquées en `processing` depuis > 30 min
 
-### 3. Finalisation locale avec contrôle d'intégrité
+4. **Feedback utilisateurs**
+   - Nouveaux threads (`feedback_threads.created_at` dans la fenêtre)
+   - Nouveaux messages non lus par un admin
+   - Groupés par statut
 
-- À la fin de chaque question, avant d'enchaîner :
-  - appeler `requestData()` puis `stop()`,
-  - reconstituer localement le blob complet en mémoire,
-  - vérifier la présence de l'en-tête (EBML pour WebM, `ftyp` pour MP4),
-  - uploader **ce blob final unique** en tant que `q{i}.{ext}` dans un chemin dédié `interviews/{session}/final/q{i}.{ext}`, avec `upsert: true`.
-- Le fichier final ainsi produit contient toujours son header (il vient d'un `stop()` propre), avec durée correcte.
-- Les chunks continuent d'exister en secours pour les cas d'abandon (téléphone fermé), mais le chemin nominal n'en dépend plus.
+5. **Historique code / risque de régression**
+   - Commits GitHub des 24h via connecteur GitHub
+   - Flag "zone sensible" si le commit touche une des zones critiques : `supabase/functions/generate-*`, `InterviewStart.tsx`, `videoRepair.worker.ts`, `useSessionDetail.ts`, `SessionReportView.tsx`, `finalize-abandoned-session`, migrations SQL
+   - Si le connecteur GitHub n'est pas encore lié : section marquée "GitHub non connecté" avec un simple lien
 
-### 4. Priorité du fichier final côté serveur
+6. **Emails & purges**
+   - `email_alert_log` récents (bounces / complaints)
+   - `data_purge_log` récents
 
-- `finalize-session` et le lecteur utilisent en priorité `interviews/{session}/final/q{i}.{ext}` s'il existe. On ne retombe sur la reconstitution depuis les chunks que si ce fichier est absent (session abandonnée avant `stop()`).
-- Le manifest indique explicitement le chemin final attendu.
+## Architecture
 
-### 5. Sauvegarde de secours: TUS resumable pour le blob final
+```text
+pg_cron  (`0 7 * * *` AT TIME ZONE 'Europe/Paris')
+     │
+     ▼
+edge function: daily-health-report
+     │
+     ├── analytics_query : function_edge_logs, postgres_logs
+     ├── SQL : sessions, reports, report_jobs, session_messages,
+     │         feedback_threads, feedback_messages,
+     │         email_alert_log, data_purge_log
+     ├── GitHub API (si connecteur lié) : /repos/{owner}/{repo}/commits?since=...
+     └── send-transactional-email
+             ↓
+     eva@alboteam.com
+```
 
-- Utiliser l'upload resumable de Lovable Cloud Storage (protocole TUS) pour le blob final, avec reprise automatique si le réseau coupe pendant l'upload post-`stop()`. Cela règle le cas "le candidat ferme l'onglet au moment où on envoie le fichier final".
+## Détails techniques
 
-### 6. Détection en amont dans le tableau de bord admin
+**Nouvelle edge function `daily-health-report`**
+- Paramètre : `?period_hours=24` (défaut). Le 1er appel utilisera `72`.
+- Destinataire **hardcodé** : `eva@alboteam.com`. Toute autre valeur passée en paramètre est ignorée.
+- `verify_jwt = false` (appelée par pg_cron avec anon key). Sécurité : rate-limit implicite (1 appel/jour) + destinataire fixe.
+- Utilise `SUPABASE_SERVICE_ROLE_KEY` pour requêter les tables.
+- Utilise `send-transactional-email` avec un nouveau template `daily-health-report` (React Email) — pas de nouvelle table, juste un template ajouté au registry.
+- Si le connecteur GitHub est présent (secret `GITHUB_API_KEY` dispo), appel via connector gateway. Sinon, la section commits affiche "non connecté".
 
-- Étendre `AdminSessionsQueue` / `AdminCandidatesToRecover` : lister automatiquement les sessions dont au moins une question n'a pas de fichier `final/q{i}.{ext}` valide, avec bouton « Réparer » déjà en place.
-- Ajouter un compteur "questions à réparer" visible côté RH.
+**Nouveau template email `daily-health-report`**
+- Fichier : `supabase/functions/_shared/transactional-email-templates/daily-health-report.tsx`
+- Enregistré dans le registry existant `TEMPLATES`
+- Reçoit `templateData` = `{ periodStart, periodEnd, severity, sections: {...} }`
 
-### 7. Test bout en bout
+**Cron pg_cron**
+- Créé via `supabase--insert` (pas migration), car contient l'anon key du projet
+- Expression : `0 7 * * *` avec `SET timezone TO 'Europe/Paris'` dans la commande, OU cron à `0 5 * * *` UTC + tolérance été/hiver (~1h de décalage). Solution retenue : utilisation de `cron.schedule` avec un wrapper `SELECT` qui filtre sur `EXTRACT(hour FROM now() AT TIME ZONE 'Europe/Paris') = 7` pour rester précis toute l'année.
 
-- Ajouter un test Playwright qui simule :
-  - un entretien complet normal → vérifier la présence des fichiers `final/q{i}.webm` avec durée finie,
-  - un changement de micro pendant une question → vérifier que la vidéo reste lisible,
-  - une fermeture d'onglet en cours de question → vérifier que la reconstitution depuis chunks reste possible (chemin de secours).
+**Premier envoi manuel (rétroactif 3 jours)**
+- Après déploiement, appel unique avec `period_hours=72` pour envoi immédiat.
 
-## Ce qui reste comme filet
+## Impact build & régressions possibles
 
-- La chaîne « Rebuild serveur → Remux/Transcode client → Upload » reste en place pour les entretiens déjà passés et pour les cas d'abandon. Elle n'est plus la voie normale, mais la voie de secours.
+- **Aucune modification** des chemins critiques (rapport, entretien, matrice, sessions, transcription)
+- **Aucune nouvelle table**, **aucun nouveau composant React**, **aucune nouvelle page**
+- Ajouts uniquement :
+  - 1 nouvelle edge function isolée (`daily-health-report`)
+  - 1 nouveau template email dans le registry
+  - 1 cron pg_cron
+- **Risque de régression : nul** sur l'app existante
+- **Risque opérationnel** : si `analytics_query` renvoie beaucoup de lignes, la fonction peut être lente. Mitigation : `LIMIT 1000` par fonction et fenêtre stricte
+- **Coût** : ~0 € (envoi gratuit dans le tier Resend, compute négligeable)
 
-## Détails techniques (pour référence)
+## Livrables
 
-- Fichiers principaux à modifier :
-  - `src/pages/InterviewStart.tsx` : `startQuestionRecording`, `stopAndUploadQuestionVideo`, `restartActiveRecorderAfterAudioSwap`, `uploadChunk`.
-  - `supabase/functions/finalize-abandoned-session/index.ts` : lecture prioritaire de `final/q{i}.{ext}`.
-  - `supabase/functions/recover-session-video/index.ts` : idem.
-  - `src/components/session/SessionVideoNavigator.tsx` : lecture prioritaire de `final/q{i}.{ext}`.
-- Format du manifest étendu : ajouter `header_chunk_confirmed`, `final_path`, `final_uploaded_at`.
-- Bucket Storage : réutiliser `media`, sous-dossier `final/` par session.
+1. `supabase/functions/daily-health-report/index.ts` — la fonction (auto-déployée)
+2. `supabase/functions/_shared/transactional-email-templates/daily-health-report.tsx` — template React Email
+3. Ajout dans `supabase/functions/_shared/transactional-email-templates/registry.ts`
+4. Insertion SQL du cron via `supabase--insert`
+5. 1er appel manuel `period_hours=72` → email immédiat couvrant les 3 derniers jours envoyé à eva@alboteam.com
+
+## À ta charge avant que je puisse construire
+
+- **Connecter GitHub** (facultatif pour un 1er envoi, mais requis pour la section commits) : menu **+** en bas à gauche du chat → GitHub → Connect project. Si pas fait, je livre quand même et la section commits sera vide au 1er run.
