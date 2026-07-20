@@ -20,9 +20,11 @@ import { template as candidateAbandonReminder } from './candidate-abandon-remind
 import { template as feedbackCopy } from './feedback-copy.tsx'
 import { template as organizationInvite } from './organization-invite.tsx'
 import { template as candidateRecoveryInvite } from './candidate-recovery-invite.tsx'
+import { template as dailyHealthReport } from './daily-health-report.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'candidate-recovery-invite': candidateRecoveryInvite,
+  'daily-health-report': dailyHealthReport,
   'interview-report': interviewReport,
   'demo-request': demoRequest,
   'email-failure-alert': emailFailureAlert,
