@@ -1,12 +1,12 @@
 // Finalise une session abandonnée (téléphone fermé / onglet tué) :
 // - reconstitue q{i}.{webm|mp4} à partir des chunks uploadés au fil de l'eau,
 //   en détectant le format réel via le manifest ou l'extension des chunks,
-// - écrit/met à jour le manifest,
-// - passe la session en 'completed' (le trigger Postgres déclenchera la
-//   transcription + génération du rapport via finalize-session).
+// - renseigne session_messages.video_segment_url / audio_segment_url pour chaque
+//   question récupérée (idempotent : ne touche que les URLs NULL),
+// - passe la session en 'completed' (+ marque recovered_at) — le trigger Postgres
+//   déclenchera la transcription + génération du rapport via finalize-session.
 //
-// Idempotent : safe à appeler plusieurs fois.
-// Public : appelée via navigator.sendBeacon (pas d'auth utilisateur).
+// Idempotent : safe à appeler plusieurs fois. Public : appelée par le front (sendBeacon).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 function buildCorsHeaders(req: Request) {
@@ -34,6 +34,12 @@ type ChunkSource = {
   name: string;
   path: string;
   order: number;
+};
+
+type AssembleResult = {
+  ok: boolean;
+  ext?: "webm" | "mp4";
+  videoPath?: string;
 };
 
 function indexOfMagic(buf: Uint8Array): number {
@@ -97,10 +103,6 @@ async function readManifest(
   }
 }
 
-// Détermine le format réel de la question :
-//  1) lit le manifest.json s'il existe (mimeType posé par le front),
-//  2) sinon regarde l'extension majoritaire des chunks,
-//  3) fallback `.webm`.
 async function detectQuestionFormat(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -114,12 +116,8 @@ async function detectQuestionFormat(
   if (mp4FromManifest > webmFromManifest) return { ext: "mp4", contentType: "video/mp4" };
   if (webmFromManifest > 0) return { ext: "webm", contentType: "video/webm" };
   const mt: string | undefined = manifest?.mimeType;
-  if (mt && mt.startsWith("video/mp4")) {
-    return { ext: "mp4", contentType: "video/mp4" };
-  }
-  if (mt && mt.startsWith("video/webm")) {
-    return { ext: "webm", contentType: "video/webm" };
-  }
+  if (mt && mt.startsWith("video/mp4")) return { ext: "mp4", contentType: "video/mp4" };
+  if (mt && mt.startsWith("video/webm")) return { ext: "webm", contentType: "video/webm" };
   try {
     const { data: chunks } = await supabase.storage
       .from("media")
@@ -144,20 +142,14 @@ async function resolveChunkSources(
   const manifestChunks = (manifest?.chunks ?? [])
     .map((path, order) => ({ name: basename(path), path, order }))
     .filter((chunk) => chunk.name.startsWith("chunk-") && extFromPath(chunk.path));
-  if (manifestChunks.length > 0) {
-    return manifestChunks.sort(sortChunkSources);
-  }
+  if (manifestChunks.length > 0) return manifestChunks.sort(sortChunkSources);
 
   const { data: chunks } = await supabase.storage
     .from("media")
     .list(folder, { limit: 1000, sortBy: { column: "name", order: "asc" } });
 
   return (chunks ?? [])
-    .filter(
-      (f) =>
-        f.name.startsWith("chunk-") &&
-        (f.name.endsWith(".webm") || f.name.endsWith(".mp4")),
-    )
+    .filter((f) => f.name.startsWith("chunk-") && (f.name.endsWith(".webm") || f.name.endsWith(".mp4")))
     .map((f, order) => ({ name: f.name, path: `${folder}/${f.name}`, order }))
     .sort(sortChunkSources);
 }
@@ -174,9 +166,7 @@ async function refineFormatFromChunkContent(
       const detected = sniffChunkFormat(new Uint8Array(await data.arrayBuffer()));
       if (detected === "mp4") return { ext: "mp4", contentType: "video/mp4" };
       if (detected === "webm") return { ext: "webm", contentType: "video/webm" };
-    } catch {
-      /* noop */
-    }
+    } catch { /* noop */ }
   }
   return current;
 }
@@ -185,51 +175,41 @@ async function assembleQuestion(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
   questionIndex: number,
-): Promise<boolean> {
+): Promise<AssembleResult> {
   const parent = `interviews/${sessionId}`;
-  const manifest = await readManifest(supabase, sessionId, questionIndex);
-  const chunkFiles = await resolveChunkSources(supabase, sessionId, questionIndex, manifest);
+  const folder = `${parent}/q${questionIndex}`;
+  const manifestData = await readManifest(supabase, sessionId, questionIndex);
+  const chunkFiles = await resolveChunkSources(supabase, sessionId, questionIndex, manifestData);
   const { ext, contentType } = await refineFormatFromChunkContent(
     supabase,
     chunkFiles,
-    await detectQuestionFormat(
-      supabase,
-      sessionId,
-      questionIndex,
-      manifest,
-    ),
+    await detectQuestionFormat(supabase, sessionId, questionIndex, manifestData),
   );
   const finalName = `q${questionIndex}.${ext}`;
   const finalPath = `${parent}/${finalName}`;
 
-  // Si un blob final existe déjà (webm ou mp4), rien à faire.
+  // Si un blob final existe déjà (webm ou mp4), on considère la question OK.
   const { data: existing } = await supabase.storage
     .from("media")
     .list(parent, { limit: 1000 });
-  if (
-    existing?.some(
-      (f) =>
-        f.name === `q${questionIndex}.webm` ||
-        f.name === `q${questionIndex}.mp4`,
-    )
-  ) {
-    return true;
+  const alreadyExists = existing?.find(
+    (f) => f.name === `q${questionIndex}.webm` || f.name === `q${questionIndex}.mp4`,
+  );
+  if (alreadyExists) {
+    const existingExt = alreadyExists.name.endsWith(".mp4") ? "mp4" : "webm";
+    return { ok: true, ext: existingExt, videoPath: `${parent}/${alreadyExists.name}` };
   }
 
-  if (chunkFiles.length === 0) return false;
+  if (chunkFiles.length === 0) return { ok: false };
 
-  // Pour les WebM, on s'assure de démarrer sur un init segment EBML valide
-  // (sinon le fichier reconstruit est illisible). Pour MP4, on ne tente pas
-  // de scan : on concatène tel quel.
+  // Pour les WebM : démarrer sur un init segment EBML valide.
   let firstValidIdx = 0;
   let droppedFromFirst = 0;
   if (ext === "webm") {
     firstValidIdx = -1;
     for (let k = 0; k < chunkFiles.length; k++) {
       const f = chunkFiles[k];
-      const { data, error } = await supabase.storage
-        .from("media")
-        .download(f.path);
+      const { data, error } = await supabase.storage.from("media").download(f.path);
       if (error || !data) continue;
       const buf = new Uint8Array(await data.arrayBuffer());
       const idx = indexOfMagic(buf);
@@ -240,16 +220,12 @@ async function assembleQuestion(
       }
     }
     if (firstValidIdx < 0) {
-      console.error(
-        "finalize-abandoned: no EBML header found in chunks",
-        sessionId,
-        questionIndex,
-      );
-      return false;
+      console.error("finalize-abandoned: no EBML header found", sessionId, questionIndex);
+      return { ok: false };
     }
   }
 
-  // Assemblage en streaming : un seul chunk en mémoire à la fois.
+  // Assemblage en streaming.
   let i = firstValidIdx;
   let firstChunkConsumed = false;
   let currentReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
@@ -258,21 +234,12 @@ async function assembleQuestion(
       try {
         while (true) {
           if (!currentReader) {
-            if (i >= chunkFiles.length) {
-              controller.close();
-              return;
-            }
+            if (i >= chunkFiles.length) { controller.close(); return; }
             const f = chunkFiles[i++];
-            const { data, error } = await supabase.storage
-              .from("media")
-              .download(f.path);
-            if (error || !data) {
-              console.error("download failed", f.path, error?.message);
-              continue;
-            }
+            const { data, error } = await supabase.storage.from("media").download(f.path);
+            if (error || !data) { console.error("download failed", f.path, error?.message); continue; }
             currentReader = data.stream().getReader();
             if (!firstChunkConsumed && droppedFromFirst > 0) {
-              // Lit tout le premier chunk en mémoire pour tronquer le préfixe.
               const parts: Uint8Array[] = [];
               while (true) {
                 const { value, done } = await currentReader.read();
@@ -283,10 +250,7 @@ async function assembleQuestion(
               const total = parts.reduce((n, p) => n + p.byteLength, 0);
               const merged = new Uint8Array(total);
               let off = 0;
-              for (const p of parts) {
-                merged.set(p, off);
-                off += p.byteLength;
-              }
+              for (const p of parts) { merged.set(p, off); off += p.byteLength; }
               firstChunkConsumed = true;
               if (droppedFromFirst < merged.byteLength) {
                 controller.enqueue(merged.slice(droppedFromFirst));
@@ -297,22 +261,12 @@ async function assembleQuestion(
             firstChunkConsumed = true;
           }
           const { value, done } = await currentReader.read();
-          if (done) {
-            currentReader = null;
-            continue;
-          }
-          if (value && value.byteLength > 0) {
-            controller.enqueue(value);
-            return;
-          }
+          if (done) { currentReader = null; continue; }
+          if (value && value.byteLength > 0) { controller.enqueue(value); return; }
         }
-      } catch (e) {
-        controller.error(e);
-      }
+      } catch (e) { controller.error(e); }
     },
-    async cancel() {
-      try { await currentReader?.cancel(); } catch { /* noop */ }
-    },
+    async cancel() { try { await currentReader?.cancel(); } catch { /* noop */ } },
   });
 
   const { error: upErr } = await supabase.storage
@@ -324,11 +278,11 @@ async function assembleQuestion(
     } as any);
   if (upErr) {
     console.error("upload final failed", finalPath, upErr.message);
-    return false;
+    return { ok: false };
   }
 
-  // Manifest (utile pour la réparation et le lecteur fallback).
-  const manifest = {
+  // Manifest récap (variable renommée pour éviter le shadow de manifestData).
+  const finalManifest = {
     sessionId,
     questionIndex,
     mimeType: contentType,
@@ -340,35 +294,84 @@ async function assembleQuestion(
     .from("media")
     .upload(
       `${folder}/manifest.json`,
-      new Blob([JSON.stringify(manifest)], { type: "application/json" }),
+      new Blob([JSON.stringify(finalManifest)], { type: "application/json" }),
       { contentType: "application/json", upsert: true },
     );
 
-  return true;
+  return { ok: true, ext, videoPath: finalPath };
 }
 
-async function processSession(
+// Vérifie si un fichier existe dans le bucket storage.
+async function storageObjectExists(
+  supabase: ReturnType<typeof createClient>,
+  path: string,
+): Promise<boolean> {
+  const parent = path.split("/").slice(0, -1).join("/");
+  const name = path.split("/").pop()!;
+  try {
+    const { data } = await supabase.storage.from("media").list(parent, { limit: 1000 });
+    return !!data?.some((f) => f.name === name);
+  } catch { return false; }
+}
+
+// Idempotent : met à jour session_messages.video_segment_url + audio_segment_url
+// pour la question au rang donné (order_index). Ne touche jamais une URL déjà renseignée.
+async function linkMediaToMessage(
+  supabase: ReturnType<typeof createClient>,
   sessionId: string,
-  lastQuestionIndex: number | null,
-) {
+  projectId: string,
+  questionIndex: number,
+  videoPath: string,
+): Promise<{ updated: number; error?: string }> {
+  // 1. Résoudre le question_id via project + order_index.
+  const { data: q, error: qErr } = await supabase
+    .from("questions")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("order_index", questionIndex)
+    .maybeSingle();
+  if (qErr || !q?.id) {
+    return { updated: 0, error: qErr?.message ?? `no question at order_index=${questionIndex}` };
+  }
+
+  // 2. Vérifier présence audio.m4a (peut ne pas exister → on n'écrit pas d'URL 404).
+  const audioPath = `interviews/${sessionId}/q${questionIndex}.audio.m4a`;
+  const audioExists = await storageObjectExists(supabase, audioPath);
+
+  // 3. UPDATE idempotent : ne touche que si video_segment_url IS NULL.
+  const patch: Record<string, unknown> = { video_segment_url: videoPath };
+  if (audioExists) patch.audio_segment_url = audioPath;
+
+  const { data: updated, error: uErr } = await supabase
+    .from("session_messages")
+    .update(patch)
+    .eq("session_id", sessionId)
+    .eq("question_id", (q as any).id)
+    .eq("role", "candidate")
+    .is("video_segment_url", null)
+    .select("id");
+  if (uErr) return { updated: 0, error: uErr.message };
+  return { updated: (updated ?? []).length };
+}
+
+async function processSession(sessionId: string) {
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, status, started_at")
+    .select("id, status, started_at, project_id")
     .eq("id", sessionId)
     .maybeSingle();
 
-  if (!session) {
-    console.log("finalize-abandoned: session not found", sessionId);
+  if (!session) { console.log("finalize-abandoned: session not found", sessionId); return; }
+  if ((session as any).status === "completed") {
+    console.log("finalize-abandoned: already completed", sessionId);
     return;
   }
-  if (session.status === "completed" || session.status === "cancelled") {
-    console.log("finalize-abandoned: already finalized", sessionId, session.status);
-    return;
-  }
+  const projectId = (session as any).project_id as string | null;
+  if (!projectId) { console.error("finalize-abandoned: no project_id", sessionId); return; }
 
-  // Reconstitue toutes les questions ayant des chunks orphelins.
+  // Liste toutes les questions ayant des chunks orphelins.
   const { data: dirs } = await supabase.storage
     .from("media")
     .list(`interviews/${sessionId}`, { limit: 1000 });
@@ -378,68 +381,74 @@ async function processSession(
     .map((f) => parseInt(f.name.slice(1), 10))
     .sort((a, b) => a - b);
 
-  let recovered = 0;
+  let recoveredQuestions = 0;
+  let messagesUpdated = 0;
+  const details: Array<{ idx: number; ok: boolean; updated: number; error?: string }> = [];
+
   for (const idx of questionDirs) {
     try {
-      const ok = await assembleQuestion(supabase, sessionId, idx);
-      if (ok) recovered += 1;
+      const result = await assembleQuestion(supabase, sessionId, idx);
+      if (result.ok && result.videoPath) {
+        recoveredQuestions += 1;
+        const link = await linkMediaToMessage(supabase, sessionId, projectId, idx, result.videoPath);
+        messagesUpdated += link.updated;
+        details.push({ idx, ok: true, updated: link.updated, error: link.error });
+      } else {
+        details.push({ idx, ok: false, updated: 0 });
+      }
     } catch (e) {
-      console.error("assemble failed", sessionId, idx, e);
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("assemble failed", sessionId, idx, msg);
+      details.push({ idx, ok: false, updated: 0, error: msg });
     }
   }
 
-  if (recovered === 0) {
-    await supabase
-      .from("sessions")
-      .update({
-        status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-      } as any)
-      .eq("id", sessionId);
-    console.log("finalize-abandoned: cancelled (no media)", sessionId);
+  if (recoveredQuestions === 0) {
+    // Aucun média récupérable → on garde le status actuel (cancelled ou in_progress).
+    // Si la session n'était pas encore cancelled, on la ferme.
+    if ((session as any).status !== "cancelled") {
+      await supabase
+        .from("sessions")
+        .update({ status: "cancelled", cancelled_at: new Date().toISOString() } as any)
+        .eq("id", sessionId);
+    }
+    console.log("finalize-abandoned: no media recovered", sessionId);
     return;
   }
 
-  const startedAt = (session as any).started_at
-    ? new Date((session as any).started_at).getTime()
-    : null;
-  const durationSeconds = startedAt
-    ? Math.max(1, Math.round((Date.now() - startedAt) / 1000))
-    : null;
+  const startedAt = (session as any).started_at ? new Date((session as any).started_at).getTime() : null;
+  const durationSeconds = startedAt ? Math.max(1, Math.round((Date.now() - startedAt) / 1000)) : null;
+  const wasCancelled = (session as any).status === "cancelled";
 
   const { error: updErr } = await supabase
     .from("sessions")
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
+      ...(wasCancelled ? { cancelled_at: null, recovered_at: new Date().toISOString() } : {}),
       ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
     } as any)
     .eq("id", sessionId);
 
-  if (updErr) {
-    console.error("session update failed", sessionId, updErr.message);
-    return;
-  }
+  if (updErr) { console.error("session update failed", sessionId, updErr.message); return; }
 
-  console.log(
-    "finalize-abandoned: completed",
+  console.log(JSON.stringify({
+    tag: "finalize-abandoned:recovered",
     sessionId,
-    "recovered_questions=",
-    recovered,
-  );
+    recoveredQuestions,
+    messagesUpdated,
+    wasCancelled,
+    details,
+  }));
 }
 
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const raw = await req.text();
     const body = raw ? JSON.parse(raw) : {};
     const sessionId = typeof body?.session_id === "string" ? body.session_id : null;
-    const lastQuestionIndex =
-      typeof body?.last_question_index === "number" ? body.last_question_index : null;
     if (!sessionId) {
       return new Response(JSON.stringify({ error: "session_id required" }), {
         status: 400,
@@ -449,9 +458,7 @@ Deno.serve(async (req) => {
 
     // @ts-ignore EdgeRuntime global
     EdgeRuntime.waitUntil(
-      processSession(sessionId, lastQuestionIndex).catch((e) =>
-        console.error("finalize-abandoned error", sessionId, e),
-      ),
+      processSession(sessionId).catch((e) => console.error("finalize-abandoned error", sessionId, e)),
     );
 
     return new Response(
