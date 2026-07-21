@@ -17,7 +17,7 @@ export interface DashboardData {
   topCandidates: any[];
   recoDistribution: Record<string, number>;
   recentSessions: any[];
-  reportsBySession: Record<string, { score: number; recommendation: string | null }>;
+  reportsBySession: Record<string, { score: number; recommendation: string | null; unusable: boolean }>;
   stalePending: any[];
   recentProjects: { id: string; title: string; job_title: string | null; created_at: string; sessionCount: number }[];
   toProcess: { session_id: string; candidate_name: string | null; project_title: string; generated_at: string; overall_score: number; recommendation: string | null }[];
@@ -29,6 +29,23 @@ export interface DashboardData {
 }
 
 const RECO_ORDER = ["strong_yes", "yes", "maybe", "no"];
+
+/**
+ * Détermine si un rapport est inexploitable.
+ * Ne se base QUE sur des signaux d'échec avérés — jamais sur un seuil temporel
+ * ni sur l'absence de rapport (une génération en cours reste "en cours").
+ */
+export function isReportUnusable(input: {
+  report?: { audio_health?: any; executive_summary?: string | null } | null;
+  jobStatus?: string | null;
+}): boolean {
+  if (input.jobStatus === "failed") return true;
+  const r = input.report;
+  if (!r) return false;
+  if (r.audio_health?.verdict === "failed") return true;
+  if (!r.executive_summary || !String(r.executive_summary).trim()) return true;
+  return false;
+}
 
 async function fetchDashboard(userId: string): Promise<DashboardData> {
   const now = new Date();
@@ -76,7 +93,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     supabase
       .from("reports")
       .select(
-        "overall_score, recommendation, generated_at, session_id, sessions!inner(candidate_name, project_id, projects!inner(title))",
+        "overall_score, recommendation, generated_at, session_id, audio_health, executive_summary, sessions!inner(candidate_name, project_id, projects!inner(title))",
       )
       .gte("generated_at", since60.toISOString())
       .order("overall_score", { ascending: false }),
@@ -139,13 +156,13 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
   ].map(({ lastCompletedAt: _omit, ...rest }) => rest);
 
   // Candidats "à traiter" : sessions complétées dans des projets actifs de l'org,
-  // avec un rapport généré, et sans décision recruteur (null ou "none").
+  // avec un rapport généré exploitable, et sans décision recruteur.
   let toProcess: DashboardData["toProcess"] = [];
   if (orgId) {
     const { data: toProcessRaw } = await supabase
       .from("sessions")
       .select(
-        "id, candidate_name, recruiter_decision, completed_at, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at)",
+        "id, candidate_name, recruiter_decision, completed_at, projects!inner(title, status, organization_id), reports!inner(overall_score, recommendation, generated_at, audio_health, executive_summary)",
       )
       .eq("status", "completed")
       .eq("is_demo", false)
@@ -159,6 +176,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
         const rep = Array.isArray(s.reports) ? s.reports[0] : s.reports;
         const proj = Array.isArray(s.projects) ? s.projects[0] : s.projects;
         if (!rep) return null;
+        if (isReportUnusable({ report: rep })) return null;
         return {
           session_id: s.id as string,
           candidate_name: s.candidate_name ?? null,
@@ -176,8 +194,11 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
   const pendingCount = pendingAll?.length ?? 0;
   const staleList = (pendingAll ?? []).filter((s) => new Date(s.created_at) < since7);
 
-  const reports30 = (reports ?? []).filter((r) => new Date(r.generated_at) >= since30);
-  const reportsPrev = (reports ?? []).filter(
+  // Filtre "usable" appliqué à toutes les agrégats basés sur reports (60j).
+  const usableReports = (reports ?? []).filter((r: any) => !isReportUnusable({ report: r }));
+
+  const reports30 = usableReports.filter((r) => new Date(r.generated_at) >= since30);
+  const reportsPrev = usableReports.filter(
     (r) => new Date(r.generated_at) < since30 && new Date(r.generated_at) >= since60,
   );
 
@@ -203,19 +224,37 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     .sort((a, b) => Number(b.overall_score) - Number(a.overall_score))
     .slice(0, 5);
 
-  // Reports pour les sessions récentes
-  const reportsBySession: Record<string, { score: number; recommendation: string | null }> = {};
+  // Reports + statuts de génération pour les sessions récentes.
+  const reportsBySession: Record<string, { score: number; recommendation: string | null; unusable: boolean }> = {};
   const recentIds = (sessions ?? []).map((s) => s.id);
   if (recentIds.length > 0) {
-    const { data: recentReports } = await supabase
-      .from("reports")
-      .select("session_id, overall_score, recommendation")
-      .in("session_id", recentIds);
-    (recentReports ?? []).forEach((r) => {
+    const [{ data: recentReports }, { data: recentJobs }] = await Promise.all([
+      supabase
+        .from("reports")
+        .select("session_id, overall_score, recommendation, audio_health, executive_summary")
+        .in("session_id", recentIds),
+      supabase
+        .from("report_jobs")
+        .select("session_id, status")
+        .in("session_id", recentIds),
+    ]);
+    const jobStatusBySession: Record<string, string> = {};
+    (recentJobs ?? []).forEach((j: any) => {
+      jobStatusBySession[j.session_id] = j.status;
+    });
+    (recentReports ?? []).forEach((r: any) => {
       reportsBySession[r.session_id] = {
         score: Math.round(Number(r.overall_score)),
         recommendation: r.recommendation,
+        unusable: isReportUnusable({ report: r, jobStatus: jobStatusBySession[r.session_id] }),
       };
+    });
+    // Sessions sans rapport mais dont le job a définitivement échoué.
+    recentIds.forEach((sid) => {
+      if (reportsBySession[sid]) return;
+      if (jobStatusBySession[sid] === "failed") {
+        reportsBySession[sid] = { score: 0, recommendation: null, unusable: true };
+      }
     });
   }
 
