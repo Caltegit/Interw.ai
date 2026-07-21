@@ -1852,6 +1852,7 @@ export type Database = {
           last_question_index: number
           organization_id: string
           project_id: string
+          recovered_at: string | null
           recruiter_decision: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at: string | null
           recruiter_decision_by: string | null
@@ -1889,6 +1890,7 @@ export type Database = {
           last_question_index?: number
           organization_id: string
           project_id: string
+          recovered_at?: string | null
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
           recruiter_decision_by?: string | null
@@ -1926,6 +1928,7 @@ export type Database = {
           last_question_index?: number
           organization_id?: string
           project_id?: string
+          recovered_at?: string | null
           recruiter_decision?: Database["public"]["Enums"]["recruiter_decision_type"]
           recruiter_decision_at?: string | null
           recruiter_decision_by?: string | null
