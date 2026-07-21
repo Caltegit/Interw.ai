@@ -79,17 +79,20 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 4. Refuser si un envoi a déjà eu lieu pour cette session.
-  const { data: existing } = await admin
+  // 4. Garde anti-double-clic : refuser si un envoi vient d'être fait (< 10 s).
+  //    Au-delà, on autorise des renvois multiples pour couvrir les cas où la
+  //    reprise a elle-même échoué (média manquant, audio KO, etc.).
+  const tenSecAgo = new Date(Date.now() - 10_000).toISOString();
+  const { data: recent } = await admin
     .from("session_reinvitations")
-    .select("id, email_sent_at, new_session_id")
+    .select("id, email_sent_at")
     .eq("original_session_id", originalId)
-    .not("email_sent_at", "is", null)
-    .maybeSingle();
-  if (existing) {
-    return json(409, {
-      error: "Une invitation de reprise a déjà été envoyée pour cette session.",
-      reinvitation_id: existing.id,
+    .eq("email_status", "sent")
+    .gte("email_sent_at", tenSecAgo)
+    .limit(1);
+  if (recent && recent.length > 0) {
+    return json(429, {
+      error: "Un envoi vient d'avoir lieu il y a moins de 10 secondes. Réessayez.",
     });
   }
 
