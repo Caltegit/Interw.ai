@@ -1,76 +1,96 @@
-## Réponse à ta question technique — oui, ce statut existe
+# Candidats à repasser — surveillance continue (version finale)
 
-Vérifié en base :
+## Point 2 clarifié : cas "repassée puis re-cassée"
 
-- Table `report_jobs`, enum `report_job_status` : `queued | processing | done | failed | cancelled`.
-- La fonction `mark_report_job_failed` (RPC appelée par `process-report-queue` sur erreur) fait exactement ce que tu décris :
-  - Tant que `attempts < max_attempts` (6 par défaut) → repasse en `queued` avec backoff exponentiel (1m, 5m, 15m, 1h, 4h, 12h).
-  - Quand `attempts >= max_attempts` → bascule en **`status = 'failed'`** de manière définitive.
-- État actuel : 323 jobs `done`, 34 jobs `failed` réellement épuisés. Pas de zone grise.
+**Comportement garanti** : 1 candidat impacté = 1 seule ligne, jamais de doublon, jamais de disparition.
 
-**Donc `report_jobs.status = 'failed'` = signal fiable et binaire d'échec définitif après retries.** Pas besoin de matérialiser quoi que ce soit. Je le lis tel quel.
+Concrètement dans le RPC :
+- On liste les sessions anomalies dont l'id **n'apparaît pas** dans `session_reinvitations.new_session_id` (c-à-d les sessions "origine", jamais les reprises).
+- Pour chaque origine, on regarde **toutes** ses reprises (`session_reinvitations` WHERE `original_session_id = <origine>`), donc l'historique complet des N tentatives.
+- Le cycle de vie devient :
+  - **`repassed`** : au moins UNE des reprises est `completed` ET non-`unusable` (TS check).
+  - **`resent`** : au moins un envoi, mais aucune reprise n'a réussi (toutes `pending`, `cancelled`, ou `completed` mais `unusable`).
+  - **`todo`** : aucun envoi.
 
-Un `queued` ou `processing`, même vieux de plusieurs heures, reste "en cours" et ne doit **jamais** être considéré comme unusable — le worker cron le reprendra. Idem pour "pas de ligne report_jobs du tout" → on ne sait rien, on ne marque rien.
+**Cas Inès qui recasse 2 fois** :
+- Ligne d'Inès reste visible en `resent` (aucune reprise réussie).
+- Colonne « Historique » : `2 renvois` (dépliable → dates + statuts mail + statut de chaque reprise).
+- Dernière reprise affichée avec son motif d'échec (ex. `audio_failed`), badge inline « Reprise re-cassée ».
+- Bouton **Renvoyer** toujours actif → crée une 3e reprise, s'ajoute à l'historique.
+- Ligne disparaît uniquement quand une reprise réussit (`repassed`) — et même là, elle reste affichée avec le badge vert (filtre par défaut = `todo + resent`, filtre `repassed` disponible).
 
-## v1 — Badge dashboard « Incomplet » (règle finale)
+**Zéro trou** : tant qu'aucune reprise n'est saine, la ligne d'origine reste toujours dans le radar avec tout son historique.
 
-`isReportUnusable(session)` retourne `true` **si et seulement si** au moins un signal d'échec avéré est présent :
+## Autres arbitrages actés
 
-1. **`audio_health.verdict === 'failed'`** dans le rapport (cas d'Inès).
-2. **Rapport existe mais `executive_summary` vide ou blanc**.
-3. **`report_jobs.status === 'failed'`** (échec définitif après épuisement des 6 tentatives).
+1. **Date de bascule** : `p_since = '2026-07-20 00:00:00'::timestamptz` avec `>=`. Vérifié : Inès (2026-07-20 17:51 UTC) passe, les 23 cas du 8-15 juillet sont exclus.
+2. **Source unique `isReportUnusable`** (option B). Le RPC retourne les signaux bruts (`audio_health`, `executive_summary`, `job_status`, `has_media`, `status`), l'UI applique la fonction TS existante (`useDashboardData.ts:38`).
+3. **Historique INSERT** dans `session_reinvitations`. Drop de l'index unique partiel. Garde anti-double-clic : 429 côté edge function si envoi `sent` < 10s.
+4. **Fixture `empty_summary`** : seed temporaire sur session demo, rollback immédiat.
 
-Dans tous les autres cas — rapport absent, job `queued` / `processing` / inexistant, score légitimement bas — on ne marque rien. Aucun seuil temporel, jamais.
+## Vérifs préalables faites
 
-### Fichiers touchés
+- **`send-transactional-email` dédup 5min** : ne se déclenche que si `idempotencyKey` fourni ET ≠ `messageId`. `resend-impacted-candidate` n'en passe pas → dédup inactive, aucun blocage silencieux.
+- **onConflict / index unique** : disparaît avec le DROP INDEX.
+- **Grep appelants** : `admin_list_impacted_candidates` et `resend-impacted-candidate` uniquement référencés dans `AdminCandidatesToRecover.tsx`.
+- **Session Inès** : `created_at = 2026-07-20 17:51:07 UTC` — passe le filtre `>=`.
 
-**1. `src/hooks/queries/useDashboardData.ts`**
-- Le fetch de `recentReports` (déjà là pour les scores) rapatrie en plus `audio_health` et `executive_summary`.
-- Nouveau fetch parallèle : `report_jobs` scopé aux `recentIds`, on ne garde que `status`. Léger, indexé par PK `session_id`.
-- Nouvelle fonction pure exportée :
-  ```ts
-  export function isReportUnusable(input: {
-    report?: { audio_health?: any; executive_summary?: string | null } | null;
-    jobStatus?: string | null;
-  }): boolean {
-    if (input.jobStatus === "failed") return true;
-    const r = input.report;
-    if (!r) return false; // rapport absent = pas encore de verdict, on ne marque rien
-    if (r.audio_health?.verdict === "failed") return true;
-    if (!r.executive_summary || !r.executive_summary.trim()) return true;
-    return false;
-  }
-  ```
-- `reportsBySession[sessionId]` : ajout d'un champ `unusable: boolean`.
-- Agrégats : le score reste dans `reportsBySession` (pour l'affichage détaillé), mais **les rapports `unusable` sortent de** `avgScore30d`, `topCandidates` (top 5), `dist` (recommandations) et `toProcess` (candidats à traiter).
+## Migration DB
 
-**2. `src/components/SessionStatusBadge.tsx`**
-- Nouveau libellé **« Incomplet »**, style `bg-destructive/10 text-destructive`, icône `AlertTriangle` neutre.
-- Prop optionnelle `override?: "unusable"` — quand présent, remplace le status. Les call sites existants restent intacts.
+```sql
+DROP INDEX IF EXISTS session_reinvitations_original_sent_uniq;
 
-**3. `src/pages/Dashboard.tsx` — « Dernières sessions candidats »**
-- Si `reportsBySession[s.id]?.unusable` → badge « Incomplet » et pastille de score masquée. Lien vers la session inchangé.
-- Sections « Meilleurs candidats » et « À traiter » : rien à faire côté composant, l'exclusion est faite en amont.
+CREATE OR REPLACE FUNCTION public.admin_list_recoverable_candidates(
+  p_since timestamptz DEFAULT '2026-07-20 00:00:00'::timestamptz
+)
+RETURNS TABLE (
+  session_id uuid, candidate_name text, candidate_email text,
+  project_id uuid, project_title text,
+  organization_id uuid, organization_name text,
+  session_status text, completed_at timestamptz,
+  has_media boolean, audio_health jsonb, executive_summary text,
+  report_job_status text,
+  reinvitations jsonb  -- array complet : [{id, sent_at, status, new_session_id, new_session_status, new_audio_health, new_summary, new_job_status, new_has_media}]
+)
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  -- Filtres amont : is_demo=false, status IN ('completed','cancelled'),
+  -- status <> 'cancelled_partial', created_at >= p_since,
+  -- ET id NOT IN (SELECT new_session_id FROM session_reinvitations WHERE new_session_id IS NOT NULL)
+  -- Le filtrage final unusable est appliqué côté TS.
+$$;
 
-## Zone grise assumée pour le v1
+GRANT EXECUTE ON FUNCTION public.admin_list_recoverable_candidates TO authenticated;
+DROP FUNCTION IF EXISTS public.admin_list_impacted_candidates(timestamptz);
+```
 
-Sur la page Session elle-même, une session « Incomplet » continue d'afficher son faux 50 issu de `generate-fit-matrix`. C'est laid mais isolé au v1. Le badge dashboard suffit à alerter le recruteur.
+## Edge function `resend-impacted-candidate`
 
-## Lot 2 (à faire ensuite, ticket séparé) — supprimer le faux 50 en base
+- Retirer la vérif basée sur l'index unique.
+- Garde anti-double-clic 10s (429 si dernier envoi `sent` < 10s).
+- Autoriser renvois multiples au-delà.
+- Ne PAS passer d'`idempotencyKey`.
 
-Origine confirmée du 50 : **`supabase/functions/generate-fit-matrix/index.ts`** lignes 270-294. Quand une cellule (critère × question) a `evidence: "none"` (ou absent), le serveur force `score = 50`. Ensuite `generate-report` recalcule `reports.overall_score` comme moyenne pondérée de la matrice → une session muette a mécaniquement toutes ses cellules à 50 → global à 50, persisté en base.
+## UI `AdminCandidatesToRecover.tsx`
 
-Modifs prévues (chiffrage indicatif, à valider) :
-1. **`generate-fit-matrix`** : détecter le cas « toutes cellules `none` » → renvoyer `overall_score: null`, `unusable: true`.
-2. **`generate-report`** : accepter `overall_score = null` et `recommendation = null`, court-circuiter les sections dépendantes du score.
-3. **UI page Session + `SharedReport` + exports PDF** : gérer `null` proprement (« Non évaluable »).
-4. **Migration one-shot** : passer à `NULL` les `overall_score` des rapports déjà identifiés unusable, ou re-régénérer proprement.
-5. **`isReportUnusable`** : ajouter `overall_score === null` comme signal fort.
+- Compteurs en header : `À renvoyer`, `Déjà renvoyée`, `Session repassée`.
+- Filtres : cycle de vie + motif (`missing_media`, `audio_failed`, `empty_summary`, `job_failed`).
+- Colonne « Historique » dépliable : N envois avec dates, statuts mail, et **statut de chaque reprise** (badge motif si re-cassée).
+- Bouton « Renvoyer » actif sauf sur `repassed`.
+- Pagination client 50/page au-delà de 100 lignes.
 
-## Régressions / risques v1
+## Tests manuels obligatoires (session demo)
 
-- `avgScore30d`, top, distribution reco et « à traiter » : légères variations attendues (les sessions cassées sortent).
-- `SessionStatusBadge` : nouvelle prop optionnelle, aucun call site cassé.
-- Un fetch supplémentaire `report_jobs` sur ~10 lignes max, coût négligeable.
-- **Aucun changement DB, aucun changement génération, aucun changement page Session.**
-- Un rapport en cours de génération (`queued` / `processing`) reste affiché « Complété » comme aujourd'hui — jamais marqué « Incomplet » à tort.
+1. `missing_media` — cas Inès reproduit.
+2. `audio_failed` — session avec `audio_health.verdict='failed'`.
+3. `empty_summary` — **fixture** : UPDATE report SET executive_summary=''. Renvoi. **Rollback immédiat**.
+4. `job_failed` — session avec `report_jobs.status='failed'`.
+
+Cycle validé pour chaque motif : ligne visible → clic Renvoyer → nouvelle session pending → mail parti (`email_send_log`) → statut passe à `resent` → historique dépliable affiche l'envoi.
+
+**Bonus test** : simuler reprise cassée → vérifier que la ligne reste en `resent`, historique montre 2 tentatives, bouton Renvoyer toujours actif.
+
+## Risques identifiés
+
+- Types Supabase régénérés → `admin_list_impacted_candidates` disparaît. Grep déjà fait : uniquement dans page recover.
+- Volume premier chargement → pagination client si >100.
+- `useDashboardData.isReportUnusable` inchangée → dashboard principal intact.
