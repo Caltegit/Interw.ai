@@ -2089,19 +2089,23 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: undefined
       }
-      admin_list_impacted_candidates: {
-        Args: never
+      admin_list_recoverable_candidates: {
+        Args: { p_since?: string }
         Returns: {
+          audio_health: Json
           candidate_email: string
           candidate_name: string
+          completed_at: string
           created_at: string
-          new_session_id: string
+          executive_summary: string
+          has_media: boolean
+          organization_id: string
           organization_name: string
+          overall_score: number
           project_id: string
           project_title: string
-          reinvitation_id: string
-          reinvitation_sent_at: string
-          reinvitation_status: string
+          reinvitations: Json
+          report_job_status: string
           session_id: string
           session_status: string
         }[]
