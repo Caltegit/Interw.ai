@@ -242,7 +242,9 @@ export default function Dashboard() {
               <ul className="space-y-1">
                 {last5Sessions.map((s: any) => {
                   const isCompleted = s.status === "completed";
-                  const fitScore = reportsBySession[s.id]?.score;
+                  const reportInfo = reportsBySession[s.id];
+                  const fitScore = reportInfo?.score;
+                  const unusable = reportInfo?.unusable === true;
                   const content = (
                     <div className="flex items-center justify-between gap-3 rounded-md p-2 -m-2 hover:bg-muted/50 transition-colors">
                       <div className="min-w-0 flex-1">
@@ -252,7 +254,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {isCompleted && fitScore !== undefined && (
+                        {isCompleted && !unusable && fitScore !== undefined && (
                           <span
                             className={cn(
                               "inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold",
@@ -264,7 +266,10 @@ export default function Dashboard() {
                             {fitScore}
                           </span>
                         )}
-                        <SessionStatusBadge status={s.status} />
+                        <SessionStatusBadge
+                          status={s.status}
+                          override={unusable ? "unusable" : undefined}
+                        />
                         <span className="text-xs text-muted-foreground hidden sm:inline">
                           {formatDistanceToNow(new Date(s.created_at), {
                             addSuffix: true,

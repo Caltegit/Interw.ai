@@ -1,36 +1,76 @@
+## Réponse à ta question technique — oui, ce statut existe
 
-## Correction UUID — bien vu, c'était une coquille
+Vérifié en base :
 
-**UUID valide et unique pour Inès : `63abd300-8c54-4d6c-9fc6-d643863edd11`**
+- Table `report_jobs`, enum `report_job_status` : `queued | processing | done | failed | cancelled`.
+- La fonction `mark_report_job_failed` (RPC appelée par `process-report-queue` sur erreur) fait exactement ce que tu décris :
+  - Tant que `attempts < max_attempts` (6 par défaut) → repasse en `queued` avec backoff exponentiel (1m, 5m, 15m, 1h, 4h, 12h).
+  - Quand `attempts >= max_attempts` → bascule en **`status = 'failed'`** de manière définitive.
+- État actuel : 323 jobs `done`, 34 jobs `failed` réellement épuisés. Pas de zone grise.
 
-C'est celui de ton lien d'origine, celui que j'ai utilisé pour toutes les investigations DB / storage précédentes. La seconde version (`…e624-46d4…`) qui a glissé dans mon exemple d'invocation était une faute de frappe — aucune requête n'a été lancée dessus, aucun risque.
+**Donc `report_jobs.status = 'failed'` = signal fiable et binaire d'échec définitif après retries.** Pas besoin de matérialiser quoi que ce soit. Je le lis tel quel.
 
-**Je n'invoquerai `finalize-abandoned-session` qu'avec `63abd300-8c54-4d6c-9fc6-d643863edd11`.** Je le vérifie une dernière fois par un `SELECT status, cancelled_at FROM sessions WHERE id = '63abd300-8c54-4d6c-9fc6-d643863edd11'` juste avant l'invocation, pour confirmer que c'est bien la session cancelled hier.
+Un `queued` ou `processing`, même vieux de plusieurs heures, reste "en cours" et ne doit **jamais** être considéré comme unusable — le worker cron le reprendra. Idem pour "pas de ligne report_jobs du tout" → on ne sait rien, on ne marque rien.
 
----
+## v1 — Badge dashboard « Incomplet » (règle finale)
 
-## Périmètre inchangé : A + B, puis STOP
+`isReportUnusable(session)` retourne `true` **si et seulement si** au moins un signal d'échec avéré est présent :
 
-Aucune modification au plan précédent :
+1. **`audio_health.verdict === 'failed'`** dans le rapport (cas d'Inès).
+2. **Rapport existe mais `executive_summary` vide ou blanc**.
+3. **`report_jobs.status === 'failed'`** (échec définitif après épuisement des 6 tentatives).
 
-### A — Étendre `finalize-abandoned-session`
-- UPDATE idempotent de `session_messages.video_segment_url` / `audio_segment_url` après chaque assemblage réussi (`WHERE video_segment_url IS NULL`).
-- Vérification storage avant de renseigner l'audio (évite les URLs 404).
-- Flag `recovered: true` interne (colonne existante à réutiliser ou migration additive minimale — je vérifie d'abord).
-- Log structuré pour traçabilité.
+Dans tous les autres cas — rapport absent, job `queued` / `processing` / inexistant, score légitimement bas — on ne marque rien. Aucun seuil temporel, jamais.
 
-### B — Récupération d'Inès (UUID confirmé : `63abd300-8c54-4d6c-9fc6-d643863edd11`)
-1. Snapshot pré-invocation : `status`, count messages sans URL, contenu folder storage.
-2. Invocation `finalize-abandoned-session` avec le bon UUID.
-3. Vérif post : blobs `q*.mp4|webm` créés, `session_messages.video_segment_url` renseignés, `sessions.status = 'completed'`, exactement **1** ligne dans `report_jobs`, rapport visible.
+### Fichiers touchés
 
-### Pendant B — audit des 2 verrous pour D
-- `report_jobs.session_id` : contrainte UNIQUE présente ou pas ? Si pas, je te propose la migration + le comportement à trancher (1 job par session vs 1 job actif à la fois).
-- `cancel-session` vs chunks : compter les sessions `cancelled` récentes ayant encore des chunks storage → volumétrie du risque "resurrection à tort" par le futur cron.
+**1. `src/hooks/queries/useDashboardData.ts`**
+- Le fetch de `recentReports` (déjà là pour les scores) rapatrie en plus `audio_health` et `executive_summary`.
+- Nouveau fetch parallèle : `report_jobs` scopé aux `recentIds`, on ne garde que `status`. Léger, indexé par PK `session_id`.
+- Nouvelle fonction pure exportée :
+  ```ts
+  export function isReportUnusable(input: {
+    report?: { audio_health?: any; executive_summary?: string | null } | null;
+    jobStatus?: string | null;
+  }): boolean {
+    if (input.jobStatus === "failed") return true;
+    const r = input.report;
+    if (!r) return false; // rapport absent = pas encore de verdict, on ne marque rien
+    if (r.audio_health?.verdict === "failed") return true;
+    if (!r.executive_summary || !r.executive_summary.trim()) return true;
+    return false;
+  }
+  ```
+- `reportsBySession[sessionId]` : ajout d'un champ `unusable: boolean`.
+- Agrégats : le score reste dans `reportsBySession` (pour l'affichage détaillé), mais **les rapports `unusable` sortent de** `avgScore30d`, `topCandidates` (top 5), `dist` (recommandations) et `toProcess` (candidats à traiter).
 
-### Rendu à toi après B
-- Résultat chiffré Inès (X questions récupérées, Y messages mis à jour, durée).
-- Audit des 2 verrous chiffré.
-- Recommandation pour C/D/E, décision prise ensemble.
+**2. `src/components/SessionStatusBadge.tsx`**
+- Nouveau libellé **« Incomplet »**, style `bg-destructive/10 text-destructive`, icône `AlertTriangle` neutre.
+- Prop optionnelle `override?: "unusable"` — quand présent, remplace le status. Les call sites existants restent intacts.
 
-Aucune modification C/D/E tant que tu n'as pas validé B + les 2 verrous.
+**3. `src/pages/Dashboard.tsx` — « Dernières sessions candidats »**
+- Si `reportsBySession[s.id]?.unusable` → badge « Incomplet » et pastille de score masquée. Lien vers la session inchangé.
+- Sections « Meilleurs candidats » et « À traiter » : rien à faire côté composant, l'exclusion est faite en amont.
+
+## Zone grise assumée pour le v1
+
+Sur la page Session elle-même, une session « Incomplet » continue d'afficher son faux 50 issu de `generate-fit-matrix`. C'est laid mais isolé au v1. Le badge dashboard suffit à alerter le recruteur.
+
+## Lot 2 (à faire ensuite, ticket séparé) — supprimer le faux 50 en base
+
+Origine confirmée du 50 : **`supabase/functions/generate-fit-matrix/index.ts`** lignes 270-294. Quand une cellule (critère × question) a `evidence: "none"` (ou absent), le serveur force `score = 50`. Ensuite `generate-report` recalcule `reports.overall_score` comme moyenne pondérée de la matrice → une session muette a mécaniquement toutes ses cellules à 50 → global à 50, persisté en base.
+
+Modifs prévues (chiffrage indicatif, à valider) :
+1. **`generate-fit-matrix`** : détecter le cas « toutes cellules `none` » → renvoyer `overall_score: null`, `unusable: true`.
+2. **`generate-report`** : accepter `overall_score = null` et `recommendation = null`, court-circuiter les sections dépendantes du score.
+3. **UI page Session + `SharedReport` + exports PDF** : gérer `null` proprement (« Non évaluable »).
+4. **Migration one-shot** : passer à `NULL` les `overall_score` des rapports déjà identifiés unusable, ou re-régénérer proprement.
+5. **`isReportUnusable`** : ajouter `overall_score === null` comme signal fort.
+
+## Régressions / risques v1
+
+- `avgScore30d`, top, distribution reco et « à traiter » : légères variations attendues (les sessions cassées sortent).
+- `SessionStatusBadge` : nouvelle prop optionnelle, aucun call site cassé.
+- Un fetch supplémentaire `report_jobs` sur ~10 lignes max, coût négligeable.
+- **Aucun changement DB, aucun changement génération, aucun changement page Session.**
+- Un rapport en cours de génération (`queued` / `processing`) reste affiché « Complété » comme aujourd'hui — jamais marqué « Incomplet » à tort.
