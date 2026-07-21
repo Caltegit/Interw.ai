@@ -68,16 +68,12 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (origErr || !original) return json(404, { error: "Session introuvable" });
 
-  // 3. Refuser si la session a des fichiers réels (non impactée).
-  //    Pour une session témoin (is_witness), on autorise même s'il y a déjà eu
-  //    un test — dans ce cas on la re-crée quand même.
-  if (!isWitness) {
-    const { data: files } = await admin.storage.from("media").list(`interviews/${originalId}`, { limit: 100 });
-    const realFiles = (files ?? []).filter((f: any) => (f?.metadata?.size ?? 0) > 1024);
-    if (realFiles.length > 0) {
-      return json(409, { error: "Cette session contient des fichiers média — pas de renvoi." });
-    }
-  }
+  // 3. (Ancien garde-fou "fichiers > 1 Ko" supprimé : depuis la bascule vers
+  //    la surveillance continue via signaux (audio_failed, summary_empty,
+  //    job_failed, missing_media), une session peut légitimement contenir des
+  //    médias tout en étant listée comme anomalie — ex. session d'Inès
+  //    récupérée avec q0.mp4 mais audio KO. La page /admin/candidates-to-recover
+  //    vet déjà la légitimité du renvoi via la RPC dédiée.)
 
   // 4. Garde anti-double-clic : refuser si un envoi vient d'être fait (< 10 s).
   //    Au-delà, on autorise des renvois multiples pour couvrir les cas où la
