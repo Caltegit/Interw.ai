@@ -565,7 +565,7 @@ export default function AdminCandidatesToRecover() {
                             <TableCell colSpan={7} className="bg-muted/30">
                               <div className="space-y-2 py-2">
                                 {r.reinvitations.map((inv, idx) => {
-                                  const success = isReinvitationSuccessful(inv);
+                                  const status = getReinvitationStatus(inv);
                                   return (
                                     <div key={inv.id} className="flex flex-wrap items-center gap-3 text-xs">
                                       <span className="font-medium">#{idx + 1}</span>
@@ -578,20 +578,23 @@ export default function AdminCandidatesToRecover() {
                                           <Badge variant="outline" className="text-xs">
                                             Nouvelle session : {inv.new_session_status ?? "?"}
                                           </Badge>
-                                          {success ? (
-                                            <Badge className="bg-green-100 text-green-800 text-xs">Exploitable</Badge>
-                                          ) : inv.new_session_status === "completed" ? (
-                                            <Badge className="bg-orange-100 text-orange-800 text-xs">Re-cassée</Badge>
-                                          ) : (
-                                            <Badge variant="secondary" className="text-xs">En attente</Badge>
+                                          {status === "success" && (
+                                            <Badge className="bg-green-100 text-green-800 text-xs">Reprise réussie</Badge>
+                                          )}
+                                          {status === "pending" && (
+                                            <Badge variant="secondary" className="text-xs">En attente de reprise</Badge>
+                                          )}
+                                          {status === "failed" && (
+                                            <Badge className="bg-orange-100 text-orange-800 text-xs">Reprise KO</Badge>
                                           )}
                                         </>
                                       ) : (
-                                        <span className="text-muted-foreground">Pas de nouvelle session</span>
+                                        <span className="text-muted-foreground">Lien envoyé</span>
                                       )}
                                     </div>
                                   );
                                 })}
+
                               </div>
                             </TableCell>
                           </TableRow>
