@@ -2209,6 +2209,10 @@ export type Database = {
       }
       get_session_id_by_token: { Args: { _token: string }; Returns: string }
       get_user_organization_id: { Args: { _user_id: string }; Returns: string }
+      has_project_access: {
+        Args: { _project: string; _user: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
