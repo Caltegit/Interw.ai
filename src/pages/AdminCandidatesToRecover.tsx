@@ -527,9 +527,13 @@ export default function AdminCandidatesToRecover() {
                             {r.lifecycle === "resent" && (
                               <div className="space-y-1">
                                 <Badge className="bg-blue-100 text-blue-800">Renvoyée</Badge>
-                                {lastFailed && (
-                                  <div className="text-xs text-orange-700">Reprise re-cassée</div>
+                                {showLastPending && (
+                                  <div className="text-xs text-muted-foreground">En attente de reprise</div>
                                 )}
+                                {showLastFailed && (
+                                  <div className="text-xs text-orange-700">Reprise KO</div>
+                                )}
+
                               </div>
                             )}
                             {r.lifecycle === "repassed" && (
