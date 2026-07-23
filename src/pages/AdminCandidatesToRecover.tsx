@@ -490,8 +490,10 @@ export default function AdminCandidatesToRecover() {
                   {pageRows.map((r) => {
                     const nSent = r.reinvitations.filter((i) => i.email_status === "sent").length;
                     const lastInv = r.reinvitations[r.reinvitations.length - 1];
-                    const lastFailed =
-                      r.lifecycle === "resent" && lastInv?.new_session_id && !isReinvitationSuccessful(lastInv);
+                    const lastStatus = lastInv ? getReinvitationStatus(lastInv) : null;
+                    const showLastPending = r.lifecycle === "resent" && lastStatus === "pending";
+                    const showLastFailed = r.lifecycle === "resent" && lastStatus === "failed";
+
                     const isExpanded = expanded[r.session_id];
                     return (
                       <>
