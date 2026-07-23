@@ -106,6 +106,21 @@ function isReinvitationSuccessful(inv: Reinvitation): boolean {
   });
 }
 
+type ReinvitationStatus = "sending" | "pending" | "success" | "failed";
+
+/**
+ * Statut fin d'une reinvitation, utilisé pour l'affichage uniquement.
+ * `computeLifecycle` reste basé sur `isReinvitationSuccessful` — inchangé.
+ */
+function getReinvitationStatus(inv: Reinvitation): ReinvitationStatus {
+  if (!inv.new_session_id) return "sending";
+  if (isReinvitationSuccessful(inv)) return "success";
+  const s = inv.new_session_status;
+  if (s === "pending" || s === "video_viewed" || s === "in_progress") return "pending";
+  return "failed";
+}
+
+
 function computeLifecycle(r: Recoverable): Lifecycle {
   const sentInvs = r.reinvitations.filter((i) => i.email_status === "sent");
   if (sentInvs.length === 0) return "todo";
