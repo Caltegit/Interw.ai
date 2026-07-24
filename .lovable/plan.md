@@ -1,30 +1,24 @@
+## Objectif
 
-## Correctif — Accès partagé aux entretiens
+Permettre aux utilisateurs invités sur un projet via `projects.visible_to_user_ids` de créer un fil de discussion et d'envoyer des messages dans le copilot, sans déclencher d'erreur RLS.
 
-### Diagnostic
-Arnaud est bien dans `projects.visible_to_user_ids`, mais les RLS `SELECT` sur `sessions`, `reports`, `session_messages` et `transcripts` n'accordent l'accès qu'aux membres de l'organisation propriétaire (ou super admins). Le partage projet ne se propage donc pas aux données d'entretien.
+## Changements prévus
 
-### Migration
+1. **Mettre à jour les politiques RLS sur `copilot_threads`**
+   - Utiliser `public.has_project_access(auth.uid(), copilot_threads.project_id)` pour vérifier l'accès au projet.
+   - Conserver `created_by = auth.uid()` sur UPDATE/DELETE (seul le créateur modifie ou supprime son fil).
+   - Conserver `created_by = auth.uid()` sur INSERT (le thread est créé au nom de l'utilisateur connecté).
 
-Ajout d'une fonction `SECURITY DEFINER` `has_project_access(_user, _project)` qui renvoie true si l'utilisateur est :
-- créateur du projet, OU
-- dans `visible_to_user_ids`, OU
-- membre de l'organisation propriétaire, OU
-- propriétaire de l'organisation, OU
-- super admin.
+2. **Mettre à jour les politiques RLS sur `copilot_messages`**
+   - Remplacer la vérification `copilot_threads.created_by = auth.uid()` par `public.has_project_access(auth.uid(), t.project_id)`.
+   - Permet à tout utilisateur ayant accès au projet de lire et d'envoyer des messages dans le fil.
 
-Puis nouvelles policies `SELECT` (`TO authenticated`, additives) sur :
-- `sessions` : `has_project_access(auth.uid(), project_id)`
-- `session_messages` : via la session parente
-- `reports` : via la session parente
-- `transcripts` : via la session parente
+3. **Vérifier le comportement**
+   - Tester qu'un utilisateur présent dans `visible_to_user_ids` peut créer un thread et envoyer un message.
+   - Vérifier qu'un utilisateur sans accès au projet reste bloqué.
 
-Les policies existantes restent en place. Aucune écriture élargie.
+## Détails techniques
 
-### Vérification post-migration
-1. Compter les sessions visibles pour Arnaud (attendu : 243, actuellement 0).
-2. Non-régression : un utilisateur random non partagé et hors org voit toujours 0.
-3. Non-régression : membre ALBO voit toujours ses sessions.
-4. Security scan pour confirmer qu'aucune nouvelle finding critique n'apparaît.
+Migration SQL : suppression/recréation des politiques concernées sur `copilot_threads` et `copilot_messages`, en s'appuyant sur la fonction `public.has_project_access(_user uuid, _project uuid)` déjà disponible.
 
-Passe en mode build pour lancer la migration.
+Aucune modification du frontend ou de l'Edge Function `copilot-chat` n'est nécessaire.
