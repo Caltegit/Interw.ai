@@ -1,119 +1,56 @@
-## Ce que je peux affirmer après vérification
+## Objectif
 
-Tu as raison : ma version précédente allait trop loin. Je ne peux pas affirmer que tu as volontairement changé ton email super admin en Justine. Ce que la base montre aujourd'hui, en revanche, est clair :
+Corriger les garde-fous précédents pour refléter les vraies règles :
+- Un email existant peut être ajouté comme super admin ou comme propriétaire d'une nouvelle organisation (compte multi-org).
+- La modification d'email est totalement retirée : pour changer d'email, on supprime le membre puis on le réinvite.
 
-- Le `user_id` historique `0af28056...` a été créé le **02/07 à 13:28 UTC**.
-- Ce même `user_id` porte maintenant :
-  - email : `justine@centreviasana.com`
-  - nom : `Justine Sagot`
-  - rôle global : `super_admin`
-  - rôle ALBO : `admin` + `member`
-  - rôle Via Sana : `admin` + `member`
-  - voix clonée : `Eva`, créée le 15/07
-- Le `user_id` `a519ef85...` porte maintenant :
-  - email : `eva@alboteam.com`
-  - nom : `Eva Danel`
-  - créé le **24/07 à 08:29 UTC**
-  - rôle global : `super_admin`
-  - rôle ALBO : `admin` + `member`
-  - rôle Via Sana : `member`
-- L'organisation **Via Sana** a été créée le **24/07 à 08:07 UTC** avec `owner_id = 0af28056...`.
+---
 
-Les heures que j'ai données viennent directement des colonnes `created_at` en base, en **UTC**. En heure française, ça correspond à environ **10:07** et **10:29**.
+## 1. Suppression complète de la modification d'email
 
-## Cause probable corrigée
+**Backend — `supabase/functions/superadmin-manage-user/index.ts`**
+- Retirer entièrement le bloc `if (email)` de l'action `update_profile`.
+- L'action ne peut plus modifier que `full_name`. Si le body contient un champ `email`, il est ignoré (ou renvoie 400 selon préférence — je pars sur ignorer silencieusement pour la rétro-compatibilité).
 
-Le scénario le plus cohérent avec ce que tu décris est celui-ci :
+**UI — `src/components/superadmin/EditUserDialog.tsx`**
+- Supprimer le champ email du formulaire.
+- Ajouter une note discrète : « Pour changer l'email d'un membre, supprimez-le puis réinvitez-le avec la nouvelle adresse. »
 
-1. Tu as créé Via Sana avec toi comme propriétaire initiale.
-2. Ensuite tu as voulu remplacer le propriétaire par Justine.
-3. L'interface / logique actuelle mélange deux notions différentes :
-   - **changer le propriétaire d'une organisation**
-   - **modifier l'email du compte utilisateur propriétaire**
-4. La fonction backend `superadmin-manage-user`, action `update_profile`, permet de changer l'email d'un utilisateur global via :
-   - mise à jour de l'email d'authentification
-   - mise à jour de `profiles.email`
-5. Résultat probable : au lieu de transférer proprement `organizations.owner_id` vers un nouveau compte Justine, le système a modifié l'identité du compte propriétaire existant (`0af28056...`).
+---
 
-Donc le problème n'est pas forcément une action manuelle de ta part sur ton profil : c'est probablement une **confusion fonctionnelle entre “propriétaire d'organisation” et “compte utilisateur”**.
+## 2. Création d'organisation — autoriser le multi-org
 
-## À vérifier avant toute réparation
+**Backend — `supabase/functions/superadmin-create-org/index.ts`**
+- Retirer le blocage lignes 112–121 (`existingMemberships.length > 0` → erreur 409).
+- Comportement : si l'email existe déjà, on réutilise le compte auth existant, on ne renvoie PAS de nouveau lien magique (le compte est déjà actif), on l'ajoute simplement comme membre + admin + owner de la nouvelle organisation.
+- Le flag `magic_link_sent` reste `false` dans ce cas ; `owner_existing: true`.
 
-Je veux valider les traces d'action exactes avant de toucher aux données :
+**UI — `src/components/superadmin/CreateOrgDialog.tsx`**
+- Retirer la mention « L'email doit correspondre à un nouveau compte. »
+- Remplacer par : « Si l'email existe déjà, le compte sera rattaché à cette nouvelle organisation en plus des siennes. »
 
-1. Lire les logs récents des fonctions backend liées à :
-   - création d'organisation
-   - création utilisateur
-   - modification utilisateur
-   - lien magique / prise en main
-2. Vérifier si un vrai compte auth séparé pour `justine@centreviasana.com` a été créé puis réattaché, ou si seul le compte `0af28056...` a changé d'identité.
-3. Vérifier les accès actuels de Justine : ALBO, Via Sana, super admin, propriété org.
-4. Vérifier les accès actuels d'Eva : ALBO, super admin, Via Sana.
+---
 
-## Réparation proposée
+## 3. Attribution du rôle super admin sur compte existant
 
-Objectif : revenir à une séparation propre.
+Le chemin actuel `action: "set_role"` fonctionne déjà pour promouvoir un compte existant en super admin — aucun changement nécessaire côté backend.
 
-### Eva
-- Garder `a519ef85...` comme compte Eva actuel si c'est celui qui porte maintenant `eva@alboteam.com`.
-- Confirmer qu'il a bien :
-  - `super_admin`
-  - `admin` + `member` ALBO
-- Retirer son rattachement à Via Sana si tu ne dois pas y être membre.
+Vérification UI : confirmer que `EditUserDialog` permet bien d'ajouter le rôle `super_admin` à n'importe quel compte listé (déjà le cas via le sélecteur de rôles).
 
-### Justine
-- Faire en sorte que `justine@centreviasana.com` soit un compte client propre, sans héritage ALBO ni super admin.
-- Retirer de ce compte :
-  - `super_admin`
-  - `admin` ALBO
-  - `member` ALBO
-- Le garder uniquement dans Via Sana, idéalement :
-  - propriétaire Via Sana
-  - admin Via Sana
-  - membre Via Sana
+---
 
-### Via Sana
-- `organizations.owner_id` doit pointer vers le vrai compte Justine.
-- Les membres Via Sana doivent être uniquement ceux voulus.
+## Ce qui reste conservé des garde-fous précédents
 
-### Session navigateur
-- Forcer une déconnexion/reconnexion après correction, car ton navigateur peut garder un jeton encore lié au mauvais `user_id`.
+- Interdiction pour un super admin de se supprimer lui-même.
+- Vérification qu'un email n'est pas réutilisé silencieusement pour une identité auth différente (mais comme on ne modifie plus jamais un email, ce risque disparaît de fait).
 
-## Garde-fous à ajouter
+---
 
-### Backend
-Dans `superadmin-manage-user` :
-- Interdire le changement d'email d'un utilisateur `super_admin`.
-- Interdire le changement d'email de son propre compte via la console super admin.
-- Interdire le changement d'email d'un utilisateur propriétaire d'organisation sans procédure dédiée.
-- Avant toute modification d'email, vérifier qu'il n'existe pas déjà un autre compte avec cet email.
+## Fichiers touchés
 
-### Interface
-Dans `EditUserDialog` :
-- Ne plus présenter le changement d'email comme une opération banale.
-- Masquer ou bloquer le champ email pour :
-  - soi-même
-  - super admins
-  - propriétaires d'organisation
-- Ajouter une action séparée : **Transférer la propriété**, qui change `organizations.owner_id` sans modifier l'email du compte source.
+- `supabase/functions/superadmin-manage-user/index.ts` — retrait bloc email dans `update_profile`.
+- `supabase/functions/superadmin-create-org/index.ts` — retrait blocage multi-org (lignes 112–121).
+- `src/components/superadmin/EditUserDialog.tsx` — retrait champ email + note.
+- `src/components/superadmin/CreateOrgDialog.tsx` — mise à jour du texte d'aide.
 
-### Audit
-Créer une table d'audit admin pour tracer :
-- qui a fait l'action
-- quel compte a été ciblé
-- ancien email
-- nouvel email
-- organisation concernée si applicable
-- date
-
-## Ordre d'exécution
-
-1. Vérifier les logs et compléter la chronologie.
-2. Corriger les données Eva / Justine / Via Sana.
-3. Ajouter les garde-fous backend.
-4. Ajouter les garde-fous UI.
-5. Ajouter l'audit.
-6. Vérifier en base :
-   - Justine n'a plus ALBO ni super admin.
-   - Eva garde ALBO + super admin.
-   - Via Sana a le bon propriétaire.
+Aucune migration DB nécessaire.
