@@ -109,16 +109,9 @@ Deno.serve(async (req) => {
 
     const ownerAlreadyExisted = !!ownerUserId;
 
-    if (ownerAlreadyExisted) {
-      const { data: existingMemberships, error: membershipErr } = await admin
-        .from("organization_members")
-        .select("organization_id, organizations(name)")
-        .eq("user_id", ownerUserId);
-      if (membershipErr) throw membershipErr;
-      if ((existingMemberships ?? []).length > 0) {
-        return json({ error: "Cet email appartient déjà à un compte rattaché à une organisation. Utilisez le transfert explicite de propriétaire." }, 409);
-      }
-    }
+    // Un email existant peut être réutilisé : le compte devient membre/admin
+    // de la nouvelle organisation en plus de ses organisations actuelles.
+
 
     // Si le propriétaire n'existe pas encore : on l'invite (envoi du lien magique natif Supabase, valable 24h, usage unique).
     if (!ownerUserId) {
