@@ -1,46 +1,119 @@
-## Contexte
+## Ce que je peux affirmer après vérification
 
-Tu choisis l'option **C** : le partage individuel via `visible_to_user_ids` reste possible, mais **uniquement** entre utilisateurs appartenant à la même organisation que le projet.
+Tu as raison : ma version précédente allait trop loin. Je ne peux pas affirmer que tu as volontairement changé ton email super admin en Justine. Ce que la base montre aujourd'hui, en revanche, est clair :
 
-**Était-ce le comportement d'origine ?** Partiellement. Avant le correctif Arnaud :
-- Le champ `visible_to_user_ids` existait déjà et était utilisé pour filtrer l'affichage côté UI.
-- Mais les politiques RLS de `sessions`, `reports`, `session_messages`, `transcripts`, `copilot_threads/messages` ne regardaient QUE l'organisation. Donc un utilisateur d'une autre org listé dans `visible_to_user_ids` voyait le projet mais pas ses données — un état incohérent.
+- Le `user_id` historique `0af28056...` a été créé le **02/07 à 13:28 UTC**.
+- Ce même `user_id` porte maintenant :
+  - email : `justine@centreviasana.com`
+  - nom : `Justine Sagot`
+  - rôle global : `super_admin`
+  - rôle ALBO : `admin` + `member`
+  - rôle Via Sana : `admin` + `member`
+  - voix clonée : `Eva`, créée le 15/07
+- Le `user_id` `a519ef85...` porte maintenant :
+  - email : `eva@alboteam.com`
+  - nom : `Eva Danel`
+  - créé le **24/07 à 08:29 UTC**
+  - rôle global : `super_admin`
+  - rôle ALBO : `admin` + `member`
+  - rôle Via Sana : `member`
+- L'organisation **Via Sana** a été créée le **24/07 à 08:07 UTC** avec `owner_id = 0af28056...`.
 
-L'option C formalise et sécurise ce qui était implicitement en place : partage fin **à l'intérieur de l'organisation**.
+Les heures que j'ai données viennent directement des colonnes `created_at` en base, en **UTC**. En heure française, ça correspond à environ **10:07** et **10:29**.
 
-## Changements
+## Cause probable corrigée
 
-### 1. Fonction `has_project_access` — resserrer la règle
-Aujourd'hui elle renvoie `true` si l'utilisateur est :
-- membre de l'organisation du projet, OU
-- créateur du projet, OU
-- listé dans `visible_to_user_ids` (peu importe son organisation), OU
-- super admin.
+Le scénario le plus cohérent avec ce que tu décris est celui-ci :
 
-Nouvelle règle : la branche `visible_to_user_ids` n'accorde l'accès **que si l'utilisateur est aussi membre de l'organisation du projet**. Les autres branches (membre d'org, super admin, créateur) restent inchangées.
+1. Tu as créé Via Sana avec toi comme propriétaire initiale.
+2. Ensuite tu as voulu remplacer le propriétaire par Justine.
+3. L'interface / logique actuelle mélange deux notions différentes :
+   - **changer le propriétaire d'une organisation**
+   - **modifier l'email du compte utilisateur propriétaire**
+4. La fonction backend `superadmin-manage-user`, action `update_profile`, permet de changer l'email d'un utilisateur global via :
+   - mise à jour de l'email d'authentification
+   - mise à jour de `profiles.email`
+5. Résultat probable : au lieu de transférer proprement `organizations.owner_id` vers un nouveau compte Justine, le système a modifié l'identité du compte propriétaire existant (`0af28056...`).
 
-Effet : Arnaud (org SUPER ADMIN) perd l'accès au projet ALBO. Un membre d'ALBO listé dans `visible_to_user_ids` d'un projet ALBO garde son accès restreint.
+Donc le problème n'est pas forcément une action manuelle de ta part sur ton profil : c'est probablement une **confusion fonctionnelle entre “propriétaire d'organisation” et “compte utilisateur”**.
 
-### 2. Garde-fou côté écriture
-Dans l'écran de partage de projet (`ProjectSharing` / endpoint de mise à jour de `visible_to_user_ids` et `report_recipient_user_ids`) :
-- Filtrer les utilisateurs proposés à la sélection aux seuls membres de l'organisation du projet.
-- Rejeter côté serveur (via un trigger `BEFORE UPDATE` sur `projects`) toute tentative d'ajouter un `user_id` qui n'appartient pas à l'organisation du projet, avec un message d'erreur clair.
+## À vérifier avant toute réparation
 
-### 3. Nettoyage des données existantes
-Migration de nettoyage : pour chaque projet, retirer de `visible_to_user_ids` et `report_recipient_user_ids` tout `user_id` qui n'est pas membre de l'organisation du projet. Loguer les entrées retirées (nombre + `project_id`) pour trace.
+Je veux valider les traces d'action exactes avant de toucher aux données :
 
-### 4. Vérifications
-- Confirmer via `supabase--read_query` qu'Arnaud n'a plus accès au projet Domaine Chapelle.
-- Confirmer qu'un membre d'ALBO listé dans `visible_to_user_ids` d'un projet ALBO garde bien l'accès aux sessions/rapports/copilot.
-- Confirmer qu'un membre d'ALBO **non** listé n'a pas accès à un projet à partage restreint.
+1. Lire les logs récents des fonctions backend liées à :
+   - création d'organisation
+   - création utilisateur
+   - modification utilisateur
+   - lien magique / prise en main
+2. Vérifier si un vrai compte auth séparé pour `justine@centreviasana.com` a été créé puis réattaché, ou si seul le compte `0af28056...` a changé d'identité.
+3. Vérifier les accès actuels de Justine : ALBO, Via Sana, super admin, propriété org.
+4. Vérifier les accès actuels d'Eva : ALBO, super admin, Via Sana.
 
-## Détails techniques
+## Réparation proposée
 
-- Migration SQL : redéfinir `public.has_project_access(_user uuid, _project uuid)` (SECURITY DEFINER, inchangé sinon), ajouter trigger `projects_validate_shared_users`, migration de nettoyage `UPDATE projects SET visible_to_user_ids = ...`.
-- Front : `src/components/project/ProjectSharing.tsx` (ou équivalent) — filtrer la liste des utilisateurs sur l'organisation du projet.
-- Aucune modification nécessaire sur les politiques RLS elles-mêmes : elles continuent d'appeler `has_project_access`, dont la sémantique change.
+Objectif : revenir à une séparation propre.
 
-## Hors périmètre
+### Eva
+- Garder `a519ef85...` comme compte Eva actuel si c'est celui qui porte maintenant `eva@alboteam.com`.
+- Confirmer qu'il a bien :
+  - `super_admin`
+  - `admin` + `member` ALBO
+- Retirer son rattachement à Via Sana si tu ne dois pas y être membre.
 
-- Pas de suppression de `visible_to_user_ids` (ce serait l'option A).
-- Aucun changement sur les rôles ou l'appartenance multi-organisation.
+### Justine
+- Faire en sorte que `justine@centreviasana.com` soit un compte client propre, sans héritage ALBO ni super admin.
+- Retirer de ce compte :
+  - `super_admin`
+  - `admin` ALBO
+  - `member` ALBO
+- Le garder uniquement dans Via Sana, idéalement :
+  - propriétaire Via Sana
+  - admin Via Sana
+  - membre Via Sana
+
+### Via Sana
+- `organizations.owner_id` doit pointer vers le vrai compte Justine.
+- Les membres Via Sana doivent être uniquement ceux voulus.
+
+### Session navigateur
+- Forcer une déconnexion/reconnexion après correction, car ton navigateur peut garder un jeton encore lié au mauvais `user_id`.
+
+## Garde-fous à ajouter
+
+### Backend
+Dans `superadmin-manage-user` :
+- Interdire le changement d'email d'un utilisateur `super_admin`.
+- Interdire le changement d'email de son propre compte via la console super admin.
+- Interdire le changement d'email d'un utilisateur propriétaire d'organisation sans procédure dédiée.
+- Avant toute modification d'email, vérifier qu'il n'existe pas déjà un autre compte avec cet email.
+
+### Interface
+Dans `EditUserDialog` :
+- Ne plus présenter le changement d'email comme une opération banale.
+- Masquer ou bloquer le champ email pour :
+  - soi-même
+  - super admins
+  - propriétaires d'organisation
+- Ajouter une action séparée : **Transférer la propriété**, qui change `organizations.owner_id` sans modifier l'email du compte source.
+
+### Audit
+Créer une table d'audit admin pour tracer :
+- qui a fait l'action
+- quel compte a été ciblé
+- ancien email
+- nouvel email
+- organisation concernée si applicable
+- date
+
+## Ordre d'exécution
+
+1. Vérifier les logs et compléter la chronologie.
+2. Corriger les données Eva / Justine / Via Sana.
+3. Ajouter les garde-fous backend.
+4. Ajouter les garde-fous UI.
+5. Ajouter l'audit.
+6. Vérifier en base :
+   - Justine n'a plus ALBO ni super admin.
+   - Eva garde ALBO + super admin.
+   - Via Sana a le bon propriétaire.
