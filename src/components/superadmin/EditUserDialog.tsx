@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 
 interface UserRow {
   user_id: string;
@@ -34,6 +34,8 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
   const [orgId, setOrgId] = useState<string>("none");
   const [newRole, setNewRole] = useState<string>("member");
   const [loading, setLoading] = useState(false);
+  const isSuperAdmin = user?.roles.includes("super_admin") ?? false;
+  const emailChanged = !!user && email.trim().toLowerCase() !== user.email.trim().toLowerCase();
 
   useEffect(() => {
     if (!open || !user) return;
@@ -119,7 +121,24 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isSuperAdmin}
+            />
+            {isSuperAdmin && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <AlertTriangle className="h-3 w-3" />
+                Email verrouillé pour les super admins.
+              </p>
+            )}
+            {emailChanged && !isSuperAdmin && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                Changer l'email modifie le compte de connexion.
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Organisation</Label>

@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+type ManagedUser = {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+async function findAuthUserByEmail(admin: any, email: string): Promise<ManagedUser | null> {
+  const lower = normalizeEmail(email);
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const found = data.users.find((authUser: ManagedUser) => normalizeEmail(authUser.email ?? "") === lower);
+    if (found) return found;
+    if (data.users.length < 200) break;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -45,18 +65,6 @@ Deno.serve(async (req) => {
         return code === "email_exists" || status === 422 || msg.includes("already been registered") || msg.includes("already exists");
       };
 
-      const findUserIdByEmail = async (target: string): Promise<string | null> => {
-        const lower = target.toLowerCase();
-        for (let page = 1; page <= 20; page++) {
-          const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
-          if (error) throw error;
-          const found = data.users.find((u) => (u.email ?? "").toLowerCase() === lower);
-          if (found) return found.id;
-          if (data.users.length < 200) break;
-        }
-        return null;
-      };
-
       try {
         const { data: invitedData, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
           data: { full_name: full_name || email },
@@ -71,7 +79,8 @@ Deno.serve(async (req) => {
         if (!organization_id) {
           return json({ error: "Cet utilisateur existe déjà." }, 409);
         }
-        const existingId = await findUserIdByEmail(email);
+        const existingAuthUser = await findAuthUserByEmail(admin, email);
+        const existingId = existingAuthUser?.id ?? null;
         if (!existingId) {
           return json({ error: "Utilisateur existant introuvable." }, 500);
         }
@@ -207,13 +216,46 @@ Deno.serve(async (req) => {
     if (action === "update_profile") {
       const { user_id, full_name, email } = body;
       if (!user_id) return json({ error: "user_id requis" }, 400);
+      const { data: targetIsSuper } = await admin.rpc("is_super_admin", { _user_id: user_id });
+      const { data: targetProfile } = await admin
+        .from("profiles")
+        .select("email, full_name")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
       if (full_name !== undefined) {
         await admin.from("profiles").update({ full_name }).eq("user_id", user_id);
       }
       if (email) {
-        const { error } = await admin.auth.admin.updateUserById(user_id, { email });
+        const cleanEmail = normalizeEmail(email);
+        const previousEmail = normalizeEmail(targetProfile?.email ?? "");
+
+        if (cleanEmail !== previousEmail) {
+          if (user_id === user.id) {
+            return json({ error: "Impossible de modifier l'email de son propre compte ici" }, 400);
+          }
+          if (targetIsSuper) {
+            return json({ error: "Impossible de modifier l'email d'un super admin depuis cette console" }, 400);
+          }
+          const existingAuthUser = await findAuthUserByEmail(admin, cleanEmail);
+          if (existingAuthUser && existingAuthUser.id !== user_id) {
+            return json({ error: "Cet email appartient déjà à un autre compte" }, 409);
+          }
+        }
+
+        const currentMetadata = (await admin.auth.admin.getUserById(user_id)).data?.user?.user_metadata ?? {};
+        const { error } = await admin.auth.admin.updateUserById(user_id, {
+          email: cleanEmail,
+          user_metadata: { ...currentMetadata, full_name: full_name ?? targetProfile?.full_name ?? cleanEmail },
+        });
         if (error) throw error;
-        await admin.from("profiles").update({ email }).eq("user_id", user_id);
+        await admin.from("profiles").update({ email: cleanEmail }).eq("user_id", user_id);
+      } else if (full_name !== undefined) {
+        const currentMetadata = (await admin.auth.admin.getUserById(user_id)).data?.user?.user_metadata ?? {};
+        const { error } = await admin.auth.admin.updateUserById(user_id, {
+          user_metadata: { ...currentMetadata, full_name },
+        });
+        if (error) throw error;
       }
       return json({ success: true });
     }

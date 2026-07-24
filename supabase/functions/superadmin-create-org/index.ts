@@ -23,6 +23,25 @@ function slugify(input: string): string {
     .slice(0, 60) || "org";
 }
 
+type ManagedUser = {
+  id: string;
+  email?: string | null;
+};
+
+const normalizeEmail = (value: string) => value.trim().toLowerCase();
+
+async function findAuthUserByEmail(admin: any, email: string): Promise<ManagedUser | null> {
+  const lower = normalizeEmail(email);
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw error;
+    const found = data.users.find((authUser: ManagedUser) => normalizeEmail(authUser.email ?? "") === lower);
+    if (found) return found;
+    if (data.users.length < 200) break;
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -45,7 +64,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const orgName: string = (body.org_name ?? "").trim();
-    const ownerEmail: string = (body.owner_email ?? "").trim().toLowerCase();
+    const ownerEmail: string = normalizeEmail(body.owner_email ?? "");
     const ownerFirstName: string = (body.owner_first_name ?? "").trim();
     const ownerLastName: string = (body.owner_last_name ?? "").trim();
     const pricing: string | null = body.pricing ? String(body.pricing).trim() : null;
@@ -79,22 +98,27 @@ Deno.serve(async (req) => {
       if (counter > 50) return json({ error: "Impossible de générer un slug unique" }, 500);
     }
 
-    // Recherche d'un user existant avec cet email
-    let ownerUserId: string | null = null;
-    {
-      const { data: prof } = await admin
-        .from("profiles")
-        .select("user_id")
-        .eq("email", ownerEmail)
-        .maybeSingle();
-      ownerUserId = prof?.user_id ?? null;
-    }
+    // Recherche uniquement dans l'identité d'authentification.
+    // Ne jamais réutiliser silencieusement un profil public dont l'email aurait été désynchronisé.
+    const existingOwner = await findAuthUserByEmail(admin, ownerEmail);
+    let ownerUserId: string | null = existingOwner?.id ?? null;
 
     const fullName = `${ownerFirstName} ${ownerLastName}`.trim();
     const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || supabaseUrl;
     const redirectTo = `${origin}/auth/magic-link`;
 
     const ownerAlreadyExisted = !!ownerUserId;
+
+    if (ownerAlreadyExisted) {
+      const { data: existingMemberships, error: membershipErr } = await admin
+        .from("organization_members")
+        .select("organization_id, organizations(name)")
+        .eq("user_id", ownerUserId);
+      if (membershipErr) throw membershipErr;
+      if ((existingMemberships ?? []).length > 0) {
+        return json({ error: "Cet email appartient déjà à un compte rattaché à une organisation. Utilisez le transfert explicite de propriétaire." }, 409);
+      }
+    }
 
     // Si le propriétaire n'existe pas encore : on l'invite (envoi du lien magique natif Supabase, valable 24h, usage unique).
     if (!ownerUserId) {

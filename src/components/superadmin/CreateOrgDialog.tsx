@@ -93,7 +93,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            Renseignez le propriétaire de l'organisation. Il recevra un email pour activer son compte.
+            Renseignez le propriétaire de l'organisation. L'email doit correspondre à un nouveau compte.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
