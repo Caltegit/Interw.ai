@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface UserRow {
   user_id: string;
@@ -30,17 +30,13 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
   const { toast } = useToast();
   const [orgs, setOrgs] = useState<OrgOption[]>([]);
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
   const [orgId, setOrgId] = useState<string>("none");
   const [newRole, setNewRole] = useState<string>("member");
   const [loading, setLoading] = useState(false);
-  const isSuperAdmin = user?.roles.includes("super_admin") ?? false;
-  const emailChanged = !!user && email.trim().toLowerCase() !== user.email.trim().toLowerCase();
 
   useEffect(() => {
     if (!open || !user) return;
     setFullName(user.full_name);
-    setEmail(user.email);
     setOrgId(user.organization_id ?? "none");
     supabase.from("organizations").select("id, name").order("name").then(({ data }) => setOrgs(data ?? []));
   }, [open, user]);
@@ -55,8 +51,8 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
     if (!user) return;
     setLoading(true);
     try {
-      if (fullName !== user.full_name || email !== user.email) {
-        await invoke({ action: "update_profile", user_id: user.user_id, full_name: fullName, email: email !== user.email ? email : undefined });
+      if (fullName !== user.full_name) {
+        await invoke({ action: "update_profile", user_id: user.user_id, full_name: fullName });
       }
       if ((orgId === "none" ? null : orgId) !== user.organization_id) {
         await invoke({ action: "move_org", user_id: user.user_id, organization_id: orgId === "none" ? null : orgId });
@@ -120,27 +116,6 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSuperAdmin}
-            />
-            {isSuperAdmin && (
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <AlertTriangle className="h-3 w-3" />
-                Email verrouillé pour les super admins.
-              </p>
-            )}
-            {emailChanged && !isSuperAdmin && (
-              <p className="flex items-center gap-1 text-xs text-destructive">
-                <AlertTriangle className="h-3 w-3" />
-                Changer l'email modifie le compte de connexion.
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
             <Label>Organisation</Label>
             <Select value={orgId} onValueChange={setOrgId}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -184,6 +159,9 @@ export function EditUserDialog({ open, onOpenChange, user, onUpdated }: Props) {
             </div>
             <p className="text-xs text-muted-foreground">
               Les rôles d'org remplacent les rôles existants dans l'organisation sélectionnée.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Pour changer l'email d'un membre, supprimez-le puis réinvitez-le avec la nouvelle adresse.
             </p>
           </div>
         </div>

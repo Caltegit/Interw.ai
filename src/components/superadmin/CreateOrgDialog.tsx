@@ -69,7 +69,14 @@ export function CreateOrgDialog({ onCreated }: Props) {
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 
-      toast({ title: "Organisation créée", description: "Une invitation a été envoyée au propriétaire." });
+      const ownerExisted = (data as { owner_existing?: boolean })?.owner_existing ?? false;
+      toast({
+        title: "Organisation créée",
+        description: ownerExisted
+          ? "Le compte existant a été rattaché à cette organisation."
+          : "Une invitation a été envoyée au propriétaire.",
+      });
+
       reset();
       setOpen(false);
       onCreated();
@@ -93,8 +100,9 @@ export function CreateOrgDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Créer une organisation</DialogTitle>
           <DialogDescription>
-            Renseignez le propriétaire de l'organisation. L'email doit correspondre à un nouveau compte.
+            Renseignez le propriétaire de l'organisation. Si l'email existe déjà, le compte sera rattaché à cette nouvelle organisation en plus des siennes.
           </DialogDescription>
+
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">

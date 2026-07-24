@@ -214,43 +214,11 @@ Deno.serve(async (req) => {
     }
 
     if (action === "update_profile") {
-      const { user_id, full_name, email } = body;
+      const { user_id, full_name } = body;
       if (!user_id) return json({ error: "user_id requis" }, 400);
-      const { data: targetIsSuper } = await admin.rpc("is_super_admin", { _user_id: user_id });
-      const { data: targetProfile } = await admin
-        .from("profiles")
-        .select("email, full_name")
-        .eq("user_id", user_id)
-        .maybeSingle();
 
       if (full_name !== undefined) {
         await admin.from("profiles").update({ full_name }).eq("user_id", user_id);
-      }
-      if (email) {
-        const cleanEmail = normalizeEmail(email);
-        const previousEmail = normalizeEmail(targetProfile?.email ?? "");
-
-        if (cleanEmail !== previousEmail) {
-          if (user_id === user.id) {
-            return json({ error: "Impossible de modifier l'email de son propre compte ici" }, 400);
-          }
-          if (targetIsSuper) {
-            return json({ error: "Impossible de modifier l'email d'un super admin depuis cette console" }, 400);
-          }
-          const existingAuthUser = await findAuthUserByEmail(admin, cleanEmail);
-          if (existingAuthUser && existingAuthUser.id !== user_id) {
-            return json({ error: "Cet email appartient déjà à un autre compte" }, 409);
-          }
-        }
-
-        const currentMetadata = (await admin.auth.admin.getUserById(user_id)).data?.user?.user_metadata ?? {};
-        const { error } = await admin.auth.admin.updateUserById(user_id, {
-          email: cleanEmail,
-          user_metadata: { ...currentMetadata, full_name: full_name ?? targetProfile?.full_name ?? cleanEmail },
-        });
-        if (error) throw error;
-        await admin.from("profiles").update({ email: cleanEmail }).eq("user_id", user_id);
-      } else if (full_name !== undefined) {
         const currentMetadata = (await admin.auth.admin.getUserById(user_id)).data?.user?.user_metadata ?? {};
         const { error } = await admin.auth.admin.updateUserById(user_id, {
           user_metadata: { ...currentMetadata, full_name },
