@@ -69,7 +69,14 @@ export function CreateOrgDialog({ onCreated }: Props) {
       if (error) throw error;
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
 
-      toast({ title: "Organisation créée", description: "Une invitation a été envoyée au propriétaire." });
+      const ownerExisted = (data as { owner_existing?: boolean })?.owner_existing ?? false;
+      toast({
+        title: "Organisation créée",
+        description: ownerExisted
+          ? "Le compte existant a été rattaché à cette organisation."
+          : "Une invitation a été envoyée au propriétaire.",
+      });
+
       reset();
       setOpen(false);
       onCreated();
