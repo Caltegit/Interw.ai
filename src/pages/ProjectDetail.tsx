@@ -251,10 +251,33 @@ export default function ProjectDetail() {
         return;
       }
 
-      const { data: reps } = await supabase
+      // Chargement par projet : une requête courte, quel que soit le nombre de sessions
+      let reps: any[] | null = null;
+      const joined = await supabase
         .from("reports")
-        .select("id, session_id, overall_score, recommendation")
-        .in("session_id", ids);
+        .select("id, session_id, overall_score, recommendation, sessions!inner(project_id)")
+        .eq("sessions.project_id", id);
+      if (!joined.error) {
+        reps = joined.data as any[];
+      } else {
+        // Repli : par lots d'identifiants
+        const batches: any[] = [];
+        let failed = false;
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error } = await supabase
+            .from("reports")
+            .select("id, session_id, overall_score, recommendation")
+            .in("session_id", ids.slice(i, i + 200));
+          if (error) { failed = true; break; }
+          batches.push(...(data ?? []));
+        }
+        if (failed) {
+          if (!cancelled) setReportsError(true);
+          logger.error("project_reports_load_failed", { projectId: id, error: joined.error.message });
+          return;
+        }
+        reps = batches;
+      }
       if (cancelled) return;
 
       const map: Record<string, any> = {};
@@ -265,8 +288,10 @@ export default function ProjectDetail() {
       for (const s of sessionsList) {
         drafts[s.id] = (s as any).recruiter_note ?? "";
       }
+      setReportsError(false);
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
+
     };
 
     Promise.all([
