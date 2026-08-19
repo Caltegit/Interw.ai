@@ -120,14 +120,22 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
     .select(
-      "id, title, job_title, created_at, sessions_done:sessions(completed_at, created_at, status, is_demo)",
+      "id, title, job_title, created_at, sessions_done:sessions(completed_at, created_at, status, is_demo, reports(id))",
     )
     .eq("status", "active")
     .limit(200);
   const mapped = (recentProjectsRaw ?? []).map((p: any) => {
+    // Même règle que la page projet : session terminée ET rapport généré
     const completedSessions = Array.isArray(p.sessions_done)
-      ? p.sessions_done.filter((s: any) => s && s.is_demo === false && s.status === "completed")
+      ? p.sessions_done.filter(
+          (s: any) =>
+            s &&
+            s.is_demo === false &&
+            s.status === "completed" &&
+            (Array.isArray(s.reports) ? s.reports.length > 0 : !!s.reports),
+        )
       : [];
+
     const completedDates = completedSessions
       .map((s: any) => s?.completed_at ?? s?.created_at)
       .filter(Boolean);
