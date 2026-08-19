@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
+import { logger } from "@/lib/logger";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,6 +129,8 @@ export default function ProjectDetail() {
   const [criteria, setCriteria] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [reportsBySession, setReportsBySession] = useState<Record<string, any>>({});
+  const [reportsError, setReportsError] = useState(false);
+
   
   const [orgMembers, setOrgMembers] = useState<{ user_id: string; full_name: string; email: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,10 +255,33 @@ export default function ProjectDetail() {
         return;
       }
 
-      const { data: reps } = await supabase
+      // Chargement par projet : une requête courte, quel que soit le nombre de sessions
+      let reps: any[] | null = null;
+      const joined = await supabase
         .from("reports")
-        .select("id, session_id, overall_score, recommendation")
-        .in("session_id", ids);
+        .select("id, session_id, overall_score, recommendation, sessions!inner(project_id)")
+        .eq("sessions.project_id", id);
+      if (!joined.error) {
+        reps = joined.data as any[];
+      } else {
+        // Repli : par lots d'identifiants
+        const batches: any[] = [];
+        let failed = false;
+        for (let i = 0; i < ids.length; i += 200) {
+          const { data, error } = await supabase
+            .from("reports")
+            .select("id, session_id, overall_score, recommendation")
+            .in("session_id", ids.slice(i, i + 200));
+          if (error) { failed = true; break; }
+          batches.push(...(data ?? []));
+        }
+        if (failed) {
+          if (!cancelled) setReportsError(true);
+          logger.error("project_reports_load_failed", { projectId: id, error: joined.error.message });
+          return;
+        }
+        reps = batches;
+      }
       if (cancelled) return;
 
       const map: Record<string, any> = {};
@@ -265,8 +292,10 @@ export default function ProjectDetail() {
       for (const s of sessionsList) {
         drafts[s.id] = (s as any).recruiter_note ?? "";
       }
+      setReportsError(false);
       setReportsBySession(map);
       setNoteDrafts((prev) => ({ ...drafts, ...prev }));
+
     };
 
     Promise.all([
@@ -988,11 +1017,14 @@ export default function ProjectDetail() {
                   ))}
                   {pagedSessions.length === 0 && (
                     <p className="col-span-full text-sm text-muted-foreground text-center py-8">
-                      {visibleDecisions.size === 0 && !search.trim()
+                      {reportsError
+                        ? "Impossible de charger les évaluations. Rechargez la page ou réessayez dans un instant."
+                        : visibleDecisions.size === 0 && !search.trim()
                         ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
                         : "Aucun candidat ne correspond aux filtres."}
                     </p>
                   )}
+
                 </div>
               ) : (
               <div className="space-y-2">
@@ -1250,11 +1282,14 @@ export default function ProjectDetail() {
                 </table>
                 {pagedSessions.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    {visibleDecisions.size === 0 && !search.trim()
+                    {reportsError
+                      ? "Impossible de charger les évaluations. Rechargez la page ou réessayez dans un instant."
+                      : visibleDecisions.size === 0 && !search.trim()
                       ? "Cliquez sur les onglets ci-dessus pour afficher vos entretiens."
                       : "Aucun candidat ne correspond aux filtres."}
                   </p>
                 )}
+
               </div>
                 {selectedIds.size > 0 && (
                   <div className="pt-2">
