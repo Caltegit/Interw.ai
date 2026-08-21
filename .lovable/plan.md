@@ -102,12 +102,28 @@ Nuance : `sessionStorage` est de toute façon perdu à la fermeture de l'onglet,
 - URLs générées `https://interw.ai/...` → `https://app.interw.com/...` (Edge Functions + templates d'email + frontend)
 - Textes de marque « Interw.ai » → « Interw »
 
-**Explicitement exclus** (adresses de contact, on n'y touche pas tant que la boîte `@interw.com` n'existe pas) :
+**Explicitement exclus** (adresses de contact — elles basculent dans le Lot B, une fois `hello@interw.com` opérationnelle) :
 - `hello@interw.ai`, `contact@interw.ai`, tous les `mailto:`
-- Fichiers concernés à laisser intacts sur ce point : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
-- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` restent sur `.ai` (ce sont des boîtes réelles)
+- Fichiers à laisser intacts sur ce point au Lot A : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
+- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` inchangés au Lot A
 
-Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule, mais le `mailto:contact@interw.ai` juste à côté reste inchangé.
+Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule au Lot A, mais le `mailto:contact@interw.ai` juste à côté attend le Lot B.
+
+**Correction sur `ROOT_DOMAIN` (`auth-email-hook`) — c'est une constante d'URL, pas de branding.** Elle est utilisée à deux endroits, tous deux générateurs de liens :
+
+```text
+ligne 258 : confirmationUrl = `https://${ROOT_DOMAIN}/auth/confirm?${params}`
+            → lien de confirmation d'inscription, magic link, invitation
+              et RÉINITIALISATION DE MOT DE PASSE (next=/reset-password)
+
+ligne 264 : siteUrl: `https://${ROOT_DOMAIN}`
+            → lien cliquable affiché dans le corps de l'email
+```
+
+Ta lecture est exacte : mettre `interw.com` casserait toute confirmation de compte et toute réinitialisation de mot de passe. **La valeur correcte est `app.interw.com`**, et elle appartient au Lot A (c'est une URL générée), pas au Lot B.
+
+Ce n'est d'ailleurs pas le domaine d'envoi : `SENDER_DOMAIN` / `FROM_DOMAIN` sont des constantes distinctes dans le même fichier. Le Lot A ne touche que `ROOT_DOMAIN`.
+
 
 ## 5. Lot B — configuration de notify.interw.com
 
