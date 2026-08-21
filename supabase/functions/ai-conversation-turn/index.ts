@@ -1,3 +1,4 @@
+import { MODEL_FAST } from "../_shared/ai-models.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -119,7 +120,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ni après, sans bloc \`\`\`.`
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: MODEL_FAST,
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,

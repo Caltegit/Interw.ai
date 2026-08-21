@@ -1,4 +1,5 @@
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
+import { MODEL_FAST } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: MODEL_FAST,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: `Voici le contenu brut de l'annonce :\n\n${truncated}` },

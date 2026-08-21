@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
+import { MODEL_FAST } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,7 @@ const corsHeaders = {
 };
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = MODEL_FAST;
 
 const MAX_SEGMENTS = 8;
 const MAX_BYTES_PER_SEGMENT = 20 * 1024 * 1024; // 20 Mo par segment audio
