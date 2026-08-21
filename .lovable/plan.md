@@ -102,12 +102,28 @@ Nuance : `sessionStorage` est de toute façon perdu à la fermeture de l'onglet,
 - URLs générées `https://interw.ai/...` → `https://app.interw.com/...` (Edge Functions + templates d'email + frontend)
 - Textes de marque « Interw.ai » → « Interw »
 
-**Explicitement exclus** (adresses de contact, on n'y touche pas tant que la boîte `@interw.com` n'existe pas) :
+**Explicitement exclus** (adresses de contact — elles basculent dans le Lot B, une fois `hello@interw.com` opérationnelle) :
 - `hello@interw.ai`, `contact@interw.ai`, tous les `mailto:`
-- Fichiers concernés à laisser intacts sur ce point : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
-- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` restent sur `.ai` (ce sont des boîtes réelles)
+- Fichiers à laisser intacts sur ce point au Lot A : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
+- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` inchangés au Lot A
 
-Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule, mais le `mailto:contact@interw.ai` juste à côté reste inchangé.
+Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule au Lot A, mais le `mailto:contact@interw.ai` juste à côté attend le Lot B.
+
+**Correction sur `ROOT_DOMAIN` (`auth-email-hook`) — c'est une constante d'URL, pas de branding.** Elle est utilisée à deux endroits, tous deux générateurs de liens :
+
+```text
+ligne 258 : confirmationUrl = `https://${ROOT_DOMAIN}/auth/confirm?${params}`
+            → lien de confirmation d'inscription, magic link, invitation
+              et RÉINITIALISATION DE MOT DE PASSE (next=/reset-password)
+
+ligne 264 : siteUrl: `https://${ROOT_DOMAIN}`
+            → lien cliquable affiché dans le corps de l'email
+```
+
+Ta lecture est exacte : mettre `interw.com` casserait toute confirmation de compte et toute réinitialisation de mot de passe. **La valeur correcte est `app.interw.com`**, et elle appartient au Lot A (c'est une URL générée), pas au Lot B.
+
+Ce n'est d'ailleurs pas le domaine d'envoi : `SENDER_DOMAIN` / `FROM_DOMAIN` sont des constantes distinctes dans le même fichier. Le Lot A ne touche que `ROOT_DOMAIN`.
+
 
 ## 5. Lot B — configuration de notify.interw.com
 
@@ -138,9 +154,15 @@ Type: NS   Nom: notify   Valeur: <ns_B affiché par Lovable>
 
 5. **Une fois `active`**, je bascule le Lot B en une passe :
    - `SENDER_DOMAIN` / `FROM_DOMAIN` → `notify.interw.com` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
-   - `ROOT_DOMAIN` → `interw.com` dans `auth-email-hook`
+   - `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` → `hello@interw.com` (`auth-email-hook`, `send-transactional-email`, `request-password-reset-code`), dès que tu confirmes la boîte opérationnelle
+   - `mailto:` du frontend → `hello@interw.com` / `contact@interw.com` : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue`, `demo-request.tsx`, `candidate-thank-you.tsx`
    - Les aperçus d'expéditeur dans `BulkEmailDialog.tsx` / `ShareReportsDialog.tsx` → `notify.interw.com`
-   - Les Reply-To restent sur `.ai` tant que la boîte `@interw.com` n'existe pas
+   - `ROOT_DOMAIN` n'est **pas** ici : il passe à `app.interw.com` dans le Lot A (voir section 4)
+
+   Deux points sur le Reply-To : il n'a pas besoin d'alignement SPF/DKIM, donc `hello@interw.com` sur la racine fonctionne même si l'envoi part de `notify.interw.com`. En revanche il faut des MX sur `interw.com` pour recevoir — c'est le seul enregistrement que tu poseras sur la racine, et il n'empêche en rien d'y héberger ta future plateforme plus tard.
+
+   Un `List-Unsubscribe: mailto:` dans `auth-email-hook` utilise aussi `REPLY_TO_EMAIL` — il bascule automatiquement avec la constante.
+
 
    Ces cinq fonctions doivent être redéployées ensemble : un `SENDER_DOMAIN` pointant vers un domaine non vérifié fait échouer l'envoi avec « No email domain record found ». D'où la règle : on ne touche pas une ligne du Lot B avant le statut `active`.
 
@@ -155,8 +177,8 @@ Note délivrabilité : un nouveau domaine d'envoi repart d'une réputation neutr
    - Tu lances la configuration de `notify.interw.com` dans Cloud → Emails et poses les NS chez ton registrar
 2. Si le chemin + query sont conservés : ajout des redirect URLs Auth, puis **Lot A** (URLs générées + marque, hors adresses de contact).
 3. Bascule du domaine primaire + Site URL, une fois le Lot A déployé.
-4. **Lot B** dès que `notify.interw.com` est `active` — pas avant.
-5. Plus tard, sur ton signal : adresses de contact `@interw.com` une fois la boîte créée.
+4. **Lot B** dès que `notify.interw.com` est `active` ET que tu confirmes `hello@interw.com` opérationnelle : domaine d'envoi + Reply-To + `mailto:` en une seule passe. Après cette étape, plus aucun `.ai` visible pour un candidat.
+
 
 Rien n'est modifié tant que tu n'as pas validé le résultat du test de redirection.
 
