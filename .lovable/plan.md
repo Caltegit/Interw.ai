@@ -1,185 +1,106 @@
-# Migration interw.ai → interw.com (domaine canonique)
+# Bascule vers app.interw.com — réponses avant exécution
 
-## Stratégie
+## 1. Protocole de test inversé — validé
 
-Les deux domaines restent actifs. `interw.com` devient le domaine canonique pour le SEO. Aucune redirection 301 pour l'instant — `.ai` reste indépendant et sert l'app actuelle sans interruption. Au lancement d'une future nouvelle plateforme, on repointe uniquement le DNS `.com`. La 301 `.ai → .com` sera ajoutée plus tard, une fois le nouveau backend validé.
+Ton protocole est le bon : `app.interw.com` en secondaire, `interw.ai` reste primaire, puis on ouvre un lien profond sur le secondaire et on regarde où on atterrit. La production n'est jamais touchée. J'attends ton observation avant d'écrire quoi que ce soit.
 
-## Décisions prises
+Une seule précision à garder en tête : la redirection est bien symétrique en mécanisme, mais teste avec une vraie URL de session existante (`/session/{slug}/start/{token}` ou `/entretien/...` selon la route réellement utilisée dans tes liens candidats) plutôt qu'un chemin inventé — un chemin inconnu peut être servi par le fallback SPA et masquer le résultat.
 
-- **Domaines** : Option 2 — deux domaines actifs, `.com` canonique, pas de 301
-- **Emails** : Migrer l'envoi vers `notify.interw.com` (nouveau sous-domaine, DNS dédié)
-- **Marque** : « Interw » (sans extension) dans tous les textes visibles
+## 2a. Supabase Auth — liste exacte à ajouter avant la bascule
 
-## 1. Connecter interw.com comme domaine personnalisé
+À faire dans Cloud → Auth, **avant** de passer le primaire :
 
-Action manuelle dans **Project Settings → Domains** :
-- Ajouter `interw.com` (A record → 185.158.133.1, TXT `_lovable`)
-- Ajouter `www.interw.com` (A record → 185.158.133.1)
-- Définir `interw.com` comme domaine **primaire** → `interw.ai` reste actif mais secondaire
-- SSL provisionné automatiquement par Lovable
+**Site URL** — une seule valeur possible. Tant que `interw.ai` est primaire, elle reste `https://interw.ai`. Elle devient `https://app.interw.com` **au moment** de la bascule.
 
-L'hébergement Lovable gère le routing SPA sur les deux domaines automatiquement (pas de `_redirects`).
-
-## 2. Canonical et métadonnées SEO → interw.com
-
-**`index.html`** — remplacer toutes les références `interw.ai` → `interw.com` :
-- `<link rel="canonical" href="https://interw.com/" />`
-- `<meta property="og:url" content="https://interw.com/" />`
-- `<meta property="og:image" content="https://interw.com/og-cover.jpg" />`
-- `<meta name="twitter:image" content="https://interw.com/og-cover.jpg" />`
-- JSON-LD `url`, `email`, `publisher.url`
-
-**Nom de marque** : remplacer « Interw.ai » → « Interw » dans :
-- `<title>` : `Interw — Sessions vidéo IA pour le recrutement`
-- `<meta property="og:site_name">` : `Interw`
-- `<meta property="og:title">` et `twitter:title`
-- `<meta name="description">` : remplacer « Interw.ai » par « Interw »
-
-**`public/robots.txt`** — ajouter la directive sitemap :
-```
-Sitemap: https://interw.com/sitemap.xml
-```
-
-**`public/sitemap.xml`** (si existant) ou script `scripts/generate-sitemap.ts` — `BASE_URL = "https://interw.com"`.
-
-## 3. Migrer l'envoi email vers notify.interw.com
-
-### 3a. Configurer le nouveau domaine d'envoi
-
-Action dans **Cloud → Emails** :
-- Configurer `notify.interw.com` comme nouveau domaine d'envoi Lovable
-- Récupérer les NS records à ajouter chez le registrar de `interw.com`
-- Attendre la vérification DNS (jusqu'à 72h)
-
-Le sous-domaine `notify.interw.ai` reste actif pendant la transition — les deux peuvent coexister.
-
-### 3b. Code : remplacer les constantes d'envoi
-
-Une fois `notify.interw.com` vérifié, remplacer dans les Edge Functions :
-
-| Fichier | Changement |
-|---------|-----------|
-| `supabase/functions/send-transactional-email/index.ts` | `SENDER_DOMAIN` et `FROM_DOMAIN` → `notify.interw.com` |
-| `supabase/functions/generate-report/index.ts` | `SENDER_DOMAIN` et `FROM_DOMAIN` → `notify.interw.com` |
-| `supabase/functions/auth-email-hook/index.ts` | `SENDER_DOMAIN`, `FROM_DOMAIN`, `ROOT_DOMAIN` → `interw.com` |
-| `supabase/functions/request-password-reset-code/index.ts` | `SENDER_DOMAIN`, `FROM_DOMAIN`, `REPLY_TO_EMAIL` → `hello@interw.com` |
-
-### 3c. Adresses de contact
-
-Remplacer `hello@interw.ai` → `hello@interw.com` et `contact@interw.ai` → `contact@interw.com` dans :
-
-**Edge Functions** :
-- `auth-email-hook/index.ts` (REPLY_TO_EMAIL)
-- `request-password-reset-code/index.ts` (REPLY_TO_EMAIL)
-- `report-interview-issue/index.ts` (recipientEmail, hello@)
-- `send-transactional-email/index.ts` (DEFAULT_REPLY_TO)
-- `_shared/transactional-email-templates/demo-request.tsx` (to: hello@)
-- `_shared/transactional-email-templates/candidate-thank-you.tsx` (contact@)
-
-**Frontend** :
-- `src/pages/Legal.tsx` (mailto:hello@interw.ai → hello@interw.com)
-- `src/pages/Privacy.tsx` (mailto:hello@interw.ai → hello@interw.com)
-- `src/components/landing/DemoRequestDialog.tsx` (hello@interw.ai)
-- `src/components/feedback/NewFeedbackDialog.tsx` (recipientEmail: hello@interw.ai)
-- `src/components/project/BulkEmailDialog.tsx` (noreply@interw.ai)
-- `src/components/project/ShareReportsDialog.tsx` (noreply@interw.ai)
-
-### 3d. Redéployer les Edge Functions
-
-Après tous les changements, redéployer :
-`auth-email-hook`, `send-transactional-email`, `generate-report`, `request-password-reset-code`, `report-interview-issue`.
-
-## 4. URLs dans les emails et Edge Functions → interw.com
-
-Remplacer `https://interw.ai` → `https://interw.com` dans toutes les URLs générées :
-
-**Edge Functions** (URLs construites pour emails, rapports, liens) :
-- `generate-report/index.ts` (reportUrl)
-- `report-interview-issue/index.ts` (sessionUrl)
-- `send-weekly-recaps/index.ts` (reportUrl, projectUrl)
-- `check-email-failures/index.ts` (dashboardUrl)
-- `process-report-queue/index.ts` (privacyUrl)
-- `resend-impacted-candidate/index.ts` (PUBLIC_APP_URL)
-- `send-abandon-reminders/index.ts` (SITE_URL)
-- `daily-health-report/index.ts` (SITE_URL)
-- `send-invitation/index.ts` (fallback origin)
-- `get-email-template-defaults/index.ts` (SITE_URL, SAMPLE_URL)
-
-**Templates email** (données d'exemple et URLs) :
-- `_shared/transactional-email-templates/weekly-project-recap.tsx`
-- `_shared/transactional-email-templates/organization-invite.tsx`
-- `_shared/transactional-email-templates/interview-report.tsx`
-- `_shared/transactional-email-templates/interview-issue-report.tsx`
-- `_shared/transactional-email-templates/feedback-copy.tsx`
-- `_shared/transactional-email-templates/email-failure-alert.tsx`
-- `_shared/transactional-email-templates/candidate-thank-you.tsx`
-- `_shared/transactional-email-templates/candidate-recovery-invite.tsx`
-- `_shared/transactional-email-templates/candidate-abandon-reminder.tsx`
-- `_shared/transactional-email-templates/daily-health-report.tsx`
-
-## 5. Frontend : remplacer interw.ai par interw.com
-
-**Pages** :
-- `src/pages/Landing.tsx` (texte affiché `interw.ai/entretien/marie-d`)
-- `src/pages/OrgPublic.tsx` (lien propulsé par)
-- `src/pages/Settings.tsx` (affichage slug `interw.ai/o/`)
-- `src/components/superadmin/EditRecoveryTemplateDialog.tsx` (URL exemple)
-
-**Affichage marque « Interw »** : remplacer « Interw.ai » → « Interw » dans les textes visibles (Landing.tsx déjà partiellement en « interw » minuscule, vérifier la casse).
-
-## 6. Tests E2E et seed
-
-- `tests/e2e/helpers/constants.ts` : `e2e-test@interw.ai` → `e2e-test@interw.com` (et mettre à jour l'utilisateur en base via seed-e2e-user)
-- `tests/e2e/README.md` : même remplacement
-- `supabase/functions/seed-e2e-user/index.ts` : email seed
-
-⚠️ Le changement d'email E2E nécessite de re-seed l'utilisateur test. À faire uniquement si les tests tournent sur `.com`.
-
-## 7. Vidéos Remotion (assets marketing)
-
-Les scènes Remotion contiennent `interw.ai` dans les mockups de navigateur :
-- `remotion/src/components/BrowserChrome.tsx` (url par défaut)
-- `remotion/src/scenes/SceneStep1-4.tsx`, `SceneOutro.tsx`
-- `remotion/src/scenes/demo/Scene*.tsx`
-
-Remplacer → `interw.com` pour cohérence marketing. Non bloquant pour l'app.
-
-## 8. REBUILD_SPEC.md
-
-Mettre à jour les références documentaires `interw.ai` → `interw.com` et marque « Interw.ai » → « Interw ». Non bloquant pour l'app.
-
-## 9. Supabase Auth : URLs de redirection
-
-Vérifier dans **Cloud → Auth** que les URLs autorisées incluent `https://interw.com/**` (en plus de `.ai`). Le code utilise déjà `window.location.origin` pour les redirects, donc pas de changement code — juste une autorisation côté config Auth.
-
-## 10. Publication
-
-Après validation de tous les changements :
-1. Publier sur `interw.com` (preview_ui--publish)
-2. Vérifier que `interw.ai` reste fonctionnel (domaine secondaire)
-3. Tester un parcours candidat complet sur `interw.com`
-4. Tester l'envoi d'un email (vérifier le From `@notify.interw.com`)
-
-## Ordre d'exécution
+**Redirect URLs (allowlist)** — ajouter dès maintenant, sans rien retirer :
 
 ```text
-1. Connecter interw.com (DNS + domaine primaire Lovable)     ← manuel, peut prendre 72h
-2. Configurer notify.interw.com (Cloud → Emails)              ← manuel, DNS
-3. Auth: autoriser interw.com dans les redirect URLs           ← manuel, Cloud → Auth
-   ── pendant que le DNS propage ──
-4. Modifier index.html (canonical, métadonnées, marque)
-5. Modifier le frontend (URLs, textes de marque)
-6. Modifier les Edge Functions (domaines d'envoi, URLs, emails contact)
-7. Modifier les templates email (URLs, données d'exemple)
-8. Redéployer les Edge Functions
-9. Publier
-10. Tester
+https://app.interw.com
+https://app.interw.com/**
 ```
 
-## Points d'attention
+En conservant les entrées existantes :
 
-- **Période de transition DNS** : pendant que `notify.interw.com` se vérifie, `notify.interw.ai` continue d'envoyer. Ne pas désactiver `.ai` tant que `.com` n'est pas vérifié.
-- **Réputation email** : `notify.interw.com` est un domaine neuf. Prévoir une période de chauffe (quelques jours) avant de basculer 100% du volume.
-- **Google Search Console** : ajouter `interw.com` comme nouvelle propriété. Faire valider la propriété puis soumettre le sitemap `https://interw.com/sitemap.xml`.
-- **Pas de 301 maintenant** : `.ai` reste actif et indépendant. La 301 sera ajoutée au moment du lancement d'une éventuelle nouvelle plateforme.
-- **Tests E2E** : ne changer les emails de test que si on migre les tests vers `.com`. Sinon garder `e2e-test@interw.ai` pour l'instant.
+```text
+https://interw.ai
+https://interw.ai/**
+```
+
+Garder les deux jeux pendant toute la transition : les liens de confirmation d'email et de réinitialisation déjà envoyés pointent encore sur `.ai`.
+
+Point d'attention : la Site URL sert de base aux liens générés par Supabase quand aucune `redirectTo` n'est fournie. Tant qu'elle vaut `.ai`, les emails d'auth continueront à pointer sur `.ai` même si l'app est servie sur `.com` — d'où l'ordre : ajouter les redirect URLs d'abord, basculer la Site URL en même temps que le domaine primaire.
+
+## 2b. CORS — sortie du grep
+
+**Il n'existe aucun fichier `supabase/functions/_shared/cors.ts`.** Contenu réel de `_shared/` :
+
+```text
+ai-models.ts   auth-guard.ts   email-templates/
+resolve-start-seconds.ts   resolve-start-seconds_test.ts
+session-storage-cleanup.ts   transactional-email-templates/
+```
+
+Grep sur les allowlists d'origines dans `supabase/functions/` : **aucune allowlist**. Toutes les fonctions déclarent en dur :
+
+```text
+"Access-Control-Allow-Origin": "*"
+```
+
+(30+ occurrences, toutes identiques : tts-openai, transcribe-session, superadmin-*, ai-conversation-turn, auth-email-hook, retry-email, etc.)
+
+**Conclusion : rien à modifier côté CORS, l'app fonctionnera telle quelle sur `app.interw.com`.**
+
+Seule exception déjà repérée : `finalize-abandoned-session/index.ts` renvoie l'origine reçue en écho, sans liste blanche — fonctionne aussi sur le nouveau domaine.
+
+Les occurrences de `interw.ai` dans les Edge Functions ne sont pas du CORS, ce sont des URLs générées et des domaines d'envoi (Lot A / Lot B) :
+- URLs générées (Lot A) : `send-weekly-recaps`, `generate-report:1523`, `process-report-queue:76`, `report-interview-issue`, `check-email-failures`, `resend-impacted-candidate`, `daily-health-report`, `send-abandon-reminders`, `send-invitation:66`, `get-email-template-defaults`, + 12 templates dans `_shared/transactional-email-templates/`
+- Domaines d'envoi (Lot B, on n'y touche pas) : `SENDER_DOMAIN` / `FROM_DOMAIN` / `REPLY_TO_EMAIL` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
+
+Côté frontend, 11 fichiers contiennent `interw.ai` : `Landing.tsx`, `Legal.tsx`, `Privacy.tsx`, `OrgPublic.tsx`, `Settings.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `AdminCandidatesToRecover.tsx`, `EditRecoveryTemplateDialog.tsx`, `ShareReportsDialog.tsx`, `BulkEmailDialog.tsx`.
+
+## 2c. Templates stockés en base — 3 lignes, aucune côté clients
+
+Colonnes vérifiées, aucune modification effectuée :
+
+| Table | Colonnes vérifiées | Lignes contenant `interw.ai` |
+|---|---|---|
+| `email_template_overrides` | subject, html_body | **2** (org SUPER ADMIN : `invite`, `magiclink`) |
+| `projects` | intro_text, completion_message, pre_session_message, candidate_email_subject, candidate_email_body | **1** (projet « Candidature spontanée », org UBIQ) |
+| `interview_templates` | mêmes colonnes | 0 |
+| `candidate_message_templates` | subject, body | 0 |
+| `intro_templates` | intro_text, description | 0 |
+| `question_templates` | content | 0 |
+| `global_email_template_overrides` | subject, intro_html, outro_html | 0 |
+| `project_public_pages` | content, seo_title, seo_description | 0 |
+
+**Aucun client n'a enregistré `interw.ai` via « garder ce texte comme défaut ».** Les 2 overrides sont les tiens, la ligne UBIQ est un texte d'introduction affiché au candidat.
+
+## 3. Reprise de session — quasi entièrement serveur
+
+L'état de reprise vit en base :
+- `sessions.last_question_index`, `status`, `started_at`, `last_activity_at`
+- `session_messages` (échanges déjà enregistrés)
+- le token est dans l'URL, donc il traverse le changement de domaine
+
+Les médias ne sont pas bufferisés dans le navigateur : chaque `ondataavailable` déclenche un `uploadChunk` immédiat vers le stockage (`interviews/{sessionId}/q{n}/...`), avec un manifest écrit à la fin de chaque question. Un candidat qui reprend depuis une autre origine ne perd aucun enregistrement.
+
+**Ce qui vit côté navigateur** (et ne suivra pas le changement d'origine) :
+
+| Clé | Type | Impact à la reprise sur le nouveau domaine |
+|---|---|---|
+| `mic-test-validated:{token}` | sessionStorage | Le candidat devra refaire le test micro/caméra |
+| `interview.preferredAudioDeviceId` / `...VideoDeviceId` | localStorage | Périphériques par défaut du navigateur au lieu du choix précédent |
+| `audioDebug` | localStorage | Aucun (diagnostic interne) |
+
+Aucun n'est bloquant : le pire cas est un test technique à refaire. Le flux de reprise (`resumePrompt` → `last_question_index`) est reconstruit depuis la base à chaque chargement.
+
+Nuance : `sessionStorage` est de toute façon perdu à la fermeture de l'onglet, donc un candidat qui reprend le lendemain refait déjà le test micro aujourd'hui, même sans changement de domaine.
+
+## Ce qui reste à décider
+
+Rien n'est modifié tant que tu n'as pas validé. Séquence proposée :
+
+1. Tu connectes `app.interw.com` en secondaire et tu me dis où atterrit le lien profond.
+2. Si le chemin + query sont conservés : j'ajoute les redirect URLs dans Cloud → Auth, puis je lance le Lot A (URLs générées + textes de marque, hors domaines d'envoi).
+3. Bascule du primaire + Site URL au même moment, une fois le Lot A déployé.
+4. Lot B (domaines d'envoi) plus tard, sur ton signal.
