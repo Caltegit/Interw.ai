@@ -177,8 +177,8 @@ Note délivrabilité : un nouveau domaine d'envoi repart d'une réputation neutr
    - Tu lances la configuration de `notify.interw.com` dans Cloud → Emails et poses les NS chez ton registrar
 2. Si le chemin + query sont conservés : ajout des redirect URLs Auth, puis **Lot A** (URLs générées + marque, hors adresses de contact).
 3. Bascule du domaine primaire + Site URL, une fois le Lot A déployé.
-4. **Lot B** dès que `notify.interw.com` est `active` — pas avant.
-5. Plus tard, sur ton signal : adresses de contact `@interw.com` une fois la boîte créée.
+4. **Lot B** dès que `notify.interw.com` est `active` ET que tu confirmes `hello@interw.com` opérationnelle : domaine d'envoi + Reply-To + `mailto:` en une seule passe. Après cette étape, plus aucun `.ai` visible pour un candidat.
+
 
 Rien n'est modifié tant que tu n'as pas validé le résultat du test de redirection.
 
