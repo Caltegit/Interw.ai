@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { MODEL_FAST } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const corsHeaders = {
 // Limite inline Gemini : ~20 Mo. On reste prudent à 18 Mo.
 const MAX_INLINE_BYTES = 18 * 1024 * 1024;
 const MAX_SEGMENTS_PER_RUN = 8;
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = MODEL_FAST;
 
 const TRANSCRIBE_PROMPT = `Tu es un transcripteur professionnel.
 Transcris EXACTEMENT ce que dit la personne dans cette vidéo/audio, en français, avec des horodatages précis.

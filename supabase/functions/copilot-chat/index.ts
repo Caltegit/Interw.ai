@@ -5,6 +5,7 @@
 //  - design   : aide à la conception de l'entretien (questions / critères)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { MODEL_FAST } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -333,7 +334,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: MODEL_FAST,
         messages: aiMessages,
       }),
     });

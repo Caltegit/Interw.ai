@@ -4,6 +4,7 @@ import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
+import { MODEL_FAST, MODEL_SCORING, MODEL_FALLBACK, buildChatBody } from "../_shared/ai-models.ts";
 
 const SITE_NAME = "Interw";
 const SENDER_DOMAIN = "notify.interw.ai";
@@ -360,8 +361,7 @@ Champs secondaires (toujours produits, format inchangé) :
 - highlights : 3 moments forts à montrer. Chaque entrée : question_index (0-based), kind (force/personnalite/vigilance), label (max 60 car), why, start_seconds / end_seconds DANS la réponse vidéo de la question (commence à 0, durée 10-30 s). Diversifie les kinds.`;
 
     // Construit le body commun (tools/messages) — on ne change que le modèle entre les essais.
-    const buildBody = (model: string) => ({
-      model,
+    const buildBody = (model: string) => buildChatBody(model, {
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -553,13 +553,13 @@ Champs secondaires (toujours produits, format inchangé) :
     };
 
     // Retry/fallback :
-    //  - tentative 1 : gemini-2.5-pro
-    //  - tentative 2 : gemini-2.5-pro (parfois 502 transitoire côté provider)
-    //  - tentative 3 : fallback gemini-2.5-flash (plus rapide, supporte le tool calling)
+    //  - tentative 1 : Gemini 3.7 Flash
+    //  - tentative 2 : Gemini 3.7 Flash (parfois 502 transitoire côté provider)
+    //  - tentative 3 : GPT-5.6 Terra (autre fournisseur, filet de sécurité)
     const attempts: Array<{ model: string; label: string }> = [
-      { model: "google/gemini-2.5-pro", label: "pro-1" },
-      { model: "google/gemini-2.5-pro", label: "pro-2" },
-      { model: "google/gemini-2.5-flash", label: "flash-fallback" },
+      { model: MODEL_SCORING, label: "flash-1" },
+      { model: MODEL_SCORING, label: "flash-2" },
+      { model: MODEL_FALLBACK, label: "openai-fallback" },
     ];
 
     let parsed: any = null;
@@ -687,8 +687,7 @@ Champs secondaires (toujours produits, format inchangé) :
         },
         required: ["criterion", "score", "statement", "level"],
       };
-      const body = {
-        model: "google/gemini-2.5-pro",
+      const body = buildChatBody(MODEL_SCORING, {
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -721,7 +720,7 @@ Règles :
         ],
         tool_choice: { type: "function", function: { name: "repair_fit_criterion" } },
         max_tokens: 2048,
-      };
+      });
       for (let i = 0; i < 2; i++) {
         try {
           const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -772,8 +771,7 @@ Règles :
         },
         required: ["score", "confidence"],
       };
-      const body = {
-        model: "google/gemini-2.5-pro",
+      const body = buildChatBody(MODEL_SCORING, {
         messages: [
           { role: "system", content: systemPrompt },
           {
@@ -804,7 +802,7 @@ Règles :
         ],
         tool_choice: { type: "function", function: { name: "repair_big_five_trait" } },
         max_tokens: 1024,
-      };
+      });
       for (let i = 0; i < 2; i++) {
         try {
           const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1049,7 +1047,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
+            model: MODEL_FAST,
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: retryPrompt },
