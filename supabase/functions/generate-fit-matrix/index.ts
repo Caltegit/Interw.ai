@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import { resolveStartFactory } from "../_shared/resolve-start-seconds.ts";
+import { MODEL_SCORING, MODEL_FALLBACK, buildChatBody } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -194,7 +195,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
 
     let parsed: any = null;
     let lastErr: string | null = null;
-    for (const model of ["google/gemini-2.5-flash", "google/gemini-2.5-pro"]) {
+    for (const model of [MODEL_SCORING, MODEL_SCORING, MODEL_FALLBACK]) {
       try {
         const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -202,7 +203,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
             Authorization: `Bearer ${LOVABLE_API_KEY}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ...bodyBase, model }),
+          body: JSON.stringify(buildChatBody(model, bodyBase)),
         });
         if (!r.ok) {
           const txt = await r.text();
