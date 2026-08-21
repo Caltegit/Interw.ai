@@ -96,11 +96,67 @@ Aucun n'est bloquant : le pire cas est un test technique à refaire. Le flux de 
 
 Nuance : `sessionStorage` est de toute façon perdu à la fermeture de l'onglet, donc un candidat qui reprend le lendemain refait déjà le test micro aujourd'hui, même sans changement de domaine.
 
-## Ce qui reste à décider
+## 4. Périmètre du Lot A — corrigé
 
-Rien n'est modifié tant que tu n'as pas validé. Séquence proposée :
+**Inclus** :
+- URLs générées `https://interw.ai/...` → `https://app.interw.com/...` (Edge Functions + templates d'email + frontend)
+- Textes de marque « Interw.ai » → « Interw »
 
-1. Tu connectes `app.interw.com` en secondaire et tu me dis où atterrit le lien profond.
-2. Si le chemin + query sont conservés : j'ajoute les redirect URLs dans Cloud → Auth, puis je lance le Lot A (URLs générées + textes de marque, hors domaines d'envoi).
-3. Bascule du primaire + Site URL au même moment, une fois le Lot A déployé.
-4. Lot B (domaines d'envoi) plus tard, sur ton signal.
+**Explicitement exclus** (adresses de contact, on n'y touche pas tant que la boîte `@interw.com` n'existe pas) :
+- `hello@interw.ai`, `contact@interw.ai`, tous les `mailto:`
+- Fichiers concernés à laisser intacts sur ce point : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
+- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` restent sur `.ai` (ce sont des boîtes réelles)
+
+Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule, mais le `mailto:contact@interw.ai` juste à côté reste inchangé.
+
+## 5. Lot B — configuration de notify.interw.com
+
+Tu as raison sur les deux points : c'est un sous-domaine, la racine `interw.com` reste totalement libre, et sans le Lot B le candidat lit encore `.ai` dans l'expéditeur avant même d'ouvrir.
+
+### État actuel (vérifié)
+
+`notify.interw.ai` est **vérifié et actif** (délégué à `ns3.lovable.cloud` / `ns4.lovable.cloud`). File d'envoi saine, 79 emails sur 7 jours. Rien n'est cassé tant qu'on n'y touche pas.
+
+### Procédure pour notify.interw.com
+
+1. **Lancer la configuration depuis Cloud → Emails** et saisir `notify.interw.com`. Lovable crée la zone déléguée et affiche **la paire de nameservers assignée à ce domaine**.
+
+   Important : les nameservers sont attribués par domaine. Ceux de `notify.interw.ai` (`ns3`/`ns4`) ne sont pas forcément ceux de `notify.interw.com` — n'utilise que les valeurs affichées à l'écran lors de la configuration.
+
+2. **Chez ton registrar `interw.com`**, ajouter deux enregistrements NS sur le sous-domaine uniquement :
+
+```text
+Type: NS   Nom: notify   Valeur: <ns_A affiché par Lovable>
+Type: NS   Nom: notify   Valeur: <ns_B affiché par Lovable>
+```
+
+   C'est tout. Aucun SPF, DKIM ou MX à écrire à la main : une fois la délégation active, Lovable gère ces enregistrements dans la zone `notify.interw.com`. Aucun enregistrement sur la racine `interw.com`.
+
+3. **Délai de vérification** : généralement 15 min à 2 h, jusqu'à 72 h selon le TTL de ton registrar. Le statut passe de `awaiting_dns` → `active_provisioning` → `active` dans Cloud → Emails.
+
+4. **Prérequis** : ton fournisseur DNS doit accepter les enregistrements de type NS (Cloudflare, OVH, Gandi, Namecheap : oui. DNS géré par Shopify : non).
+
+5. **Une fois `active`**, je bascule le Lot B en une passe :
+   - `SENDER_DOMAIN` / `FROM_DOMAIN` → `notify.interw.com` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
+   - `ROOT_DOMAIN` → `interw.com` dans `auth-email-hook`
+   - Les aperçus d'expéditeur dans `BulkEmailDialog.tsx` / `ShareReportsDialog.tsx` → `notify.interw.com`
+   - Les Reply-To restent sur `.ai` tant que la boîte `@interw.com` n'existe pas
+
+   Ces cinq fonctions doivent être redéployées ensemble : un `SENDER_DOMAIN` pointant vers un domaine non vérifié fait échouer l'envoi avec « No email domain record found ». D'où la règle : on ne touche pas une ligne du Lot B avant le statut `active`.
+
+6. **Les deux domaines d'envoi peuvent coexister** : `notify.interw.ai` reste vérifié et fonctionnel. En cas de problème sur `.com`, on revient en arrière en une modification de constante.
+
+Note délivrabilité : un nouveau domaine d'envoi repart d'une réputation neutre. Avec ton volume (~80 emails/semaine), aucune montée en charge à organiser — le volume est trop faible pour déclencher un filtrage sur nouveauté de domaine.
+
+## 6. Séquence
+
+1. **En parallèle, dès maintenant** :
+   - Tu connectes `app.interw.com` en secondaire → tu me dis où atterrit le lien profond réel
+   - Tu lances la configuration de `notify.interw.com` dans Cloud → Emails et poses les NS chez ton registrar
+2. Si le chemin + query sont conservés : ajout des redirect URLs Auth, puis **Lot A** (URLs générées + marque, hors adresses de contact).
+3. Bascule du domaine primaire + Site URL, une fois le Lot A déployé.
+4. **Lot B** dès que `notify.interw.com` est `active` — pas avant.
+5. Plus tard, sur ton signal : adresses de contact `@interw.com` une fois la boîte créée.
+
+Rien n'est modifié tant que tu n'as pas validé le résultat du test de redirection.
+
