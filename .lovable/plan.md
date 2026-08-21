@@ -154,9 +154,15 @@ Type: NS   Nom: notify   Valeur: <ns_B affiché par Lovable>
 
 5. **Une fois `active`**, je bascule le Lot B en une passe :
    - `SENDER_DOMAIN` / `FROM_DOMAIN` → `notify.interw.com` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
-   - `ROOT_DOMAIN` → `interw.com` dans `auth-email-hook`
+   - `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` → `hello@interw.com` (`auth-email-hook`, `send-transactional-email`, `request-password-reset-code`), dès que tu confirmes la boîte opérationnelle
+   - `mailto:` du frontend → `hello@interw.com` / `contact@interw.com` : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue`, `demo-request.tsx`, `candidate-thank-you.tsx`
    - Les aperçus d'expéditeur dans `BulkEmailDialog.tsx` / `ShareReportsDialog.tsx` → `notify.interw.com`
-   - Les Reply-To restent sur `.ai` tant que la boîte `@interw.com` n'existe pas
+   - `ROOT_DOMAIN` n'est **pas** ici : il passe à `app.interw.com` dans le Lot A (voir section 4)
+
+   Deux points sur le Reply-To : il n'a pas besoin d'alignement SPF/DKIM, donc `hello@interw.com` sur la racine fonctionne même si l'envoi part de `notify.interw.com`. En revanche il faut des MX sur `interw.com` pour recevoir — c'est le seul enregistrement que tu poseras sur la racine, et il n'empêche en rien d'y héberger ta future plateforme plus tard.
+
+   Un `List-Unsubscribe: mailto:` dans `auth-email-hook` utilise aussi `REPLY_TO_EMAIL` — il bascule automatiquement avec la constante.
+
 
    Ces cinq fonctions doivent être redéployées ensemble : un `SENDER_DOMAIN` pointant vers un domaine non vérifié fait échouer l'envoi avec « No email domain record found ». D'où la règle : on ne touche pas une ligne du Lot B avant le statut `active`.
 
