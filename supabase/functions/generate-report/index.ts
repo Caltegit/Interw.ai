@@ -553,9 +553,9 @@ Champs secondaires (toujours produits, format inchangé) :
     };
 
     // Retry/fallback :
-    //  - tentative 1 : gemini-2.5-pro
-    //  - tentative 2 : gemini-2.5-pro (parfois 502 transitoire côté provider)
-    //  - tentative 3 : fallback gemini-2.5-flash (plus rapide, supporte le tool calling)
+    //  - tentative 1 : Gemini 3.7 Flash
+    //  - tentative 2 : Gemini 3.7 Flash (parfois 502 transitoire côté provider)
+    //  - tentative 3 : GPT-5.6 Terra (autre fournisseur, filet de sécurité)
     const attempts: Array<{ model: string; label: string }> = [
       { model: MODEL_SCORING, label: "flash-1" },
       { model: MODEL_SCORING, label: "flash-2" },
