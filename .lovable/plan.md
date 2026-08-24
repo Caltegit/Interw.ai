@@ -75,6 +75,15 @@ Sans ce lot, les suivants sont invérifiables. C'est le prérequis.
 - Aucune modification du `MediaRecorder` vidéo pendant une question : la règle du conteneur unique reste intacte.
 - Mesure d'énergie serveur par décodage léger de l'en-tête et échantillonnage du PCM, sans dépendance lourde ajoutée.
 
+## Critère de succès mesurable
+
+Aujourd'hui, 8,7 % des sessions terminées (30 derniers jours) ont moins de 200 caractères de transcription candidat — symptôme d'une capture audio perdue.
+
+- **Objectif** : après déploiement des Lots 2 à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
+- **Contrôle** : 30 jours après mise en production, requête SQL de comparaison avant/après.
+- Si l'objectif n'est pas atteint, la télémétrie du Lot 1 identifie précisément le navigateur / OS / périphérique restant à traiter, et on corrige ciblément plutôt qu'au feeling.
+- Sans ce critère, on risque soit de surcorriger (toucher à ce qui marche), soit de s'arrêter trop tôt (un candidat sur douze a toujours un micro mort).
+
 ## Ordre proposé
 
 Lot 1 d'abord, seul, publié et laissé tourner 48 h pour obtenir des chiffres réels par navigateur. Les lots 2 et 3 ensuite, qui couvrent l'essentiel du vécu candidat. Les lots 4 et 5 pour finir.
