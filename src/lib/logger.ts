@@ -28,6 +28,19 @@ let currentUserId: string | null = null;
 
 const isDev = import.meta.env.DEV;
 
+/**
+ * Hook optionnel : forward les événements micro vers la télémétrie serveur.
+ * Branché par micTelemetry.ts — aucun couplage direct entre les deux modules.
+ */
+type TelemetryHook = (event: string, level: LogLevel, data?: Record<string, unknown>) => void;
+let telemetryHook: TelemetryHook | null = null;
+
+const MIC_EVENT_PREFIXES = ["mic_", "interview_media", "interview_audio"];
+
+export function setTelemetryHook(fn: TelemetryHook | null): void {
+  telemetryHook = fn;
+}
+
 function getRoute(): string {
   if (typeof window === "undefined") return "";
   return window.location.pathname;
