@@ -72,7 +72,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminOrgDetail from "./pages/SuperAdminOrgDetail";
 import AdminCandidatesToRecover from "./pages/AdminCandidatesToRecover";
-import AdminEmails from "./pages/AdminEmails";
+
 import AdminTuto from "./pages/AdminTuto";
 import AdminTtsCompare from "./pages/AdminTtsCompare";
 import AdminReportJobs from "./pages/AdminReportJobs";
