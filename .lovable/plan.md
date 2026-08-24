@@ -11,15 +11,34 @@ Sessions terminées hors démo :
 
 Une session terminée sur onze est quasi vide côté parole candidat (moyenne normale ~7 100 caractères). Ce ne sont pas des candidats laconiques : c'est une capture audio perdue.
 
-## Cinq causes identifiées
+## Causes identifiées (vérifiées dans le code)
 
-1. **Aucune trace serveur** : `logger.ts` n'écrit que dans la console navigateur. Tous les événements micro déjà instrumentés disparaissent à la fermeture de l'onglet. On répare à l'aveugle.
-2. **L'erreur d'accès média est avalée** : `startVideoStream` demande caméra + micro en un seul appel. Si le micro seul est indisponible, l'appel entier échoue avec un message faux (« Caméra inaccessible »). Les types d'erreur ne sont pas distingués.
-3. **Le contexte micro ne survit pas au parcours** : calibration en `sessionStorage`, micro préféré en `localStorage`. Changement d'onglet ou arrivée directe sur le lien = calibration perdue. Rien ne bloque le démarrage sans test micro validé.
-4. **Aucune preuve serveur qu'une réponse a été captée** : `transcribe-session` ne vérifie ni taille, ni durée, ni énergie du fichier audio. Un fichier de 2 ko silencieux produit une transcription vide ou hallucinée.
-5. **La bascule de micro à chaud reste fragile** : aucune vérification que la nouvelle piste produit du signal après la bascule. Le candidat peut « changer de micro » et continuer à enregistrer du vide.
+### Déjà couvertes — rien à faire
+- **Piste qui meurt sans erreur** : `useMicHealthWatcher.ts` écoute déjà `track.addEventListener("ended")` et `("mute")`, avec tolérance de 5 s sur les blips Bluetooth.
+- **Suppression de bruit agressive** : `micLevel.ts` impose déjà `noiseSuppression: false`, `autoGainControl: true`, `channelCount: 1`, `sampleRate { ideal: 48000, min: 16000 }`.
+
+### Trous confirmés à traiter
+
+1. **Codec Safari — partiellement traité, deux fuites en dur.** `getSupportedAudioMimeType()` teste bien `MediaRecorder.isTypeSupported()` avec `audio/mp4` en premier sur Safari. Mais deux endroits contournent cette détection : `InterviewStart.tsx:1633` (`previous.audioMime || "audio/webm"` au redémarrage après bascule de micro) et `:1943` (`audioMime: "audio/webm;codecs=opus"` à l'initialisation). Sur Safari, ces chemins produisent un enregistreur qui échoue ou sort un fichier illisible. Suspect n°1 pour les sessions terminées sans parole.
+
+2. **Aucune trace serveur** : `logger.ts` n'écrit que dans la console navigateur. Tous les événements micro déjà instrumentés disparaissent à la fermeture de l'onglet. On répare à l'aveugle.
+
+3. **Types d'erreur média non distingués.** Un seul `OverconstrainedError` est géré, et uniquement dans `InterviewDeviceTest.tsx:249`. Nulle part on ne distingue `NotAllowedError` (refus), `NotReadableError` (micro verrouillé par Teams/Zoom/Discord sur Windows), `NotFoundError` (aucun micro). Le candidat voit « Caméra inaccessible » quel que soit le vrai problème.
+
+4. **Demande combinée audio + vidéo.** `startVideoStream` fait un seul `getUserMedia({ video, audio })`. Si le micro seul est indisponible, tout échoue avec un message faux.
+
+5. **Bluetooth / profil HFP dégradé — angle mort total.** Sur AirPods et casques similaires, activer le micro force la bascule A2DP → HFP, qui peut produire du 8 kHz inexploitable par la transcription. Le code lit `getSettings().deviceId` mais **ne vérifie jamais le `sampleRate` réellement obtenu**. Un candidat qui répond depuis son téléphone avec des écouteurs peut enregistrer un audio techniquement valide mais intranscriptible.
+
+6. **iOS Safari en arrière-plan — traité à moitié.** Un `visibilitychange` reprend bien l'`AudioContext` (`InterviewStart.tsx:794-815`), mais rien ne vérifie que la **piste média** a survécu : iOS la tue définitivement, et elle n'est pas réacquise au retour.
+
+7. **Le contexte micro ne survit pas au parcours** : calibration en `sessionStorage`, micro préféré en `localStorage`. Rien ne bloque le démarrage sans test micro validé.
+
+8. **Aucune preuve serveur qu'une réponse a été captée** : `transcribe-session` ne vérifie ni taille, ni durée, ni énergie du fichier audio.
+
+9. **Bascule de micro à chaud non vérifiée** : aucune mesure que la nouvelle piste produit du signal après la bascule.
 
 ---
+
 
 ## Lot 1 — Voir ce qui casse (télémétrie micro pilotable)
 
