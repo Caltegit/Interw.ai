@@ -77,7 +77,7 @@ function useDebounced<T>(value: T, delay = 300): T {
   return v;
 }
 
-export default function AdminSessionsQueue() {
+export default function SessionsQueueTab() {
   const qc = useQueryClient();
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounced(searchInput, 300);
