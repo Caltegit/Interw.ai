@@ -209,14 +209,11 @@ export default function SessionsQueueTab() {
   const stats = statsQuery.data;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Sessions queue</h1>
-          <p className="text-sm text-muted-foreground">
-            Vue super admin de toutes les sessions, transcripts, rapports et emails.
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Toutes les sessions, transcripts, rapports et emails.
+        </p>
         <Button variant="outline" size="sm" onClick={() => { rowsQuery.refetch(); statsQuery.refetch(); }}>
           <RefreshCw className="h-4 w-4 mr-2" /> Rafraîchir
         </Button>
