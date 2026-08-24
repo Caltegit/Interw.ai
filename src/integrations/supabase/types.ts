@@ -845,6 +845,53 @@ export type Database = {
         }
         Relationships: []
       }
+      mic_events: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          created_at: string
+          data: Json
+          device_type: string | null
+          event: string
+          id: string
+          os: string | null
+          session_id: string
+          user_agent: string
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          created_at?: string
+          data?: Json
+          device_type?: string | null
+          event: string
+          id?: string
+          os?: string | null
+          session_id: string
+          user_agent?: string
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          created_at?: string
+          data?: Json
+          device_type?: string | null
+          event?: string
+          id?: string
+          os?: string | null
+          session_id?: string
+          user_agent?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mic_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_invitations: {
         Row: {
           created_at: string
