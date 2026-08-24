@@ -111,11 +111,25 @@ SQL direct, index sur `created_at` déjà existant.
 
 ---
 
+## Lot 1bis — NOUVEAU — Corriger le codec Safari (correctif court, prioritaire)
+
+Traite la cause n°1. Petit périmètre, gros impact, aucune dépendance aux autres lots.
+
+- Supprimer les deux valeurs `"audio/webm"` codées en dur (`InterviewStart.tsx:1633` et `:1943`) et les remplacer par un appel à `getSupportedAudioMimeType()`, qui teste déjà `isTypeSupported()` avec `audio/mp4` en tête sur Safari.
+- Si aucun type n'est supporté, construire le `MediaRecorder` sans option `mimeType` (le navigateur choisit) plutôt que d'imposer un format qu'il refuse.
+- Journaliser le mimeType effectivement retenu (`recorder.mimeType`) pour vérifier en télémétrie qu'aucun Safari ne repart en webm.
+- Test Playwright ciblé simulant un navigateur où `audio/webm` n'est pas supporté.
+
 ## Lot 2 — Demander le micro proprement
 
 - Séparer la demande : micro d'abord, caméra ensuite. Une caméra manquante ne doit plus faire échouer le micro, et inversement.
 - Repli en cascade sur le micro : périphérique préféré → périphérique par défaut → contraintes minimales (`audio: true`).
-- Messages d'erreur typés et actionnables, en français : refus de permission, périphérique occupé par une autre application, périphérique débranché, aucun micro détecté — chacun avec la manœuvre de réparation et un bouton « Réessayer ».
+- **Messages d'erreur typés** (aujourd'hui seul `OverconstrainedError` est géré, et seulement dans le test) :
+  - `NotAllowedError` → permission refusée, consignes de déblocage par navigateur.
+  - `NotReadableError` → « Votre micro est utilisé par une autre application (Teams, Zoom, Discord). Fermez-la puis réessayez. » Cas très fréquent sur Windows.
+  - `NotFoundError` → aucun micro détecté.
+  - `OverconstrainedError` → périphérique débranché, repli sur le micro par défaut.
+  - Chacun avec sa manœuvre de réparation et un bouton « Réessayer ».
 - `MicBlockingDialog` enrichi avec les consignes spécifiques Chrome / Safari / Edge et iOS / Android.
 
 ## Lot 3 — Ne plus démarrer un entretien sans micro prouvé
@@ -123,11 +137,14 @@ SQL direct, index sur `created_at` déjà existant.
 - Persister la calibration côté serveur (rattachée à la session) au lieu du seul `sessionStorage`, avec repli local.
 - Rendre le test micro bloquant : sans mesure valide (pic et durée active au-dessus des seuils existants), le bouton de démarrage propose « Refaire le test micro » plutôt que de laisser passer.
 - Contrôle éclair juste avant la première question : 1,5 s de mesure, et si le signal est plat, affichage de l'écran de réparation avant que la moindre question ne soit posée.
+- **NOUVEAU — Détection du profil Bluetooth dégradé** : après acquisition, lire `track.getSettings().sampleRate`. En dessous de 16 kHz (signature du profil HFP sur AirPods et casques Bluetooth), avertir le candidat : « Votre casque Bluetooth dégrade fortement la qualité audio. Utilisez le micro de votre téléphone ou un casque filaire. » Journaliser l'événement pour mesurer la fréquence réelle.
 
 ## Lot 4 — Vérifier la bascule et la reprise
 
 - Après tout changement de micro ou toute réacquisition de piste, mesure de confirmation de 1 s : le message « Micro changé » n'apparaît que si du signal est effectivement présent, sinon on reste sur l'écran de réparation.
 - Réacquisition automatique unique en cas de piste morte, avec repli sur le périphérique par défaut, puis journalisation du résultat.
+- **NOUVEAU — Reprise iOS après arrière-plan** : le `visibilitychange` existant (`InterviewStart.tsx:794-815`) reprend l'`AudioContext` mais ne vérifie pas la piste média, qu'iOS tue définitivement. Ajouter au retour au premier plan un contrôle de `track.readyState`, et si la piste est morte, réacquisition automatique + reprise de l'enregistreur, sans perdre la réponse en cours.
+
 
 ## Lot 5 — Filet de sécurité serveur
 
