@@ -25,6 +25,7 @@ export default function AdminSystem() {
         <TabsList>
           <TabsTrigger value="emails">Emails</TabsTrigger>
           <TabsTrigger value="sessions">File des sessions</TabsTrigger>
+          <TabsTrigger value="mic">Qualité micro</TabsTrigger>
         </TabsList>
 
         <TabsContent value="emails" className="mt-6">
@@ -33,6 +34,10 @@ export default function AdminSystem() {
 
         <TabsContent value="sessions" className="mt-6">
           <SessionsQueueTab />
+        </TabsContent>
+
+        <TabsContent value="mic" className="mt-6">
+          <MicQualityTab />
         </TabsContent>
       </Tabs>
     </div>
