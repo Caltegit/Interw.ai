@@ -39,7 +39,7 @@ const statusColor = (s: string) => {
   }
 };
 
-export default function AdminEmails() {
+export default function EmailsTab() {
   const { toast } = useToast();
   const [preset, setPreset] = useState<string>("7d");
   const [customSince, setCustomSince] = useState<string>("");
