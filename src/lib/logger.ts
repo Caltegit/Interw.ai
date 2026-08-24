@@ -28,6 +28,19 @@ let currentUserId: string | null = null;
 
 const isDev = import.meta.env.DEV;
 
+/**
+ * Hook optionnel : forward les événements micro vers la télémétrie serveur.
+ * Branché par micTelemetry.ts — aucun couplage direct entre les deux modules.
+ */
+type TelemetryHook = (event: string, level: LogLevel, data?: Record<string, unknown>) => void;
+let telemetryHook: TelemetryHook | null = null;
+
+const MIC_EVENT_PREFIXES = ["mic_", "interview_media", "interview_audio"];
+
+export function setTelemetryHook(fn: TelemetryHook | null): void {
+  telemetryHook = fn;
+}
+
 function getRoute(): string {
   if (typeof window === "undefined") return "";
   return window.location.pathname;
@@ -67,8 +80,10 @@ function emit(level: LogLevel, event: string, data?: Record<string, unknown>) {
       break;
   }
 
-  // Hook pour brancher un service externe plus tard
-  // ex : Sentry.captureMessage(event, { level, extra: payload });
+  // Forward vers la télémétrie micro si l'événement correspond.
+  if (telemetryHook && MIC_EVENT_PREFIXES.some((p) => event.startsWith(p))) {
+    try { telemetryHook(event, level, data); } catch { /* ignore */ }
+  }
 }
 
 export const logger = {

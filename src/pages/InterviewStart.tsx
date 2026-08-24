@@ -32,6 +32,7 @@ import {
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
 import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints, loadMicCalibration, type MicCalibration } from "@/lib/micLevel";
+import { initMicTelemetry, disposeMicTelemetry, trackMicEvent } from "@/lib/micTelemetry";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
 import { extFromMime } from "@/lib/mediaExt";
 import { ensureAudioContextRunning } from "@/lib/audioContext";
@@ -1388,6 +1389,13 @@ export default function InterviewStart() {
     resetSilenceTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
+
+  // Télémétrie micro : init quand on a un token, dispose au démontage.
+  useEffect(() => {
+    if (!token) return;
+    initMicTelemetry(token);
+    return () => disposeMicTelemetry();
+  }, [token]);
 
   // Load session data
   useEffect(() => {

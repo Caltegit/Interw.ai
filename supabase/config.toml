@@ -77,3 +77,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.complete-password-reset]
     verify_jwt = false
 
+  [functions.log-mic-events]
+    verify_jwt = false
+

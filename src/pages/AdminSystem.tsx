@@ -2,8 +2,9 @@ import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EmailsTab from "@/components/admin/EmailsTab";
 import SessionsQueueTab from "@/components/admin/SessionsQueueTab";
+import MicQualityTab from "@/components/admin/MicQualityTab";
 
-const TABS = ["emails", "sessions"] as const;
+const TABS = ["emails", "sessions", "mic"] as const;
 
 export default function AdminSystem() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,6 +25,7 @@ export default function AdminSystem() {
         <TabsList>
           <TabsTrigger value="emails">Emails</TabsTrigger>
           <TabsTrigger value="sessions">File des sessions</TabsTrigger>
+          <TabsTrigger value="mic">Qualité micro</TabsTrigger>
         </TabsList>
 
         <TabsContent value="emails" className="mt-6">
@@ -32,6 +34,10 @@ export default function AdminSystem() {
 
         <TabsContent value="sessions" className="mt-6">
           <SessionsQueueTab />
+        </TabsContent>
+
+        <TabsContent value="mic" className="mt-6">
+          <MicQualityTab />
         </TabsContent>
       </Tabs>
     </div>
