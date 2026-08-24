@@ -255,7 +255,7 @@ export function AppSidebar() {
                     <DropdownMenuItem onSelect={() => navigate("/admin")}>
                       <Shield className="mr-2 h-4 w-4" /> Super admin
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => navigate("/admin/emails")}>
+                    <DropdownMenuItem onSelect={() => navigate("/admin/system")}>
                       <Settings className="mr-2 h-4 w-4" /> Système
                     </DropdownMenuItem>
                   </>
