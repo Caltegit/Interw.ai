@@ -115,15 +115,9 @@ export default function EmailsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Mail className="h-6 w-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Santé des emails</h1>
-          <p className="text-sm text-muted-foreground">
-            Surveillance des envois transactionnels et auth — déduplication par <code>message_id</code>.
-          </p>
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        Surveillance des envois transactionnels et auth — déduplication par <code>message_id</code>.
+      </p>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
