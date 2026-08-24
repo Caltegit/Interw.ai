@@ -107,8 +107,10 @@ export function trackMicEvent(event: string, data?: Record<string, unknown>): vo
  */
 export function disposeMicTelemetry(): void {
   flush()
+  setTelemetryHook(null)
   if (flushTimer) {
     clearInterval(flushTimer)
     flushTimer = null
   }
+  sessionToken = null
 }
