@@ -44,7 +44,8 @@ import ProjectCompare from "./pages/ProjectCompare";
 import ProjectStats from "./pages/ProjectStats";
 import SessionDetail from "./pages/SessionDetail";
 import SessionVideoExport from "./pages/SessionVideoExport";
-import Settings from "./pages/Settings";
+import SettingsProfile from "./pages/settings/SettingsProfile";
+import SettingsOrganization from "./pages/settings/SettingsOrganization";
 import QuestionLibrary from "./pages/QuestionLibrary";
 import LibraryHome from "./pages/LibraryHome";
 import IntroLibrary from "./pages/IntroLibrary";
@@ -162,7 +163,9 @@ const App = () => (
               <Route path="/library/sessions/:id" element={<InterviewTemplateEdit />} />
               <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings" element={<Navigate to="/settings/profil" replace />} />
+              <Route path="/settings/profil" element={<SettingsProfile />} />
+              <Route path="/settings/organisation" element={<SettingsOrganization />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/feedback/:threadId" element={<FeedbackThread />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />

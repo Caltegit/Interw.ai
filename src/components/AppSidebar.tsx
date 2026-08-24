@@ -1,6 +1,6 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Activity } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
@@ -22,10 +22,19 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -42,13 +51,23 @@ const librarySubItems = [
 
 const bottomItems = [
   { title: "Feedback", url: "/feedback", icon: MessageCircle },
-  { title: "Paramètres", url: "/settings", icon: Settings },
 ];
+
+function getInitials(name?: string | null, email?: string | null) {
+  const source = (name || "").trim();
+  if (source) {
+    const parts = source.split(/\s+/).slice(0, 2);
+    return parts.map((p) => p[0]?.toUpperCase() ?? "").join("");
+  }
+  return (email || "?").slice(0, 2).toUpperCase();
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { signOut, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const unreadFeedback = useUnreadFeedback();
@@ -60,20 +79,10 @@ export function AppSidebar() {
     ? librarySubItems
     : librarySubItems.filter((s) => s.url !== "/library/emails");
 
-  const systemSubItems = [
-    { title: "Email", url: "/admin/emails", icon: Mail },
-    { title: "Sessions", url: "/admin/sessions-queue", icon: Activity },
-  ];
-  const isSystemActive = systemSubItems.some((s) => location.pathname.startsWith(s.url));
-  const [systemOpen, setSystemOpen] = useState(isSystemActive);
-
   const bottomItemsList = isSuperAdmin
-    ? [
-        ...bottomItems,
-        { title: "Super Admin", url: "/admin", icon: Shield, showFeedbackBadge: true },
-        { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
-      ]
+    ? [...bottomItems, { title: "Tuto", url: "/admin/tuto", icon: PlayCircle }]
     : bottomItems;
+
 
   return (
     <Sidebar collapsible="icon">
@@ -186,70 +195,81 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
 
-              {/* Système (super admin) */}
-              {isSuperAdmin && (
-                <Collapsible open={systemOpen || collapsed} onOpenChange={setSystemOpen}>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <button
-                        type="button"
-                        onClick={() => setSystemOpen((v) => !v)}
-                        className={`w-full flex items-center hover:bg-muted/50 ${isSystemActive ? "bg-muted text-primary font-medium" : ""}`}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        {!collapsed && (
-                          <>
-                            <span>Système</span>
-                            <CollapsibleTrigger asChild>
-                              <span
-                                className="ml-auto inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
-                                aria-label={systemOpen ? "Réduire" : "Développer"}
-                              >
-                                <ChevronDown
-                                  className={`h-4 w-4 transition-transform ${systemOpen ? "rotate-180" : ""}`}
-                                />
-                              </span>
-                            </CollapsibleTrigger>
-                          </>
-                        )}
-                      </button>
-                    </SidebarMenuButton>
-                    {!collapsed && (
-                      <CollapsibleContent>
-                        <SidebarMenuSub>
-                          {systemSubItems.map((sub) => (
-                            <SidebarMenuSubItem key={sub.title}>
-                              <SidebarMenuSubButton asChild>
-                                <NavLink
-                                  to={sub.url}
-                                  className="hover:bg-muted/50"
-                                  activeClassName="bg-muted text-primary font-medium"
-                                >
-                                  <sub.icon className="mr-2 h-4 w-4" />
-                                  <span>{sub.title}</span>
-                                </NavLink>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
-                      </CollapsibleContent>
-                    )}
-                  </SidebarMenuItem>
-                </Collapsible>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        {!collapsed && profile && (
-          <p className="px-3 text-xs text-muted-foreground truncate">{profile.email}</p>
-        )}
-        <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start">
-          <LogOut className="mr-2 h-4 w-4" />
-          {!collapsed && "Déconnexion"}
-        </Button>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="h-auto w-full py-2 data-[state=open]:bg-muted">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="text-xs">
+                      {getInitials(profile?.full_name, profile?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {!collapsed && (
+                    <>
+                      <div className="ml-2 min-w-0 flex-1 text-left">
+                        <p className="truncate text-sm font-medium leading-tight">
+                          {profile?.full_name || "Mon compte"}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground leading-tight">
+                          {profile?.email}
+                        </p>
+                      </div>
+                      <ChevronRight className="ml-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                    </>
+                  )}
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side={isMobile ? "top" : "right"}
+                align="end"
+                sideOffset={8}
+                className="w-60"
+              >
+                <DropdownMenuLabel className="flex items-center gap-2 font-normal">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {getInitials(profile?.full_name, profile?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{profile?.full_name || "Mon compte"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => navigate("/settings/profil")}>
+                  <User className="mr-2 h-4 w-4" /> Mon profil
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/settings/organisation")}>
+                  <Building2 className="mr-2 h-4 w-4" /> Mon organisation
+                </DropdownMenuItem>
+                {isSuperAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => navigate("/admin")}>
+                      <Shield className="mr-2 h-4 w-4" /> Super admin
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => navigate("/admin/emails")}>
+                      <Settings className="mr-2 h-4 w-4" /> Système
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => signOut()}>
+                  <LogOut className="mr-2 h-4 w-4" /> Déconnexion
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
 }
+
