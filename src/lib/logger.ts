@@ -80,8 +80,10 @@ function emit(level: LogLevel, event: string, data?: Record<string, unknown>) {
       break;
   }
 
-  // Hook pour brancher un service externe plus tard
-  // ex : Sentry.captureMessage(event, { level, extra: payload });
+  // Forward vers la télémétrie micro si l'événement correspond.
+  if (telemetryHook && MIC_EVENT_PREFIXES.some((p) => event.startsWith(p))) {
+    try { telemetryHook(event, level, data); } catch { /* ignore */ }
+  }
 }
 
 export const logger = {
