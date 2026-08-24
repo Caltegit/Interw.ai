@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
     if (insertErr) {
       console.error('[log-mic-events] insert failed', insertErr)
-      return json(500, { error: 'Échec de l\\'enregistrement des événements.' })
+      return json(500, { error: "Échec de l'enregistrement des événements." })
     }
 
     return json(200, { ok: true, inserted: rows.length })
