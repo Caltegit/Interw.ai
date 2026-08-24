@@ -163,7 +163,9 @@ const App = () => (
               <Route path="/library/sessions/:id" element={<InterviewTemplateEdit />} />
               <Route path="/library/emails" element={<EmailTemplates />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings" element={<Navigate to="/settings/profil" replace />} />
+              <Route path="/settings/profil" element={<SettingsProfile />} />
+              <Route path="/settings/organisation" element={<SettingsOrganization />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/feedback/:threadId" element={<FeedbackThread />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
