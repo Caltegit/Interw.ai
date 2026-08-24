@@ -32,6 +32,7 @@ import {
   STATIC_TRANSITION_PHRASES,
 } from "@/lib/ttsCache";
 import { measureMicLevel, MIC_THRESHOLDS, isMicTestStillValid, buildAudioConstraints, loadMicCalibration, type MicCalibration } from "@/lib/micLevel";
+import { initMicTelemetry, disposeMicTelemetry, trackMicEvent } from "@/lib/micTelemetry";
 import { listInputDevices, setStoredDeviceId, PREFERRED_AUDIO_KEY } from "@/lib/deviceDiagnostics";
 import { extFromMime } from "@/lib/mediaExt";
 import { ensureAudioContextRunning } from "@/lib/audioContext";
