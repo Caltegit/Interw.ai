@@ -204,8 +204,8 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="h-auto w-full py-2 data-[state=open]:bg-muted">
-                  <Avatar className="h-8 w-8 shrink-0">
+                <SidebarMenuButton size="lg" className="h-auto w-full py-2 data-[state=open]:bg-muted group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:justify-center">
+                  <Avatar className="h-8 w-8 shrink-0 group-data-[collapsible=icon]:!m-0">
                     <AvatarFallback className="text-xs">
                       {getInitials(profile?.full_name, profile?.email)}
                     </AvatarFallback>
