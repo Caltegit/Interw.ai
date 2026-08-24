@@ -1390,6 +1390,13 @@ export default function InterviewStart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speak, startListening, resetSilenceTimer, toast, questions, currentQuestionIndex]);
 
+  // Télémétrie micro : init quand on a un token, dispose au démontage.
+  useEffect(() => {
+    if (!token) return;
+    initMicTelemetry(token);
+    return () => disposeMicTelemetry();
+  }, [token]);
+
   // Load session data
   useEffect(() => {
     if (!token) return;
