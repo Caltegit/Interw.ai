@@ -157,16 +157,19 @@ Traite la cause n°1. Petit périmètre, gros impact, aucune dépendance aux aut
 
 Aujourd'hui, 8,7 % des sessions terminées (30 derniers jours) ont moins de 200 caractères de transcription candidat.
 
-- **Objectif** : après déploiement des Lots 2 à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
+- **Objectif** : après déploiement des Lots 1bis à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
 - **Contrôle** : 30 jours après mise en production, requête SQL de comparaison avant/après.
+- **Contrôle intermédiaire après Lot 1bis** : si le codec Safari était bien le suspect n°1, on doit voir une chute nette du taux chez les candidats Safari/iOS dès la première semaine, sans attendre les autres lots.
 - Si l'objectif n'est pas atteint, la télémétrie du Lot 1 (activée manuellement) identifie précisément le navigateur / OS / périphérique restant à traiter.
 - Sans ce critère, on risque soit de surcorriger (toucher à ce qui marche), soit de s'arrêter trop tôt.
 
 ## Ordre de déploiement
 
 1. **Lot 1** (télémétrie pilotable) — déployé, puis on active manuellement la collecte pour 48h de chiffres réels par navigateur/OS.
-2. **Lots 2 et 3** — couvrent l'essentiel du vécu candidat.
-3. **Lots 4 et 5** — finitions et filet de sécurité.
+2. **Lot 1bis** (codec Safari) — correctif court et à fort impact, peut partir en parallèle du Lot 1.
+3. **Lots 2 et 3** — couvrent l'essentiel du vécu candidat (erreurs typées, Bluetooth, test bloquant).
+4. **Lots 4 et 5** — reprise iOS, vérification de bascule, filet de sécurité serveur.
+
 
 ## Ce qui ne change pas
 - Aucune modification de la logique d'acquisition audio dans le Lot 1 (`useMicHealthWatcher`, `InterviewStart`).
