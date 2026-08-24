@@ -11,15 +11,34 @@ Sessions terminées hors démo :
 
 Une session terminée sur onze est quasi vide côté parole candidat (moyenne normale ~7 100 caractères). Ce ne sont pas des candidats laconiques : c'est une capture audio perdue.
 
-## Cinq causes identifiées
+## Causes identifiées (vérifiées dans le code)
 
-1. **Aucune trace serveur** : `logger.ts` n'écrit que dans la console navigateur. Tous les événements micro déjà instrumentés disparaissent à la fermeture de l'onglet. On répare à l'aveugle.
-2. **L'erreur d'accès média est avalée** : `startVideoStream` demande caméra + micro en un seul appel. Si le micro seul est indisponible, l'appel entier échoue avec un message faux (« Caméra inaccessible »). Les types d'erreur ne sont pas distingués.
-3. **Le contexte micro ne survit pas au parcours** : calibration en `sessionStorage`, micro préféré en `localStorage`. Changement d'onglet ou arrivée directe sur le lien = calibration perdue. Rien ne bloque le démarrage sans test micro validé.
-4. **Aucune preuve serveur qu'une réponse a été captée** : `transcribe-session` ne vérifie ni taille, ni durée, ni énergie du fichier audio. Un fichier de 2 ko silencieux produit une transcription vide ou hallucinée.
-5. **La bascule de micro à chaud reste fragile** : aucune vérification que la nouvelle piste produit du signal après la bascule. Le candidat peut « changer de micro » et continuer à enregistrer du vide.
+### Déjà couvertes — rien à faire
+- **Piste qui meurt sans erreur** : `useMicHealthWatcher.ts` écoute déjà `track.addEventListener("ended")` et `("mute")`, avec tolérance de 5 s sur les blips Bluetooth.
+- **Suppression de bruit agressive** : `micLevel.ts` impose déjà `noiseSuppression: false`, `autoGainControl: true`, `channelCount: 1`, `sampleRate { ideal: 48000, min: 16000 }`.
+
+### Trous confirmés à traiter
+
+1. **Codec Safari — partiellement traité, deux fuites en dur.** `getSupportedAudioMimeType()` teste bien `MediaRecorder.isTypeSupported()` avec `audio/mp4` en premier sur Safari. Mais deux endroits contournent cette détection : `InterviewStart.tsx:1633` (`previous.audioMime || "audio/webm"` au redémarrage après bascule de micro) et `:1943` (`audioMime: "audio/webm;codecs=opus"` à l'initialisation). Sur Safari, ces chemins produisent un enregistreur qui échoue ou sort un fichier illisible. Suspect n°1 pour les sessions terminées sans parole.
+
+2. **Aucune trace serveur** : `logger.ts` n'écrit que dans la console navigateur. Tous les événements micro déjà instrumentés disparaissent à la fermeture de l'onglet. On répare à l'aveugle.
+
+3. **Types d'erreur média non distingués.** Un seul `OverconstrainedError` est géré, et uniquement dans `InterviewDeviceTest.tsx:249`. Nulle part on ne distingue `NotAllowedError` (refus), `NotReadableError` (micro verrouillé par Teams/Zoom/Discord sur Windows), `NotFoundError` (aucun micro). Le candidat voit « Caméra inaccessible » quel que soit le vrai problème.
+
+4. **Demande combinée audio + vidéo.** `startVideoStream` fait un seul `getUserMedia({ video, audio })`. Si le micro seul est indisponible, tout échoue avec un message faux.
+
+5. **Bluetooth / profil HFP dégradé — angle mort total.** Sur AirPods et casques similaires, activer le micro force la bascule A2DP → HFP, qui peut produire du 8 kHz inexploitable par la transcription. Le code lit `getSettings().deviceId` mais **ne vérifie jamais le `sampleRate` réellement obtenu**. Un candidat qui répond depuis son téléphone avec des écouteurs peut enregistrer un audio techniquement valide mais intranscriptible.
+
+6. **iOS Safari en arrière-plan — traité à moitié.** Un `visibilitychange` reprend bien l'`AudioContext` (`InterviewStart.tsx:794-815`), mais rien ne vérifie que la **piste média** a survécu : iOS la tue définitivement, et elle n'est pas réacquise au retour.
+
+7. **Le contexte micro ne survit pas au parcours** : calibration en `sessionStorage`, micro préféré en `localStorage`. Rien ne bloque le démarrage sans test micro validé.
+
+8. **Aucune preuve serveur qu'une réponse a été captée** : `transcribe-session` ne vérifie ni taille, ni durée, ni énergie du fichier audio.
+
+9. **Bascule de micro à chaud non vérifiée** : aucune mesure que la nouvelle piste produit du signal après la bascule.
 
 ---
+
 
 ## Lot 1 — Voir ce qui casse (télémétrie micro pilotable)
 
@@ -92,11 +111,25 @@ SQL direct, index sur `created_at` déjà existant.
 
 ---
 
+## Lot 1bis — NOUVEAU — Corriger le codec Safari (correctif court, prioritaire)
+
+Traite la cause n°1. Petit périmètre, gros impact, aucune dépendance aux autres lots.
+
+- Supprimer les deux valeurs `"audio/webm"` codées en dur (`InterviewStart.tsx:1633` et `:1943`) et les remplacer par un appel à `getSupportedAudioMimeType()`, qui teste déjà `isTypeSupported()` avec `audio/mp4` en tête sur Safari.
+- Si aucun type n'est supporté, construire le `MediaRecorder` sans option `mimeType` (le navigateur choisit) plutôt que d'imposer un format qu'il refuse.
+- Journaliser le mimeType effectivement retenu (`recorder.mimeType`) pour vérifier en télémétrie qu'aucun Safari ne repart en webm.
+- Test Playwright ciblé simulant un navigateur où `audio/webm` n'est pas supporté.
+
 ## Lot 2 — Demander le micro proprement
 
 - Séparer la demande : micro d'abord, caméra ensuite. Une caméra manquante ne doit plus faire échouer le micro, et inversement.
 - Repli en cascade sur le micro : périphérique préféré → périphérique par défaut → contraintes minimales (`audio: true`).
-- Messages d'erreur typés et actionnables, en français : refus de permission, périphérique occupé par une autre application, périphérique débranché, aucun micro détecté — chacun avec la manœuvre de réparation et un bouton « Réessayer ».
+- **Messages d'erreur typés** (aujourd'hui seul `OverconstrainedError` est géré, et seulement dans le test) :
+  - `NotAllowedError` → permission refusée, consignes de déblocage par navigateur.
+  - `NotReadableError` → « Votre micro est utilisé par une autre application (Teams, Zoom, Discord). Fermez-la puis réessayez. » Cas très fréquent sur Windows.
+  - `NotFoundError` → aucun micro détecté.
+  - `OverconstrainedError` → périphérique débranché, repli sur le micro par défaut.
+  - Chacun avec sa manœuvre de réparation et un bouton « Réessayer ».
 - `MicBlockingDialog` enrichi avec les consignes spécifiques Chrome / Safari / Edge et iOS / Android.
 
 ## Lot 3 — Ne plus démarrer un entretien sans micro prouvé
@@ -104,11 +137,14 @@ SQL direct, index sur `created_at` déjà existant.
 - Persister la calibration côté serveur (rattachée à la session) au lieu du seul `sessionStorage`, avec repli local.
 - Rendre le test micro bloquant : sans mesure valide (pic et durée active au-dessus des seuils existants), le bouton de démarrage propose « Refaire le test micro » plutôt que de laisser passer.
 - Contrôle éclair juste avant la première question : 1,5 s de mesure, et si le signal est plat, affichage de l'écran de réparation avant que la moindre question ne soit posée.
+- **NOUVEAU — Détection du profil Bluetooth dégradé** : après acquisition, lire `track.getSettings().sampleRate`. En dessous de 16 kHz (signature du profil HFP sur AirPods et casques Bluetooth), avertir le candidat : « Votre casque Bluetooth dégrade fortement la qualité audio. Utilisez le micro de votre téléphone ou un casque filaire. » Journaliser l'événement pour mesurer la fréquence réelle.
 
 ## Lot 4 — Vérifier la bascule et la reprise
 
 - Après tout changement de micro ou toute réacquisition de piste, mesure de confirmation de 1 s : le message « Micro changé » n'apparaît que si du signal est effectivement présent, sinon on reste sur l'écran de réparation.
 - Réacquisition automatique unique en cas de piste morte, avec repli sur le périphérique par défaut, puis journalisation du résultat.
+- **NOUVEAU — Reprise iOS après arrière-plan** : le `visibilitychange` existant (`InterviewStart.tsx:794-815`) reprend l'`AudioContext` mais ne vérifie pas la piste média, qu'iOS tue définitivement. Ajouter au retour au premier plan un contrôle de `track.readyState`, et si la piste est morte, réacquisition automatique + reprise de l'enregistreur, sans perdre la réponse en cours.
+
 
 ## Lot 5 — Filet de sécurité serveur
 
@@ -121,16 +157,19 @@ SQL direct, index sur `created_at` déjà existant.
 
 Aujourd'hui, 8,7 % des sessions terminées (30 derniers jours) ont moins de 200 caractères de transcription candidat.
 
-- **Objectif** : après déploiement des Lots 2 à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
+- **Objectif** : après déploiement des Lots 1bis à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
 - **Contrôle** : 30 jours après mise en production, requête SQL de comparaison avant/après.
+- **Contrôle intermédiaire après Lot 1bis** : si le codec Safari était bien le suspect n°1, on doit voir une chute nette du taux chez les candidats Safari/iOS dès la première semaine, sans attendre les autres lots.
 - Si l'objectif n'est pas atteint, la télémétrie du Lot 1 (activée manuellement) identifie précisément le navigateur / OS / périphérique restant à traiter.
 - Sans ce critère, on risque soit de surcorriger (toucher à ce qui marche), soit de s'arrêter trop tôt.
 
 ## Ordre de déploiement
 
 1. **Lot 1** (télémétrie pilotable) — déployé, puis on active manuellement la collecte pour 48h de chiffres réels par navigateur/OS.
-2. **Lots 2 et 3** — couvrent l'essentiel du vécu candidat.
-3. **Lots 4 et 5** — finitions et filet de sécurité.
+2. **Lot 1bis** (codec Safari) — correctif court et à fort impact, peut partir en parallèle du Lot 1.
+3. **Lots 2 et 3** — couvrent l'essentiel du vécu candidat (erreurs typées, Bluetooth, test bloquant).
+4. **Lots 4 et 5** — reprise iOS, vérification de bascule, filet de sécurité serveur.
+
 
 ## Ce qui ne change pas
 - Aucune modification de la logique d'acquisition audio dans le Lot 1 (`useMicHealthWatcher`, `InterviewStart`).
