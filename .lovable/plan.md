@@ -1,184 +1,105 @@
-# Bascule vers app.interw.com — réponses avant exécution
+# Sidebar simplifiée + bouton compte en bas
 
-## 1. Protocole de test inversé — validé
+## Réponses avant de coder
 
-Ton protocole est le bon : `app.interw.com` en secondaire, `interw.ai` reste primaire, puis on ouvre un lien profond sur le secondaire et on regarde où on atterrit. La production n'est jamais touchée. J'attends ton observation avant d'écrire quoi que ce soit.
+### La voix clonée est rattachée à l'utilisateur
 
-Une seule précision à garder en tête : la redirection est bien symétrique en mécanisme, mais teste avec une vraie URL de session existante (`/session/{slug}/start/{token}` ou `/entretien/...` selon la route réellement utilisée dans tes liens candidats) plutôt qu'un chemin inventé — un chemin inconnu peut être servi par le fallback SPA et masquer le résultat.
+Table `profiles`, colonnes `cloned_voice_id`, `cloned_voice_name`, `cloned_voice_created_at`, `cloned_voice_consent_at`. Clé étrangère : `profiles.user_id → auth.users.id`. La lecture dans la page filtre bien sur `.eq("user_id", user.id)`.
 
-## 2a. Supabase Auth — liste exacte à ajouter avant la bascule
+C'est donc bien du niveau **utilisateur** : la carte « Ma voix clonée » part dans `/settings/profil`, conformément à ta répartition.
 
-À faire dans Cloud → Auth, **avant** de passer le primaire :
+### État partagé entre les cartes qui se séparent
 
-**Site URL** — une seule valeur possible. Tant que `interw.ai` est primaire, elle reste `https://interw.ai`. Elle devient `https://app.interw.com` **au moment** de la bascule.
+Vérifié : aucune duplication nécessaire. La répartition est nette.
 
-**Redirect URLs (allowlist)** — ajouter dès maintenant, sans rien retirer :
-
-```text
-https://app.interw.com
-https://app.interw.com/**
-```
-
-En conservant les entrées existantes :
-
-```text
-https://interw.ai
-https://interw.ai/**
-```
-
-Garder les deux jeux pendant toute la transition : les liens de confirmation d'email et de réinitialisation déjà envoyés pointent encore sur `.ai`.
-
-Point d'attention : la Site URL sert de base aux liens générés par Supabase quand aucune `redirectTo` n'est fournie. Tant qu'elle vaut `.ai`, les emails d'auth continueront à pointer sur `.ai` même si l'app est servie sur `.com` — d'où l'ordre : ajouter les redirect URLs d'abord, basculer la Site URL en même temps que le domaine primaire.
-
-## 2b. CORS — sortie du grep
-
-**Il n'existe aucun fichier `supabase/functions/_shared/cors.ts`.** Contenu réel de `_shared/` :
-
-```text
-ai-models.ts   auth-guard.ts   email-templates/
-resolve-start-seconds.ts   resolve-start-seconds_test.ts
-session-storage-cleanup.ts   transactional-email-templates/
-```
-
-Grep sur les allowlists d'origines dans `supabase/functions/` : **aucune allowlist**. Toutes les fonctions déclarent en dur :
-
-```text
-"Access-Control-Allow-Origin": "*"
-```
-
-(30+ occurrences, toutes identiques : tts-openai, transcribe-session, superadmin-*, ai-conversation-turn, auth-email-hook, retry-email, etc.)
-
-**Conclusion : rien à modifier côté CORS, l'app fonctionnera telle quelle sur `app.interw.com`.**
-
-Seule exception déjà repérée : `finalize-abandoned-session/index.ts` renvoie l'origine reçue en écho, sans liste blanche — fonctionne aussi sur le nouveau domaine.
-
-Les occurrences de `interw.ai` dans les Edge Functions ne sont pas du CORS, ce sont des URLs générées et des domaines d'envoi (Lot A / Lot B) :
-- URLs générées (Lot A) : `send-weekly-recaps`, `generate-report:1523`, `process-report-queue:76`, `report-interview-issue`, `check-email-failures`, `resend-impacted-candidate`, `daily-health-report`, `send-abandon-reminders`, `send-invitation:66`, `get-email-template-defaults`, + 12 templates dans `_shared/transactional-email-templates/`
-- Domaines d'envoi (Lot B, on n'y touche pas) : `SENDER_DOMAIN` / `FROM_DOMAIN` / `REPLY_TO_EMAIL` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
-
-Côté frontend, 11 fichiers contiennent `interw.ai` : `Landing.tsx`, `Legal.tsx`, `Privacy.tsx`, `OrgPublic.tsx`, `Settings.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `AdminCandidatesToRecover.tsx`, `EditRecoveryTemplateDialog.tsx`, `ShareReportsDialog.tsx`, `BulkEmailDialog.tsx`.
-
-## 2c. Templates stockés en base — 3 lignes, aucune côté clients
-
-Colonnes vérifiées, aucune modification effectuée :
-
-| Table | Colonnes vérifiées | Lignes contenant `interw.ai` |
+| État / hook | Cartes concernées | Destination |
 |---|---|---|
-| `email_template_overrides` | subject, html_body | **2** (org SUPER ADMIN : `invite`, `magiclink`) |
-| `projects` | intro_text, completion_message, pre_session_message, candidate_email_subject, candidate_email_body | **1** (projet « Candidature spontanée », org UBIQ) |
-| `interview_templates` | mêmes colonnes | 0 |
-| `candidate_message_templates` | subject, body | 0 |
-| `intro_templates` | intro_text, description | 0 |
-| `question_templates` | content | 0 |
-| `global_email_template_overrides` | subject, intro_html, outro_html | 0 |
-| `project_public_pages` | content, seo_title, seo_description | 0 |
+| `fullName`, `useUpdateProfile` | Mon profil | profil |
+| `newPassword`, `confirmPassword`, `savingPassword` | Mot de passe | profil |
+| `clonedVoice`, `voiceLoading`, `cloneDialogOpen`, `confirmDeleteVoice`, `deletingVoice`, `previewingVoice` | Ma voix clonée | profil |
+| `org`, `orgName`, `orgSlug`, `initialSlug`, `orgLogo`, `orgInitialized`, `useUpdateOrganization` | Organisation | organisation |
+| `useOrgRole` (`isAdmin`, `orgId`, `roleLoading`) | Organisation + Membres | organisation uniquement |
+| `useAuth`, `useToast` | les deux | ce sont des hooks globaux, pas de la duplication |
 
-**Aucun client n'a enregistré `interw.ai` via « garder ce texte comme défaut ».** Les 2 overrides sont les tiens, la ligne UBIQ est un texte d'introduction affiché au candidat.
+`useOrgRole` n'est utilisé que par les cartes Organisation et Membres : il ne part pas côté profil.
 
-## 3. Reprise de session — quasi entièrement serveur
+### Routes câblées
 
-L'état de reprise vit en base :
-- `sessions.last_question_index`, `status`, `started_at`, `last_activity_at`
-- `session_messages` (échanges déjà enregistrés)
-- le token est dans l'URL, donc il traverse le changement de domaine
+| Entrée | Route |
+|---|---|
+| Mon profil | `/settings/profil` |
+| Mon organisation | `/settings/organisation` |
+| Super admin | `/admin` |
+| Système | `/admin/system` (onglets `?tab=emails` / `?tab=sessions`) |
 
-Les médias ne sont pas bufferisés dans le navigateur : chaque `ondataavailable` déclenche un `uploadChunk` immédiat vers le stockage (`interviews/{sessionId}/q{n}/...`), avec un manifest écrit à la fin de chaque question. Un candidat qui reprend depuis une autre origine ne perd aucun enregistrement.
+Redirections permanentes ajoutées :
+- `/settings` → `/settings/profil`
+- `/admin/emails` → `/admin/system?tab=emails`
+- `/admin/sessions-queue` → `/admin/system?tab=sessions`
 
-**Ce qui vit côté navigateur** (et ne suivra pas le changement d'origine) :
+## 1. Sidebar principale
 
-| Clé | Type | Impact à la reprise sur le nouveau domaine |
-|---|---|---|
-| `mic-test-validated:{token}` | sessionStorage | Le candidat devra refaire le test micro/caméra |
-| `interview.preferredAudioDeviceId` / `...VideoDeviceId` | localStorage | Périphériques par défaut du navigateur au lieu du choix précédent |
-| `audioDebug` | localStorage | Aucun (diagnostic interne) |
+Ne restent que 5 entrées : **Dashboard**, **Projets**, **Ressources** (sous-items inchangés), **Feedback**, **Tuto** (super admin uniquement, comme aujourd'hui).
 
-Aucun n'est bloquant : le pire cas est un test technique à refaire. Le flux de reprise (`resumePrompt` → `last_question_index`) est reconstruit depuis la base à chaque chargement.
+Retirés de la nav : Paramètres, Super Admin, et le groupe repliable Système (avec son état `systemOpen` devenu inutile). Aucune page, route ni composant supprimé de ce fait — seules les entrées de menu disparaissent.
 
-Nuance : `sessionStorage` est de toute façon perdu à la fermeture de l'onglet, donc un candidat qui reprend le lendemain refait déjà le test micro aujourd'hui, même sans changement de domaine.
+La logique de highlight actuelle (`NavLink` + `activeClassName`) et le badge de feedback non lu sont conservés à l'identique pour les entrées restantes.
 
-## 4. Périmètre du Lot A — corrigé
+## 2. Bouton compte dans le SidebarFooter
 
-**Inclus** :
-- URLs générées `https://interw.ai/...` → `https://app.interw.com/...` (Edge Functions + templates d'email + frontend)
-- Textes de marque « Interw.ai » → « Interw »
-
-**Explicitement exclus** (adresses de contact — elles basculent dans le Lot B, une fois `hello@interw.com` opérationnelle) :
-- `hello@interw.ai`, `contact@interw.ai`, tous les `mailto:`
-- Fichiers à laisser intacts sur ce point au Lot A : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue/index.ts`, `_shared/transactional-email-templates/demo-request.tsx`, `candidate-thank-you.tsx`
-- `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` inchangés au Lot A
-
-Note : dans `candidate-thank-you.tsx`, le lien de marque `https://interw.ai` (footer) bascule au Lot A, mais le `mailto:contact@interw.ai` juste à côté attend le Lot B.
-
-**Correction sur `ROOT_DOMAIN` (`auth-email-hook`) — c'est une constante d'URL, pas de branding.** Elle est utilisée à deux endroits, tous deux générateurs de liens :
+Remplace le texte de l'email + le bouton Déconnexion par un unique bouton pleine largeur :
 
 ```text
-ligne 258 : confirmationUrl = `https://${ROOT_DOMAIN}/auth/confirm?${params}`
-            → lien de confirmation d'inscription, magic link, invitation
-              et RÉINITIALISATION DE MOT DE PASSE (next=/reset-password)
-
-ligne 264 : siteUrl: `https://${ROOT_DOMAIN}`
-            → lien cliquable affiché dans le corps de l'email
+┌──────────────────────────────┐
+│ (EB)  Eva Bouillet-Danel   ▸ │
+│       eva@alboteam.com       │
+└──────────────────────────────┘
 ```
 
-Ta lecture est exacte : mettre `interw.com` casserait toute confirmation de compte et toute réinitialisation de mot de passe. **La valeur correcte est `app.interw.com`**, et elle appartient au Lot A (c'est une URL générée), pas au Lot B.
+Avatar shadcn avec initiales dérivées de `profile.full_name` (pas de champ photo dans `profiles` aujourd'hui, donc initiales systématiques). En mode sidebar réduite, seul l'avatar reste visible.
 
-Ce n'est d'ailleurs pas le domaine d'envoi : `SENDER_DOMAIN` / `FROM_DOMAIN` sont des constantes distinctes dans le même fichier. Le Lot A ne touche que `ROOT_DOMAIN`.
-
-
-## 5. Lot B — configuration de notify.interw.com
-
-Tu as raison sur les deux points : c'est un sous-domaine, la racine `interw.com` reste totalement libre, et sans le Lot B le candidat lit encore `.ai` dans l'expéditeur avant même d'ouvrir.
-
-### État actuel (vérifié)
-
-`notify.interw.ai` est **vérifié et actif** (délégué à `ns3.lovable.cloud` / `ns4.lovable.cloud`). File d'envoi saine, 79 emails sur 7 jours. Rien n'est cassé tant qu'on n'y touche pas.
-
-### Procédure pour notify.interw.com
-
-1. **Lancer la configuration depuis Cloud → Emails** et saisir `notify.interw.com`. Lovable crée la zone déléguée et affiche **la paire de nameservers assignée à ce domaine**.
-
-   Important : les nameservers sont attribués par domaine. Ceux de `notify.interw.ai` (`ns3`/`ns4`) ne sont pas forcément ceux de `notify.interw.com` — n'utilise que les valeurs affichées à l'écran lors de la configuration.
-
-2. **Chez ton registrar `interw.com`**, ajouter deux enregistrements NS sur le sous-domaine uniquement :
+Dropdown (`DropdownMenu` shadcn, `side="right"` / `align="end"`, `side="top"` sur mobile), dans cet ordre :
 
 ```text
-Type: NS   Nom: notify   Valeur: <ns_A affiché par Lovable>
-Type: NS   Nom: notify   Valeur: <ns_B affiché par Lovable>
+En-tête non cliquable : avatar + nom + email
+──────────────────────
+Mon profil          → /settings/profil
+Mon organisation    → /settings/organisation
+──────────────────────  (super admin uniquement)
+Super admin         → /admin
+Système             → /admin/system
+──────────────────────
+Déconnexion         → signOut()
 ```
 
-   C'est tout. Aucun SPF, DKIM ou MX à écrire à la main : une fois la délégation active, Lovable gère ces enregistrements dans la zone `notify.interw.com`. Aucun enregistrement sur la racine `interw.com`.
+Le check de rôle réutilise le hook `useSuperAdmin()` déjà appelé dans `AppSidebar` — aucun nouveau check, aucune duplication.
 
-3. **Délai de vérification** : généralement 15 min à 2 h, jusqu'à 72 h selon le TTL de ton registrar. Le statut passe de `awaiting_dns` → `active_provisioning` → `active` dans Cloud → Emails.
+Sur mobile, le footer reste dans le drawer et le dropdown s'ouvre au-dessus du bouton.
 
-4. **Prérequis** : ton fournisseur DNS doit accepter les enregistrements de type NS (Cloudflare, OVH, Gandi, Namecheap : oui. DNS géré par Shopify : non).
+## 3. Scission de la page Paramètres
 
-5. **Une fois `active`**, je bascule le Lot B en une passe :
-   - `SENDER_DOMAIN` / `FROM_DOMAIN` → `notify.interw.com` dans `send-transactional-email`, `auth-email-hook`, `request-password-reset-code`, `generate-report`, `retry-email`
-   - `REPLY_TO_EMAIL` / `DEFAULT_REPLY_TO` → `hello@interw.com` (`auth-email-hook`, `send-transactional-email`, `request-password-reset-code`), dès que tu confirmes la boîte opérationnelle
-   - `mailto:` du frontend → `hello@interw.com` / `contact@interw.com` : `Legal.tsx`, `Privacy.tsx`, `DemoRequestDialog.tsx`, `NewFeedbackDialog.tsx`, `report-interview-issue`, `demo-request.tsx`, `candidate-thank-you.tsx`
-   - Les aperçus d'expéditeur dans `BulkEmailDialog.tsx` / `ShareReportsDialog.tsx` → `notify.interw.com`
-   - `ROOT_DOMAIN` n'est **pas** ici : il passe à `app.interw.com` dans le Lot A (voir section 4)
+Les cartes sont **déplacées telles quelles** : même JSX, mêmes hooks, mêmes appels, mêmes textes, mêmes validations. Les permissions de la carte Membres (`isAdmin` issu de `useOrgRole`) sont inchangées.
 
-   Deux points sur le Reply-To : il n'a pas besoin d'alignement SPF/DKIM, donc `hello@interw.com` sur la racine fonctionne même si l'envoi part de `notify.interw.com`. En revanche il faut des MX sur `interw.com` pour recevoir — c'est le seul enregistrement que tu poseras sur la racine, et il n'empêche en rien d'y héberger ta future plateforme plus tard.
+- `src/pages/settings/SettingsProfile.tsx` — cartes Mon profil, Mot de passe, Ma voix clonée (+ `VoiceCloneDialog` et l'`AlertDialog` de suppression)
+- `src/pages/settings/SettingsOrganization.tsx` — cartes Organisation (dont `OrgLogoUpload`) et `OrgMembers`
+- `src/pages/Settings.tsx` supprimé, remplacé par une redirection dans le routeur
 
-   Un `List-Unsubscribe: mailto:` dans `auth-email-hook` utilise aussi `REPLY_TO_EMAIL` — il bascule automatiquement avec la constante.
+Aucun changement de logique métier, de schéma, de table ni de colonne.
 
+## 4. Page Système unifiée
 
-   Ces cinq fonctions doivent être redéployées ensemble : un `SENDER_DOMAIN` pointant vers un domaine non vérifié fait échouer l'envoi avec « No email domain record found ». D'où la règle : on ne touche pas une ligne du Lot B avant le statut `active`.
+Nouvelle page `src/pages/AdminSystem.tsx`, protégée par `SuperAdminRoute` comme les pages actuelles :
 
-6. **Les deux domaines d'envoi peuvent coexister** : `notify.interw.ai` reste vérifié et fonctionnel. En cas de problème sur `.com`, on revient en arrière en une modification de constante.
+- Onglets shadcn `Tabs`, même pattern que la console Super Admin
+- Onglet actif lu et écrit dans l'URL via `useSearchParams` : recharger `/admin/system?tab=sessions` rouvre bien Sessions ; sans paramètre, `emails` par défaut
+- Le contenu des deux pages actuelles (`AdminEmails.tsx`, `AdminSessionsQueue.tsx`) est déplacé dans deux composants d'onglet, sans réécriture
 
-Note délivrabilité : un nouveau domaine d'envoi repart d'une réputation neutre. Avec ton volume (~80 emails/semaine), aucune montée en charge à organiser — le volume est trop faible pour déclencher un filtrage sur nouveauté de domaine.
+Les fichiers `src/pages/AdminEmails.tsx` et `src/pages/AdminSessionsQueue.tsx` sont supprimés une fois les redirections en place — aucun composant orphelin.
 
-## 6. Séquence
+## 5. Détails techniques
 
-1. **En parallèle, dès maintenant** :
-   - Tu connectes `app.interw.com` en secondaire → tu me dis où atterrit le lien profond réel
-   - Tu lances la configuration de `notify.interw.com` dans Cloud → Emails et poses les NS chez ton registrar
-2. Si le chemin + query sont conservés : ajout des redirect URLs Auth, puis **Lot A** (URLs générées + marque, hors adresses de contact).
-3. Bascule du domaine primaire + Site URL, une fois le Lot A déployé.
-4. **Lot B** dès que `notify.interw.com` est `active` ET que tu confirmes `hello@interw.com` opérationnelle : domaine d'envoi + Reply-To + `mailto:` en une seule passe. Après cette étape, plus aucun `.ai` visible pour un candidat.
-
-
-Rien n'est modifié tant que tu n'as pas validé le résultat du test de redirection.
-
+- Fichiers modifiés : `src/components/AppSidebar.tsx`, `src/App.tsx`
+- Fichiers créés : `src/pages/settings/SettingsProfile.tsx`, `src/pages/settings/SettingsOrganization.tsx`, `src/pages/AdminSystem.tsx`, plus les deux composants d'onglet système
+- Fichiers supprimés : `src/pages/Settings.tsx`, `src/pages/AdminEmails.tsx`, `src/pages/AdminSessionsQueue.tsx`
+- Aucune nouvelle dépendance : `DropdownMenu`, `Avatar`, `Tabs`, `SidebarFooter` existent déjà dans le projet
+- Les liens internes vers `/settings`, `/admin/emails` et `/admin/sessions-queue` présents ailleurs dans le code (rapport de santé quotidien, liens d'emails) continuent de fonctionner grâce aux redirections
