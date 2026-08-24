@@ -1,6 +1,6 @@
-import { LayoutDashboard, FolderKanban, BookOpen, Settings, LogOut, Shield, ChevronDown, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Activity } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useUnreadFeedback } from "@/hooks/useUnreadFeedback";
@@ -22,10 +22,19 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { OrganizationSwitcher } from "@/components/OrganizationSwitcher";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -42,13 +51,23 @@ const librarySubItems = [
 
 const bottomItems = [
   { title: "Feedback", url: "/feedback", icon: MessageCircle },
-  { title: "Paramètres", url: "/settings", icon: Settings },
 ];
+
+function getInitials(name?: string | null, email?: string | null) {
+  const source = (name || "").trim();
+  if (source) {
+    const parts = source.split(/\s+/).slice(0, 2);
+    return parts.map((p) => p[0]?.toUpperCase() ?? "").join("");
+  }
+  return (email || "?").slice(0, 2).toUpperCase();
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { signOut, profile } = useAuth();
   const { isSuperAdmin } = useSuperAdmin();
   const unreadFeedback = useUnreadFeedback();
@@ -60,20 +79,10 @@ export function AppSidebar() {
     ? librarySubItems
     : librarySubItems.filter((s) => s.url !== "/library/emails");
 
-  const systemSubItems = [
-    { title: "Email", url: "/admin/emails", icon: Mail },
-    { title: "Sessions", url: "/admin/sessions-queue", icon: Activity },
-  ];
-  const isSystemActive = systemSubItems.some((s) => location.pathname.startsWith(s.url));
-  const [systemOpen, setSystemOpen] = useState(isSystemActive);
-
   const bottomItemsList = isSuperAdmin
-    ? [
-        ...bottomItems,
-        { title: "Super Admin", url: "/admin", icon: Shield, showFeedbackBadge: true },
-        { title: "Tuto", url: "/admin/tuto", icon: PlayCircle },
-      ]
+    ? [...bottomItems, { title: "Tuto", url: "/admin/tuto", icon: PlayCircle }]
     : bottomItems;
+
 
   return (
     <Sidebar collapsible="icon">
