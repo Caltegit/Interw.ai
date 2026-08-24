@@ -77,6 +77,7 @@ import AdminTuto from "./pages/AdminTuto";
 import AdminTtsCompare from "./pages/AdminTtsCompare";
 import AdminReportJobs from "./pages/AdminReportJobs";
 import AdminSessionsQueue from "./pages/AdminSessionsQueue";
+import AdminSystem from "./pages/AdminSystem";
 import Feedback from "./pages/Feedback";
 import FeedbackThread from "./pages/FeedbackThread";
 import { SuperAdminRoute } from "@/components/SuperAdminRoute";
@@ -170,11 +171,12 @@ const App = () => (
               <Route path="/feedback/:threadId" element={<FeedbackThread />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
               <Route path="/superadmin/orgs/:orgId" element={<SuperAdminRoute><SuperAdminOrgDetail /></SuperAdminRoute>} />
-              <Route path="/admin/emails" element={<SuperAdminRoute><AdminEmails /></SuperAdminRoute>} />
+              <Route path="/admin/system" element={<SuperAdminRoute><AdminSystem /></SuperAdminRoute>} />
+              <Route path="/admin/emails" element={<Navigate to="/admin/system?tab=emails" replace />} />
               <Route path="/admin/tuto" element={<SuperAdminRoute><AdminTuto /></SuperAdminRoute>} />
               <Route path="/admin/tts-compare" element={<SuperAdminRoute><AdminTtsCompare /></SuperAdminRoute>} />
               <Route path="/admin/report-jobs" element={<SuperAdminRoute><AdminReportJobs /></SuperAdminRoute>} />
-              <Route path="/admin/sessions-queue" element={<SuperAdminRoute><AdminSessionsQueue /></SuperAdminRoute>} />
+              <Route path="/admin/sessions-queue" element={<Navigate to="/admin/system?tab=sessions" replace />} />
               <Route path="/admin/candidates-to-recover" element={<SuperAdminRoute><AdminCandidatesToRecover /></SuperAdminRoute>} />
             </Route>
 
