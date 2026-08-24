@@ -3,9 +3,13 @@
  * sans jamais bloquer le déroulé de l'entretien.
  *
  * - Buffer en mémoire, vidé toutes les 5 s et sur visibilitychange/pagehide.
- * - Utilise navigator.sendBeacon (fire-and-forget) avec repli fetch keepalive.
+ * - Utilise fetch keepalive (fire-and-forget).
  * - Aucun await dans le chemin critique : tout est asynchrone et non bloquant.
+ * - Se branche sur logger.ts via setTelemetryHook : tout logger.warn("mic_*")
+ *   existant est automatiquement forwardé vers le serveur.
  */
+
+import { setTelemetryHook } from "./logger";
 
 interface QueuedEvent {
   event: string
