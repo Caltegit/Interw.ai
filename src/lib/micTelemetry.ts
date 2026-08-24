@@ -84,6 +84,11 @@ export function initMicTelemetry(token: string): void {
   sessionToken = token
   ensureListeners()
 
+  // Branche le hook logger → trackMicEvent pour tous les événements micro.
+  setTelemetryHook((event, level, data) => {
+    trackMicEvent(event, { level, ...data })
+  })
+
   if (flushTimer) clearInterval(flushTimer)
   flushTimer = setInterval(() => flush(), FLUSH_INTERVAL_MS)
 }
