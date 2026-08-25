@@ -35,7 +35,7 @@ const BLOCKS: Block[] = [
   },
   {
     pill: "Postes",
-    title: "Un poste par poste, vos questions, vos critères",
+    title: "Un poste, vos questions, vos critères",
     desc: "Créez un poste en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
     bullets: [
       "Lien candidat unique, partageable par email ou RS",
