@@ -167,7 +167,7 @@ export function EditRecoveryTemplateDialog({ open, onOpenChange, onSaved }: Prop
               <Label>Aperçu</Label>
               <div className="rounded-md border bg-white p-6 text-sm">
                 <div className="pb-3 mb-4 border-b">
-                  <div className="text-lg font-bold text-indigo-600">Interw</div>
+                  <div className="text-lg font-bold text-neutral-900">Interw</div>
                 </div>
                 <div className="text-xs text-muted-foreground mb-3">
                   <span className="font-medium">Sujet :</span> {subject || <em>(vide)</em>}
@@ -178,13 +178,13 @@ export function EditRecoveryTemplateDialog({ open, onOpenChange, onSaved }: Prop
                   dangerouslySetInnerHTML={{ __html: substitute(intro) }}
                 />
                 <div className="text-center my-6">
-                  <span className="inline-block bg-indigo-600 text-white font-bold px-6 py-3 rounded-md text-sm">
+                  <span className="inline-block bg-neutral-900 text-white font-bold px-6 py-3 rounded-md text-sm">
                     Repasser l'entretien
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mb-4">
                   Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br />
-                  <span className="text-indigo-600 break-all">https://interw.ai/session/…</span>
+                  <span className="text-neutral-900 break-all">https://interw.ai/session/…</span>
                 </p>
                 <div
                   className="text-gray-700 leading-relaxed [&_p]:mb-3"
