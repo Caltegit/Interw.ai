@@ -20,7 +20,7 @@ export function StatsOverview() {
   const items = [
     { label: "Organisations", value: stats.orgs, icon: Building2 },
     { label: "Utilisateurs", value: stats.users, icon: Users },
-    { label: "Projets", value: stats.projects, icon: FolderKanban },
+    { label: "Postes", value: stats.projects, icon: FolderKanban },
     { label: "Sessions", value: stats.sessions, icon: Video },
   ];
 

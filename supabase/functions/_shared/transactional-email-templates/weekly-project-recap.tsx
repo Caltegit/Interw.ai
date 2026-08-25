@@ -97,7 +97,7 @@ const WeeklyProjectRecap = ({
 
         {stats && (
           <>
-            <Heading as="h2" style={h2}>Statistiques du projet</Heading>
+            <Heading as="h2" style={h2}>Statistiques du poste</Heading>
             <Section style={statsBox}>
               <Text style={statRow}>
                 <strong>Sessions complétées :</strong> {stats.totalSessions} au total
@@ -123,7 +123,7 @@ const WeeklyProjectRecap = ({
         {projectUrl && (
           <Section style={{ textAlign: 'center', margin: '24px 0 8px' }}>
             <Button href={projectUrl} style={primaryButton}>
-              Ouvrir le projet
+              Ouvrir le poste
             </Button>
           </Section>
         )}
@@ -141,7 +141,7 @@ export const template = {
   component: WeeklyProjectRecap,
   subject: (data: Record<string, any>) =>
     `Récap interw sur le poste « ${data?.jobTitle ?? ''} »`,
-  displayName: 'Récap hebdo projet',
+  displayName: 'Récap hebdo poste',
   previewData: {
     firstName: 'Marie',
     jobTitle: 'Product Manager Senior',

@@ -48,7 +48,7 @@ const confidenceLabel: Record<string, string> = {
 interface Props {
   profile?: Profile | null;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
-  /** Moyenne du projet (Big Five) à superposer en marqueur. */
+  /** Moyenne du poste (Big Five) à superposer en marqueur. */
   projectAverages?: Partial<Record<keyof Profile, number>>;
   questionNumberByMessageId?: Record<string, number>;
 }
@@ -105,7 +105,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
                   <div
                     className="absolute top-[-2px] h-3 w-[2px] bg-foreground/60"
                     style={{ left: `${Math.max(0, Math.min(100, avg))}%` }}
-                    title={`Moyenne du projet : ${Math.round(avg)}/100`}
+                    title={`Moyenne du poste : ${Math.round(avg)}/100`}
                   />
                 )}
               </div>
@@ -132,7 +132,7 @@ export function PersonalityRadar({ profile, onGoToMessage, projectAverages, ques
         })}
         {projectAverages && Object.keys(projectAverages).length > 0 && (
           <p className="pt-1 text-[11px] text-muted-foreground">
-            Le repère vertical sur chaque barre indique la moyenne du projet.
+            Le repère vertical sur chaque barre indique la moyenne du poste.
           </p>
         )}
       </CardContent>

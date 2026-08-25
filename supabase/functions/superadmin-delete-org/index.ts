@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const { organization_id } = await req.json();
     if (!organization_id) return json({ error: "organization_id requis" }, 400);
 
-    // Récupérer projets de l'org → cascade sessions/questions/criteria/reports
+    // Récupérer postes de l'org → cascade sessions/questions/criteria/reports
     const { data: projects } = await admin.from("projects").select("id").eq("organization_id", organization_id);
     const projectIds = (projects ?? []).map((p) => p.id);
 

@@ -16,11 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 interface QuestionAvatarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Avatar actuellement défini sur la question (null = utilise celui du projet) */
+  /** Avatar actuellement défini sur la question (null = utilise celui du poste) */
   currentAvatarUrl: string | null;
-  /** Avatar du projet, utilisé en repli */
+  /** Avatar du poste, utilisé en repli */
   projectAvatarUrl: string | null;
-  /** Renvoie l'URL retenue pour cette question (null = utiliser l'avatar du projet) */
+  /** Renvoie l'URL retenue pour cette question (null = utiliser l'avatar du poste) */
   onConfirm: (url: string | null) => void;
 }
 
@@ -87,7 +87,7 @@ export function QuestionAvatarDialog({
               <span className="text-muted-foreground">Avatar personnalisé pour cette question</span>
               <Button type="button" variant="ghost" size="sm" onClick={handleResetToProject}>
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Utiliser celui du projet
+                Utiliser celui du poste
               </Button>
             </div>
           )}

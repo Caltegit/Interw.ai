@@ -63,7 +63,7 @@ export default function InterviewLanding() {
         .single();
 
       if (!proj) {
-        setError("Ce lien est invalide ou le projet n'est plus actif.");
+        setError("Ce lien est invalide ou le poste n'est plus actif.");
         setLoading(false);
         return;
       }
@@ -125,7 +125,7 @@ export default function InterviewLanding() {
   const linkedinValid = !trimmedLinkedin || /^https?:\/\//i.test(trimmedLinkedin);
   const phoneValid = !trimmedPhone || /^[+0-9 ().-]{6,}$/.test(trimmedPhone);
 
-  // Validation des champs additionnels selon la config du projet
+  // Validation des champs additionnels selon la config du poste
   const missingRequired =
     (candidateFields.phone.enabled && candidateFields.phone.required && !trimmedPhone) ||
     (candidateFields.job_title.enabled && candidateFields.job_title.required && !trimmedJobTitle) ||

@@ -1,4 +1,4 @@
-// Envoi du récap hebdomadaire des entretiens par projet.
+// Envoi du récap hebdomadaire des entretiens par poste.
 // Déclenché par pg_cron tous les lundis (08:00 et 09:00 UTC).
 // La fonction vérifie l'heure locale Europe/Paris et ne s'exécute qu'à 10h.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
@@ -91,10 +91,10 @@ async function processProject(
     return;
   }
   if (!weekSessions || weekSessions.length === 0) {
-    return; // Pas d'activité → pas d'email pour ce projet
+    return; // Pas d'activité → pas d'email pour ce poste
   }
 
-  // Stats cumulées (toutes les sessions complétées du projet).
+  // Stats cumulées (toutes les sessions complétées du poste).
   const { data: allSessions } = await supabase
     .from("sessions")
     .select("id, reports(overall_score, recommendation)")
@@ -180,7 +180,7 @@ async function runWeeklyRecaps(force = false) {
   const sinceIso = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const weekKey = isoWeekKey();
 
-  // Tous les projets actifs avec au moins 1 destinataire.
+  // Tous les postes actifs avec au moins 1 destinataire.
   const { data: projects, error } = await supabase
     .from("projects")
     .select("id, title, job_title, report_recipient_user_ids")

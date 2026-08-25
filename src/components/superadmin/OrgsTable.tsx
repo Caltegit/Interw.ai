@@ -114,7 +114,7 @@ export function OrgsTable({ refreshKey, onChange }: Props) {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Supprimer {org.name} ?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Cette action est irréversible. Tous les projets, sessions, rapports et données liés seront définitivement supprimés. Les utilisateurs membres seront détachés de l'organisation.
+                        Cette action est irréversible. Tous les postes, sessions, rapports et données liés seront définitivement supprimés. Les utilisateurs membres seront détachés de l'organisation.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

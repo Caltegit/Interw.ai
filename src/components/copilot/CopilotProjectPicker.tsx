@@ -10,11 +10,11 @@ export function CopilotProjectPicker({ onPick }: { onPick: (id: string) => void 
   return (
     <div className="flex flex-col gap-3 p-4">
       <p className="text-sm text-muted-foreground">
-        Choisissez un projet pour démarrer une conversation avec le copilote.
+        Choisissez un poste pour démarrer une conversation avec le copilote.
       </p>
       {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
       {!isLoading && projects.length === 0 && (
-        <p className="text-sm text-muted-foreground">Aucun projet actif.</p>
+        <p className="text-sm text-muted-foreground">Aucun poste actif.</p>
       )}
       <div className="flex flex-col gap-1">
         {projects.map((p) => (

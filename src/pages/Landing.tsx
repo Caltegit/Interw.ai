@@ -90,7 +90,7 @@ function HeroInterviewMock() {
                   Question 2 / 5
                 </div>
                 <div className="mt-0.5 text-sm font-medium text-white">
-                  Décrivez un projet dont vous êtes particulièrement fier.
+                  Décrivez un poste dont vous êtes particulièrement fier.
                 </div>
               </div>
             </div>
@@ -187,7 +187,7 @@ function InterviewLiveCard() {
           <span className="h-1 w-1 animate-pulse rounded-full bg-white" /> REC
         </div>
         <div className="absolute inset-x-2 bottom-2 rounded px-2 py-1.5 text-[11px] text-white" style={{ background: "hsl(230 20% 10% / 0.85)" }}>
-          « Décrivez un projet dont vous êtes fier. »
+          « Décrivez un poste dont vous êtes fier. »
         </div>
       </div>
     </div>
@@ -615,7 +615,7 @@ export default function Landing() {
                 price: "3 €",
                 priceSuffix: "/ entretien",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
-                features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
+                features: ["20 entretiens offerts", "Postes illimités", "Rapports IA détaillés", "Aucune carte requise"],
                 cta: "Planifier une démo",
                 ctaNote: "Aucune carte requise",
                 highlight: false,
@@ -733,7 +733,7 @@ export default function Landing() {
               },
               {
                 q: "Combien de temps pour démarrer ?",
-                a: "Une dizaine de minutes. Vous créez votre projet, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
+                a: "Une dizaine de minutes. Vous créez votre poste, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
               },
               {
                 q: "L'IA remplace-t-elle le recruteur ?",

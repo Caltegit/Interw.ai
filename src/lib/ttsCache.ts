@@ -6,7 +6,7 @@
 // - Clé = `${voiceId}|${normalizedText}` → un changement de voix invalide
 //   naturellement le cache (rarissime en cours de session, mais propre).
 // - Cache mémoire process-local (Map). Pas de persistance disque pour rester
-//   simple et éviter toute fuite d'audio entre projets/voix.
+//   simple et éviter toute fuite d'audio entre postes/voix.
 // - Borné implicitement (≤ une poignée de phrases statiques par session).
 
 type CacheKey = string;
@@ -43,7 +43,7 @@ export const STATIC_TRANSITION_PHRASES = {
 export type TtsFetcher = (text: string) => Promise<{ blob: Blob; bytes: number; ms: number } | null>;
 
 /**
- * Précharge en parallèle les phrases statiques pour la voix du projet.
+ * Précharge en parallèle les phrases statiques pour la voix du poste.
  * Fire-and-forget : si une requête échoue, on retombe simplement sur le flux
  * normal au moment du jeu. Ne lève jamais.
  */

@@ -110,7 +110,7 @@ export default function ProjectNew() {
   const [formInitial, setFormInitial] = useState<ProjectFormState>(initialState);
   const [templateLoading, setTemplateLoading] = useState(!!templateId);
 
-  // Pré-coche le créateur du projet comme destinataire par défaut
+  // Pré-coche le créateur du poste comme destinataire par défaut
   useEffect(() => {
     if (!user) return;
     setFormInitial((s) => (s.reportRecipientUserIds.length === 0 ? { ...s, reportRecipientUserIds: [user.id] } : s));
@@ -466,13 +466,13 @@ export default function ProjectNew() {
 
       if (!check) {
         toast({
-          title: "Projet créé mais lien candidat non fonctionnel",
+          title: "Poste créé mais lien candidat non fonctionnel",
           description:
-            "Le projet a été créé mais le lien public ne semble pas accessible. Vérifiez le statut du projet.",
+            "Le poste a été créé mais le lien public ne semble pas accessible. Vérifiez le statut du poste.",
           variant: "destructive",
         });
       } else {
-        toast({ title: "Projet créé !", description: "Le lien candidat est fonctionnel ✓" });
+        toast({ title: "Poste créé !", description: "Le lien candidat est fonctionnel ✓" });
       }
 
       if (s.saveCandidateEmailAsDefault && organizationId) {
@@ -509,8 +509,8 @@ export default function ProjectNew() {
       initial={formInitial}
       onSubmit={handleSave}
       saving={saving}
-      header={<h1 className="text-2xl font-bold">Nouveau projet</h1>}
-      submitLabel={{ idle: "Créer le projet", busy: "Création..." }}
+      header={<h1 className="text-2xl font-bold">Nouveau poste</h1>}
+      submitLabel={{ idle: "Créer le poste", busy: "Création..." }}
     />
   );
 }

@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     return json(400, { error: "original_session_id requis" });
   }
 
-  // 2. Charger la session d'origine + projet.
+  // 2. Charger la session d'origine + poste.
   const { data: original, error: origErr } = await admin
     .from("sessions")
     .select("id, project_id, organization_id, candidate_name, candidate_email, candidate_phone, candidate_linkedin_url, candidate_job_title, status, projects(slug, title, job_title, organizations(name))")

@@ -51,7 +51,7 @@ function suggestionsForCandidate(name: string): string[] {
     `Quels sont les points forts et faiblesses de ${name} ?`,
     `Rédige 5 questions de relance à poser à ${name} en second entretien.`,
     `Quels axes approfondir sur le profil de ${name} ?`,
-    `Compare ${name} à la moyenne des autres candidats du projet.`,
+    `Compare ${name} à la moyenne des autres candidats du poste.`,
   ];
 }
 
@@ -80,13 +80,13 @@ function emptyStateFor(
     case "projects-list":
       return {
         suggestions: [
-          "Quels projets ont le plus de candidats à départager ?",
-          "Sur quels projets manque-t-il des critères d'évaluation ?",
-          "Résume l'avancement de mes projets en cours.",
+          "Quels postes ont le plus de candidats à départager ?",
+          "Sur quels postes manque-t-il des critères d'évaluation ?",
+          "Résume l'avancement de mes postes en cours.",
         ],
-        title: "Vue d'ensemble de vos projets",
-        hint: "Le copilote analyse l'ensemble de vos projets et candidats.",
-        placeholder: "Posez une question sur vos projets…",
+        title: "Vue d'ensemble de vos postes",
+        hint: "Le copilote analyse l'ensemble de vos postes et candidats.",
+        placeholder: "Posez une question sur vos postes…",
       };
     case "compare":
       return {
@@ -96,7 +96,7 @@ function emptyStateFor(
           "Quel profil correspond le mieux aux critères prioritaires ?",
         ],
         title: "Comparer les candidats",
-        hint: "Le copilote compare les profils du projet en cours.",
+        hint: "Le copilote compare les profils du poste en cours.",
         placeholder: "Posez une question de comparaison…",
       };
     case "stats":
@@ -106,7 +106,7 @@ function emptyStateFor(
           "Identifie les tendances sur les soft skills.",
           "Quelle question génère les réponses les plus pauvres ?",
         ],
-        title: "Lire les statistiques du projet",
+        title: "Lire les statistiques du poste",
         hint: "Le copilote s'appuie sur les évaluations agrégées.",
         placeholder: "Posez une question sur les statistiques…",
       };
@@ -142,14 +142,14 @@ function emptyStateFor(
     case "project-detail":
       return {
         suggestions: SUGGESTIONS_ANALYSIS,
-        title: "Analyser les candidats du projet",
+        title: "Analyser les candidats du poste",
         hint: "Le copilote s'appuie sur les rapports d'évaluation déjà générés.",
         placeholder: "Posez une question sur les candidats…",
       };
     default:
       return {
         suggestions: mode === "design" ? SUGGESTIONS_DESIGN : SUGGESTIONS_ANALYSIS,
-        title: mode === "design" ? "Co-construisez votre entretien avec l'IA" : "Posez une question sur les candidats du projet",
+        title: mode === "design" ? "Co-construisez votre entretien avec l'IA" : "Posez une question sur les candidats du poste",
         hint:
           mode === "design"
             ? "Le copilote connaît vos questions et critères, et peut en proposer de nouveaux."
@@ -424,14 +424,14 @@ function QuestionsActions({
                 try {
                   await addToProject.mutateAsync({ projectId, q });
                   setDone((d) => ({ ...d, [i]: "project" }));
-                  toast.success("Question ajoutée au projet");
+                  toast.success("Question ajoutée au poste");
                 } catch (e: any) {
                   toast.error(e?.message || "Erreur");
                 }
               }}
             >
               {done[i] === "project" ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-              Ajouter au projet
+              Ajouter au poste
             </Button>
             <Button
               size="sm"
@@ -496,14 +496,14 @@ function CriteriaActions({
                 try {
                   await addToProject.mutateAsync({ projectId, c });
                   setDone((d) => ({ ...d, [i]: "project" }));
-                  toast.success("Critère ajouté au projet");
+                  toast.success("Critère ajouté au poste");
                 } catch (e: any) {
                   toast.error(e?.message || "Erreur");
                 }
               }}
             >
               {done[i] === "project" ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-              Ajouter au projet
+              Ajouter au poste
             </Button>
             <Button
               size="sm"

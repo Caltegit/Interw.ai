@@ -506,7 +506,7 @@ export default function InterviewStart() {
     [],
   );
 
-  // Durée max paramétrée au niveau du projet (défaut 15 min, plage 5–60).
+  // Durée max paramétrée au niveau du poste (défaut 15 min, plage 5–60).
   const maxDurationMinutes = Math.min(60, Math.max(5, Number(project?.max_duration_minutes) || 15));
   const MAX_DURATION_MS = maxDurationMinutes * 60 * 1000;
   // Plafond d'historique IA envoyé à chaque tour (les N derniers messages),
@@ -4234,7 +4234,7 @@ export default function InterviewStart() {
                   // Le bouton reste cliquable même pendant une relance IA :
                   // le clic interrompt la TTS en cours et passe à la suite.
                   const disabled = false;
-                  // Le passage de question est optionnel côté projet (par défaut activé).
+                  // Le passage de question est optionnel côté poste (par défaut activé).
                   // La dernière question reste toujours « terminable » via ce bouton, sinon le candidat est bloqué.
                   const skipAllowed = (project as { allow_skip_question?: boolean })?.allow_skip_question !== false;
                   const showSkip = skipAllowed || isLastQ;

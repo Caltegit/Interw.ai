@@ -114,9 +114,9 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
       : Promise.resolve({ count: 0 }),
   ]);
 
-  // Derniers projets actifs : on priorise ceux où un entretien a réellement été
+  // Derniers postes actifs : on priorise ceux où un entretien a réellement été
   // passé (sessions complétées non démo), triés par date du dernier entretien
-  // terminé. Puis on complète avec les projets sans entretien terminé.
+  // terminé. Puis on complète avec les postes sans entretien terminé.
   const { data: recentProjectsRaw } = await supabase
     .from("projects")
     .select(
@@ -125,7 +125,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     .eq("status", "active")
     .limit(200);
   const mapped = (recentProjectsRaw ?? []).map((p: any) => {
-    // Même règle que la page projet : session terminée ET rapport généré
+    // Même règle que la page poste : session terminée ET rapport généré
     const completedSessions = Array.isArray(p.sessions_done)
       ? p.sessions_done.filter(
           (s: any) =>
@@ -163,7 +163,7 @@ async function fetchDashboard(userId: string): Promise<DashboardData> {
     ...withoutCompleted.slice(0, Math.max(0, 5 - withCompleted.length)),
   ].map(({ lastCompletedAt: _omit, ...rest }) => rest);
 
-  // Candidats "à traiter" : sessions complétées dans des projets actifs de l'org,
+  // Candidats "à traiter" : sessions complétées dans des postes actifs de l'org,
   // avec un rapport généré exploitable, et sans décision recruteur.
   let toProcess: DashboardData["toProcess"] = [];
   if (orgId) {

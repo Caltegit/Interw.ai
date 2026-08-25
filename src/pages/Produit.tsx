@@ -24,9 +24,9 @@ const BLOCKS: Block[] = [
   {
     pill: "Tableau de bord",
     title: "Pilotez en un coup d'œil",
-    desc: "Tous vos projets, vos candidats les plus prometteurs et vos décisions en attente sont réunis sur un seul écran. ",
+    desc: "Tous vos postes, vos candidats les plus prometteurs et vos décisions en attente sont réunis sur un seul écran. ",
     bullets: [
-      "Projets actifs, sessions complétées et score moyen",
+      "Postes actifs, sessions complétées et score moyen",
       "Meilleurs candidats des 30 derniers jours mis en avant",
       "Candidats à traiter pour ne perdre aucun profil",
     ],
@@ -34,12 +34,12 @@ const BLOCKS: Block[] = [
     icon: <Sparkles className="h-4 w-4" />,
   },
   {
-    pill: "Projets",
-    title: "Un projet par poste, vos questions, vos critères",
-    desc: "Créez un projet en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
+    pill: "Postes",
+    title: "Un poste par poste, vos questions, vos critères",
+    desc: "Créez un poste en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
     bullets: [
       "Lien candidat unique, partageable par email ou RS",
-      "Suivi de l'avancement par projet et par candidat",
+      "Suivi de l'avancement par poste et par candidat",
     ],
     img: shotProjects,
     icon: <FolderKanban className="h-4 w-4" />,
@@ -71,10 +71,10 @@ const BLOCKS: Block[] = [
   {
     pill: "Ressources",
     title: "Vos questions et critères, prêts à réutiliser",
-    desc: "Construisez vos ressources au fil du temps. Réutilisez les bonnes questions sur tous vos projets, capitalisez sur ce qui fonctionne.",
+    desc: "Construisez vos ressources au fil du temps. Réutilisez les bonnes questions sur tous vos postes, capitalisez sur ce qui fonctionne.",
     bullets: [
       "Questions classées par type (écrite, vidéo, énigme…)",
-      "Critères réutilisables sur tous vos projets",
+      "Critères réutilisables sur tous vos postes",
       "Intros et sessions d'emails personnalisables",
     ],
     img: shotQuestions,

@@ -23,7 +23,7 @@ const ITEMS: LibraryItem[] = [
   {
     key: "interviews",
     title: "Sessions types",
-    description: "Sessions types prêtes à dupliquer pour lancer un projet en quelques secondes.",
+    description: "Sessions types prêtes à dupliquer pour lancer un poste en quelques secondes.",
     icon: ClipboardList,
     url: "/library/sessions",
     table: "interview_templates",
@@ -114,7 +114,7 @@ export default function LibraryHome() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Ressources</h1>
         <p className="mt-2 text-muted-foreground">
-          Réutilisez vos sessions pour gagner du temps et garder une qualité constante d'un projet à l'autre.
+          Réutilisez vos sessions pour gagner du temps et garder une qualité constante d'un poste à l'autre.
         </p>
       </div>
 

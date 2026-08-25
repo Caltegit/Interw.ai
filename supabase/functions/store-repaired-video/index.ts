@@ -4,7 +4,7 @@
 // utilisateurs authentifiés côté client.
 //
 // Auth : le caller doit être un utilisateur authentifié appartenant à
-// l'organisation propriétaire du projet lié à la session, ou un appel
+// l'organisation propriétaire du poste lié à la session, ou un appel
 // interne.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     );
 
     // Contrôle d'accès : si caller.userId présent, vérifier qu'il appartient
-    // à l'organisation du projet de la session.
+    // à l'organisation du poste de la session.
     if (caller.userId) {
       const { data: sess, error: sessErr } = await sb
         .from("sessions")

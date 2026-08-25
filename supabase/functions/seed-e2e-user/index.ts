@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       created_by: userId,
       title: "E2E Test Project",
       job_title: "QA Engineer E2E",
-      description: "Projet seed utilisé par les tests Playwright. Ne pas supprimer.",
+      description: "Poste seed utilisé par les tests Playwright. Ne pas supprimer.",
       status: "active",
       slug: "e2e-test-project",
       language: "fr",

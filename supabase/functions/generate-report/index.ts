@@ -887,7 +887,7 @@ Règles :
 
 
     // ============================================================
-    // NOUVEAU : fit_breakdown — mappé sur les critères réels du projet
+    // NOUVEAU : fit_breakdown — mappé sur les critères réels du poste
     // ============================================================
     let fitBreakdown: Array<Record<string, unknown>> = [];
     const aiFit = Array.isArray(parsed.fit_breakdown) ? parsed.fit_breakdown : [];
@@ -914,7 +914,7 @@ Règles :
         });
       });
     } else {
-      // Pas de critères définis sur le projet : on garde tel quel
+      // Pas de critères définis sur le poste : on garde tel quel
       aiFit.forEach((f: any) => {
         fitBreakdown.push({
           criterion: f?.criterion || "Critère",
@@ -961,7 +961,7 @@ Règles :
     const candidateMessages = messages.filter((m: any) => m.role === "candidate");
     const aiMessages = messages.filter((m: any) => m.role === "ai");
     const candidateVideos = candidateMessages.filter((m: any) => m.video_segment_url);
-    // Réponses principales (hors follow-ups) — sert pour matcher les questions du projet
+    // Réponses principales (hors follow-ups) — sert pour matcher les questions du poste
     const mainAnswerVideos = candidateVideos.filter((m: any) => !m.is_follow_up);
 
     const aiFollowups = aiMessages.filter((m: any) => m.is_follow_up).length;
@@ -1492,7 +1492,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       nonverbalAnalysis: any | null,
     ) => {
     try {
-      // Liste des destinataires explicitement configurée sur le projet.
+      // Liste des destinataires explicitement configurée sur le poste.
       // Une liste vide = opt-out volontaire de toute l'équipe → aucun envoi.
       const configuredIds: string[] = Array.isArray(
         (project as { report_recipient_user_ids?: string[] | null }).report_recipient_user_ids,

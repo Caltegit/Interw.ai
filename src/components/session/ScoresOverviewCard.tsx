@@ -213,7 +213,7 @@ function ScoreGauge({
                     ? "text-rose-600"
                     : "text-muted-foreground"
               }`}
-              title="Écart vs moyenne projet"
+              title="Écart vs moyenne poste"
             >
               {delta > 0 ? "+" : ""}
               {delta}{" "}

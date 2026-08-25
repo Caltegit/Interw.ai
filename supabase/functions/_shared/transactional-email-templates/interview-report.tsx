@@ -415,7 +415,7 @@ export const template = {
       emotional_stability: { score: 75, interpretation: 'Reste posée sur les questions difficiles.' },
     },
     followupQuestions: [
-      { question: 'Pouvez-vous détailler votre approche des tests sur votre dernier projet React ?', rationale: 'À creuser car peu d\'exemples concrets.' },
+      { question: 'Pouvez-vous détailler votre approche des tests sur votre dernier poste React ?', rationale: 'À creuser car peu d\'exemples concrets.' },
       { question: 'Comment gérez-vous un désaccord technique avec un lead ?', rationale: 'Valider la posture en équipe.' },
     ],
     strengths: ['Communication claire', 'Solide expérience React', 'Bonne motivation'],
@@ -465,7 +465,7 @@ export const template = {
     ],
     softSkills: [
       { label: 'Esprit d\'équipe', score: 8, comment: 'Mentionne plusieurs collaborations réussies.' },
-      { label: 'Autonomie', score: 7, comment: 'A piloté plusieurs projets en parallèle.' },
+      { label: 'Autonomie', score: 7, comment: 'A piloté plusieurs postes en parallèle.' },
     ],
   },
 } satisfies TemplateEntry

@@ -33,14 +33,14 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
   const lines: string[] = [];
   if (focusName) {
     lines.push(
-      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à approfondir le profil de **${focusName}**, candidat sur le projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à approfondir le profil de **${focusName}**, candidat sur le poste "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
     );
     lines.push(
-      "Concentre toutes tes réponses sur ce candidat précis. Tu peux comparer ses scores aux critères du projet, suggérer des questions de relance pour un second entretien, repérer des zones à creuser, et reformuler les forces/faiblesses.",
+      "Concentre toutes tes réponses sur ce candidat précis. Tu peux comparer ses scores aux critères du poste, suggérer des questions de relance pour un second entretien, repérer des zones à creuser, et reformuler les forces/faiblesses.",
     );
   } else {
     lines.push(
-      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
+      `Tu es un assistant IA expert en recrutement, sobre, factuel, qui aide un recruteur à analyser les candidatures du poste "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}).`,
     );
   }
   lines.push(
@@ -54,7 +54,7 @@ function buildAnalysisSystemPrompt(project: any, criteria: any[], reports: any[]
   );
 
   if (criteria.length > 0) {
-    lines.push("\n## Critères d'évaluation du projet");
+    lines.push("\n## Critères d'évaluation du poste");
     for (const c of criteria) {
       lines.push(`- **${c.label}** (poids ${c.weight ?? 0}) : ${c.description ?? ""}`.trim());
     }
@@ -131,7 +131,7 @@ function buildDesignSystemPrompt(
 ): string {
   const lines: string[] = [];
   lines.push(
-    `Tu es un assistant IA expert en conception d'entretiens structurés. Tu aides un recruteur à construire l'entretien du projet "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}, langue : ${project?.language ?? "fr"}, durée cible : ${project?.max_duration_minutes ?? 30} min).`,
+    `Tu es un assistant IA expert en conception d'entretiens structurés. Tu aides un recruteur à construire l'entretien du poste "${project?.title ?? "—"}" (poste : ${project?.job_title ?? "—"}, langue : ${project?.language ?? "fr"}, durée cible : ${project?.max_duration_minutes ?? 30} min).`,
   );
   lines.push(
     "Réponds toujours en français, de façon concise et structurée (Markdown : titres courts, listes, tableaux). Justifie brièvement chaque suggestion (« pourquoi »).",
@@ -152,10 +152,10 @@ function buildDesignSystemPrompt(
     "Chaque bloc JSON doit être valide et autonome. Tu peux mettre plusieurs blocs dans une même réponse. N'invente pas d'autres types.",
   );
 
-  lines.push(`\n## Projet`);
+  lines.push(`\n## Poste`);
   if (project?.intro_text) lines.push(`- Description : ${String(project.intro_text).slice(0, 600)}`);
 
-  lines.push(`\n## Questions actuelles du projet (${questions.length})`);
+  lines.push(`\n## Questions actuelles du poste (${questions.length})`);
   if (questions.length === 0) {
     lines.push("Aucune question pour le moment.");
   } else {

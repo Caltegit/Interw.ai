@@ -190,7 +190,7 @@ export default function ProjectCompare() {
       </div>
     );
   }
-  if (!project) return <p>Projet introuvable</p>;
+  if (!project) return <p>Poste introuvable</p>;
   if (sessions.length === 0)
     return (
       <div className="space-y-4">
@@ -217,7 +217,7 @@ export default function ProjectCompare() {
         <div>
           <Button variant="ghost" size="sm" asChild className="mb-1 -ml-2">
             <Link to={`/projects/${id}`}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+              <ArrowLeft className="mr-1 h-4 w-4" /> Retour au poste
             </Link>
           </Button>
           <h1 className="text-2xl font-bold">Comparaison</h1>

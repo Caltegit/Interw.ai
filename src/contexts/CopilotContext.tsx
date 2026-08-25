@@ -25,7 +25,7 @@ interface CopilotContextValue {
   setOpen: (v: boolean) => void;
   toggle: () => void;
   openCopilot: () => void;
-  /** Projet actif détecté via la route (projet ou session), ou null. */
+  /** Poste actif détecté via la route (poste ou session), ou null. */
   activeProjectId: string | null;
   /** Session active détectée via la route, ou null. */
   activeSessionId: string | null;
@@ -148,14 +148,14 @@ export function CopilotProvider({ children }: { children: ReactNode }) {
     }
   }, [visible, open]);
 
-  // Réinitialise le projet sélectionné si la route impose un projet invalide
+  // Réinitialise le poste sélectionné si la route impose un poste invalide
   useEffect(() => {
     if (location.pathname === "/projects/new" && pickedProjectId !== null) {
       setPickedProjectId(null);
     }
   }, [location.pathname, pickedProjectId]);
 
-  // Reset thread quand projet/session effectif ou mode change
+  // Reset thread quand poste/session effectif ou mode change
   const effectiveProjectId = activeProjectId ?? pickedProjectId;
   useEffect(() => {
     setActiveThreadId(null);

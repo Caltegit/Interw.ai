@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * Carte comparant le candidat à la moyenne du projet.
+ * Carte comparant le candidat à la moyenne du poste.
  * Masquée tant qu'on n'a pas au moins 3 candidats avec rapport (sinon pas assez de signal).
  */
 export function ProjectComparisonCard({ candidateScore, averages, candidateCriteria }: Props) {
@@ -20,7 +20,7 @@ export function ProjectComparisonCard({ candidateScore, averages, candidateCrite
   const delta = candidateScore - averages.overallScore;
   const positive = delta >= 0;
 
-  // Critères du candidat avec moyenne projet correspondante (par label)
+  // Critères du candidat avec moyenne poste correspondante (par label)
   const criteriaRows = Object.values(candidateCriteria)
     .map((c) => {
       const label = c.label || "Critère";
@@ -41,7 +41,7 @@ export function ProjectComparisonCard({ candidateScore, averages, candidateCrite
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className="text-2xl font-semibold">{candidateScore}/100</span>
           <span className="text-sm text-muted-foreground">
-            moyenne du projet : {averages.overallScore}/100
+            moyenne du poste : {averages.overallScore}/100
           </span>
           <span
             className={`flex items-center gap-1 text-sm font-medium ${
@@ -75,13 +75,13 @@ export function ProjectComparisonCard({ candidateScore, averages, candidateCrite
                   <div
                     className="absolute top-[-2px] h-3 w-[2px] bg-foreground/60"
                     style={{ left: `${Math.max(0, Math.min(100, row.avgPct!))}%` }}
-                    title={`Moyenne du projet : ${Math.round(row.avgPct!)}%`}
+                    title={`Moyenne du poste : ${Math.round(row.avgPct!)}%`}
                   />
                 </div>
               </div>
             ))}
             <p className="pt-1 text-[11px] text-muted-foreground">
-              Le repère vertical indique la moyenne du projet pour ce critère.
+              Le repère vertical indique la moyenne du poste pour ce critère.
             </p>
           </div>
         )}

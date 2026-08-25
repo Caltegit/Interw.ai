@@ -583,7 +583,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
         })),
       );
     }
-    toast({ title: "Session type appliquée", description: "Vous pouvez ajuster les champs avant de créer le projet." });
+    toast({ title: "Session type appliquée", description: "Vous pouvez ajuster les champs avant de créer le poste." });
   };
 
   const applyJobImport = (payload: JobImportPayload) => {
@@ -1157,19 +1157,19 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
             <div className="space-y-4">
               <Accordion type="multiple" className="space-y-3">
                 {!isTemplate && (<>
-                {/* 1. Visibilité du projet */}
+                {/* 1. Visibilité du poste */}
 
                 <AccordionItem value="visibility" className="rounded-lg border bg-card px-4">
                   <AccordionTrigger className="hover:no-underline">
                     <span className="flex items-center gap-2 text-sm font-medium">
                       <User className="h-4 w-4" />
-                      Visibilité du projet
+                      Visibilité du poste
                     </span>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3 pt-1">
                       <p className="text-sm text-muted-foreground">
-                        Choisissez qui peut voir ce projet. Le créateur et le propriétaire de l'organisation y ont toujours accès.
+                        Choisissez qui peut voir ce poste. Le créateur et le propriétaire de l'organisation y ont toujours accès.
                       </p>
                       {(() => {
                         const creatorId = creatorUserId ?? user?.id ?? null;
@@ -1336,7 +1336,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                             checked={saveCandidateEmailAsDefault}
                             onCheckedChange={(v) => setSaveCandidateEmailAsDefault(v === true)}
                           />
-                          <span>Garder ce texte comme session type par défaut pour mes prochains projets</span>
+                          <span>Garder ce texte comme session type par défaut pour mes prochains postes</span>
                         </label>
                         <Button
                           type="button"

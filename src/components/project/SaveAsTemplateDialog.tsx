@@ -46,7 +46,7 @@ export function SaveAsTemplateDialog({
       const { data: orgId } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
       if (!orgId) throw new Error("Organisation introuvable");
 
-      // Charger toutes les colonnes du projet pour les copier dans la session type
+      // Charger toutes les colonnes du poste pour les copier dans la session type
       const { data: project } = await supabase
         .from("projects")
         .select("*")
@@ -65,7 +65,7 @@ export function SaveAsTemplateDialog({
           job_title: (p.job_title as string) || defaultJobTitle,
           default_duration_minutes: (p.max_duration_minutes as number) || defaultDuration,
           default_language: (p.language as string) || defaultLanguage,
-          // Tous les champs étendus copiés depuis le projet
+          // Tous les champs étendus copiés depuis le poste
           ai_persona_name: p.ai_persona_name ?? undefined,
           ai_voice: p.ai_voice ?? undefined,
           avatar_image_url: p.avatar_image_url ?? null,
@@ -168,7 +168,7 @@ export function SaveAsTemplateDialog({
           <DialogHeader>
             <DialogTitle>Sauvegarder comme session type</DialogTitle>
             <DialogDescription>
-              Crée une session type réutilisable à partir des questions et critères de ce projet.
+              Crée une session type réutilisable à partir des questions et critères de ce poste.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

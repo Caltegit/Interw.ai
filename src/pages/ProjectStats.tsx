@@ -87,10 +87,10 @@ export default function ProjectStats() {
         <div>
           <Button variant="ghost" size="sm" asChild className="-ml-2 mb-1">
             <Link to={`/projects/${id}`}>
-              <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+              <ArrowLeft className="mr-1 h-4 w-4" /> Retour au poste
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold">Statistiques · {data.project?.title ?? "Projet"}</h1>
+          <h1 className="text-2xl font-semibold">Statistiques · {data.project?.title ?? "Poste"}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Suivi de l'acquisition et de la conversion des candidats sur la période.
           </p>
