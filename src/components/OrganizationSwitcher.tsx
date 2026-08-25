@@ -89,7 +89,6 @@ export function OrganizationSwitcher() {
   if (orgs.length === 0) return null;
 
   const label = active?.name ?? "Organisation";
-  const roleLabel = isOwner ? "Propriétaire" : "Membre";
 
   if (orgs.length === 1) {
     return (
