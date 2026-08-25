@@ -140,7 +140,7 @@ export default function Dashboard() {
           <Button asChild size="sm">
             <Link to="/projects/new">
               <Plus className="h-4 w-4" />
-              Nouveau projet
+              Nouveau poste
             </Link>
           </Button>
         </div>
@@ -186,13 +186,13 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Raccourcis : projets actifs + sessions récentes */}
+      {/* Raccourcis : postes actifs + sessions récentes */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <FolderOpen className="h-4 w-4 text-primary" />
-              Derniers projets actifs
+              Derniers postes actifs
             </CardTitle>
             <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
               <Link to="/projects">
@@ -202,7 +202,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {recentProjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun projet actif.</p>
+              <p className="text-sm text-muted-foreground">Aucun poste actif.</p>
             ) : (
               <ul className="space-y-1">
                 {recentProjects.map((p) => (
@@ -300,7 +300,7 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Projets actifs</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Postes actifs</CardTitle>
             <FolderKanban className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>

@@ -60,13 +60,13 @@ export interface Question {
   videoPreviewUrl: string | null;
   /** true si la question vient d'un import depuis les ressources */
   from_library?: boolean;
-  /** true si l'utilisateur veut sauvegarder cette question dans les ressources à la sauvegarde du projet */
+  /** true si l'utilisateur veut sauvegarder cette question dans les ressources à la sauvegarde du poste */
   save_to_library?: boolean;
   /** Indication courte affichée au candidat pendant la réponse */
   hint_text: string;
   /** Durée maximale de la réponse en secondes (null = pas de limite) */
   max_response_seconds: number | null;
-  /** Avatar spécifique à cette question (remplace l'avatar du projet pour cette question). null = avatar du projet. */
+  /** Avatar spécifique à cette question (remplace l'avatar du poste pour cette question). null = avatar du poste. */
   avatar_image_url: string | null;
 }
 

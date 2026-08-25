@@ -87,7 +87,7 @@ export function useCreateCopilotThread() {
       sessionId = null,
     }: { projectId: string; userId: string; mode?: CopilotMode; sessionId?: string | null }) => {
       if (!isUuid(projectId)) {
-        throw new Error("Choisissez d'abord un projet existant.");
+        throw new Error("Choisissez d'abord un poste existant.");
       }
       const safeSessionId = isUuid(sessionId) ? sessionId : null;
       const { data, error } = await supabase

@@ -615,7 +615,7 @@ export default function Landing() {
                 price: "3 €",
                 priceSuffix: "/ entretien",
                 desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
-                features: ["20 entretiens offerts", "Projets illimités", "Rapports IA détaillés", "Aucune carte requise"],
+                features: ["20 entretiens offerts", "Postes illimités", "Rapports IA détaillés", "Aucune carte requise"],
                 cta: "Planifier une démo",
                 ctaNote: "Aucune carte requise",
                 highlight: false,
@@ -733,7 +733,7 @@ export default function Landing() {
               },
               {
                 q: "Combien de temps pour démarrer ?",
-                a: "Une dizaine de minutes. Vous créez votre projet, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
+                a: "Une dizaine de minutes. Vous créez votre poste, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
               },
               {
                 q: "L'IA remplace-t-elle le recruteur ?",

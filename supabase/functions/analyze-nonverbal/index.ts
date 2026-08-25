@@ -168,7 +168,7 @@ serve(async (req) => {
     const project: any = session.projects;
     if (!project?.record_video) {
       // En mode force, on autorise quand même si des segments vidéo existent réellement
-      // (cas des projets où record_video=false mais le candidat a quand même envoyé de la vidéo).
+      // (cas des postes où record_video=false mais le candidat a quand même envoyé de la vidéo).
       let hasRealSegments = false;
       if (force) {
         const { count } = await supabase

@@ -348,13 +348,13 @@ export default function SuperAdminOrgDetail() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Briefcase className="h-5 w-5" /> Projets
+            <Briefcase className="h-5 w-5" /> Postes
           </CardTitle>
-          <CardDescription>{projects.length} projet{projects.length > 1 ? "s" : ""}</CardDescription>
+          <CardDescription>{projects.length} poste{projects.length > 1 ? "s" : ""}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {projects.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-6">Aucun projet.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">Aucun poste.</p>
           )}
           {projects.map((p) => (
             <div key={p.id} className="flex items-center justify-between rounded-md border p-3">

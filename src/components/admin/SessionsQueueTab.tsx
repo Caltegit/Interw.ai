@@ -234,7 +234,7 @@ export default function SessionsQueueTab() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher candidat, email, projet, organisation, session.id ou token…"
+                placeholder="Rechercher candidat, email, poste, organisation, session.id ou token…"
                 className="pl-9"
                 value={searchInput}
                 onChange={(e) => { setSearchInput(e.target.value); setPage(0); }}
@@ -283,7 +283,7 @@ export default function SessionsQueueTab() {
                 <tr>
                   <th className="py-2 w-6"></th>
                   <th className="py-2 pr-3">Candidat</th>
-                  <th className="py-2 pr-3">Projet · Org</th>
+                  <th className="py-2 pr-3">Poste · Org</th>
                   <th className="py-2 pr-3">Session</th>
                   <th className="py-2 pr-3">Transcript</th>
                   <th className="py-2 pr-3">Rapport</th>

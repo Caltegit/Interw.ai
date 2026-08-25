@@ -48,7 +48,7 @@ export default function InterviewDemoLanding() {
         .eq("status", "active")
         .maybeSingle();
       if (!proj) {
-        setError("Ce projet n'est pas accessible.");
+        setError("Ce poste n'est pas accessible.");
         setLoading(false);
         return;
       }
@@ -102,7 +102,7 @@ export default function InterviewDemoLanding() {
     const token = (session as any).token as string;
     setSessionToken(token);
 
-    // 3) Intro projet si configurée
+    // 3) Intro poste si configurée
     const mode = resolveIntroMode(project);
     if (mode) {
       setIntroMode(mode);

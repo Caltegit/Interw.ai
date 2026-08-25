@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-    // Récupère la session + projet pour le contrôle d'accès
+    // Récupère la session + poste pour le contrôle d'accès
     const { data: session, error: sessErr } = await admin
       .from("sessions")
       .select("id, project_id, candidate_email, projects:projects!inner(created_by, organization_id)")

@@ -84,7 +84,7 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
     if (a !== null) motivation[k] = a;
   }
 
-  // Critères : on agrège par label (les ids changent par projet mais labels stables)
+  // Critères : on agrège par label (les ids changent par poste mais labels stables)
   const buckets: Record<string, number[]> = {};
   for (const r of list as any[]) {
     const cs = r.criteria_scores || {};

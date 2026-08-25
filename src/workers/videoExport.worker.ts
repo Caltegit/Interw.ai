@@ -307,7 +307,7 @@ async function run(msg: StartMessage) {
     readme.push("");
     readme.push(`Candidat : ${msg.candidateName ?? ""}`);
     if (msg.candidateEmail) readme.push(`Courriel : ${msg.candidateEmail}`);
-    if (msg.projectTitle) readme.push(`Projet   : ${msg.projectTitle}`);
+    if (msg.projectTitle) readme.push(`Poste   : ${msg.projectTitle}`);
     if (msg.projectJobTitle) readme.push(`Poste    : ${msg.projectJobTitle}`);
     readme.push(`Date     : ${dateStr}`);
     if (durationMin !== null) readme.push(`Durée    : ${durationMin} min`);

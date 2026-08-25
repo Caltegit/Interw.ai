@@ -42,10 +42,10 @@ export default function ProjectsArchives() {
     const { error } = await supabase.from("projects").update({ status: "active" }).eq("id", id);
     if (error) {
       logger.error("project_restore_failed", { projectId: id, error: error.message });
-      toast({ title: "Erreur", description: "Impossible de restaurer le projet.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de restaurer le poste.", variant: "destructive" });
     } else {
       invalidate();
-      toast({ title: "Projet restauré" });
+      toast({ title: "Poste restauré" });
     }
   };
 
@@ -54,10 +54,10 @@ export default function ProjectsArchives() {
     const { error } = await supabase.rpc("delete_project", { _project_id: toDelete.id });
     if (error) {
       logger.error("project_delete_failed", { projectId: toDelete.id, error: error.message });
-      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de supprimer le poste.", variant: "destructive" });
     } else {
       invalidate();
-      toast({ title: "Projet supprimé" });
+      toast({ title: "Poste supprimé" });
     }
     setToDelete(null);
   };
@@ -75,7 +75,7 @@ export default function ProjectsArchives() {
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => navigate("/projects")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Projets actifs
+          Postes actifs
         </Button>
         <h1 className="text-lg font-semibold">Archives</h1>
       </div>
@@ -83,7 +83,7 @@ export default function ProjectsArchives() {
       {projects.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Aucun projet archivé.
+            Aucun poste archivé.
           </CardContent>
         </Card>
       ) : (

@@ -106,7 +106,7 @@ const FORMAT_OPTIONS: {
     label: "Lu par IA",
     hint: "Lu par l'IA",
     icon: Type,
-    description: "La question sera lue à voix haute par l'IA du projet.",
+    description: "La question sera lue à voix haute par l'IA du poste.",
   },
 ];
 
@@ -396,7 +396,7 @@ export function QuestionFormDialog({
                   Ajouter aussi aux ressources
                 </span>
                 <span className="block text-xs text-muted-foreground mt-0.5">
-                  Réutilisable dans tes prochains projets.
+                  Réutilisable dans tes prochains postes.
                 </span>
               </Label>
             </div>

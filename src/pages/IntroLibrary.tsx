@@ -381,8 +381,8 @@ export default function IntroLibrary() {
               <DialogTitle>{editingId ? "Modifier l'intro" : "Nouvelle intro"}</DialogTitle>
               <DialogDescription>
                 {editingId
-                  ? "Modifiez les informations de cette intro. Les projets qui l'utilisent seront mis à jour."
-                  : "Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un projet."}
+                  ? "Modifiez les informations de cette intro. Les postes qui l'utilisent seront mis à jour."
+                  : "Créez une intro réutilisable que vous pourrez sélectionner lors de la création d'un poste."}
               </DialogDescription>
             </DialogHeader>
 

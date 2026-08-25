@@ -86,7 +86,7 @@ serve(async (req) => {
       toRetry.push({ session_id: (r as any).session_id, fn: "analyze-paraverbal" });
     }
     // Pour la non-verbale : on autorise aussi quand record_video=false mais des segments vidéo existent
-    // (cas historiques où la captation a eu lieu malgré le flag projet à false).
+    // (cas historiques où la captation a eu lieu malgré le flag poste à false).
     const hasVideo = sessionsWithVideo.has((r as any).session_id);
     const nonverbalEnabled = project.record_video || hasVideo;
     const nonverbalState = (r as any).nonverbal_analysis;

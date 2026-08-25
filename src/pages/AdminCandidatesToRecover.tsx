@@ -294,7 +294,7 @@ export default function AdminCandidatesToRecover() {
     setCreatingWitness(true);
     try {
       const project = projects.find((p) => p.id === wProjectId);
-      if (!project) throw new Error("Projet introuvable");
+      if (!project) throw new Error("Poste introuvable");
       const { data: org } = await supabase
         .from("projects")
         .select("organization_id")
@@ -370,7 +370,7 @@ export default function AdminCandidatesToRecover() {
             <Input placeholder="Nom témoin" value={wName} onChange={(e) => setWName(e.target.value)} />
             <Input placeholder="E-mail témoin" type="email" value={wEmail} onChange={(e) => setWEmail(e.target.value)} />
             <Select value={wProjectId} onValueChange={setWProjectId}>
-              <SelectTrigger><SelectValue placeholder="Projet" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Poste" /></SelectTrigger>
               <SelectContent>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.title} — {p.organization_name}</SelectItem>
@@ -479,7 +479,7 @@ export default function AdminCandidatesToRecover() {
                     <TableHead className="w-8"></TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Candidat</TableHead>
-                    <TableHead>Projet</TableHead>
+                    <TableHead>Poste</TableHead>
                     <TableHead>Motif</TableHead>
                     <TableHead>Cycle</TableHead>
                     <TableHead>Historique</TableHead>

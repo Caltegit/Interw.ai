@@ -44,7 +44,7 @@ export default function ProjectEdit() {
         .single();
 
       if (projectError || !project) {
-        toast({ title: "Projet introuvable", variant: "destructive" });
+        toast({ title: "Poste introuvable", variant: "destructive" });
         navigate("/projects");
         return;
       }
@@ -203,7 +203,7 @@ export default function ProjectEdit() {
           (project as { candidate_email_body?: string | null }).candidate_email_body ?? DEFAULT_CANDIDATE_EMAIL_BODY,
       });
 
-      // Fallback : si pas d'override projet, charger le modèle d'organisation
+      // Fallback : si pas d'override poste, charger le modèle d'organisation
       const projHasSubject = (project as { candidate_email_subject?: string | null }).candidate_email_subject;
       const projHasBody = (project as { candidate_email_body?: string | null }).candidate_email_body;
       if (!projHasSubject || !projHasBody) {
@@ -613,7 +613,7 @@ export default function ProjectEdit() {
         }
       }
 
-      toast({ title: "Projet mis à jour !" });
+      toast({ title: "Poste mis à jour !" });
       navigate(`/projects/${id}`);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -643,7 +643,7 @@ export default function ProjectEdit() {
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-1 h-4 w-4" /> Retour
           </Button>
-          <h1 className="text-2xl font-bold">Modifier le projet</h1>
+          <h1 className="text-2xl font-bold">Modifier le poste</h1>
         </div>
       }
       submitLabel={{ idle: "Enregistrer les modifications", busy: "Enregistrement..." }}

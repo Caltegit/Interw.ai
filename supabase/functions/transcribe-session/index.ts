@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     });
 
     // Vérification optionnelle du caller : s'il fournit un Authorization header,
-    // il doit appartenir à l'organisation du projet. Les soumissions candidat
+    // il doit appartenir à l'organisation du poste. Les soumissions candidat
     // (fin de session, sans auth) sont autorisées.
     const authHeader = req.headers.get("Authorization") ?? "";
     if (authHeader.startsWith("Bearer ")) {

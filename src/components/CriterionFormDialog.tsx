@@ -123,7 +123,7 @@ export function CriterionFormDialog({
                     Ajouter à mes ressources
                   </span>
                   <span className="block text-xs text-muted-foreground mt-0.5">
-                    Le critère sera réutilisable dans tes prochains projets.
+                    Le critère sera réutilisable dans tes prochains postes.
                   </span>
                 </Label>
               </div>

@@ -73,7 +73,7 @@ export function GlobalSearch() {
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        placeholder="Rechercher un projet ou un candidat…"
+        placeholder="Rechercher un poste ou un candidat…"
         className="pl-9"
         aria-label="Recherche globale"
       />
@@ -90,7 +90,7 @@ export function GlobalSearch() {
 
           {projects.length > 0 && (
             <div className="p-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Projets</div>
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Postes</div>
               {projects.map((p) => (
                 <button
                   key={p.id}

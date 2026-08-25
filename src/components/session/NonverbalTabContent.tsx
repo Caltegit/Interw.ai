@@ -34,7 +34,7 @@ const REASON_LABELS: Record<string, string> = {
   not_enough_video:
     "Les segments vidéo étaient trop volumineux ou indisponibles. Vous pouvez relancer l'analyse.",
   video_not_recorded:
-    "L'enregistrement vidéo n'était pas activé pour ce projet.",
+    "L'enregistrement vidéo n'était pas activé pour ce poste.",
 };
 
 export function NonverbalTabContent({ analysis, sessionId, onGoToMessage, questionNumberByMessageId, transcriptsByMessageId, resolveVideoMessageId, readOnly }: Props) {

@@ -104,7 +104,7 @@ ${offerContent}
 ---
 
 Génère :
-- un titre court pour le projet d'entretien (intitulé de poste + entreprise si trouvée)
+- un titre court pour le poste d'entretien (intitulé de poste + entreprise si trouvée)
 - exactement ${questionsCount} questions au total : la 1re est une question d'introduction (brise-glace), la dernière est une question de conclusion, les ${Math.max(0, questionsCount - 2)} du milieu sont personnalisées à l'offre
 - exactement ${criteriaCount} critères d'évaluation pondérés (somme = 100)`;
 

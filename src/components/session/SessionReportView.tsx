@@ -222,7 +222,7 @@ export function SessionReportView({
 
   const rankLabel =
     projectAverages && projectAverages.count >= 3 && fitScore !== null && projectAverages.overallScore !== null
-      ? `Moyenne projet : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
+      ? `Moyenne poste : ${projectAverages.overallScore}/100 · ${fitScore - projectAverages.overallScore >= 0 ? "+" : ""}${fitScore - projectAverages.overallScore} pts`
       : null;
 
   const videoNavRef = useRef<SessionVideoNavigatorHandle>(null);

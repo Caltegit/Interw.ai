@@ -77,7 +77,7 @@ export function IntroLibraryDialog({ type, onSelect }: Props) {
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ressources — intros — {meta.label}</DialogTitle>
-          <DialogDescription>Sélectionnez une intro pour l'utiliser dans ce projet.</DialogDescription>
+          <DialogDescription>Sélectionnez une intro pour l'utiliser dans ce poste.</DialogDescription>
         </DialogHeader>
 
         {loading ? (

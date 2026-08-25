@@ -73,13 +73,13 @@ export default function Projects() {
     const { error } = await supabase.from("projects").update({ status: "archived" }).eq("id", toArchive.id);
     if (error) {
       logger.error("project_archive_failed", { projectId: toArchive.id, error: error.message });
-      toast({ title: "Erreur", description: "Impossible d'archiver le projet.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible d'archiver le poste.", variant: "destructive" });
     } else {
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: queryKeys.projects(user.id) });
         queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(user.id) });
       }
-      toast({ title: "Projet archivé" });
+      toast({ title: "Poste archivé" });
     }
     setToArchive(null);
   };
@@ -98,7 +98,7 @@ export default function Projects() {
         <Button asChild>
           <Link to="/projects/new">
             <Plus className="mr-2 h-4 w-4" />
-            Nouveau projet
+            Nouveau poste
           </Link>
         </Button>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -115,9 +115,9 @@ export default function Projects() {
       {projects.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">Aucun projet</p>
+            <p className="text-muted-foreground mb-4">Aucun poste</p>
             <Button asChild>
-              <Link to="/projects/new">Créer votre premier projet</Link>
+              <Link to="/projects/new">Créer votre premier poste</Link>
             </Button>
           </CardContent>
         </Card>
@@ -203,7 +203,7 @@ export default function Projects() {
       {projects.length > PAGE_SIZE && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">
-            Page {page + 1} / {totalPages} — {projects.length} projets
+            Page {page + 1} / {totalPages} — {projects.length} postes
           </span>
           <div className="flex gap-2">
             <Button
@@ -231,7 +231,7 @@ export default function Projects() {
           <AlertDialogHeader>
             <AlertDialogTitle>Archiver « {toArchive?.title} » ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Le projet sera déplacé dans les archives. Vous pourrez le restaurer à tout moment.
+              Le poste sera déplacé dans les archives. Vous pourrez le restaurer à tout moment.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

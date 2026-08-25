@@ -244,7 +244,7 @@ async function loadEdgeStats(ctx: Ctx) {
   let totalErrors = 0;
 
   try {
-    // On lit les logs edge fonctions via l'API REST analytics du projet.
+    // On lit les logs edge fonctions via l'API REST analytics du poste.
     // L'endpoint canonique n'étant pas exposé côté runtime, on se rabat sur
     // report_jobs + email_alert_log qui donnent déjà un signal fiable.
     // (Analytics.query n'est disponible qu'à travers l'outil Lovable côté agent.)

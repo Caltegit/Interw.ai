@@ -163,7 +163,7 @@ export default function ProjectPublicPageEditor() {
     <div className="container mx-auto max-w-4xl p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(`/projects/${projectId}`)}>
-          <ArrowLeft className="mr-1 h-4 w-4" /> Retour au projet
+          <ArrowLeft className="mr-1 h-4 w-4" /> Retour au poste
         </Button>
         <div className="flex gap-2">
           {page.enabled && (

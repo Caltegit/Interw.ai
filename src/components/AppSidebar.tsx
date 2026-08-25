@@ -38,7 +38,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Projets", url: "/projects", icon: FolderKanban },
+  { title: "Postes", url: "/projects", icon: FolderKanban },
 ];
 
 const librarySubItems = [

@@ -221,7 +221,7 @@ export default function InterviewTemplates() {
         <div>
           <h1 className="text-2xl font-bold">Sessions</h1>
           <p className="text-muted-foreground">
-            Sessions types réutilisables (questions + critères) pour démarrer un projet en 1 clic.
+            Sessions types réutilisables (questions + critères) pour démarrer un poste en 1 clic.
           </p>
         </div>
         <Button onClick={handleCreate}>
@@ -356,7 +356,7 @@ export default function InterviewTemplates() {
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer cette session ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Les projets déjà créés à partir de cette session type ne seront pas affectés.
+              Cette action est irréversible. Les postes déjà créés à partir de cette session type ne seront pas affectés.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

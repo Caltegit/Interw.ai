@@ -171,7 +171,7 @@ export function CreateOrgDialog({ onCreated }: Props) {
           <div className="flex items-center justify-between rounded-md border p-3">
             <div className="space-y-0.5">
               <Label htmlFor="seedLibraries" className="cursor-pointer">Charger les ressources par défaut</Label>
-              <p className="text-xs text-muted-foreground">Questions, critères, modèles d'entretien et projet de démonstration.</p>
+              <p className="text-xs text-muted-foreground">Questions, critères, modèles d'entretien et poste de démonstration.</p>
             </div>
             <Switch id="seedLibraries" checked={seedLibraries} onCheckedChange={setSeedLibraries} />
           </div>

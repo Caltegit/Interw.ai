@@ -255,7 +255,7 @@ export default function ProjectDetail() {
         return;
       }
 
-      // Chargement par projet : une requête courte, quel que soit le nombre de sessions
+      // Chargement par poste : une requête courte, quel que soit le nombre de sessions
       let reps: any[] | null = null;
       const joined = await supabase
         .from("reports")
@@ -492,7 +492,7 @@ export default function ProjectDetail() {
           .is("archived_at", null)
           .order("order_index"),
       ]);
-      if (srcErr || !src) throw srcErr ?? new Error("Projet source introuvable");
+      if (srcErr || !src) throw srcErr ?? new Error("Poste source introuvable");
       if (critFetchErr) throw critFetchErr;
       if (qFetchErr) throw qFetchErr;
 
@@ -505,7 +505,7 @@ export default function ProjectDetail() {
         "-copy-" +
         Date.now().toString(36);
 
-      // 2) Recopie fidèle : on part de TOUTES les colonnes du projet source,
+      // 2) Recopie fidèle : on part de TOUTES les colonnes du poste source,
       // on retire seulement celles qui doivent être propres à la copie.
       const omit = new Set([
         "id",
@@ -588,7 +588,7 @@ export default function ProjectDetail() {
         if (qErr) throw qErr;
       }
 
-      toast({ title: "Projet dupliqué !", description: "Le nouveau projet a été créé." });
+      toast({ title: "Poste dupliqué !", description: "Le nouveau poste a été créé." });
       navigate(`/projects/${newProject.id}`);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -600,9 +600,9 @@ export default function ProjectDetail() {
   const handleDelete = async () => {
     const { error } = await supabase.from("projects").delete().eq("id", id!);
     if (error) {
-      toast({ title: "Erreur", description: "Impossible de supprimer le projet.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de supprimer le poste.", variant: "destructive" });
     } else {
-      toast({ title: "Projet supprimé" });
+      toast({ title: "Poste supprimé" });
       navigate("/projects");
     }
   };
@@ -613,7 +613,7 @@ export default function ProjectDetail() {
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
-  if (!project) return <p>Projet introuvable</p>;
+  if (!project) return <p>Poste introuvable</p>;
 
   const statusLabel =
     { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
@@ -795,7 +795,7 @@ export default function ProjectDetail() {
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
+                    <AlertDialogTitle>Supprimer ce poste ?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Cette action est irréversible. Toutes les sessions et données associées seront supprimées.
                     </AlertDialogDescription>

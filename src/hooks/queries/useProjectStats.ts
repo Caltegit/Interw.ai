@@ -149,7 +149,7 @@ export function useProjectStats(projectId: string | undefined, period: StatsPeri
         completed: Number(r.completed),
       }));
 
-      // Socle minimum de clics forcé pour certains projets : les nouveaux
+      // Socle minimum de clics forcé pour certains postes : les nouveaux
       // clics réels s'additionnent au socle au lieu de l'écraser.
       const FORCED_CLICKS_BASELINE: Record<string, number> = {
         "7ea73a6b-27d6-4dac-916b-2157a09a323d": 120,
