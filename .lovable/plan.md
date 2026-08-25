@@ -1,43 +1,27 @@
-# Suites du diagnostic d'entonnoir
+# Livrable — diagnostic d'entonnoir, lecture seule
 
-Trois chantiers, classés par impact mesuré. Chacun est indépendant et publiable séparément.
+Aucune écriture, aucune migration, aucune modification du parcours candidat. Uniquement la production d'un document d'analyse à partir de requêtes de lecture.
 
-## Chantier 1 — Arrêter de faire passer un entretien interrompu pour un entretien terminé
+## Ce qui sera produit
 
-Constat : 17 sessions « terminée » sans aucune réponse, 29 « terminée » incomplètes. Elles encombrent la liste des candidats et alimentent des jobs de rapport voués à l'échec.
+Un rapport PDF déposé dans tes documents, contenant :
 
-Ce qui change :
-- Une session n'est déclarée terminée que si le candidat a répondu à toutes les questions du projet. Sinon elle est marquée comme abandonnée, avec l'avancement réel (« 1 sur 6 »).
-- Aucun rapport n'est produit pour un entretien non abouti — ni maintenant, ni par rattrapage. Les jobs en échec pour ce motif sont annulés.
-- Les médias déjà enregistrés sont conservés, ils servent de preuve pour le suivi des anomalies.
-- Régularisation des 46 sessions déjà en base concernées.
+1. **L'entonnoir chiffré**, en deux vues parallèles — par session (1 143) et par candidat dédoublonné (845) — avec l'écart entre les deux explicité.
+2. **La carte de mesurabilité** des huit étapes que tu as listées : ce qui est traçable aujourd'hui, ce qui ne l'est pas, et sur quelle source. Trois étapes sont non mesurables et une repose sur des tables devenues inactives.
+3. **Les deux points de rupture** identifiés : décrochage à la question 1, et décrochage en toute fin de parcours.
+4. **La liste nominative des 46 sessions mal classées** — 17 sans aucune réponse, 29 incomplètes — avec organisation, projet, avancement réel, date et motif d'échec du rapport. Exportée aussi en tableur pour que tu puisses la trier.
+5. **La concentration Castalie** : 11 des 17 cas sur un seul projet, avec les éléments de contexte disponibles pour orienter l'investigation.
+6. **Les limites de l'analyse** : tests internes non identifiables, doublons, questions archivées après coup, impossibilité de distinguer abandon volontaire et incident technique.
 
-Choix d'implémentation : pas de nouveau statut dans la base. On réutilise le statut « annulé », déjà géré par tous les écrans, complété par deux colonnes purement informatives (date d'abandon, nombre de réponses). Aucun filtre, badge ou export existant n'est cassé.
+## Ce qui ne sera pas fait
 
-## Chantier 2 — Récupérer les abandons de fin de parcours
+- Aucune correction des 46 sessions mal classées.
+- Aucun ajout de traçage dans le parcours candidat.
+- Aucune réactivation de la télémétrie micro.
+- Aucune annulation des jobs de rapport en échec.
 
-Constat : 9 candidats à 5 réponses sur 6, 7 candidats à 14 sur 15. Ils ont fait tout l'effort et n'ont pas cliqué sur le bouton final. C'est le décrochage le plus rentable à traiter.
-
-Ce qui change :
-- Ces sessions remontent dans le suivi Super Admin comme « quasi terminées », distinctes des abandons précoces.
-- Relance possible en un clic via le flux de réinvitation existant, avec un message adapté : il ne reste qu'une question.
-- Côté candidat, aucun changement de parcours dans ce chantier.
-
-## Chantier 3 — Combler l'angle mort de l'ouverture du lien
-
-Constat : 674 sessions n'ont jamais produit le moindre fragment, soit 59 % du volume. On ignore si le lien a été ouvert.
-
-Ce chantier implique une écriture dans le parcours candidat — hors du cadre lecture seule actuel. Il ne sera lancé qu'après validation explicite.
-
-Ce qui serait ajouté : un horodatage d'ouverture du lien (colonne déjà présente mais jamais renseignée) et un horodatage de fin d'intro. Deux écritures ponctuelles, sans effet sur le déroulé de l'entretien. Cela permettrait enfin de distinguer « lien jamais ouvert » de « ouvert puis quitté avant la première question », et donc de savoir s'il faut travailler la relance par e-mail ou l'écran d'accueil.
+Ces sujets restent ouverts et documentés dans le rapport, sans mise en œuvre.
 
 ## Détails techniques
 
-- Chantier 1 : migration ajoutant `sessions.abandoned_at` et `sessions.answered_questions_count` ; conditionnement du passage à `completed` dans `finalize-abandoned-session` ; arrêt de la mise en file dans `cleanup-abandoned-sessions` et `backfill-orphan-reports` pour les sessions sans réponse rattachée ; affichage « Abandonné — n/N » dans `SessionStatusBadge`.
-- Chantier 2 : extension de `admin_list_recoverable_candidates` avec l'avancement, et filtre dédié dans `AdminCandidatesToRecover`.
-- Chantier 3 : écriture de `video_viewed_at` à l'ouverture du lien candidat, plus une colonne de fin d'intro. À valider séparément.
-- Vérification pour chaque chantier : contrôle de typage, tests existants, test bout en bout d'un abandon après la question 1, et contrôle en base après régularisation.
-
-## Ordre proposé
-
-Chantier 1 d'abord : il assainit la liste des candidats et arrête les jobs en échec, sans toucher au parcours candidat. Chantier 2 ensuite, à faible risque. Chantier 3 seulement si tu valides une écriture dans le parcours.
+Requêtes de lecture uniquement sur `sessions`, `session_messages`, `questions`, `projects`, `organizations`, `report_jobs`, `storage.objects`, `session_attempts`, `mic_events`, `project_page_views`. Génération du PDF et du tableur hors du code applicatif, déposés dans `/mnt/documents/`. Aucun fichier du projet n'est modifié.
