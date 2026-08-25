@@ -3,12 +3,18 @@ import { Building2, Check, ChevronsUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrgRole } from "@/hooks/useOrgRole";
-import { useSidebar } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -19,11 +25,30 @@ interface Org {
   logo_url: string | null;
 }
 
+function OrgLogo({ org, className = "size-8" }: { org: Org | null; className?: string }) {
+  if (org?.logo_url) {
+    return (
+      <img
+        src={org.logo_url}
+        alt=""
+        className={`${className} shrink-0 rounded-lg object-cover`}
+      />
+    );
+  }
+  const initial = org?.name?.trim()?.[0]?.toUpperCase();
+  return (
+    <div
+      className={`${className} flex shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold`}
+    >
+      {initial ?? <Building2 className="size-4" />}
+    </div>
+  );
+}
+
 export function OrganizationSwitcher() {
   const { user } = useAuth();
-  const { organizationId: activeId } = useOrgRole();
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { organizationId: activeId, isOwner } = useOrgRole();
+  const isMobile = useIsMobile();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [switching, setSwitching] = useState(false);
 
@@ -64,56 +89,62 @@ export function OrganizationSwitcher() {
   if (orgs.length === 0) return null;
 
   const label = active?.name ?? "Organisation";
-  const Logo = active?.logo_url ? (
-    <img src={active.logo_url} alt="" className="h-5 w-5 rounded object-cover shrink-0" />
-  ) : (
-    <Building2 className="h-4 w-4 shrink-0" />
-  );
+  const roleLabel = isOwner ? "Propriétaire" : "Membre";
 
   if (orgs.length === 1) {
     return (
-      <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
-        {Logo}
-        {!collapsed && <span className="truncate">{label}</span>}
-      </div>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent">
+            <OrgLogo org={active} />
+            <div className="grid flex-1 text-left leading-tight">
+              <span className="truncate font-semibold">{label}</span>
+              <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={switching}
-          className="w-full justify-start gap-2 h-9 px-2"
-        >
-          {Logo}
-          {!collapsed && (
-            <>
-              <span className="truncate flex-1 text-left">{label}</span>
-              <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
-            </>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        {orgs.map((org) => (
-          <DropdownMenuItem
-            key={org.id}
-            onClick={() => handleSwitch(org.id)}
-            className="gap-2"
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              disabled={switching}
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <OrgLogo org={active} />
+              <div className="grid flex-1 text-left leading-tight">
+                <span className="truncate font-semibold">{label}</span>
+                <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 opacity-50" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            side={isMobile ? "bottom" : "right"}
+            sideOffset={4}
+            className="w-[--radix-popper-anchor-width] min-w-56"
           >
-            {org.logo_url ? (
-              <img src={org.logo_url} alt="" className="h-5 w-5 rounded object-cover" />
-            ) : (
-              <Building2 className="h-4 w-4" />
-            )}
-            <span className="truncate flex-1">{org.name}</span>
-            {org.id === activeId && <Check className="h-4 w-4" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Organisations
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {orgs.map((org) => (
+              <DropdownMenuItem key={org.id} onClick={() => handleSwitch(org.id)} className="gap-2">
+                <OrgLogo org={org} className="size-6" />
+                <span className="truncate flex-1">{org.name}</span>
+                {org.id === activeId && <Check className="size-4" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }
