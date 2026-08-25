@@ -144,7 +144,7 @@ export default function Produit() {
           <Link to="/" className="flex items-center gap-2">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
+              style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
             >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
@@ -220,7 +220,7 @@ export default function Produit() {
                 <div className="self-center">
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
-                    style={{ background: "hsl(243 75% 60%)" }}
+                    style={{ background: "hsl(0 0% 8%)" }}
                   >
                     {b.icon}
                     {b.pill}
@@ -234,7 +234,7 @@ export default function Produit() {
                   <ul className="mt-4 space-y-2">
                     {b.bullets.map((bl) => (
                       <li key={bl} className="flex items-start gap-2.5 text-sm" style={{ color: "hsl(230 10% 25%)" }}>
-                        <Activity className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
+                        <Activity className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "hsl(0 0% 8%)" }} />
                         <span>{bl}</span>
                       </li>
                     ))}
@@ -243,13 +243,13 @@ export default function Produit() {
                 <div className="relative">
                   <div
                     className="absolute -inset-4 -z-10 rounded-3xl blur-2xl"
-                    style={{ background: "radial-gradient(ellipse at center, hsl(243 75% 60% / 0.18), transparent 70%)" }}
+                    style={{ background: "radial-gradient(ellipse at center, hsl(0 0% 8% / 0.18), transparent 70%)" }}
                   />
                   <div
                     className="overflow-hidden rounded-xl"
                     style={{
                       border: "1px solid hsl(230 14% 88%)",
-                      boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.22), 0 1px 2px hsl(240 10% 10% / 0.04)",
+                      boxShadow: "0 30px 80px -20px hsl(0 0% 8% / 0.22), 0 1px 2px hsl(240 10% 10% / 0.04)",
                       background: "white",
                     }}
                   >

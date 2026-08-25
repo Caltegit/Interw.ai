@@ -33,14 +33,14 @@ function HeroInterviewMock() {
     >
       <div
         className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
-        style={{ background: "radial-gradient(ellipse at center, hsl(243 75% 60% / 0.18), transparent 70%)" }}
+        style={{ background: "radial-gradient(ellipse at center, hsl(0 0% 8% / 0.18), transparent 70%)" }}
       />
       <div
         className="relative overflow-hidden rounded-2xl"
         style={{
           background: "#0f1020",
           border: "1px solid hsl(230 16% 92%)",
-          boxShadow: "0 30px 80px -20px hsl(243 75% 60% / 0.25), 0 1px 2px hsl(240 10% 10% / 0.04)",
+          boxShadow: "0 30px 80px -20px hsl(0 0% 8% / 0.25), 0 1px 2px hsl(240 10% 10% / 0.04)",
         }}
       >
         {/* Browser top bar */}
@@ -81,7 +81,7 @@ function HeroInterviewMock() {
             <div className="flex items-start gap-2.5">
               <div
                 className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-                style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
+                style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
               >
                 <Sparkles className="h-3 w-3 text-white" />
               </div>
@@ -100,8 +100,8 @@ function HeroInterviewMock() {
         {/* Footer controls */}
         <div className="flex items-center justify-between px-4 py-3" style={{ background: "#16172a", borderTop: "1px solid hsl(230 20% 20%)" }}>
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: "hsl(243 75% 60% / 0.2)" }}>
-              <Video className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 70%)" }} />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: "hsl(0 0% 8% / 0.2)" }}>
+              <Video className="h-3.5 w-3.5" style={{ color: "hsl(0 0% 30%)" }} />
             </div>
             <div className="text-[11px]" style={{ color: "hsl(230 8% 70%)" }}>
               Entretien en cours · Marie D.
@@ -112,7 +112,7 @@ function HeroInterviewMock() {
               <span
                 key={i}
                 className="w-0.5 rounded-full"
-                style={{ height: `${h / 10}px`, background: "hsl(243 75% 60%)" }}
+                style={{ height: `${h / 10}px`, background: "hsl(0 0% 8%)" }}
               />
             ))}
           </div>
@@ -125,9 +125,9 @@ function HeroInterviewMock() {
 /* ---------------- Small product cards (3 moments) ---------------- */
 function ProjectCreationCard() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
       <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
           <FileText className="h-3.5 w-3.5" /> ÉTAPE 1 · CRÉATION
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez l'entretien</h3>
@@ -146,11 +146,11 @@ function ProjectCreationCard() {
           <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Questions</div>
           <div className="mt-1 space-y-1">
             <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>1</span>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(0 0% 8%)" }}>1</span>
               Parlez-moi de votre parcours.
             </div>
             <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(243 75% 60%)" }}>2</span>
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(0 0% 8%)" }}>2</span>
               Comment gérez-vous un désaccord ?
             </div>
           </div>
@@ -158,9 +158,9 @@ function ProjectCreationCard() {
         <div>
           <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Critères</div>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Technique</span>
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Communication</span>
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(243 100% 94%)", color: "hsl(243 78% 54%)" }}>Autonomie</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Technique</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Communication</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Autonomie</span>
           </div>
         </div>
       </div>
@@ -170,9 +170,9 @@ function ProjectCreationCard() {
 
 function InterviewLiveCard() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
       <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
           <Video className="h-3.5 w-3.5" /> ÉTAPE 2 · L'ENTRETIEN
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien</h3>
@@ -206,9 +206,9 @@ function CandidatesShortlistCard() {
     low: { bg: "hsl(230 14% 94%)", fg: "hsl(230 10% 40%)", ring: "hsl(230 14% 70%)" },
   };
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(243 75% 60% / 0.2)" }}>
+    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
       <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(243 78% 54%)" }}>
+        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
           <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT IA
         </div>
         <h3 className="mt-2 text-lg font-semibold text-foreground">Vous comparez les profils</h3>
@@ -302,7 +302,7 @@ export default function Landing() {
           <Link to="/" className="flex items-center gap-2">
             <div
               className="flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
+              style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
             >
               <Sparkles className="h-4 w-4 text-white" />
             </div>
@@ -418,15 +418,15 @@ export default function Landing() {
           <div
             className="mt-14 overflow-hidden rounded-2xl p-10"
             style={{
-              background: "linear-gradient(135deg, hsl(243 100% 96%), hsl(243 100% 97%))",
-              border: "1px solid hsl(243 75% 60% / 0.25)",
+              background: "linear-gradient(135deg, hsl(0 0% 95%), hsl(0 0% 96%))",
+              border: "1px solid hsl(0 0% 8% / 0.25)",
             }}
           >
             <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
               <div className="max-w-2xl">
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
-                  style={{ background: "hsl(243 75% 60%)" }}
+                  style={{ background: "hsl(0 0% 8%)" }}
                 >
                   GARDEZ LE CONTRÔLE
                 </span>
@@ -439,9 +439,9 @@ export default function Landing() {
               </div>
               <div
                 className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
-                style={{ background: "hsl(243 75% 60% / 0.12)", border: "1px solid hsl(243 75% 60% / 0.25)" }}
+                style={{ background: "hsl(0 0% 8% / 0.12)", border: "1px solid hsl(0 0% 8% / 0.25)" }}
               >
-                <Sparkles className="h-12 w-12" style={{ color: "hsl(243 75% 60%)" }} />
+                <Sparkles className="h-12 w-12" style={{ color: "hsl(0 0% 8%)" }} />
               </div>
             </div>
           </div>
@@ -505,7 +505,7 @@ export default function Landing() {
               <div key={f.title} className="landing-card landing-card-hover p-6">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-lg"
-                  style={{ background: "hsl(243 75% 60% / 0.12)", color: "hsl(243 75% 60%)" }}
+                  style={{ background: "hsl(0 0% 8% / 0.12)", color: "hsl(0 0% 8%)" }}
                 >
                   <f.icon className="h-5 w-5" />
                 </div>
@@ -546,7 +546,7 @@ export default function Landing() {
               </div>
               <div
                 className="relative p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
-                style={{ background: "hsl(243 100% 96%)", color: "hsl(243 78% 54%)" }}
+                style={{ background: "hsl(0 0% 95%)", color: "hsl(0 0% 0%)" }}
               >
                 <span>Interw</span>
                 <span
@@ -585,9 +585,9 @@ export default function Landing() {
                 </div>
                 <div
                   className="flex items-center justify-center gap-2 p-5 text-center font-semibold text-foreground"
-                  style={{ background: "hsl(243 100% 97%)" }}
+                  style={{ background: "hsl(0 0% 96%)" }}
                 >
-                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(243 75% 60%)" }} /> {b}
+                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(0 0% 8%)" }} /> {b}
                 </div>
               </div>
             ))}
@@ -652,8 +652,8 @@ export default function Landing() {
                 style={
                   p.highlight
                     ? {
-                        background: "hsl(243 100% 97%)",
-                        border: "2px solid hsl(243 75% 60%)",
+                        background: "hsl(0 0% 96%)",
+                        border: "2px solid hsl(0 0% 8%)",
                       }
                     : {
                         background: "hsl(240 25% 97%)",
@@ -664,7 +664,7 @@ export default function Landing() {
                 {p.highlight && (
                   <div
                     className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-                    style={{ background: "hsl(243 75% 60%)" }}
+                    style={{ background: "hsl(0 0% 8%)" }}
                   >
                     Le plus choisi
                   </div>
@@ -684,7 +684,7 @@ export default function Landing() {
                 <ul className="mt-6 space-y-2.5 text-sm">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(243 75% 60%)" }} />
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(0 0% 8%)" }} />
                       <span style={{ color: "hsl(230 10% 28%)" }}>{f}</span>
                     </li>
                   ))}
@@ -772,7 +772,7 @@ export default function Landing() {
                     <span>{item.q}</span>
                     <ChevronDown
                       className={`h-4 w-4 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-                      style={{ color: "hsl(243 75% 60%)" }}
+                      style={{ color: "hsl(0 0% 8%)" }}
                     />
                   </button>
                   {isOpen && (
@@ -821,7 +821,7 @@ export default function Landing() {
           >
             {["RGPD", "Hébergement EU", "Sans engagement", "Setup en 10 min"].map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5" style={{ color: "hsl(243 75% 60%)" }} />
+                <Check className="h-3.5 w-3.5" style={{ color: "hsl(0 0% 8%)" }} />
                 {t}
               </span>
             ))}
@@ -838,7 +838,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             <div
               className="flex h-5 w-5 items-center justify-center rounded"
-              style={{ background: "linear-gradient(135deg, hsl(243 75% 60%), hsl(290 70% 60%))" }}
+              style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
             >
               <Sparkles className="h-3 w-3 text-white" />
             </div>
