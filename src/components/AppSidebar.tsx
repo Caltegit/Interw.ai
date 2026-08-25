@@ -79,9 +79,7 @@ export function AppSidebar() {
     ? librarySubItems
     : librarySubItems.filter((s) => s.url !== "/library/emails");
 
-  const bottomItemsList = isSuperAdmin
-    ? [...bottomItems, { title: "Tuto", url: "/admin/tuto", icon: PlayCircle }]
-    : bottomItems;
+  const bottomItemsList = bottomItems;
 
 
   return (
