@@ -86,9 +86,13 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="gap-1 px-2 py-2">
-        <OrganizationSwitcher />
-        <SidebarTrigger className="h-7 w-7 self-end" />
+      <SidebarHeader className="px-2 py-2">
+        <div className="flex items-center gap-1">
+          <SidebarTrigger className="h-7 w-7 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <OrganizationSwitcher />
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

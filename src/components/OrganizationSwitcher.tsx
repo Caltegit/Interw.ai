@@ -99,7 +99,6 @@ export function OrganizationSwitcher() {
             <OrgLogo org={active} />
             <div className="grid flex-1 text-left leading-tight">
               <span className="truncate font-semibold">{label}</span>
-              <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -120,7 +119,6 @@ export function OrganizationSwitcher() {
               <OrgLogo org={active} />
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold">{label}</span>
-                <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 opacity-50" />
             </SidebarMenuButton>
