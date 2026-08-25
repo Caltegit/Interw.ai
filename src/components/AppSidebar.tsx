@@ -86,17 +86,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-2 py-2">
-        {!collapsed && <span className="text-lg font-bold text-primary">Interw</span>}
-        <SidebarTrigger className="h-7 w-7 ml-auto" />
+      <SidebarHeader className="gap-1 px-2 py-2">
+        <OrganizationSwitcher />
+        <SidebarTrigger className="h-7 w-7 self-end" />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel />
-          <div className="px-2 pb-2">
-            <OrganizationSwitcher />
-          </div>
           <SidebarGroupContent>
+
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
