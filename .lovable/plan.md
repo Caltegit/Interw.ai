@@ -1,183 +1,47 @@
-# Plan : Fiabiliser le micro candidat
+# Sessions Marion Botte : diagnostic et correction
 
-## Contexte chiffré (confirmé)
+## Ce qui s'est réellement passé
 
-Sessions terminées hors démo :
+Les deux sessions ont été passées le 24 août à 10h20 et 10h25 UTC. Vérifications faites en base :
 
-| Période | Sessions | Réponses < 200 caractères | Zéro réponse |
-|---|---|---|---|
-| 30 derniers jours | 184 | 16 (8,7 %) | — |
-| 90 derniers jours | 460 | 24 | 14 |
+- Les deux sont en statut « terminée » mais ne contiennent **aucune réponse candidat** : une seule ligne de message, la question 1 posée par l'IA.
+- La vidéo existe pourtant bien dans le stockage : `q0.webm` reconstitué (1,0 Mo puis 1,7 Mo) à partir de 16 puis 22 fragments.
+- La génération du rapport a échoué 6 fois avec `no_recordings` — « Aucun enregistrement disponible ».
 
-Une session terminée sur onze est quasi vide côté parole candidat (moyenne normale ~7 100 caractères). Ce ne sont pas des candidats laconiques : c'est une capture audio perdue.
+Enchaînement confirmé : Marion a répondu à la question 1, puis l'onglet s'est fermé (ou la page a été quittée) avant que la réponse ne soit enregistrée en base. Le mécanisme de récupération automatique (`finalize-abandoned-session`) a bien réassemblé la vidéo depuis les fragments, mais il ne sait rattacher cette vidéo qu'à une ligne de réponse candidat **déjà existante**. Comme aucune n'existait, la vidéo est restée orpheline — et la session a quand même été marquée « terminée », d'où un rapport impossible à produire.
 
-## Causes identifiées (vérifiées dans le code)
+Deuxième signal, sur la première session : un trou de 90 secondes entre le fragment 5 (10h18:23) et le fragment 6 (10h19:54). L'enregistrement s'est interrompu puis a repris — c'est cohérent avec un onglet passé en arrière-plan ou une piste micro/caméra tombée. C'est probablement pour cela qu'elle a recommencé une deuxième fois.
 
-### Déjà couvertes — rien à faire
-- **Piste qui meurt sans erreur** : `useMicHealthWatcher.ts` écoute déjà `track.addEventListener("ended")` et `("mute")`, avec tolérance de 5 s sur les blips Bluetooth.
-- **Suppression de bruit agressive** : `micLevel.ts` impose déjà `noiseSuppression: false`, `autoGainControl: true`, `channelCount: 1`, `sampleRate { ideal: 48000, min: 16000 }`.
+## Est-ce lié au correctif micro d'hier ?
 
-### Trous confirmés à traiter
+Non. Les deux sessions datent du 24 août à 10h20 UTC ; la table de télémétrie micro a été créée à 16h20 UTC le même jour, soit six heures plus tard, et aucune donnée n'y a été écrite (collecte non publiée/non activée). Aucune des modifications d'hier ne touche l'enregistrement ni la finalisation. Le défaut est antérieur.
 
-1. **Codec Safari — partiellement traité, deux fuites en dur.** `getSupportedAudioMimeType()` teste bien `MediaRecorder.isTypeSupported()` avec `audio/mp4` en premier sur Safari. Mais deux endroits contournent cette détection : `InterviewStart.tsx:1633` (`previous.audioMime || "audio/webm"` au redémarrage après bascule de micro) et `:1943` (`audioMime: "audio/webm;codecs=opus"` à l'initialisation). Sur Safari, ces chemins produisent un enregistreur qui échoue ou sort un fichier illisible. Suspect n°1 pour les sessions terminées sans parole.
+## Correctifs proposés
 
-2. **Aucune trace serveur** : `logger.ts` n'écrit que dans la console navigateur. Tous les événements micro déjà instrumentés disparaissent à la fermeture de l'onglet. On répare à l'aveugle.
+### 1. Récupération : créer la réponse manquante au lieu de l'ignorer
+Dans `finalize-abandoned-session`, quand aucune ligne de réponse candidat n'existe pour une question dont la vidéo a été reconstituée, en créer une (rôle candidat, question correspondante, URL vidéo, transcription à faire) plutôt que de ne rien faire. La vidéo cesse d'être orpheline et le rapport devient générable.
 
-3. **Types d'erreur média non distingués.** Un seul `OverconstrainedError` est géré, et uniquement dans `InterviewDeviceTest.tsx:249`. Nulle part on ne distingue `NotAllowedError` (refus), `NotReadableError` (micro verrouillé par Teams/Zoom/Discord sur Windows), `NotFoundError` (aucun micro). Le candidat voit « Caméra inaccessible » quel que soit le vrai problème.
+### 2. Ne plus marquer « terminée » une session sans réponse rattachée
+Toujours dans la même fonction : ne passer en « terminée » que si au moins une réponse candidat porte réellement une URL média. Sinon, statut « incomplète/annulée » — la session remonte alors dans le suivi des anomalies au lieu d'apparaître faussement complète avec un rapport en erreur.
 
-4. **Demande combinée audio + vidéo.** `startVideoStream` fait un seul `getUserMedia({ video, audio })`. Si le micro seul est indisponible, tout échoue avec un message faux.
+### 3. Rejouer les deux sessions de Marion
+Une fois le correctif en place, relancer la récupération sur les deux sessions puis remettre leur job de rapport en file. Objectif : deux rapports exploitables sans redemander l'entretien à la candidate.
 
-5. **Bluetooth / profil HFP dégradé — angle mort total.** Sur AirPods et casques similaires, activer le micro force la bascule A2DP → HFP, qui peut produire du 8 kHz inexploitable par la transcription. Le code lit `getSettings().deviceId` mais **ne vérifie jamais le `sampleRate` réellement obtenu**. Un candidat qui répond depuis son téléphone avec des écouteurs peut enregistrer un audio techniquement valide mais intranscriptible.
+### 4. Balayage des cas similaires
+Recenser les sessions « terminées » sans aucune réponse candidat mais avec des médias en stockage, et les repasser par la même récupération. Résultat listé dans la console Super Admin (suivi des anomalies existant).
 
-6. **iOS Safari en arrière-plan — traité à moitié.** Un `visibilitychange` reprend bien l'`AudioContext` (`InterviewStart.tsx:794-815`), mais rien ne vérifie que la **piste média** a survécu : iOS la tue définitivement, et elle n'est pas réacquise au retour.
+### 5. Fiabiliser la fin de réponse (cause racine du trou de 90 s)
+Enregistrer la réponse candidat en base **dès le début** de la question (ligne créée avec statut « en cours »), et non seulement à la fin. Ainsi, même si l'onglet se ferme en pleine réponse, la ligne existe déjà et les fragments s'y rattachent automatiquement.
 
-7. **Le contexte micro ne survit pas au parcours** : calibration en `sessionStorage`, micro préféré en `localStorage`. Rien ne bloque le démarrage sans test micro validé.
+## Détails techniques
 
-8. **Aucune preuve serveur qu'une réponse a été captée** : `transcribe-session` ne vérifie ni taille, ni durée, ni énergie du fichier audio.
+- `supabase/functions/finalize-abandoned-session/index.ts` : `linkMediaToMessage` fait aujourd'hui un `UPDATE` filtré sur `role = 'candidate'` et `video_segment_url IS NULL` ; il faut un `INSERT` de repli quand `updated = 0` et qu'aucune ligne candidat n'existe pour ce `question_id`. Puis conditionner le passage à `status = 'completed'` à `messagesUpdated > 0` (et non `recoveredQuestions > 0`).
+- `src/pages/InterviewStart.tsx` : créer la ligne `session_messages` (rôle candidat, `transcription_status = 'pending'`) à l'ouverture de la question, mise à jour ensuite avec les URLs et le texte.
+- Rejeu : `finalize-abandoned-session` puis `enqueue_report_job` avec `force_regenerate` pour les deux sessions concernées.
+- Aucun changement de schéma requis.
 
-9. **Bascule de micro à chaud non vérifiée** : aucune mesure que la nouvelle piste produit du signal après la bascule.
+## Vérification
 
----
-
-
-## Lot 1 — Voir ce qui casse (télémétrie micro pilotable)
-
-> **Modification par rapport au plan initial** : la télémétrie n'est plus toujours active. Elle est **désactivée par défaut**, activable manuellement depuis l'admin, avec **purge automatique à 30 jours**.
-
-### 1a. Table `mic_events` (déjà créée et déployée)
-- `session_id`, `event`, `data jsonb`, `user_agent`, `browser`, `browser_version`, `os`, `device_type`, `created_at`.
-- RLS : insertion via Edge Function (service key), lecture réservée aux super admins.
-- Index sur `session_id`, `created_at`, `event`.
-
-### 1b. Sink réseau `micTelemetry.ts` (déjà créé et déployé)
-- Buffer en mémoire, flush toutes les 5s et sur `visibilitychange`/`pagehide`.
-- `fetch(keepalive: true)` fire-and-forget, aucun `await` dans le chemin critique.
-- Hook sur `logger.ts` : tout événement `mic_*` / `interview_audio_*` / `interview_media_*` est forwardé automatiquement.
-
-### 1c. Edge Function `log-mic-events` (déjà créée et déployée)
-- Valide le token candidat via `get_session_id_by_token`.
-- Parse le User-Agent (navigateur, version, OS, type d'appareil).
-- Insère les événements en bulk.
-
-### 1d. NOUVEAU — Table de configuration `mic_telemetry_config` (à créer)
-Singleton (une seule ligne, id=1), pattern identique à `email_send_state` :
-- `id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1)`
-- `enabled boolean NOT NULL DEFAULT false`
-- `updated_at timestamptz NOT NULL DEFAULT now()`
-- `updated_by uuid` (qui a basculé le switch)
-
-Seed : `INSERT INTO mic_telemetry_config (id, enabled) VALUES (1, false) ON CONFLICT DO NOTHING;`
-
-Grants : `SELECT` pour `authenticated` (l'admin lit), `ALL` pour `service_role` (l'Edge Function consulte). RLS : lecture pour super_admin uniquement.
-
-### 1e. NOUVEAU — Gate côté serveur dans `log-mic-events`
-Après validation du token, avant l'insertion :
-```ts
-const { data: cfg } = await supabase
-  .from('mic_telemetry_config').select('enabled').eq('id', 1).single()
-if (!cfg?.enabled) return json(200, { ok: true, disabled: true, inserted: 0 })
-```
-Quand désactivé : retourne 200 avec `disabled: true`, **n'insère rien**.
-
-### 1f. NOUVEAU — Auto-stop côté client `micTelemetry.ts`
-Dans `flush()`, on lit la réponse. Si `disabled: true` :
-- Flag `telemetryDisabled = true`
-- Stoppe le `setInterval` de flush
-- Retire le hook logger (`setTelemetryHook(null)`)
-- Les futurs appels `trackMicEvent` deviennent no-op
-
-Résultat : un seul cycle de flush gaspillé, puis silence. Non bloquant, sans risque candidat.
-
-### 1g. NOUVEAU — Toggle admin dans `MicQualityTab.tsx`
-Switch ON/OFF en haut de la page avec :
-- État actuel (Activé / Désactivé)
-- Bascule qui écrit dans `mic_telemetry_config`
-- Date de dernière modification et qui l'a modifiée
-- Texte : « Active la collecte d'événements micro côté candidat. Désactivé par défaut. »
-
-### 1h. NOUVEAU — Purge automatique 30 jours (pg_cron)
-```sql
-SELECT cron.schedule(
-  'purge-mic-events-daily',
-  '0 3 * * *',  -- 3h UTC tous les jours
-  $$ DELETE FROM public.mic_events WHERE created_at < now() - interval '30 days' $$
-);
-```
-SQL direct, index sur `created_at` déjà existant.
-
-### 1i. Onglet « Qualité micro » dans `/admin/system` (déjà créé et déployé)
-- Taux d'incident par jour, par navigateur, par OS.
-- Liste des sessions concernées avec lien direct.
-
----
-
-## Lot 1bis — NOUVEAU — Corriger le codec Safari (correctif court, prioritaire)
-
-Traite la cause n°1. Petit périmètre, gros impact, aucune dépendance aux autres lots.
-
-- Supprimer les deux valeurs `"audio/webm"` codées en dur (`InterviewStart.tsx:1633` et `:1943`) et les remplacer par un appel à `getSupportedAudioMimeType()`, qui teste déjà `isTypeSupported()` avec `audio/mp4` en tête sur Safari.
-- Si aucun type n'est supporté, construire le `MediaRecorder` sans option `mimeType` (le navigateur choisit) plutôt que d'imposer un format qu'il refuse.
-- Journaliser le mimeType effectivement retenu (`recorder.mimeType`) pour vérifier en télémétrie qu'aucun Safari ne repart en webm.
-- Test Playwright ciblé simulant un navigateur où `audio/webm` n'est pas supporté.
-
-## Lot 2 — Demander le micro proprement
-
-- Séparer la demande : micro d'abord, caméra ensuite. Une caméra manquante ne doit plus faire échouer le micro, et inversement.
-- Repli en cascade sur le micro : périphérique préféré → périphérique par défaut → contraintes minimales (`audio: true`).
-- **Messages d'erreur typés** (aujourd'hui seul `OverconstrainedError` est géré, et seulement dans le test) :
-  - `NotAllowedError` → permission refusée, consignes de déblocage par navigateur.
-  - `NotReadableError` → « Votre micro est utilisé par une autre application (Teams, Zoom, Discord). Fermez-la puis réessayez. » Cas très fréquent sur Windows.
-  - `NotFoundError` → aucun micro détecté.
-  - `OverconstrainedError` → périphérique débranché, repli sur le micro par défaut.
-  - Chacun avec sa manœuvre de réparation et un bouton « Réessayer ».
-- `MicBlockingDialog` enrichi avec les consignes spécifiques Chrome / Safari / Edge et iOS / Android.
-
-## Lot 3 — Ne plus démarrer un entretien sans micro prouvé
-
-- Persister la calibration côté serveur (rattachée à la session) au lieu du seul `sessionStorage`, avec repli local.
-- Rendre le test micro bloquant : sans mesure valide (pic et durée active au-dessus des seuils existants), le bouton de démarrage propose « Refaire le test micro » plutôt que de laisser passer.
-- Contrôle éclair juste avant la première question : 1,5 s de mesure, et si le signal est plat, affichage de l'écran de réparation avant que la moindre question ne soit posée.
-- **NOUVEAU — Détection du profil Bluetooth dégradé** : après acquisition, lire `track.getSettings().sampleRate`. En dessous de 16 kHz (signature du profil HFP sur AirPods et casques Bluetooth), avertir le candidat : « Votre casque Bluetooth dégrade fortement la qualité audio. Utilisez le micro de votre téléphone ou un casque filaire. » Journaliser l'événement pour mesurer la fréquence réelle.
-
-## Lot 4 — Vérifier la bascule et la reprise
-
-- Après tout changement de micro ou toute réacquisition de piste, mesure de confirmation de 1 s : le message « Micro changé » n'apparaît que si du signal est effectivement présent, sinon on reste sur l'écran de réparation.
-- Réacquisition automatique unique en cas de piste morte, avec repli sur le périphérique par défaut, puis journalisation du résultat.
-- **NOUVEAU — Reprise iOS après arrière-plan** : le `visibilitychange` existant (`InterviewStart.tsx:794-815`) reprend l'`AudioContext` mais ne vérifie pas la piste média, qu'iOS tue définitivement. Ajouter au retour au premier plan un contrôle de `track.readyState`, et si la piste est morte, réacquisition automatique + reprise de l'enregistreur, sans perdre la réponse en cours.
-
-
-## Lot 5 — Filet de sécurité serveur
-
-- `transcribe-session` mesure taille, durée et énergie moyenne de chaque fichier audio de réponse ; en dessous du seuil, la réponse est marquée `audio_silent` et n'est plus notée (score neutre, cohérent avec la règle `evidence: none` déjà en place dans la matrice).
-- Une session dont plus de la moitié des réponses sont `audio_silent` est signalée comme anomalie dans le suivi de récupération candidat existant, au lieu d'apparaître comme une session terminée normale.
-
----
-
-## Critère de succès mesurable
-
-Aujourd'hui, 8,7 % des sessions terminées (30 derniers jours) ont moins de 200 caractères de transcription candidat.
-
-- **Objectif** : après déploiement des Lots 1bis à 4, le taux de sessions < 200 caractères sur 30 jours doit passer sous 2 %.
-- **Contrôle** : 30 jours après mise en production, requête SQL de comparaison avant/après.
-- **Contrôle intermédiaire après Lot 1bis** : si le codec Safari était bien le suspect n°1, on doit voir une chute nette du taux chez les candidats Safari/iOS dès la première semaine, sans attendre les autres lots.
-- Si l'objectif n'est pas atteint, la télémétrie du Lot 1 (activée manuellement) identifie précisément le navigateur / OS / périphérique restant à traiter.
-- Sans ce critère, on risque soit de surcorriger (toucher à ce qui marche), soit de s'arrêter trop tôt.
-
-## Ordre de déploiement
-
-1. **Lot 1** (télémétrie pilotable) — déployé, puis on active manuellement la collecte pour 48h de chiffres réels par navigateur/OS.
-2. **Lot 1bis** (codec Safari) — correctif court et à fort impact, peut partir en parallèle du Lot 1.
-3. **Lots 2 et 3** — couvrent l'essentiel du vécu candidat (erreurs typées, Bluetooth, test bloquant).
-4. **Lots 4 et 5** — reprise iOS, vérification de bascule, filet de sécurité serveur.
-
-
-## Ce qui ne change pas
-- Aucune modification de la logique d'acquisition audio dans le Lot 1 (`useMicHealthWatcher`, `InterviewStart`).
-- Aucun changement du parcours candidat quand la télémétrie est OFF (un seul flush vide, puis silence).
-- Les autres fonctionnalités (dashboard, rapports, etc.) non touchées.
-
-## Risques Lot 1
-- **Candidat** : zéro impact. `flush()` est fire-and-forget avec `.catch(() => {})`. Lire la réponse pour le flag `disabled` est non bloquant.
-- **Build** : pas de dépendance nouvelle. `Switch` est un composant shadcn déjà présent.
-- **DB** : une nouvelle table standalone + un job pg_cron. Aucune modification de table existante.
-- **Admin** : un simple toggle lecture/écriture, protégé par RLS super_admin.
+- Contrôle du typage et des tests existants.
+- Test bout en bout : entretien démarré puis onglet fermé pendant la réponse → la vidéo doit être rattachée et le rapport généré.
+- Contrôle en base : les deux sessions de Marion doivent avoir une réponse candidat avec URL, un job de rapport réussi et un rapport visible.
