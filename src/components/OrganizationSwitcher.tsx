@@ -47,7 +47,7 @@ function OrgLogo({ org, className = "size-8" }: { org: Org | null; className?: s
 
 export function OrganizationSwitcher() {
   const { user } = useAuth();
-  const { organizationId: activeId, isOwner } = useOrgRole();
+  const { organizationId: activeId } = useOrgRole();
   const isMobile = useIsMobile();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [switching, setSwitching] = useState(false);
@@ -89,7 +89,6 @@ export function OrganizationSwitcher() {
   if (orgs.length === 0) return null;
 
   const label = active?.name ?? "Organisation";
-  const roleLabel = isOwner ? "Propriétaire" : "Membre";
 
   if (orgs.length === 1) {
     return (
@@ -99,7 +98,6 @@ export function OrganizationSwitcher() {
             <OrgLogo org={active} />
             <div className="grid flex-1 text-left leading-tight">
               <span className="truncate font-semibold">{label}</span>
-              <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -120,7 +118,6 @@ export function OrganizationSwitcher() {
               <OrgLogo org={active} />
               <div className="grid flex-1 text-left leading-tight">
                 <span className="truncate font-semibold">{label}</span>
-                <span className="truncate text-xs text-muted-foreground">{roleLabel}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4 opacity-50" />
             </SidebarMenuButton>
