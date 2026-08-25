@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71% 4%;
 
-    --primary: 239 84% 67%;
+    --primary: 0 0% 8%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -43,18 +43,18 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --ring: 0 0% 8%;
 
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 0 0% 8%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 0 0% 8%;
   }
 
   .dark {
@@ -67,8 +67,8 @@
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 8%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -95,16 +95,16 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 239 84% 67%;
+    --ring: 0 0% 90%;
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 239 84% 67%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 8%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 0 0% 90%;
   }
 }
 
@@ -129,9 +129,9 @@
   --l-fg-dimmer: 230 8% 55%;
   --l-border: 230 16% 92%;
   --l-border-strong: 230 14% 84%;
-  --l-accent: 243 75% 60%;
-  --l-accent-strong: 243 78% 54%;
-  --l-accent-soft: 243 100% 96%;
+  --l-accent: 0 0% 8%;
+  --l-accent-strong: 0 0% 0%;
+  --l-accent-soft: 0 0% 94%;
   --l-success: 152 60% 40%;
   --l-danger: 0 70% 50%;
 
@@ -276,8 +276,8 @@
   --l-fg: 0 0% 98%;
   --l-fg-dim: 230 10% 65%;
   --l-border: 230 15% 16%;
-  --l-accent: 244 90% 70%;
-  --l-accent-2: 280 85% 70%;
+  --l-accent: 0 0% 96%;
+  --l-accent-2: 0 0% 72%;
 
   background-color: hsl(var(--l-bg));
   color: hsl(var(--l-fg));
@@ -343,7 +343,7 @@
 
 .candidate-btn-primary {
   background: linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2))) !important;
-  color: hsl(var(--l-fg)) !important;
+  color: hsl(var(--l-bg)) !important;
   border: none !important;
   box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.6) !important;
   transition: all 0.2s ease !important;
@@ -398,7 +398,7 @@
   color: #f87171 !important;
 }
 
-/* Primary token → indigo */
+/* Primary token → noir */
 .candidate-layout .bg-primary {
   background-color: hsl(var(--l-accent)) !important;
 }
@@ -418,7 +418,7 @@
 .candidate-layout button[class*="bg-primary"],
 .candidate-layout button.bg-primary {
   background: linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2))) !important;
-  color: hsl(var(--l-fg)) !important;
+  color: hsl(var(--l-bg)) !important;
   font-weight: 600;
   box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.6);
 }

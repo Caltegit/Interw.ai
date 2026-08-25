@@ -1290,7 +1290,7 @@ export default function InterviewDeviceTest() {
                 className={cn(
                   "h-14 px-10 text-lg font-semibold rounded-2xl transition-all",
                   canContinue
-                    ? "bg-gradient-to-r from-primary to-fuchsia-500 text-primary-foreground shadow-xl shadow-primary/40 hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02]"
+                    ? "bg-gradient-to-r from-primary to-neutral-700 text-primary-foreground shadow-xl shadow-primary/40 hover:shadow-2xl hover:shadow-primary/50 hover:scale-[1.02]"
                     : "",
                 )}
                 disabled={!canContinue}
