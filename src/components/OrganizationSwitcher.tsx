@@ -47,7 +47,7 @@ function OrgLogo({ org, className = "size-8" }: { org: Org | null; className?: s
 
 export function OrganizationSwitcher() {
   const { user } = useAuth();
-  const { organizationId: activeId, isOwner } = useOrgRole();
+  const { organizationId: activeId } = useOrgRole();
   const isMobile = useIsMobile();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [switching, setSwitching] = useState(false);
