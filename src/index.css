@@ -276,8 +276,8 @@
   --l-fg: 0 0% 98%;
   --l-fg-dim: 230 10% 65%;
   --l-border: 230 15% 16%;
-  --l-accent: 0 0% 10%;
-  --l-accent-2: 0 0% 35%;
+  --l-accent: 0 0% 96%;
+  --l-accent-2: 0 0% 72%;
 
   background-color: hsl(var(--l-bg));
   color: hsl(var(--l-fg));
@@ -343,7 +343,7 @@
 
 .candidate-btn-primary {
   background: linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2))) !important;
-  color: hsl(var(--l-fg)) !important;
+  color: hsl(var(--l-bg)) !important;
   border: none !important;
   box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.6) !important;
   transition: all 0.2s ease !important;
@@ -418,7 +418,7 @@
 .candidate-layout button[class*="bg-primary"],
 .candidate-layout button.bg-primary {
   background: linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2))) !important;
-  color: hsl(var(--l-fg)) !important;
+  color: hsl(var(--l-bg)) !important;
   font-weight: 600;
   box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.6);
 }
