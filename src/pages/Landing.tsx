@@ -22,6 +22,51 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+function DemoVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || visible) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible) ref.current?.load();
+  }, [visible]);
+
+  return (
+    <video
+      ref={ref}
+      className="relative block h-full max-h-full w-full object-contain"
+      poster="/demo-interwai-poster.png"
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="none"
+    >
+      {visible && (
+        <>
+          <source src="/demo-interwai-hd.webm" type="video/webm" />
+          <source src="/demo-interwai-hd.mp4" type="video/mp4" />
+        </>
+      )}
+    </video>
+  );
+}
+
 const BETA_LOGOS = [
   { name: "Morning", src: logoMorning, className: "max-h-6 sm:max-h-8 md:max-h-9" },
   { name: "E.Leclerc", src: logoLeclerc, className: "max-h-7 sm:max-h-9 md:max-h-11" },
