@@ -1,4 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
+import { I18nextProvider } from "react-i18next";
+import i18n from "@/i18n";
 import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 
 // Redirige les anciennes routes /interview/:slug/{test|start|complete}/:token
