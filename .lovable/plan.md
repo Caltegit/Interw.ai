@@ -23,6 +23,3 @@ Les trois images sont refaites avec les corrections demandées, toujours en donn
 - Anonymisation par substitution DOM juste avant la capture (noms, e-mails, dates, logo et nom d'organisation) — aucune donnée réelle dans l'image, aucune écriture en base.
 - Nouvelles previews envoyées dans le chat avant tout remplacement dans `src/assets/`.
 
-## Point à confirmer
-
-Le bloc 1 de la page d'accueil s'intitule aujourd'hui « Vos questions, posées par vous. » : je change le titre pour parler des critères, ou je garde le texte actuel avec l'image des critères ?
