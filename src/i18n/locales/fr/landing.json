@@ -1,1 +1,169 @@
-{}
+{
+  "nav": {
+    "product": "Produit",
+    "pricing": "Tarifs",
+    "signIn": "Se connecter",
+    "demo": "Demander une démo"
+  },
+  "hero": {
+    "title": "Évaluez les candidats, pas leur CV.",
+    "subtitle": "Vous posez vos questions face caméra. Chaque candidat y répond quand il veut, où il veut. Interw évalue chaque entretien sur vos critères et fait remonter les profils à voir en premier.",
+    "cta": "Demander une démo",
+    "createAccount": "Créer un compte gratuit",
+    "freeNote": "Gratuit · 15 entretiens / mois · sans carte"
+  },
+  "proof": {
+    "title": "Ils recrutent avec Interw"
+  },
+  "problem": {
+    "title": "Aujourd'hui vous ne triez pas des candidats. Vous triez des documents.",
+    "outro": "Tous les autres, vous ne les avez jamais entendus."
+  },
+  "funnel": {
+    "s1": {
+      "title": "Les candidatures arrivent.",
+      "desc": "Toutes écrites avec la même IA, toutes bien calibrées, toutes convaincantes. Plus rien ne les distingue."
+    },
+    "s2": {
+      "title": "Vous triez sur ce qui se voit.",
+      "desc": "L'école, les années, la mise en page. Des critères qui ne disent pas lequel sera le meilleur sur le poste."
+    },
+    "s3": {
+      "title": "Vous appelez les survivants.",
+      "desc": "Quinze minutes chacun, à synchroniser sur vos heures de bureau, et sur leurs disponibilités. La plupart du temps, une minute suffit pour trancher."
+    },
+    "s4": {
+      "title": "Vous en recevez trois.",
+      "desc": "Les seuls que vous aurez vraiment écoutés."
+    },
+    "illus": {
+      "sorted": "Trié",
+      "callInProgress": "Appel en cours",
+      "minutes": "15 min",
+      "received": "CV reçus",
+      "called": "Appelés",
+      "interviews": "Entretiens",
+      "hired": "Recruté"
+    }
+  },
+  "product": {
+    "title": "Faites-les tous passer, sans y passer vos journées.",
+    "desc": "L'IA transcrit chaque entretien et le confronte à vos questions comme à vos critères. Les meilleurs profils remontent — y compris ceux qu'un CV vous aurait fait manquer.",
+    "s1": {
+      "title": "Vos questions, posées par vous.",
+      "desc": "Vous décrivez le poste, vous choisissez vos critères, vous filmez vos questions. Dix minutes, une fois. Le lien est prêt.",
+      "alt": "Écran de création d'un poste dans Interw"
+    },
+    "s2": {
+      "title": "Chaque candidat passe en vidéo",
+      "desc": "Là où il est à l'aise, quand ça l'arrange : depuis chez lui, entre deux réunions, le soir après le travail. Pas de créneau à synchroniser — il vous voit poser vos questions, il y répond à son rythme.",
+      "alt": "Rapport d'entretien vidéo d'un candidat"
+    },
+    "s3": {
+      "title": "Les bons profils remontent, vous décidez.",
+      "desc": "Notre IA évalue sur vos critères, et chaque note s'appuie sur des extraits de réponses qui la justifie. Vous regardez dix secondes, deux minutes ou l'entretien entier — c'est vous qui tranchez.",
+      "alt": "Liste de candidats triés par score de correspondance"
+    }
+  },
+  "closing": {
+    "title": "Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?"
+  },
+  "footer": {
+    "copyright": "© {{year}} Interw",
+    "demo": "Demander une démo",
+    "legal": "Mentions légales",
+    "privacy": "Confidentialité"
+  },
+  "productPage": {
+    "nav": {
+      "product": "Produit",
+      "how": "Fonctionnement",
+      "pricing": "Tarifs",
+      "faq": "Questions",
+      "signIn": "Se connecter",
+      "demo": "Planifier une démo"
+    },
+    "hero": {
+      "pill": "Produit",
+      "title": "Un outil pour recruter mieux, plus vite, et tout en laissant une chance à tous.",
+      "subtitle": "Entretiens vidéo asynchrones, rapports détaillés, ressources réutilisables. Une plateforme pensée pour les équipes qui veulent évaluer des candidats, pas leur CV.",
+      "demo": "Planifier une démo",
+      "pricing": "Voir les tarifs"
+    },
+    "meta": {
+      "title": "Produit — Interw",
+      "description": "Découvrez interw : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais."
+    },
+    "blocks": {
+      "dashboard": {
+        "pill": "Tableau de bord",
+        "title": "Pilotez en un coup d'œil",
+        "desc": "Tous vos postes, vos candidats les plus prometteurs et vos décisions en attente sont réunis sur un seul écran.",
+        "b1": "Postes actifs, sessions complétées et score moyen",
+        "b2": "Meilleurs candidats des 30 derniers jours mis en avant",
+        "b3": "Candidats à traiter pour ne perdre aucun profil"
+      },
+      "projects": {
+        "pill": "Postes",
+        "title": "Un poste, vos questions, vos critères",
+        "desc": "Créez un poste en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
+        "b1": "Lien candidat unique, partageable par email ou réseaux sociaux",
+        "b2": "Suivi de l'avancement par poste et par candidat"
+      },
+      "tracking": {
+        "pill": "Suivi candidats",
+        "title": "Visualisez chaque entretien, triez en quelques clics",
+        "desc": "Toutes les réponses vidéo, notées par l'IA selon vos critères. Vous classez chaque candidat : à discuter, retenu, RDV, oui ou non — sans jamais quitter la page.",
+        "b1": "Vidéos, notes IA et décisions sur la même vue",
+        "b2": "Filtres rapides : à traiter, à discuter, retenus",
+        "b3": "Notes recruteur pour partager votre avis avec l'équipe"
+      },
+      "report": {
+        "pill": "Rapport IA",
+        "title": "Un rapport détaillé pour chaque candidat",
+        "desc": "L'IA transcrit et analyse l'entretien en fonction des critères que vous avez définis. Puis une analyse orale et visuelle du candidat est produite, ainsi qu'un score Big Five (personnalité).",
+        "b1": "Score Fit Poste et synthèse en une phrase",
+        "b2": "Évaluation critère par critère avec niveau (Excellent, Partiel, Manquant)",
+        "b3": "Citations exactes du candidat avec horodatage vidéo"
+      },
+      "resources": {
+        "pill": "Ressources",
+        "title": "Vos questions et critères, prêts à réutiliser",
+        "desc": "Construisez vos ressources au fil du temps. Réutilisez les bonnes questions sur tous vos postes, capitalisez sur ce qui fonctionne.",
+        "b1": "Questions classées par type (écrite, vidéo, énigme…)",
+        "b2": "Critères réutilisables sur tous vos postes",
+        "b3": "Intros et sessions d'emails personnalisables"
+      },
+      "criteria": {
+        "pill": "Critères d'évaluation",
+        "title": "Vos critères, votre méthode — pas une grille générique",
+        "desc": "Définissez précisément ce que vous cherchez : soft skills, motivation, clarté du discours, compétences métier. L'IA évalue chaque candidat exactement selon vos critères.",
+        "b1": "Critères 100 % personnalisables, sans limite",
+        "b2": "Description détaillée pour guider l'analyse IA",
+        "b3": "Mêmes critères = mêmes règles pour tous les candidats"
+      }
+    },
+    "cta": {
+      "title": "Prêt à voir interw sur vos propres recrutements ?",
+      "subtitle": "20 entretiens offerts. Sans carte bancaire. Setup en 10 minutes.",
+      "button": "Planifier une démo"
+    }
+  },
+  "demoDialog": {
+    "title": "Demander une démo",
+    "description": "Laissez-nous votre email et nous vous recontactons sous 24h.",
+    "emailLabel": "Votre email *",
+    "emailPlaceholder": "vous@entreprise.com",
+    "messageLabel": "Un message ?",
+    "messagePlaceholder": "Quelques mots sur votre besoin…",
+    "submit": "Envoyer la demande",
+    "sending": "Envoi…",
+    "invalidTitle": "Vérifiez votre saisie",
+    "invalidFields": "Champs invalides",
+    "invalidEmail": "Email invalide",
+    "successTitle": "Demande envoyée 🎉",
+    "successDescription": "Nous revenons vers vous très vite.",
+    "errorTitle": "Erreur",
+    "errorDescription": "Impossible d'envoyer la demande. Réessayez ou écrivez-nous à hello@interw.com."
+  }
+}
