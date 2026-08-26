@@ -1,1 +1,34 @@
-{}
+{
+  "title": "Frequently asked questions",
+  "subtitle": "The rules, in plain words.",
+  "items": {
+    "decision": {
+      "q": "Does the AI decide for me?",
+      "a": "No. Interw transcribes the answers, matches them against your criteria and suggests a reading order. Every assessment links back to the answer excerpt that justifies it, which you can listen to. You stay in control of who you meet, and you can ignore the ranking."
+    },
+    "hosting": {
+      "q": "Where are candidate videos and data hosted?",
+      "a": "Videos are hosted on our servers in France, and we use an AI hosted in France."
+    },
+    "activeRole": {
+      "q": "What is an active role?",
+      "a": "An active role in Interw is a hire in progress. Once the hire is done, archive it: the slot frees up immediately for the next one. A permanent role, such as spontaneous applications, occupies a slot continuously. On Plus, you can add up to two extra roles at €29 per month each."
+    },
+    "interview": {
+      "q": "What counts as an interview?",
+      "a": "A candidate who completes their session and whose report is generated. Invitations sent, abandoned sessions and your own tests never count. You can share your link as widely as you like."
+    },
+    "quota": {
+      "q": "What happens when I reach my quota?",
+      "a": "Nothing for your candidates: they are never blocked. On Plus and Pro, each extra interview is billed €3 on your next invoice. On Free, the next 15 candidates are kept and analysed as soon as you move to Plus, or when your quota renews. Beyond that, the link closes until the following month."
+    },
+    "trial": {
+      "q": "How does the trial work?",
+      "a": "30 days on Pro, no credit card. The countdown starts when you publish your first role, not when you sign up. Then you pick a plan or stay on Free: everything you created remains accessible."
+    },
+    "billing": {
+      "q": "Monthly or annual?",
+      "a": "Monthly has no commitment: move up or down a plan whenever you want, including outside hiring season. Annual is 12 months for the price of 10."
+    }
+  }
+}
