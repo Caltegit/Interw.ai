@@ -1,278 +1,230 @@
-import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
-import candidateWoman from "@/assets/hero-candidate-video.jpg";
-import candidateMan from "@/assets/hero-candidate-man-v1.jpg";
-import shortlistAvatar1 from "@/assets/candidates/candidate-woman-1.jpg";
-import shortlistAvatar2 from "@/assets/candidates/candidate-man-1.jpg";
-import shortlistAvatar3 from "@/assets/candidates/candidate-woman-2.jpg";
+import { Fragment, useEffect, useState } from "react";
+// Navigation : adapter cet import au routeur du projet cible.
+// TanStack Start : import { Link } from "@tanstack/react-router";
+// React Router  : import { Link } from "react-router-dom";  (et to= -> to=)
+import { Link } from "@tanstack/react-router";
+import FunnelCards from "@/components/landing/FunnelCards";
+
+import productProjects from "@/assets/product-projects.png";
+import productReport from "@/assets/product-report.png";
+import productDashboard from "@/assets/product-dashboard.png";
+import paintingShore from "@/assets/backgrounds/painting-shore.jpeg";
+import paintingPier from "@/assets/backgrounds/painting-pier.jpeg";
+import paintingBay from "@/assets/backgrounds/painting-bay.jpeg";
+import logoMorning from "@/assets/logos/logo-morning.png";
+import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
+import logoCastalie from "@/assets/logos/logo-castalie.svg";
+import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
+import { ArrowRight, Check, ChevronDown, Minus } from "lucide-react";
 import {
-  ArrowRight,
-  Brain,
-  Check,
-  CheckCircle2,
-  ChevronDown,
-  Library,
-  ShieldCheck,
-  Sparkles,
-  Scale,
-  Video,
-  FileText,
-  X,
-  Star,
-  Play,
-} from "lucide-react";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-/* ---------------- Hero mock: live video interview ---------------- */
-function HeroInterviewMock() {
-  return (
-    <div
-      className="landing-fade-up landing-delay-2 relative mx-auto w-full max-w-md"
-      style={{ transform: "rotate(-2deg)" }}
-    >
-      <div
-        className="absolute -inset-6 -z-10 rounded-[24px] blur-2xl"
-        style={{ background: "radial-gradient(ellipse at center, hsl(0 0% 8% / 0.18), transparent 70%)" }}
-      />
-      <div
-        className="relative overflow-hidden rounded-2xl"
-        style={{
-          background: "#0f1020",
-          border: "1px solid hsl(230 16% 92%)",
-          boxShadow: "0 30px 80px -20px hsl(0 0% 8% / 0.25), 0 1px 2px hsl(240 10% 10% / 0.04)",
-        }}
-      >
-        {/* Browser top bar */}
-        <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ background: "#1a1b2e", borderBottom: "1px solid hsl(230 20% 20%)" }}>
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ff5f57" }} />
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#febc2e" }} />
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28c840" }} />
-          <div className="ml-3 flex-1 truncate rounded px-2 py-0.5 text-[10px]" style={{ background: "hsl(230 20% 14%)", color: "hsl(230 8% 65%)" }}>
-            interw.com/entretien/marie-d
-          </div>
-        </div>
+const BETA_LOGOS = [
+  { name: "Morning", src: logoMorning, className: "max-h-6 sm:max-h-8 md:max-h-9" },
+  { name: "E.Leclerc", src: logoLeclerc, className: "max-h-7 sm:max-h-9 md:max-h-11" },
+  { name: "Castalie", src: logoCastalie, className: "max-h-5 sm:max-h-7 md:max-h-8" },
+  { name: "ad's up consulting", src: logoAdsup, className: "max-h-6 sm:max-h-8 md:max-h-9" },
+];
 
-        {/* Video stage */}
-        <div className="relative aspect-[16/10] overflow-hidden">
-          {/* Candidate video feed */}
-          <img
-            src={candidateWoman}
-            alt="Candidate en entretien vidéo"
-            className="absolute inset-0 h-full w-full object-cover my-0"
-          />
-          {/* Subtle vignette for readability of overlays */}
-          <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 5% / 0.25) 0%, transparent 30%, transparent 55%, hsl(230 20% 5% / 0.55) 100%)" }} />
+const CAL_LINK = "https://calendar.app.google/C7YQSPArwRUyyQrk8";
+
+const H2 = "text-[32px] md:text-[52px] leading-[1.08] font-semibold tracking-tight text-foreground";
+const H3 = "text-[24px] md:text-[28px] leading-[1.15] font-semibold tracking-tight text-foreground";
+const BODY = "text-[17px] md:text-[19px] leading-relaxed";
+
+/* Ancien bloc chiffré — conservé au cas où
+const PROBLEMS = [
+  { stat: "200", title: "Candidatures par offre", desc: "..." },
+  { stat: "8 min", title: "Un pré-entretien téléphonique", desc: "..." },
+  { stat: "40 h", title: "200 candidats en visio", desc: "..." },
+];
+*/
+
+/* Les 4 étapes de l'entonnoir vivent désormais dans FunnelCards.tsx */
 
 
-          {/* REC indicator */}
-          <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            REC
-          </div>
+const SECTIONS = [
+  {
+    title: "Vos questions, posées par vous.",
+    desc: "Vous décrivez le poste, vous choisissez vos critères, vous filmez vos questions. Dix minutes, une fois. Le lien est prêt.",
+    image: productProjects,
+    alt: "Écran de création d'un poste dans Interw",
+    background: paintingShore,
+  },
+  {
+    title: "Chaque candidat passe en vidéo",
+    desc: "Là où il est à l'aise, quand ça l'arrange : depuis chez lui, entre deux réunions, le soir après le travail. Pas de créneau à synchroniser — il vous voit poser vos questions, il y répond à son rythme.",
+    image: productReport,
+    alt: "Rapport d'entretien vidéo d'un candidat",
+    background: paintingPier,
+  },
+  {
+    title: "Les bons profils remontent, vous décidez.",
+    desc: "Notre IA évalue sur vos critères, et chaque note s'appuie sur des extraits de réponses qui la justifie. Vous regardez dix secondes, deux minutes ou l'entretien entier — c'est vous qui tranchez.",
+    image: productDashboard,
+    alt: "Liste de candidats triés par score de correspondance",
+    background: paintingBay,
+  },
+];
 
-          {/* Timer */}
-          <div className="absolute right-3 top-3 rounded-md px-2 py-1 font-mono text-[10px] text-white" style={{ background: "hsl(230 20% 10% / 0.7)" }}>
-            01:24
-          </div>
+const PLANS = [
+  {
+    name: "Free",
+    desc: "Pour essayer Interw sur un vrai recrutement.",
+    monthly: "0 €",
+    annual: "0 €",
+    monthlyUnit: "",
+    annualUnit: "",
+    monthlyNote: "Pour toujours",
+    annualNote: "Pour toujours",
+    cta: "Créer un compte",
+    featured: false,
+    noCardNote: "",
+    specs: [
+      { label: "Postes actifs simultanés", value: "1" },
+      { label: "Entretiens analysés / mois", value: "15" },
+      { label: "Au-delà", value: "File d'attente", sub: "au mois suivant" },
+      { label: "Utilisateurs", value: "1" },
+    ],
+  },
+  {
+    name: "Plus",
+    desc: "Pour un manager ou une petite équipe qui recrute régulièrement.",
+    monthly: "99 €",
+    annual: "990 €",
+    monthlyUnit: "/ mois",
+    annualUnit: "/ an",
+    monthlyNote: "Facturé chaque mois",
+    annualNote: "Facturé une fois par an",
+    cta: "Choisir Plus",
+    featured: false,
+    noCardNote: "",
+    specs: [
+      { label: "Postes actifs simultanés", value: "3", sub: "+29 € par poste (max 5)" },
+      { label: "Entretiens analysés / mois", value: "50" },
+      { label: "Au-delà", value: "3 € par entretien" },
+      { label: "Utilisateurs", value: "Illimités" },
+    ],
+  },
+  {
+    name: "Pro",
+    desc: "Pour la fonction RH qui déploie Interw sur tous ses recrutements.",
+    monthly: "399 €",
+    annual: "3 990 €",
+    monthlyUnit: "/ mois",
+    annualUnit: "/ an",
+    monthlyNote: "Facturé chaque mois",
+    annualNote: "Facturé une fois par an",
+    cta: "Essayer Pro 30 jours",
+    featured: true,
+    noCardNote: "Sans carte bancaire",
+    specs: [
+      { label: "Postes actifs simultanés", value: "20" },
+      { label: "Entretiens analysés / mois", value: "500" },
+      { label: "Au-delà", value: "3 € par entretien" },
+      { label: "Utilisateurs", value: "Illimités + rôles" },
+    ],
+  },
+  {
+    name: "Enterprise",
+    desc: "Pour les organisations à volume, avec vos outils et vos règles.",
+    monthly: "Sur devis",
+    annual: "Sur devis",
+    monthlyUnit: "",
+    annualUnit: "",
+    monthlyNote: "Engagement annuel",
+    annualNote: "Engagement annuel",
+    cta: "Parler à l'équipe",
+    featured: false,
+    noCardNote: "",
+    specs: [
+      { label: "Postes actifs simultanés", value: "Illimités" },
+      { label: "Entretiens analysés / mois", value: "Négocié" },
+      { label: "Au-delà", value: "Négocié" },
+      { label: "Utilisateurs", value: "Illimités + rôles + SSO" },
+    ],
+  },
+];
 
-          {/* AI question overlay */}
-          <div className="absolute inset-x-3 bottom-3 rounded-lg p-3" style={{ background: "hsl(230 20% 10% / 0.85)", backdropFilter: "blur(8px)" }}>
-            <div className="flex items-start gap-2.5">
-              <div
-                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
-                style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
-              >
-                <Sparkles className="h-3 w-3 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: "hsl(230 8% 65%)" }}>
-                  Question 2 / 5
-                </div>
-                <div className="mt-0.5 text-sm font-medium text-white">
-                  Décrivez un projet dont vous êtes particulièrement fier.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+const COMPARISON = [
+  {
+    group: "Inclus dans tous les plans",
+    rows: [
+      { label: "Rapport IA complet", sub: "Fit poste, communication, verbatims ancrés", values: ["✓", "✓", "✓", "✓"] },
+      { label: "Ressources réutilisables", sub: "Sessions types, questions, critères", values: ["✓", "✓", "✓", "✓"] },
+    ],
+  },
+  {
+    group: "Marque",
+    rows: [
+      { label: "Personnalisation", sub: "Votre logo, vos couleurs, sans mention Interw", values: ["—", "✓", "✓", "✓"] },
+    ],
+  },
+  {
+    group: "Équipe",
+    rows: [
+      { label: "Utilisateurs", values: ["1", "Illimités", "Illimités", "Illimités"] },
+      { label: "Rôles et permissions", values: ["—", "—", "✓", "✓"] },
+      { label: "SSO", values: ["—", "—", "—", "✓"] },
+    ],
+  },
+  {
+    group: "Intégrations",
+    rows: [
+      { label: "Intégration ATS", values: ["—", "—", "✓", "✓"] },
+      { label: "API", values: ["—", "—", "—", "✓"] },
+      { label: "MCP", sub: "Branchez Interw à vos agents IA", values: ["—", "—", "—", "✓"] },
+    ],
+  },
+  {
+    group: "Support",
+    rows: [
+      { label: "Email", values: ["✓", "✓", "✓", "✓"] },
+      { label: "Prioritaire", values: ["—", "—", "✓", "✓"] },
+      { label: "Téléphone et WhatsApp", values: ["—", "—", "✓", "✓"] },
+      { label: "Support personnalisé", values: ["—", "—", "—", "✓"] },
+    ],
+  },
+];
 
-        {/* Footer controls */}
-        <div className="flex items-center justify-between px-4 py-3" style={{ background: "#16172a", borderTop: "1px solid hsl(230 20% 20%)" }}>
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full" style={{ background: "hsl(0 0% 8% / 0.2)" }}>
-              <Video className="h-3.5 w-3.5" style={{ color: "hsl(0 0% 30%)" }} />
-            </div>
-            <div className="text-[11px]" style={{ color: "hsl(230 8% 70%)" }}>
-              Entretien en cours · Marie D.
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {[60, 100, 80, 120, 70, 90, 50].map((h, i) => (
-              <span
-                key={i}
-                className="w-0.5 rounded-full"
-                style={{ height: `${h / 10}px`, background: "hsl(0 0% 8%)" }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+const FAQ = [
+  {
+    q: "Est-ce que l'IA décide à ma place ?",
+    a: "Non. Interw transcrit les réponses, les confronte à vos critères et vous propose un ordre de lecture. Chaque appréciation renvoie à l'extrait de réponse qui la justifie, que vous pouvez écouter. Vous gardez la main sur qui vous rencontrez, et vous pouvez ignorer le classement.",
+  },
+  {
+    q: "Où sont hébergées les vidéos et les données des candidats ?",
+    a: "Les vidéos sont hébergées sur nos serveurs en France, et nous utilisons une IA hébergée en France.",
+  },
+  {
+    q: "Qu'est-ce qu'un poste actif ?",
+    a: "Un poste actif dans Interw correspond à un recrutement en cours. Quand le recrutement est terminé, archivez-le : le slot se libère immédiatement pour le suivant. Un poste permanent, comme des candidatures spontanées, occupe un slot en continu. Sur Plus, vous pouvez ajouter jusqu'à deux postes supplémentaires, à 29 € par mois chacun.",
+  },
+  {
+    q: "Qu'est-ce qui compte comme un entretien ?",
+    a: "Un candidat qui va au bout de sa session et dont le rapport est généré. Les invitations envoyées, les sessions abandonnées et vos propres tests ne comptent jamais. Vous pouvez partager votre lien aussi largement que vous voulez.",
+  },
+  {
+    q: "Que se passe-t-il quand j'atteins mon quota ?",
+    a: "Rien pour vos candidats : ils ne sont jamais bloqués. Sur Plus et Pro, chaque entretien supplémentaire est facturé 3 € sur votre facture suivante. Sur Free, les 15 candidats suivants sont conservés et analysés dès votre passage en Plus, ou au renouvellement de votre quota. Au-delà, le lien se ferme jusqu'au mois suivant.",
+  },
+  {
+    q: "Comment fonctionne l'essai ?",
+    a: "30 jours sur Pro, sans carte bancaire. Le compte à rebours démarre quand vous publiez votre premier poste, pas à l'inscription. Ensuite, vous choisissez un plan ou vous restez sur Free : tout ce que vous avez créé reste consultable.",
+  },
+  {
+    q: "Mensuel ou annuel ?",
+    a: "Le mensuel est sans engagement : vous montez ou descendez de plan quand vous voulez, y compris hors saison de recrutement. L'annuel, c'est 12 mois pour le prix de 10.",
+  },
+];
 
-/* ---------------- Small product cards (3 moments) ---------------- */
-function ProjectCreationCard() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
-      <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
-          <FileText className="h-3.5 w-3.5" /> ÉTAPE 1 · CRÉATION
-        </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous définissez l'entretien</h3>
-        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Poste, questions et critères d'évaluation.
-        </p>
-      </div>
-      <div className="mx-5 mb-5 space-y-2.5 rounded-xl p-4" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
-        <div>
-          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Intitulé du poste</div>
-          <div className="mt-1 rounded-md bg-white px-2.5 py-1.5 text-[12px] font-medium text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-            Office manager
-          </div>
-        </div>
-        <div>
-          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Questions</div>
-          <div className="mt-1 space-y-1">
-            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(0 0% 8%)" }}>1</span>
-              Parlez-moi de votre parcours.
-            </div>
-            <div className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] text-foreground" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded text-[9px] font-semibold text-white" style={{ background: "hsl(0 0% 8%)" }}>2</span>
-              Comment gérez-vous un désaccord ?
-            </div>
-          </div>
-        </div>
-        <div>
-          <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "hsl(230 8% 46%)" }}>Critères</div>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Technique</span>
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Communication</span>
-            <span className="rounded-full px-2 py-0.5 text-[10px] font-medium" style={{ background: "hsl(0 0% 92%)", color: "hsl(0 0% 0%)" }}>Autonomie</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InterviewLiveCard() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
-      <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
-          <Video className="h-3.5 w-3.5" /> ÉTAPE 2 · L'ENTRETIEN
-        </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Le candidat passe l'entretien</h3>
-        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Le candidat répond face caméra, à son rythme.
-        </p>
-      </div>
-      <div className="relative mx-5 mb-5 aspect-[16/9] overflow-hidden rounded-xl" style={{ background: "linear-gradient(135deg, #1e1f3a, #2a1b3d)" }}>
-        <img src={candidateMan} alt="Candidat en entretien vidéo" className="absolute inset-0 h-full w-full object-cover my-0" style={{ objectPosition: "center 25%" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, hsl(230 20% 8% / 0.15) 0%, transparent 40%, hsl(230 20% 8% / 0.55) 100%)" }} />
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white" style={{ background: "hsl(0 75% 50% / 0.9)" }}>
-          <span className="h-1 w-1 animate-pulse rounded-full bg-white" /> REC
-        </div>
-        <div className="absolute inset-x-2 bottom-2 rounded px-2 py-1.5 text-[11px] text-white" style={{ background: "hsl(230 20% 10% / 0.85)" }}>
-          « Décrivez un projet dont vous êtes fier. »
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CandidatesShortlistCard() {
-  const candidates = [
-    { initials: "MD", photo: shortlistAvatar1, name: "Marie D. - 24:20", score: 92, label: "Recommandé", tone: "good" as const },
-    { initials: "TL", photo: shortlistAvatar2, name: "Thomas L. - 26:12", score: 78, label: "À considérer", tone: "mid" as const },
-    { initials: "SR", photo: shortlistAvatar3, name: "Sofia R. - 14:55", score: 64, label: "Réserve", tone: "low" as const },
-  ];
-  const toneColors = {
-    good: { bg: "hsl(152 70% 95%)", fg: "hsl(152 60% 38%)", ring: "hsl(152 60% 45%)" },
-    mid: { bg: "hsl(38 100% 94%)", fg: "hsl(32 80% 42%)", ring: "hsl(32 90% 55%)" },
-    low: { bg: "hsl(230 14% 94%)", fg: "hsl(230 10% 40%)", ring: "hsl(230 14% 70%)" },
-  };
-  return (
-    <div className="relative overflow-hidden rounded-2xl border bg-white" style={{ borderColor: "hsl(230 14% 88%)", boxShadow: "0 10px 30px -15px hsl(0 0% 8% / 0.2)" }}>
-      <div className="p-5">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider" style={{ color: "hsl(0 0% 0%)" }}>
-          <Brain className="h-3.5 w-3.5" /> ÉTAPE 3 · LE RAPPORT IA
-        </div>
-        <h3 className="mt-2 text-lg font-semibold text-foreground">Vous comparez les profils</h3>
-        <p className="mt-1 text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-          Et choisissez qui vous sélectionnez...
-        </p>
-      </div>
-      <div className="mx-5 mb-5 space-y-2 rounded-xl p-3" style={{ background: "hsl(240 25% 97%)", border: "1px solid hsl(230 14% 90%)" }}>
-        {candidates.map((c) => {
-          const colors = toneColors[c.tone];
-          const circumference = 2 * Math.PI * 14;
-          const offset = circumference - (c.score / 100) * circumference;
-          return (
-            <div key={c.initials} className="flex items-center gap-3 rounded-lg bg-white p-2.5" style={{ border: "1px solid hsl(230 14% 90%)" }}>
-              <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-white" style={{ boxShadow: "0 2px 6px -2px hsl(230 20% 20% / 0.25)" }}>
-                <img src={c.photo} alt={c.name} className="absolute inset-0 h-full w-full object-cover my-0" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[12px] font-semibold text-foreground">{c.name}</div>
-                <div className="mt-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium" style={{ background: colors.bg, color: colors.fg }}>
-                  {c.label}
-                </div>
-              </div>
-              <div className="relative h-9 w-9 shrink-0">
-                <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
-                  <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(230 16% 90%)" strokeWidth="3" />
-                  <circle cx="18" cy="18" r="14" fill="none" stroke={colors.ring} strokeWidth="3" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-foreground">{c.score}</div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-
-
-/* ---------------- Page ---------------- */
 export default function Landing() {
-  const { session, loading } = useAuth();
-  const [demoOpen, setDemoOpen] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [scrolled, setScrolled] = useState(false);
-
-  const openDemo = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    setDemoOpen(true);
-  };
-
-  useEffect(() => {
-    document.title = "Interw — Évaluez les candidats, pas leur CV";
-    const desc =
-      "Vos questions, vos critères, votre processus. interw analyse les réponses de chaque candidat et vous livre un rapport détaillé — pour recruter plus vite, plus équitablement, sans rater le bon profil.";
-    let m = document.querySelector('meta[name="description"]');
-    if (!m) {
-      m = document.createElement("meta");
-      m.setAttribute("name", "description");
-      document.head.appendChild(m);
-    }
-    m.setAttribute("content", desc);
-  }, []);
+  const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -281,585 +233,497 @@ export default function Landing() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  if (loading) return null;
-  if (session) return <Navigate to="/dashboard" replace />;
+
+
 
   return (
-    <div className="landing-root min-h-screen">
-      <div className="landing-grain" aria-hidden />
-
-      {/* ============ NAVBAR ============ */}
+    <div className="landing-root bg-background text-foreground min-h-screen">
+      {/* ============ HEADER ============ */}
       <header
-        className="sticky top-0 z-50 transition-all duration-200"
-        style={{
-          backdropFilter: scrolled ? "blur(12px)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(12px)" : "none",
-          background: scrolled ? "hsl(0 0% 100% / 0.8)" : "hsl(0 0% 100%)",
-          borderBottom: `1px solid hsl(230 16% ${scrolled ? "88%" : "94%"})`,
-        }}
+        className={`bg-background/90 sticky top-0 z-50 border-b backdrop-blur transition-colors ${
+          scrolled ? "border-border" : "border-transparent"
+        }`}
       >
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center gap-2">
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-md"
-              style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
-            >
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-[15px] font-semibold tracking-tight">Interw</span>
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+          <Link to="/" className="text-[22px] font-semibold tracking-tight">
+            Interw
           </Link>
-          <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
-            <Link to="/produit" className="transition-colors hover:text-foreground">Produit</Link>
-            <a href="#features" className="transition-colors hover:text-foreground">Fonctionnement</a>
-            <a href="#pricing" className="transition-colors hover:text-foreground">Tarifs</a>
-            <a href="#faq" className="transition-colors hover:text-foreground">Questions</a>
+          <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
+            <Link to="/produit" className="hover:text-foreground transition-colors">
+              Produit
+            </Link>
+            <a href="#tarifs" className="hover:text-foreground transition-colors">
+              Tarifs
+            </a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="text-sm transition-colors hover:text-foreground"
-              style={{ color: "hsl(230 8% 42%)" }}
-            >
+          <div className="flex items-center gap-4 text-sm">
+            <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">
               Se connecter
             </Link>
-            <span className="hidden h-5 w-px md:block" style={{ background: "hsl(230 14% 88%)" }} />
-            <button
-              type="button"
-              onClick={openDemo}
-              className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
+            <a
+              href={CAL_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-foreground text-background inline-flex h-9 items-center rounded-lg px-3.5 font-medium transition-opacity hover:opacity-90"
             >
-              Commencez
-            </button>
+              Demander une démo
+            </a>
           </div>
         </div>
       </header>
 
-      {/* ============ HERO ============ */}
-      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 100%)" }}>
-        <div className="landing-bg-grid absolute inset-0 -z-10" />
-        <div className="landing-hero-glow absolute inset-0 -z-10" />
-        <div className="mx-auto max-w-6xl px-6 pt-16 pb-24 md:pt-24 md:pb-28">
-          <div className="grid items-center gap-8 md:grid-cols-[55%_45%]">
-            {/* Left column */}
-            <div>
-              <h1 className="landing-fade-up landing-delay-1 text-4xl font-semibold leading-[1.05] md:text-6xl text-left">
-                <span className="landing-gradient-text mx-0 px-0 text-5xl">
-                  Évaluez les candidats,<br />pas leur CV.
-                </span>
-              </h1>
-              <p className="landing-fade-up landing-delay-2 mt-6 max-w-xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
-                Faites passer un entretien vidéo à chaque candidat. Automatiquement.
-              </p>
-              <p className="landing-fade-up landing-delay-2 mt-5 max-w-xl text-base leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
-                90% des CV et lettres de motivation sont rédigés par ChatGPT.<br />
-                Quand l'IA uniformise tout, l'entretien vidéo devient le seul filtre fiable<br />
-                pour sélectionner les meilleurs profils.
-              </p>
-              <div className="landing-fade-up landing-delay-3 mt-8 text-center">
-                <button
-                  type="button"
-                  onClick={openDemo}
-                  className="landing-btn-white group inline-flex items-center gap-3 rounded-xl px-8 py-3.5 text-center font-semibold shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/30"
-                >
-                  <span className="flex flex-col leading-tight">
-                    <span className="text-base">Commencer gratuitement</span>
-                    <span className="text-xs font-medium opacity-80">20 entretiens offerts</span>
-                  </span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </button>
-                <p className="mt-3 text-xs text-center" style={{ color: "hsl(230 8% 52%)" }}>
-                  Sans CB · Sans engagement · Setup en 10 min
-                </p>
+      {/* ============ HERO + VIDÉO + PREUVE (visibles sans scroll) ============ */}
+      <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
+        <section className="mx-auto w-full max-w-5xl shrink-0 px-6 pt-14 pb-8 text-center md:pt-[3vh] md:pb-[2vh]">
+          <h1 className="landing-fade-up mx-auto max-w-3xl text-[40px] leading-[1.05] font-semibold tracking-tight md:text-[clamp(2.5rem,4.4vh+1.2rem,4rem)]">
+            Évaluez les candidats, pas leur CV.
+          </h1>
+          <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
+            Vous posez vos questions face caméra. Chaque candidat y répond quand il veut, où il veut. Interw
+            évalue chaque entretien sur vos critères et fait remonter les profils à voir en premier.
+          </p>
+          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center md:mt-[2.5vh]">
+            <a
+              href={CAL_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              Demander une démo <ArrowRight className="h-4 w-4" />
+            </a>
+            <Link
+              to="/login"
+              className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
+            >
+              Créer un compte gratuit
+            </Link>
+            <p className="text-muted-foreground mt-1.5 text-[13px]">
+              Gratuit · 15 entretiens / mois · sans carte
+            </p>
+          </div>
+        </section>
+
+        <section className="mx-auto flex min-h-[180px] w-full max-w-5xl flex-1 px-6 pb-8 md:min-h-0 md:pb-[2vh]">
+          <div className="landing-fade-up landing-delay-3 border-border relative flex min-h-0 w-full items-center justify-center overflow-hidden rounded-xl border bg-white">
+            {/* Fond en grille — s'adapte à toutes les proportions du cadre */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(9,9,11,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(9,9,11,0.045) 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }}
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(60% 60% at 20% 10%, rgba(9,9,11,0.05) 0%, transparent 70%), radial-gradient(50% 50% at 90% 95%, rgba(9,9,11,0.035) 0%, transparent 70%)",
+              }}
+            />
+            <video
+              className="relative block h-full max-h-full w-full object-contain"
+              poster="/tuto-poster.png"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            >
+              <source src="/demo-interwai.webm" type="video/webm" />
+              <source src="/demo-interwai-20s.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </section>
+
+
+        {/* ============ PREUVE ============ */}
+        <section className="border-border shrink-0 border-y">
+          <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+            <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
+              Ils recrutent avec Interw
+            </p>
+            <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
+              {BETA_LOGOS.map((logo) => (
+                <img
+                  key={logo.name}
+                  src={logo.src}
+                  alt={logo.name}
+                  loading="lazy"
+                  className={`${logo.className} h-auto w-full max-w-[150px] min-w-0 object-contain`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ============ PROBLÈME ============ */}
+      <section className="mx-auto max-w-5xl px-6 py-24">
+        <h2 className={`mx-auto max-w-3xl text-center ${H2}`}>
+          Aujourd'hui vous ne triez pas des candidats. Vous triez des documents.
+        </h2>
+        <FunnelCards />
+
+        <p className="text-foreground mx-auto mt-14 max-w-2xl text-center text-[24px] leading-snug font-semibold tracking-tight md:text-[32px]">
+          Tous les autres, vous ne les avez jamais entendus.
+        </p>
+      </section>
+
+      {/* ============ PRODUIT ============ */}
+      <section className="border-border border-t">
+        <div className="mx-auto max-w-5xl px-6 py-24">
+          <div className="max-w-3xl">
+            <h2 className={H2}>Faites-les tous passer, sans y passer vos journées.</h2>
+            <p className={`text-foreground/80 mt-5 ${BODY}`}>
+              L'IA transcrit chaque entretien et le confronte à vos questions comme à vos critères. Les
+              meilleurs profils remontent — y compris ceux qu'un CV vous aurait fait manquer.
+            </p>
+          </div>
+          <div className="mt-20 space-y-24">
+          {SECTIONS.map((s) => (
+            <div key={s.title}>
+              <h3 className={`max-w-xl ${H3}`}>{s.title}</h3>
+              <p className={`text-muted-foreground mt-3 max-w-2xl ${BODY}`}>{s.desc}</p>
+              <div
+                className="border-border mt-8 overflow-hidden rounded-xl border bg-cover bg-center p-4 md:p-10"
+                style={{ backgroundImage: `url(${s.background})` }}
+              >
+                <img
+                  src={s.image}
+                  alt={s.alt}
+                  loading="lazy"
+                  className="border-border bg-background w-full rounded-lg border shadow-lg"
+                />
               </div>
             </div>
+          ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Right column — mock report */}
-            <div className="mt-4 md:mt-0">
-              <HeroInterviewMock />
+      {/* ============ TARIFS ============ */}
+      <section id="tarifs" className="border-border border-t">
+        <div className="mx-auto max-w-5xl px-6 py-24">
+          <div className="max-w-2xl">
+            <h2 className={H2}>Nos tarifs</h2>
+          </div>
+
+          {/* Toggle mensuel / annuel */}
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <div className="bg-muted inline-flex rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => setBilling("mensuel")}
+                aria-selected={billing === "mensuel"}
+                className={`inline-flex h-8 items-center rounded-md px-3.5 text-sm font-medium transition-all ${
+                  billing === "mensuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                Mensuel
+              </button>
+              <button
+                type="button"
+                onClick={() => setBilling("annuel")}
+                aria-selected={billing === "annuel"}
+                className={`inline-flex h-8 items-center gap-2 rounded-md px-3.5 text-sm font-medium transition-all ${
+                  billing === "annuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                Annuel
+                <span className="bg-foreground text-background rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                  2 mois offerts
+                </span>
+              </button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============ PRODUCT MOMENTS ============ */}
-      <section style={{ background: "hsl(0 0% 100%)" }}>
-        <div className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">3 ETAPES SIMPLES</span>
-            <h2 className="mt-5 text-3xl font-semibold md:text-5xl">
-              Laissez une chance à tous,<br />rencontrez les meilleurs.
-            </h2>
-          </div>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            <ProjectCreationCard />
-            <InterviewLiveCard />
-            <CandidatesShortlistCard />
-          </div>
-        </div>
-      </section>
-
-
-
-
-      {/* ============ FEATURES ============ */}
-      <section id="features" className="relative" style={{ background: "hsl(240 20% 98%)" }}>
-        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">AVANTAGES</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-5xl">
-              Gagnez du temps tout en gardant la main.
-            </h2>
-            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
-              GARDEZ LE CONTRÔLE. L'IA fait le travail d'analyse a posteriori. Chaque candidat a enfin une vraie chance d'être entendu.
+            <p className="text-muted-foreground text-xs">
+              Prix HT. Sans engagement, changez de plan quand vous voulez.
             </p>
           </div>
 
-          {/* Big card #1 — GARDEZ LE CONTRÔLE */}
-          <div
-            className="mt-14 overflow-hidden rounded-2xl p-10"
-            style={{
-              background: "linear-gradient(135deg, hsl(0 0% 95%), hsl(0 0% 96%))",
-              border: "1px solid hsl(0 0% 8% / 0.25)",
-            }}
-          >
-            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-              <div className="max-w-2xl">
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
-                  style={{ background: "hsl(0 0% 8%)" }}
-                >
-                  GARDEZ LE CONTRÔLE
-                </span>
-                <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Vos questions, vos critères, votre méthode.
-                </h3>
-                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
-                  Vous choisissez les questions et fixez vos critères d'évaluation. Le candidat répond depuis son navigateur, quand il veut. Vous ne perdez jamais la main sur votre recrutement, l'outil s'adapte à votre méthode, pas l'inverse.
-                </p>
-              </div>
-              <div
-                className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
-                style={{ background: "hsl(0 0% 8% / 0.12)", border: "1px solid hsl(0 0% 8% / 0.25)" }}
-              >
-                <Sparkles className="h-12 w-12" style={{ color: "hsl(0 0% 8%)" }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Big card #2 — Équité */}
-          <div
-            className="mt-6 overflow-hidden rounded-2xl p-10"
-            style={{
-              background: "linear-gradient(135deg, hsl(152 70% 96%), hsl(152 70% 97%))",
-              border: "1px solid hsl(152 55% 82%)",
-            }}
-          >
-            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
-              <div className="max-w-2xl">
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-white"
-                  style={{ background: "hsl(142 71% 38%)" }}
-                >
-                  Équité &amp; inclusion
-                </span>
-                <h3 className="mt-4 text-2xl font-semibold text-foreground md:text-3xl">
-                  Un recrutement plus équitable.
-                </h3>
-                <p className="mt-4 text-base leading-relaxed" style={{ color: "hsl(230 10% 25%)" }}>
-                  Peu importe le CV, le nom, l'école ou le parcours : chaque candidat répond aux mêmes questions, évalué selon les mêmes critères. Vous donnez une vraie chance à ceux dont le CV aurait été écarté peut être trop vite.
-                </p>
-              </div>
-              <div
-                className="hidden h-24 w-24 items-center justify-center rounded-2xl md:flex"
-                style={{ background: "hsl(142 71% 38% / 0.15)", border: "1px solid hsl(142 71% 38% / 0.3)" }}
-              >
-                <Scale className="h-12 w-12" style={{ color: "hsl(152 60% 38%)" }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Standard cards grid */}
-          <div className="mt-6 grid gap-5 md:grid-cols-2">
-            {[
-              {
-                icon: Brain,
-                title: "Analyse IA des réponses",
-                desc: "Une fois l'entretien terminé, l'IA transcrit et analyse chaque réponse selon vos critères. Même grille pour tous. Zéro biais, zéro fatigue, zéro oubli. Vous pouvez alors comparer et mieux choisir les profils adaptés.",
-              },
-              {
-                icon: FileText,
-                title: "Rapports prêts à partager",
-                desc: "Un portrait complet de chaque candidat : score, points forts, zones d'attention, recommandation. Prêt à partager avec vos collaborateurs. Sans passer des heures à rédiger vos notes.",
-              },
-              {
-                icon: Library,
-                title: "Votre méthode, capitalisée",
-                desc: "Construisez et sauvegardez votre propre méthode d'évaluation. Réutilisez-la sur tous vos recrutements. Votre expertise ne repart jamais de zéro.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "RGPD natif",
-                desc: "Hébergement européen, consentement explicite, durée de conservation paramétrable. Suppression automatique par action du candidat. ",
-              },
-            ].map((f) => (
-              <div key={f.title} className="landing-card landing-card-hover p-6">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-lg"
-                  style={{ background: "hsl(0 0% 8% / 0.12)", color: "hsl(0 0% 8%)" }}
-                >
-                  <f.icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-4 text-lg font-semibold text-foreground">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "hsl(230 8% 38%)" }}>
-                  {f.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-
-
-
-      {/* ============ COMPARATIF ============ */}
-      <section style={{ background: "hsl(0 0% 100%)" }}>
-        <div className="mx-auto max-w-5xl px-6 py-28 md:py-32">
-          <div className="mx-auto max-w-3xl text-center">
-            <span className="landing-pill">Comparatif</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-5xl">
-              Avec la présélection traditionnelle, vous n'avez pas le temps d'évaluer tout le potentiel de certains candidats.
-            </h2>
-          </div>
-
-          <div
-            className="mt-14 overflow-hidden rounded-2xl"
-            style={{ border: "1px solid hsl(230 14% 88%)" }}
-          >
-            <div className="grid grid-cols-[1.2fr_1fr_1fr] text-sm">
-              <div className="p-5 font-medium" style={{ background: "hsl(240 25% 96%)" }}>&nbsp;</div>
-              <div
-                className="p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
-                style={{ background: "hsl(240 25% 96%)", color: "hsl(230 8% 46%)" }}
-              >
-                Téléphone / Visio
-              </div>
-              <div
-                className="relative p-5 text-center text-xs font-semibold uppercase tracking-wider md:text-sm"
-                style={{ background: "hsl(0 0% 95%)", color: "hsl(0 0% 0%)" }}
-              >
-                <span>Interw</span>
-                <span
-                  className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-white"
-                  style={{ background: "hsl(142 71% 38%)" }}
-                >
-                  <Check className="h-3 w-3" /> Recommandé
-                </span>
-              </div>
-            </div>
-            {[
-              ["Temps par candidat", "20–30 minutes", "0 minute pour vous"],
-              ["Disponibilité", "Heures de bureau", "24h/24, 7j/7"],
-              ["Critères d'évaluation", "Variables", "Identiques pour tous"],
-              ["Biais inconscients", "Présents", "Réduits"],
-              ["Contrôle du processus", "Dépend du recruteur", "100% défini par vous"],
-              ["Équité entre candidats", "Variable", "Identique pour tous"],
-              ["Profils atypiques", "Souvent écartés", "Toujours évalués"],
-              ["Temps d'analyse / candidat", "20–30 min de notes", "Quelques minutes"],
-            ].map(([l, a, b], idx) => (
-              <div
-                key={l}
-                className="grid grid-cols-[1.2fr_1fr_1fr] text-sm"
-                style={{
-                  borderTop: "1px solid hsl(230 16% 92%)",
-                  background: idx % 2 === 1 ? "hsl(240 25% 97%)" : "transparent",
-                }}
-              >
-                <div className="p-5 font-medium text-foreground/90">{l}</div>
-                <div
-                  className="flex items-center justify-center gap-2 p-5 text-center"
-                  style={{ color: "hsl(230 8% 60%)" }}
-                >
-                  <X className="h-4 w-4" style={{ color: "hsl(0 70% 55%)" }} />
-                  <span className="line-through decoration-1">{a}</span>
-                </div>
-                <div
-                  className="flex items-center justify-center gap-2 p-5 text-center font-semibold text-foreground"
-                  style={{ background: "hsl(0 0% 96%)" }}
-                >
-                  <Check className="h-4 w-4 shrink-0" style={{ color: "hsl(0 0% 8%)" }} /> {b}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ PRICING ============ */}
-      <section id="pricing" style={{ background: "hsl(240 25% 97%)" }}>
-        <div className="mx-auto max-w-6xl px-6 py-28 md:py-32">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="landing-pill">Tarifs</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-5xl">
-              Une formule simple, adaptée à votre volume.
-            </h2>
-            <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
-              Sans engagement. Commencez gratuitement, payez à l'usage, passez en illimité quand vous êtes prêt.
-            </p>
-          </div>
-
-          <div className="mt-16 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                name: "Pay As You Go",
-                price: "3 €",
-                priceSuffix: "/ entretien",
-                desc: "Testez sans risque. 20 entretiens offerts pour vous faire votre propre avis.",
-                features: ["20 entretiens offerts", "Postes illimités", "Rapports IA détaillés", "Aucune carte requise"],
-                cta: "Planifier une démo",
-                ctaNote: "Aucune carte requise",
-                highlight: false,
-              },
-              {
-                name: "Startup",
-                price: "99 €",
-                priceSuffix: "/ mois",
-                desc: "Pour les équipes qui recrutent régulièrement et veulent un suivi personnalisé.",
-                features: [
-                  "50 entretiens inclus",
-                  "Ressources — questions partagée",
-                  "Sessions types réutilisables",
-                  "Support prioritaire",
-                ],
-                cta: "Démarrer l'essai",
-                ctaNote: "Annulable à tout moment",
-                highlight: true,
-              },
-              {
-                name: "Entreprise",
-                price: "Sur mesure",
-                priceSuffix: "",
-                desc: "Pour les organisations qui recrutent à grande échelle, avec des exigences RH spécifiques et des besoins de personnalisation avancés.",
-                features: ["Volume négocié", "SSO, rôles avancés, multi-équipes", "IA et voix personnalisées", "DPA + accompagnement dédié"],
-                cta: "Nous contacter",
-                ctaNote: "Devis sous 24h",
-                highlight: false,
-              },
-            ].map((p) => (
-              <div
-                key={p.name}
-                className={`relative rounded-2xl p-7 ${p.highlight ? "landing-pulse-glow" : ""}`}
-                style={
-                  p.highlight
-                    ? {
-                        background: "hsl(0 0% 96%)",
-                        border: "2px solid hsl(0 0% 8%)",
-                      }
-                    : {
-                        background: "hsl(240 25% 97%)",
-                        border: "1px solid hsl(230 14% 88%)",
-                      }
-                }
-              >
-                {p.highlight && (
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-semibold text-white"
-                    style={{ background: "hsl(0 0% 8%)" }}
-                  >
-                    Le plus choisi
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold text-foreground">{p.name}</h3>
-                <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-5xl font-bold text-foreground">{p.price}</span>
-                  {p.priceSuffix && (
-                    <span className="text-sm" style={{ color: "hsl(230 8% 46%)" }}>
-                      {p.priceSuffix}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-3 text-sm leading-relaxed" style={{ color: "hsl(230 8% 42%)" }}>
-                  {p.desc}
-                </p>
-                <ul className="mt-6 space-y-2.5 text-sm">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "hsl(0 0% 8%)" }} />
-                      <span style={{ color: "hsl(230 10% 28%)" }}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  type="button"
-                  onClick={openDemo}
-                  className={`mt-7 inline-flex h-11 w-full items-center justify-center gap-2 px-4 text-sm font-semibold ${
-                    p.highlight ? "landing-btn-primary" : "landing-btn-ghost"
-                  }`}
-                >
-                  {p.cta} <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-                <p className="mt-3 text-center text-xs" style={{ color: "hsl(230 8% 58%)" }}>
-                  {p.ctaNote}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ FAQ ============ */}
-      <section id="faq" style={{ background: "hsl(0 0% 100%)" }}>
-        <div className="mx-auto max-w-3xl px-6 py-28 md:py-32">
-          <div className="text-center">
-            <span className="landing-pill">Questions fréquentes</span>
-            <h2 className="mt-5 text-3xl landing-gradient-text md:text-5xl">
-              Tout ce que vous voulez savoir.
-            </h2>
-          </div>
-
-          <div className="mt-14 space-y-3">
-            {[
-              {
-                q: "Comment l'IA analyse-t-elle les réponses ?",
-                a: "Vous définissez vos critères (compétences, comportements, motivations). Une fois l'entretien terminé, l'IA analyse chaque réponse en fonction de ces critères et attribue une note motivée. L'évaluation porte uniquement sur ce que le candidat a dit — pas sur son nom, son école ou son parcours.",
-              },
-              {
-                q: "Mes candidats acceptent-ils ce format ?",
-                a: "Oui : les candidats apprécient de pouvoir passer l'entretien quand ils veulent, sans pression de planning. Le consentement est demandé clairement avant l'enregistrement.",
-              },
-              {
-                q: "Mes données sont-elles en sécurité ?",
-                a: "Toutes les données sont hébergées dans l'Union européenne. Le consentement candidat est explicite, la durée de conservation est paramétrable, et un engagement RGPD est disponible pour les comptes Entreprise.",
-              },
-              {
-                q: "Combien de temps pour démarrer ?",
-                a: "Une dizaine de minutes. Vous créez votre poste, choisissez vos questions et critères, puis envoyez le lien à vos candidats. Aucune installation.",
-              },
-              {
-                q: "L'IA remplace-t-elle le recruteur ?",
-                a: "Non. interw ne conduit pas l'entretien à votre place — c'est vous qui définissez les questions et les critères. L'IA intervient après, pour analyser les réponses et rédiger les rapports. Vous gardez le contrôle total. L'IA vous fait gagner le temps que vous passiez à décortiquer chaque entretien manuellement.",
-              },
-              {
-                q: "Puis-je personnaliser la voix et le ton de l'IA ?",
-                a: "Oui. Vous choisissez la voix, la langue et le ton. Vous pouvez aussi ajouter une vidéo de présentation au début de l'entretien.",
-              },
-              {
-                q: "interw favorise-t-il vraiment l'égalité des chances ?",
-                a: "Oui. Chaque candidat répond aux mêmes questions, évalué selon les mêmes critères, avec la même grille de notation. Les biais liés au CV, à l'école, au prénom ou à l'apparence n'ont plus d'impact sur la présélection. C'est une façon concrète de recruter plus équitablement — sans effort supplémentaire de votre part.",
-              },
-            ].map((item, i) => {
-              const isOpen = openFaq === i;
+          {/* Cartes */}
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {PLANS.filter((p) => p.name !== "Enterprise").map((p) => {
+              const price = billing === "annuel" ? p.annual : p.monthly;
+              const unit = billing === "annuel" ? p.annualUnit : p.monthlyUnit;
+              const note = billing === "annuel" ? p.annualNote : p.monthlyNote;
               return (
                 <div
-                  key={item.q}
-                  className="overflow-hidden rounded-xl transition-colors"
-                  style={{
-                    background: isOpen ? "hsl(240 25% 97%)" : "hsl(240 20% 98%)",
-                    border: "1px solid hsl(230 16% 92%)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isOpen) e.currentTarget.style.background = "hsl(240 25% 97%)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isOpen) e.currentTarget.style.background = "hsl(240 20% 98%)";
-                  }}
+                  key={p.name}
+                  className={`relative flex flex-col rounded-xl border p-5 ${
+                    p.featured ? "border-foreground bg-background" : "border-border bg-background"
+                  }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(isOpen ? null : i)}
-                    className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium text-foreground md:text-base"
-                  >
-                    <span>{item.q}</span>
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
-                      style={{ color: "hsl(0 0% 8%)" }}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div
-                      className="animate-fade-in px-5 pb-5 text-sm leading-relaxed"
-                      style={{ color: "hsl(230 8% 38%)" }}
-                    >
-                      {item.a}
-                    </div>
+                  {p.featured && (
+                    <span className="bg-foreground text-background absolute -top-2.5 left-6 inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold">
+                      Recommandé
+                    </span>
                   )}
+                  {/* Nom + description — hauteur fixe (3 lignes) */}
+                  <div className="h-[88px]">
+                    <h3 className="text-base font-semibold">{p.name}</h3>
+                    <p className="text-muted-foreground mt-1 text-[13px] leading-snug">{p.desc}</p>
+                  </div>
+                  {/* Prix — hauteur fixe */}
+                  <div className="flex h-12 items-baseline gap-1.5">
+                    <span className="text-4xl font-semibold tracking-tight">{price}</span>
+                    {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
+                  </div>
+                  {/* Note sous le prix — hauteur fixe même si vide */}
+                  <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                  {/* Bouton */}
+                  <Link
+                    to="/login"
+                    className={`mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium transition-opacity hover:opacity-90 ${
+                      p.featured
+                        ? "bg-foreground text-background"
+                        : "border-border bg-background text-foreground border hover:bg-muted"
+                    }`}
+                  >
+                    {p.cta}
+                  </Link>
+                  {/* Note sous le bouton — hauteur fixe identique pour les 4 cartes */}
+                  <p className="mt-1 h-5 text-center text-[11px] text-muted-foreground">{p.noCardNote}</p>
+                  {/* Caractéristiques — hauteur fixe identique, séparateurs alignés */}
+                  <div className="border-border border-t mt-2">
+                    {p.specs.map((s, idx) => {
+                      const tall = idx === 0 || idx === 2 || idx === 3;
+                      return (
+                        <div
+                          key={s.label}
+                          className={`border-border flex items-center justify-between gap-2 overflow-hidden border-b ${
+                            tall ? "h-[62px]" : "h-[46px]"
+                          } last:border-0`}
+                        >
+                          <span className="text-muted-foreground text-[12px] leading-tight">{s.label}</span>
+                          <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
+                            {s.value}
+                            {s.sub && (
+                              <span className="text-muted-foreground block text-[10px] font-normal leading-tight">
+                                {s.sub}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
           </div>
+
+          {/* Enterprise — une seule ligne */}
+          <div className="border-border mt-4 flex flex-col items-start justify-between gap-4 rounded-xl border p-5 sm:flex-row sm:items-center">
+            <p className={`text-foreground ${BODY}`}>
+              <span className="font-semibold">Enterprise</span> — volumes importants, SSO, vos outils et vos
+              règles. Sur devis.
+            </p>
+            <a
+              href={CAL_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-border text-foreground hover:bg-muted inline-flex h-10 shrink-0 items-center rounded-lg border px-4 text-sm font-medium transition-colors"
+            >
+              Parler à l'équipe
+            </a>
+          </div>
+
+          {/* Comparatif — replié par défaut */}
+          <Accordion type="single" collapsible className="mt-6">
+            <AccordionItem value="comparatif" className="border-border rounded-xl border px-5">
+              <AccordionTrigger className="text-[17px] font-semibold hover:no-underline">
+                Comparer les plans en détail
+              </AccordionTrigger>
+              <AccordionContent className="pb-6">
+          {/* Desktop : tableau */}
+          <div className="border-border hidden overflow-x-auto rounded-xl border md:block">
+            <table className="w-full min-w-[760px] border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th className="border-border bg-background border-b px-4 py-3.5 text-left text-sm font-semibold">
+                    Fonctionnalité
+                  </th>
+                  <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
+                    Free
+                  </th>
+                  <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
+                    Plus
+                  </th>
+                  <th className="bg-muted/40 border-border border-b px-4 py-3.5 text-center text-sm font-semibold">
+                    Pro
+                  </th>
+                  <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
+                    Enterprise
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.map((g) => (
+                  <Fragment key={g.group}>
+                    <tr>
+                      <th
+                        colSpan={5}
+                        className="bg-muted text-muted-foreground border-border border-b px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
+                      >
+                        {g.group}
+                      </th>
+                    </tr>
+                    {g.rows.map((r) => (
+                      <tr key={r.label}>
+                        <th className="border-border bg-background border-b px-4 py-3 text-left text-sm font-medium">
+                          {r.label}
+                          {r.sub && (
+                            <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
+                              {r.sub}
+                            </span>
+                          )}
+                        </th>
+                        {r.values.map((v, i) => (
+                          <td
+                            key={i}
+                            className={`border-border border-b px-4 py-3 text-center text-sm ${
+                              i === 2 ? "bg-muted/40" : ""
+                            }`}
+                          >
+                            {v === "✓" ? (
+                              <Check className="text-foreground mx-auto h-4 w-4" />
+                            ) : v === "—" ? (
+                              <Minus className="text-muted-foreground/40 mx-auto h-4 w-4" />
+                            ) : (
+                              <span className="font-medium">{v}</span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile : vue empilée, sans scroll latéral */}
+          <div className="border-border divide-border divide-y rounded-xl border md:hidden">
+            {COMPARISON.map((g) => (
+              <div key={g.group} className="px-4 py-3">
+                <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                  {g.group}
+                </h3>
+                <div className="mt-2 divide-border divide-y">
+                  {g.rows.map((r) => (
+                    <div key={r.label} className="py-2.5">
+                      <p className="text-sm font-medium">
+                        {r.label}
+                        {r.sub && (
+                          <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
+                            {r.sub}
+                          </span>
+                        )}
+                      </p>
+                      <div className="mt-2 grid grid-cols-4 gap-2">
+                        {r.values.map((v, i) => (
+                          <div
+                            key={i}
+                            className={`flex flex-col items-center gap-0.5 rounded-md border px-1 py-1.5 ${
+                              i === 2 ? "border-foreground/30 bg-muted/40" : "border-border"
+                            }`}
+                          >
+                            <span className="text-muted-foreground text-[10px] font-semibold uppercase">
+                              {["F", "+", "Pro", "E"][i]}
+                            </span>
+                            {v === "✓" ? (
+                              <Check className="text-foreground h-4 w-4" />
+                            ) : v === "—" ? (
+                              <Minus className="text-muted-foreground/40 h-4 w-4" />
+                            ) : (
+                              <span className="text-center text-[11px] font-medium leading-tight">
+                                {v}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </section>
 
-      {/* ============ FINAL CTA ============ */}
-      <section className="relative overflow-hidden" style={{ background: "hsl(0 0% 100%)" }}>
-        <div className="landing-final-glow absolute inset-0 -z-10" />
-        <div className="mx-auto max-w-4xl px-6 py-28 text-center md:py-32">
-          <h2 className="text-3xl font-semibold md:text-5xl landing-gradient-text">
+      {/* ============ FAQ ============ */}
+      <section className="border-border border-t">
+        <div className="mx-auto max-w-3xl px-6 py-24">
+          <div className="mb-6">
+            <h2 className={H2}>Questions fréquentes</h2>
+            <p className={`text-muted-foreground mt-3 ${BODY}`}>Les règles, en clair.</p>
+          </div>
+          <div className="border-border border-t">
+            {FAQ.map((item) => (
+              <details key={item.q} className="border-border border-b group">
+                <summary className="text-foreground flex cursor-pointer items-center justify-between py-4 text-[17px] font-medium [&::-webkit-details-marker]:hidden">
+                  {item.q}
+                  <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="text-muted-foreground pb-4 pr-8 text-[15px] leading-relaxed md:text-[16px]">{item.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ CLÔTURE ============ */}
+      <section className="border-border border-t">
+        <div className="mx-auto max-w-3xl px-6 py-24 text-center">
+          <h2 className={H2}>
             Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-base md:text-lg" style={{ color: "hsl(230 8% 38%)" }}>
-            En 20 minutes, on vous montre comment interw s'intègre à votre méthode de recrutement, sans la remplacer.
-          </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={openDemo}
-              className="landing-btn-primary inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+          <div className="mt-9 flex flex-col items-center">
+            <a
+              href={CAL_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
             >
-              Planifier une démo <ArrowRight className="h-4 w-4" />
-            </button>
+              Demander une démo <ArrowRight className="h-4 w-4" />
+            </a>
             <Link
               to="/login"
-              className="landing-btn-ghost inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
+              className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
-              Se connecter
+              Créer un compte gratuit
             </Link>
-          </div>
-          <div
-            className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px]"
-            style={{ color: "hsl(230 8% 55%)" }}
-          >
-            {["RGPD", "Hébergement EU", "Sans engagement", "Setup en 10 min"].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5" style={{ color: "hsl(0 0% 8%)" }} />
-                {t}
-              </span>
-            ))}
+            <p className="text-muted-foreground mt-1.5 text-[13px]">
+              Gratuit · 15 entretiens / mois · sans carte
+            </p>
           </div>
         </div>
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer style={{ background: "hsl(240 20% 98%)", borderTop: "1px solid hsl(230 16% 92%)" }}>
-        <div
-          className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row"
-          style={{ color: "hsl(230 8% 55%)" }}
-        >
-          <div className="flex items-center gap-2">
-            <div
-              className="flex h-5 w-5 items-center justify-center rounded"
-              style={{ background: "linear-gradient(135deg, hsl(0 0% 8%), hsl(0 0% 25%))" }}
-            >
-              <Sparkles className="h-3 w-3 text-white" />
-            </div>
-            <span>© {new Date().getFullYear()} Interw — Tous droits réservés</span>
-          </div>
+      <footer className="border-border border-t">
+        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row">
+          <span>© {new Date().getFullYear()} Interw</span>
           <div className="flex items-center gap-5">
-            <button
-              type="button"
-              onClick={openDemo}
-              className="cursor-pointer border-0 bg-transparent p-0 transition-colors hover:text-foreground"
-              style={{ color: "inherit", font: "inherit" }}
-            >
-              Contact
-            </button>
-            <Link to="/legal" className="transition-colors hover:text-foreground">Mentions légales</Link>
-            <Link to="/privacy" className="transition-colors hover:text-foreground">Confidentialité</Link>
+            <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+              Demander une démo
+            </a>
+            <Link to="/legal" className="hover:text-foreground transition-colors">
+              Mentions légales
+            </Link>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">
+              Confidentialité
+            </Link>
           </div>
         </div>
       </footer>
-
-      <DemoRequestDialog open={demoOpen} onOpenChange={setDemoOpen} />
     </div>
   );
 }
