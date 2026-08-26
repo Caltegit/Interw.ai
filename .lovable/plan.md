@@ -13,7 +13,7 @@ Exclus (amendements validés) :
 
 ## Ce qui est mis en place
 
-1. Dépendances : `i18next`, `react-i18next`.
+1. Dépendances : `i18next`, `react-i18next`, `i18next-browser-languagedetector`.
 2. Langues : `fr` et `en`. **Langue par défaut et fallback : `en`.** Une locale résout en `fr` uniquement si son sous-tag primaire est `fr` (insensible à la casse) ; toute autre langue, connue ou non, donne `en`.
 3. Ordre de résolution, premier trouvé gagne :
    1. query string `?lang=fr` / `?lang=en`
