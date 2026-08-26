@@ -128,13 +128,13 @@ Deno.serve(async (req) => {
       return json(500, { error: `Enregistrement du message impossible : ${mErr.message}` })
     }
 
-    // Copie email vers hello@interw.ai (fire-and-forget)
+    // Copie email vers hello@interw.com (fire-and-forget)
     try {
       const reportedAt = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
       await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'interview-issue-report',
-          recipientEmail: 'hello@interw.ai',
+          recipientEmail: 'hello@interw.com',
           idempotencyKey: `interview-issue-${thread.id}`,
           templateData: {
             candidateName,

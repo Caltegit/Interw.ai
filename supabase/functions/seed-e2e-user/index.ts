@@ -27,7 +27,7 @@ const FIXED = {
   transcriptId: "e2e0e2e0-0000-0000-0000-000000000060",
   pendingToken: "e2e-pending-session-token-aaaaaaaaaaaaaaaaaaaaaaaa",
   resumeToken: "e2e-resume-session-token-bbbbbbbbbbbbbbbbbbbbbbbbbb",
-  email: "e2e-test@interw.ai",
+  email: "e2e-test@interw.com",
   password: "E2eTest!2026",
 };
 
