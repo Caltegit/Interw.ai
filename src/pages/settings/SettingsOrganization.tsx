@@ -110,7 +110,7 @@ export default function SettingsOrganization() {
           <div>
             <Label>Identifiant URL (slug)</Label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">interw.ai/o/</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">interw.com/o/</span>
               <Input
                 value={orgSlug}
                 onChange={(e) => setOrgSlug(e.target.value.toLowerCase())}

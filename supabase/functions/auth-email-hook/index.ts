@@ -58,7 +58,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 // Configuration
 const SITE_NAME = "interw"
 const SENDER_DOMAIN = "notify.interw.ai"
-const ROOT_DOMAIN = "interw.ai"
+const ROOT_DOMAIN = "interw.com"
 const FROM_DOMAIN = "notify.interw.ai" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).

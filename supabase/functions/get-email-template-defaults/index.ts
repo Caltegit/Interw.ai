@@ -14,9 +14,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SITE_NAME = 'interw.ai'
-const SITE_URL = 'https://interw.ai'
-const SAMPLE_URL = 'https://interw.ai/sample'
+const SITE_NAME = 'interw.com'
+const SITE_URL = 'https://interw.com'
+const SAMPLE_URL = 'https://interw.com/sample'
 const SAMPLE_EMAIL = 'candidat@example.com'
 
 const AUTH_TEMPLATES: Record<string, { component: any; subject: string; sampleProps: Record<string, any>; variables: string[]; displayName: string; group: 'auth' }> = {

@@ -121,7 +121,7 @@ export function NewFeedbackDialog() {
             authorEmail,
             subject: subject.trim(),
             message: message.trim(),
-            threadUrl: `https://interw.ai/feedback/${thread.id}`,
+            threadUrl: `https://interw.com/feedback/${thread.id}`,
             submittedAt: new Date().toLocaleString("fr-FR", {
               dateStyle: "long",
               timeStyle: "short",

@@ -13,7 +13,7 @@ interface Props {
 const CandidateAbandonReminderEmail = ({ prenom, sessionName, sessionUrl }: Props) => {
   const name = (prenom && prenom.trim()) || ''
   const session = (sessionName && sessionName.trim()) || 'votre entretien'
-  const url = sessionUrl || 'https://interw.ai'
+  const url = sessionUrl || 'https://interw.com'
 
   return (
     <Html lang="fr" dir="ltr">
@@ -60,7 +60,7 @@ export const template = {
   previewData: {
     prenom: 'Jane',
     sessionName: 'Office Manager - Acme',
-    sessionUrl: 'https://interw.ai/session/demo/start/sample-token',
+    sessionUrl: 'https://interw.com/session/demo/start/sample-token',
   },
 } satisfies TemplateEntry
 

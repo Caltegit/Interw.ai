@@ -39,7 +39,7 @@ export const SceneSolution: React.FC = () => {
             opacity: wizardIn,
           }}
         >
-          <BrowserChrome url="interw.ai/dashboard" width={1200} height={420}>
+          <BrowserChrome url="interw.com/dashboard" width={1200} height={420}>
             <div style={{ padding: "32px 40px" }}>
               <div style={{ color: FG, fontSize: 22, fontWeight: 600, marginBottom: 4 }}>Tableau de bord</div>
               <div style={{ color: FG_DIM, fontSize: 14, marginBottom: 28 }}>Avril 2026</div>

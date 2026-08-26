@@ -18,7 +18,7 @@ interface BrowserChromeProps {
 }
 
 export const BrowserChrome: React.FC<BrowserChromeProps> = ({
-  url = "interw.ai",
+  url = "interw.com",
   children,
   width = 1400,
   height = 760,

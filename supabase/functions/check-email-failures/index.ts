@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
             failureCount,
             threshold,
             windowMinutes,
-            dashboardUrl: 'https://interw.ai/admin/emails',
+            dashboardUrl: 'https://interw.com/admin/emails',
           },
         }),
       })

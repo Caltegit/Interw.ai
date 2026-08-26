@@ -39,7 +39,7 @@ export const SceneEvaluation: React.FC = () => {
         </div>
 
         <div style={{ transform: `scale(${0.92 + 0.08 * wizardIn})`, opacity: wizardIn }}>
-          <BrowserChrome url="interw.ai/sessions/lucas-m" width={1200} height={520}>
+          <BrowserChrome url="interw.com/sessions/lucas-m" width={1200} height={520}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, padding: 28 }}>
               {/* Critères pondérés */}
               <div>

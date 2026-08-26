@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
   const org = project.organizations ?? {};
   // Domaine public fixe — jamais l'origine de la requête (preview Lovable
   // ou autre) pour éviter de mettre un lien lovableproject.com dans l'e-mail.
-  const PUBLIC_APP_URL = (Deno.env.get("PUBLIC_APP_URL") || "https://interw.ai").replace(/\/$/, "");
+  const PUBLIC_APP_URL = (Deno.env.get("PUBLIC_APP_URL") || "https://interw.com").replace(/\/$/, "");
   const ctaLink = `${PUBLIC_APP_URL}/session/${project.slug}/start/${newSession.token}`;
   const prenom = String(original.candidate_name ?? "").trim().split(/\s+/)[0] || "";
 

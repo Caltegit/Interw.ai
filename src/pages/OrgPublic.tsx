@@ -120,7 +120,7 @@ export default function OrgPublic() {
       </main>
 
       <footer className="border-t mt-12 py-6 text-center text-sm text-muted-foreground">
-        Propulsé par <a href="https://interw.ai" className="font-medium hover:text-foreground">Interw</a>
+        Propulsé par <a href="https://interw.com" className="font-medium hover:text-foreground">Interw</a>
       </footer>
     </div>
   );

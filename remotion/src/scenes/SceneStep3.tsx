@@ -21,7 +21,7 @@ export const SceneStep3: React.FC = () => {
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
       <div style={{ transform: `scale(${0.92 + 0.08 * wizardIn})`, opacity: wizardIn }}>
-        <BrowserChrome url="interw.ai/projects/new">
+        <BrowserChrome url="interw.com/projects/new">
           <WizardStepBar active={3} />
 
           <div style={{ padding: "40px 56px" }}>

@@ -145,7 +145,7 @@ export const template = {
   previewData: {
     firstName: 'Marie',
     jobTitle: 'Product Manager Senior',
-    projectUrl: 'https://interw.ai/projects/abc',
+    projectUrl: 'https://interw.com/projects/abc',
     candidates: [
       {
         name: 'Jane Doe',
@@ -153,7 +153,7 @@ export const template = {
         date: '27 mai',
         score: 8.2,
         recommendation: 'À recommander',
-        reportUrl: 'https://interw.ai/sessions/abc',
+        reportUrl: 'https://interw.com/sessions/abc',
       },
       {
         name: 'John Smith',
@@ -161,7 +161,7 @@ export const template = {
         date: '28 mai',
         score: 6.5,
         recommendation: 'À considérer',
-        reportUrl: 'https://interw.ai/sessions/def',
+        reportUrl: 'https://interw.com/sessions/def',
       },
     ],
     stats: {

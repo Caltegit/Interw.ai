@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     // it creates the auth user immediately and lets the invitee sign in without
     // setting a password. Here the user only exists after they submit the
     // signup form on /invite/{token}.
-    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "https://interw.ai";
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.replace(/\/$/, "") || "https://interw.com";
     const inviteLink = `${origin}/invite/${invitationToken}`;
 
     // Send invitation email via our transactional email function

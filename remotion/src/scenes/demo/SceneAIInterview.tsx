@@ -36,7 +36,7 @@ export const SceneAIInterview: React.FC = () => {
         </div>
 
         <div style={{ transform: `scale(${0.92 + 0.08 * wizardIn})`, opacity: wizardIn }}>
-          <BrowserChrome url="interw.ai/session/lucas-m" width={1200} height={520}>
+          <BrowserChrome url="interw.com/session/lucas-m" width={1200} height={520}>
             <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", height: "100%" }}>
               {/* Avatar IA */}
               <div

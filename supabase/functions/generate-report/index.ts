@@ -1520,7 +1520,7 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         return;
       }
 
-      const reportUrl = `https://interw.ai/sessions/${session_id}`;
+      const reportUrl = `https://interw.com/sessions/${session_id}`;
       const templateData = {
         candidateName: session.candidate_name,
         candidateEmail: session.candidate_email,

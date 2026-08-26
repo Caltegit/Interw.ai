@@ -64,7 +64,7 @@ type ProjectRow = { id: string; slug: string; title: string; organization_name: 
 type Reason = "missing_media" | "audio_failed" | "empty_summary" | "job_failed";
 type Lifecycle = "todo" | "resent" | "repassed";
 
-const PUBLIC_APP_URL = "https://interw.ai";
+const PUBLIC_APP_URL = "https://interw.com";
 function candidateUrl(slug: string, token: string) {
   return `${PUBLIC_APP_URL}/session/${slug}/start/${token}`;
 }

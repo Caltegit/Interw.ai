@@ -17,7 +17,7 @@ const EmailFailureAlert = ({
   failureCount = 0,
   threshold = 5,
   windowMinutes = 60,
-  dashboardUrl = 'https://interw.ai/admin/emails',
+  dashboardUrl = 'https://interw.com/admin/emails',
 }: EmailFailureAlertProps) => (
   <Html lang="fr" dir="ltr">
     <Head />
@@ -57,7 +57,7 @@ export const template = {
   subject: (data: Record<string, any>) =>
     `⚠️ ${data?.failureCount ?? 0} échecs d'envoi d'emails détectés sur ${SITE_NAME}`,
   displayName: 'Alerte échecs envoi emails',
-  previewData: { failureCount: 12, threshold: 5, windowMinutes: 60, dashboardUrl: 'https://interw.ai/admin/emails' },
+  previewData: { failureCount: 12, threshold: 5, windowMinutes: 60, dashboardUrl: 'https://interw.com/admin/emails' },
 } satisfies TemplateEntry
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
