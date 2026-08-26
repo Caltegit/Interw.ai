@@ -3,7 +3,7 @@
   "monthly": "Monthly",
   "annual": "Annual",
   "twoMonthsFree": "2 months free",
-  "note": "Prices excl. tax. No commitment, change plan whenever you want.",
+  "note": "Prices exclude VAT. No commitment, switch plans whenever you want.",
   "recommended": "Recommended",
   "forever": "Forever",
   "billedMonthly": "Billed every month",
@@ -12,13 +12,13 @@
   "onQuote": "On request",
   "specs": {
     "activeRoles": "Concurrent active roles",
-    "interviews": "Interviews analysed / month",
+    "interviews": "Interviews analyzed / month",
     "beyond": "Beyond that",
     "users": "Users"
   },
   "values": {
     "unlimited": "Unlimited",
-    "queue": "Queued",
+    "queue": "Rolled over",
     "queueSub": "to the next month",
     "perInterview": "€3 per interview",
     "negotiated": "Negotiated",
@@ -45,7 +45,7 @@
     },
     "enterprise": {
       "name": "Enterprise",
-      "desc": "For high-volume organisations, with your tools and your rules.",
+      "desc": "For high-volume organizations, with your tools and your rules.",
       "cta": "Talk to the team"
     }
   },
@@ -68,8 +68,8 @@
       "reportSub": "Role fit, communication, anchored quotes",
       "resources": "Reusable resources",
       "resourcesSub": "Session templates, questions, criteria",
-      "branding": "White labelling",
-      "brandingSub": "Your logo, your colours, no Interw branding",
+      "branding": "White labeling",
+      "brandingSub": "Your logo, your colors, no Interw branding",
       "users": "Users",
       "roles": "Roles and permissions",
       "sso": "SSO",
