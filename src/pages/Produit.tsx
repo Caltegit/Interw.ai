@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/contexts/AuthContext";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 import { ArrowRight, Sparkles, FolderKanban, FileText, Library, Scale, Activity } from "lucide-react";
@@ -12,97 +14,29 @@ import shotQuestions from "@/assets/product-questions.png";
 import shotCriteria from "@/assets/product-criteria.png";
 
 type Block = {
-  pill: string;
-  title: string;
-  desc: string;
-  bullets: string[];
+  key: string;
   img: string;
   icon: React.ReactNode;
 };
 
 const BLOCKS: Block[] = [
-  {
-    pill: "Tableau de bord",
-    title: "Pilotez en un coup d'œil",
-    desc: "Tous vos postes, vos candidats les plus prometteurs et vos décisions en attente sont réunis sur un seul écran. ",
-    bullets: [
-      "Postes actifs, sessions complétées et score moyen",
-      "Meilleurs candidats des 30 derniers jours mis en avant",
-      "Candidats à traiter pour ne perdre aucun profil",
-    ],
-    img: shotDashboard,
-    icon: <Sparkles className="h-4 w-4" />,
-  },
-  {
-    pill: "Postes",
-    title: "Un poste, vos questions, vos critères",
-    desc: "Créez un poste en moins de 10 minutes. Choisissez vos questions, définissez vos critères, partagez le lien aux candidats qui répondent quand ils veulent.",
-    bullets: [
-      "Lien candidat unique, partageable par email ou RS",
-      "Suivi de l'avancement par poste et par candidat",
-    ],
-    img: shotProjects,
-    icon: <FolderKanban className="h-4 w-4" />,
-  },
-  {
-    pill: "Suivi candidats",
-    title: "Visualisez chaque entretien, triez en quelques clics",
-    desc: "Toutes les réponses vidéo, notées par l'IA selon vos critères. Vous classez chaque candidat : à discuter, retenu, RDV, oui ou non — sans jamais quitter la page.",
-    bullets: [
-      "Vidéos, notes IA et décisions sur la même vue",
-      "Filtres rapides : à traiter, à discuter, retenus",
-      "Notes recruteur pour partager votre avis avec l'équipe",
-    ],
-    img: shotProject,
-    icon: <FolderKanban className="h-4 w-4" />,
-  },
-  {
-    pill: "Rapport IA",
-    title: "Un rapport détaillé pour chaque candidat",
-    desc: "l'IA transcrit et analyse l'entretien en fonction des critères que vous avez définis. Puis une analyse orale et visuelle du candidat est produite, ainsi qu'un score Big Five (personnalité).",
-    bullets: [
-      "Score Fit Poste et synthèse en une phrase",
-      "Évaluation critère par critère avec niveau (Excellent, Partiel, Manquant)",
-      "Citations exactes du candidat avec horodatage vidéo",
-    ],
-    img: shotReport,
-    icon: <FileText className="h-4 w-4" />,
-  },
-  {
-    pill: "Ressources",
-    title: "Vos questions et critères, prêts à réutiliser",
-    desc: "Construisez vos ressources au fil du temps. Réutilisez les bonnes questions sur tous vos postes, capitalisez sur ce qui fonctionne.",
-    bullets: [
-      "Questions classées par type (écrite, vidéo, énigme…)",
-      "Critères réutilisables sur tous vos postes",
-      "Intros et sessions d'emails personnalisables",
-    ],
-    img: shotQuestions,
-    icon: <Library className="h-4 w-4" />,
-  },
-  {
-    pill: "Critères d'évaluation",
-    title: "Vos critères, votre méthode — pas une grille générique",
-    desc: "Définissez précisément ce que vous cherchez : soft skills, motivation, clarté du discours, compétences métier. L'IA évalue chaque candidat exactement selon vos critères.",
-    bullets: [
-      "Critères 100 % personnalisables, sans limite",
-      "Description détaillée pour guider l'analyse IA",
-      "Mêmes critères = mêmes règles pour tous les candidats",
-    ],
-    img: shotCriteria,
-    icon: <Scale className="h-4 w-4" />,
-  },
+  { key: "dashboard", img: shotDashboard, icon: <Sparkles className="h-4 w-4" /> },
+  { key: "projects", img: shotProjects, icon: <FolderKanban className="h-4 w-4" /> },
+  { key: "tracking", img: shotProject, icon: <FolderKanban className="h-4 w-4" /> },
+  { key: "report", img: shotReport, icon: <FileText className="h-4 w-4" /> },
+  { key: "resources", img: shotQuestions, icon: <Library className="h-4 w-4" /> },
+  { key: "criteria", img: shotCriteria, icon: <Scale className="h-4 w-4" /> },
 ];
 
 export default function Produit() {
+  const { t } = useTranslation("landing");
   const { session, loading } = useAuth();
   const [demoOpen, setDemoOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    document.title = "Produit — Interw";
-    const desc =
-      "Découvrez interw : entretiens vidéo asynchrones, rapports IA détaillés, ressources de questions et critères. Une plateforme complète pour évaluer vos candidats sans biais.";
+    document.title = t("productPage.meta.title");
+    const desc = t("productPage.meta.description");
     let m = document.querySelector('meta[name="description"]');
     if (!m) {
       m = document.createElement("meta");
@@ -110,7 +44,7 @@ export default function Produit() {
       document.head.appendChild(m);
     }
     m.setAttribute("content", desc);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -151,14 +85,15 @@ export default function Produit() {
             <span className="text-[15px] font-semibold tracking-tight">Interw</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm md:flex" style={{ color: "hsl(230 8% 42%)" }}>
-            <Link to="/produit" className="transition-colors text-foreground">Produit</Link>
-            <Link to="/#how" className="transition-colors hover:text-foreground">Fonctionnement</Link>
-            <Link to="/#pricing" className="transition-colors hover:text-foreground">Tarifs</Link>
-            <Link to="/#faq" className="transition-colors hover:text-foreground">Questions</Link>
+            <Link to="/produit" className="transition-colors text-foreground">{t("productPage.nav.product")}</Link>
+            <Link to="/#how" className="transition-colors hover:text-foreground">{t("productPage.nav.how")}</Link>
+            <Link to="/#pricing" className="transition-colors hover:text-foreground">{t("productPage.nav.pricing")}</Link>
+            <Link to="/#faq" className="transition-colors hover:text-foreground">{t("productPage.nav.faq")}</Link>
           </nav>
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Link to="/login" className="text-sm transition-colors hover:text-foreground" style={{ color: "hsl(230 8% 42%)" }}>
-              Se connecter
+              {t("productPage.nav.signIn")}
             </Link>
             <span className="hidden h-5 w-px md:block" style={{ background: "hsl(230 14% 88%)" }} />
             <button
@@ -166,7 +101,7 @@ export default function Produit() {
               onClick={openDemo}
               className="landing-btn-primary inline-flex h-9 items-center gap-1.5 px-3.5 text-sm font-medium"
             >
-              Planifier une démo
+              {t("productPage.nav.demo")}
             </button>
           </div>
         </div>
@@ -177,15 +112,12 @@ export default function Produit() {
         <div className="landing-bg-grid absolute inset-0 -z-10" />
         <div className="landing-hero-glow absolute inset-0 -z-10" />
         <div className="mx-auto max-w-4xl px-6 pt-20 pb-16 md:pt-28 md:pb-20 text-center">
-          <span className="landing-pill">Produit</span>
+          <span className="landing-pill">{t("productPage.hero.pill")}</span>
           <h1 className="landing-fade-up landing-delay-1 mt-5 text-4xl font-semibold leading-[1.05] md:text-6xl">
-            <span className="landing-gradient-text">
-              Un outil pour recruter mieux, plus vite, et tout en laissant une chance à tous.
-            </span>
+            <span className="landing-gradient-text">{t("productPage.hero.title")}</span>
           </h1>
           <p className="landing-fade-up landing-delay-2 mx-auto mt-6 max-w-2xl text-lg md:text-xl" style={{ color: "hsl(230 10% 25%)" }}>
-            Entretiens vidéo asynchrones, rapports détaillés, ressources réutilisables.
-            Une plateforme pensée pour les équipes qui veulent évaluer des candidats, pas leur CV.
+            {t("productPage.hero.subtitle")}
           </p>
           <div className="landing-fade-up landing-delay-3 mt-8 flex flex-wrap justify-center gap-3">
             <button
@@ -193,7 +125,7 @@ export default function Produit() {
               onClick={openDemo}
               className="landing-btn-white inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
             >
-              Planifier une démo
+              {t("productPage.hero.demo")}
               <ArrowRight className="h-4 w-4" />
             </button>
             <Link
@@ -201,7 +133,7 @@ export default function Produit() {
               className="inline-flex h-12 items-center gap-2 rounded-md px-6 text-sm font-semibold"
               style={{ border: "1px solid hsl(230 14% 84%)", color: "hsl(230 10% 25%)" }}
             >
-              Voir les tarifs
+              {t("productPage.hero.pricing")}
             </Link>
           </div>
         </div>
@@ -214,7 +146,7 @@ export default function Produit() {
             const reverse = i % 2 === 1;
             return (
               <div
-                key={b.pill}
+                key={b.key}
                 className={`grid items-center gap-10 md:gap-16 md:grid-cols-2 ${reverse ? "md:[&>div:first-child]:order-2" : ""}`}
               >
                 <div className="self-center">
@@ -223,21 +155,23 @@ export default function Produit() {
                     style={{ background: "hsl(0 0% 8%)" }}
                   >
                     {b.icon}
-                    {b.pill}
+                    {t(`productPage.blocks.${b.key}.pill`)}
                   </span>
                   <h2 className="mt-3 text-2xl font-semibold text-foreground md:text-3xl leading-tight">
-                    {b.title}
+                    {t(`productPage.blocks.${b.key}.title`)}
                   </h2>
                   <p className="mt-3 text-sm md:text-base leading-relaxed" style={{ color: "hsl(230 10% 30%)" }}>
-                    {b.desc}
+                    {t(`productPage.blocks.${b.key}.desc`)}
                   </p>
                   <ul className="mt-4 space-y-2">
-                    {b.bullets.map((bl) => (
-                      <li key={bl} className="flex items-start gap-2.5 text-sm" style={{ color: "hsl(230 10% 25%)" }}>
-                        <Activity className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "hsl(0 0% 8%)" }} />
-                        <span>{bl}</span>
-                      </li>
-                    ))}
+                    {["b1", "b2", "b3"]
+                      .filter((bk) => t(`productPage.blocks.${b.key}.${bk}`, { defaultValue: "" }))
+                      .map((bk) => (
+                        <li key={bk} className="flex items-start gap-2.5 text-sm" style={{ color: "hsl(230 10% 25%)" }}>
+                          <Activity className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "hsl(0 0% 8%)" }} />
+                          <span>{t(`productPage.blocks.${b.key}.${bk}`)}</span>
+                        </li>
+                      ))}
                   </ul>
                 </div>
                 <div className="relative">
@@ -253,7 +187,7 @@ export default function Produit() {
                       background: "white",
                     }}
                   >
-                    <img src={b.img} alt={b.title} loading="lazy" className="block w-full h-auto" />
+                    <img src={b.img} alt={t(`productPage.blocks.${b.key}.title`)} loading="lazy" className="block w-full h-auto" />
                   </div>
                 </div>
               </div>
@@ -266,17 +200,17 @@ export default function Produit() {
       <section style={{ background: "hsl(0 0% 100%)" }}>
         <div className="mx-auto max-w-4xl px-6 py-24 text-center">
           <h2 className="text-3xl md:text-5xl landing-gradient-text">
-            Prêt à voir interw sur vos propres recrutements ?
+            {t("productPage.cta.title")}
           </h2>
           <p className="mt-5 text-base md:text-lg" style={{ color: "hsl(230 8% 42%)" }}>
-            20 entretiens offerts. Sans carte bancaire. Setup en 10 minutes.
+            {t("productPage.cta.subtitle")}
           </p>
           <button
             type="button"
             onClick={openDemo}
             className="landing-btn-white mt-8 inline-flex h-12 items-center gap-2 px-6 text-sm font-semibold"
           >
-            Planifier une démo
+            {t("productPage.cta.button")}
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
