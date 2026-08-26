@@ -10,7 +10,7 @@ Les trois images sont refaites avec les corrections demandées, toujours en donn
 ## 2. Écran « Vos questions, posées par vous »
 
 - On ne montre plus l'onglet Questions mais l'écran des **critères d'évaluation** : liste des critères pondérés (ex. Sens du service, Clarté d'expression, Gestion des objections, Rigueur, Motivation) avec leurs poids et la répartition.
-- Le titre du bloc sur la page d'accueil sera ajusté en conséquence lors de l'intégration (proposition : « Vos critères, votre grille de lecture. ») — à valider.
+- Le titre du bloc sur la page d'accueil reste inchangé.
 
 ## 3. Rapport de Camille Fontaine
 
@@ -23,6 +23,3 @@ Les trois images sont refaites avec les corrections demandées, toujours en donn
 - Anonymisation par substitution DOM juste avant la capture (noms, e-mails, dates, logo et nom d'organisation) — aucune donnée réelle dans l'image, aucune écriture en base.
 - Nouvelles previews envoyées dans le chat avant tout remplacement dans `src/assets/`.
 
-## Point à confirmer
-
-Le bloc 1 de la page d'accueil s'intitule aujourd'hui « Vos questions, posées par vous. » : je change le titre pour parler des critères, ou je garde le texte actuel avec l'image des critères ?
