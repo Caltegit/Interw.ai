@@ -1,0 +1,169 @@
+{
+  "nav": {
+    "product": "Product",
+    "pricing": "Pricing",
+    "signIn": "Sign in",
+    "demo": "Book a demo"
+  },
+  "hero": {
+    "title": "Assess candidates, not their résumés.",
+    "subtitle": "You ask your questions on camera. Every candidate answers whenever and wherever they want. Interw scores each interview against your criteria and surfaces the profiles worth seeing first.",
+    "cta": "Book a demo",
+    "createAccount": "Create a free account",
+    "freeNote": "Free · 15 interviews / month · no card required"
+  },
+  "proof": {
+    "title": "They hire with Interw"
+  },
+  "problem": {
+    "title": "Today you are not sorting candidates. You are sorting documents.",
+    "outro": "Everyone else, you never actually heard."
+  },
+  "funnel": {
+    "s1": {
+      "title": "Applications come in.",
+      "desc": "All written with the same AI, all neatly calibrated, all convincing. Nothing sets them apart anymore."
+    },
+    "s2": {
+      "title": "You sort on what shows.",
+      "desc": "The school, the years, the layout. Signals that never tell you who will actually be best in the role."
+    },
+    "s3": {
+      "title": "You call the survivors.",
+      "desc": "Fifteen minutes each, to be squeezed into your office hours and their availability. Most of the time, one minute is enough to decide."
+    },
+    "s4": {
+      "title": "You meet three of them.",
+      "desc": "The only ones you truly listened to."
+    },
+    "illus": {
+      "sorted": "Sorted",
+      "callInProgress": "Call in progress",
+      "minutes": "15 min",
+      "received": "Résumés received",
+      "called": "Called",
+      "interviews": "Interviews",
+      "hired": "Hired"
+    }
+  },
+  "product": {
+    "title": "Let them all interview, without spending your days on it.",
+    "desc": "The AI transcribes every interview and matches it against your questions and your criteria. The best profiles rise to the top — including the ones a résumé would have made you miss.",
+    "s1": {
+      "title": "Your questions, asked by you.",
+      "desc": "You describe the role, you choose your criteria, you film your questions. Ten minutes, once. The link is ready.",
+      "alt": "Creating a role in Interw"
+    },
+    "s2": {
+      "title": "Every candidate interviews on video",
+      "desc": "Wherever they feel comfortable, whenever it suits them: at home, between two meetings, in the evening after work. No slot to coordinate — they watch you ask your questions and answer at their own pace.",
+      "alt": "A candidate's video interview report"
+    },
+    "s3": {
+      "title": "The right profiles rise, you decide.",
+      "desc": "Our AI scores against your criteria, and every rating is backed by the answer excerpts that justify it. Watch ten seconds, two minutes or the whole interview — the call is yours.",
+      "alt": "Candidate list ranked by fit score"
+    }
+  },
+  "closing": {
+    "title": "What if your next hire is the one you would have ruled out on paper?"
+  },
+  "footer": {
+    "copyright": "© {{year}} Interw",
+    "demo": "Book a demo",
+    "legal": "Legal notice",
+    "privacy": "Privacy"
+  },
+  "productPage": {
+    "nav": {
+      "product": "Product",
+      "how": "How it works",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "signIn": "Sign in",
+      "demo": "Schedule a demo"
+    },
+    "hero": {
+      "pill": "Product",
+      "title": "A tool to hire better, faster, while giving everyone a fair shot.",
+      "subtitle": "Asynchronous video interviews, detailed reports, reusable resources. A platform built for teams who want to assess candidates, not their résumés.",
+      "demo": "Schedule a demo",
+      "pricing": "See pricing"
+    },
+    "meta": {
+      "title": "Product — Interw",
+      "description": "Discover Interw: asynchronous video interviews, detailed AI reports, reusable question and criteria libraries. A complete platform to assess candidates without bias."
+    },
+    "blocks": {
+      "dashboard": {
+        "pill": "Dashboard",
+        "title": "See everything at a glance",
+        "desc": "All your roles, your most promising candidates and your pending decisions on a single screen.",
+        "b1": "Active roles, completed sessions and average score",
+        "b2": "Top candidates from the last 30 days highlighted",
+        "b3": "Candidates to review so no profile slips through"
+      },
+      "projects": {
+        "pill": "Roles",
+        "title": "One role, your questions, your criteria",
+        "desc": "Create a role in under 10 minutes. Choose your questions, define your criteria, share the link with candidates who answer whenever they want.",
+        "b1": "A unique candidate link, shareable by email or social media",
+        "b2": "Progress tracking per role and per candidate"
+      },
+      "tracking": {
+        "pill": "Candidate tracking",
+        "title": "Watch every interview, shortlist in a few clicks",
+        "desc": "All video answers, scored by the AI against your criteria. You rank each candidate: to discuss, shortlisted, meeting, yes or no — without ever leaving the page.",
+        "b1": "Videos, AI scores and decisions in one view",
+        "b2": "Quick filters: to review, to discuss, shortlisted",
+        "b3": "Recruiter notes to share your view with the team"
+      },
+      "report": {
+        "pill": "AI report",
+        "title": "A detailed report for every candidate",
+        "desc": "The AI transcribes and analyses the interview against the criteria you defined. It then produces a spoken and visual analysis of the candidate, plus a Big Five personality score.",
+        "b1": "Role fit score and a one-sentence summary",
+        "b2": "Criterion-by-criterion assessment with a level (Excellent, Partial, Missing)",
+        "b3": "Exact candidate quotes with video timestamps"
+      },
+      "resources": {
+        "pill": "Resources",
+        "title": "Your questions and criteria, ready to reuse",
+        "desc": "Build your library over time. Reuse the questions that work across every role and capitalise on what proves effective.",
+        "b1": "Questions organised by type (written, video, puzzle…)",
+        "b2": "Criteria reusable across all your roles",
+        "b3": "Customisable intros and email sequences"
+      },
+      "criteria": {
+        "pill": "Evaluation criteria",
+        "title": "Your criteria, your method — not a generic grid",
+        "desc": "Define exactly what you are looking for: soft skills, motivation, clarity of speech, job-specific skills. The AI assesses each candidate strictly against your criteria.",
+        "b1": "Fully customisable criteria, no limit",
+        "b2": "Detailed descriptions to guide the AI analysis",
+        "b3": "Same criteria means the same rules for every candidate"
+      }
+    },
+    "cta": {
+      "title": "Ready to see Interw on your own hiring?",
+      "subtitle": "20 interviews on us. No credit card. Setup in 10 minutes.",
+      "button": "Schedule a demo"
+    }
+  },
+  "demoDialog": {
+    "title": "Book a demo",
+    "description": "Leave us your email and we will get back to you within 24 hours.",
+    "emailLabel": "Your email *",
+    "emailPlaceholder": "you@company.com",
+    "messageLabel": "A message?",
+    "messagePlaceholder": "A few words about what you need…",
+    "submit": "Send request",
+    "sending": "Sending…",
+    "invalidTitle": "Check your entry",
+    "invalidFields": "Invalid fields",
+    "invalidEmail": "Invalid email",
+    "successTitle": "Request sent 🎉",
+    "successDescription": "We will get back to you very soon.",
+    "errorTitle": "Error",
+    "errorDescription": "We could not send your request. Try again or write to hello@interw.com."
+  }
+}

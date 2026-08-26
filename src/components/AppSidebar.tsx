@@ -1,5 +1,6 @@
 import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -262,6 +263,11 @@ export function AppSidebar() {
                     </DropdownMenuItem>
                   </>
                 )}
+                <DropdownMenuSeparator />
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-xs text-muted-foreground">Langue</span>
+                  <LanguageSwitcher />
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => signOut()}>
                   <LogOut className="mr-2 h-4 w-4" /> Déconnexion

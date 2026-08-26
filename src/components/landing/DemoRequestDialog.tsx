@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -9,10 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
-const schema = z.object({
-  email: z.string().trim().email("Email invalide").max(255),
-  message: z.string().trim().max(1000).optional(),
-});
+const makeSchema = (invalidEmail: string) =>
+  z.object({
+    email: z.string().trim().email(invalidEmail).max(255),
+    message: z.string().trim().max(1000).optional(),
+  });
 
 interface Props {
   open: boolean;
@@ -23,14 +25,15 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useTranslation("landing");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const parsed = schema.safeParse({ email, message: message || undefined });
+    const parsed = makeSchema(t("demoDialog.invalidEmail")).safeParse({ email, message: message || undefined });
     if (!parsed.success) {
       toast({
-        title: "Vérifiez votre saisie",
-        description: parsed.error.errors[0]?.message ?? "Champs invalides",
+        title: t("demoDialog.invalidTitle"),
+        description: parsed.error.errors[0]?.message ?? t("demoDialog.invalidFields"),
         variant: "destructive",
       });
       return;
@@ -54,8 +57,8 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
       if (error) throw error;
 
       toast({
-        title: "Demande envoyée 🎉",
-        description: "Nous revenons vers vous très vite.",
+        title: t("demoDialog.successTitle"),
+        description: t("demoDialog.successDescription"),
       });
       setEmail("");
       setMessage("");
@@ -63,8 +66,8 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
     } catch (err) {
       console.error("Demo request error:", err);
       toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer la demande. Réessayez ou écrivez-nous à hello@interw.ai.",
+        title: t("demoDialog.errorTitle"),
+        description: t("demoDialog.errorDescription"),
         variant: "destructive",
       });
     } finally {
@@ -76,28 +79,28 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Demander une démo</DialogTitle>
-          <DialogDescription>Laissez-nous votre email et nous vous recontactons sous 24h.</DialogDescription>
+          <DialogTitle>{t("demoDialog.title")}</DialogTitle>
+          <DialogDescription>{t("demoDialog.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="demo-email">Votre email *</Label>
+            <Label htmlFor="demo-email">{t("demoDialog.emailLabel")}</Label>
             <Input
               id="demo-email"
               type="email"
               required
               autoFocus
-              placeholder="vous@entreprise.com"
+              placeholder={t("demoDialog.emailPlaceholder")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="demo-message">Un message ?</Label>
+            <Label htmlFor="demo-message">{t("demoDialog.messageLabel")}</Label>
             <Textarea
               id="demo-message"
-              placeholder="Quelques mots sur votre besoin…"
+              placeholder={t("demoDialog.messagePlaceholder")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               disabled={submitting}
@@ -109,10 +112,10 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Envoi…
+                {t("demoDialog.sending")}
               </>
             ) : (
-              "Envoyer la demande"
+              t("demoDialog.submit")
             )}
           </Button>
         </form>

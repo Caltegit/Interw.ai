@@ -1,0 +1,88 @@
+{
+  "title": "Pricing",
+  "monthly": "Monthly",
+  "annual": "Annual",
+  "twoMonthsFree": "2 months free",
+  "note": "Prices excl. tax. No commitment, change plan whenever you want.",
+  "recommended": "Recommended",
+  "forever": "Forever",
+  "billedMonthly": "Billed every month",
+  "billedAnnually": "Billed once a year",
+  "annualCommitment": "Annual commitment",
+  "onQuote": "On request",
+  "specs": {
+    "activeRoles": "Concurrent active roles",
+    "interviews": "Interviews analysed / month",
+    "beyond": "Beyond that",
+    "users": "Users"
+  },
+  "values": {
+    "unlimited": "Unlimited",
+    "queue": "Queued",
+    "queueSub": "to the next month",
+    "perInterview": "€3 per interview",
+    "negotiated": "Negotiated",
+    "unlimitedRoles": "Unlimited + roles",
+    "unlimitedRolesSso": "Unlimited + roles + SSO",
+    "extraRole": "+€29 per role (max 5)"
+  },
+  "plans": {
+    "free": {
+      "name": "Free",
+      "desc": "To try Interw on a real hire.",
+      "cta": "Create an account"
+    },
+    "plus": {
+      "name": "Plus",
+      "desc": "For a manager or a small team hiring regularly.",
+      "cta": "Choose Plus"
+    },
+    "pro": {
+      "name": "Pro",
+      "desc": "For HR teams rolling Interw out across every hire.",
+      "cta": "Try Pro for 30 days",
+      "noCardNote": "No credit card"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "desc": "For high-volume organisations, with your tools and your rules.",
+      "cta": "Talk to the team"
+    }
+  },
+  "enterpriseLine": {
+    "text": "— high volumes, SSO, your tools and your rules. On request.",
+    "cta": "Talk to the team"
+  },
+  "compare": {
+    "trigger": "Compare plans in detail",
+    "feature": "Feature",
+    "groups": {
+      "all": "Included in every plan",
+      "brand": "Brand",
+      "team": "Team",
+      "integrations": "Integrations",
+      "support": "Support"
+    },
+    "rows": {
+      "report": "Full AI report",
+      "reportSub": "Role fit, communication, anchored quotes",
+      "resources": "Reusable resources",
+      "resourcesSub": "Session templates, questions, criteria",
+      "branding": "White labelling",
+      "brandingSub": "Your logo, your colours, no Interw branding",
+      "users": "Users",
+      "roles": "Roles and permissions",
+      "sso": "SSO",
+      "ats": "ATS integration",
+      "api": "API",
+      "mcp": "MCP",
+      "mcpSub": "Connect Interw to your AI agents",
+      "email": "Email",
+      "priority": "Priority",
+      "phone": "Phone and WhatsApp",
+      "dedicated": "Dedicated support"
+    }
+  },
+  "perMonth": "/ mo",
+  "perYear": "/ yr"
+}

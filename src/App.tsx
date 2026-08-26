@@ -1,4 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
+import { I18nextProvider } from "react-i18next";
+import i18n from "@/i18n";
 import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 
 // Redirige les anciennes routes /interview/:slug/{test|start|complete}/:token
@@ -83,6 +85,7 @@ import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
+  <I18nextProvider i18n={i18n}>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -185,6 +188,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </I18nextProvider>
 );
 
 export default App;

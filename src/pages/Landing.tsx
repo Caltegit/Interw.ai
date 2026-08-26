@@ -1,7 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 
 import productProjects from "@/assets/product-projects.png";
@@ -80,193 +82,116 @@ const H2 = "text-[32px] md:text-[52px] leading-[1.08] font-semibold tracking-tig
 const H3 = "text-[24px] md:text-[28px] leading-[1.15] font-semibold tracking-tight text-foreground";
 const BODY = "text-[17px] md:text-[19px] leading-relaxed";
 
-/* Ancien bloc chiffré — conservé au cas où
-const PROBLEMS = [
-  { stat: "200", title: "Candidatures par offre", desc: "..." },
-  { stat: "8 min", title: "Un pré-entretien téléphonique", desc: "..." },
-  { stat: "40 h", title: "200 candidats en visio", desc: "..." },
-];
-*/
+const SECTION_KEYS = [
+  { key: "s1", image: productProjects, background: paintingShore },
+  { key: "s2", image: productReport, background: paintingPier },
+  { key: "s3", image: productDashboard, background: paintingBay },
+] as const;
 
-/* Les 4 étapes de l'entonnoir vivent désormais dans FunnelCards.tsx */
-
-
-const SECTIONS = [
+const PLAN_KEYS = [
   {
-    title: "Vos questions, posées par vous.",
-    desc: "Vous décrivez le poste, vous choisissez vos critères, vous filmez vos questions. Dix minutes, une fois. Le lien est prêt.",
-    image: productProjects,
-    alt: "Écran de création d'un poste dans Interw",
-    background: paintingShore,
-  },
-  {
-    title: "Chaque candidat passe en vidéo",
-    desc: "Là où il est à l'aise, quand ça l'arrange : depuis chez lui, entre deux réunions, le soir après le travail. Pas de créneau à synchroniser — il vous voit poser vos questions, il y répond à son rythme.",
-    image: productReport,
-    alt: "Rapport d'entretien vidéo d'un candidat",
-    background: paintingPier,
-  },
-  {
-    title: "Les bons profils remontent, vous décidez.",
-    desc: "Notre IA évalue sur vos critères, et chaque note s'appuie sur des extraits de réponses qui la justifie. Vous regardez dix secondes, deux minutes ou l'entretien entier — c'est vous qui tranchez.",
-    image: productDashboard,
-    alt: "Liste de candidats triés par score de correspondance",
-    background: paintingBay,
-  },
-];
-
-const PLANS = [
-  {
-    name: "Free",
-    desc: "Pour essayer Interw sur un vrai recrutement.",
+    key: "free",
     monthly: "0 €",
     annual: "0 €",
-    monthlyUnit: "",
-    annualUnit: "",
-    monthlyNote: "Pour toujours",
-    annualNote: "Pour toujours",
-    cta: "Créer un compte",
+    monthlyUnitKey: null,
+    annualUnitKey: null,
+    monthlyNoteKey: "forever",
+    annualNoteKey: "forever",
     featured: false,
-    noCardNote: "",
+    noCardNoteKey: null,
     specs: [
-      { label: "Postes actifs simultanés", value: "1" },
-      { label: "Entretiens analysés / mois", value: "15" },
-      { label: "Au-delà", value: "File d'attente", sub: "au mois suivant" },
-      { label: "Utilisateurs", value: "1" },
+      { labelKey: "specs.activeRoles", value: "1" },
+      { labelKey: "specs.interviews", value: "15" },
+      { labelKey: "specs.beyond", valueKey: "values.queue", subKey: "values.queueSub" },
+      { labelKey: "specs.users", value: "1" },
     ],
   },
   {
-    name: "Plus",
-    desc: "Pour un manager ou une petite équipe qui recrute régulièrement.",
+    key: "plus",
     monthly: "99 €",
     annual: "990 €",
-    monthlyUnit: "/ mois",
-    annualUnit: "/ an",
-    monthlyNote: "Facturé chaque mois",
-    annualNote: "Facturé une fois par an",
-    cta: "Choisir Plus",
+    monthlyUnitKey: "perMonth",
+    annualUnitKey: "perYear",
+    monthlyNoteKey: "billedMonthly",
+    annualNoteKey: "billedAnnually",
     featured: false,
-    noCardNote: "",
+    noCardNoteKey: null,
     specs: [
-      { label: "Postes actifs simultanés", value: "3", sub: "+29 € par poste (max 5)" },
-      { label: "Entretiens analysés / mois", value: "50" },
-      { label: "Au-delà", value: "3 € par entretien" },
-      { label: "Utilisateurs", value: "Illimités" },
+      { labelKey: "specs.activeRoles", value: "3", subKey: "values.extraRole" },
+      { labelKey: "specs.interviews", value: "50" },
+      { labelKey: "specs.beyond", valueKey: "values.perInterview" },
+      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
-    name: "Pro",
-    desc: "Pour la fonction RH qui déploie Interw sur tous ses recrutements.",
+    key: "pro",
     monthly: "399 €",
     annual: "3 990 €",
-    monthlyUnit: "/ mois",
-    annualUnit: "/ an",
-    monthlyNote: "Facturé chaque mois",
-    annualNote: "Facturé une fois par an",
-    cta: "Essayer Pro 30 jours",
+    monthlyUnitKey: "perMonth",
+    annualUnitKey: "perYear",
+    monthlyNoteKey: "billedMonthly",
+    annualNoteKey: "billedAnnually",
     featured: true,
-    noCardNote: "Sans carte bancaire",
+    noCardNoteKey: "plans.pro.noCardNote",
     specs: [
-      { label: "Postes actifs simultanés", value: "20" },
-      { label: "Entretiens analysés / mois", value: "500" },
-      { label: "Au-delà", value: "3 € par entretien" },
-      { label: "Utilisateurs", value: "Illimités + rôles" },
+      { labelKey: "specs.activeRoles", value: "20" },
+      { labelKey: "specs.interviews", value: "500" },
+      { labelKey: "specs.beyond", valueKey: "values.perInterview" },
+      { labelKey: "specs.users", valueKey: "values.unlimitedRoles" },
     ],
   },
-  {
-    name: "Enterprise",
-    desc: "Pour les organisations à volume, avec vos outils et vos règles.",
-    monthly: "Sur devis",
-    annual: "Sur devis",
-    monthlyUnit: "",
-    annualUnit: "",
-    monthlyNote: "Engagement annuel",
-    annualNote: "Engagement annuel",
-    cta: "Parler à l'équipe",
-    featured: false,
-    noCardNote: "",
-    specs: [
-      { label: "Postes actifs simultanés", value: "Illimités" },
-      { label: "Entretiens analysés / mois", value: "Négocié" },
-      { label: "Au-delà", value: "Négocié" },
-      { label: "Utilisateurs", value: "Illimités + rôles + SSO" },
-    ],
-  },
-];
+] as const;
 
-const COMPARISON = [
+const COMPARISON_KEYS = [
   {
-    group: "Inclus dans tous les plans",
+    group: "compare.groups.all",
     rows: [
-      { label: "Rapport IA complet", sub: "Fit poste, communication, verbatims ancrés", values: ["✓", "✓", "✓", "✓"] },
-      { label: "Ressources réutilisables", sub: "Sessions types, questions, critères", values: ["✓", "✓", "✓", "✓"] },
+      { label: "compare.rows.report", sub: "compare.rows.reportSub", values: ["✓", "✓", "✓", "✓"] },
+      { label: "compare.rows.resources", sub: "compare.rows.resourcesSub", values: ["✓", "✓", "✓", "✓"] },
     ],
   },
   {
-    group: "Marque",
+    group: "compare.groups.brand",
     rows: [
-      { label: "Personnalisation", sub: "Votre logo, vos couleurs, sans mention Interw", values: ["—", "✓", "✓", "✓"] },
+      { label: "compare.rows.branding", sub: "compare.rows.brandingSub", values: ["—", "✓", "✓", "✓"] },
     ],
   },
   {
-    group: "Équipe",
+    group: "compare.groups.team",
     rows: [
-      { label: "Utilisateurs", values: ["1", "Illimités", "Illimités", "Illimités"] },
-      { label: "Rôles et permissions", values: ["—", "—", "✓", "✓"] },
-      { label: "SSO", values: ["—", "—", "—", "✓"] },
+      {
+        label: "compare.rows.users",
+        values: ["1", "values.unlimited", "values.unlimited", "values.unlimited"],
+      },
+      { label: "compare.rows.roles", values: ["—", "—", "✓", "✓"] },
+      { label: "compare.rows.sso", values: ["—", "—", "—", "✓"] },
     ],
   },
   {
-    group: "Intégrations",
+    group: "compare.groups.integrations",
     rows: [
-      { label: "Intégration ATS", values: ["—", "—", "✓", "✓"] },
-      { label: "API", values: ["—", "—", "—", "✓"] },
-      { label: "MCP", sub: "Branchez Interw à vos agents IA", values: ["—", "—", "—", "✓"] },
+      { label: "compare.rows.ats", values: ["—", "—", "✓", "✓"] },
+      { label: "compare.rows.api", values: ["—", "—", "—", "✓"] },
+      { label: "compare.rows.mcp", sub: "compare.rows.mcpSub", values: ["—", "—", "—", "✓"] },
     ],
   },
   {
-    group: "Support",
+    group: "compare.groups.support",
     rows: [
-      { label: "Email", values: ["✓", "✓", "✓", "✓"] },
-      { label: "Prioritaire", values: ["—", "—", "✓", "✓"] },
-      { label: "Téléphone et WhatsApp", values: ["—", "—", "✓", "✓"] },
-      { label: "Support personnalisé", values: ["—", "—", "—", "✓"] },
+      { label: "compare.rows.email", values: ["✓", "✓", "✓", "✓"] },
+      { label: "compare.rows.priority", values: ["—", "—", "✓", "✓"] },
+      { label: "compare.rows.phone", values: ["—", "—", "✓", "✓"] },
+      { label: "compare.rows.dedicated", values: ["—", "—", "—", "✓"] },
     ],
   },
-];
+] as const;
 
-const FAQ = [
-  {
-    q: "Est-ce que l'IA décide à ma place ?",
-    a: "Non. Interw transcrit les réponses, les confronte à vos critères et vous propose un ordre de lecture. Chaque appréciation renvoie à l'extrait de réponse qui la justifie, que vous pouvez écouter. Vous gardez la main sur qui vous rencontrez, et vous pouvez ignorer le classement.",
-  },
-  {
-    q: "Où sont hébergées les vidéos et les données des candidats ?",
-    a: "Les vidéos sont hébergées sur nos serveurs en France, et nous utilisons une IA hébergée en France.",
-  },
-  {
-    q: "Qu'est-ce qu'un poste actif ?",
-    a: "Un poste actif dans Interw correspond à un recrutement en cours. Quand le recrutement est terminé, archivez-le : le slot se libère immédiatement pour le suivant. Un poste permanent, comme des candidatures spontanées, occupe un slot en continu. Sur Plus, vous pouvez ajouter jusqu'à deux postes supplémentaires, à 29 € par mois chacun.",
-  },
-  {
-    q: "Qu'est-ce qui compte comme un entretien ?",
-    a: "Un candidat qui va au bout de sa session et dont le rapport est généré. Les invitations envoyées, les sessions abandonnées et vos propres tests ne comptent jamais. Vous pouvez partager votre lien aussi largement que vous voulez.",
-  },
-  {
-    q: "Que se passe-t-il quand j'atteins mon quota ?",
-    a: "Rien pour vos candidats : ils ne sont jamais bloqués. Sur Plus et Pro, chaque entretien supplémentaire est facturé 3 € sur votre facture suivante. Sur Free, les 15 candidats suivants sont conservés et analysés dès votre passage en Plus, ou au renouvellement de votre quota. Au-delà, le lien se ferme jusqu'au mois suivant.",
-  },
-  {
-    q: "Comment fonctionne l'essai ?",
-    a: "30 jours sur Pro, sans carte bancaire. Le compte à rebours démarre quand vous publiez votre premier poste, pas à l'inscription. Ensuite, vous choisissez un plan ou vous restez sur Free : tout ce que vous avez créé reste consultable.",
-  },
-  {
-    q: "Mensuel ou annuel ?",
-    a: "Le mensuel est sans engagement : vous montez ou descendez de plan quand vous voulez, y compris hors saison de recrutement. L'annuel, c'est 12 mois pour le prix de 10.",
-  },
-];
+const FAQ_KEYS = ["decision", "hosting", "activeRole", "interview", "quota", "trial", "billing"] as const;
 
 export default function Landing() {
+  const { t } = useTranslation("landing");
+  const { t: tp } = useTranslation("pricing");
+  const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
@@ -282,10 +207,8 @@ export default function Landing() {
     return <Navigate to="/dashboard" replace />;
   }
 
-
-
-
-
+  /** Rend une valeur de tableau comparatif : clé de traduction ou valeur littérale. */
+  const compareValue = (v: string) => (v.startsWith("values.") ? tp(v) : v);
 
   return (
     <div className="landing-root bg-background text-foreground min-h-screen">
@@ -301,15 +224,16 @@ export default function Landing() {
           </Link>
           <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
             <Link to="/produit" className="hover:text-foreground transition-colors">
-              Produit
+              {t("nav.product")}
             </Link>
             <a href="#tarifs" className="hover:text-foreground transition-colors">
-              Tarifs
+              {t("nav.pricing")}
             </a>
           </nav>
           <div className="flex items-center gap-4 text-sm">
+            <LanguageSwitcher />
             <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">
-              Se connecter
+              {t("nav.signIn")}
             </Link>
             <a
               href={CAL_LINK}
@@ -317,7 +241,7 @@ export default function Landing() {
               rel="noopener noreferrer"
               className="bg-foreground text-background inline-flex h-9 items-center rounded-lg px-3.5 font-medium transition-opacity hover:opacity-90"
             >
-              Demander une démo
+              {t("nav.demo")}
             </a>
           </div>
         </div>
@@ -327,11 +251,10 @@ export default function Landing() {
       <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
         <section className="mx-auto w-full max-w-5xl shrink-0 px-6 pt-14 pb-8 text-center md:pt-[3vh] md:pb-[2vh]">
           <h1 className="landing-fade-up mx-auto max-w-3xl text-[40px] leading-[1.05] font-semibold tracking-tight md:text-[clamp(2.5rem,4.4vh+1.2rem,4rem)]">
-            Évaluez les candidats, pas leur CV.
+            {t("hero.title")}
           </h1>
           <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
-            Vous posez vos questions face caméra. Chaque candidat y répond quand il veut, où il veut. Interw
-            évalue chaque entretien sur vos critères et fait remonter les profils à voir en premier.
+            {t("hero.subtitle")}
           </p>
           <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center md:mt-[2.5vh]">
             <a
@@ -340,17 +263,15 @@ export default function Landing() {
               rel="noopener noreferrer"
               className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
             >
-              Demander une démo <ArrowRight className="h-4 w-4" />
+              {t("hero.cta")} <ArrowRight className="h-4 w-4" />
             </a>
             <Link
               to="/login"
               className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
-              Créer un compte gratuit
+              {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">
-              Gratuit · 15 entretiens / mois · sans carte
-            </p>
+            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
           </div>
         </section>
 
@@ -383,7 +304,7 @@ export default function Landing() {
         <section className="border-border shrink-0 border-y">
           <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
             <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
-              Ils recrutent avec Interw
+              {t("proof.title")}
             </p>
             <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
               {BETA_LOGOS.map((logo) => (
@@ -402,13 +323,11 @@ export default function Landing() {
 
       {/* ============ PROBLÈME ============ */}
       <section className="mx-auto max-w-5xl px-6 py-24">
-        <h2 className={`mx-auto max-w-3xl text-center ${H2}`}>
-          Aujourd'hui vous ne triez pas des candidats. Vous triez des documents.
-        </h2>
+        <h2 className={`mx-auto max-w-3xl text-center ${H2}`}>{t("problem.title")}</h2>
         <FunnelCards />
 
         <p className="text-foreground mx-auto mt-14 max-w-2xl text-center text-[24px] leading-snug font-semibold tracking-tight md:text-[32px]">
-          Tous les autres, vous ne les avez jamais entendus.
+          {t("problem.outro")}
         </p>
       </section>
 
@@ -416,24 +335,21 @@ export default function Landing() {
       <section className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
           <div className="max-w-3xl">
-            <h2 className={H2}>Faites-les tous passer, sans y passer vos journées.</h2>
-            <p className={`text-foreground/80 mt-5 ${BODY}`}>
-              L'IA transcrit chaque entretien et le confronte à vos questions comme à vos critères. Les
-              meilleurs profils remontent — y compris ceux qu'un CV vous aurait fait manquer.
-            </p>
+            <h2 className={H2}>{t("product.title")}</h2>
+            <p className={`text-foreground/80 mt-5 ${BODY}`}>{t("product.desc")}</p>
           </div>
           <div className="mt-20 space-y-24">
-          {SECTIONS.map((s) => (
-            <div key={s.title}>
-              <h3 className={`max-w-xl ${H3}`}>{s.title}</h3>
-              <p className={`text-muted-foreground mt-3 max-w-2xl ${BODY}`}>{s.desc}</p>
+          {SECTION_KEYS.map((s) => (
+            <div key={s.key}>
+              <h3 className={`max-w-xl ${H3}`}>{t(`product.${s.key}.title`)}</h3>
+              <p className={`text-muted-foreground mt-3 max-w-2xl ${BODY}`}>{t(`product.${s.key}.desc`)}</p>
               <div
                 className="border-border mt-8 overflow-hidden rounded-xl border bg-cover bg-center p-4 md:p-10"
                 style={{ backgroundImage: `url(${s.background})` }}
               >
                 <img
                   src={s.image}
-                  alt={s.alt}
+                  alt={t(`product.${s.key}.alt`)}
                   loading="lazy"
                   className="border-border bg-background w-full rounded-lg border shadow-lg"
                 />
@@ -448,7 +364,7 @@ export default function Landing() {
       <section id="tarifs" className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
           <div className="max-w-2xl">
-            <h2 className={H2}>Nos tarifs</h2>
+            <h2 className={H2}>{tp("title")}</h2>
           </div>
 
           {/* Toggle mensuel / annuel */}
@@ -462,7 +378,7 @@ export default function Landing() {
                   billing === "mensuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
               >
-                Mensuel
+                {tp("monthly")}
               </button>
               <button
                 type="button"
@@ -472,39 +388,40 @@ export default function Landing() {
                   billing === "annuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
               >
-                Annuel
+                {tp("annual")}
                 <span className="bg-foreground text-background rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                  2 mois offerts
+                  {tp("twoMonthsFree")}
                 </span>
               </button>
             </div>
-            <p className="text-muted-foreground text-xs">
-              Prix HT. Sans engagement, changez de plan quand vous voulez.
-            </p>
+            <p className="text-muted-foreground text-xs">{tp("note")}</p>
           </div>
 
           {/* Cartes */}
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {PLANS.filter((p) => p.name !== "Enterprise").map((p) => {
+            {PLAN_KEYS.map((p) => {
               const price = billing === "annuel" ? p.annual : p.monthly;
-              const unit = billing === "annuel" ? p.annualUnit : p.monthlyUnit;
-              const note = billing === "annuel" ? p.annualNote : p.monthlyNote;
+              const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
+              const unit = unitKey ? tp(unitKey) : "";
+              const note = tp(billing === "annuel" ? p.annualNoteKey : p.monthlyNoteKey);
               return (
                 <div
-                  key={p.name}
+                  key={p.key}
                   className={`relative flex flex-col rounded-xl border p-5 ${
                     p.featured ? "border-foreground bg-background" : "border-border bg-background"
                   }`}
                 >
                   {p.featured && (
                     <span className="bg-foreground text-background absolute -top-2.5 left-6 inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold">
-                      Recommandé
+                      {tp("recommended")}
                     </span>
                   )}
                   {/* Nom + description — hauteur fixe (3 lignes) */}
                   <div className="h-[88px]">
-                    <h3 className="text-base font-semibold">{p.name}</h3>
-                    <p className="text-muted-foreground mt-1 text-[13px] leading-snug">{p.desc}</p>
+                    <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
+                    <p className="text-muted-foreground mt-1 text-[13px] leading-snug">
+                      {tp(`plans.${p.key}.desc`)}
+                    </p>
                   </div>
                   {/* Prix — hauteur fixe */}
                   <div className="flex h-12 items-baseline gap-1.5">
@@ -522,27 +439,33 @@ export default function Landing() {
                         : "border-border bg-background text-foreground border hover:bg-muted"
                     }`}
                   >
-                    {p.cta}
+                    {tp(`plans.${p.key}.cta`)}
                   </Link>
                   {/* Note sous le bouton — hauteur fixe identique pour les 4 cartes */}
-                  <p className="mt-1 h-5 text-center text-[11px] text-muted-foreground">{p.noCardNote}</p>
+                  <p className="mt-1 h-5 text-center text-[11px] text-muted-foreground">
+                    {p.noCardNoteKey ? tp(p.noCardNoteKey) : ""}
+                  </p>
                   {/* Caractéristiques — hauteur fixe identique, séparateurs alignés */}
                   <div className="border-border border-t mt-2">
                     {p.specs.map((s, idx) => {
                       const tall = idx === 0 || idx === 2 || idx === 3;
+                      const value = "valueKey" in s && s.valueKey ? tp(s.valueKey) : (s as { value: string }).value;
+                      const sub = "subKey" in s && s.subKey ? tp(s.subKey) : null;
                       return (
                         <div
-                          key={s.label}
+                          key={s.labelKey}
                           className={`border-border flex items-center justify-between gap-2 overflow-hidden border-b ${
                             tall ? "h-[62px]" : "h-[46px]"
                           } last:border-0`}
                         >
-                          <span className="text-muted-foreground text-[12px] leading-tight">{s.label}</span>
+                          <span className="text-muted-foreground text-[12px] leading-tight">
+                            {tp(s.labelKey)}
+                          </span>
                           <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
-                            {s.value}
-                            {s.sub && (
+                            {value}
+                            {sub && (
                               <span className="text-muted-foreground block text-[10px] font-normal leading-tight">
-                                {s.sub}
+                                {sub}
                               </span>
                             )}
                           </span>
@@ -558,8 +481,8 @@ export default function Landing() {
           {/* Enterprise — une seule ligne */}
           <div className="border-border mt-4 flex flex-col items-start justify-between gap-4 rounded-xl border p-5 sm:flex-row sm:items-center">
             <p className={`text-foreground ${BODY}`}>
-              <span className="font-semibold">Enterprise</span> — volumes importants, SSO, vos outils et vos
-              règles. Sur devis.
+              <span className="font-semibold">{tp("plans.enterprise.name")}</span>{" "}
+              {tp("enterpriseLine.text")}
             </p>
             <a
               href={CAL_LINK}
@@ -567,7 +490,7 @@ export default function Landing() {
               rel="noopener noreferrer"
               className="border-border text-foreground hover:bg-muted inline-flex h-10 shrink-0 items-center rounded-lg border px-4 text-sm font-medium transition-colors"
             >
-              Parler à l'équipe
+              {tp("enterpriseLine.cta")}
             </a>
           </div>
 
@@ -575,7 +498,7 @@ export default function Landing() {
           <Accordion type="single" collapsible className="mt-6">
             <AccordionItem value="comparatif" className="border-border rounded-xl border px-5">
               <AccordionTrigger className="text-[17px] font-semibold hover:no-underline">
-                Comparer les plans en détail
+                {tp("compare.trigger")}
               </AccordionTrigger>
               <AccordionContent className="pb-6">
           {/* Desktop : tableau */}
@@ -584,40 +507,40 @@ export default function Landing() {
               <thead>
                 <tr>
                   <th className="border-border bg-background border-b px-4 py-3.5 text-left text-sm font-semibold">
-                    Fonctionnalité
+                    {tp("compare.feature")}
                   </th>
                   <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
-                    Free
+                    {tp("plans.free.name")}
                   </th>
                   <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
-                    Plus
+                    {tp("plans.plus.name")}
                   </th>
                   <th className="bg-muted/40 border-border border-b px-4 py-3.5 text-center text-sm font-semibold">
-                    Pro
+                    {tp("plans.pro.name")}
                   </th>
                   <th className="border-border bg-background border-b px-4 py-3.5 text-center text-sm font-semibold">
-                    Enterprise
+                    {tp("plans.enterprise.name")}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map((g) => (
+                {COMPARISON_KEYS.map((g) => (
                   <Fragment key={g.group}>
                     <tr>
                       <th
                         colSpan={5}
                         className="bg-muted text-muted-foreground border-border border-b px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide"
                       >
-                        {g.group}
+                        {tp(g.group)}
                       </th>
                     </tr>
                     {g.rows.map((r) => (
                       <tr key={r.label}>
                         <th className="border-border bg-background border-b px-4 py-3 text-left text-sm font-medium">
-                          {r.label}
-                          {r.sub && (
+                          {tp(r.label)}
+                          {"sub" in r && r.sub && (
                             <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
-                              {r.sub}
+                              {tp(r.sub)}
                             </span>
                           )}
                         </th>
@@ -633,7 +556,7 @@ export default function Landing() {
                             ) : v === "—" ? (
                               <Minus className="text-muted-foreground/40 mx-auto h-4 w-4" />
                             ) : (
-                              <span className="font-medium">{v}</span>
+                              <span className="font-medium">{compareValue(v)}</span>
                             )}
                           </td>
                         ))}
@@ -647,19 +570,19 @@ export default function Landing() {
 
           {/* Mobile : vue empilée, sans scroll latéral */}
           <div className="border-border divide-border divide-y rounded-xl border md:hidden">
-            {COMPARISON.map((g) => (
+            {COMPARISON_KEYS.map((g) => (
               <div key={g.group} className="px-4 py-3">
                 <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                  {g.group}
+                  {tp(g.group)}
                 </h3>
                 <div className="mt-2 divide-border divide-y">
                   {g.rows.map((r) => (
                     <div key={r.label} className="py-2.5">
                       <p className="text-sm font-medium">
-                        {r.label}
-                        {r.sub && (
+                        {tp(r.label)}
+                        {"sub" in r && r.sub && (
                           <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
-                            {r.sub}
+                            {tp(r.sub)}
                           </span>
                         )}
                       </p>
@@ -680,7 +603,7 @@ export default function Landing() {
                               <Minus className="text-muted-foreground/40 h-4 w-4" />
                             ) : (
                               <span className="text-center text-[11px] font-medium leading-tight">
-                                {v}
+                                {compareValue(v)}
                               </span>
                             )}
                           </div>
@@ -702,17 +625,19 @@ export default function Landing() {
       <section className="border-border border-t">
         <div className="mx-auto max-w-3xl px-6 py-24">
           <div className="mb-6">
-            <h2 className={H2}>Questions fréquentes</h2>
-            <p className={`text-muted-foreground mt-3 ${BODY}`}>Les règles, en clair.</p>
+            <h2 className={H2}>{tf("title")}</h2>
+            <p className={`text-muted-foreground mt-3 ${BODY}`}>{tf("subtitle")}</p>
           </div>
           <div className="border-border border-t">
-            {FAQ.map((item) => (
-              <details key={item.q} className="border-border border-b group">
+            {FAQ_KEYS.map((key) => (
+              <details key={key} className="border-border border-b group">
                 <summary className="text-foreground flex cursor-pointer items-center justify-between py-4 text-[17px] font-medium [&::-webkit-details-marker]:hidden">
-                  {item.q}
+                  {tf(`items.${key}.q`)}
                   <ChevronDown className="text-muted-foreground h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
                 </summary>
-                <p className="text-muted-foreground pb-4 pr-8 text-[15px] leading-relaxed md:text-[16px]">{item.a}</p>
+                <p className="text-muted-foreground pb-4 pr-8 text-[15px] leading-relaxed md:text-[16px]">
+                  {tf(`items.${key}.a`)}
+                </p>
               </details>
             ))}
           </div>
@@ -722,9 +647,7 @@ export default function Landing() {
       {/* ============ CLÔTURE ============ */}
       <section className="border-border border-t">
         <div className="mx-auto max-w-3xl px-6 py-24 text-center">
-          <h2 className={H2}>
-            Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?
-          </h2>
+          <h2 className={H2}>{t("closing.title")}</h2>
           <div className="mt-9 flex flex-col items-center">
             <a
               href={CAL_LINK}
@@ -732,17 +655,15 @@ export default function Landing() {
               rel="noopener noreferrer"
               className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
             >
-              Demander une démo <ArrowRight className="h-4 w-4" />
+              {t("hero.cta")} <ArrowRight className="h-4 w-4" />
             </a>
             <Link
               to="/login"
               className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
-              Créer un compte gratuit
+              {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">
-              Gratuit · 15 entretiens / mois · sans carte
-            </p>
+            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
           </div>
         </div>
       </section>
@@ -750,16 +671,16 @@ export default function Landing() {
       {/* ============ FOOTER ============ */}
       <footer className="border-border border-t">
         <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row">
-          <span>© {new Date().getFullYear()} Interw</span>
+          <span>{t("footer.copyright", { year: new Date().getFullYear() })}</span>
           <div className="flex items-center gap-5">
             <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-              Demander une démo
+              {t("footer.demo")}
             </a>
             <Link to="/legal" className="hover:text-foreground transition-colors">
-              Mentions légales
+              {t("footer.legal")}
             </Link>
             <Link to="/privacy" className="hover:text-foreground transition-colors">
-              Confidentialité
+              {t("footer.privacy")}
             </Link>
           </div>
         </div>

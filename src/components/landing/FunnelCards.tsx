@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const H3 = "text-[18px] md:text-[19px] leading-[1.2] font-semibold tracking-tight text-foreground";
 const BODY = "text-[14px] md:text-[15px] leading-relaxed";
@@ -122,7 +123,7 @@ function IllusIdentical({ play }: { play: boolean }) {
 
 /* ---------- 2. Vous triez sur ce qui se voit ---------- */
 
-function IllusSort({ play }: { play: boolean }) {
+function IllusSort({ play, label }: { play: boolean; label: string }) {
   return (
     <div className="relative h-full w-full">
       {/* pile des écartés, à gauche */}
@@ -187,7 +188,7 @@ function IllusSort({ play }: { play: boolean }) {
           zIndex: 3,
         }}
       >
-        Trié
+        {label}
       </div>
     </div>
   );
@@ -195,7 +196,7 @@ function IllusSort({ play }: { play: boolean }) {
 
 /* ---------- 3. Vous appelez les survivants ---------- */
 
-function IllusCalls({ play }: { play: boolean }) {
+function IllusCalls({ play, labels }: { play: boolean; labels: { call: string; minutes: string } }) {
   return (
     <div className="absolute inset-0 flex flex-col justify-center gap-2">
       <div
@@ -212,7 +213,7 @@ function IllusCalls({ play }: { play: boolean }) {
           ))}
         </div>
         <span className="text-[10px] font-medium" style={{ color: c(CALLED, 0.95) }}>
-          Appel en cours
+          {labels.call}
         </span>
         <span className="text-muted-foreground ml-auto text-[10px] font-semibold tabular-nums">00:15</span>
       </div>
@@ -234,7 +235,7 @@ function IllusCalls({ play }: { play: boolean }) {
             </span>
             <span>{t}</span>
             <span className="h-[3px] flex-1 rounded-full" style={{ background: c(CALLED, 0.18) }} />
-            <span>15 min</span>
+            <span>{labels.minutes}</span>
           </div>
         ))}
       </div>
@@ -245,13 +246,13 @@ function IllusCalls({ play }: { play: boolean }) {
 /* ---------- 4. Vous en recevez trois ---------- */
 
 const DOT_TIERS = [
-  { count: 32, label: "CV reçus", token: RECEIVED, alpha: 0.35, delay: 0 },
-  { count: 12, label: "Appelés", token: CALLED, alpha: 0.6, delay: 700 },
-  { count: 3, label: "Entretiens", token: INTERVIEW, alpha: 0.85, delay: 1300 },
-  { count: 1, label: "Recruté", token: HIRED, alpha: 1, delay: 1800 },
+  { count: 32, labelKey: "received", token: RECEIVED, alpha: 0.35, delay: 0 },
+  { count: 12, labelKey: "called", token: CALLED, alpha: 0.6, delay: 700 },
+  { count: 3, labelKey: "interviews", token: INTERVIEW, alpha: 0.85, delay: 1300 },
+  { count: 1, labelKey: "hired", token: HIRED, alpha: 1, delay: 1800 },
 ];
 
-function IllusDots({ play }: { play: boolean }) {
+function IllusDots({ play, labels }: { play: boolean; labels: Record<string, string> }) {
   const dots: { color: string; delay: number }[] = [];
   DOT_TIERS.forEach((tier) => {
     for (let i = 0; i < tier.count; i++) {
@@ -272,12 +273,12 @@ function IllusDots({ play }: { play: boolean }) {
       </div>
       <div className="text-muted-foreground grid grid-cols-2 gap-x-2 gap-y-[2px] text-[9px]">
         {DOT_TIERS.map((t) => (
-          <span key={t.label} className="flex items-center gap-1">
+          <span key={t.labelKey} className="flex items-center gap-1">
             <span
               className="h-[6px] w-[6px] shrink-0 rounded-full"
               style={{ background: c(t.token, t.alpha) }}
             />
-            {t.label} · {t.count}
+            {labels[t.labelKey]} · {t.count}
           </span>
         ))}
       </div>
@@ -285,35 +286,37 @@ function IllusDots({ play }: { play: boolean }) {
   );
 }
 
-const ILLUSTRATIONS = [IllusIdentical, IllusSort, IllusCalls, IllusDots];
+const FUNNEL_KEYS = ["s1", "s2", "s3", "s4"] as const;
 
-const FUNNEL = [
-  {
-    step: "1",
-    title: "Les candidatures arrivent.",
-    desc: "Toutes écrites avec la même IA, toutes bien calibrées, toutes convaincantes. Plus rien ne les distingue.",
-  },
-  {
-    step: "2",
-    title: "Vous triez sur ce qui se voit.",
-    desc: "L'école, les années, la mise en page. Des critères qui ne disent pas lequel sera le meilleur sur le poste.",
-  },
-  {
-    step: "3",
-    title: "Vous appelez les survivants.",
-    desc: "Quinze minutes chacun, à synchroniser sur vos heures de bureau, et sur leurs disponibilités. La plupart du temps, une minute suffit pour trancher.",
-  },
-  {
-    step: "4",
-    title: "Vous en recevez trois.",
-    desc: "Les seuls que vous aurez vraiment écoutés.",
-  },
-];
-
-function FunnelCard({ item, index }: { item: (typeof FUNNEL)[number]; index: number }) {
+function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
+  const { t } = useTranslation("landing");
   const { ref, inView } = useInView<HTMLDivElement>();
   const [hoverKey, setHoverKey] = useState(0);
-  const Illus = ILLUSTRATIONS[index];
+  const illusLabels = {
+    received: t("funnel.illus.received"),
+    called: t("funnel.illus.called"),
+    interviews: t("funnel.illus.interviews"),
+    hired: t("funnel.illus.hired"),
+  };
+
+  const renderIllus = () => {
+    switch (index) {
+      case 0:
+        return <IllusIdentical key={hoverKey} play={inView} />;
+      case 1:
+        return <IllusSort key={hoverKey} play={inView} label={t("funnel.illus.sorted")} />;
+      case 2:
+        return (
+          <IllusCalls
+            key={hoverKey}
+            play={inView}
+            labels={{ call: t("funnel.illus.callInProgress"), minutes: t("funnel.illus.minutes") }}
+          />
+        );
+      default:
+        return <IllusDots key={hoverKey} play={inView} labels={illusLabels} />;
+    }
+  };
 
   return (
     <div
@@ -325,13 +328,11 @@ function FunnelCard({ item, index }: { item: (typeof FUNNEL)[number]; index: num
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <h3 className={H3}>
-        <span className="text-muted-foreground font-semibold tabular-nums">{item.step} · </span>
-        {item.title}
+        <span className="text-muted-foreground font-semibold tabular-nums">{index + 1} · </span>
+        {t(`funnel.${stepKey}.title`)}
       </h3>
-      <p className={`text-muted-foreground mt-2 mb-6 ${BODY}`}>{item.desc}</p>
-      <div className="relative mt-auto h-[120px] shrink-0 overflow-hidden">
-        <Illus key={hoverKey} play={inView} />
-      </div>
+      <p className={`text-muted-foreground mt-2 mb-6 ${BODY}`}>{t(`funnel.${stepKey}.desc`)}</p>
+      <div className="relative mt-auto h-[120px] shrink-0 overflow-hidden">{renderIllus()}</div>
     </div>
   );
 }
@@ -339,8 +340,8 @@ function FunnelCard({ item, index }: { item: (typeof FUNNEL)[number]; index: num
 export default function FunnelCards() {
   return (
     <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {FUNNEL.map((f, i) => (
-        <FunnelCard key={f.step} item={f} index={i} />
+      {FUNNEL_KEYS.map((key, i) => (
+        <FunnelCard key={key} stepKey={key} index={i} />
       ))}
     </div>
   );

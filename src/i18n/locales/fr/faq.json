@@ -1,0 +1,34 @@
+{
+  "title": "Questions fréquentes",
+  "subtitle": "Les règles, en clair.",
+  "items": {
+    "decision": {
+      "q": "Est-ce que l'IA décide à ma place ?",
+      "a": "Non. Interw transcrit les réponses, les confronte à vos critères et vous propose un ordre de lecture. Chaque appréciation renvoie à l'extrait de réponse qui la justifie, que vous pouvez écouter. Vous gardez la main sur qui vous rencontrez, et vous pouvez ignorer le classement."
+    },
+    "hosting": {
+      "q": "Où sont hébergées les vidéos et les données des candidats ?",
+      "a": "Les vidéos sont hébergées sur nos serveurs en France, et nous utilisons une IA hébergée en France."
+    },
+    "activeRole": {
+      "q": "Qu'est-ce qu'un poste actif ?",
+      "a": "Un poste actif dans Interw correspond à un recrutement en cours. Quand le recrutement est terminé, archivez-le : le slot se libère immédiatement pour le suivant. Un poste permanent, comme des candidatures spontanées, occupe un slot en continu. Sur Plus, vous pouvez ajouter jusqu'à deux postes supplémentaires, à 29 € par mois chacun."
+    },
+    "interview": {
+      "q": "Qu'est-ce qui compte comme un entretien ?",
+      "a": "Un candidat qui va au bout de sa session et dont le rapport est généré. Les invitations envoyées, les sessions abandonnées et vos propres tests ne comptent jamais. Vous pouvez partager votre lien aussi largement que vous voulez."
+    },
+    "quota": {
+      "q": "Que se passe-t-il quand j'atteins mon quota ?",
+      "a": "Rien pour vos candidats : ils ne sont jamais bloqués. Sur Plus et Pro, chaque entretien supplémentaire est facturé 3 € sur votre facture suivante. Sur Free, les 15 candidats suivants sont conservés et analysés dès votre passage en Plus, ou au renouvellement de votre quota. Au-delà, le lien se ferme jusqu'au mois suivant."
+    },
+    "trial": {
+      "q": "Comment fonctionne l'essai ?",
+      "a": "30 jours sur Pro, sans carte bancaire. Le compte à rebours démarre quand vous publiez votre premier poste, pas à l'inscription. Ensuite, vous choisissez un plan ou vous restez sur Free : tout ce que vous avez créé reste consultable."
+    },
+    "billing": {
+      "q": "Mensuel ou annuel ?",
+      "a": "Le mensuel est sans engagement : vous montez ou descendez de plan quand vous voulez, y compris hors saison de recrutement. L'annuel, c'est 12 mois pour le prix de 10."
+    }
+  }
+}
