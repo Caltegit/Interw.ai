@@ -9,8 +9,8 @@ const corsHeaders = {
 }
 
 const SITE_NAME = 'interw'
-const SENDER_DOMAIN = 'notify.interw.com'
-const FROM_DOMAIN = 'notify.interw.com'
+const SENDER_DOMAIN = 'notify.interw.ai'
+const FROM_DOMAIN = 'notify.interw.ai'
 const FROM_NAME = 'Interw'
 const FROM_LOCAL_PART = 'hello'
 const REPLY_TO_EMAIL = 'hello@interw.com'

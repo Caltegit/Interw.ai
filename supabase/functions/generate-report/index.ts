@@ -7,8 +7,8 @@ import { template as interviewReportTemplate } from "../_shared/transactional-em
 import { MODEL_FAST, MODEL_SCORING, MODEL_FALLBACK, buildChatBody } from "../_shared/ai-models.ts";
 
 const SITE_NAME = "Interw";
-const SENDER_DOMAIN = "notify.interw.com";
-const FROM_DOMAIN = "notify.interw.com";
+const SENDER_DOMAIN = "notify.interw.ai";
+const FROM_DOMAIN = "notify.interw.ai";
 const FROM_LOCAL_PART = "hello";
 
 function generateToken(): string {
