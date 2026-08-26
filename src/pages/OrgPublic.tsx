@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Briefcase, ArrowRight } from "lucide-react";
+import { PUBLIC_APP_URL } from "@/lib/appUrl";
 
 interface Org {
   id: string;
@@ -120,7 +121,7 @@ export default function OrgPublic() {
       </main>
 
       <footer className="border-t mt-12 py-6 text-center text-sm text-muted-foreground">
-        Propulsé par <a href="https://interw.com" className="font-medium hover:text-foreground">Interw</a>
+        Propulsé par <a href={PUBLIC_APP_URL} className="font-medium hover:text-foreground">Interw</a>
       </footer>
     </div>
   );

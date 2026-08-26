@@ -11,6 +11,7 @@ import { OrgLogoUpload } from "@/components/OrgLogoUpload";
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { slugify, SLUG_REGEX } from "@/lib/slug";
 import { useOrganization, useUpdateOrganization } from "@/hooks/queries/useOrganization";
+import { PUBLIC_APP_HOST } from "@/lib/appUrl";
 
 export default function SettingsOrganization() {
   const { toast } = useToast();
@@ -110,7 +111,7 @@ export default function SettingsOrganization() {
           <div>
             <Label>Identifiant URL (slug)</Label>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">interw.com/o/</span>
+              <span className="text-sm text-muted-foreground whitespace-nowrap">{PUBLIC_APP_HOST}/o/</span>
               <Input
                 value={orgSlug}
                 onChange={(e) => setOrgSlug(e.target.value.toLowerCase())}
