@@ -20,7 +20,7 @@
     },
     "quota": {
       "q": "What happens when I reach my quota?",
-      "a": "Nothing for your candidates: they are never blocked. On Plus and Pro, each extra interview is billed €3 on your next invoice. On Free, the next 15 candidates are kept and analysed as soon as you move to Plus, or when your quota renews. Beyond that, the link closes until the following month."
+      "a": "Nothing for your candidates: they're never blocked. On Plus and Pro, each extra interview is billed €3 on your next invoice. On Free, the next 15 candidates are kept and analyzed as soon as you move to Plus, or when your quota renews. Beyond that, the link pauses until the following month."
     },
     "trial": {
       "q": "How does the trial work?",
