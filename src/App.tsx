@@ -188,6 +188,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </I18nextProvider>
 );
 
 export default App;
