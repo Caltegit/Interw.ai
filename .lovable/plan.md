@@ -38,3 +38,31 @@ Une fois le plan approuvé, j'exécuterai la table de cas suivante contre le cod
 
 Autres contrôles : `?lang=fr` gagne sur `localStorage` ; le switcher persiste le choix ; aucun changement d'URL, les liens de session candidat en circulation restent valides.
 
+
+---
+
+# Lot i18n B2 — Landing publique
+
+État constaté : le Lot A n'est pas encore dans le code (`src/i18n/` absent). Seules les dépendances `i18next`, `react-i18next`, `i18next-browser-languagedetector` sont installées dans `package.json`. Le Lot A est donc livré d'abord, tel que décrit ci-dessus, puis le Lot B2 enchaîne.
+
+## Périmètre
+
+- `src/pages/Landing.tsx` (769 lignes) — navbar publique, hero, problème, produit, tarifs, FAQ, CTA final, footer.
+- `src/pages/Produit.tsx` (288 lignes).
+- `src/components/landing/FunnelCards.tsx` et `src/components/landing/DemoRequestDialog.tsx`, utilisés uniquement par ces deux pages.
+
+Hors périmètre : produit authentifié, pages candidat, admin. Aucun composant partagé (`components/ui/*`) n'est modifié.
+
+## Ce qui est fait
+
+1. Extraction de toutes les chaînes visibles de ces fichiers vers les namespaces `landing`, `pricing`, `faq` (FR + EN), avec traduction anglaise rédigée, pas machine-brute.
+2. Clés nommées par section : `landing:nav.*`, `landing:hero.*`, `landing:problem.*`, `landing:product.*`, `landing:cta.*`, `landing:footer.*`, `pricing:*`, `faq:*`.
+3. Les listes (cartes, items de FAQ, lignes de tarifs) passent par des tableaux de clés, pas par `returnObjects`, pour rester typables.
+4. Le `LanguageSwitcher` du Lot A reste dans la navbar publique ; aucune autre modification de mise en page ni de style.
+5. Les données non textuelles (liens Cal.com, images, ancres `#tarifs`) restent inchangées — aucune modification d'URL.
+
+## Vérification
+
+- Navigateur `fr-*` : la landing et `/produit` sont identiques à aujourd'hui, mot pour mot.
+- `?lang=en` : toutes les sections s'affichent en anglais, aucune chaîne française résiduelle.
+- Bascule via le switcher : rendu immédiat, choix persisté, `<html lang>` mis à jour.
