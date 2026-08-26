@@ -329,18 +329,7 @@ export default function Landing() {
                   "radial-gradient(60% 60% at 20% 10%, rgba(9,9,11,0.05) 0%, transparent 70%), radial-gradient(50% 50% at 90% 95%, rgba(9,9,11,0.035) 0%, transparent 70%)",
               }}
             />
-            <video
-              className="relative block h-full max-h-full w-full object-contain"
-              poster="/tuto-poster.png"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            >
-              <source src="/demo-interwai.webm" type="video/webm" />
-              <source src="/demo-interwai-20s.mp4" type="video/mp4" />
-            </video>
+            <DemoVideo />
           </div>
         </section>
 
