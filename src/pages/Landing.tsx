@@ -1,9 +1,8 @@
 import { Fragment, useEffect, useState } from "react";
-// Navigation : adapter cet import au routeur du projet cible.
-// TanStack Start : import { Link } from "@tanstack/react-router";
-// React Router  : import { Link } from "react-router-dom";  (et to= -> to=)
-import { Link } from "@tanstack/react-router";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
+
 
 import productProjects from "@/assets/product-projects.png";
 import productReport from "@/assets/product-report.png";
