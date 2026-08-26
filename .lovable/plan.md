@@ -10,7 +10,7 @@ Les trois images sont refaites avec les corrections demandées, toujours en donn
 ## 2. Écran « Vos questions, posées par vous »
 
 - On ne montre plus l'onglet Questions mais l'écran des **critères d'évaluation** : liste des critères pondérés (ex. Sens du service, Clarté d'expression, Gestion des objections, Rigueur, Motivation) avec leurs poids et la répartition.
-- Le titre du bloc sur la page d'accueil sera ajusté en conséquence lors de l'intégration (proposition : « Vos critères, votre grille de lecture. ») — à valider.
+- Le titre du bloc sur la page d'accueil reste inchangé.
 
 ## 3. Rapport de Camille Fontaine
 
