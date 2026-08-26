@@ -263,6 +263,11 @@ export function AppSidebar() {
                   </>
                 )}
                 <DropdownMenuSeparator />
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-xs text-muted-foreground">Langue</span>
+                  <LanguageSwitcher />
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => signOut()}>
                   <LogOut className="mr-2 h-4 w-4" /> Déconnexion
                 </DropdownMenuItem>
