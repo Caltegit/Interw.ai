@@ -82,5 +82,7 @@
       "phone": "Phone and WhatsApp",
       "dedicated": "Dedicated support"
     }
-  }
+  },
+  "perMonth": "/ mo",
+  "perYear": "/ yr"
 }

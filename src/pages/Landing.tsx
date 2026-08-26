@@ -93,8 +93,8 @@ const PLAN_KEYS = [
     key: "free",
     monthly: "0 €",
     annual: "0 €",
-    monthlyUnit: "",
-    annualUnit: "",
+    monthlyUnitKey: null,
+    annualUnitKey: null,
     monthlyNoteKey: "forever",
     annualNoteKey: "forever",
     featured: false,
@@ -110,8 +110,8 @@ const PLAN_KEYS = [
     key: "plus",
     monthly: "99 €",
     annual: "990 €",
-    monthlyUnit: "/ mois",
-    annualUnit: "/ an",
+    monthlyUnitKey: "perMonth",
+    annualUnitKey: "perYear",
     monthlyNoteKey: "billedMonthly",
     annualNoteKey: "billedAnnually",
     featured: false,
@@ -127,8 +127,8 @@ const PLAN_KEYS = [
     key: "pro",
     monthly: "399 €",
     annual: "3 990 €",
-    monthlyUnit: "/ mois",
-    annualUnit: "/ an",
+    monthlyUnitKey: "perMonth",
+    annualUnitKey: "perYear",
     monthlyNoteKey: "billedMonthly",
     annualNoteKey: "billedAnnually",
     featured: true,
@@ -401,7 +401,8 @@ export default function Landing() {
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             {PLAN_KEYS.map((p) => {
               const price = billing === "annuel" ? p.annual : p.monthly;
-              const unit = billing === "annuel" ? p.annualUnit : p.monthlyUnit;
+              const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
+              const unit = unitKey ? tp(unitKey) : "";
               const note = tp(billing === "annuel" ? p.annualNoteKey : p.monthlyNoteKey);
               return (
                 <div

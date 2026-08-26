@@ -82,5 +82,7 @@
       "phone": "Téléphone et WhatsApp",
       "dedicated": "Support personnalisé"
     }
-  }
+  },
+  "perMonth": "/ mois",
+  "perYear": "/ an"
 }
