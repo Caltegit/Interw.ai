@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
@@ -21,6 +21,51 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+
+function DemoVideo() {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || visible) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visible]);
+
+  useEffect(() => {
+    if (visible) ref.current?.load();
+  }, [visible]);
+
+  return (
+    <video
+      ref={ref}
+      className="relative block h-full max-h-full w-full object-contain"
+      poster="/demo-interwai-poster.png"
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="none"
+    >
+      {visible && (
+        <>
+          <source src="/demo-interwai-hd.webm" type="video/webm" />
+          <source src="/demo-interwai-hd.mp4" type="video/mp4" />
+        </>
+      )}
+    </video>
+  );
+}
 
 const BETA_LOGOS = [
   { name: "Morning", src: logoMorning, className: "max-h-6 sm:max-h-8 md:max-h-9" },
@@ -329,18 +374,7 @@ export default function Landing() {
                   "radial-gradient(60% 60% at 20% 10%, rgba(9,9,11,0.05) 0%, transparent 70%), radial-gradient(50% 50% at 90% 95%, rgba(9,9,11,0.035) 0%, transparent 70%)",
               }}
             />
-            <video
-              className="relative block h-full max-h-full w-full object-contain"
-              poster="/tuto-poster.png"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            >
-              <source src="/demo-interwai.webm" type="video/webm" />
-              <source src="/demo-interwai-20s.mp4" type="video/mp4" />
-            </video>
+            <DemoVideo />
           </div>
         </section>
 
