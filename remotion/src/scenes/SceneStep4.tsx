@@ -19,7 +19,7 @@ export const SceneStep4: React.FC = () => {
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
       <div style={{ transform: `scale(${0.92 + 0.08 * wizardIn})`, opacity: wizardIn, display: "flex", gap: 36 }}>
         {/* Left: lien candidat */}
-        <BrowserChrome url="interw.ai/projects/new" width={780} height={620}>
+        <BrowserChrome url="interw.com/projects/new" width={780} height={620}>
           <WizardStepBar active={4} />
           <div style={{ padding: "40px 36px" }}>
             <div style={{ color: FG, fontSize: 26, fontWeight: 600, marginBottom: 6, letterSpacing: -0.5 }}>
@@ -44,7 +44,7 @@ export const SceneStep4: React.FC = () => {
             >
               <span style={{ color: ACCENT, fontSize: 18 }}>🔗</span>
               <div style={{ flex: 1, color: FG, fontSize: 16, fontFamily: "Inter, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                interw.ai/session/product-manager-x4t2
+                interw.com/session/product-manager-x4t2
               </div>
               <button
                 style={{

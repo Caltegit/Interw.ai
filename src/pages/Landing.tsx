@@ -49,7 +49,7 @@ function HeroInterviewMock() {
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#febc2e" }} />
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#28c840" }} />
           <div className="ml-3 flex-1 truncate rounded px-2 py-0.5 text-[10px]" style={{ background: "hsl(230 20% 14%)", color: "hsl(230 8% 65%)" }}>
-            interw.ai/entretien/marie-d
+            interw.com/entretien/marie-d
           </div>
         </div>
 

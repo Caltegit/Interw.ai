@@ -267,7 +267,7 @@ export const template = {
       { fn: 'generate-report', message: 'Gateway 429 rate limit', count: 3 },
     ],
     anomalies: [
-      { id: 'abc', candidate: 'Jane Doe', reason: 'report_job failed: gemini timeout', url: 'https://interw.ai/sessions/abc' },
+      { id: 'abc', candidate: 'Jane Doe', reason: 'report_job failed: gemini timeout', url: 'https://interw.com/sessions/abc' },
     ],
     feedbacks: [
       { subject: 'Vidéo saccadée', status: 'open', lastMessageAt: 'il y a 3h' },

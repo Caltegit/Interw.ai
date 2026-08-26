@@ -453,7 +453,7 @@ export const template = {
       best_question_idx: 0,
       best_question_score: 9,
     },
-    reportUrl: 'https://interw.ai/sessions/abc',
+    reportUrl: 'https://interw.com/sessions/abc',
     candidateLinkedinUrl: 'https://www.linkedin.com/in/jane-doe',
     verdictHeadline: 'Profil solide à rencontrer en priorité.',
     decisionDrivers: [

@@ -73,7 +73,7 @@ async function sendCandidateThankYou(
   const firstName = (session.candidate_name ?? "").trim().split(/\s+/)[0] ?? "";
   const slug = project?.slug ?? "session";
   const privacyUrl = session.token
-    ? `https://interw.ai/session/${slug}/privacy/${session.token}`
+    ? `https://interw.com/session/${slug}/privacy/${session.token}`
     : undefined;
 
   let customSubject: string | null = project?.candidate_email_subject ?? null;

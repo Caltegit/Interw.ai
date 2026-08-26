@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { toast } from "sonner";
 import { Plus, ImagePlus, X } from "lucide-react";
+import { PUBLIC_APP_URL } from "@/lib/appUrl";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 Mo
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
@@ -121,7 +122,7 @@ export function NewFeedbackDialog() {
             authorEmail,
             subject: subject.trim(),
             message: message.trim(),
-            threadUrl: `https://interw.ai/feedback/${thread.id}`,
+            threadUrl: `${PUBLIC_APP_URL}/feedback/${thread.id}`,
             submittedAt: new Date().toLocaleString("fr-FR", {
               dateStyle: "long",
               timeStyle: "short",

@@ -67,7 +67,7 @@ export const template = {
     authorEmail: 'jane@example.com',
     subject: 'Bug sur la création de poste',
     message: 'Quand je clique sur enregistrer, rien ne se passe.',
-    threadUrl: 'https://interw.ai/feedback/abc',
+    threadUrl: 'https://interw.com/feedback/abc',
     submittedAt: '5 mai 2026 à 14:32',
   },
 } satisfies TemplateEntry

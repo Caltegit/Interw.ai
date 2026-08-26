@@ -17,7 +17,7 @@ interface Props {
 const OrganizationInviteEmail = ({
   inviterName = 'Un recruteur',
   organizationName = 'une organisation',
-  inviteUrl = 'https://interw.ai',
+  inviteUrl = 'https://interw.com',
   recipientEmail = '',
 }: Props) => (
   <Html lang="fr" dir="ltr">
@@ -65,7 +65,7 @@ export const template = {
   previewData: {
     inviterName: 'Jane Doe',
     organizationName: 'Acme',
-    inviteUrl: 'https://interw.ai/invite/abc123',
+    inviteUrl: 'https://interw.com/invite/abc123',
     recipientEmail: 'user@example.com',
   },
 } satisfies TemplateEntry

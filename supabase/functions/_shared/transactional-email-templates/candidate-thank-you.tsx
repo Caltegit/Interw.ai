@@ -105,7 +105,7 @@ const CandidateThankYouEmail = ({
               <strong>Interw</strong> — Plateforme d'entretien digitale
             </Text>
             <Text style={footerText}>
-              <Link href="https://interw.ai" style={footerLink}>interw</Link>
+              <Link href="https://interw.com" style={footerLink}>interw</Link>
               {' · '}
               <Link href="mailto:contact@interw.ai" style={footerLink}>contact@interw.ai</Link>
             </Text>
@@ -129,7 +129,7 @@ export const template = {
     firstName: 'Jane',
     jobTitle: 'Office Manager',
     orgName: 'Acme',
-    privacyUrl: 'https://interw.ai/session/demo/privacy/sample-token',
+    privacyUrl: 'https://interw.com/session/demo/privacy/sample-token',
   },
 } satisfies TemplateEntry
 

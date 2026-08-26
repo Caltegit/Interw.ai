@@ -110,7 +110,7 @@ async function processProject(
       date: s.completed_at ? formatDateParis(s.completed_at) : "—",
       score: r?.overall_score != null ? Number(r.overall_score) : null,
       recommendation: r?.recommendation ? (RECO_LABEL[r.recommendation] ?? null) : null,
-      reportUrl: `https://interw.ai/sessions/${s.id}`,
+      reportUrl: `https://interw.com/sessions/${s.id}`,
     };
   });
 
@@ -149,7 +149,7 @@ async function processProject(
 
   if (!profiles || profiles.length === 0) return;
 
-  const projectUrl = `https://interw.ai/projects/${project.id}`;
+  const projectUrl = `https://interw.com/projects/${project.id}`;
   const jobTitle = project.job_title || project.title || "";
 
   for (const p of profiles) {

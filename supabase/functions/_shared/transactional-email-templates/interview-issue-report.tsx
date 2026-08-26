@@ -83,7 +83,7 @@ export const template = {
     jobTitle: 'Développeuse Full-Stack',
     projectTitle: 'Recrutement Q1 2026',
     message: 'Le micro coupe régulièrement et je dois répéter mes réponses. Pouvez-vous m\'aider ?',
-    sessionUrl: 'https://interw.ai/sessions/abc',
+    sessionUrl: 'https://interw.com/sessions/abc',
     reportedAt: '5 mai 2026 à 14:32',
   },
 } satisfies TemplateEntry

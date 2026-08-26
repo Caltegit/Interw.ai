@@ -184,7 +184,7 @@ export function EditRecoveryTemplateDialog({ open, onOpenChange, onSaved }: Prop
                 </div>
                 <p className="text-xs text-gray-500 mb-4">
                   Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br />
-                  <span className="text-neutral-900 break-all">https://interw.ai/session/…</span>
+                  <span className="text-neutral-900 break-all">https://interw.com/session/…</span>
                 </p>
                 <div
                   className="text-gray-700 leading-relaxed [&_p]:mb-3"

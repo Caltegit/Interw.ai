@@ -35,7 +35,7 @@ export const SceneResult: React.FC = () => {
         </div>
 
         <div style={{ transform: `scale(${0.92 + 0.08 * wizardIn})`, opacity: wizardIn }}>
-          <BrowserChrome url="interw.ai/sessions/lucas-m/report" width={1100} height={460}>
+          <BrowserChrome url="interw.com/sessions/lucas-m/report" width={1100} height={460}>
             <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 28, padding: 28 }}>
               {/* Score circle */}
               <div

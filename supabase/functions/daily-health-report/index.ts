@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 const HARD_RECIPIENT = "eva@alboteam.com";
-const SITE_URL = Deno.env.get("SITE_URL") || "https://interw.ai";
+const SITE_URL = Deno.env.get("SITE_URL") || "https://interw.com";
 
 const CRITICAL_FUNCTIONS = [
   "generate-report",

@@ -38,7 +38,7 @@ const CandidateRecoveryInviteEmail = ({
   const name = (prenom && prenom.trim()) || ''
   const jobTitle = (poste && poste.trim()) || 'le poste'
   const company = (entreprise && entreprise.trim()) || ''
-  const url = cta_link || 'https://interw.ai'
+  const url = cta_link || 'https://interw.com'
   const vars = { prenom: name, poste: jobTitle, entreprise: company }
 
   const introRendered = intro_html && intro_html.trim()
@@ -112,7 +112,7 @@ export const template = {
     prenom: 'Camille',
     poste: 'Office Manager',
     entreprise: 'Acme',
-    cta_link: 'https://interw.ai/session/demo/start/sample-token',
+    cta_link: 'https://interw.com/session/demo/start/sample-token',
   },
 } satisfies TemplateEntry
 

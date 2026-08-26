@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Send, RefreshCw, CheckCircle2, Mail, ChevronDown, ChevronRight } from "lucide-react";
 import { EditRecoveryTemplateDialog } from "@/components/superadmin/EditRecoveryTemplateDialog";
 import { isReportUnusable } from "@/hooks/queries/useDashboardData";
+import { PUBLIC_APP_URL } from "@/lib/appUrl";
 
 type Reinvitation = {
   id: string;
@@ -64,7 +65,6 @@ type ProjectRow = { id: string; slug: string; title: string; organization_name: 
 type Reason = "missing_media" | "audio_failed" | "empty_summary" | "job_failed";
 type Lifecycle = "todo" | "resent" | "repassed";
 
-const PUBLIC_APP_URL = "https://interw.ai";
 function candidateUrl(slug: string, token: string) {
   return `${PUBLIC_APP_URL}/session/${slug}/start/${token}`;
 }

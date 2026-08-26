@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const INACTIVITY_MINUTES = 30;
 const MAX_AGE_HOURS = 24;
-const SITE_URL = Deno.env.get("SITE_URL") || "https://interw.ai";
+const SITE_URL = Deno.env.get("SITE_URL") || "https://interw.com";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
