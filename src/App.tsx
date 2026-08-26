@@ -85,6 +85,7 @@ import { SuperAdminRoute } from "@/components/SuperAdminRoute";
 import NotFound from "./pages/NotFound";
 
 const App = () => (
+  <I18nextProvider i18n={i18n}>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
