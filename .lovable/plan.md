@@ -15,11 +15,7 @@ Exclus (amendements validés) :
 
 1. Dépendances : `i18next`, `react-i18next`, `i18next-browser-languagedetector`.
 2. Langues : `fr` et `en`. **Langue par défaut et fallback : `en`.** Une locale résout en `fr` uniquement si son sous-tag primaire est `fr` (insensible à la casse) ; toute autre langue, connue ou non, donne `en`.
-3. Ordre de résolution, premier trouvé gagne :
-   1. query string `?lang=fr` / `?lang=en`
-   2. `localStorage`, clé `interw_lang`
-   3. `navigator.languages` (premier tag dont le sous-tag primaire est `fr` → `fr`, sinon `en`), avec `navigator.language` en secours
-   4. `en`
+3. Ordre de résolution géré par `i18next-browser-languagedetector` : `order: ['querystring', 'localStorage', 'navigator']`, `lookupQuerystring: 'lang'`, `lookupLocalStorage: 'interw_lang'`, `caches: ['localStorage']`. Le plugin renvoie des tags bruts (`zh-CN`, `nl-BE`) ; la normalisation « fr sinon en » est appliquée par-dessus via un détecteur personnalisé enregistré dans le `LanguageDetector`, qui enveloppe la valeur du plugin. Sans information exploitable : `en`.
 4. Namespaces créés, vides hormis la chaîne témoin : `common`, `auth`, `dashboard`, `projects`, `sessions`, `candidate`, `projectWizard`, `resources`, `report`, `settings`, `landing`, `pricing`, `faq` (en FR et EN).
 5. Provider monté au-dessus du routeur, sans changement de structure d'URL ni de route.
 6. Mise à jour de l'attribut `lang` de `<html>` au changement de langue.
