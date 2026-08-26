@@ -1,5 +1,6 @@
 import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
