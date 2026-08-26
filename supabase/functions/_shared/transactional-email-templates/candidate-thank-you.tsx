@@ -107,7 +107,7 @@ const CandidateThankYouEmail = ({
             <Text style={footerText}>
               <Link href="https://interw.com" style={footerLink}>interw</Link>
               {' · '}
-              <Link href="mailto:contact@interw.ai" style={footerLink}>contact@interw.ai</Link>
+              <Link href="mailto:contact@interw.com" style={footerLink}>contact@interw.com</Link>
             </Text>
             {firstName ? (
               <Text style={footerHint}>

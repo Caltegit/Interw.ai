@@ -45,7 +45,7 @@ const DemoRequestEmail = ({ email, message }: DemoRequestProps) => (
 export const template = {
   component: DemoRequestEmail,
   subject: 'Demande de démo',
-  to: 'hello@interw.ai',
+  to: 'hello@interw.com',
   displayName: 'Demande de démo (site)',
   previewData: { email: 'prospect@example.com', message: 'Bonjour, je souhaiterais une démo.' },
 } satisfies TemplateEntry

@@ -39,7 +39,7 @@ function buildSubject(emailType: string, data: Record<string, unknown>): string 
   }
 }
 
-const REPLY_TO_EMAIL = 'hello@interw.ai'
+const REPLY_TO_EMAIL = 'hello@interw.com'
 const FROM_NAME = 'Interw'
 // Local-part de l'adresse expéditrice. `hello@` est mieux noté que `noreply@`
 // par Gmail/Outlook (signal de délivrabilité positif depuis 2024).
@@ -57,9 +57,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 
 // Configuration
 const SITE_NAME = "interw"
-const SENDER_DOMAIN = "notify.interw.ai"
+const SENDER_DOMAIN = "notify.interw.com"
 const ROOT_DOMAIN = "interw.com"
-const FROM_DOMAIN = "notify.interw.ai" // Domain shown in From address (may be root or sender subdomain)
+const FROM_DOMAIN = "notify.interw.com" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.

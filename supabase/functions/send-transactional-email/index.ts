@@ -9,17 +9,17 @@ const SITE_NAME = "Interw"
 // SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
 // It MUST match the subdomain delegated to Lovable's nameservers — never the root domain.
 // The email API looks up this exact domain; a mismatch causes "No email domain record found".
-const SENDER_DOMAIN = "notify.interw.ai"
+const SENDER_DOMAIN = "notify.interw.com"
 // FROM_DOMAIN is the domain shown in the From: header (e.g., "example.com").
 // When display_from_root is enabled, this can be the root domain for cleaner branding,
 // even though actual sending uses the subdomain above.
-const FROM_DOMAIN = "notify.interw.ai"
+const FROM_DOMAIN = "notify.interw.com"
 // Local-part de l'adresse expéditrice. `hello@` est mieux perçu que `noreply@`
 // par Gmail/Outlook (signal de délivrabilité positif depuis 2024).
 const FROM_LOCAL_PART = "hello"
 // Reply-To par défaut quand l'appelant n'en fournit pas explicitement.
 // Une vraie boîte surveillée augmente la confiance des filtres anti-spam.
-const DEFAULT_REPLY_TO = "contact@interw.ai"
+const DEFAULT_REPLY_TO = "contact@interw.com"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
