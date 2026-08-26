@@ -222,6 +222,7 @@ const FAQ = [
 ];
 
 export default function Landing() {
+  const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
@@ -231,6 +232,12 @@ export default function Landing() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+
 
 
 
