@@ -58,7 +58,7 @@ await renderMedia({
   concurrency: 1,
   onProgress: ({ progress }) => {
     if (Math.round(progress * 100) % 10 === 0) {
-      stdount`  ${Math.round(progress * 100)}% `;
+      process.stdout.write(`  ${Math.round(progress * 100)}% `);
     }
   },
 });
