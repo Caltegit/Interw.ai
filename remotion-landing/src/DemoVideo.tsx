@@ -8,6 +8,7 @@ import { SceneDefinition } from "./scenes/demo/SceneDefinition";
 import { SceneInterview } from "./scenes/demo/SceneInterview";
 import { SceneEvaluation } from "./scenes/demo/SceneEvaluation";
 import { SceneProfiles } from "./scenes/demo/SceneProfiles";
+import type { Lang } from "./i18n/demo-copy";
 
 loadFont("normal", { weights: ["400", "500", "600", "700"], subsets: ["latin"] });
 
@@ -26,7 +27,10 @@ export const DEMO_TOTAL =
   Object.values(DEMO_SCENE_DURATIONS).reduce((a, b) => a + b, 0) -
   4 * DEMO_TRANSITION_FRAMES;
 
-export const DemoVideo: React.FC<{ transparent?: boolean }> = ({ transparent = false }) => {
+export const DemoVideo: React.FC<{ transparent?: boolean; lang?: Lang }> = ({
+  transparent = false,
+  lang = "fr",
+}) => {
   return (
     <AbsoluteFill
       style={{
@@ -37,27 +41,27 @@ export const DemoVideo: React.FC<{ transparent?: boolean }> = ({ transparent = f
       {transparent ? null : <BackgroundLayer />}
       <TransitionSeries>
         <TransitionSeries.Sequence durationInFrames={DEMO_SCENE_DURATIONS.problem}>
-          <SceneProblem />
+          <SceneProblem lang={lang} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t(DEMO_TRANSITION_FRAMES)} />
 
         <TransitionSeries.Sequence durationInFrames={DEMO_SCENE_DURATIONS.definition}>
-          <SceneDefinition />
+          <SceneDefinition lang={lang} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t(DEMO_TRANSITION_FRAMES)} />
 
         <TransitionSeries.Sequence durationInFrames={DEMO_SCENE_DURATIONS.interview}>
-          <SceneInterview />
+          <SceneInterview lang={lang} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t(DEMO_TRANSITION_FRAMES)} />
 
         <TransitionSeries.Sequence durationInFrames={DEMO_SCENE_DURATIONS.evaluation}>
-          <SceneEvaluation />
+          <SceneEvaluation lang={lang} />
         </TransitionSeries.Sequence>
         <TransitionSeries.Transition presentation={fade()} timing={t(DEMO_TRANSITION_FRAMES)} />
 
         <TransitionSeries.Sequence durationInFrames={DEMO_SCENE_DURATIONS.profiles}>
-          <SceneProfiles />
+          <SceneProfiles lang={lang} />
         </TransitionSeries.Sequence>
       </TransitionSeries>
     </AbsoluteFill>

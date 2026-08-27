@@ -10,16 +10,7 @@ import { BrowserChrome, ACCENT, FG, FG_DIM, BORDER, BG_ELEV_2 } from "../../comp
 import { DEMO_ENTER_DELAY } from "../../constants";
 import { FitScene } from "../../components/FitScene";
 import { Subtitle } from "../../components/Subtitle";
-
-const TITLE = "Office manager";
-
-const QUESTIONS = [
-  { text: "Parlez-moi de votre parcours.", duration: "0:14" },
-  { text: "Comment gérez-vous un désaccord ?", duration: "0:11" },
-  { text: "Décrivez un projet dont vous êtes fier.", duration: null },
-];
-
-const CRITERIA = ["Technique", "Communication", "Autonomie"];
+import { COPY, type Lang } from "../../i18n/demo-copy";
 
 // Vidéo de la recruteuse (30 fps, ~11,7 s) décomposée en images, bouclée
 // proprement pour couvrir les 180 frames de la scène.
@@ -29,7 +20,8 @@ const EVA_VIDEO_FRAMES = 351;
 // une fois l'intitulé du poste saisi.
 const FIRST_QUESTION_DELAY = 98;
 
-export const SceneDefinition: React.FC = () => {
+export const SceneDefinition: React.FC<{ lang: Lang }> = ({ lang }) => {
+  const c = COPY[lang].definition;
   const rawFrame = useCurrentFrame();
   const frame = rawFrame - DEMO_ENTER_DELAY;
   const { fps } = useVideoConfig();
@@ -40,12 +32,12 @@ export const SceneDefinition: React.FC = () => {
   // Saisie animée de l'intitulé du poste
   const typedCount = Math.max(
     0,
-    Math.min(TITLE.length, Math.round(interpolate(frame - 38, [0, 52], [0, TITLE.length], {
+    Math.min(c.jobTitle.length, Math.round(interpolate(frame - 38, [0, 52], [0, c.jobTitle.length], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     })))
   );
-  const typed = TITLE.slice(0, typedCount);
+  const typed = c.jobTitle.slice(0, typedCount);
   const caretOn = Math.floor(rawFrame / 12) % 2 === 0;
 
   // Apparition du cadre recruteuse, synchronisée avec la première question
@@ -84,24 +76,23 @@ export const SceneDefinition: React.FC = () => {
               color: FG,
               letterSpacing: -1.4,
               lineHeight: 1.1,
-              lineHeight: 1.1,
               opacity: titleIn,
               transform: `translateY(${interpolate(titleIn, [0, 1], [16, 0])}px)`,
             }}
           >
-            Vous définissez <span style={{ color: ACCENT }}>l'entretien.</span>
+            {c.titlePre}<span style={{ color: ACCENT }}>{c.titleAccent}</span>
           </div>
           <Subtitle frame={frame} mainDelay={12} mainFontSize={52}>
-            Vos critères, vos questions — posées par vous.
+            {c.subtitle}
           </Subtitle>
         </div>
 
         <div style={{ transform: `scale(${0.94 + 0.06 * shellIn})`, opacity: shellIn }}>
-          <BrowserChrome url="interw · nouveau poste" width={1180} height={560}>
+          <BrowserChrome url={c.url} width={1180} height={560}>
             <div style={{ padding: "24px 30px", display: "flex", flexDirection: "column", gap: 24 }}>
               {/* Intitulé */}
               <div>
-                <Label>Intitulé du poste</Label>
+                <Label>{c.labelTitle}</Label>
                 <div
                   style={{
                     marginTop: 10,
@@ -115,16 +106,16 @@ export const SceneDefinition: React.FC = () => {
                   }}
                 >
                   {typed}
-                  <span style={{ opacity: caretOn && typedCount < TITLE.length ? 1 : 0 }}>|</span>
+                  <span style={{ opacity: caretOn && typedCount < c.jobTitle.length ? 1 : 0 }}>|</span>
                 </div>
               </div>
 
               {/* Questions enregistrées + cadre recruteuse */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 200px", gap: 22, alignItems: "start" }}>
                 <div>
-                  <Label>Questions enregistrées</Label>
+                  <Label>{c.labelQuestions}</Label>
                   <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
-                    {QUESTIONS.map((q, i) => {
+                    {c.questions.map((q, i) => {
                       const a = spring({ frame: frame - (FIRST_QUESTION_DELAY + i * 20), fps, config: { damping: 17, stiffness: 180 } });
                       const active = q.duration === null;
                       return (
@@ -214,7 +205,7 @@ export const SceneDefinition: React.FC = () => {
                     }}
                   >
                     <span style={{ width: 7, height: 7, borderRadius: 4, background: "#EF4444", opacity: dotOpacity }} />
-                    Enregistrement · 00:0{seconds}
+                    {c.recording}00:0{seconds}
                   </div>
 
                   <div
@@ -249,13 +240,13 @@ export const SceneDefinition: React.FC = () => {
 
               {/* Critères */}
               <div>
-                <Label>Critères de sélection</Label>
+                <Label>{c.labelCriteria}</Label>
                 <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-                  {CRITERIA.map((c, i) => {
+                  {c.criteria.map((label, i) => {
                     const a = spring({ frame: frame - (188 + i * 15), fps, config: { damping: 14, stiffness: 200 } });
                     return (
                       <span
-                        key={c}
+                        key={label}
                         style={{
                           fontSize: 15,
                           fontWeight: 500,
@@ -268,7 +259,7 @@ export const SceneDefinition: React.FC = () => {
                           transform: `scale(${0.85 + 0.15 * a})`,
                         }}
                       >
-                        {c}
+                        {label}
                       </span>
                     );
                   })}

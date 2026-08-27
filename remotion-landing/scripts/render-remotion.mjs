@@ -5,15 +5,23 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Usage: node render-remotion.mjs [compositionId] [outputPath]
-const compositionId = process.argv[2] || "main";
+// Usage: node render-remotion.mjs [compositionId] [outputPath] [--lang=fr|en]
+const args = process.argv.slice(2);
+const compositionId = args[0] || "main";
+const langArg = args.find((a) => a.startsWith("--lang="));
+const lang = langArg ? langArg.replace("--lang=", "") : undefined;
+const outArg = args.find((a) => !a.startsWith("--") && a === args[1]);
 const out =
-  process.argv[3] ||
+  outArg ||
   (compositionId === "demo"
-    ? "/mnt/documents/interw-demo-20s.mp4"
+    ? lang === "en"
+      ? "/mnt/documents/interw-demo-en.mp4"
+      : "/mnt/documents/interw-demo-20s.mp4"
     : "/mnt/documents/tutoriel-creation-session.mp4");
 
-console.log(`→ Bundling… (composition: ${compositionId})`);
+const inputProps = lang ? { lang } : undefined;
+
+console.log(`→ Bundling… (composition: ${compositionId}${lang ? `, lang: ${lang}` : ""})`);
 const bundled = await bundle({
   entryPoint: path.resolve(__dirname, "../src/index.ts"),
   webpackOverride: (config) => config,
@@ -33,6 +41,7 @@ const composition = await selectComposition({
   serveUrl: bundled,
   id: compositionId,
   puppeteerInstance: browser,
+  ...(inputProps ? { inputProps } : {}),
 });
 
 console.log(`→ Rendering ${composition.durationInFrames} frames @ ${composition.fps}fps → ${out}`);

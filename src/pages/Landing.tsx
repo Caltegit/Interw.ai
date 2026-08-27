@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/accordion";
 
 function DemoVideo() {
+  const { i18n } = useTranslation();
+  const isEn = (i18n.resolvedLanguage ?? i18n.language ?? "").startsWith("en");
+  const base = isEn ? "demo-interwai-hd-en" : "demo-interwai-hd";
+  const poster = isEn ? "/demo-interwai-poster-en.png" : "/demo-interwai-poster.png";
   const ref = useRef<HTMLVideoElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -52,13 +56,13 @@ function DemoVideo() {
     el.play().catch(() => {
       /* lecture auto refusée : le poster reste affiché */
     });
-  }, [visible]);
+  }, [visible, base]);
 
   return (
     <video
       ref={ref}
       className="relative block h-full max-h-full w-full object-contain"
-      poster="/demo-interwai-poster.png"
+      poster={poster}
       autoPlay
       muted
       loop
@@ -67,8 +71,8 @@ function DemoVideo() {
     >
       {visible && (
         <>
-          <source src="/demo-interwai-hd.mp4" type="video/mp4" />
-          <source src="/demo-interwai-hd.webm" type="video/webm" />
+          <source src={`/${base}.mp4`} type="video/mp4" />
+          <source src={`/${base}.webm`} type="video/webm" />
         </>
       )}
     </video>
