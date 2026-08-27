@@ -2,7 +2,8 @@
  * Normalisation de langue Interw.
  *
  * Règle non négociable :
- * - premier tag de la liste dont le sous-tag primaire est `fr` (insensible à la casse) → "fr"
+ * - seul le PREMIER tag exploitable décide
+ * - son sous-tag primaire vaut `fr` (insensible à la casse) → "fr"
  * - tout le reste, connu ou inconnu → "en"
  * - aucune information disponible → "en"
  */
@@ -11,7 +12,8 @@ export type AppLanguage = "fr" | "en";
 
 export const SUPPORTED_LANGUAGES: AppLanguage[] = ["fr", "en"];
 export const DEFAULT_LANGUAGE: AppLanguage = "en";
-export const LANGUAGE_STORAGE_KEY = "interw_lang";
+/** Clé versionnée : les valeurs écrites par l'ancienne détection sont ignorées. */
+export const LANGUAGE_STORAGE_KEY = "interw_lang_v2";
 export const LANGUAGE_QUERY_PARAM = "lang";
 
 /** Sous-tag primaire d'un tag BCP 47, en minuscules. `fr-BE` → `fr`. */
@@ -21,17 +23,19 @@ function primarySubtag(tag: unknown): string {
 }
 
 /**
- * Applique la règle « fr sinon en » à un tag ou à une liste de tags bruts.
+ * Applique la règle « fr sinon en » au premier tag exploitable.
  * Retourne toujours une langue supportée.
  */
 export function normalizeLanguage(input: unknown): AppLanguage {
   const tags = Array.isArray(input) ? input : [input];
   for (const tag of tags) {
-    if (primarySubtag(tag) === "fr") return "fr";
+    const primary = primarySubtag(tag);
+    if (!primary) continue;
+    return primary === "fr" ? "fr" : "en";
   }
-  const hasInfo = tags.some((t) => typeof t === "string" && t.trim().length > 0);
-  return hasInfo ? "en" : DEFAULT_LANGUAGE;
+  return DEFAULT_LANGUAGE;
 }
+
 
 /** Tag brut présent dans la query string (`?lang=…`), s'il existe. */
 export function queryStringLanguageTag(param = LANGUAGE_QUERY_PARAM): string | null {
