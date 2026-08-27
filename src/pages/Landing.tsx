@@ -45,7 +45,13 @@ function DemoVideo() {
   }, [visible]);
 
   useEffect(() => {
-    if (visible) ref.current?.load();
+    if (!visible) return;
+    const el = ref.current;
+    if (!el) return;
+    el.load();
+    el.play().catch(() => {
+      /* lecture auto refusée : le poster reste affiché */
+    });
   }, [visible]);
 
   return (
@@ -62,6 +68,7 @@ function DemoVideo() {
       {visible && (
         <>
           <source src="/demo-interwai-hd.mp4" type="video/mp4" />
+          <source src="/demo-interwai-hd.webm" type="video/webm" />
         </>
       )}
     </video>
