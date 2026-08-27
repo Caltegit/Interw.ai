@@ -308,28 +308,27 @@ export default function Landing() {
             <DemoVideo />
           </div>
         </section>
-
-
-        {/* ============ PREUVE ============ */}
-        <section className="border-border shrink-0 border-y">
-          <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-            <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
-              {t("proof.title")}
-            </p>
-            <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
-              {BETA_LOGOS.map((logo) => (
-                <img
-                  key={logo.name}
-                  src={logo.src}
-                  alt={logo.name}
-                  loading="lazy"
-                  className={`${logo.className} h-auto w-full max-w-[150px] min-w-0 object-contain`}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
+
+      {/* ============ PREUVE ============ */}
+      <section className="border-border border-y">
+        <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+          <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
+            {t("proof.title")}
+          </p>
+          <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
+            {BETA_LOGOS.map((logo) => (
+              <img
+                key={logo.name}
+                src={logo.src}
+                alt={logo.name}
+                loading="lazy"
+                className={`${logo.className} h-auto w-full max-w-[150px] min-w-0 object-contain`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ============ PROBLÈME ============ */}
       <section className="mx-auto max-w-5xl px-6 py-24">
