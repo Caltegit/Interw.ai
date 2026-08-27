@@ -229,9 +229,9 @@ export default function Landing() {
             Interw
           </Link>
           <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
-            <Link to="/produit" className="hover:text-foreground transition-colors">
+            <span className="hover:text-foreground transition-colors cursor-default">
               {t("nav.product")}
-            </Link>
+            </span>
             <a href="#tarifs" className="hover:text-foreground transition-colors">
               {t("nav.pricing")}
             </a>
