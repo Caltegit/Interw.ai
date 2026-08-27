@@ -61,7 +61,6 @@ function DemoVideo() {
     >
       {visible && (
         <>
-          <source src="/demo-interwai-hd.webm" type="video/webm" />
           <source src="/demo-interwai-hd.mp4" type="video/mp4" />
         </>
       )}
