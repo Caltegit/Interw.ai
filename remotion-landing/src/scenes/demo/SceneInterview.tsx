@@ -10,10 +10,10 @@ import { BrowserChrome, ACCENT, FG, FG_DIM, BORDER, BG_ELEV_2 } from "../../comp
 import { DEMO_ENTER_DELAY } from "../../constants";
 import { FitScene } from "../../components/FitScene";
 import { Subtitle } from "../../components/Subtitle";
+import { COPY, type Lang } from "../../i18n/demo-copy";
 
-const STEPS = ["Présentation", "Parcours", "Motivation", "Mise en situation"];
-
-export const SceneInterview: React.FC = () => {
+export const SceneInterview: React.FC<{ lang: Lang }> = ({ lang }) => {
+  const c = COPY[lang].interview;
   const rawFrame = useCurrentFrame();
   const frame = rawFrame - DEMO_ENTER_DELAY;
   const { fps } = useVideoConfig();
@@ -46,15 +46,15 @@ export const SceneInterview: React.FC = () => {
               transform: `translateY(${interpolate(titleIn, [0, 1], [16, 0])}px)`,
             }}
           >
-            Le candidat répond <span style={{ color: ACCENT }}>face caméra.</span>
+            {c.titlePre}<span style={{ color: ACCENT }}>{c.titleAccent}</span>
           </div>
           <Subtitle frame={frame} mainDelay={14} mainFontSize={56}>
-            Quand il veut, où il veut.
+            {c.subtitle}
           </Subtitle>
         </div>
 
         <div style={{ transform: `scale(${0.94 + 0.06 * shellIn})`, opacity: shellIn }}>
-          <BrowserChrome url="interw · entretien en cours" width={1240} height={540}>
+          <BrowserChrome url={c.url} width={1240} height={540}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", height: "100%" }}>
               {/* Vidéo candidat */}
               <div style={{ position: "relative", background: "#09090B", overflow: "hidden" }}>
@@ -90,7 +90,7 @@ export const SceneInterview: React.FC = () => {
                       opacity: 0.5 + 0.5 * Math.abs(Math.sin((rawFrame / fps) * Math.PI)),
                     }}
                   />
-                  Enregistrement · {timer}
+                  {c.recording}{timer}
                 </div>
 
                 {/* Niveau micro */}
@@ -127,7 +127,7 @@ export const SceneInterview: React.FC = () => {
               {/* Panneau question */}
               <div style={{ borderLeft: `1px solid ${BORDER}`, padding: 26, display: "flex", flexDirection: "column", gap: 20 }}>
                 <div style={{ color: FG_DIM, fontSize: 12, textTransform: "uppercase", letterSpacing: 1.4 }}>
-                  Question 3 / 4
+                  {c.questionLabel}
                 </div>
                 <div
                   style={{
@@ -143,11 +143,11 @@ export const SceneInterview: React.FC = () => {
                     transform: `translateY(${interpolate(questionIn, [0, 1], [12, 0])}px)`,
                   }}
                 >
-                  Qu'est-ce qui vous attire dans ce poste ?
+                  {c.questionText}
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 4 }}>
-                  {STEPS.map((s, i) => {
+                  {c.steps.map((s, i) => {
                     const done = i < 2;
                     const active = i === 2;
                     return (

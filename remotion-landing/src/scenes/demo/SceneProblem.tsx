@@ -3,9 +3,9 @@ import { ACCENT, FG, FG_DIM, BORDER, BG_ELEV_2 } from "../../components/BrowserC
 import { DEMO_ENTER_DELAY } from "../../constants";
 import { FitScene } from "../../components/FitScene";
 import { Subtitle } from "../../components/Subtitle";
+import { COPY, type Lang } from "../../i18n/demo-copy";
 
 const HOURS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"];
-const DAYS = ["Lun 27", "Mar 28", "Mer 29", "Jeu 30", "Ven 1er"];
 const ROW_H = 46;
 
 // 5 entretiens par jour, jamais superposés (1 ligne = 1 h)
@@ -24,7 +24,8 @@ const ROWS = [
   [1, 3, 4, 6, 7],
 ];
 
-export const SceneProblem: React.FC = () => {
+export const SceneProblem: React.FC<{ lang: Lang }> = ({ lang }) => {
+  const c = COPY[lang].problem;
   const rawFrame = useCurrentFrame();
   // La scène ne s'anime qu'après la fin de la transition entrante.
   const frame = rawFrame - DEMO_ENTER_DELAY;
@@ -49,10 +50,10 @@ export const SceneProblem: React.FC = () => {
               transform: `translateY(${interpolate(text1In, [0, 1], [16, 0])}px)`,
             }}
           >
-            Des heures d'entretiens…
+            {c.title}
           </div>
           <Subtitle frame={frame} mainDelay={43}>
-            …alors qu'il vous suffit de 5 minutes par candidat.
+            {c.subtitle}
           </Subtitle>
 
         </div>
@@ -71,8 +72,8 @@ export const SceneProblem: React.FC = () => {
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-            <div style={{ color: FG, fontSize: 20, fontWeight: 600 }}>Semaine du 27 avril</div>
-            <div style={{ color: FG_DIM, fontSize: 15 }}>25 entretiens</div>
+            <div style={{ color: FG, fontSize: 20, fontWeight: 600 }}>{c.weekLabel}</div>
+            <div style={{ color: FG_DIM, fontSize: 15 }}>{c.interviewCount}</div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "80px repeat(5, 1fr)" }}>
@@ -89,7 +90,7 @@ export const SceneProblem: React.FC = () => {
               ))}
             </div>
 
-            {DAYS.map((d, col) => (
+            {c.days.map((d, col) => (
               <div key={d} style={{ position: "relative" }}>
                 <div
                   style={{
