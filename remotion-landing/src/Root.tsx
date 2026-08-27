@@ -16,6 +16,7 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="demo"
       component={DemoVideo}
+      defaultProps={{ lang: "fr" }}
       durationInFrames={DEMO_TOTAL}
       fps={FPS}
       width={1920}
@@ -24,7 +25,7 @@ export const RemotionRoot: React.FC = () => (
     <Composition
       id="demo-alpha"
       component={DemoVideo}
-      defaultProps={{ transparent: true }}
+      defaultProps={{ transparent: true, lang: "fr" }}
       durationInFrames={DEMO_TOTAL}
       fps={FPS}
       width={1920}
