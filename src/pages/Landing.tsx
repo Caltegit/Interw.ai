@@ -16,7 +16,7 @@ import logoMorning from "@/assets/logos/logo-morning.png";
 import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 function DemoVideo() {
   const { i18n } = useTranslation();
