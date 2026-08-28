@@ -1,57 +1,60 @@
-# Passage d'ElevenLabs à Mistral (Voxtral)
+# Revenir au calcul de score d'avant la matrice
 
-Deux briques audio changent de fournisseur : la synthèse vocale (lecture des questions par l'IA) et la transcription des entretiens. En plus, la règle produit change : **plus aucune voix générique** — seule la voix clonée du recruteur peut lire les questions.
+## Le constat
 
-## Ce que dit l'état actuel de la base
+Le score global est aujourd'hui uniquement la moyenne pondérée des colonnes de la matrice. Chaque case sans élément d'évaluation est forcée à 50/100 et compte dans la moyenne : tous les candidats sont tirés vers le centre.
 
-- 10 recruteurs ont une voix clonée chez ElevenLabs.
-- 109 postes sont configurés en lecture vocale, dont **14 seulement** utilisent une voix clonée. Les 95 autres utilisent une voix générique du catalogue.
-- 1 modèle d'entretien utilise aussi la lecture vocale.
+Vérifié dans le code : `generate-report` calcule bien une note hybride (moyenne note IA globale + score critères), puis `generate-fit-matrix` la remplace par le score matrice (`method: "matrix_v2"`), en écrasant aussi la recommandation et les scores par critère.
 
-C'est le point sensible : supprimer les voix génériques coupe la lecture vocale sur 95 postes actifs.
+## Ce qu'on rétablit
 
-## 1. Règle produit : voix clonée obligatoire
+La formule hybride, toujours présente dans le code :
 
-- Le catalogue de 12 voix génériques disparaît complètement.
-- Dans la création/édition d'un poste, l'option « questions lues par l'IA » n'est sélectionnable que si le recruteur a cloné sa voix. Sinon, l'option est désactivée avec un lien direct vers le clonage dans son profil.
-- Le sélecteur de voix devient un simple affichage : « Votre voix — [nom] », plus de liste.
-- Postes existants sans voix clonée (95) : ils basculent en questions écrites (pas de lecture vocale), et le propriétaire voit un bandeau l'invitant à cloner sa voix pour réactiver la lecture. Les questions et les entretiens en cours ne sont pas affectés.
+```text
+score final = moyenne( note globale IA , score d'adéquation aux critères IA )
+```
 
-## 2. Récupération des voix des bêta-testeurs
+## Ce qu'on garde
 
-ElevenLabs conserve l'échantillon audio d'origine de chaque voix clonée. Une fonction de migration réservée au super-admin :
+La matrice reste entièrement en place : tableau question × critère, justifications, citations et repères vidéo « Q5 · 1:15 ». Elle explique la note, elle ne la produit plus.
 
-1. liste les 10 profils avec une voix clonée ;
-2. télécharge l'échantillon d'origine depuis ElevenLabs ;
-3. le range dans un espace de stockage privé (pour ne plus jamais dépendre d'un fournisseur) ;
-4. recrée la voix chez Mistral et enregistre le nouvel identifiant.
+## Le correctif
 
-Point à vérifier en premier : que l'échantillon soit bien téléchargeable pour ces 10 voix. Si un échantillon manque, le recruteur concerné est listé et devra réenregistrer 30 secondes — l'écran de clonage existant suffit.
+### 1. La matrice ne réécrit plus la note
 
-## 3. Synthèse vocale — Voxtral TTS
+`generate-fit-matrix` n'écrit plus que la matrice dans les statistiques du rapport. Il ne touche plus à la note globale, à la recommandation ni aux scores par critère.
 
-- Nouvelle fonction serveur `tts-mistral` qui remplace `tts-elevenlabs`, même contrat d'entrée/sortie (flux MP3), donc aucun changement dans le déroulé de l'entretien.
-- Le clonage passe par la création d'une voix Mistral réutilisable ; l'échantillon est aussi conservé de notre côté.
-- La suppression de voix supprime chez Mistral et dans le stockage.
-- Le cache de phrases de transition et le préchargement actuels restent tels quels.
+### 2. Le rapport reprend la formule hybride
 
-## 4. Transcription — Voxtral Mini Transcribe V2
+`generate-report` conserve son calcul hybride et ne le remplace plus par le résultat de la matrice. La méthode enregistrée redevient `hybrid_v1`.
 
-- `transcribe-session` passe de Gemini à Voxtral, qui rend nativement des horodatages mot à mot (donc des segments plus fiables que ceux devinés aujourd'hui).
-- L'audio est envoyé en fichier plutôt qu'encodé dans un message ; supporte jusqu'à 3 heures, ce qui supprime le découpage en segments actuel.
-- Les horodatages alimentent déjà la matrice de fit (« Q5 · 1:15 ») : le format de sortie reste identique pour ne rien casser en aval.
-- Repli : si Voxtral échoue, on retombe sur le chemin Gemini actuel pendant la période de validation.
+### 3. Les cases « non évaluées » ne pèsent plus
 
-## 5. Bascule et nettoyage
+Une case sans élément est marquée « non évalué » et exclue de la moyenne de sa colonne. Un critère sans aucune case évaluable reste sans moyenne.
 
-1. Ajout de la clé API Mistral.
-2. Migration des 10 voix, vérification à l'écoute.
-3. Bascule TTS puis transcription, avec repli actif.
-4. Après validation : suppression du code ElevenLabs, du catalogue de voix et de la clé.
+### 4. Carte « Adéquation selon les critères »
+
+Elle réaffiche les scores par critère produits par l'IA, avec leurs justifications et citations, au lieu des moyennes de colonnes.
+
+## Effet sur les rapports existants
+
+Aucune réécriture rétroactive. Seuls les rapports régénérés après le correctif utilisent la formule rétablie.
+
+Sur ta question « jamais redescendre ? » : non, pas garanti. Le score remonte quand la note IA globale est plus haute que la moyenne matrice (cas fréquent aujourd'hui), mais un candidat dont l'IA juge l'entretien globalement faible alors que la matrice le neutralisait à 50 verra son score baisser. C'est le retour de l'amplitude, dans les deux sens.
+
+## Vérification
+
+- Régénérer Marine Fiaud : score attendu autour de 90, matrice intacte.
+- Régénérer une session moyenne : l'écart avec la précédente doit être nettement plus marqué.
+- Aucune colonne de matrice ne doit afficher 50 par défaut.
+
+## Hors périmètre
+
+- Décalage score e-mail / interface (e-mail parti avant la fin du recalcul) : à traiter juste après.
+- Analyses orale, attitude et personnalité : inchangées.
 
 ## Détails techniques
 
-- Points d'appel Mistral : `POST /v1/audio/voices` (clonage), `POST /v1/audio/speech` avec `voxtral-mini-tts-2603` en flux, `POST /v1/audio/transcriptions` avec `voxtral-mini-transcribe-2`.
-- Fichiers touchés : `supabase/functions/tts-mistral` (nouveau), `clone-voice`, `delete-cloned-voice`, `transcribe-session`, `migrate-voices-to-mistral` (nouveau, super-admin) ; côté interface `VoiceSelectorDialog.tsx`, `VoiceCloneDialog.tsx`, `ProjectEdit.tsx`, `ProjectNew`, `InterviewTemplateEdit.tsx`, `IntroLibrary.tsx`, `InterviewStart.tsx`, `InterviewLanding.tsx`, `InterviewDemoLanding.tsx`, `SettingsProfile.tsx`, `AdminTtsCompare.tsx`.
-- Base : ajout de `cloned_voice_provider` et `cloned_voice_sample_path` sur `profiles` ; `tts_provider` accepte `mistral` ; migration des 95 postes en voix générique vers `browser`/questions écrites.
-- Nouveau seau de stockage privé pour les échantillons de voix, accessible uniquement aux fonctions serveur.
+- `supabase/functions/generate-fit-matrix/index.ts` : cases `evidence: "none"` → `score: null` + `not_evaluated: true` ; moyennes de colonne calculées sur les seules cases notées ; `reportPatch` réduit à `{ stats }` (plus de `overall_score`, `recommendation`, `criteria_scores`) ; plus de reconstruction de `stats.fit_breakdown` ni de `fit_score` / `score_breakdown`.
+- `supabase/functions/generate-report/index.ts` : le bloc `if (matrixResult?.ok …)` (≈ lignes 1416-1439) ne récupère plus que `fit_matrix` dans `stats` ; `finalOverallScore`, `parsed.recommendation`, `criteriaScores`, `fitScore` et `fitBreakdown` restent ceux du calcul hybride ; `score_breakdown.method` reste `hybrid_v1`.
+- `src/components/session/FitMatrixCard.tsx` : afficher « non évalué » pour les cases sans score et ignorer ces cases dans l'affichage des moyennes.
