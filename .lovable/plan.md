@@ -19,7 +19,6 @@ Aujourd'hui la vidéo est posée dans un cadre à fond blanc + grille : quand le
 ## 3. Section « problème »
 
 - Titre remplacé par : « Et si votre prochain recrutement était celui que vous auriez écarté sur CV ? » (EN : « What if your next great hire is the one you'd have filtered out on paper? »).
-- Cette phrase servait déjà de titre au bloc de clôture en bas de page : ce bloc reprend l'ancien titre « Aujourd'hui vous ne triez pas des candidats. Vous triez des documents. » pour éviter le doublon.
 - Les 4 cartouches perdent leur sous-titre explicatif : il ne reste que le numéro + le titre, puis l'illustration animée (qui remonte, cartes plus compactes et de hauteur égale).
 - 4ᵉ cartouche (l'entonnoir en points) : couleurs plus franches — palette saturée et opacités relevées (points « CV reçus » / « Appelés » / « Entretiens » / « Recruté » nettement contrastés au lieu des tons pastel actuels), pour lire l'écrasement du funnel d'un coup d'œil.
 
