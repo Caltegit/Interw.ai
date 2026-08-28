@@ -15,7 +15,7 @@ cartouche ne porte plus que le prix, le volume inclus et le prix au-delà.
 |---|---|---|---|
 | À la carte | 0 € | — | 5 € / entretien |
 | Plus | 199 € / mois | 100 | 4 € / entretien |
-| Pro (recommandé) | 399 € / mois | 300 | 3 € / entretien |
+| Pro (populaire) | 399 € / mois | 300 | 3 € / entretien |
 | Entreprise | Sur devis | Illimité | Négocié |
 
 « Postes actifs simultanés » reste affiché sur chaque carte, mais avec la valeur
