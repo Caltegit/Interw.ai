@@ -246,9 +246,9 @@ function IllusCalls({ play, labels }: { play: boolean; labels: { call: string; m
 /* ---------- 4. Vous en recevez trois ---------- */
 
 const DOT_TIERS = [
-  { count: 32, labelKey: "received", token: RECEIVED, alpha: 0.35, delay: 0 },
-  { count: 12, labelKey: "called", token: CALLED, alpha: 0.6, delay: 700 },
-  { count: 3, labelKey: "interviews", token: INTERVIEW, alpha: 0.85, delay: 1300 },
+  { count: 32, labelKey: "received", token: RECEIVED, alpha: 0.55, delay: 0 },
+  { count: 12, labelKey: "called", token: CALLED, alpha: 0.78, delay: 700 },
+  { count: 3, labelKey: "interviews", token: INTERVIEW, alpha: 0.95, delay: 1300 },
   { count: 1, labelKey: "hired", token: HIRED, alpha: 1, delay: 1800 },
 ];
 
