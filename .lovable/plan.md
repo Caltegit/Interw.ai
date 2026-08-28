@@ -15,8 +15,9 @@ Retouche de la section tarifs de `src/pages/Landing.tsx` : retirer les élément
 Objectif : au clic sur Mensuel / Annuel, seuls les chiffres qui changent bougent, comme une machine à sous.
 
 - Les prix sont affichés chiffre par chiffre (chaque chiffre dans son propre span, de largeur fixe `ch` pour ne pas décaler la mise en page).
-- Au changement de période, un chiffre dont la valeur ne change pas reste immobile ; un chiffre qui change défile verticalement (l'ancien chiffre sort vers le haut, le nouveau arrive par le bas, ~300 ms, courbe douce).
-- Exemple Plus 199 → 169 : le « 1 » reste fixe, « 9 → 6 » et « 9 → 9 »... le « 9 » des dizaines devient « 6 » donc il tourne, et les unités « 9 → 9 » restent fixes car identiques. Pro 399 → 329 : « 3 » fixe, « 9 → 3 » et « 9 → 9 » tournent selon le même principe.
+- Un chiffre qui change défile verticalement (l'ancien chiffre sort vers le haut, le nouveau arrive par le bas, ~300 ms, courbe douce).
+- Si un chiffre de poids supérieur change, tous les chiffres situés à sa droite tournent également, même si leur valeur est identique : cela donne l'effet d'une roulette.
+- Exemple Plus 199 → 169 : le « 1 » reste fixe, « 9 → 6 » et « 9 → 9 »... le « 9 » des dizaines devient « 6 » donc il tourne, et les unités « 9 → 9 » tournent aussi, car le chiffre des dizaines a bougé. Pro 399 → 329 : « 3 » fixe, « 9 → 3 » et « 9 → 9 » tournent toutes les deux.
 - La cartouche « À la carte » (0 €) et « Entreprise » (Sur devis) ne bougent jamais : prix identique dans les deux périodes, aucune animation.
 - L'animation actuelle `price-roll` (fondu global du prix entier) est supprimée au profit de cette mécanique chiffre par chiffre.
 
