@@ -46,5 +46,7 @@
       "desc": "Pour les organisations à volume, avec vos outils et vos règles.",
       "cta": "Parler à l'équipe"
     }
-  }
+  },
+  "perMonth": "/ mois",
+  "perYear": "/ an"
 }

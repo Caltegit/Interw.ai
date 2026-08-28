@@ -46,5 +46,7 @@
       "desc": "For high-volume organizations, with your tools and your rules.",
       "cta": "Talk to the team"
     }
-  }
+  },
+  "perMonth": "/ mo",
+  "perYear": "/ yr"
 }
