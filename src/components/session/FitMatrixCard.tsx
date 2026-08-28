@@ -228,7 +228,7 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                 <AlertDialogHeader>
                   <AlertDialogTitle>Régénérer la matrice ?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    La matrice actuelle sera remplacée. Le score global et la recommandation peuvent être ajustés en conséquence.
+                    La matrice actuelle sera remplacée. Elle sert uniquement à détailler l'évaluation.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
