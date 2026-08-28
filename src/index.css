@@ -4,6 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  @keyframes price-roll {
+    0% { opacity: 0; transform: translateY(-0.5rem); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .price-roll {
+    animation: price-roll 0.25s ease-out;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
