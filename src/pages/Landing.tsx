@@ -157,6 +157,91 @@ const PLAN_KEYS = [
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
+function DigitRoller({
+  from,
+  to,
+  roll,
+}: {
+  from: string;
+  to: string;
+  roll: boolean;
+}) {
+  return (
+    <span className="relative inline-block h-[1em] w-[0.55em] overflow-hidden align-bottom">
+      <span
+        className={`absolute inset-0 flex items-center justify-center ${
+          roll ? "animate-digit-roll-out" : ""
+        }`}
+      >
+        {from}
+      </span>
+      <span
+        className={`absolute inset-0 flex translate-y-full items-center justify-center ${
+          roll ? "animate-digit-roll-in" : ""
+        }`}
+      >
+        {to}
+      </span>
+    </span>
+  );
+}
+
+function RollingPrice({
+  monthly,
+  annual,
+  billing,
+  onQuote,
+}: {
+  monthly: string;
+  annual: string;
+  billing: "mensuel" | "annuel";
+  onQuote: string;
+}) {
+  const [anim, setAnim] = useState<{ from: string; to: string } | null>(null);
+
+  useEffect(() => {
+    setAnim((prev) => {
+      const to = billing === "annuel" ? annual : monthly;
+      if (!prev) return { from: to, to };
+      if (prev.to === to) return prev;
+      return { from: prev.to, to };
+    });
+  }, [billing, monthly, annual]);
+
+  if (!anim) return null;
+  const toPrice = anim.to;
+  if (toPrice === "onQuote") {
+    return <span className="text-4xl font-semibold tracking-tight">{onQuote}</span>;
+  }
+
+  const fromStr = anim.from === "onQuote" ? "" : anim.from.replace(/\D/g, "");
+  const toStr = toPrice.replace(/\D/g, "");
+  const maxLen = Math.max(fromStr.length, toStr.length, 1);
+  const fromDigits = fromStr.padStart(maxLen, " ");
+  const toDigits = toStr.padStart(maxLen, " ");
+
+  let rolling = false;
+  const rollFlags = toDigits.split("").map((toDigit, i) => {
+    const fromDigit = fromDigits[i];
+    if (fromDigit !== toDigit) rolling = true;
+    return rolling;
+  });
+
+  return (
+    <span className="inline-flex items-baseline text-4xl font-semibold tracking-tight">
+      {toDigits.split("").map((toDigit, i) => (
+        <DigitRoller
+          key={i}
+          from={fromDigits[i]}
+          to={toDigit}
+          roll={rollFlags[i]}
+        />
+      ))}
+      <span className="ml-1">€</span>
+    </span>
+  );
+}
+
 export default function Landing() {
   const { t } = useTranslation("landing");
   const { t: tp } = useTranslation("pricing");
