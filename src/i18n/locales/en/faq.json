@@ -10,25 +10,21 @@
       "q": "Where are candidate videos and data hosted?",
       "a": "Videos are hosted on our servers in France, and we use an AI hosted in France."
     },
-    "activeRole": {
-      "q": "What is an active role?",
-      "a": "An active role in Interw is a hire in progress. Once the hire is done, archive it: the slot frees up immediately for the next one. A permanent role, such as spontaneous applications, occupies a slot continuously. On Plus, you can add up to two extra roles at €29 per month each."
-    },
     "interview": {
       "q": "What counts as an interview?",
       "a": "A candidate who completes their session and whose report is generated. Invitations sent, abandoned sessions and your own tests never count. You can share your link as widely as you like."
     },
     "quota": {
-      "q": "What happens when I reach my quota?",
-      "a": "Nothing for your candidates: they're never blocked. On Plus and Pro, each extra interview is billed €3 on your next invoice. On Free, the next 15 candidates are kept and analyzed as soon as you move to Plus, or when your quota renews. Beyond that, the link pauses until the following month."
+      "q": "What happens when I exceed my plan?",
+      "a": "Nothing for your candidates: they're never blocked. Each extra interview is billed at your plan's rate: €5 on Pay as you go, €4 on Plus, €3 on Pro."
     },
     "trial": {
-      "q": "How does the trial work?",
-      "a": "30 days on Pro, no credit card. The countdown starts when you publish your first role, not when you sign up. Then you pick a plan or stay on Free: everything you created remains accessible."
+      "q": "How do the 10 free interviews work?",
+      "a": "Your first 10 analyzed interviews are free, no credit card required, whichever plan you choose. After that, you automatically move to your plan's rate. You can add a payment method at any time."
     },
     "billing": {
       "q": "Monthly or annual?",
-      "a": "Monthly has no commitment: move up or down a plan whenever you want, including outside hiring season. Annual is 12 months for the price of 10."
+      "a": "Monthly has no commitment: move up or down a plan whenever you want. Annual shows the reduced monthly price: Plus at €169/mo and Pro at €329/mo, billed once a year."
     }
   }
 }

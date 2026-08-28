@@ -4,83 +4,47 @@
   "annual": "Annuel",
   "twoMonthsFree": "2 mois offerts",
   "note": "Prix HT. Sans engagement, changez de plan quand vous voulez.",
-  "recommended": "Recommandé",
+  "recommended": "Populaire",
   "forever": "Pour toujours",
   "billedMonthly": "Facturé chaque mois",
-  "billedAnnually": "Facturé une fois par an",
+  "billedAnnually": "Facturé annuellement",
   "annualCommitment": "Engagement annuel",
   "onQuote": "Sur devis",
+  "freeOffer": "10 entretiens offerts",
+  "noCard": "Sans carte bancaire",
   "specs": {
     "activeRoles": "Postes actifs simultanés",
-    "interviews": "Entretiens analysés / mois",
+    "interviews": "Entretiens inclus / mois",
     "beyond": "Au-delà",
     "users": "Utilisateurs"
   },
   "values": {
     "unlimited": "Illimités",
-    "queue": "File d'attente",
-    "queueSub": "au mois suivant",
-    "perInterview": "3 € par entretien",
-    "negotiated": "Négocié",
-    "unlimitedRoles": "Illimités + rôles",
-    "unlimitedRolesSso": "Illimités + rôles + SSO",
-    "extraRole": "+29 € par poste (max 5)"
+    "perInterview5": "5 € par entretien",
+    "perInterview4": "4 € par entretien",
+    "perInterview3": "3 € par entretien",
+    "negotiated": "Négocié"
   },
   "plans": {
     "free": {
-      "name": "Free",
-      "desc": "Pour essayer Interw sur un vrai recrutement.",
-      "cta": "Créer un compte"
+      "name": "À la carte",
+      "desc": "Payez uniquement les entretiens que vous analysez.",
+      "cta": "Commencer gratuitement"
     },
     "plus": {
       "name": "Plus",
-      "desc": "Pour un manager ou une petite équipe qui recrute régulièrement.",
-      "cta": "Choisir Plus"
+      "desc": "Pour une équipe qui recrute régulièrement.",
+      "cta": "Commencer gratuitement"
     },
     "pro": {
       "name": "Pro",
       "desc": "Pour la fonction RH qui déploie Interw sur tous ses recrutements.",
-      "cta": "Essayer Pro 30 jours",
-      "noCardNote": "Sans carte bancaire"
+      "cta": "Commencer gratuitement"
     },
     "enterprise": {
-      "name": "Enterprise",
+      "name": "Entreprise",
       "desc": "Pour les organisations à volume, avec vos outils et vos règles.",
       "cta": "Parler à l'équipe"
-    }
-  },
-  "enterpriseLine": {
-    "text": "— volumes importants, SSO, vos outils et vos règles. Sur devis.",
-    "cta": "Parler à l'équipe"
-  },
-  "compare": {
-    "trigger": "Comparer les plans en détail",
-    "feature": "Fonctionnalité",
-    "groups": {
-      "all": "Inclus dans tous les plans",
-      "brand": "Marque",
-      "team": "Équipe",
-      "integrations": "Intégrations",
-      "support": "Support"
-    },
-    "rows": {
-      "report": "Rapport IA complet",
-      "reportSub": "Fit poste, communication, verbatims ancrés",
-      "resources": "Ressources réutilisables",
-      "resourcesSub": "Sessions types, questions, critères",
-      "branding": "Personnalisation",
-      "brandingSub": "Votre logo, vos couleurs, sans mention Interw",
-      "users": "Utilisateurs",
-      "roles": "Rôles et permissions",
-      "sso": "SSO",
-      "ats": "Intégration ATS",
-      "api": "API",
-      "mcp": "MCP",
-      "mcpSub": "Branchez Interw à vos agents IA",
-      "email": "Email",
-      "priority": "Prioritaire",
-      "phone": "Téléphone et WhatsApp",
-      "dedicated": "Support personnalisé"
     }
   },
   "perMonth": "/ mois",

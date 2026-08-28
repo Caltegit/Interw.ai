@@ -4,83 +4,47 @@
   "annual": "Annual",
   "twoMonthsFree": "2 months free",
   "note": "Prices exclude VAT. No commitment, switch plans whenever you want.",
-  "recommended": "Recommended",
+  "recommended": "Popular",
   "forever": "Forever",
   "billedMonthly": "Billed every month",
-  "billedAnnually": "Billed once a year",
+  "billedAnnually": "Billed annually",
   "annualCommitment": "Annual commitment",
   "onQuote": "On request",
+  "freeOffer": "10 interviews free",
+  "noCard": "No credit card",
   "specs": {
     "activeRoles": "Concurrent active roles",
-    "interviews": "Interviews analyzed / month",
+    "interviews": "Interviews included / month",
     "beyond": "Beyond that",
     "users": "Users"
   },
   "values": {
     "unlimited": "Unlimited",
-    "queue": "Rolled over",
-    "queueSub": "to the next month",
-    "perInterview": "€3 per interview",
-    "negotiated": "Negotiated",
-    "unlimitedRoles": "Unlimited + roles",
-    "unlimitedRolesSso": "Unlimited + roles + SSO",
-    "extraRole": "+€29 per role (max 5)"
+    "perInterview5": "€5 per interview",
+    "perInterview4": "€4 per interview",
+    "perInterview3": "€3 per interview",
+    "negotiated": "Negotiated"
   },
   "plans": {
     "free": {
-      "name": "Free",
-      "desc": "To try Interw on a real hire.",
-      "cta": "Create an account"
+      "name": "Pay as you go",
+      "desc": "Only pay for the interviews you analyze.",
+      "cta": "Start for free"
     },
     "plus": {
       "name": "Plus",
-      "desc": "For a manager or a small team hiring regularly.",
-      "cta": "Choose Plus"
+      "desc": "For a team hiring regularly.",
+      "cta": "Start for free"
     },
     "pro": {
       "name": "Pro",
       "desc": "For HR teams rolling Interw out across every hire.",
-      "cta": "Try Pro for 30 days",
-      "noCardNote": "No credit card"
+      "cta": "Start for free"
     },
     "enterprise": {
       "name": "Enterprise",
       "desc": "For high-volume organizations, with your tools and your rules.",
       "cta": "Talk to the team"
-    }
-  },
-  "enterpriseLine": {
-    "text": "— high volumes, SSO, your tools and your rules. On request.",
-    "cta": "Talk to the team"
-  },
-  "compare": {
-    "trigger": "Compare plans in detail",
-    "feature": "Feature",
-    "groups": {
-      "all": "Included in every plan",
-      "brand": "Brand",
-      "team": "Team",
-      "integrations": "Integrations",
-      "support": "Support"
-    },
-    "rows": {
-      "report": "Full AI report",
-      "reportSub": "Role fit, communication, anchored quotes",
-      "resources": "Reusable resources",
-      "resourcesSub": "Session templates, questions, criteria",
-      "branding": "White labeling",
-      "brandingSub": "Your logo, your colors, no Interw branding",
-      "users": "Users",
-      "roles": "Roles and permissions",
-      "sso": "SSO",
-      "ats": "ATS integration",
-      "api": "API",
-      "mcp": "MCP",
-      "mcpSub": "Connect Interw to your AI agents",
-      "email": "Email",
-      "priority": "Priority",
-      "phone": "Phone and WhatsApp",
-      "dedicated": "Dedicated support"
     }
   },
   "perMonth": "/ mo",
