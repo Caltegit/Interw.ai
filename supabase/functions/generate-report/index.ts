@@ -1452,8 +1452,8 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     }
 
     // Si la matrice n'a pas pu être générée de manière synchrone, on tente
-    // une mise à jour en arrière-plan pour que le rapport soit corrigé plus tard.
-    if (generate_fit_matrix !== false && (!matrixResult?.ok || typeof matrixResult?.fit_score !== "number")) try {
+    // une mise à jour en arrière-plan pour que le détail soit ajouté plus tard.
+    if (generate_fit_matrix !== false && (!matrixResult?.ok || !matrixResult?.fit_matrix)) try {
       fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
         method: "POST",
         headers: {
