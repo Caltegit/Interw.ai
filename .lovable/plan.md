@@ -48,6 +48,12 @@ Passer à la version gérée par Lovable : envoi, retries, suppression, désinsc
 - **Après publication, la bascule est définitive** et ne peut pas être annulée.
 - Les 16 emails actuellement en DLQ devront être re-traités manuellement ou via les fonctionnalités existantes (`retry-email`, `check-email-failures`) avant ou après la bascule.
 
+## Décision actuelle
+
+Mise à jour **reportée au lundi 31 août 2026**. L’infrastructure email legacy reste en place jusqu’à cette date.
+
 ## Prochaine action
 
-Si tu valides, je lance la procédure de consentement puis la mise à jour du code. Aucun fichier ne sera modifié avant ton accord explicite.
+- Le 31 août 2026, reproposer ce plan à l’utilisatrice pour validation.
+- Si elle valide ce jour-là : lancer la procédure de consentement, puis la mise à jour du code.
+- Aucun fichier ne sera modifié avant son accord explicite.
