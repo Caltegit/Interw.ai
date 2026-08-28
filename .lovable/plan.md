@@ -53,7 +53,7 @@ Trois éléments qui font la différence en conversion :
 - le chiffre tourne avec une micro-animation au moment du switch, comme un compteur.
 - « Facturé annuellement » sous le prix annuel, pas le montant total.
 
-Prix annuels : Plus 1 990 € (166 €/mois), Pro 3 990 € (332 €/mois). L'offre À la
+Prix annuels : Plus 2 028 € (169 €/mois), Pro 3 948 € (329 €/mois). L'offre À la
 carte et Entreprise ne changent pas selon la bascule.
 
 ## L'essai 30 jours
