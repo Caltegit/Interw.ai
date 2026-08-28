@@ -3,7 +3,7 @@
   "monthly": "Monthly",
   "annual": "Annual",
   "twoMonthsFree": "2 months free",
-  "note": "Prices exclude VAT. No commitment, switch plans whenever you want.",
+  "note": "Prices exclude VAT. No commitment.",
   "recommended": "Popular",
   "forever": "Forever",
   "billedMonthly": "Billed every month",
@@ -11,12 +11,9 @@
   "annualCommitment": "Annual commitment",
   "onQuote": "On request",
   "freeOffer": "10 interviews free",
-  "noCard": "No credit card",
   "specs": {
-    "activeRoles": "Concurrent active roles",
     "interviews": "Interviews included / month",
-    "beyond": "Beyond that",
-    "users": "Users"
+    "beyond": "Beyond that"
   },
   "values": {
     "unlimited": "Unlimited",
@@ -28,22 +25,18 @@
   "plans": {
     "free": {
       "name": "Pay as you go",
-      "desc": "Only pay for the interviews you analyze.",
       "cta": "Start for free"
     },
     "plus": {
       "name": "Plus",
-      "desc": "For a team hiring regularly.",
       "cta": "Start for free"
     },
     "pro": {
       "name": "Pro",
-      "desc": "For HR teams rolling Interw out across every hire.",
       "cta": "Start for free"
     },
     "enterprise": {
       "name": "Enterprise",
-      "desc": "For high-volume organizations, with your tools and your rules.",
       "cta": "Talk to the team"
     }
   },

@@ -104,10 +104,8 @@ const PLAN_KEYS = [
     featured: false,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "—" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview5" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -121,10 +119,8 @@ const PLAN_KEYS = [
     featured: false,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "100" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview4" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -138,10 +134,8 @@ const PLAN_KEYS = [
     featured: true,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "300" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview3" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -155,15 +149,98 @@ const PLAN_KEYS = [
     featured: false,
     external: true,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", valueKey: "values.unlimited" },
       { labelKey: "specs.beyond", valueKey: "values.negotiated" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
 ] as const;
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
+
+function DigitRoller({
+  from,
+  to,
+  roll,
+}: {
+  from: string;
+  to: string;
+  roll: boolean;
+}) {
+  return (
+    <span className="relative inline-block h-[1em] w-[0.55em] overflow-hidden align-bottom">
+      <span
+        className={`absolute inset-0 flex items-center justify-center ${
+          roll ? "animate-digit-roll-out" : ""
+        }`}
+      >
+        {from}
+      </span>
+      <span
+        className={`absolute inset-0 flex translate-y-full items-center justify-center ${
+          roll ? "animate-digit-roll-in" : ""
+        }`}
+      >
+        {to}
+      </span>
+    </span>
+  );
+}
+
+function RollingPrice({
+  monthly,
+  annual,
+  billing,
+  onQuote,
+}: {
+  monthly: string;
+  annual: string;
+  billing: "mensuel" | "annuel";
+  onQuote: string;
+}) {
+  const [anim, setAnim] = useState<{ from: string; to: string } | null>(null);
+
+  useEffect(() => {
+    setAnim((prev) => {
+      const to = billing === "annuel" ? annual : monthly;
+      if (!prev) return { from: to, to };
+      if (prev.to === to) return prev;
+      return { from: prev.to, to };
+    });
+  }, [billing, monthly, annual]);
+
+  if (!anim) return null;
+  const toPrice = anim.to;
+  if (toPrice === "onQuote") {
+    return <span className="text-4xl font-semibold tracking-tight">{onQuote}</span>;
+  }
+
+  const fromStr = anim.from === "onQuote" ? "" : anim.from.replace(/\D/g, "");
+  const toStr = toPrice.replace(/\D/g, "");
+  const maxLen = Math.max(fromStr.length, toStr.length, 1);
+  const fromDigits = fromStr.padStart(maxLen, " ");
+  const toDigits = toStr.padStart(maxLen, " ");
+
+  let rolling = false;
+  const rollFlags = toDigits.split("").map((toDigit, i) => {
+    const fromDigit = fromDigits[i];
+    if (fromDigit !== toDigit) rolling = true;
+    return rolling;
+  });
+
+  return (
+    <span className="inline-flex items-baseline text-4xl font-semibold tracking-tight">
+      {toDigits.split("").map((toDigit, i) => (
+        <DigitRoller
+          key={i}
+          from={fromDigits[i]}
+          to={toDigit}
+          roll={rollFlags[i]}
+        />
+      ))}
+      <span className="ml-1">€</span>
+    </span>
+  );
+}
 
 export default function Landing() {
   const { t } = useTranslation("landing");
@@ -374,9 +451,6 @@ export default function Landing() {
           <div className="mt-8 flex justify-center">
             <div className="bg-foreground text-background inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
               <span>{tp("freeOffer")}</span>
-              <span className="bg-background text-foreground rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                {tp("noCard")}
-              </span>
             </div>
           </div>
 
@@ -406,16 +480,18 @@ export default function Landing() {
                       {tp("recommended")}
                     </span>
                   )}
-                  {/* Nom + description — hauteur fixe (3 lignes) */}
-                  <div className="h-[88px]">
+                  {/* Nom */}
+                  <div className="h-6">
                     <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
-                    <p className="text-muted-foreground mt-1 text-[13px] leading-snug">
-                      {tp(`plans.${p.key}.desc`)}
-                    </p>
                   </div>
                   {/* Prix — hauteur fixe */}
-                  <div className="flex h-12 items-baseline gap-1.5">
-                    <span key={billing} className="text-4xl font-semibold tracking-tight price-roll">{price === "onQuote" ? tp("onQuote") : price}</span>
+                  <div className="mt-4 flex h-12 items-baseline gap-1.5">
+                    <RollingPrice
+                      monthly={p.monthly}
+                      annual={p.annual}
+                      billing={billing}
+                      onQuote={tp("onQuote")}
+                    />
                     {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
@@ -435,21 +511,14 @@ export default function Landing() {
                       {cta}
                     </Link>
                   )}
-                  {/* Note sous le bouton — hauteur fixe identique pour les 4 cartes */}
-                  <p className="mt-1 h-5 text-center text-[11px] text-muted-foreground">
-                    {p.external ? "" : tp("noCard")}
-                  </p>
                   {/* Caractéristiques — hauteur fixe identique, séparateurs alignés */}
-                  <div className="border-border border-t mt-2">
+                  <div className="border-border border-t mt-4">
                     {p.specs.map((s, idx) => {
-                      const tall = idx === 0 || idx === 2 || idx === 3;
                       const value = "valueKey" in s && s.valueKey ? tp(s.valueKey) : (s as { value: string }).value;
                       return (
                         <div
                           key={s.labelKey}
-                          className={`border-border flex items-center justify-between gap-2 overflow-hidden border-b ${
-                            tall ? "h-[62px]" : "h-[46px]"
-                          } last:border-0`}
+                          className="border-border flex h-[62px] items-center justify-between gap-2 overflow-hidden border-b last:border-0"
                         >
                           <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
