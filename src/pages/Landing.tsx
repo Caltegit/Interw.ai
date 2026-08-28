@@ -325,26 +325,8 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto flex min-h-[180px] w-full max-w-5xl flex-1 px-6 pb-8 md:min-h-0 md:pb-[2vh]">
-          <div className="landing-fade-up landing-delay-3 border-border relative flex min-h-0 w-full items-center justify-center overflow-hidden rounded-xl border bg-white">
-            {/* Fond en grille — s'adapte à toutes les proportions du cadre */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(9,9,11,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(9,9,11,0.045) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(60% 60% at 20% 10%, rgba(9,9,11,0.05) 0%, transparent 70%), radial-gradient(50% 50% at 90% 95%, rgba(9,9,11,0.035) 0%, transparent 70%)",
-              }}
-            />
+        <section className="mx-auto flex w-full max-w-6xl flex-1 items-start justify-center px-4 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
+          <div className="landing-fade-up landing-delay-3 border-border relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-xl border bg-white">
             <DemoVideo />
           </div>
         </section>
