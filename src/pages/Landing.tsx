@@ -480,16 +480,18 @@ export default function Landing() {
                       {tp("recommended")}
                     </span>
                   )}
-                  {/* Nom + description — hauteur fixe (3 lignes) */}
-                  <div className="h-[88px]">
+                  {/* Nom */}
+                  <div className="h-6">
                     <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
-                    <p className="text-muted-foreground mt-1 text-[13px] leading-snug">
-                      {tp(`plans.${p.key}.desc`)}
-                    </p>
                   </div>
                   {/* Prix — hauteur fixe */}
-                  <div className="flex h-12 items-baseline gap-1.5">
-                    <span key={billing} className="text-4xl font-semibold tracking-tight price-roll">{price === "onQuote" ? tp("onQuote") : price}</span>
+                  <div className="mt-4 flex h-12 items-baseline gap-1.5">
+                    <RollingPrice
+                      monthly={p.monthly}
+                      annual={p.annual}
+                      billing={billing}
+                      onQuote={tp("onQuote")}
+                    />
                     {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
@@ -509,21 +511,14 @@ export default function Landing() {
                       {cta}
                     </Link>
                   )}
-                  {/* Note sous le bouton — hauteur fixe identique pour les 4 cartes */}
-                  <p className="mt-1 h-5 text-center text-[11px] text-muted-foreground">
-                    {p.external ? "" : tp("noCard")}
-                  </p>
                   {/* Caractéristiques — hauteur fixe identique, séparateurs alignés */}
-                  <div className="border-border border-t mt-2">
+                  <div className="border-border border-t mt-4">
                     {p.specs.map((s, idx) => {
-                      const tall = idx === 0 || idx === 2 || idx === 3;
                       const value = "valueKey" in s && s.valueKey ? tp(s.valueKey) : (s as { value: string }).value;
                       return (
                         <div
                           key={s.labelKey}
-                          className={`border-border flex items-center justify-between gap-2 overflow-hidden border-b ${
-                            tall ? "h-[62px]" : "h-[46px]"
-                          } last:border-0`}
+                          className="border-border flex h-[62px] items-center justify-between gap-2 overflow-hidden border-b last:border-0"
                         >
                           <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
