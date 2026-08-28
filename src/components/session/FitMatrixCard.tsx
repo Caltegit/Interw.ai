@@ -28,6 +28,7 @@ export interface FitMatrixCriterion {
 
 export interface FitMatrixCell {
   score: number | null;
+  not_evaluated?: boolean;
   justification?: string;
   quote?: string;
   message_id?: string;
@@ -114,7 +115,9 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
     const out: Record<string, number | null> = {};
     for (const c of matrix.criteria) {
       const scores = matrix.rows
-        .map((r) => r.cells[c.id]?.score)
+        .map((r) => r.cells[c.id])
+        .filter((cell): cell is FitMatrixCell => isInformative(cell))
+        .map((cell) => cell.score)
         .filter((v): v is number => typeof v === "number");
       out[c.id] = scores.length > 0
         ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
@@ -130,7 +133,8 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
       let sum = 0;
       let weight = 0;
       for (const c of matrix.criteria) {
-        const s = r.cells[c.id]?.score;
+        const cell = r.cells[c.id];
+        const s = isInformative(cell) ? cell?.score : null;
         if (typeof s === "number") {
           sum += s * (c.weight || 0);
           weight += c.weight || 0;
@@ -224,7 +228,7 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                 <AlertDialogHeader>
                   <AlertDialogTitle>Régénérer la matrice ?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    La matrice actuelle sera remplacée. Le score global et la recommandation peuvent être ajustés en conséquence.
+                    La matrice actuelle sera remplacée. Elle sert uniquement à détailler l'évaluation.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -299,12 +303,12 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                       return (
                         <td key={c.id} className="p-0.5 align-top">
                           <div
-                            className="flex w-full h-12 items-center justify-center rounded-md border border-dashed border-border/60 bg-background text-sm font-medium tabular-nums text-muted-foreground/70"
-                            title="Note par défaut : critère non couvert par la question"
-                            aria-label="Note par défaut, critère non couvert"
-                          >
-                            {typeof score === "number" ? score : "—"}
-                          </div>
+                             className="flex w-full h-12 items-center justify-center rounded-md border border-dashed border-border/60 bg-background text-sm font-medium text-muted-foreground/70"
+                             title="Critère non évalué pour cette question"
+                             aria-label="Critère non évalué"
+                           >
+                             Non évalué
+                           </div>
                         </td>
                       );
                     }

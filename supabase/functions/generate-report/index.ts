@@ -1413,30 +1413,12 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       }
     }
 
-    if (
-      matrixResult?.ok &&
-      matrixResult.fit_matrix &&
-      typeof matrixResult.fit_score === "number"
-    ) {
-      fitScore = matrixResult.fit_score;
-      fitBreakdown = Array.isArray(matrixResult.fit_breakdown)
-        ? matrixResult.fit_breakdown
-        : fitBreakdown;
-      finalOverallScore = typeof matrixResult.overall_score === "number"
-        ? matrixResult.overall_score
-        : fitScore;
-      parsed.recommendation = matrixResult.recommendation || parsed.recommendation;
-      criteriaScores = matrixResult.criteria_scores || criteriaScores;
-      stats.fit_score = fitScore;
-      stats.fit_breakdown = fitBreakdown;
-      stats.score_breakdown = matrixResult.score_breakdown || {
-        ai_score: aiOverallScore,
-        weighted_criteria_score: fitScore,
-        final_score: finalOverallScore,
-        method: "matrix_v2",
-        fit_score_source: "fit_matrix",
-      };
+    // La matrice est purement explicative : on la range dans les stats sans
+    // toucher à la note hybride, à la recommandation ni aux scores par critère.
+    if (matrixResult?.ok && matrixResult.fit_matrix) {
+      (stats as Record<string, any>).fit_matrix = matrixResult.fit_matrix;
     }
+
 
     // Save report
     const { data: insertedReport, error: reportError } = await supabase.from("reports").upsert({
@@ -1470,8 +1452,8 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
     }
 
     // Si la matrice n'a pas pu être générée de manière synchrone, on tente
-    // une mise à jour en arrière-plan pour que le rapport soit corrigé plus tard.
-    if (generate_fit_matrix !== false && (!matrixResult?.ok || typeof matrixResult?.fit_score !== "number")) try {
+    // une mise à jour en arrière-plan pour que le détail soit ajouté plus tard.
+    if (generate_fit_matrix !== false && (!matrixResult?.ok || !matrixResult?.fit_matrix)) try {
       fetch(`${SUPABASE_URL}/functions/v1/generate-fit-matrix`, {
         method: "POST",
         headers: {
