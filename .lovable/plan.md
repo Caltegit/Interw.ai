@@ -28,6 +28,6 @@ Aujourd'hui la vidéo est posée dans un cadre à fond blanc + grille : quand le
 
 ## Détails techniques
 
-- Fichiers : `src/pages/Landing.tsx` (hero, boutons, `DemoVideo`, conteneur vidéo), `src/components/landing/FunnelCards.tsx` (suppression des `desc`, opacités/tokens de la carte 4), `src/index.css` (tokens `--l-step-*` plus saturés si nécessaire), `src/i18n/locales/fr/landing.json` et `en/landing.json` (clés `hero.freeNote` supprimée, `hero.createAccount`, `problem.title`, `closing.title`, `product.title`, `funnel.s1..s4.desc` supprimées).
+- Fichiers : `src/pages/Landing.tsx` (hero, boutons, `DemoVideo`, conteneur vidéo), `src/components/landing/FunnelCards.tsx` (suppression des `desc`, opacités/tokens des 4 cartes), `src/index.css` (tokens `--l-step-*` plus saturés si nécessaire), `src/i18n/locales/fr/landing.json` et `en/landing.json` (clés `hero.freeNote` supprimée, `hero.createAccount`, `problem.title`, `closing.title`, `product.title`, `funnel.s1..s4.desc` supprimées).
 - Aucune logique métier, aucun changement backend, pricing intact.
 - Vérification Playwright : captures desktop 1440×900, laptop 1280×720 et mobile 390×844 pour confirmer que la vidéo tient sans scroll et sans double cadre.
