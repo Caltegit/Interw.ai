@@ -415,7 +415,7 @@ export default function Landing() {
                   </div>
                   {/* Prix — hauteur fixe */}
                   <div className="flex h-12 items-baseline gap-1.5">
-                    <span className="text-4xl font-semibold tracking-tight">{price === "onQuote" ? tp("onQuote") : price}</span>
+                    <span key={billing} className="text-4xl font-semibold tracking-tight price-roll">{price === "onQuote" ? tp("onQuote") : price}</span>
                     {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
