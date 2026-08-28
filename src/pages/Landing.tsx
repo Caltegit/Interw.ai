@@ -55,7 +55,7 @@ function DemoVideo() {
   return (
     <video
       ref={ref}
-      className="relative block h-full max-h-full w-full object-contain"
+      className="relative block h-full w-full object-cover"
       poster={poster}
       autoPlay
       muted
@@ -307,7 +307,7 @@ export default function Landing() {
           <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
             {t("hero.subtitle")}
           </p>
-          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center md:mt-[2.5vh]">
+          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-[2.5vh]">
             <a
               href={CAL_LINK}
               target="_blank"
@@ -318,34 +318,15 @@ export default function Landing() {
             </a>
             <Link
               to="/login"
-              className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
+              className="bg-background text-foreground inline-flex h-11 items-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5"
             >
               {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
           </div>
         </section>
 
-        <section className="mx-auto flex min-h-[180px] w-full max-w-5xl flex-1 px-6 pb-8 md:min-h-0 md:pb-[2vh]">
-          <div className="landing-fade-up landing-delay-3 border-border relative flex min-h-0 w-full items-center justify-center overflow-hidden rounded-xl border bg-white">
-            {/* Fond en grille — s'adapte à toutes les proportions du cadre */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(9,9,11,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(9,9,11,0.045) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(60% 60% at 20% 10%, rgba(9,9,11,0.05) 0%, transparent 70%), radial-gradient(50% 50% at 90% 95%, rgba(9,9,11,0.035) 0%, transparent 70%)",
-              }}
-            />
+        <section className="mx-auto flex w-full max-w-6xl flex-1 items-start justify-center px-4 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
+          <div className="landing-fade-up landing-delay-3 relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-xl shadow-2xl">
             <DemoVideo />
           </div>
         </section>

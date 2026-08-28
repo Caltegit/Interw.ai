@@ -9,32 +9,27 @@
     "title": "Évaluez les candidats, pas leur CV.",
     "subtitle": "Vous posez vos questions face caméra. Chaque candidat y répond quand il veut, où il veut. Interw évalue chaque entretien sur vos critères et fait remonter les profils à voir en premier.",
     "cta": "Demander une démo",
-    "createAccount": "Créer un compte gratuit",
-    "freeNote": "Gratuit · 15 entretiens / mois · sans carte"
+    "createAccount": "Commencer gratuitement"
   },
   "proof": {
     "title": "Ils recrutent avec Interw"
   },
   "problem": {
-    "title": "Aujourd'hui vous ne triez pas des candidats. Vous triez des documents.",
+    "title": "Et si votre prochain recrutement était celui que vous auriez écarté sur CV ?",
     "outro": "Tous les autres, vous ne les avez jamais entendus."
   },
   "funnel": {
     "s1": {
-      "title": "Les candidatures arrivent.",
-      "desc": "Toutes écrites avec la même IA, toutes bien calibrées, toutes convaincantes. Plus rien ne les distingue."
+      "title": "Les candidatures arrivent."
     },
     "s2": {
-      "title": "Vous triez sur ce qui se voit.",
-      "desc": "L'école, les années, la mise en page. Des critères qui ne disent pas lequel sera le meilleur sur le poste."
+      "title": "Vous triez sur ce qui se voit."
     },
     "s3": {
-      "title": "Vous appelez les survivants.",
-      "desc": "Quinze minutes chacun, à synchroniser sur vos heures de bureau, et sur leurs disponibilités. La plupart du temps, une minute suffit pour trancher."
+      "title": "Vous appelez les survivants."
     },
     "s4": {
-      "title": "Vous en recevez trois.",
-      "desc": "Les seuls que vous aurez vraiment écoutés."
+      "title": "Vous en recevez trois."
     },
     "illus": {
       "sorted": "Trié",
@@ -47,7 +42,7 @@
     }
   },
   "product": {
-    "title": "Faites-les tous passer, sans y passer vos journées.",
+    "title": "Donnez une chance à chacun",
     "desc": "L'IA transcrit chaque entretien et le confronte à vos questions comme à vos critères. Les meilleurs profils remontent — y compris ceux qu'un CV vous aurait fait manquer.",
     "s1": {
       "title": "Vos questions, posées par vous.",

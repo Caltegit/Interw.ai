@@ -9,32 +9,27 @@
     "title": "Assess candidates, not their resumes.",
     "subtitle": "You ask your questions on camera. Every candidate answers whenever and wherever they want. Interw scores each interview against your criteria and surfaces the profiles worth seeing first.",
     "cta": "Book a demo",
-    "createAccount": "Create a free account",
-    "freeNote": "Free · 15 interviews / month · no card required"
+    "createAccount": "Start for free"
   },
   "proof": {
     "title": "They hire with Interw"
   },
   "problem": {
-    "title": "You're not sorting candidates today. You're sorting documents.",
+    "title": "What if your next great hire is the one you'd have filtered out on paper?",
     "outro": "Everyone else, you never even heard."
   },
   "funnel": {
     "s1": {
-      "title": "Applications come in.",
-      "desc": "All written with the same AI, all neatly calibrated, all convincing. Nothing sets them apart anymore."
+      "title": "Applications come in."
     },
     "s2": {
-      "title": "You sort on what shows.",
-      "desc": "The school, the years, the layout. Signals that don't tell you who will actually be best in the role."
+      "title": "You sort on what shows."
     },
     "s3": {
-      "title": "You call the survivors.",
-      "desc": "Fifteen minutes each, squeezed into your office hours and their availability. Most of the time, one minute is enough to decide."
+      "title": "You call the survivors."
     },
     "s4": {
-      "title": "You meet three of them.",
-      "desc": "The only ones you truly listened to."
+      "title": "You meet three of them."
     },
     "illus": {
       "sorted": "Sorted",
@@ -47,7 +42,7 @@
     }
   },
   "product": {
-    "title": "Interview everyone. Without losing your week.",
+    "title": "Give everyone a shot",
     "desc": "The AI transcribes every interview and matches it against your questions and your criteria. The best profiles rise to the top — including the ones a resume would have made you miss.",
     "s1": {
       "title": "Your questions, asked by you.",

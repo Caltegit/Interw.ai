@@ -246,9 +246,9 @@ function IllusCalls({ play, labels }: { play: boolean; labels: { call: string; m
 /* ---------- 4. Vous en recevez trois ---------- */
 
 const DOT_TIERS = [
-  { count: 32, labelKey: "received", token: RECEIVED, alpha: 0.35, delay: 0 },
-  { count: 12, labelKey: "called", token: CALLED, alpha: 0.6, delay: 700 },
-  { count: 3, labelKey: "interviews", token: INTERVIEW, alpha: 0.85, delay: 1300 },
+  { count: 32, labelKey: "received", token: RECEIVED, alpha: 1, delay: 0 },
+  { count: 12, labelKey: "called", token: CALLED, alpha: 1, delay: 700 },
+  { count: 3, labelKey: "interviews", token: INTERVIEW, alpha: 1, delay: 1300 },
   { count: 1, labelKey: "hired", token: HIRED, alpha: 1, delay: 1800 },
 ];
 
@@ -331,8 +331,7 @@ function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
         <span className="text-muted-foreground font-semibold tabular-nums">{index + 1} · </span>
         {t(`funnel.${stepKey}.title`)}
       </h3>
-      <p className={`text-muted-foreground mt-2 mb-6 ${BODY}`}>{t(`funnel.${stepKey}.desc`)}</p>
-      <div className="relative mt-auto h-[120px] shrink-0 overflow-hidden">{renderIllus()}</div>
+      <div className="relative mt-5 h-[140px] shrink-0 overflow-hidden">{renderIllus()}</div>
     </div>
   );
 }
