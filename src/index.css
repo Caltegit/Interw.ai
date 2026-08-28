@@ -5,12 +5,19 @@
 @tailwind utilities;
 
 @layer utilities {
-  @keyframes price-roll {
-    0% { opacity: 0; transform: translateY(-0.5rem); }
-    100% { opacity: 1; transform: translateY(0); }
+  @keyframes digit-roll-out {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-100%); }
   }
-  .price-roll {
-    animation: price-roll 0.25s ease-out;
+  @keyframes digit-roll-in {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(0); }
+  }
+  .animate-digit-roll-out {
+    animation: digit-roll-out 0.3s ease-out forwards;
+  }
+  .animate-digit-roll-in {
+    animation: digit-roll-in 0.3s ease-out forwards;
   }
 }
 

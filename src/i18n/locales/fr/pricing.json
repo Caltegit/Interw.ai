@@ -3,7 +3,7 @@
   "monthly": "Mensuel",
   "annual": "Annuel",
   "twoMonthsFree": "2 mois offerts",
-  "note": "Prix HT. Sans engagement, changez de plan quand vous voulez.",
+  "note": "Prix HT. Sans engagement.",
   "recommended": "Populaire",
   "forever": "Pour toujours",
   "billedMonthly": "Facturé chaque mois",
@@ -11,12 +11,9 @@
   "annualCommitment": "Engagement annuel",
   "onQuote": "Sur devis",
   "freeOffer": "10 entretiens offerts",
-  "noCard": "Sans carte bancaire",
   "specs": {
-    "activeRoles": "Postes actifs simultanés",
     "interviews": "Entretiens inclus / mois",
-    "beyond": "Au-delà",
-    "users": "Utilisateurs"
+    "beyond": "Au-delà"
   },
   "values": {
     "unlimited": "Illimités",
@@ -28,22 +25,18 @@
   "plans": {
     "free": {
       "name": "À la carte",
-      "desc": "Payez uniquement les entretiens que vous analysez.",
       "cta": "Commencer gratuitement"
     },
     "plus": {
       "name": "Plus",
-      "desc": "Pour une équipe qui recrute régulièrement.",
       "cta": "Commencer gratuitement"
     },
     "pro": {
       "name": "Pro",
-      "desc": "Pour la fonction RH qui déploie Interw sur tous ses recrutements.",
       "cta": "Commencer gratuitement"
     },
     "enterprise": {
       "name": "Entreprise",
-      "desc": "Pour les organisations à volume, avec vos outils et vos règles.",
       "cta": "Parler à l'équipe"
     }
   },
