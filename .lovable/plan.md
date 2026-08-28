@@ -51,8 +51,7 @@ Facturé chaque mois        399 € — Facturé 3 990 € par an
 Trois éléments qui font la différence en conversion :
 - le grand chiffre **baisse** quand on bascule, il ne saute pas à 3 990 €
 - le chiffre tourne avec une micro-animation au moment du switch, comme un compteur.
-- la somme réellement débitée est écrite en petit dessous — pas de mauvaise
-  surprise au paiement, ce qui évite les abandons en fin de tunnel
+- « Facturé annuellement » sous le prix annuel, pas le montant total.
 
 Prix annuels : Plus 1 990 € (166 €/mois), Pro 3 990 € (332 €/mois). L'offre À la
 carte et Entreprise ne changent pas selon la bascule.
