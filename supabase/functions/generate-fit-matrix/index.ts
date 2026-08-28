@@ -268,15 +268,15 @@ Renvoie la matrice avec l'outil fit_matrix.`;
           aiCells[j] ??
           null;
         const evidence = String(aiCell?.evidence ?? "").toLowerCase();
-        if (evidence === "none") {
-          cells[c.id] = {
-            score: 50,
-            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
-          };
-        } else if (evidence === "clear") {
+        const notEvaluated = {
+          score: null,
+          not_evaluated: true,
+          justification: "Non évalué : aucun élément dans la réponse.",
+        };
+        if (evidence === "clear") {
           const rawScore = aiCell ? Number(aiCell.score) : NaN;
           if (!Number.isFinite(rawScore)) {
-            cells[c.id] = { score: 50, justification: "Aucun élément dans la réponse pour évaluer ce critère." };
+            cells[c.id] = notEvaluated;
           } else {
             const message_id = aiCell?.message_id ? String(aiCell.message_id) : undefined;
             const quote = aiCell?.quote ? String(aiCell.quote).slice(0, 400) : undefined;
@@ -290,12 +290,10 @@ Renvoie la matrice avec l'outil fit_matrix.`;
             };
           }
         } else {
-          // evidence absent/invalide → fallback neutre
-          cells[c.id] = {
-            score: 50,
-            justification: "Aucun élément dans la réponse pour évaluer ce critère.",
-          };
+          // evidence "none", absent ou invalide → case non évaluée, exclue des moyennes
+          cells[c.id] = notEvaluated;
         }
+
       }
       rows.push({
         question_id: q.id,
