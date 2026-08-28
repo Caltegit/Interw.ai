@@ -451,9 +451,6 @@ export default function Landing() {
           <div className="mt-8 flex justify-center">
             <div className="bg-foreground text-background inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
               <span>{tp("freeOffer")}</span>
-              <span className="bg-background text-foreground rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                {tp("noCard")}
-              </span>
             </div>
           </div>
 
