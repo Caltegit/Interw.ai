@@ -50,7 +50,7 @@ Facturé chaque mois        399 € — Facturé 3 990 € par an
 
 Trois éléments qui font la différence en conversion :
 - le grand chiffre **baisse** quand on bascule, il ne saute pas à 3 990 €
-- l'ancien prix reste visible barré, l'économie devient tangible
+- le chiffre tourne avec une micro-animation au moment du switch, comme un compteur.
 - la somme réellement débitée est écrite en petit dessous — pas de mauvaise
   surprise au paiement, ce qui évite les abandons en fin de tunnel
 
