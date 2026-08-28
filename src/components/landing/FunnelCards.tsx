@@ -331,8 +331,7 @@ function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
         <span className="text-muted-foreground font-semibold tabular-nums">{index + 1} · </span>
         {t(`funnel.${stepKey}.title`)}
       </h3>
-      <p className={`text-muted-foreground mt-2 mb-6 ${BODY}`}>{t(`funnel.${stepKey}.desc`)}</p>
-      <div className="relative mt-auto h-[120px] shrink-0 overflow-hidden">{renderIllus()}</div>
+      <div className="relative mt-5 h-[140px] shrink-0 overflow-hidden">{renderIllus()}</div>
     </div>
   );
 }
