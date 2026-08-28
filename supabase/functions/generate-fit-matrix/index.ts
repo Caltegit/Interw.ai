@@ -304,8 +304,8 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       });
     }
 
-    // Moyenne par critère (colonne) — toutes les cases avec un score numérique comptent,
-    // y compris les scores neutres par défaut (50) posés quand l'IA n'a rien à noter.
+    // Moyenne par critère (colonne) — seules les cases réellement évaluées comptent.
+    // Les cases sans élément (score null) sont exclues du calcul.
     const criterion_averages: Record<string, number | null> = {};
     for (const c of criteria) {
       const vals: number[] = [];
@@ -318,25 +318,8 @@ Renvoie la matrice avec l'outil fit_matrix.`;
         : null;
     }
 
-    // Fit score global = moyenne pondérée des moyennes-critères (par le poids du critère).
-    // Les critères sans aucune note sont exclus du dénominateur.
-    let matrixFitScore: number | null = null;
-    let sumWeighted = 0;
-    let sumWeights = 0;
-    for (const c of criteria) {
-      const avg = criterion_averages[c.id];
-      if (avg === null) continue;
-      const w = Math.max(0, Number(c.weight) || 0);
-      if (w <= 0) continue;
-      sumWeighted += avg * w;
-      sumWeights += w;
-    }
-    if (sumWeights > 0) {
-      matrixFitScore = Math.round(sumWeighted / sumWeights);
-    }
-
     const fit_matrix = {
-      version: 2,
+      version: 3,
       generated_at: new Date().toISOString(),
       criteria: criteria.map((c: any) => ({
         id: c.id,
@@ -347,86 +330,9 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       criterion_averages,
     };
 
-    const recommendationFromScore = (score: number) => {
-      if (score >= 80) return "strong_yes";
-      if (score >= 65) return "yes";
-      if (score >= 45) return "maybe";
-      return "no";
-    };
-
+    // La matrice est un outil de lecture : elle n'écrit plus la note globale,
+    // la recommandation ni les scores par critère du rapport.
     const nextStats: Record<string, any> = { ...existingStats, fit_matrix };
-    const reportPatch: Record<string, any> = { stats: nextStats };
-
-    // Reconstruire fit_breakdown à partir de la matrice pour que la carte
-    // "Adéquation selon les critères définis" affiche exactement les moyennes
-    // de la matrice. On préserve les preuves (statement/quote/message_id) issues
-    // de la génération IA précédente lorsqu'elles existent.
-    const inferLevel = (s: number) => {
-      if (s >= 80) return "excellent";
-      if (s >= 60) return "solid";
-      if (s >= 40) return "partial";
-      return "gap";
-    };
-    const prevFitBreakdown: any[] = Array.isArray(existingStats?.fit_breakdown)
-      ? existingStats.fit_breakdown
-      : [];
-    const prevByCriterionId = new Map<string, any>();
-    const prevByLabel = new Map<string, any>();
-    for (const e of prevFitBreakdown) {
-      if (e?.criterion_id) prevByCriterionId.set(String(e.criterion_id), e);
-      if (e?.criterion) prevByLabel.set(String(e.criterion).toLowerCase(), e);
-    }
-    const newFitBreakdown: any[] = [];
-    for (const c of criteria) {
-      const avg = criterion_averages[c.id];
-      if (typeof avg !== "number") continue;
-      const prev =
-        prevByCriterionId.get(String(c.id)) ||
-        prevByLabel.get(String(c.label ?? "").toLowerCase()) ||
-        null;
-      newFitBreakdown.push({
-        criterion_id: c.id,
-        criterion: c.label,
-        score: avg,
-        level: inferLevel(avg),
-        statement: prev?.statement || prev?.comment || "",
-        quote: prev?.quote || null,
-        message_id: prev?.message_id || null,
-        start_seconds: typeof prev?.start_seconds === "number" ? prev.start_seconds : null,
-      });
-    }
-    nextStats.fit_breakdown = newFitBreakdown;
-
-    if (matrixFitScore !== null) {
-      nextStats.fit_score = matrixFitScore;
-      const prevBreakdown = (existingStats?.score_breakdown ?? {}) as Record<string, any>;
-      const aiScore = Number.isFinite(Number(prevBreakdown.ai_score))
-        ? Math.max(0, Math.min(100, Number(prevBreakdown.ai_score)))
-        : Math.max(0, Math.min(100, Number(reportRes.data?.overall_score) || matrixFitScore));
-      const finalScore = matrixFitScore;
-      nextStats.score_breakdown = {
-        ...prevBreakdown,
-        ai_score: aiScore,
-        weighted_criteria_score: matrixFitScore,
-        final_score: finalScore,
-        fit_score_source: "fit_matrix",
-        method: "matrix_v2",
-      };
-      reportPatch.overall_score = finalScore;
-      reportPatch.recommendation = recommendationFromScore(finalScore);
-      reportPatch.criteria_scores = criteria.reduce((acc: Record<string, any>, c: any) => {
-        const avg = criterion_averages[c.id];
-        if (typeof avg !== "number") return acc;
-        const maxScale = c.scoring_scale === "0-10" ? 10 : 5;
-        acc[c.id] = {
-          label: c.label,
-          score: Math.round((avg / 100) * maxScale),
-          max: maxScale,
-          comment: "Moyenne issue de la matrice détaillée.",
-        };
-        return acc;
-      }, {});
-    }
 
     if (update_report) {
       if (!reportRes.data) {
@@ -437,7 +343,7 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       }
       const { error: updateError } = await supabase
         .from("reports")
-        .update(reportPatch)
+        .update({ stats: nextStats })
         .eq("id", reportRes.data.id);
 
       if (updateError) {
@@ -455,15 +361,10 @@ Renvoie la matrice avec l'outil fit_matrix.`;
         rows: rows.length,
         criteria: criteria.length,
         fit_matrix: fit_matrix,
-        fit_breakdown: nextStats.fit_breakdown,
-        fit_score: nextStats.fit_score ?? null,
-        overall_score: reportPatch.overall_score ?? null,
-        recommendation: reportPatch.recommendation ?? null,
-        criteria_scores: reportPatch.criteria_scores ?? null,
-        score_breakdown: nextStats.score_breakdown ?? null,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (e) {
     console.error("[generate-fit-matrix] fatal", e);
     return new Response(
