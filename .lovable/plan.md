@@ -20,7 +20,7 @@ Aujourd'hui la vidéo est posée dans un cadre à fond blanc + grille : quand le
 
 - Titre remplacé par : « Et si votre prochain recrutement était celui que vous auriez écarté sur CV ? » (EN : « What if your next great hire is the one you'd have filtered out on paper? »).
 - Les 4 cartouches perdent leur sous-titre explicatif : il ne reste que le numéro + le titre, puis l'illustration animée (qui remonte, cartes plus compactes et de hauteur égale).
-- 4ᵉ cartouche (l'entonnoir en points) : couleurs plus franches — palette saturée et opacités relevées (points « CV reçus » / « Appelés » / « Entretiens » / « Recruté » nettement contrastés au lieu des tons pastel actuels), pour lire l'écrasement du funnel d'un coup d'œil.
+- Couleurs plus franches sur les 4 cartouches — palette saturée et opacités relevées sur chaque étape du funnel (points « CV reçus » / « Appelés » / « Entretiens » / « Recruté » nettement contrastés au lieu des tons pastel actuels), pour lire l'écrasement du funnel d'un coup d'œil.
 
 ## 4. Titre section produit
 
