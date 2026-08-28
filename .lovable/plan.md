@@ -57,14 +57,23 @@ Prix annuels : Plus 169 €/mois, Pro 329 €/mois. Le total annuel (2 028 € /
 n'est visible que dans le panier au moment de l'achat. L'offre À la carte et
 Entreprise ne changent pas selon la bascule.
 
-## L'essai 30 jours
+## Les 10 premiers entretiens offerts
 
-Un bandeau au-dessus des cartes, à la Attio, sorti des cartouches :
+Le bandeau au-dessus des cartes passe de l'essai 30 jours à une offre permanente :
 
-> 30 jours de Pro offerts, sans carte bancaire — quel que soit le plan choisi ensuite.
+> 10 entretiens offerts, sans carte bancaire — avec chaque forfait.
 
-Le bouton de la carte Pro redevient un CTA normal, la mention « sans carte
-bancaire » sous le bouton disparaît puisqu'elle est portée par le bandeau.
+Affichage dans les cartouches :
+- sous le prix, une ligne « 10 premiers entretiens inclus » ;
+- le CTA principal devient « Commencer gratuitement » ;
+- la mention « sans carte bancaire » reste sous le bouton pour rassurer.
+
+Mécanique commerciale après les 10 gratuits :
+- dès le 11e entretien généré, bannière in-app : « Votre 11e entretien est arrivé.
+  Ajoutez un moyen de paiement pour continuer. » ;
+- même message aux 12e et 13e entretiens ;
+- au-delà, blocage doux : consultation autorisée, mais plus de nouveaux rapports
+  générés tant qu'aucune carte n'est enregistrée.
 
 ## La FAQ suit
 
