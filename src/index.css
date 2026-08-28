@@ -150,10 +150,10 @@
   --l-accent-strong: 0 0% 0%;
   --l-accent-soft: 0 0% 94%;
   /* étapes du tunnel de recrutement */
-  --l-step-received: 6 82% 56%;
-  --l-step-called: 28 92% 53%;
-  --l-step-interview: 43 96% 51%;
-  --l-step-hired: 152 72% 40%;
+  --l-step-received: 6 90% 48%;
+  --l-step-called: 22 95% 48%;
+  --l-step-interview: 40 100% 48%;
+  --l-step-hired: 150 80% 35%;
   --l-success: 152 60% 40%;
   --l-danger: 0 70% 50%;
 
