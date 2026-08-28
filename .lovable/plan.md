@@ -1,71 +1,87 @@
-# Corriger l'écart entre le score de l'e-mail et le score réel
+# Revenir au calcul de score d'avant la matrice
 
-## Le problème constaté
+## Le constat
 
-Session Marine Fiaud (27 août) : l'e-mail annonce **90/100 · Fortement
-recommandé**, l'interface affiche **76/100 · Favorable**. Le 76 est le bon
-chiffre.
+Depuis le passage à la matrice, le score global d'un candidat est **uniquement**
+la moyenne pondérée des colonnes de la matrice. Or chaque case où l'IA n'a
+trouvé aucun élément est forcée à **50/100** et compte quand même dans la
+moyenne. Résultat : tous les candidats sont tirés vers le centre et l'écart
+entre un bon et un moyen profil s'écrase.
 
-Cause confirmée par les horodatages en base :
+Exemple mesuré sur la session Marine Fiaud : score IA 90, score matrice 76,
+c'est le 76 qui est retenu.
+
+## Ce qu'on rétablit
+
+L'ancienne formule, dite **hybride**, qui existe toujours dans le code :
 
 ```text
-09:54:20  generate-report termine        -> écrit overall_score = 90
-09:54:33  e-mail "interview-report" part -> envoie 90
-09:54:57  generate-fit-matrix termine    -> écrase overall_score = 76
+score final = moyenne( note globale IA , score d'adéquation aux critères IA )
 ```
 
-`generate-fit-matrix` recalcule le score à partir de la moyenne pondérée des
-critères (63 / 76 / 81 / 83, poids 24/23/23/30 = 76) et écrase
-`overall_score` **et** `recommendation` du rapport. Mais l'e-mail est déjà
-parti 24 secondes plus tôt, avec la valeur provisoire.
+La note globale IA juge l'entretien dans son ensemble ; le score d'adéquation
+vient de l'évaluation critère par critère produite par le même modèle. Cette
+combinaison redonne de l'amplitude entre candidats.
 
-Tous les rapports envoyés par e-mail depuis la mise en place de la matrice
-sont potentiellement concernés, pas seulement celui-ci.
+## Ce qu'on garde
 
-Second défaut visible sur le même e-mail : « Meilleur moment : Question
-**NaN** ». En base `best_question_idx` est vide ; le gabarit lui ajoute `+1`
-et affiche `NaN`.
+La matrice reste **entièrement en place** : le tableau question × critère, les
+justifications, les citations du transcript et les repères vidéo « Q5 · 1:15 ».
+Elle continue d'expliquer au recruteur sur quelle phrase l'IA s'est appuyée.
+Elle devient un outil de lecture, plus le moteur de la note.
 
 ## Le correctif
 
-### 1. Envoyer l'e-mail après la matrice, jamais avant
+### 1. La matrice ne réécrit plus la note
 
-Déplacer le déclenchement de l'e-mail « nouveau rapport » hors de
-`generate-report`. Le worker `process-report-queue` enchaîne déjà
-`generate-report` puis `generate-fit-matrix` ; l'envoi se fera à la fin de
-cette séquence, une fois le score définitif écrit.
+`generate-fit-matrix` cesse d'écraser `overall_score`, `recommendation` et
+`criteria_scores` du rapport. Il n'écrit plus que la matrice elle-même dans
+les statistiques du rapport.
 
-Conséquence : l'e-mail annonce toujours le même score que l'interface.
-Le délai d'envoi augmente d'environ 30 secondes, sans impact utilisateur.
+### 2. Le rapport reprend la formule hybride
 
-### 2. Garantir l'idempotence
+`generate-report` calcule à nouveau le score final comme moyenne de la note
+globale IA et du score critères IA, et conserve la recommandation issue du
+modèle. La méthode enregistrée redevient `hybrid_v1`, ce qui permet de savoir
+d'un coup d'œil quels rapports ont été notés avec quelle règle.
 
-Conserver la clé d'idempotence par session pour qu'un rapport régénéré
-n'envoie pas un second e-mail aux recruteurs.
+### 3. Les cases « non évaluées » ne pèsent plus dans la matrice
 
-### 3. Corriger l'affichage « Question NaN »
+Dans la matrice affichée, une case sans élément d'évaluation n'est plus
+comptée comme 50 dans la moyenne de sa colonne : elle est marquée « non
+évalué » et exclue du calcul de la colonne. Un critère dont aucune case n'est
+évaluable reste sans moyenne. La matrice devient ainsi lisible sans introduire
+de faux neutres.
 
-Dans le gabarit `interview-report`, ne montrer la ligne « Meilleur moment »
-que lorsque l'index **et** le score existent réellement, et masquer la ligne
-sinon plutôt que d'afficher une valeur vide.
+### 4. Cohérence de la carte « Adéquation selon les critères »
 
-### 4. Vérification
+Cette carte réaffiche les scores par critère produits par l'IA (avec leurs
+justifications et citations), comme avant la matrice, au lieu des moyennes de
+colonnes.
 
-- Régénérer le rapport d'une session témoin et comparer le score de l'e-mail
-  reçu avec celui affiché sur la fiche candidat : ils doivent être identiques.
-- Vérifier qu'un seul e-mail part par régénération.
-- Confirmer que la ligne « Meilleur moment » n'affiche plus jamais `NaN`.
+## Effet sur les rapports existants
 
-## Ce que je ne touche pas
+Aucune réécriture rétroactive : les rapports déjà générés gardent leur note
+actuelle. Seuls les rapports générés ou régénérés après le correctif utilisent
+la formule rétablie. Une session régénérée verra donc son score remonter — c'est
+attendu.
 
-- Le calcul du score lui-même : la matrice fait foi, le 76 est correct.
-- Les rapports déjà générés : leurs scores en base sont justes, seuls les
-  e-mails déjà partis restent erronés (rien à rattraper côté données).
-- L'e-mail de remerciement candidat, qui ne contient aucun score.
+## Vérification
+
+- Régénérer la session Marine Fiaud : le score doit repasser autour de 90 et
+  la matrice doit rester affichée avec ses justifications intactes.
+- Régénérer une session moyenne et vérifier que l'écart avec la précédente est
+  nettement plus marqué qu'aujourd'hui.
+- Vérifier qu'aucune colonne de matrice n'affiche 50 par défaut.
+
+## Hors périmètre
+
+- Le décalage entre le score de l'e-mail et celui de l'interface (e-mail envoyé
+  avant la fin du recalcul) : à traiter juste après, une fois le calcul stabilisé.
+- Les analyses orale, attitude et personnalité, inchangées.
 
 ## Fichiers concernés
 
-- `supabase/functions/generate-report/index.ts` — retirer l'envoi de l'e-mail
-- `supabase/functions/process-report-queue/index.ts` — envoyer après la matrice
-- `supabase/functions/_shared/transactional-email-templates/interview-report.tsx`
-  — garde sur « Meilleur moment »
+- `supabase/functions/generate-fit-matrix/index.ts` — ne plus patcher la note,
+  exclure les cases non évaluées des moyennes
+- `supabase/functions/generate-report/index.ts` — rétablir la formule hybride
