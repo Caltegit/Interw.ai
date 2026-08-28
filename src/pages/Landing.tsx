@@ -104,10 +104,8 @@ const PLAN_KEYS = [
     featured: false,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "—" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview5" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -121,10 +119,8 @@ const PLAN_KEYS = [
     featured: false,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "100" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview4" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -138,10 +134,8 @@ const PLAN_KEYS = [
     featured: true,
     external: false,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", value: "300" },
       { labelKey: "specs.beyond", valueKey: "values.perInterview3" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
   {
@@ -155,10 +149,8 @@ const PLAN_KEYS = [
     featured: false,
     external: true,
     specs: [
-      { labelKey: "specs.activeRoles", valueKey: "values.unlimited" },
       { labelKey: "specs.interviews", valueKey: "values.unlimited" },
       { labelKey: "specs.beyond", valueKey: "values.negotiated" },
-      { labelKey: "specs.users", valueKey: "values.unlimited" },
     ],
   },
 ] as const;
