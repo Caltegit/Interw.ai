@@ -1,87 +1,99 @@
-# Revenir au calcul de score d'avant la matrice
+# Nouveau pricing : tout illimité, prix à l'entretien
 
-## Le constat
+## Le principe
 
-Depuis le passage à la matrice, le score global d'un candidat est **uniquement**
-la moyenne pondérée des colonnes de la matrice. Or chaque case où l'IA n'a
-trouvé aucun élément est forcée à **50/100** et compte quand même dans la
-moyenne. Résultat : tous les candidats sont tirés vers le centre et l'écart
-entre un bon et un moyen profil s'écrase.
+L'outil est en bêta. On arrête de segmenter par fonctionnalité : tout le monde a
+tout. La seule variable est le nombre d'entretiens analysés. Objectif : provoquer
+l'usage, pas faire monter en gamme.
 
-Exemple mesuré sur la session Marine Fiaud : score IA 90, score matrice 76,
-c'est le 76 qui est retenu.
+Conséquence directe : le grand tableau comparatif disparaît entièrement. Chaque
+cartouche ne porte plus que le prix, le volume inclus et le prix au-delà.
 
-## Ce qu'on rétablit
+## Les quatre offres
 
-L'ancienne formule, dite **hybride**, qui existe toujours dans le code :
+| Offre | Prix | Entretiens inclus | Au-delà |
+|---|---|---|---|
+| À la carte | 0 € | — | 5 € / entretien |
+| Plus | 199 € / mois | 100 | 4 € / entretien |
+| Pro (recommandé) | 399 € / mois | 300 | 3 € / entretien |
+| Entreprise | Sur devis | Illimité | Négocié |
+
+« Postes actifs simultanés » reste affiché sur chaque carte, mais avec la valeur
+**Illimités** partout — c'est un argument, pas une limite. Idem pour les
+utilisateurs : illimités partout.
+
+Entreprise redevient une **quatrième cartouche à part entière** (la ligne unique
+actuelle disparaît), avec « Sur devis » en prix et le bouton « Parler à l'équipe »
+vers le calendrier.
+
+## Crédits ou entretiens — ma réponse
+
+On reste sur **entretiens**. Un crédit n'a de sens que quand plusieurs actions ont
+des coûts différents (analyse simple, analyse longue, ré-analyse). Aujourd'hui
+Interw ne facture qu'une chose : un candidat qui va au bout et dont le rapport est
+généré. Introduire une monnaie intermédiaire ajouterait une conversion à expliquer
+sans rien débloquer, alors que « 199 € pour 100 entretiens, puis 4 € » se comprend
+en une seconde. Le jour où l'on facturera différemment un ré-scoring ou une analyse
+vidéo longue, on basculera en crédits avec 1 crédit = 1 entretien : le passage sera
+indolore. Les prix affichés étant ronds, rien à refaire côté copy.
+
+## La bascule mensuel / annuel — recommandation CRO
+
+Ta proposition est la bonne pratique standard (Attio, Linear, Notion le font tous) :
+en annuel on affiche le **prix mensuel réduit**, pas la somme annuelle.
 
 ```text
-score final = moyenne( note globale IA , score d'adéquation aux critères IA )
+Mensuel                    Annuel
+399 €  / mois              332 €  / mois
+Facturé chaque mois        399 € — Facturé 3 990 € par an
 ```
 
-La note globale IA juge l'entretien dans son ensemble ; le score d'adéquation
-vient de l'évaluation critère par critère produite par le même modèle. Cette
-combinaison redonne de l'amplitude entre candidats.
+Trois éléments qui font la différence en conversion :
+- le grand chiffre **baisse** quand on bascule, il ne saute pas à 3 990 €
+- l'ancien prix reste visible barré, l'économie devient tangible
+- la somme réellement débitée est écrite en petit dessous — pas de mauvaise
+  surprise au paiement, ce qui évite les abandons en fin de tunnel
 
-## Ce qu'on garde
+Prix annuels : Plus 1 990 € (166 €/mois), Pro 3 990 € (332 €/mois). L'offre À la
+carte et Entreprise ne changent pas selon la bascule.
 
-La matrice reste **entièrement en place** : le tableau question × critère, les
-justifications, les citations du transcript et les repères vidéo « Q5 · 1:15 ».
-Elle continue d'expliquer au recruteur sur quelle phrase l'IA s'est appuyée.
-Elle devient un outil de lecture, plus le moteur de la note.
+## L'essai 30 jours
 
-## Le correctif
+Un bandeau au-dessus des cartes, à la Attio, sorti des cartouches :
 
-### 1. La matrice ne réécrit plus la note
+> 30 jours de Pro offerts, sans carte bancaire — quel que soit le plan choisi ensuite.
 
-`generate-fit-matrix` cesse d'écraser `overall_score`, `recommendation` et
-`criteria_scores` du rapport. Il n'écrit plus que la matrice elle-même dans
-les statistiques du rapport.
+Le bouton de la carte Pro redevient un CTA normal, la mention « sans carte
+bancaire » sous le bouton disparaît puisqu'elle est portée par le bandeau.
 
-### 2. Le rapport reprend la formule hybride
+## La FAQ suit
 
-`generate-report` calcule à nouveau le score final comme moyenne de la note
-globale IA et du score critères IA, et conserve la recommandation issue du
-modèle. La méthode enregistrée redevient `hybrid_v1`, ce qui permet de savoir
-d'un coup d'œil quels rapports ont été notés avec quelle règle.
-
-### 3. Les cases « non évaluées » ne pèsent plus dans la matrice
-
-Dans la matrice affichée, une case sans élément d'évaluation n'est plus
-comptée comme 50 dans la moyenne de sa colonne : elle est marquée « non
-évalué » et exclue du calcul de la colonne. Un critère dont aucune case n'est
-évaluable reste sans moyenne. La matrice devient ainsi lisible sans introduire
-de faux neutres.
-
-### 4. Cohérence de la carte « Adéquation selon les critères »
-
-Cette carte réaffiche les scores par critère produits par l'IA (avec leurs
-justifications et citations), comme avant la matrice, au lieu des moyennes de
-colonnes.
-
-## Effet sur les rapports existants
-
-Aucune réécriture rétroactive : les rapports déjà générés gardent leur note
-actuelle. Seuls les rapports générés ou régénérés après le correctif utilisent
-la formule rétablie. Une session régénérée verra donc son score remonter — c'est
-attendu.
+Trois réponses deviennent fausses avec ce changement et sont réécrites :
+- « Qu'est-ce qu'un poste actif ? » → devient sans objet, on la supprime
+- « Que se passe-t-il quand j'atteins mon quota ? » → plus de file d'attente ni de
+  blocage : les entretiens supplémentaires sont simplement facturés au prix de
+  l'offre (5 / 4 / 3 €)
+- « Comment fonctionne l'essai ? » → aligné sur le bandeau
+- « Mensuel ou annuel ? » → reformulé avec les nouveaux montants
 
 ## Vérification
 
-- Régénérer la session Marine Fiaud : le score doit repasser autour de 90 et
-  la matrice doit rester affichée avec ses justifications intactes.
-- Régénérer une session moyenne et vérifier que l'écart avec la précédente est
-  nettement plus marqué qu'aujourd'hui.
-- Vérifier qu'aucune colonne de matrice n'affiche 50 par défaut.
+- Bascule mensuel/annuel : le grand prix doit baisser, jamais augmenter
+- Les quatre cartes doivent avoir la même hauteur, y compris Entreprise
+- Aucune trace du comparatif ni de « postes actifs limités » sur la page
+- Version anglaise cohérente au mot près
 
-## Hors périmètre
+## Détails techniques
 
-- Le décalage entre le score de l'e-mail et celui de l'interface (e-mail envoyé
-  avant la fin du recalcul) : à traiter juste après, une fois le calcul stabilisé.
-- Les analyses orale, attitude et personnalité, inchangées.
-
-## Fichiers concernés
-
-- `supabase/functions/generate-fit-matrix/index.ts` — ne plus patcher la note,
-  exclure les cases non évaluées des moyennes
-- `supabase/functions/generate-report/index.ts` — rétablir la formule hybride
+- `src/pages/Landing.tsx` : réécriture de `PLAN_KEYS` (4 offres, prix mensuel
+  équivalent en annuel, specs réduites à 3 lignes), suppression de
+  `COMPARISON_KEYS`, du bloc `Accordion` comparatif et de ses deux rendus
+  desktop/mobile, suppression de la ligne Entreprise, ajout du bandeau d'essai,
+  retrait de `activeRole` de `FAQ_KEYS`.
+- `src/i18n/locales/fr/pricing.json` et `en/pricing.json` : nouvelles clés de
+  plans et de valeurs, suppression de tout le bloc `compare` et de
+  `enterpriseLine`.
+- `src/i18n/locales/fr/faq.json` et `en/faq.json` : suppression de `activeRole`,
+  réécriture de `quota`, `trial`, `billing`.
+- Aucun changement de logique de facturation en base : la page tarifs est
+  purement éditoriale à ce stade.
