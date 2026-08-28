@@ -307,7 +307,7 @@ export default function Landing() {
           <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
             {t("hero.subtitle")}
           </p>
-          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center md:mt-[2.5vh]">
+          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-[2.5vh]">
             <a
               href={CAL_LINK}
               target="_blank"
@@ -318,11 +318,10 @@ export default function Landing() {
             </a>
             <Link
               to="/login"
-              className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
+              className="bg-background text-foreground inline-flex h-11 items-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5"
             >
               {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
           </div>
         </section>
 
