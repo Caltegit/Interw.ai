@@ -203,12 +203,9 @@ export function SessionReportView({
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
   const verdictHeadline = stats.verdict_headline || report?.executive_summary_short || null;
-  const fitScore =
-    typeof stats.fit_score === "number"
-      ? stats.fit_score
-      : report
-        ? Number(report.overall_score)
-        : null;
+  // La comparaison utilise la note finale hybride du rapport, jamais l'ancien
+  // score calculé par la matrice détaillée.
+  const fitScore = report ? Number(report.overall_score) : null;
 
   const criteriaWeights = useMemo(() => {
     const map: Record<string, number> = {};
