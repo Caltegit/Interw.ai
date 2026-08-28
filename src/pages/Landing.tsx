@@ -55,7 +55,7 @@ function DemoVideo() {
   return (
     <video
       ref={ref}
-      className="relative block h-full max-h-full w-full object-contain"
+      className="relative block h-full w-full object-cover"
       poster={poster}
       autoPlay
       muted
