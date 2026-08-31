@@ -71,19 +71,39 @@ Basculer un seul poste non critique en `voxtral`, passer un entretien complet de
 ### Étape 6 — Bascule des postes existants
 Appliquer la correspondance aux 109 postes (95 actifs) en une opération unique. Les archivés peuvent être basculés aussi, sans risque.
 
-### Étape 7 — Voix clonées
-Traiter les 10 voix selon l'option retenue ci-dessous.
+### Étape 7 — Voix clonées : option A retenue
+
+**Périmètre réel** (vérifié en base) : 10 voix clonées, dont **6 seulement sont utilisées** sur **14 postes** (13 actifs).
+
+| Voix | Personne | Postes |
+|---|---|---|
+| Marie | marie.paquer@ads-up.fr | 4 actifs |
+| Eva | hello@techsolidaire.com | 3 actifs |
+| Alexis | alexis.grould@youswitch.co | 2 actifs |
+| Olivier Kellermann | olivier.kellermann@qwartz-conseil.fr | 2 actifs |
+| Alteresco | clement.alteresco@gmail.com | 1 actif + 1 archivé |
+| Anaëlle | anaelle.morin@castalie.com | 1 actif |
+| Indy, Benjamin, François Levy, Mach | interne / inactifs | 0 |
+
+Les 4 voix sans poste ne demandent aucune action de rattrapage : on les invite simplement à réenregistrer si elles reviennent.
+
+**Ce qu'on construit (option A — clonage reconstruit sur Voxtral)**
+1. Stockage : un espace privé pour les échantillons de voix, un fichier par personne, accessible uniquement par la fonction de synthèse.
+2. Base : sur le profil, on garde le nom de la voix et on ajoute la référence de l'échantillon et la date de consentement ; l'ancien identifiant ElevenLabs reste conservé jusqu'au retrait complet.
+3. Enregistrement : l'écran de clonage n'envoie plus rien à ElevenLabs, il enregistre l'échantillon chez nous après recueil du consentement.
+4. Synthèse : `tts-voxtral` joint l'échantillon de référence à chaque génération pour les postes en voix clonée, avec mise en cache côté fonction pour éviter de recharger l'échantillon à chaque phrase.
+5. Suppression : le bouton de suppression efface l'échantillon du stockage (droit à l'effacement conservé).
+
+**Séquence de bascule pour les 6 personnes concernées**
+- Tant qu'une personne n'a pas réenregistré, ses postes **restent sur ElevenLabs**. Aucune coupure.
+- Un message leur est envoyé avec le lien vers l'écran de clonage ; réenregistrement en une minute.
+- Dès le nouvel échantillon reçu, ses postes basculent en `voxtral`.
+- Après un délai à définir, les postes restés sans échantillon repassent sur une voix du catalogue plutôt que d'échouer.
+
+**Risque à valider à l'étape 0** : fidélité du clonage zéro-shot de Voxtral face à ElevenLabs, et latence quand l'échantillon est joint à chaque requête. C'est le point qui peut faire renoncer à l'option A.
 
 ### Étape 8 — Retrait d'ElevenLabs
 Une fois tout stable pendant quelques jours : suppression des fonctions ElevenLabs, de la clé API, et mise à jour des mentions ElevenLabs dans les textes de consentement et les paramètres.
-
-## Décision à prendre : les voix clonées
-
-| Option | Ce que ça implique |
-|---|---|
-| **A. Reconstruire le clonage sur Voxtral** | On stocke l'échantillon audio de référence dans notre stockage et on le transmet à chaque génération. Il faut redemander un enregistrement aux 10 personnes. Nouveau consentement à recueillir. |
-| **B. Garder ElevenLabs pour le seul clonage** | Voxtral pour les voix du catalogue, ElevenLabs conservé pour les 10 voix clonées. Aucune rupture, mais deux fournisseurs à maintenir et deux factures. |
-| **C. Abandonner le clonage** | Les 10 voix repassent sur une voix du catalogue. Le plus simple, mais on perd une fonctionnalité différenciante. |
 
 ## Ce que je ne peux pas encore garantir
 
@@ -95,4 +115,5 @@ Ces trois points se tranchent à l'étape 0, avant toute écriture de code.
 
 ## Prochaine action
 
-Dis-moi quelle option tu retiens pour les voix clonées (A, B ou C) et je peux démarrer l'étape 0 dès que la clé Mistral est disponible.
+Fournir la clé API Mistral pour lancer l'étape 0 (test de qualité, latence et clonage zéro-shot).
+
