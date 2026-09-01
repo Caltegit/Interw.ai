@@ -437,7 +437,7 @@ export default function Landing() {
               return (
                 <div
                   key={p.key}
-                  className={`relative flex flex-col rounded-xl border p-2.5 ${
+                  className={`relative flex flex-col rounded-xl border p-2 ${
                     p.featured ? "border-foreground bg-background" : "border-border bg-background"
                   }`}
                 >
@@ -496,7 +496,7 @@ export default function Landing() {
                       return (
                         <div
                           key={s.labelKey}
-                          className="border-border flex h-[62px] items-center justify-between gap-0 overflow-hidden border-b last:border-0"
+                          className="border-border flex h-[62px] items-center justify-between gap-1 overflow-hidden border-b last:border-0"
                         >
                           <span className="text-muted-foreground whitespace-nowrap text-[12px] leading-tight">
                             {tp(s.labelKey)}
