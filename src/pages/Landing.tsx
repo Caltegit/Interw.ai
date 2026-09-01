@@ -81,7 +81,7 @@ const BETA_LOGOS = [
   { name: "E.Leclerc", src: logoLeclerc, href: "https://www.e.leclerc/mag/e-leclerc-fouesnant-pleuven", className: "max-h-7 sm:max-h-9 md:max-h-11" },
   { name: "Castalie", src: logoCastalie, href: "https://www.castalie.com/", className: "max-h-5 sm:max-h-7 md:max-h-8" },
   { name: "ad's up consulting", src: logoAdsup, href: "https://ads-up.fr/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
-  { name: "Gardner", src: logoGardner, href: "https://withgardner.com/", className: "max-h-5 sm:max-h-7 md:max-h-8 max-w-[120px] sm:max-w-[140px] md:max-w-[160px]" },
+  { name: "Gardner", src: logoGardner, href: "https://withgardner.com/", className: "max-h-4 sm:max-h-7 md:max-h-8 max-w-[100px] sm:max-w-[130px] md:max-w-[150px]" },
 ];
 
 const CAL_LINK = "https://calendar.app.google/C7YQSPArwRUyyQrk8";
