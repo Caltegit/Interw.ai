@@ -164,8 +164,8 @@ const PLAN_KEYS = [
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
-const PRICE_CLASS = "text-4xl font-semibold tracking-tight";
-const QUOTE_PRICE_CLASS = "text-[28px] lg:text-4xl font-semibold tracking-tight";
+const PRICE_CLASS = "text-[28px] lg:text-4xl font-semibold tracking-tight";
+const QUOTE_PRICE_CLASS = "text-[24px] lg:text-4xl font-semibold tracking-tight";
 const NUMBER_FLOW_STYLE = {
   fontVariantNumeric: "tabular-nums",
   lineHeight: 0.85,
@@ -432,7 +432,7 @@ export default function Landing() {
           </div>
 
           {/* Cartes */}
-          <div className="mx-auto mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto mt-6 grid grid-cols-2 gap-3 gap-y-5 md:grid-cols-4 lg:gap-5">
             {PLAN_KEYS.map((p) => {
               const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
               const unit = unitKey ? tp(unitKey) : "";
@@ -442,14 +442,14 @@ export default function Landing() {
 
               const cta = tp(`plans.${p.key}.cta`);
               const ctaClass =
-                "mt-1 inline-flex h-10 w-full items-center justify-center overflow-hidden rounded-lg px-3 text-[13px] lg:text-sm font-medium whitespace-nowrap transition-opacity hover:opacity-90 " +
+                "mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-lg px-3 py-1.5 text-[12px] font-medium leading-tight text-center transition-opacity hover:opacity-90 lg:h-10 lg:py-0 lg:text-sm lg:whitespace-nowrap lg:leading-normal " +
                 (p.featured
                   ? "bg-foreground text-background"
                   : "border-border bg-background text-foreground border hover:bg-muted");
               return (
                 <div
                   key={p.key}
-                  className={`relative flex flex-col rounded-xl border p-5 sm:p-6 ${
+                  className={`relative flex flex-col rounded-xl border p-3.5 lg:p-6 ${
                     p.featured ? "border-foreground bg-background" : "border-border bg-background"
                   }`}
                 >
@@ -463,7 +463,7 @@ export default function Landing() {
                     <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
                   </div>
                   {/* Prix — hauteur fixe */}
-                  <div className="mt-2 flex h-12 items-baseline gap-1.5 overflow-hidden whitespace-nowrap">
+                  <div className="mt-2 flex h-10 items-baseline gap-1.5 overflow-hidden whitespace-nowrap lg:h-12">
                     <PlanPrice
                       monthly={p.monthly}
                       annual={p.annual}
@@ -472,18 +472,18 @@ export default function Landing() {
                       quoteLabel={tp("onQuote")}
                       locale={priceLocale}
                     />
-                    {unit && <span className="text-muted-foreground text-[13px] lg:text-sm">{unit}</span>}
+                    {unit && <span className="text-muted-foreground text-[11px] lg:text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
                   {noteChanges ? (
                     <p
                       key={billing}
-                      className="text-muted-foreground mt-2 h-5 animate-fade-in text-xs [animation-duration:180ms]"
+                      className="text-muted-foreground mt-2 h-5 animate-fade-in text-[11px] lg:text-xs [animation-duration:180ms]"
                     >
                       {note}
                     </p>
                   ) : (
-                    <p className="text-muted-foreground mt-2 h-5 text-xs">{note}</p>
+                    <p className="text-muted-foreground mt-2 h-5 text-[11px] lg:text-xs">{note}</p>
                   )}
 
                   {/* Bouton */}
@@ -508,12 +508,12 @@ export default function Landing() {
                       return (
                         <div
                           key={s.labelKey}
-                          className="border-border flex h-[56px] sm:h-[62px] items-center justify-between gap-2 overflow-hidden border-b last:border-0"
+                          className="border-border flex h-auto flex-col items-start justify-center gap-0.5 py-2.5 overflow-hidden border-b last:border-0 lg:h-[62px] lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:py-0"
                         >
                           <span className="text-muted-foreground text-[11px] lg:text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="text-right text-sm font-semibold leading-tight">
+                          <span className="text-sm font-semibold leading-tight lg:text-right">
                             {value}
                           </span>
                         </div>
