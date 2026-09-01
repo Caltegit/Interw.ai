@@ -566,21 +566,29 @@ export default function Landing() {
 
       {/* ============ FOOTER ============ */}
       <footer className="border-border border-t">
-        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row">
-          <span>{t("footer.copyright", { year: new Date().getFullYear() })}</span>
-          <div className="flex items-center gap-5">
-            <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-              {t("footer.demo")}
-            </a>
-            <Link to="/legal" className="hover:text-foreground transition-colors">
-              {t("footer.legal")}
-            </Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">
-              {t("footer.privacy")}
-            </Link>
+        <div className="mx-auto max-w-5xl px-6 py-8">
+          <div className="text-muted-foreground flex flex-col items-center justify-between gap-4 text-xs md:flex-row">
+            <LanguageSelect />
+            <div className="flex items-center gap-5">
+              <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                {t("footer.demo")}
+              </a>
+              <Link to="/legal" className="hover:text-foreground transition-colors">
+                {t("footer.legal")}
+              </Link>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                {t("footer.privacy")}
+              </Link>
+            </div>
+          </div>
+          <div className="border-border mt-6 border-t pt-6">
+            <p className="text-muted-foreground text-xs">
+              {t("footer.copyright", { year: new Date().getFullYear() })}
+            </p>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
