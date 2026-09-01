@@ -333,15 +333,27 @@ export default function Landing() {
           <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
             {t("proof.title")}
           </p>
-          <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
-            {BETA_LOGOS.map((logo) => (
-              <img
-                key={logo.name}
-                src={logo.src}
-                alt={logo.name}
-                loading="lazy"
-                className={`${logo.className} h-auto w-full max-w-[150px] min-w-0 object-contain`}
-              />
+          <div className="mt-5 flex flex-col items-center gap-y-5 sm:mt-6 sm:gap-y-7">
+            {[BETA_LOGOS.slice(0, 3), BETA_LOGOS.slice(3)].map((row, rowIdx) => (
+              <div key={rowIdx} className="flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4 sm:gap-x-14 md:gap-x-20">
+                {row.map((logo) => (
+                  <a
+                    key={logo.name}
+                    href={logo.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={logo.name}
+                    className="transition-opacity hover:opacity-70"
+                  >
+                    <img
+                      src={logo.src}
+                      alt={logo.name}
+                      loading="lazy"
+                      className={`${logo.className} h-auto w-auto max-w-[150px] object-contain`}
+                    />
+                  </a>
+                ))}
+              </div>
             ))}
           </div>
         </div>
