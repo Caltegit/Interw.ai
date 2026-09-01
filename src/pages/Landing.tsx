@@ -231,6 +231,8 @@ export default function Landing() {
   const { t: tp } = useTranslation("pricing");
   const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
+  const { language } = useLanguage();
+  const priceLocale = language === "fr" ? "fr-FR" : "en-GB";
   const [scrolled, setScrolled] = useState(false);
   const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
