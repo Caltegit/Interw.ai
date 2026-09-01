@@ -155,7 +155,7 @@ const PLAN_KEYS = [
     featured: false,
     external: true,
     specs: [
-      { labelKey: "specs.interviews", valueKey: "values.unlimited" },
+      { labelKey: "specs.interviews", valueKey: "values.byVolume" },
       { labelKey: "specs.beyond", valueKey: "values.negotiated" },
     ],
   },
@@ -437,7 +437,7 @@ export default function Landing() {
               return (
                 <div
                   key={p.key}
-                  className={`relative flex flex-col rounded-xl border p-5 ${
+                  className={`relative flex flex-col rounded-xl border p-2 ${
                     p.featured ? "border-foreground bg-background" : "border-border bg-background"
                   }`}
                 >
@@ -451,7 +451,7 @@ export default function Landing() {
                     <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
                   </div>
                   {/* Prix — hauteur fixe */}
-                  <div className="mt-4 flex h-12 items-baseline gap-1.5">
+                  <div className="mt-2 flex h-12 items-baseline gap-1.5">
                     <PlanPrice
                       monthly={p.monthly}
                       annual={p.annual}
@@ -466,12 +466,12 @@ export default function Landing() {
                   {noteChanges ? (
                     <p
                       key={billing}
-                      className="text-muted-foreground h-5 animate-fade-in text-xs [animation-duration:180ms]"
+                      className="text-muted-foreground mt-2 h-5 animate-fade-in text-xs [animation-duration:180ms]"
                     >
                       {note}
                     </p>
                   ) : (
-                    <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                    <p className="text-muted-foreground mt-2 h-5 text-xs">{note}</p>
                   )}
 
                   {/* Bouton */}
@@ -496,12 +496,12 @@ export default function Landing() {
                       return (
                         <div
                           key={s.labelKey}
-                          className="border-border flex h-[62px] items-center justify-between gap-2 overflow-hidden border-b last:border-0"
+                          className="border-border flex h-[62px] items-center justify-between gap-1 overflow-hidden border-b last:border-0"
                         >
-                          <span className="text-muted-foreground text-[12px] leading-tight">
+                          <span className="text-muted-foreground whitespace-nowrap text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
+                          <span className="max-w-[60%] whitespace-nowrap text-right text-sm font-semibold leading-tight">
                             {value}
                           </span>
                         </div>

@@ -12,12 +12,12 @@
   "onQuote": "On request",
   "freeOffer": "10 interviews free",
   "specs": {
-    "interviews": "Interviews included / month",
+    "interviews": "Interviews / month",
     "beyond": "Beyond that",
     "pricePerInterview": "Price per interview"
   },
   "values": {
-    "unlimited": "Unlimited",
+    "byVolume": "By volume",
     "perInterview5": "€5 per interview",
     "perInterview4": "€4 per interview",
     "perInterview3": "€3 per interview",
