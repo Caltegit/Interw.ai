@@ -322,23 +322,25 @@ function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
     <div
       ref={ref}
       onMouseEnter={() => setHoverKey((k) => k + 1)}
-      className={`landing-funnel-card border-border bg-background flex flex-col rounded-xl border p-5 ${
+      className={`landing-funnel-card border-border bg-background flex flex-col rounded-xl border p-5 sm:p-6 ${
         inView ? "landing-funnel-enter" : "opacity-0"
       }`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <h3 className={H3}>
-        <span className="text-muted-foreground font-semibold tabular-nums">{index + 1} · </span>
-        {t(`funnel.${stepKey}.title`)}
-      </h3>
-      <div className="relative mt-5 h-[140px] shrink-0 overflow-hidden">{renderIllus()}</div>
+      <span className="bg-muted text-foreground mb-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums">
+        {index + 1}
+      </span>
+      <h3 className={H3}>{t(`funnel.${stepKey}.title`)}</h3>
+      <div className="relative mx-auto mt-5 h-[120px] w-full max-w-[280px] shrink-0 overflow-hidden sm:h-[140px] sm:max-w-none">
+        {renderIllus()}
+      </div>
     </div>
   );
 }
 
 export default function FunnelCards() {
   return (
-    <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-12 md:mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {FUNNEL_KEYS.map((key, i) => (
         <FunnelCard key={key} stepKey={key} index={i} />
       ))}
