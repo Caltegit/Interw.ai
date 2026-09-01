@@ -18,6 +18,7 @@ import logoMorning from "@/assets/logos/logo-morning.png";
 import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
+import logoGardner from "@/assets/logos/logo-gardner.png";
 import { ArrowRight, ChevronDown, Gift } from "lucide-react";
 
 function DemoVideo() {
@@ -76,10 +77,11 @@ function DemoVideo() {
 }
 
 const BETA_LOGOS = [
-  { name: "Morning", src: logoMorning, className: "max-h-6 sm:max-h-8 md:max-h-9" },
-  { name: "E.Leclerc", src: logoLeclerc, className: "max-h-7 sm:max-h-9 md:max-h-11" },
-  { name: "Castalie", src: logoCastalie, className: "max-h-5 sm:max-h-7 md:max-h-8" },
-  { name: "ad's up consulting", src: logoAdsup, className: "max-h-6 sm:max-h-8 md:max-h-9" },
+  { name: "Morning", src: logoMorning, href: "https://www.morning.fr/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
+  { name: "E.Leclerc", src: logoLeclerc, href: "https://www.e.leclerc/mag/e-leclerc-fouesnant-pleuven", className: "max-h-7 sm:max-h-9 md:max-h-11" },
+  { name: "Castalie", src: logoCastalie, href: "https://www.castalie.com/", className: "max-h-5 sm:max-h-7 md:max-h-8" },
+  { name: "ad's up consulting", src: logoAdsup, href: "https://ads-up.fr/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
+  { name: "Gardner", src: logoGardner, href: "https://withgardner.com/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
 ];
 
 const CAL_LINK = "https://calendar.app.google/C7YQSPArwRUyyQrk8";
@@ -331,15 +333,27 @@ export default function Landing() {
           <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
             {t("proof.title")}
           </p>
-          <div className="mt-5 grid grid-cols-4 items-center justify-items-center gap-x-4 sm:mt-6 sm:gap-x-10 md:gap-x-16">
-            {BETA_LOGOS.map((logo) => (
-              <img
-                key={logo.name}
-                src={logo.src}
-                alt={logo.name}
-                loading="lazy"
-                className={`${logo.className} h-auto w-full max-w-[150px] min-w-0 object-contain`}
-              />
+          <div className="mt-5 flex flex-col items-center gap-y-5 sm:mt-6 sm:gap-y-7">
+            {[BETA_LOGOS.slice(0, 3), BETA_LOGOS.slice(3)].map((row, rowIdx) => (
+              <div key={rowIdx} className="flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4 sm:gap-x-14 md:gap-x-20">
+                {row.map((logo) => (
+                  <a
+                    key={logo.name}
+                    href={logo.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={logo.name}
+                    className="transition-opacity hover:opacity-70"
+                  >
+                    <img
+                      src={logo.src}
+                      alt={logo.name}
+                      loading="lazy"
+                      className={`${logo.className} h-auto w-auto max-w-[150px] object-contain`}
+                    />
+                  </a>
+                ))}
+              </div>
             ))}
           </div>
         </div>
