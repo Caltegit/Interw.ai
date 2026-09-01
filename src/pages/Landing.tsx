@@ -354,7 +354,7 @@ export default function Landing() {
       </section>
 
       {/* ============ PRODUIT ============ */}
-      <section className="border-border border-t">
+      <section id="produit" className="border-border border-t scroll-mt-20">
         <div className="mx-auto max-w-5xl px-5 sm:px-6 py-16 md:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className={H2}>{t("product.title")}</h2>
