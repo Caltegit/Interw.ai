@@ -260,13 +260,17 @@ export default function Landing() {
         }`}
       >
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
-          <Link to="/" className="text-[22px] font-semibold tracking-tight">
+          <Link
+            to="/"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="text-[22px] font-semibold tracking-tight"
+          >
             Interw
           </Link>
           <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
-            <span className="hover:text-foreground transition-colors cursor-default">
+            <a href="#produit" className="hover:text-foreground transition-colors">
               {t("nav.product")}
-            </span>
+            </a>
             <a href="#tarifs" className="hover:text-foreground transition-colors">
               {t("nav.pricing")}
             </a>
@@ -342,6 +346,9 @@ export default function Landing() {
       {/* ============ PROBLÈME ============ */}
       <section className="mx-auto max-w-5xl px-5 sm:px-6 py-16 md:py-24">
         <h2 className={`mx-auto max-w-3xl text-center ${H2}`}>{t("problem.title")}</h2>
+        <p className={`text-muted-foreground mx-auto mt-5 max-w-2xl text-center ${BODY}`}>
+          {t("problem.intro")}
+        </p>
         <FunnelCards />
 
         <p className="text-foreground mx-auto mt-12 md:mt-16 max-w-2xl text-center text-[24px] leading-snug font-semibold tracking-tight md:text-[32px]">
@@ -350,7 +357,7 @@ export default function Landing() {
       </section>
 
       {/* ============ PRODUIT ============ */}
-      <section className="border-border border-t">
+      <section id="produit" className="border-border border-t scroll-mt-20">
         <div className="mx-auto max-w-5xl px-5 sm:px-6 py-16 md:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className={H2}>{t("product.title")}</h2>
@@ -380,7 +387,7 @@ export default function Landing() {
       </section>
 
       {/* ============ TARIFS ============ */}
-      <section id="tarifs" className="border-border border-t">
+      <section id="tarifs" className="border-border border-t scroll-mt-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-6 py-16 md:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className={H2}>{tp("title")}</h2>

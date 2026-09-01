@@ -4,7 +4,7 @@
   "items": {
     "decision": {
       "q": "Est-ce que l'IA décide à ma place ?",
-      "a": "Non. Interw transcrit les réponses, les confronte à vos critères et vous propose un ordre de lecture. Chaque appréciation renvoie à l'extrait de réponse qui la justifie, que vous pouvez écouter. Vous gardez la main sur qui vous rencontrez, et vous pouvez ignorer le classement."
+      "a": "Non. Interw transcrit chaque entretien, le compare aux critères que vous avez définis, et vous indique par quels candidats commencer. Rien de plus. Chaque note s'appuie sur un passage précis de l'entretien, que vous réécoutez en un clic. Vous décidez qui vous rencontrez — et vous pouvez très bien commencer par le dernier de la liste."
     },
     "hosting": {
       "q": "Où sont hébergées les vidéos et les données des candidats ?",
