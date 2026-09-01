@@ -150,8 +150,8 @@ const PLAN_KEYS = [
     quote: true,
     monthlyUnitKey: null,
     annualUnitKey: null,
-    monthlyNoteKey: null,
-    annualNoteKey: null,
+    monthlyNoteKey: "annualCommitment",
+    annualNoteKey: "annualCommitment",
     featured: false,
     external: true,
     specs: [
@@ -165,11 +165,14 @@ const PLAN_KEYS = [
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
 const PRICE_CLASS = "text-4xl font-semibold tracking-tight";
-const PRICE_STYLE = {
+const NUMBER_FLOW_STYLE = {
   fontVariantNumeric: "tabular-nums",
   lineHeight: 0.85,
-  paddingTop: "0.25em",
-  paddingBottom: "0.25em",
+} as const;
+const STATIC_PRICE_STYLE = {
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 0.85,
+  padding: "0.25em 0",
   display: "inline-block",
 } as const;
 
@@ -190,7 +193,7 @@ function PlanPrice({
 }) {
   if (quote || monthly === null || annual === null) {
     return (
-      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
         {quoteLabel}
       </span>
     );
@@ -200,7 +203,7 @@ function PlanPrice({
 
   if (monthly === annual) {
     return (
-      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
         {new Intl.NumberFormat(locale, {
           style: "currency",
           currency: "EUR",
@@ -220,7 +223,7 @@ function PlanPrice({
       spinTiming={{ duration: 900, easing: "ease-out" }}
       opacityTiming={{ duration: 350, easing: "ease-out" }}
       className={PRICE_CLASS}
-      style={PRICE_STYLE}
+      style={NUMBER_FLOW_STYLE}
     />
   );
 }
@@ -498,10 +501,10 @@ export default function Landing() {
                           key={s.labelKey}
                           className="border-border flex h-[62px] items-center justify-between gap-1 overflow-hidden border-b last:border-0"
                         >
-                          <span className="text-muted-foreground whitespace-nowrap text-[12px] leading-tight">
+                          <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="max-w-[60%] whitespace-nowrap text-right text-sm font-semibold leading-tight">
+                          <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
                             {value}
                           </span>
                         </div>
