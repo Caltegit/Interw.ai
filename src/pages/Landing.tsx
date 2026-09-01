@@ -346,6 +346,9 @@ export default function Landing() {
       {/* ============ PROBLÈME ============ */}
       <section className="mx-auto max-w-5xl px-5 sm:px-6 py-16 md:py-24">
         <h2 className={`mx-auto max-w-3xl text-center ${H2}`}>{t("problem.title")}</h2>
+        <p className={`text-muted-foreground mx-auto mt-5 max-w-2xl text-center ${BODY}`}>
+          {t("problem.intro")}
+        </p>
         <FunnelCards />
 
         <p className="text-foreground mx-auto mt-12 md:mt-16 max-w-2xl text-center text-[24px] leading-snug font-semibold tracking-tight md:text-[32px]">
