@@ -505,7 +505,7 @@ export default function Landing() {
                           <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="text-right text-sm font-semibold leading-tight">
+                          <span className="shrink-0 text-right text-sm font-semibold leading-tight">
                             {value}
                           </span>
                         </div>
