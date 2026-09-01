@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import NumberFlow, { continuous } from "@number-flow/react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
+import { useLanguage } from "@/hooks/useLanguage";
 import { LanguageSelect } from "@/components/LanguageSelect";
 
 
@@ -95,8 +97,9 @@ const SECTION_KEYS = [
 const PLAN_KEYS = [
   {
     key: "free",
-    monthly: "0 €",
-    annual: "0 €",
+    monthly: 0,
+    annual: 0,
+    quote: false,
     monthlyUnitKey: null,
     annualUnitKey: null,
     monthlyNoteKey: "forever",
@@ -110,8 +113,9 @@ const PLAN_KEYS = [
   },
   {
     key: "plus",
-    monthly: "199 €",
-    annual: "169 €",
+    monthly: 199,
+    annual: 169,
+    quote: false,
     monthlyUnitKey: "perMonth",
     annualUnitKey: "perMonth",
     monthlyNoteKey: "billedMonthly",
@@ -125,8 +129,9 @@ const PLAN_KEYS = [
   },
   {
     key: "pro",
-    monthly: "399 €",
-    annual: "329 €",
+    monthly: 399,
+    annual: 329,
+    quote: false,
     monthlyUnitKey: "perMonth",
     annualUnitKey: "perMonth",
     monthlyNoteKey: "billedMonthly",
@@ -140,8 +145,9 @@ const PLAN_KEYS = [
   },
   {
     key: "enterprise",
-    monthly: "onQuote",
-    annual: "onQuote",
+    monthly: null,
+    annual: null,
+    quote: true,
     monthlyUnitKey: null,
     annualUnitKey: null,
     monthlyNoteKey: null,
@@ -155,98 +161,78 @@ const PLAN_KEYS = [
   },
 ] as const;
 
+
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
-function DigitRoller({
-  from,
-  to,
-  roll,
-}: {
-  from: string;
-  to: string;
-  roll: boolean;
-}) {
-  return (
-    <span className="relative inline-block h-[1em] w-[0.55em] overflow-hidden align-bottom">
-      <span
-        className={`absolute inset-0 flex items-center justify-center ${
-          roll ? "animate-digit-roll-out" : ""
-        }`}
-      >
-        {from}
-      </span>
-      <span
-        className={`absolute inset-0 flex translate-y-full items-center justify-center ${
-          roll ? "animate-digit-roll-in" : ""
-        }`}
-      >
-        {to}
-      </span>
-    </span>
-  );
-}
+const PRICE_CLASS = "text-4xl font-semibold tracking-tight";
+const PRICE_STYLE = {
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 0.85,
+  paddingTop: "0.25em",
+  paddingBottom: "0.25em",
+  display: "inline-block",
+} as const;
 
-function RollingPrice({
+function PlanPrice({
   monthly,
   annual,
+  quote,
   billing,
-  onQuote,
+  quoteLabel,
+  locale,
 }: {
-  monthly: string;
-  annual: string;
+  monthly: number | null;
+  annual: number | null;
+  quote: boolean;
   billing: "mensuel" | "annuel";
-  onQuote: string;
+  quoteLabel: string;
+  locale: string;
 }) {
-  const [anim, setAnim] = useState<{ from: string; to: string } | null>(null);
-
-  useEffect(() => {
-    setAnim((prev) => {
-      const to = billing === "annuel" ? annual : monthly;
-      if (!prev) return { from: to, to };
-      if (prev.to === to) return prev;
-      return { from: prev.to, to };
-    });
-  }, [billing, monthly, annual]);
-
-  if (!anim) return null;
-  const toPrice = anim.to;
-  if (toPrice === "onQuote") {
-    return <span className="text-4xl font-semibold tracking-tight">{onQuote}</span>;
+  if (quote || monthly === null || annual === null) {
+    return (
+      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+        {quoteLabel}
+      </span>
+    );
   }
 
-  const fromStr = anim.from === "onQuote" ? "" : anim.from.replace(/\D/g, "");
-  const toStr = toPrice.replace(/\D/g, "");
-  const maxLen = Math.max(fromStr.length, toStr.length, 1);
-  const fromDigits = fromStr.padStart(maxLen, " ");
-  const toDigits = toStr.padStart(maxLen, " ");
+  const value = billing === "annuel" ? annual : monthly;
 
-  let rolling = false;
-  const rollFlags = toDigits.split("").map((toDigit, i) => {
-    const fromDigit = fromDigits[i];
-    if (fromDigit !== toDigit) rolling = true;
-    return rolling;
-  });
+  if (monthly === annual) {
+    return (
+      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+        {new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: "EUR",
+          maximumFractionDigits: 0,
+        }).format(value)}
+      </span>
+    );
+  }
 
   return (
-    <span className="inline-flex items-baseline text-4xl font-semibold tracking-tight">
-      {toDigits.split("").map((toDigit, i) => (
-        <DigitRoller
-          key={i}
-          from={fromDigits[i]}
-          to={toDigit}
-          roll={rollFlags[i]}
-        />
-      ))}
-      <span className="ml-1">€</span>
-    </span>
+    <NumberFlow
+      value={value}
+      locales={locale}
+      format={{ style: "currency", currency: "EUR", maximumFractionDigits: 0 }}
+      plugins={[continuous]}
+      transformTiming={{ duration: 500, easing: "ease-out" }}
+      spinTiming={{ duration: 900, easing: "ease-out" }}
+      opacityTiming={{ duration: 350, easing: "ease-out" }}
+      className={PRICE_CLASS}
+      style={PRICE_STYLE}
+    />
   );
 }
+
 
 export default function Landing() {
   const { t } = useTranslation("landing");
   const { t: tp } = useTranslation("pricing");
   const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
+  const { language } = useLanguage();
+  const priceLocale = language === "fr" ? "fr-FR" : "en-GB";
   const [scrolled, setScrolled] = useState(false);
   const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
@@ -436,11 +422,12 @@ export default function Landing() {
           {/* Cartes */}
           <div className="mt-6 grid gap-4 md:grid-cols-4">
             {PLAN_KEYS.map((p) => {
-              const price = billing === "annuel" ? p.annual : p.monthly;
               const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
               const unit = unitKey ? tp(unitKey) : "";
               const noteKey = billing === "annuel" ? p.annualNoteKey : p.monthlyNoteKey;
               const note = noteKey ? tp(noteKey) : "";
+              const noteChanges = p.monthlyNoteKey !== p.annualNoteKey;
+
               const cta = tp(`plans.${p.key}.cta`);
               const ctaClass =
                 "mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium transition-opacity hover:opacity-90 " +
@@ -465,16 +452,28 @@ export default function Landing() {
                   </div>
                   {/* Prix — hauteur fixe */}
                   <div className="mt-4 flex h-12 items-baseline gap-1.5">
-                    <RollingPrice
+                    <PlanPrice
                       monthly={p.monthly}
                       annual={p.annual}
+                      quote={p.quote}
                       billing={billing}
-                      onQuote={tp("onQuote")}
+                      quoteLabel={tp("onQuote")}
+                      locale={priceLocale}
                     />
                     {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
-                  <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                  {noteChanges ? (
+                    <p
+                      key={billing}
+                      className="text-muted-foreground h-5 animate-fade-in text-xs [animation-duration:180ms]"
+                    >
+                      {note}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                  )}
+
                   {/* Bouton */}
                   {p.external ? (
                     <a

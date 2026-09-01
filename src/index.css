@@ -4,22 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer utilities {
-  @keyframes digit-roll-out {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-100%); }
-  }
-  @keyframes digit-roll-in {
-    0% { transform: translateY(100%); }
-    100% { transform: translateY(0); }
-  }
-  .animate-digit-roll-out {
-    animation: digit-roll-out 0.3s ease-out forwards;
-  }
-  .animate-digit-roll-in {
-    animation: digit-roll-in 0.3s ease-out forwards;
-  }
-}
+
+
 
 @layer base {
   :root {
