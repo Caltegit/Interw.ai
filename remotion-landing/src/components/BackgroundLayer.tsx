@@ -35,17 +35,6 @@ export const BackgroundLayer: React.FC = () => {
           filter: "blur(60px)",
         }}
       />
-      {/* Subtle grid */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage:
-            "linear-gradient(rgba(9,9,11,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(9,9,11,0.045) 1px, transparent 1px)",
-          backgroundSize: "80px 80px",
-          opacity: 0.6,
-        }}
-      />
     </AbsoluteFill>
   );
 };
