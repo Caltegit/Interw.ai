@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
 
 import productProjects from "@/assets/product-projects.png";
@@ -105,7 +105,7 @@ const PLAN_KEYS = [
     external: false,
     specs: [
       { labelKey: "specs.interviews", value: "—" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview5" },
+      { labelKey: "specs.pricePerInterview", value: "5 €" },
     ],
   },
   {
@@ -282,7 +282,6 @@ export default function Landing() {
             </a>
           </nav>
           <div className="flex items-center gap-4 text-sm">
-            <LanguageSwitcher />
             <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">
               {t("nav.signIn")}
             </Link>
@@ -363,15 +362,16 @@ export default function Landing() {
       {/* ============ PRODUIT ============ */}
       <section className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="max-w-3xl">
+          <div className="mx-auto max-w-3xl text-center">
             <h2 className={H2}>{t("product.title")}</h2>
             <p className={`text-foreground/80 mt-5 ${BODY}`}>{t("product.desc")}</p>
           </div>
           <div className="mt-20 space-y-24">
           {SECTION_KEYS.map((s) => (
             <div key={s.key}>
-              <h3 className={`max-w-xl ${H3}`}>{t(`product.${s.key}.title`)}</h3>
-              <p className={`text-muted-foreground mt-3 max-w-2xl ${BODY}`}>{t(`product.${s.key}.desc`)}</p>
+              <h3 className={`mx-auto max-w-xl text-center ${H3}`}>{t(`product.${s.key}.title`)}</h3>
+              <p className={`text-muted-foreground mx-auto mt-3 max-w-2xl text-center ${BODY}`}>{t(`product.${s.key}.desc`)}</p>
+
               <div
                 className="border-border mt-8 overflow-hidden rounded-xl border bg-cover bg-center p-4 md:p-10"
                 style={{ backgroundImage: `url(${s.background})` }}
@@ -392,7 +392,7 @@ export default function Landing() {
       {/* ============ TARIFS ============ */}
       <section id="tarifs" className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="max-w-2xl">
+          <div className="mx-auto max-w-2xl text-center">
             <h2 className={H2}>{tp("title")}</h2>
           </div>
 
@@ -519,7 +519,7 @@ export default function Landing() {
       {/* ============ FAQ ============ */}
       <section className="border-border border-t">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <div className="mb-6">
+          <div className="mb-6 text-center">
             <h2 className={H2}>{tf("title")}</h2>
             <p className={`text-muted-foreground mt-3 ${BODY}`}>{tf("subtitle")}</p>
           </div>
@@ -558,28 +558,36 @@ export default function Landing() {
             >
               {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
           </div>
+
         </div>
       </section>
 
       {/* ============ FOOTER ============ */}
       <footer className="border-border border-t">
-        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 py-8 text-xs md:flex-row">
-          <span>{t("footer.copyright", { year: new Date().getFullYear() })}</span>
-          <div className="flex items-center gap-5">
-            <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-              {t("footer.demo")}
-            </a>
-            <Link to="/legal" className="hover:text-foreground transition-colors">
-              {t("footer.legal")}
-            </Link>
-            <Link to="/privacy" className="hover:text-foreground transition-colors">
-              {t("footer.privacy")}
-            </Link>
+        <div className="mx-auto max-w-5xl px-6 py-8">
+          <div className="text-muted-foreground flex flex-col items-center justify-between gap-4 text-xs md:flex-row">
+            <LanguageSelect />
+            <div className="flex items-center gap-5">
+              <a href={CAL_LINK} target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                {t("footer.demo")}
+              </a>
+              <Link to="/legal" className="hover:text-foreground transition-colors">
+                {t("footer.legal")}
+              </Link>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                {t("footer.privacy")}
+              </Link>
+            </div>
+          </div>
+          <div className="border-border mt-6 border-t pt-6">
+            <p className="text-muted-foreground text-xs">
+              {t("footer.copyright", { year: new Date().getFullYear() })}
+            </p>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }

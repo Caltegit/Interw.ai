@@ -16,7 +16,7 @@
     },
     "quota": {
       "q": "What happens when I exceed my plan?",
-      "a": "Nothing for your candidates: they're never blocked. Each extra interview is billed at your plan's rate: €5 on Pay as you go, €4 on Plus, €3 on Pro."
+      "a": "Nothing for your candidates: they're never blocked. On Plus and Pro, every interview beyond your plan is billed €4 and €3. On Pay as you go there is no plan: every interview costs €5."
     },
     "trial": {
       "q": "How do the 10 free interviews work?",
