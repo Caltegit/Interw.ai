@@ -319,7 +319,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="border-border w-full border-y bg-foreground/[0.03] py-10 md:py-16">
+      <section className="w-full py-10 md:py-16">
         <div className="mx-auto flex w-full max-w-[1280px] items-start justify-center px-2 sm:px-6 md:px-8">
           <div className="landing-fade-up landing-delay-3 relative aspect-video w-full overflow-hidden">
             <DemoVideo />
