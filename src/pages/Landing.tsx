@@ -559,7 +559,7 @@ export default function Landing() {
             >
               {t("hero.createAccount")}
             </Link>
-            <p className="text-muted-foreground mt-1.5 text-[13px]">{t("hero.freeNote")}</p>
+            
           </div>
         </div>
       </section>
