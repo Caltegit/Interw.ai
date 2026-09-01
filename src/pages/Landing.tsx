@@ -418,11 +418,12 @@ export default function Landing() {
           {/* Cartes */}
           <div className="mt-6 grid gap-4 md:grid-cols-4">
             {PLAN_KEYS.map((p) => {
-              const price = billing === "annuel" ? p.annual : p.monthly;
               const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
               const unit = unitKey ? tp(unitKey) : "";
               const noteKey = billing === "annuel" ? p.annualNoteKey : p.monthlyNoteKey;
               const note = noteKey ? tp(noteKey) : "";
+              const noteChanges = p.monthlyNoteKey !== p.annualNoteKey;
+
               const cta = tp(`plans.${p.key}.cta`);
               const ctaClass =
                 "mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium transition-opacity hover:opacity-90 " +
@@ -447,16 +448,28 @@ export default function Landing() {
                   </div>
                   {/* Prix — hauteur fixe */}
                   <div className="mt-4 flex h-12 items-baseline gap-1.5">
-                    <RollingPrice
+                    <PlanPrice
                       monthly={p.monthly}
                       annual={p.annual}
+                      quote={p.quote}
                       billing={billing}
-                      onQuote={tp("onQuote")}
+                      quoteLabel={tp("onQuote")}
+                      locale={priceLocale}
                     />
                     {unit && <span className="text-muted-foreground text-sm">{unit}</span>}
                   </div>
                   {/* Note sous le prix — hauteur fixe même si vide */}
-                  <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                  {noteChanges ? (
+                    <p
+                      key={billing}
+                      className="text-muted-foreground h-5 animate-fade-in text-xs [animation-duration:180ms]"
+                    >
+                      {note}
+                    </p>
+                  ) : (
+                    <p className="text-muted-foreground h-5 text-xs">{note}</p>
+                  )}
+
                   {/* Bouton */}
                   {p.external ? (
                     <a
