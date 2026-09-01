@@ -363,15 +363,16 @@ export default function Landing() {
       {/* ============ PRODUIT ============ */}
       <section className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="max-w-3xl">
+          <div className="mx-auto max-w-3xl text-center">
             <h2 className={H2}>{t("product.title")}</h2>
             <p className={`text-foreground/80 mt-5 ${BODY}`}>{t("product.desc")}</p>
           </div>
           <div className="mt-20 space-y-24">
           {SECTION_KEYS.map((s) => (
             <div key={s.key}>
-              <h3 className={`max-w-xl ${H3}`}>{t(`product.${s.key}.title`)}</h3>
-              <p className={`text-muted-foreground mt-3 max-w-2xl ${BODY}`}>{t(`product.${s.key}.desc`)}</p>
+              <h3 className={`mx-auto max-w-xl text-center ${H3}`}>{t(`product.${s.key}.title`)}</h3>
+              <p className={`text-muted-foreground mx-auto mt-3 max-w-2xl text-center ${BODY}`}>{t(`product.${s.key}.desc`)}</p>
+
               <div
                 className="border-border mt-8 overflow-hidden rounded-xl border bg-cover bg-center p-4 md:p-10"
                 style={{ backgroundImage: `url(${s.background})` }}
