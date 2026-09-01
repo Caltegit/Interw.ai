@@ -317,8 +317,8 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-6xl items-start justify-center px-4 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
-        <div className="landing-fade-up landing-delay-3 relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-xl shadow-2xl">
+      <section className="mx-auto flex w-full max-w-6xl items-start justify-center px-3 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
+        <div className="landing-fade-up landing-delay-3 relative aspect-video w-full max-w-[1280px] overflow-hidden">
           <DemoVideo />
         </div>
       </section>
