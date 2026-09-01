@@ -18,6 +18,7 @@ import logoMorning from "@/assets/logos/logo-morning.png";
 import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
+import logoGardnerAsset from "@/assets/logos/logo-gardner.png.asset.json";
 import { ArrowRight, ChevronDown, Gift } from "lucide-react";
 
 function DemoVideo() {
