@@ -262,11 +262,11 @@ function IllusDots({ play, labels }: { play: boolean; labels: Record<string, str
 
   return (
     <div className="absolute inset-0 flex flex-col justify-center gap-2">
-      <div className="grid grid-cols-9 gap-[5px] lg:grid-cols-12">
+      <div className="grid grid-cols-8 gap-[5px] lg:grid-cols-12">
         {dots.map((d, i) => (
           <span
             key={i}
-            className={`aspect-square rounded-full ${i >= 45 ? "max-lg:hidden" : ""} ${play ? "landing-funnel-dot" : "opacity-20"}`}
+            className={`aspect-square rounded-full ${play ? "landing-funnel-dot" : "opacity-20"}`}
             style={{ background: d.color, animationDelay: `${d.delay}ms` }}
           />
         ))}
