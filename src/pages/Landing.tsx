@@ -393,7 +393,7 @@ export default function Landing() {
       {/* ============ TARIFS ============ */}
       <section id="tarifs" className="border-border border-t">
         <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="max-w-2xl">
+          <div className="mx-auto max-w-2xl text-center">
             <h2 className={H2}>{tp("title")}</h2>
           </div>
 
