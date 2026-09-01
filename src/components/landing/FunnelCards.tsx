@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-const H3 = "text-[18px] md:text-[19px] leading-[1.2] font-semibold tracking-tight text-foreground";
+const H3 = "text-[16px] lg:text-[19px] leading-[1.2] font-semibold tracking-tight text-foreground";
 const BODY = "text-[14px] md:text-[15px] leading-relaxed";
 
 const RECEIVED = "var(--l-step-received)";
@@ -262,11 +262,11 @@ function IllusDots({ play, labels }: { play: boolean; labels: Record<string, str
 
   return (
     <div className="absolute inset-0 flex flex-col justify-center gap-2">
-      <div className="grid grid-cols-12 gap-[5px]">
+      <div className="grid grid-cols-9 gap-[5px] lg:grid-cols-12">
         {dots.map((d, i) => (
           <span
             key={i}
-            className={`aspect-square rounded-full ${play ? "landing-funnel-dot" : "opacity-20"}`}
+            className={`aspect-square rounded-full ${i >= 45 ? "max-lg:hidden" : ""} ${play ? "landing-funnel-dot" : "opacity-20"}`}
             style={{ background: d.color, animationDelay: `${d.delay}ms` }}
           />
         ))}
@@ -322,16 +322,16 @@ function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
     <div
       ref={ref}
       onMouseEnter={() => setHoverKey((k) => k + 1)}
-      className={`landing-funnel-card border-border bg-background flex flex-col rounded-xl border p-5 sm:p-6 ${
+      className={`landing-funnel-card border-border bg-background flex flex-col rounded-xl border p-3.5 lg:p-6 ${
         inView ? "landing-funnel-enter" : "opacity-0"
       }`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <span className="bg-muted text-foreground mb-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-[13px] font-semibold tabular-nums">
+      <span className="bg-muted text-foreground mb-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-semibold tabular-nums lg:mb-3 lg:h-7 lg:w-7 lg:text-[13px]">
         {index + 1}
       </span>
       <h3 className={H3}>{t(`funnel.${stepKey}.title`)}</h3>
-      <div className="relative mx-auto mt-5 h-[120px] w-full max-w-[280px] shrink-0 overflow-hidden sm:h-[140px] sm:max-w-none">
+      <div className="relative mt-4 h-[110px] w-full shrink-0 overflow-hidden lg:mt-5 lg:h-[140px]">
         {renderIllus()}
       </div>
     </div>
@@ -340,7 +340,7 @@ function FunnelCard({ stepKey, index }: { stepKey: string; index: number }) {
 
 export default function FunnelCards() {
   return (
-    <div className="mt-12 md:mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-12 md:mt-16 grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-4">
       {FUNNEL_KEYS.map((key, i) => (
         <FunnelCard key={key} stepKey={key} index={i} />
       ))}
