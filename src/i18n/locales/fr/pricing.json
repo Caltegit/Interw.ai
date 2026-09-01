@@ -9,7 +9,8 @@
   "billedMonthly": "Facturé chaque mois",
   "billedAnnually": "Facturé annuellement",
   "annualCommitment": "Engagement annuel",
-  "onQuote": "Sur mesure",
+  "annualOnly": "Facturation annuelle",
+  "onQuote": "Sur devis",
   "freeOffer": "10 entretiens offerts",
   "specs": {
     "interviews": "Entretiens / mois",
@@ -22,7 +23,7 @@
     "perInterview5": "5 € par entretien",
     "perInterview4": "4 € par entretien",
     "perInterview3": "3 € par entretien",
-    "negotiated": "Négocié"
+    "negotiated": "Tarif négocié"
   },
   "plans": {
     "free": {
