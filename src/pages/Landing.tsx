@@ -520,7 +520,7 @@ export default function Landing() {
       {/* ============ FAQ ============ */}
       <section className="border-border border-t">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <div className="mb-6">
+          <div className="mb-6 text-center">
             <h2 className={H2}>{tf("title")}</h2>
             <p className={`text-muted-foreground mt-3 ${BODY}`}>{tf("subtitle")}</p>
           </div>
