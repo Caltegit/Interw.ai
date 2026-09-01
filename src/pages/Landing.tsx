@@ -165,11 +165,14 @@ const PLAN_KEYS = [
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
 const PRICE_CLASS = "text-4xl font-semibold tracking-tight";
-const PRICE_STYLE = {
+const NUMBER_FLOW_STYLE = {
   fontVariantNumeric: "tabular-nums",
   lineHeight: 0.85,
-  paddingTop: "0.25em",
-  paddingBottom: "0.25em",
+} as const;
+const STATIC_PRICE_STYLE = {
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 0.85,
+  padding: "0.25em 0",
   display: "inline-block",
 } as const;
 
@@ -498,10 +501,10 @@ export default function Landing() {
                           key={s.labelKey}
                           className="border-border flex h-[62px] items-center justify-between gap-1 overflow-hidden border-b last:border-0"
                         >
-                          <span className="text-muted-foreground whitespace-nowrap text-[12px] leading-tight">
+                          <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="max-w-[60%] whitespace-nowrap text-right text-sm font-semibold leading-tight">
+                          <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
                             {value}
                           </span>
                         </div>
