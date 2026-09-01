@@ -18,6 +18,7 @@
   },
   "values": {
     "byVolume": "Selon volume",
+    "perInterviewFlat5": "5 €",
     "perInterview5": "5 € par entretien",
     "perInterview4": "4 € par entretien",
     "perInterview3": "3 € par entretien",
