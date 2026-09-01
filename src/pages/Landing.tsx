@@ -223,7 +223,7 @@ function PlanPrice({
       spinTiming={{ duration: 900, easing: "ease-out" }}
       opacityTiming={{ duration: 350, easing: "ease-out" }}
       className={PRICE_CLASS}
-      style={PRICE_STYLE}
+      style={NUMBER_FLOW_STYLE}
     />
   );
 }
