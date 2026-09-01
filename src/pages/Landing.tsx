@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import NumberFlow, { continuous } from "@number-flow/react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
-import FunnelCards from "@/components/landing/FunnelCards";
+import { useLanguage } from "@/hooks/useLanguage";
 import { LanguageSelect } from "@/components/LanguageSelect";
 
 
