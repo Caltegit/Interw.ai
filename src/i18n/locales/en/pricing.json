@@ -13,7 +13,8 @@
   "freeOffer": "10 interviews free",
   "specs": {
     "interviews": "Interviews included / month",
-    "beyond": "Beyond that"
+    "beyond": "Beyond that",
+    "pricePerInterview": "Price per interview"
   },
   "values": {
     "unlimited": "Unlimited",

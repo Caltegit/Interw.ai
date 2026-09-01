@@ -16,7 +16,7 @@
     },
     "quota": {
       "q": "Que se passe-t-il quand je dépasse mon forfait ?",
-      "a": "Rien pour vos candidats : ils ne sont jamais bloqués. Chaque entretien supplémentaire est facturé au prix de votre offre : 5 € sur À la carte, 4 € sur Plus, 3 € sur Pro."
+      "a": "Rien pour vos candidats : ils ne sont jamais bloqués. Sur Plus et Pro, chaque entretien au-delà du forfait est facturé 4 € et 3 €. Sur À la carte, il n'y a pas de forfait : chaque entretien est à 5 €."
     },
     "trial": {
       "q": "Comment fonctionnent les 10 entretiens offerts ?",

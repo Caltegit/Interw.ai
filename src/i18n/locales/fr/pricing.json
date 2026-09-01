@@ -13,7 +13,8 @@
   "freeOffer": "10 entretiens offerts",
   "specs": {
     "interviews": "Entretiens inclus / mois",
-    "beyond": "Au-delà"
+    "beyond": "Au-delà",
+    "pricePerInterview": "Prix par entretien"
   },
   "values": {
     "unlimited": "Illimités",

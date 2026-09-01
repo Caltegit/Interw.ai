@@ -3,7 +3,7 @@ import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import FunnelCards from "@/components/landing/FunnelCards";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
 
 import productProjects from "@/assets/product-projects.png";
@@ -105,7 +105,7 @@ const PLAN_KEYS = [
     external: false,
     specs: [
       { labelKey: "specs.interviews", value: "—" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview5" },
+      { labelKey: "specs.pricePerInterview", value: "5 €" },
     ],
   },
   {
@@ -282,7 +282,6 @@ export default function Landing() {
             </a>
           </nav>
           <div className="flex items-center gap-4 text-sm">
-            <LanguageSwitcher />
             <Link to="/login" className="text-muted-foreground hover:text-foreground transition-colors">
               {t("nav.signIn")}
             </Link>
