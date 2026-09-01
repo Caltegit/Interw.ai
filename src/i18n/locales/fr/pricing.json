@@ -9,10 +9,10 @@
   "billedMonthly": "Facturé chaque mois",
   "billedAnnually": "Facturé annuellement",
   "annualCommitment": "Engagement annuel",
-  "onQuote": "Sur devis",
+  "onQuote": "Sur mesure",
   "freeOffer": "10 entretiens offerts",
   "specs": {
-    "interviews": "Entretiens inclus / mois",
+    "interviews": "Entretiens / mois",
     "beyond": "Au-delà",
     "pricePerInterview": "Prix par entretien"
   },

@@ -150,8 +150,8 @@ const PLAN_KEYS = [
     quote: true,
     monthlyUnitKey: null,
     annualUnitKey: null,
-    monthlyNoteKey: null,
-    annualNoteKey: null,
+    monthlyNoteKey: "annualCommitment",
+    annualNoteKey: "annualCommitment",
     featured: false,
     external: true,
     specs: [

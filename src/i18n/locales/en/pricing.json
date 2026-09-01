@@ -8,8 +8,8 @@
   "forever": "Forever",
   "billedMonthly": "Billed every month",
   "billedAnnually": "Billed annually",
-  "annualCommitment": "Annual commitment",
-  "onQuote": "On request",
+  "annualCommitment": "Annual contract",
+  "onQuote": "Custom",
   "freeOffer": "10 interviews free",
   "specs": {
     "interviews": "Interviews / month",
