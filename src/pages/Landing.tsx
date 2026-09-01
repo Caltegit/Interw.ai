@@ -260,13 +260,17 @@ export default function Landing() {
         }`}
       >
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
-          <Link to="/" className="text-[22px] font-semibold tracking-tight">
+          <Link
+            to="/"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="text-[22px] font-semibold tracking-tight"
+          >
             Interw
           </Link>
           <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
-            <span className="hover:text-foreground transition-colors cursor-default">
+            <a href="#produit" className="hover:text-foreground transition-colors">
               {t("nav.product")}
-            </span>
+            </a>
             <a href="#tarifs" className="hover:text-foreground transition-colors">
               {t("nav.pricing")}
             </a>
