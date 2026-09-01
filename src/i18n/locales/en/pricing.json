@@ -18,6 +18,7 @@
   },
   "values": {
     "byVolume": "By volume",
+    "perInterviewFlat5": "€5",
     "perInterview5": "€5 per interview",
     "perInterview4": "€4 per interview",
     "perInterview3": "€3 per interview",

@@ -108,7 +108,7 @@ const PLAN_KEYS = [
     external: false,
     specs: [
       { labelKey: "specs.interviews", value: "—" },
-      { labelKey: "specs.pricePerInterview", value: "5 €" },
+      { labelKey: "specs.pricePerInterview", valueKey: "values.perInterviewFlat5" },
     ],
   },
   {
