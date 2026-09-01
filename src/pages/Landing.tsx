@@ -18,7 +18,7 @@ import logoMorning from "@/assets/logos/logo-morning.png";
 import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight, ChevronDown, Gift } from "lucide-react";
 
 function DemoVideo() {
   const { i18n } = useTranslation();
@@ -416,14 +416,15 @@ export default function Landing() {
           </div>
 
           {/* Bandeau 10 entretiens offerts */}
-          <div className="mt-8 flex justify-center">
-            <div className="bg-foreground text-background inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
+          <div className="mt-4 flex justify-center">
+            <div className="bg-muted text-foreground border-border inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium">
+              <Gift className="h-4 w-4" />
               <span>{tp("freeOffer")}</span>
             </div>
           </div>
 
           {/* Cartes */}
-          <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="mx-auto mt-6 grid max-w-6xl gap-5 md:grid-cols-4">
             {PLAN_KEYS.map((p) => {
               const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
               const unit = unitKey ? tp(unitKey) : "";
@@ -433,14 +434,14 @@ export default function Landing() {
 
               const cta = tp(`plans.${p.key}.cta`);
               const ctaClass =
-                "mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium transition-opacity hover:opacity-90 " +
+                "mt-1 inline-flex h-10 w-full items-center justify-center rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-opacity hover:opacity-90 " +
                 (p.featured
                   ? "bg-foreground text-background"
                   : "border-border bg-background text-foreground border hover:bg-muted");
               return (
                 <div
                   key={p.key}
-                  className={`relative flex flex-col rounded-xl border p-2 ${
+                  className={`relative flex flex-col rounded-xl border p-6 ${
                     p.featured ? "border-foreground bg-background" : "border-border bg-background"
                   }`}
                 >
@@ -499,12 +500,12 @@ export default function Landing() {
                       return (
                         <div
                           key={s.labelKey}
-                          className="border-border flex h-[62px] items-center justify-between gap-1 overflow-hidden border-b last:border-0"
+                          className="border-border flex h-[62px] items-center justify-between gap-2 overflow-hidden border-b last:border-0"
                         >
                           <span className="text-muted-foreground text-[12px] leading-tight">
                             {tp(s.labelKey)}
                           </span>
-                          <span className="max-w-[60%] text-right text-sm font-semibold leading-tight">
+                          <span className="text-right text-sm font-semibold leading-tight">
                             {value}
                           </span>
                         </div>
