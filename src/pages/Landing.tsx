@@ -332,7 +332,7 @@ export default function Landing() {
         </section>
       </div>
 
-      {/* ============ PREUVE ============ */}
+      {/* ============ PREUVE (hors fold pour ne pas être écrasé) ============ */}
       <section className="border-border border-y">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
           <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
