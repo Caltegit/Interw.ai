@@ -7,13 +7,15 @@ Mesures prises sur la page en 1065×910 :
 
 La vidéo déborde donc de 57 px et recouvre les logos (d'où l'aspect coupé sur la capture).
 
-Cause : le bloc hero + vidéo est enfermé dans un conteneur à hauteur fixe (`md:h-[calc(100dvh-4rem)]`). La vidéo garde son ratio 16:9 sur toute la largeur (max 1120 px), ce qui dépasse la hauteur restante ; rien ne la contraint, elle sort du conteneur et passe par-dessus la section suivante.
+Cause : le bloc hero + vidéo est enfermé dans un conteneur à hauteur fixe (`md:h-[calc(100dvh-4rem)]`). La vidéo garde son ratio 16:9 sur toute la largeur (max 1120 px), ce qui dépasse la hauteur restante ; elle sort du conteneur et passe par-dessus la section logos qui se trouve à l'extérieur de ce conteneur.
 
-## Correction
-Dans `src/pages/Landing.tsx` :
-1. Retirer la hauteur fixe du fold (`md:h-[calc(100dvh-4rem)]`) ; le hero et la vidéo s'enchaînent alors normalement dans le flux.
-2. Contraindre la vidéo pour qu'elle reste raisonnable sans jamais déborder : `min-h-0` sur le conteneur flex et une hauteur max basée sur la fenêtre (`max-h-[min(56vw,60dvh)]` environ) avec conservation du ratio 16:9 et centrage.
-3. Vérifier qu'aucune ombre/arrondi ne déborde sur la section logos.
+## Correction demandée
+- Garder la taille actuelle de la vidéo.
+- Sortir la section « Ils recrutent avec Interw » du bloc hero + vidéo pour qu'elle se place naturellement en dessous, dans le flux normal de la page.
+- Supprimer le conteneur à hauteur fixe (`md:h-[calc(100dvh-4rem)]`) autour du hero + vidéo afin que rien ne soit tronqué ou superposé.
+
+## Fichier impacté
+`src/pages/Landing.tsx` : restructurer le hero + vidéo en un simple flux vertical sans fold fixe, puis placer la section logos juste après.
 
 ## Vérification
 Captures en desktop (1065×910, 1440×900) et mobile (390×844) pour confirmer que le bas de la vidéo reste au-dessus du haut de la section logos, et que les 4 logos sont entièrement visibles.
