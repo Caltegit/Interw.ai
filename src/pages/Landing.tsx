@@ -95,8 +95,9 @@ const SECTION_KEYS = [
 const PLAN_KEYS = [
   {
     key: "free",
-    monthly: "0 €",
-    annual: "0 €",
+    monthly: 0,
+    annual: 0,
+    quote: false,
     monthlyUnitKey: null,
     annualUnitKey: null,
     monthlyNoteKey: "forever",
@@ -110,8 +111,9 @@ const PLAN_KEYS = [
   },
   {
     key: "plus",
-    monthly: "199 €",
-    annual: "169 €",
+    monthly: 199,
+    annual: 169,
+    quote: false,
     monthlyUnitKey: "perMonth",
     annualUnitKey: "perMonth",
     monthlyNoteKey: "billedMonthly",
@@ -125,8 +127,9 @@ const PLAN_KEYS = [
   },
   {
     key: "pro",
-    monthly: "399 €",
-    annual: "329 €",
+    monthly: 399,
+    annual: 329,
+    quote: false,
     monthlyUnitKey: "perMonth",
     annualUnitKey: "perMonth",
     monthlyNoteKey: "billedMonthly",
@@ -140,8 +143,9 @@ const PLAN_KEYS = [
   },
   {
     key: "enterprise",
-    monthly: "onQuote",
-    annual: "onQuote",
+    monthly: null,
+    annual: null,
+    quote: true,
     monthlyUnitKey: null,
     annualUnitKey: null,
     monthlyNoteKey: null,
@@ -154,6 +158,7 @@ const PLAN_KEYS = [
     ],
   },
 ] as const;
+
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
