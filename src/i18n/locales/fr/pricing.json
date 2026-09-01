@@ -17,7 +17,7 @@
     "pricePerInterview": "Prix par entretien"
   },
   "values": {
-    "unlimited": "Illimités",
+    "byVolume": "Selon volume",
     "perInterview5": "5 € par entretien",
     "perInterview4": "4 € par entretien",
     "perInterview3": "3 € par entretien",
