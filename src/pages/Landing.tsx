@@ -559,7 +559,8 @@ export default function Landing() {
             >
               {t("hero.createAccount")}
             </Link>
-            
+          </div>
+
           </div>
         </div>
       </section>
