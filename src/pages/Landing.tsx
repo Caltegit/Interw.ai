@@ -18,7 +18,7 @@ import logoMorning from "@/assets/logos/logo-morning.png";
 import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
-import logoGardnerAsset from "@/assets/logos/logo-gardner.png.asset.json";
+import logoGardner from "@/assets/logos/logo-gardner.png";
 import { ArrowRight, ChevronDown, Gift } from "lucide-react";
 
 function DemoVideo() {
@@ -81,7 +81,7 @@ const BETA_LOGOS = [
   { name: "E.Leclerc", src: logoLeclerc, href: "https://www.e.leclerc/mag/e-leclerc-fouesnant-pleuven", className: "max-h-7 sm:max-h-9 md:max-h-11" },
   { name: "Castalie", src: logoCastalie, href: "https://www.castalie.com/", className: "max-h-5 sm:max-h-7 md:max-h-8" },
   { name: "ad's up consulting", src: logoAdsup, href: "https://ads-up.fr/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
-  { name: "Gardner", src: logoGardnerAsset.url, href: "https://withgardner.com/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
+  { name: "Gardner", src: logoGardner, href: "https://withgardner.com/", className: "max-h-6 sm:max-h-8 md:max-h-9" },
 ];
 
 const CAL_LINK = "https://calendar.app.google/C7YQSPArwRUyyQrk8";
