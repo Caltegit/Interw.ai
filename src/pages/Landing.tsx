@@ -162,90 +162,67 @@ const PLAN_KEYS = [
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
 
-function DigitRoller({
-  from,
-  to,
-  roll,
-}: {
-  from: string;
-  to: string;
-  roll: boolean;
-}) {
-  return (
-    <span className="relative inline-block h-[1em] w-[0.55em] overflow-hidden align-bottom">
-      <span
-        className={`absolute inset-0 flex items-center justify-center ${
-          roll ? "animate-digit-roll-out" : ""
-        }`}
-      >
-        {from}
-      </span>
-      <span
-        className={`absolute inset-0 flex translate-y-full items-center justify-center ${
-          roll ? "animate-digit-roll-in" : ""
-        }`}
-      >
-        {to}
-      </span>
-    </span>
-  );
-}
+const PRICE_CLASS = "text-4xl font-semibold tracking-tight";
+const PRICE_STYLE = {
+  fontVariantNumeric: "tabular-nums",
+  lineHeight: 0.85,
+  paddingTop: "0.25em",
+  paddingBottom: "0.25em",
+  display: "inline-block",
+} as const;
 
-function RollingPrice({
+function PlanPrice({
   monthly,
   annual,
+  quote,
   billing,
-  onQuote,
+  quoteLabel,
+  locale,
 }: {
-  monthly: string;
-  annual: string;
+  monthly: number | null;
+  annual: number | null;
+  quote: boolean;
   billing: "mensuel" | "annuel";
-  onQuote: string;
+  quoteLabel: string;
+  locale: string;
 }) {
-  const [anim, setAnim] = useState<{ from: string; to: string } | null>(null);
-
-  useEffect(() => {
-    setAnim((prev) => {
-      const to = billing === "annuel" ? annual : monthly;
-      if (!prev) return { from: to, to };
-      if (prev.to === to) return prev;
-      return { from: prev.to, to };
-    });
-  }, [billing, monthly, annual]);
-
-  if (!anim) return null;
-  const toPrice = anim.to;
-  if (toPrice === "onQuote") {
-    return <span className="text-4xl font-semibold tracking-tight">{onQuote}</span>;
+  if (quote || monthly === null || annual === null) {
+    return (
+      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+        {quoteLabel}
+      </span>
+    );
   }
 
-  const fromStr = anim.from === "onQuote" ? "" : anim.from.replace(/\D/g, "");
-  const toStr = toPrice.replace(/\D/g, "");
-  const maxLen = Math.max(fromStr.length, toStr.length, 1);
-  const fromDigits = fromStr.padStart(maxLen, " ");
-  const toDigits = toStr.padStart(maxLen, " ");
+  const value = billing === "annuel" ? annual : monthly;
 
-  let rolling = false;
-  const rollFlags = toDigits.split("").map((toDigit, i) => {
-    const fromDigit = fromDigits[i];
-    if (fromDigit !== toDigit) rolling = true;
-    return rolling;
-  });
+  if (monthly === annual) {
+    return (
+      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+        {new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency: "EUR",
+          maximumFractionDigits: 0,
+        }).format(value)}
+      </span>
+    );
+  }
 
   return (
-    <span className="inline-flex items-baseline text-4xl font-semibold tracking-tight">
-      {toDigits.split("").map((toDigit, i) => (
-        <DigitRoller
-          key={i}
-          from={fromDigits[i]}
-          to={toDigit}
-          roll={rollFlags[i]}
-        />
-      ))}
-      <span className="ml-1">€</span>
-    </span>
+    <NumberFlow
+      value={value}
+      locales={locale}
+      format={{ style: "currency", currency: "EUR", maximumFractionDigits: 0 }}
+      plugins={[continuous]}
+      transformTiming={{ duration: 500, easing: "ease-out" }}
+      spinTiming={{ duration: 900, easing: "ease-out" }}
+      opacityTiming={{ duration: 350, easing: "ease-out" }}
+      className={PRICE_CLASS}
+      style={PRICE_STYLE}
+    />
   );
 }
+
 
 export default function Landing() {
   const { t } = useTranslation("landing");
