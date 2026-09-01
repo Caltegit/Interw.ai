@@ -193,7 +193,7 @@ function PlanPrice({
 }) {
   if (quote || monthly === null || annual === null) {
     return (
-      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
         {quoteLabel}
       </span>
     );
@@ -203,7 +203,7 @@ function PlanPrice({
 
   if (monthly === annual) {
     return (
-      <span className={PRICE_CLASS} style={PRICE_STYLE}>
+      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
         {new Intl.NumberFormat(locale, {
           style: "currency",
           currency: "EUR",
