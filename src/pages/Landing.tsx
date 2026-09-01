@@ -298,41 +298,39 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* ============ HERO + VIDÉO + PREUVE (visibles sans scroll) ============ */}
-      <div className="flex flex-col md:h-[calc(100dvh-4rem)]">
-        <section className="mx-auto w-full max-w-5xl shrink-0 px-6 pt-14 pb-8 text-center md:pt-[3vh] md:pb-[2vh]">
-          <h1 className="landing-fade-up mx-auto max-w-3xl text-[40px] leading-[1.05] font-semibold tracking-tight md:text-[clamp(2.5rem,4.4vh+1.2rem,4rem)]">
-            {t("hero.title")}
-          </h1>
-          <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
-            {t("hero.subtitle")}
-          </p>
-          <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-[2.5vh]">
-            <a
-              href={CAL_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
-            >
-              {t("hero.cta")} <ArrowRight className="h-4 w-4" />
-            </a>
-            <Link
-              to="/login"
-              className="bg-background text-foreground inline-flex h-11 items-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5"
-            >
-              {t("hero.createAccount")}
-            </Link>
-          </div>
-        </section>
+      {/* ============ HERO + VIDÉO (flux vertical) ============ */}
+      <section className="mx-auto w-full max-w-5xl px-6 pt-14 pb-8 text-center md:pt-[3vh] md:pb-[2vh]">
+        <h1 className="landing-fade-up mx-auto max-w-3xl text-[40px] leading-[1.05] font-semibold tracking-tight md:text-[clamp(2.5rem,4.4vh+1.2rem,4rem)]">
+          {t("hero.title")}
+        </h1>
+        <p className="landing-fade-up landing-delay-1 text-muted-foreground mx-auto mt-5 max-w-2xl text-[17px] md:mt-[2vh] md:text-[clamp(1rem,1.4vh+0.5rem,1.1875rem)]">
+          {t("hero.subtitle")}
+        </p>
+        <div className="landing-fade-up landing-delay-2 mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-[2.5vh]">
+          <a
+            href={CAL_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
+          >
+            {t("hero.cta")} <ArrowRight className="h-4 w-4" />
+          </a>
+          <Link
+            to="/login"
+            className="bg-background text-foreground inline-flex h-11 items-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5"
+          >
+            {t("hero.createAccount")}
+          </Link>
+        </div>
+      </section>
 
-        <section className="mx-auto flex w-full max-w-6xl flex-1 items-start justify-center px-4 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
-          <div className="landing-fade-up landing-delay-3 relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-xl shadow-2xl">
-            <DemoVideo />
-          </div>
-        </section>
-      </div>
+      <section className="mx-auto flex w-full max-w-6xl items-start justify-center px-4 pb-6 sm:px-6 md:px-8 md:pb-[2vh]">
+        <div className="landing-fade-up landing-delay-3 relative aspect-video w-full max-w-[1120px] overflow-hidden rounded-xl shadow-2xl">
+          <DemoVideo />
+        </div>
+      </section>
 
-      {/* ============ PREUVE (hors fold pour ne pas être écrasé) ============ */}
+      {/* ============ PREUVE ============ */}
       <section className="border-border border-y">
         <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
           <p className="text-center text-lg font-bold tracking-tight sm:text-xl">
