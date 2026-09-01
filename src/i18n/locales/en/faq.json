@@ -4,7 +4,7 @@
   "items": {
     "decision": {
       "q": "Does the AI decide for me?",
-      "a": "No. Interw transcribes the answers, matches them against your criteria and suggests a reading order. Every assessment links back to the answer excerpt that justifies it, which you can listen to. You stay in control of who you meet, and you can ignore the ranking."
+      "a": "No. Interw transcribes each interview, compares it against the criteria you set and tells you which candidates to meet first. That's it. Every score is backed by a specific moment in the interview, one click away. You decide who you meet — and nothing stops you from starting with the last name on the list."
     },
     "hosting": {
       "q": "Where are candidate videos and data hosted?",
