@@ -15,7 +15,8 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [step, setStep] = useState<"form" | "sent" | "existing">("form");
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session } = useAuth();
