@@ -19,7 +19,7 @@
 Sur `/bienvenue`, lorsqu’une invitation expirée est trouvée :
 
 - expliquer qu’elle est indépendante de la création du compte ;
-- proposer **« Demander une nouvelle invitation »** pour rejoindre l’organisation concernée ;
+- proposer **« Demander une nouvelle invitation »** pour rejoindre l’organisation concernée, avec envoi d’une notification (email + alerte en app) à la personne qui a envoyé l’invitation ;
 - proposer **« Créer ma propre organisation »** pour ignorer définitivement cette ancienne invitation et poursuivre l’inscription normale ;
 - enregistrer ce choix côté base afin que l’écran expiré ne réapparaisse pas à chaque connexion.
 
