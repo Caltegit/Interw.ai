@@ -9,9 +9,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
+type Invitation = { token: string; organization_name: string; expired: boolean };
+
 export default function Onboarding() {
   const [orgName, setOrgName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [expiredInvitation, setExpiredInvitation] = useState<Invitation | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session } = useAuth();
@@ -19,17 +23,44 @@ export default function Onboarding() {
   const queryClient = useQueryClient();
 
   // Si l'utilisateur est déjà rattaché à une organisation (invitation), on saute cette étape.
+  // S'il a une invitation en attente, on l'accepte ; si elle est expirée, on bloque la création.
   useEffect(() => {
-    if (!session?.user) return;
-    supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("user_id", session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.organization_id) navigate("/dashboard", { replace: true });
-      });
-  }, [session, navigate]);
+    const user = session?.user;
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (profile?.organization_id) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      const { data } = await supabase.rpc("my_pending_invitation");
+      const invitation = (data as Invitation[] | null)?.[0] ?? null;
+      if (cancelled) return;
+      if (invitation && !invitation.expired) {
+        const { error } = await supabase.rpc("accept_invitation", {
+          _token: invitation.token,
+          _user_id: user.id,
+        });
+        if (!error) {
+          await queryClient.invalidateQueries();
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+      }
+      if (invitation?.expired) setExpiredInvitation(invitation);
+      setChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session, navigate, queryClient]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
