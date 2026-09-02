@@ -19,7 +19,7 @@ Point non vérifiable en l'état : il n'existe aucune télémétrie sur les éch
 
 1. **Réglages expressifs pour la clôture** : ajouter un paramètre `context: "closing"` à `tts-elevenlabs`. Pour ce contexte, passer `stability` à ~0.45 et `style` à ~0.3 (voix plus naturelle et chaleureuse), tout en gardant les réglages actuels pour les questions (où la neutralité est souhaitable).
 2. **Modèle plus naturel pour la clôture** : utiliser `eleven_multilingual_v2` (plus expressif) au lieu de `eleven_turbo_v2_5` pour le seul message de fin — la latence importe peu à ce stade.
-3. **Pré-génération de la clôture** : générer et mettre en cache l'audio du message de fin dès le début de l'entretien (le texte est prévisible), ce qui élimine le risque d'échec au moment critique.
+3. **Pré-génération déjà en place, à étendre** : la clôture est déjà préchargée ; il faut simplement que le préchargement utilise les nouveaux réglages expressifs pour que le cache et la lecture restent cohérents.
 4. **Télémétrie du repli** : remonter un événement `mic_events`/log serveur quand le repli navigateur se déclenche, pour détecter les sessions dégradées au lieu de le découvrir par hasard.
 
 ### Étape 3 — Validation
