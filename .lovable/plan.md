@@ -10,7 +10,7 @@
 
 ### 1. Rendre la fin d’inscription explicite
 
-- Après validation de l’email, envoyer le nouvel utilisateur vers `/bienvenue` seulement s’il n’a aucune organisation ; s’il est déjà rattaché, l’envoyer directement vers `/dashboard`. Sur `/bienvenue`, afficher son organisation de rattachement en champ grisé non modifiable.
+- Après validation de l’email, envoyer le nouvel utilisateur vers `/bienvenue` seulement s’il n’a aucune organisation. S’il est déjà rattaché à une organisation, il ne passera jamais par `/bienvenue` : il est renvoyé directement vers `/dashboard`.
 - Sur la page de confirmation, distinguer clairement : confirmation réussie, lien réellement invalide, et lien déjà utilisé.
 - Conserver la protection contre les robots qui ouvrent automatiquement les liens reçus par email.
 
