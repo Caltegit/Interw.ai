@@ -2665,7 +2665,11 @@ export default function InterviewStart() {
       }
       // Pré-cache (fire-and-forget) les phrases statiques de transition pour
       // que la 1re vraie transition soit instantanée côté TTS.
-      void prefetchTransitionPhrases(project?.tts_voice_id ?? null, fetchElevenLabsBlob);
+      // Si la voix de clôture est coupée, on ne la précharge pas.
+      const phrasesToPrefetch = DISABLE_CLOSING_VOICE
+        ? [STATIC_TRANSITION_PHRASES.nextAudio, STATIC_TRANSITION_PHRASES.nextVideo]
+        : Object.values(STATIC_TRANSITION_PHRASES);
+      void prefetchTransitionPhrases(project?.tts_voice_id ?? null, fetchElevenLabsBlob, phrasesToPrefetch);
     }
     updateStep("voice", "done");
     updateStep("network", "done");
