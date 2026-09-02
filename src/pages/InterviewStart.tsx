@@ -43,6 +43,10 @@ import DeviceSelector from "@/components/interview/DeviceSelector";
 const SILENT_AUDIO_DATA_URI =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
+// Interrupteur temporaire pour couper le son de clôture en fin d'entretien.
+// Mettre à false pour réactiver la voix IA de fin.
+const DISABLE_CLOSING_VOICE = true;
+
 // (retiré) déclarations globales webkitSpeechRecognition / SpeechRecognition :
 // la reconnaissance vocale live a été désactivée côté candidat.
 
