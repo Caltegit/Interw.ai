@@ -311,7 +311,7 @@ export default function Landing() {
             {t("hero.cta")} <ArrowRight className="h-4 w-4" />
           </a>
           <Link
-            to="/login"
+            to="/signup"
             className="bg-background text-foreground inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5 sm:w-auto"
           >
             {t("hero.createAccount")}
@@ -513,7 +513,7 @@ export default function Landing() {
                       {cta}
                     </a>
                   ) : (
-                    <Link to="/login" className={ctaClass}>
+                    <Link to="/signup" className={ctaClass}>
                       {cta}
                     </Link>
                   )}
@@ -580,7 +580,7 @@ export default function Landing() {
               {t("hero.cta")} <ArrowRight className="h-4 w-4" />
             </a>
             <Link
-              to="/login"
+              to="/signup"
               className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
               {t("hero.createAccount")}
