@@ -2302,6 +2302,14 @@ export type Database = {
         }
         Returns: number
       }
+      my_pending_invitation: {
+        Args: never
+        Returns: {
+          expired: boolean
+          organization_name: string
+          token: string
+        }[]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
