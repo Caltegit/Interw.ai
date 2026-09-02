@@ -36,7 +36,7 @@ export default function Signup() {
     setLoading(true);
     try {
       const normalizedEmail = normalizeEmail(email);
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
         options: {
@@ -47,13 +47,19 @@ export default function Signup() {
       if (error) {
         const msg = error.message?.toLowerCase() ?? "";
         if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("user already")) {
-          toast({ title: t("signup.existingTitle"), description: t("signup.existingDesc") });
-          navigate("/login");
+          setStep("existing");
           return;
         }
         throw error;
       }
-      setSent(true);
+      // Protection anti-énumération : quand l'adresse a déjà un compte confirmé,
+      // l'API renvoie un faux succès avec une liste d'identités vide.
+      if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        setStep("existing");
+        return;
+      }
+      setStep("sent");
+
     } catch (error: any) {
       toast({ title: t("signup.error"), description: error.message, variant: "destructive" });
     } finally {
