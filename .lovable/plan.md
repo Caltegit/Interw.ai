@@ -4,7 +4,7 @@
 
 1. Une page publique `/signup` (bloc shadcn `signup-03`) : nom, email, mot de passe, confirmation d'email obligatoire.
 2. Une page `/login` reprenant la mise en page du bloc `login-03`, sans changer la logique existante (connexion + mot de passe oublié par code à 6 chiffres).
-3. Une étape d'accueil après la première connexion : le nouvel inscrit saisit le nom de son entreprise, son organisation est créée, il en devient administrateur avec ses 10 entretiens offerts.
+3. Une étape d'accueil après la première connexion : le nouvel inscrit saisit le nom de son entreprise, son organisation est créée, il en devient propriétaire avec ses 10 entretiens offerts.
 4. Tous les boutons « Commencer gratuitement » pointent vers `/signup`, tous les « Se connecter » vers `/login`. Les boutons « Réserver une démo » restent inchangés.
 
 ## État actuel constaté
