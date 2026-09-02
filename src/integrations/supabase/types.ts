@@ -2230,6 +2230,7 @@ export type Database = {
         Args: { _created_by: string; _org_id: string }
         Returns: string
       }
+      create_own_organization: { Args: { _name: string }; Returns: string }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
