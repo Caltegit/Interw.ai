@@ -43,6 +43,10 @@ import DeviceSelector from "@/components/interview/DeviceSelector";
 const SILENT_AUDIO_DATA_URI =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVEQYHAACMjIVDRUWFA4OBwOBwOBwOAgEAgEAg=";
 
+// Interrupteur temporaire pour couper le son de clôture en fin d'entretien.
+// Mettre à false pour réactiver la voix IA de fin.
+const DISABLE_CLOSING_VOICE = true;
+
 // (retiré) déclarations globales webkitSpeechRecognition / SpeechRecognition :
 // la reconnaissance vocale live a été désactivée côté candidat.
 
@@ -2661,7 +2665,11 @@ export default function InterviewStart() {
       }
       // Pré-cache (fire-and-forget) les phrases statiques de transition pour
       // que la 1re vraie transition soit instantanée côté TTS.
-      void prefetchTransitionPhrases(project?.tts_voice_id ?? null, fetchElevenLabsBlob);
+      // Si la voix de clôture est coupée, on ne la précharge pas.
+      const phrasesToPrefetch = DISABLE_CLOSING_VOICE
+        ? [STATIC_TRANSITION_PHRASES.nextAudio, STATIC_TRANSITION_PHRASES.nextVideo]
+        : Object.values(STATIC_TRANSITION_PHRASES);
+      void prefetchTransitionPhrases(project?.tts_voice_id ?? null, fetchElevenLabsBlob, phrasesToPrefetch);
     }
     updateStep("voice", "done");
     updateStep("network", "done");
@@ -3113,10 +3121,16 @@ export default function InterviewStart() {
       // dernière réponse → "la dernière question saute".
       // On parallélise avec la TTS de clôture pour ne pas ajouter de latence
       // perçue (speak prend déjà 2-4 s, le temps que l'upload finisse).
-      await Promise.all([
-        persistCandidatePromise ?? Promise.resolve(),
-        speak(closing),
-      ]);
+      // On parallélise avec la TTS de clôture quand elle est active.
+      // Quand DISABLE_CLOSING_VOICE est true, on n'attend que l'upload final.
+      if (DISABLE_CLOSING_VOICE) {
+        await (persistCandidatePromise ?? Promise.resolve());
+      } else {
+        await Promise.all([
+          persistCandidatePromise ?? Promise.resolve(),
+          speak(closing),
+        ]);
+      }
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
       return;
