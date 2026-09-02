@@ -92,28 +92,44 @@ export default function Onboarding() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-sm">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
-            <p className="text-muted-foreground mt-2 text-sm">{t("onboarding.subtitle")}</p>
-          </div>
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="orgName">{t("onboarding.orgName")}</Label>
-              <Input
-                id="orgName"
-                type="text"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder={t("onboarding.orgNamePlaceholder")}
-                required
-                autoFocus
-              />
+          {checking ? (
+            <div className="flex justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
-            <Button type="submit" className="w-full" disabled={loading || !orgName.trim()}>
-              {loading ? t("onboarding.loading") : t("onboarding.submit")}
-            </Button>
-          </form>
+          ) : expiredInvitation ? (
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.expiredTitle")}</h1>
+              <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+                {t("onboarding.expiredDesc", { organization: expiredInvitation.organization_name })}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="text-center">
+                <h1 className="text-2xl font-semibold tracking-tight">{t("onboarding.title")}</h1>
+                <p className="text-muted-foreground mt-2 text-sm">{t("onboarding.subtitle")}</p>
+              </div>
+              <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="orgName">{t("onboarding.orgName")}</Label>
+                  <Input
+                    id="orgName"
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder={t("onboarding.orgNamePlaceholder")}
+                    required
+                    autoFocus
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading || !orgName.trim()}>
+                  {loading ? t("onboarding.loading") : t("onboarding.submit")}
+                </Button>
+              </form>
+            </>
+          )}
         </div>
+
       </main>
     </div>
   );
