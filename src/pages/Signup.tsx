@@ -76,7 +76,21 @@ export default function Signup() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-sm">
-          {sent ? (
+          {step === "existing" ? (
+            <div className="text-center">
+              <UserCheck className="mx-auto h-10 w-10" />
+              <h1 className="mt-6 text-2xl font-semibold tracking-tight">{t("signup.existingTitle")}</h1>
+              <p className="text-muted-foreground mt-3 text-sm leading-relaxed">
+                {t("signup.existingDesc")} ({normalizeEmail(email)})
+              </p>
+              <Button asChild className="mt-8 w-full">
+                <Link to="/login">{t("signup.signIn")}</Link>
+              </Button>
+              <Button asChild variant="ghost" className="mt-2 w-full">
+                <Link to="/login">{t("signup.existingForgot")}</Link>
+              </Button>
+            </div>
+          ) : step === "sent" ? (
             <div className="text-center">
               <MailCheck className="mx-auto h-10 w-10" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">{t("signup.checkEmailTitle")}</h1>
@@ -88,6 +102,7 @@ export default function Signup() {
               </Button>
             </div>
           ) : (
+
             <>
               <div className="text-center">
                 <h1 className="text-2xl font-semibold tracking-tight">{t("signup.title")}</h1>
