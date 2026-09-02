@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { normalizeEmail, validatePassword } from "@/lib/auth-utils";
-import { MailCheck } from "lucide-react";
+import { MailCheck, UserCheck } from "lucide-react";
 
 export default function Signup() {
   const [fullName, setFullName] = useState("");
