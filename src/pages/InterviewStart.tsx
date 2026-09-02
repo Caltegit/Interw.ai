@@ -3117,10 +3117,16 @@ export default function InterviewStart() {
       // dernière réponse → "la dernière question saute".
       // On parallélise avec la TTS de clôture pour ne pas ajouter de latence
       // perçue (speak prend déjà 2-4 s, le temps que l'upload finisse).
-      await Promise.all([
-        persistCandidatePromise ?? Promise.resolve(),
-        speak(closing),
-      ]);
+      // On parallélise avec la TTS de clôture quand elle est active.
+      // Quand DISABLE_CLOSING_VOICE est true, on n'attend que l'upload final.
+      if (DISABLE_CLOSING_VOICE) {
+        await (persistCandidatePromise ?? Promise.resolve());
+      } else {
+        await Promise.all([
+          persistCandidatePromise ?? Promise.resolve(),
+          speak(closing),
+        ]);
+      }
       if (token.aborted) { aborted = true; return; }
       endInterviewRef.current?.();
       return;
