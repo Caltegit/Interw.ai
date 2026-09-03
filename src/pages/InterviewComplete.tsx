@@ -87,17 +87,11 @@ export default function InterviewComplete() {
                 className="absolute inset-0 rounded-full animate-ping opacity-20"
                 style={{ backgroundColor: "hsl(var(--l-accent))" }}
               />
-              <div
-                className="relative flex h-20 w-20 items-center justify-center rounded-full"
-                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 shadow-lg"
-              >
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 shadow-lg">
                 {processing ? (
-                  <Loader2
-                    className="h-10 w-10 animate-spin"
-                    style={{ color: "hsl(var(--l-accent))" }}
-                  />
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 ) : (
-                  <CheckCircle className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+                  <CheckCircle className="h-10 w-10 text-primary" />
                 )}
               </div>
             </div>

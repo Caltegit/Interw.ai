@@ -531,10 +531,10 @@ export default function InterviewLanding() {
                   {mediaPlaying && (introMediaType === "audio" || introMediaType === "tts") && (
                     <div className="flex flex-col items-center gap-3 animate-fade-in">
                       <div className="flex items-center gap-3">
-                        <span className="h-2.5 w-2.5 rounded-full animate-pulse" className="bg-primary" />
-                        <span className="h-3.5 w-3.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.2s" }} />
-                        <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.4s" }} />
-                        <span className="text-sm font-medium" className="text-primary">Lecture en cours...</span>
+                        <span className="h-2.5 w-2.5 rounded-full animate-pulse bg-primary" />
+                        <span className="h-3.5 w-3.5 rounded-full animate-pulse bg-primary" style={{ animationDelay: "0.2s" }} />
+                        <span className="h-2 w-2 rounded-full animate-pulse bg-primary" style={{ animationDelay: "0.4s" }} />
+                        <span className="text-sm font-medium text-primary">Lecture en cours...</span>
                       </div>
                     </div>
                   )}
