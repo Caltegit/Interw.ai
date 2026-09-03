@@ -534,24 +534,24 @@
 /* Avatar halos */
 @keyframes halo-breathe {
   0%, 100% {
-    opacity: 0.55;
+    opacity: 0.35;
     transform: scale(1);
   }
   50% {
-    opacity: 0.9;
+    opacity: 0.6;
     transform: scale(1.08);
   }
 }
 @keyframes ring-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 hsl(160 84% 50% / 0.5); }
-  50% { box-shadow: 0 0 0 14px hsl(160 84% 50% / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 hsl(160 84% 36% / 0.45); }
+  50% { box-shadow: 0 0 0 14px hsl(160 84% 36% / 0); }
 }
 
 .candidate-avatar-halo {
   position: absolute;
   inset: -18%;
   border-radius: 9999px;
-  background: radial-gradient(circle, hsl(var(--l-accent) / 0.55), hsl(var(--l-accent-2) / 0.35) 45%, transparent 70%);
+  background: radial-gradient(circle, hsl(var(--l-accent) / 0.18), hsl(var(--l-accent) / 0.08) 45%, transparent 70%);
   filter: blur(28px);
   animation: halo-breathe 2.5s ease-in-out infinite;
   pointer-events: none;
@@ -561,24 +561,16 @@
   animation: ring-pulse 2s ease-out infinite;
 }
 
-/* Progress bar shine */
-@keyframes progress-shine {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
+/* Progress bar */
 .candidate-progress-fill {
-  background: linear-gradient(90deg,
-    hsl(var(--l-accent)) 0%,
-    hsl(var(--l-accent-2)) 50%,
-    hsl(var(--l-accent)) 100%);
-  background-size: 200% 100%;
-  animation: progress-shine 3s linear infinite;
+  background: hsl(var(--l-accent));
 }
 
-/* Mic meter gradient */
+/* Mic meter */
 .candidate-mic-bar-on {
-  background: linear-gradient(180deg, hsl(var(--l-accent-2)), hsl(var(--l-accent))) !important;
+  background: hsl(var(--l-accent)) !important;
 }
+
 
 /* Opacity overrides */
 .candidate-layout .opacity-70 { opacity: 0.8; }
