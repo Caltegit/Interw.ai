@@ -411,9 +411,10 @@ export default function InterviewLanding() {
 
   if (loading)
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "#1a1a1a" }}>
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "#d4a574", borderTopColor: "transparent" }} />
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "#111111", borderTopColor: "transparent" }} />
       </div>
+
     );
 
   if (error) {
