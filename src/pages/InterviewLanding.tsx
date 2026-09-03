@@ -490,14 +490,12 @@ export default function InterviewLanding() {
                   onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
-                  className="w-full rounded-xl border transition-all duration-300"
                   className="w-full rounded-xl border border-border transition-all duration-300"
                 />
               )}
 
               {introMediaType === "text" && (
                 <div
-                  className="text-left rounded-xl border border-border bg-muted p-5 whitespace-pre-wrap text-sm leading-relaxed"
                   className="text-left rounded-xl border border-border bg-muted p-5 whitespace-pre-wrap text-sm leading-relaxed"
                 >
                   {project.intro_text}
@@ -511,7 +509,7 @@ export default function InterviewLanding() {
                 </Button>
               ) : mediaError ? (
                 <div className="space-y-3 animate-fade-in">
-                  <p className="text-sm" className="text-sm text-amber-600">
+                  <p className="text-sm text-amber-600">
                     Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
                   </p>
                   <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
@@ -541,7 +539,7 @@ export default function InterviewLanding() {
 
                   {mediaFinished && (
                     <div className="space-y-3 animate-fade-in">
-                      <div className="flex items-center justify-center gap-2" className="text-success">
+                      <div className="flex items-center justify-center gap-2 text-success">
                         <CheckCircle className="h-5 w-5" />
                         <span className="text-sm font-medium">
                           {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
@@ -577,13 +575,13 @@ export default function InterviewLanding() {
       <div className="w-full max-w-xl space-y-8 animate-fade-in">
         {/* Hero section */}
         <div className="text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4 animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
-            <Mic className="h-7 w-7" className="text-primary" />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4 animate-scale-in">
+            <Mic className="h-7 w-7 text-primary" />
           </div>
-          <p className="text-base font-medium tracking-tight" className="text-base font-medium tracking-tight text-muted-foreground">
+          <p className="text-base font-medium tracking-tight text-muted-foreground">
             Nouvelle session
           </p>
-          <h1 className="text-3xl font-bold" className="text-primary">
+          <h1 className="text-3xl font-bold text-primary">
             {project?.job_title}
           </h1>
         </div>
@@ -591,7 +589,7 @@ export default function InterviewLanding() {
 
         {/* Form card */}
         <Card className="overflow-hidden">
-          <div className="h-1 w-full" className="h-1 w-full bg-primary" />
+          <div className="h-1 w-full bg-primary" />
           <CardContent className="pt-8 pb-8 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">Votre prénom/nom *</Label>
@@ -616,7 +614,7 @@ export default function InterviewLanding() {
                 style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
               />
               {showEmailError && (
-                <p className="text-xs" className="text-xs text-destructive">
+                <p className="text-xs text-destructive">
                   Veuillez saisir une adresse email valide.
                 </p>
               )}
@@ -635,11 +633,10 @@ export default function InterviewLanding() {
                   placeholder="+33 6 12 34 56 78"
                   value={candidatePhone}
                   onChange={(e) => setCandidatePhone(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
                 {!phoneValid && (
-                  <p className="text-xs" className="text-xs text-destructive">
+                  <p className="text-xs text-destructive">
                     Numéro de téléphone invalide.
                   </p>
                 )}
@@ -656,8 +653,7 @@ export default function InterviewLanding() {
                   placeholder="Intitulé du poste visé"
                   value={candidateJobTitle}
                   onChange={(e) => setCandidateJobTitle(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
               </div>
             )}
@@ -673,11 +669,10 @@ export default function InterviewLanding() {
                   placeholder="https://www.linkedin.com/in/..."
                   value={candidateLinkedin}
                   onChange={(e) => setCandidateLinkedin(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
                 {!linkedinValid && (
-                  <p className="text-xs" className="text-xs text-destructive">
+                  <p className="text-xs text-destructive">
                     L'URL doit commencer par http:// ou https://
                   </p>
                 )}
@@ -691,7 +686,7 @@ export default function InterviewLanding() {
                 required={candidateFields.cv.required}
                 file={cvFile}
                 onPick={(f) => handlePickFile(f, setCvFile)}
-                icon={<FileText className="h-4 w-4 shrink-0" className="text-primary" />}
+                icon={<FileText className="h-4 w-4 shrink-0 text-primary" />}
               />
             )}
 
@@ -702,7 +697,7 @@ export default function InterviewLanding() {
                 required={candidateFields.cover_letter.required}
                 file={coverLetterFile}
                 onPick={(f) => handlePickFile(f, setCoverLetterFile)}
-                icon={<FileSignature className="h-4 w-4 shrink-0" className="text-primary" />}
+                icon={<FileSignature className="h-4 w-4 shrink-0 text-primary" />}
               />
             )}
 
@@ -733,7 +728,7 @@ export default function InterviewLanding() {
           </CardContent>
         </Card>
 
-        <p className="text-xs text-center" className="text-xs text-center text-muted-foreground">
+        <p className="text-xs text-center text-muted-foreground">
           Cette session sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
           acceptez ces conditions.
         </p>
@@ -766,7 +761,6 @@ function CandidateFileField({
       {file ? (
         <div
           className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2.5 text-sm"
-          className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2.5 text-sm"
         >
           <div className="flex min-w-0 items-center gap-2">
             {icon}
@@ -784,8 +778,7 @@ function CandidateFileField({
       ) : (
         <label
           htmlFor={inputId}
-          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm transition-colors hover:border-[#d4a574]"
-          style={{ borderColor: "rgba(245, 240, 232, 0.2)", color: "rgba(245, 240, 232, 0.6)" }}
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary"
         >
           <Upload className="h-4 w-4" />
           Glissez ou cliquez (PDF, DOC — 10 Mo max)
