@@ -1,48 +1,24 @@
-# Pourquoi les photos rondes des candidats sont vides
+# Nouvelle image de partage (aperçu des liens candidats)
 
-## Ce que montrent les vérifications
+## Ce qui se passe aujourd'hui
+Quand un lien est collé dans WhatsApp, LinkedIn ou Slack, l'aperçu affiche toujours la même image : `public/og-cover.jpg`, déclarée une seule fois dans `index.html` (`og:image` + `twitter:image`). C'est le visuel violet foncé « Interw.ai — Sessions vidéo IA pour le recrutement », resté du temps du domaine `.ai` et du thème sombre.
 
-Les vignettes ne sont pas « perdues » : elles existent bien.
+Comme l'application est une application monopage, toutes les pages (landing, lien candidat, poste) partagent cet unique aperçu : il n'y a pas d'image spécifique par candidat.
 
-- Sur les 10 dernières semaines, la quasi-totalité des entretiens terminés ont une vignette enregistrée (ex. semaine du 31/08 : 13 vignettes sur 16 entretiens).
-- Les fichiers se téléchargent correctement (réponse 200), taille 1 358 octets, format 320x320.
-- Analyse des 3 vignettes les plus récentes (3 septembre) : luminosité moyenne **0.0**, écart-type **0.0** → l'image est **entièrement noire**.
-
-Donc l'image s'affiche bel et bien, mais elle est noire, ce qui donne visuellement un rond vide dans la liste des candidats.
-
-## Cause
-
-La photo est prise à la fin du premier segment enregistré, dans `src/pages/InterviewStart.tsx`, via une balise vidéo créée à la volée et jamais insérée dans la page. Ce lecteur invisible reçoit le flux caméra puis on dessine deux images plus tard sur un canvas. Sur les navigateurs actuels, un lecteur détaché de la page ne produit pas toujours d'image exploitable : le canvas récupère du noir.
-
-Deux aggravants :
-
-1. Aucun contrôle de qualité : l'image noire est quand même envoyée et enregistrée en base, ce qui verrouille la vignette (le drapeau interne considère la capture réussie et n'essaie plus).
-2. Le repli « extraire une image de la vidéo enregistrée » n'est jamais atteint, puisque la première capture est considérée comme un succès.
-
-## Correction proposée
-
-1. Capturer depuis le lecteur vidéo déjà visible à l'écran (celui qui affiche le candidat pendant l'entretien) plutôt que depuis un lecteur invisible.
-2. Ajouter une validation de l'image avant envoi : si l'image est quasi noire ou uniforme, elle est rejetée.
-3. Si la capture est rejetée, réessayer aux segments suivants de l'entretien (le drapeau « capture faite » n'est posé qu'après une image valide), puis en dernier recours extraire une image de la vidéo enregistrée avec la même validation.
-4. Nettoyer l'existant : repérer les vignettes noires déjà stockées et les neutraliser afin que la liste retombe proprement sur les initiales du candidat au lieu d'un rond noir.
+## Ce que je propose
+1. Créer un nouveau visuel 1200 × 630 :
+   - fond blanc, aucune grille ni halo,
+   - mot-symbole « Interw.com » en noir, typographie proche de l'interface,
+   - une ligne d'accroche discrète en gris moyen : « Entretiens vidéo asynchrones »,
+   - fine bordure/arrondi et respiration façon carte shadcn, palette strictement noir / blanc / gris.
+2. Remplacer `public/og-cover.jpg` par ce visuel (même nom de fichier, donc aucun autre lien à modifier), avec un paramètre de version dans l'URL pour forcer les plateformes à recharger l'aperçu.
+3. Mettre à jour la description sociale si besoin pour rester cohérente avec `interw.com`.
 
 ## Détails techniques
+- Fichier : `public/og-cover.jpg` (1200 × 630, JPG).
+- `index.html` : `og:image` et `twitter:image` passent à `https://interw.com/og-cover.jpg?v=2`, `og:image:alt` ajouté.
+- WhatsApp et LinkedIn gardent l'ancienne image en cache plusieurs jours : après publication, il faudra rafraîchir via le LinkedIn Post Inspector, et l'astuce du `?v=2` règle le cas WhatsApp.
+- Aucun changement fonctionnel côté candidat.
 
-- `src/pages/InterviewStart.tsx` : `captureStreamSnapshot` prendra en entrée l'élément de `videoRef` s'il est monté et prêt, sinon repli sur le flux ; ajout d'une fonction de contrôle de luminance/variance sur le canvas avant `toBlob` ; `thumbnailCapturedRef` passé à `true` uniquement après validation.
-- `src/components/session/SessionVideoThumb.tsx` : inchangé, le repli initiales existe déjà.
-- Nettoyage : passage de contrôle sur les vignettes existantes, mise à `null` de `sessions.thumbnail_url` pour celles détectées entièrement noires.
-
-## Vérification
-
-Passer un entretien de test, vérifier que la vignette générée n'est plus noire, puis contrôler la vue liste d'un poste : photos visibles pour les nouveaux entretiens, initiales pour les anciens nettoyés.
-
-## Rattrapage des vignettes déjà noires
-
-Oui, c'est possible, et en deux temps.
-
-1. **Détection automatique** : un balayage parcourt les entretiens terminés ayant une vignette, télécharge chaque image et mesure sa luminosité. Une image plate et quasi noire est marquée comme invalide. Ce test est réutilisable à la demande.
-2. **Réparation** : pour chaque vignette invalide dont la vidéo d'entretien existe, une nouvelle image est extraite de la vidéo en cherchant une image réellement exploitable (plusieurs instants testés, contrôle de luminosité à chaque essai), puis remplacée dans le stockage. Si aucune image valide n'existe dans la vidéo, la vignette est simplement effacée pour retomber sur les initiales.
-
-Interface : un écran Super Admin « Vignettes » listant les entretiens concernés, avec le nombre de vignettes noires, un bouton « Analyser » et un bouton « Réparer » (traitement par lots, progression affichée, reprise possible). Le traitement se fait dans le navigateur, en réutilisant la mécanique d'extraction vidéo déjà présente dans l'application.
-
-Impact attendu, d'après l'échantillon analysé : les entretiens récents retrouvent une photo dès qu'une image exploitable existe dans la vidéo ; les autres affichent proprement les initiales.
+## Limite connue
+Un aperçu personnalisé par poste ou par candidat (nom du poste dans l'image) n'est pas possible sans rendu côté serveur ; je peux le chiffrer séparément si vous le souhaitez.
