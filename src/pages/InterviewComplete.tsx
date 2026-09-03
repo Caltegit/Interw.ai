@@ -80,13 +80,7 @@ export default function InterviewComplete() {
     <CandidateLayout>
       <div className="animate-fade-in">
         <Card className="max-w-md w-full text-center overflow-hidden">
-          <div
-            className="h-1 w-full"
-            style={{
-              background:
-                "linear-gradient(90deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)), hsl(var(--l-accent)))",
-            }}
-          />
+          <div className="h-1 w-full bg-primary" />
           <CardContent className="py-14 space-y-6">
             <div className="relative mx-auto flex h-20 w-20 items-center justify-center animate-scale-in">
               <div
@@ -95,11 +89,7 @@ export default function InterviewComplete() {
               />
               <div
                 className="relative flex h-20 w-20 items-center justify-center rounded-full"
-                style={{
-                  background:
-                    "linear-gradient(135deg, hsl(var(--l-accent) / 0.25), hsl(var(--l-accent-2) / 0.25))",
-                  boxShadow: "0 12px 32px -8px hsl(var(--l-accent) / 0.5)",
-                }}
+                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 shadow-lg"
               >
                 {processing ? (
                   <Loader2
