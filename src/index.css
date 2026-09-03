@@ -370,16 +370,16 @@
 
 
 
-/* ============ Candidate pages — Dark Premium (Linear-inspired) ============ */
+/* ============ Candidate pages — Light ============ */
 .candidate-layout {
-  --l-bg: 230 25% 5%;
-  --l-bg-elev: 230 22% 8%;
-  --l-bg-elev-2: 230 20% 11%;
-  --l-fg: 0 0% 98%;
-  --l-fg-dim: 230 10% 65%;
-  --l-border: 230 15% 16%;
-  --l-accent: 0 0% 96%;
-  --l-accent-2: 0 0% 72%;
+  --l-bg: 0 0% 100%;
+  --l-bg-elev: 240 25% 98%;
+  --l-bg-elev-2: 240 20% 96%;
+  --l-fg: 240 24% 8%;
+  --l-fg-dim: 230 8% 38%;
+  --l-border: 230 16% 92%;
+  --l-accent: 0 0% 8%;
+  --l-accent-2: 0 0% 0%;
 
   background-color: hsl(var(--l-bg));
   color: hsl(var(--l-fg));
@@ -397,65 +397,42 @@
   font-weight: 600;
 }
 
-.candidate-bg-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(hsl(var(--l-border) / 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(var(--l-border) / 0.4) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 100%);
-}
-
-.candidate-hero-glow {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% 0%, hsl(var(--l-accent) / 0.18), transparent 60%),
-    radial-gradient(ellipse 40% 30% at 70% 15%, hsl(var(--l-accent-2) / 0.12), transparent 60%);
-}
-
 .candidate-header {
-  border-bottom: 1px solid hsl(var(--l-border) / 0.6);
-  background: hsl(var(--l-bg) / 0.7);
+  border-bottom: 1px solid hsl(var(--l-border));
+  background: hsl(var(--l-bg) / 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 .candidate-footer {
-  border-top: 1px solid hsl(var(--l-border) / 0.5);
+  border-top: 1px solid hsl(var(--l-border));
   color: hsl(var(--l-fg) / 0.5);
 }
 
 .candidate-gradient-text {
-  background: linear-gradient(90deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: hsl(var(--l-accent));
 }
 
 .candidate-card {
-  background: linear-gradient(180deg, hsl(var(--l-bg-elev)) 0%, hsl(var(--l-bg)) 100%);
+  background: hsl(var(--l-bg-elev));
   border: 1px solid hsl(var(--l-border));
   border-radius: 1rem;
 }
 
 .candidate-btn-primary {
-  background: linear-gradient(135deg, hsl(var(--l-accent)), hsl(var(--l-accent-2))) !important;
-  color: hsl(var(--l-bg)) !important;
+  background: hsl(var(--l-accent)) !important;
+  color: #fff !important;
   border: none !important;
-  box-shadow: 0 8px 24px -8px hsl(var(--l-accent) / 0.6) !important;
+  box-shadow: 0 8px 24px -10px hsl(var(--l-accent) / 0.45) !important;
   transition: all 0.2s ease !important;
   font-weight: 600 !important;
 }
 .candidate-btn-primary:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px -8px hsl(var(--l-accent) / 0.7) !important;
-  filter: brightness(1.05);
+  background: hsl(var(--l-accent-2)) !important;
+  box-shadow: 0 12px 32px -10px hsl(var(--l-accent) / 0.55) !important;
 }
+
 
 /* Cards */
 .candidate-layout .bg-card,
