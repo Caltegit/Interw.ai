@@ -1,4 +1,4 @@
 - [x] Passer la palette globale des écrans candidat au blanc
-- [ ] Vérifier et corriger les styles spécifiques des écrans candidat
-- [ ] Valider le rendu et les tests
+- [x] Vérifier et corriger les styles spécifiques des écrans candidat
+- [x] Valider le rendu et les tests
 - [ ] Produire le classeur Excel de documentation du scoring
