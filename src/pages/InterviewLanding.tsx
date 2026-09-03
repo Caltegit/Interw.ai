@@ -702,7 +702,7 @@ export default function InterviewLanding() {
             )}
 
             {fileError && (
-              <p className="text-xs" className="text-xs text-destructive">
+              <p className="text-xs text-destructive">
                 {fileError}
               </p>
             )}
