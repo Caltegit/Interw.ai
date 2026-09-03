@@ -598,8 +598,7 @@ export default function InterviewLanding() {
                 placeholder="Prénom Nom"
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
-                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="space-y-2">
@@ -610,8 +609,7 @@ export default function InterviewLanding() {
                 placeholder="prenom.nom@email.com"
                 value={candidateEmail}
                 onChange={(e) => setCandidateEmail(e.target.value)}
-                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
               />
               {showEmailError && (
                 <p className="text-xs text-destructive">
