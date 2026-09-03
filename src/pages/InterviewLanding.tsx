@@ -411,9 +411,10 @@ export default function InterviewLanding() {
 
   if (loading)
     return (
-      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "#1a1a1a" }}>
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "#d4a574", borderTopColor: "transparent" }} />
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "#111111", borderTopColor: "transparent" }} />
       </div>
+
     );
 
   if (error) {
@@ -452,17 +453,17 @@ export default function InterviewLanding() {
                 <img
                   src={project.avatar_image_url}
                   alt={project.ai_persona_name || "Recruteur"}
-                  className={`mx-auto h-72 w-72 rounded-full object-cover object-top border-4 transition-all duration-500 ${mediaPlaying ? "border-[#d4a574] shadow-[0_0_20px_rgba(212,165,116,0.3)] scale-105" : "border-[#333]"}`}
+                  className={`mx-auto h-72 w-72 rounded-full object-cover object-top border-4 transition-all duration-500 ${mediaPlaying ? "border-primary shadow-lg scale-105" : "border-border"}`}
                 />
               ) : (introMediaType === "audio" || introMediaType === "tts") ? (
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
-                  <Volume2 className="h-8 w-8" style={{ color: "#d4a574" }} />
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 animate-scale-in">
+                  <Volume2 className="h-8 w-8 text-primary" />
                 </div>
               ) : null}
 
               <div className="space-y-2">
                 <h2 className="text-xl font-bold">Message de {project.ai_persona_name || "votre recruteur"}</h2>
-                <p className="text-sm" style={{ color: "rgba(245, 240, 232, 0.65)" }}>
+                <p className="text-sm text-muted-foreground">
                   {introMediaType === "video"
                     ? "Regardez cette vidéo avant de commencer votre session."
                     : introMediaType === "text"
@@ -489,15 +490,13 @@ export default function InterviewLanding() {
                   onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
-                  className="w-full rounded-xl border transition-all duration-300"
-                  style={{ borderColor: "rgba(245, 240, 232, 0.12)" }}
+                  className="w-full rounded-xl border border-border transition-all duration-300"
                 />
               )}
 
               {introMediaType === "text" && (
                 <div
-                  className="text-left rounded-xl border p-5 whitespace-pre-wrap text-sm leading-relaxed"
-                  style={{ borderColor: "rgba(245, 240, 232, 0.12)", backgroundColor: "rgba(255,255,255,0.02)" }}
+                  className="text-left rounded-xl border border-border bg-muted p-5 whitespace-pre-wrap text-sm leading-relaxed"
                 >
                   {project.intro_text}
                 </div>
@@ -510,7 +509,7 @@ export default function InterviewLanding() {
                 </Button>
               ) : mediaError ? (
                 <div className="space-y-3 animate-fade-in">
-                  <p className="text-sm" style={{ color: "#f59e0b" }}>
+                  <p className="text-sm text-amber-600">
                     Lecture impossible sur cet appareil. Vous pouvez continuer sans visionner le message.
                   </p>
                   <Button size="lg" className="w-full group transition-all duration-300" onClick={handleProceedToInterview}>
@@ -530,17 +529,17 @@ export default function InterviewLanding() {
                   {mediaPlaying && (introMediaType === "audio" || introMediaType === "tts") && (
                     <div className="flex flex-col items-center gap-3 animate-fade-in">
                       <div className="flex items-center gap-3">
-                        <span className="h-2.5 w-2.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574" }} />
-                        <span className="h-3.5 w-3.5 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.2s" }} />
-                        <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: "#d4a574", animationDelay: "0.4s" }} />
-                        <span className="text-sm font-medium" style={{ color: "#d4a574" }}>Lecture en cours...</span>
+                        <span className="h-2.5 w-2.5 rounded-full animate-pulse bg-primary" />
+                        <span className="h-3.5 w-3.5 rounded-full animate-pulse bg-primary" style={{ animationDelay: "0.2s" }} />
+                        <span className="h-2 w-2 rounded-full animate-pulse bg-primary" style={{ animationDelay: "0.4s" }} />
+                        <span className="text-sm font-medium text-primary">Lecture en cours...</span>
                       </div>
                     </div>
                   )}
 
                   {mediaFinished && (
                     <div className="space-y-3 animate-fade-in">
-                      <div className="flex items-center justify-center gap-2" style={{ color: "#4ade80" }}>
+                      <div className="flex items-center justify-center gap-2 text-success">
                         <CheckCircle className="h-5 w-5" />
                         <span className="text-sm font-medium">
                           {introMediaType === "video" ? "Vidéo visionnée" : "Message écouté"}
@@ -576,13 +575,13 @@ export default function InterviewLanding() {
       <div className="w-full max-w-xl space-y-8 animate-fade-in">
         {/* Hero section */}
         <div className="text-center space-y-3">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full mb-4 animate-scale-in" style={{ backgroundColor: "rgba(212, 165, 116, 0.15)" }}>
-            <Mic className="h-7 w-7" style={{ color: "#d4a574" }} />
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-4 animate-scale-in">
+            <Mic className="h-7 w-7 text-primary" />
           </div>
-          <p className="text-base font-medium tracking-tight" style={{ color: "rgba(245, 240, 232, 0.7)" }}>
+          <p className="text-base font-medium tracking-tight text-muted-foreground">
             Nouvelle session
           </p>
-          <h1 className="text-3xl font-bold" style={{ color: "#d4a574" }}>
+          <h1 className="text-3xl font-bold text-primary">
             {project?.job_title}
           </h1>
         </div>
@@ -590,7 +589,7 @@ export default function InterviewLanding() {
 
         {/* Form card */}
         <Card className="overflow-hidden">
-          <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #d4a574, #c4955e, #d4a574)" }} />
+          <div className="h-1 w-full bg-primary" />
           <CardContent className="pt-8 pb-8 space-y-5">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">Votre prénom/nom *</Label>
@@ -599,8 +598,7 @@ export default function InterviewLanding() {
                 placeholder="Prénom Nom"
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
-                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="space-y-2">
@@ -611,11 +609,10 @@ export default function InterviewLanding() {
                 placeholder="prenom.nom@email.com"
                 value={candidateEmail}
                 onChange={(e) => setCandidateEmail(e.target.value)}
-                className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
               />
               {showEmailError && (
-                <p className="text-xs" style={{ color: "#f87171" }}>
+                <p className="text-xs text-destructive">
                   Veuillez saisir une adresse email valide.
                 </p>
               )}
@@ -634,11 +631,10 @@ export default function InterviewLanding() {
                   placeholder="+33 6 12 34 56 78"
                   value={candidatePhone}
                   onChange={(e) => setCandidatePhone(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
                 {!phoneValid && (
-                  <p className="text-xs" style={{ color: "#f87171" }}>
+                  <p className="text-xs text-destructive">
                     Numéro de téléphone invalide.
                   </p>
                 )}
@@ -655,8 +651,7 @@ export default function InterviewLanding() {
                   placeholder="Intitulé du poste visé"
                   value={candidateJobTitle}
                   onChange={(e) => setCandidateJobTitle(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
               </div>
             )}
@@ -672,11 +667,10 @@ export default function InterviewLanding() {
                   placeholder="https://www.linkedin.com/in/..."
                   value={candidateLinkedin}
                   onChange={(e) => setCandidateLinkedin(e.target.value)}
-                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2"
-                  style={{ "--tw-ring-color": "rgba(212, 165, 116, 0.5)" } as any}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
                 />
                 {!linkedinValid && (
-                  <p className="text-xs" style={{ color: "#f87171" }}>
+                  <p className="text-xs text-destructive">
                     L'URL doit commencer par http:// ou https://
                   </p>
                 )}
@@ -690,7 +684,7 @@ export default function InterviewLanding() {
                 required={candidateFields.cv.required}
                 file={cvFile}
                 onPick={(f) => handlePickFile(f, setCvFile)}
-                icon={<FileText className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+                icon={<FileText className="h-4 w-4 shrink-0 text-primary" />}
               />
             )}
 
@@ -701,12 +695,12 @@ export default function InterviewLanding() {
                 required={candidateFields.cover_letter.required}
                 file={coverLetterFile}
                 onPick={(f) => handlePickFile(f, setCoverLetterFile)}
-                icon={<FileSignature className="h-4 w-4 shrink-0" style={{ color: "#d4a574" }} />}
+                icon={<FileSignature className="h-4 w-4 shrink-0 text-primary" />}
               />
             )}
 
             {fileError && (
-              <p className="text-xs" style={{ color: "#f87171" }}>
+              <p className="text-xs text-destructive">
                 {fileError}
               </p>
             )}
@@ -732,7 +726,7 @@ export default function InterviewLanding() {
           </CardContent>
         </Card>
 
-        <p className="text-xs text-center" style={{ color: "rgba(245, 240, 232, 0.4)" }}>
+        <p className="text-xs text-center text-muted-foreground">
           Cette session sera enregistré, transcrit et analysé par intelligence artificielle. En continuant, vous
           acceptez ces conditions.
         </p>
@@ -764,8 +758,7 @@ function CandidateFileField({
       </Label>
       {file ? (
         <div
-          className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm"
-          style={{ borderColor: "rgba(245, 240, 232, 0.18)", backgroundColor: "rgba(255,255,255,0.03)" }}
+          className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2.5 text-sm"
         >
           <div className="flex min-w-0 items-center gap-2">
             {icon}
@@ -783,8 +776,7 @@ function CandidateFileField({
       ) : (
         <label
           htmlFor={inputId}
-          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-3 text-sm transition-colors hover:border-[#d4a574]"
-          style={{ borderColor: "rgba(245, 240, 232, 0.2)", color: "rgba(245, 240, 232, 0.6)" }}
+          className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary"
         >
           <Upload className="h-4 w-4" />
           Glissez ou cliquez (PDF, DOC — 10 Mo max)

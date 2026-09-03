@@ -80,34 +80,18 @@ export default function InterviewComplete() {
     <CandidateLayout>
       <div className="animate-fade-in">
         <Card className="max-w-md w-full text-center overflow-hidden">
-          <div
-            className="h-1 w-full"
-            style={{
-              background:
-                "linear-gradient(90deg, hsl(var(--l-accent)), hsl(var(--l-accent-2)), hsl(var(--l-accent)))",
-            }}
-          />
+          <div className="h-1 w-full bg-primary" />
           <CardContent className="py-14 space-y-6">
             <div className="relative mx-auto flex h-20 w-20 items-center justify-center animate-scale-in">
               <div
                 className="absolute inset-0 rounded-full animate-ping opacity-20"
                 style={{ backgroundColor: "hsl(var(--l-accent))" }}
               />
-              <div
-                className="relative flex h-20 w-20 items-center justify-center rounded-full"
-                style={{
-                  background:
-                    "linear-gradient(135deg, hsl(var(--l-accent) / 0.25), hsl(var(--l-accent-2) / 0.25))",
-                  boxShadow: "0 12px 32px -8px hsl(var(--l-accent) / 0.5)",
-                }}
-              >
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 shadow-lg">
                 {processing ? (
-                  <Loader2
-                    className="h-10 w-10 animate-spin"
-                    style={{ color: "hsl(var(--l-accent))" }}
-                  />
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 ) : (
-                  <CheckCircle className="h-10 w-10" style={{ color: "hsl(var(--l-accent))" }} />
+                  <CheckCircle className="h-10 w-10 text-primary" />
                 )}
               </div>
             </div>

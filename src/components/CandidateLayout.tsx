@@ -53,8 +53,7 @@ export default function CandidateLayout({ children, minimal = false }: Candidate
 
   return (
     <div className="candidate-layout min-h-screen flex flex-col relative overflow-hidden">
-      <div className="candidate-bg-grid" aria-hidden="true" />
-      <div className="candidate-hero-glow" aria-hidden="true" />
+
 
       <header
         className={`candidate-header sticky top-0 z-40 flex items-center justify-between ${

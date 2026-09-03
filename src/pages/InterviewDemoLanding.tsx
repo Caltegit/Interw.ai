@@ -229,7 +229,7 @@ export default function InterviewDemoLanding() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -249,7 +249,7 @@ export default function InterviewDemoLanding() {
 
   if (phase === "navigating") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
