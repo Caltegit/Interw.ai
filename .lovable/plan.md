@@ -35,3 +35,14 @@ Deux aggravants :
 ## Vérification
 
 Passer un entretien de test, vérifier que la vignette générée n'est plus noire, puis contrôler la vue liste d'un poste : photos visibles pour les nouveaux entretiens, initiales pour les anciens nettoyés.
+
+## Rattrapage des vignettes déjà noires
+
+Oui, c'est possible, et en deux temps.
+
+1. **Détection automatique** : un balayage parcourt les entretiens terminés ayant une vignette, télécharge chaque image et mesure sa luminosité. Une image plate et quasi noire est marquée comme invalide. Ce test est réutilisable à la demande.
+2. **Réparation** : pour chaque vignette invalide dont la vidéo d'entretien existe, une nouvelle image est extraite de la vidéo en cherchant une image réellement exploitable (plusieurs instants testés, contrôle de luminosité à chaque essai), puis remplacée dans le stockage. Si aucune image valide n'existe dans la vidéo, la vignette est simplement effacée pour retomber sur les initiales.
+
+Interface : un écran Super Admin « Vignettes » listant les entretiens concernés, avec le nombre de vignettes noires, un bouton « Analyser » et un bouton « Réparer » (traitement par lots, progression affichée, reprise possible). Le traitement se fait dans le navigateur, en réutilisant la mécanique d'extraction vidéo déjà présente dans l'application.
+
+Impact attendu, d'après l'échantillon analysé : les entretiens récents retrouvent une photo dès qu'une image exploitable existe dans la vidéo ; les autres affichent proprement les initiales.
