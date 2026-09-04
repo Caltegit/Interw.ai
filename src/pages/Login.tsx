@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,14 @@ export default function Login() {
   const { toast } = useToast();
   const { session } = useAuth();
   const { t } = useTranslation("auth");
+  const [searchParams] = useSearchParams();
+  // Retour vers la page demandée (ex. consentement OAuth) après connexion.
+  const rawNext = searchParams.get("next");
+  const nextPath = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   useEffect(() => {
-    if (session) navigate("/dashboard", { replace: true });
-  }, [session, navigate]);
+    if (session) navigate(nextPath, { replace: true });
+  }, [session, navigate, nextPath]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +52,7 @@ export default function Login() {
           password,
         });
         if (error) throw error;
-        navigate("/dashboard");
+        navigate(nextPath);
       }
     } catch (error: any) {
       toast({ title: t("login.error"), description: error.message, variant: "destructive" });

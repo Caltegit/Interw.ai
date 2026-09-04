@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "sdk_version": "2.0.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://qxszgsxdktnwqabsdfvw.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "interw",
+      "version": "0.1.0",
+      "title": "Interw"
+    },
+    "tools": [
+      {
+        "name": "list_postes",
+        "title": "Lister les postes",
+        "description": "Liste les postes de recrutement accessibles à l'utilisateur connecté.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "active",
+                "archived"
+              ],
+              "description": "Filtrer par statut du poste."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Nombre maximum de postes retournés."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_candidats",
+        "title": "Lister les candidats",
+        "description": "Liste les sessions candidats, avec filtre optionnel par poste, statut ou recherche sur le nom.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "poste_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant du poste à filtrer."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "in_progress",
+                "completed",
+                "cancelled",
+                "expired"
+              ],
+              "description": "Statut de la session candidat."
+            },
+            "search": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Recherche sur le nom du candidat."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "description": "Nombre maximum de candidats retournés."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_rapport",
+        "title": "Rapport d'entretien",
+        "description": "Récupère le rapport d'évaluation d'une session candidat : score, synthèse, points forts et axes de progrès.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de la session candidat."
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_transcript",
+        "title": "Transcription d'entretien",
+        "description": "Récupère les échanges transcrits d'une session candidat, dans l'ordre chronologique.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Identifiant de la session candidat."
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
