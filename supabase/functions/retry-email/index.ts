@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,40 +65,55 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Re-send via send-transactional-email (regenerates message_id and re-renders).
-  // We just call it with the same template/recipient. For interview-report we
-  // need templateData — try to recover from session via email-based lookup is
-  // complex; simplest path: re-invoke with minimal data. For now we re-enqueue
-  // a fresh send using stored template_name and recipient_email.
+  // Renvoi manuel : le contenu original n'est pas régénérable, on renvoie un
+  // message de notification à la même adresse.
   const newMessageId = crypto.randomUUID()
-  const { error: enqueueError } = await supabase.rpc('enqueue_email', {
-    queue_name: 'transactional_emails',
-    payload: {
-      message_id: newMessageId,
-      to: log.recipient_email,
-      from: 'Interw <noreply@notify.interw.com>',
-      sender_domain: 'notify.interw.com',
-      subject: '[Renvoi] ' + (log.template_name || 'Email'),
-      html: '<p>Cet email a été renvoyé manuellement par un administrateur. Le contenu original n\'a pas pu être régénéré automatiquement — contactez l\'équipe pour les détails complets.</p>',
-      text: 'Cet email a été renvoyé manuellement par un administrateur.',
-      purpose: 'transactional',
-      label: log.template_name + '-retry',
-      idempotency_key: newMessageId,
-      queued_at: new Date().toISOString(),
-    },
-  })
+  const html =
+    '<p>Cet email a été renvoyé manuellement par un administrateur. Le contenu original n\'a pas pu être régénéré automatiquement — contactez l\'équipe pour les détails complets.</p>'
+  const text = 'Cet email a été renvoyé manuellement par un administrateur.'
 
-  if (enqueueError) {
-    return new Response(JSON.stringify({ error: 'Failed to enqueue', detail: enqueueError.message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  try {
+    await sendLovableEmail(
+      {
+        to: log.recipient_email,
+        from: 'Interw <hello@notify.interw.com>',
+        sender_domain: 'notify.interw.com',
+        subject: '[Renvoi] ' + (log.template_name || 'Email'),
+        html,
+        text,
+        purpose: 'transactional',
+        label: log.template_name + '-retry',
+        idempotency_key: newMessageId,
+      },
+      { apiKey: Deno.env.get('LOVABLE_API_KEY')!, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
+    )
+  } catch (e) {
+    const suppressed = e instanceof EmailAPIError && e.code === 'recipient_suppressed'
+    await supabase.from('email_send_log').insert({
+      message_id: newMessageId,
+      template_name: log.template_name + '-retry',
+      recipient_email: log.recipient_email,
+      status: suppressed ? 'suppressed' : 'failed',
+      error_message: suppressed ? null : (e instanceof Error ? e.message : String(e)).slice(0, 1000),
+      metadata: { retried_from: messageId, retried_by: userData.user.id },
     })
+    if (suppressed) {
+      return new Response(
+        JSON.stringify({ success: false, reason: 'recipient_suppressed' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+    return new Response(
+      JSON.stringify({ error: 'Failed to send', detail: e instanceof Error ? e.message : String(e) }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   }
 
   await supabase.from('email_send_log').insert({
     message_id: newMessageId,
     template_name: log.template_name + '-retry',
     recipient_email: log.recipient_email,
-    status: 'pending',
+    status: 'sent',
     metadata: { retried_from: messageId, retried_by: userData.user.id },
   })
 

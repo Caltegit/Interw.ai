@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@3.23.8'
+import { sendAppEmail } from '../_shared/transactional-email-templates/send-app-email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -131,20 +132,16 @@ Deno.serve(async (req) => {
     // Copie email vers hello@interw.com (fire-and-forget)
     try {
       const reportedAt = new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })
-      await supabase.functions.invoke('send-transactional-email', {
-        body: {
-          templateName: 'interview-issue-report',
-          recipientEmail: 'hello@interw.com',
-          idempotencyKey: `interview-issue-${thread.id}`,
-          templateData: {
-            candidateName,
-            candidateEmail: session.candidate_email || '',
-            jobTitle,
-            projectTitle,
-            message,
-            sessionUrl: `https://interw.com/sessions/${session.id}`,
-            reportedAt,
-          },
+      await sendAppEmail('interview-issue-report', 'hello@interw.com', {
+        idempotencyKey: `interview-issue-${thread.id}`,
+        templateData: {
+          candidateName,
+          candidateEmail: session.candidate_email || '',
+          jobTitle,
+          projectTitle,
+          message,
+          sessionUrl: `https://interw.com/sessions/${session.id}`,
+          reportedAt,
         },
       })
     } catch (e) {

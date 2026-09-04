@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.102.1";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.102.1/cors";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -67,22 +68,19 @@ Deno.serve(async (req) => {
     const inviteLink = `${origin}/invite/${invitationToken}`;
 
     // Send invitation email via our transactional email function
-    const { error: sendError } = await supabase.functions.invoke("send-transactional-email", {
-      body: {
-        templateName: "organization-invite",
-        recipientEmail: email,
+    let sendError: unknown = null;
+    try {
+      await sendAppEmail("organization-invite", email, {
         templateData: {
           inviterName,
           organizationName: orgName,
           inviteUrl: inviteLink,
           recipientEmail: email,
         },
-      },
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        "x-internal-secret": serviceRoleKey,
-      },
-    });
+      });
+    } catch (e) {
+      sendError = e;
+    }
 
     if (sendError) {
       console.error("send-invitation: email dispatch failed", sendError);

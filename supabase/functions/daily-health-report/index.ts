@@ -1,6 +1,7 @@
 // Rapport quotidien santé produit — envoyé à eva@alboteam.com uniquement.
 // Cron : 5h et 6h UTC (couvre 7h Paris été/hiver), déduplication via idempotencyKey.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +20,6 @@ const CRITICAL_FUNCTIONS = [
   "backfill-report-timestamps",
   "store-repaired-video",
   "finalize-abandoned-session",
-  "send-transactional-email",
   "analyze-nonverbal",
   "cleanup-abandoned-sessions",
   "send-abandon-reminders",
@@ -124,10 +124,8 @@ Deno.serve(async (req) => {
     const parisDate = new Date().toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }).split("/").reverse().join("-");
     const idempotencyKey = `daily-health-${parisDate}-${hours}h`;
 
-    const { error: invokeErr } = await supabase.functions.invoke("send-transactional-email", {
-      body: {
-        templateName: "daily-health-report",
-        recipientEmail: HARD_RECIPIENT,
+    try {
+      await sendAppEmail("daily-health-report", HARD_RECIPIENT, {
         idempotencyKey,
         templateData: {
           periodLabel,
@@ -151,13 +149,11 @@ Deno.serve(async (req) => {
             source: p.source,
             count: 1,
           })),
-        },
       },
-    });
-
-    if (invokeErr) {
-      console.error("daily-health-report send failed", invokeErr);
-      return json({ ok: false, error: invokeErr.message }, 500);
+      });
+    } catch (e) {
+      console.error("daily-health-report send failed", e);
+      return json({ ok: false, error: e instanceof Error ? e.message : String(e) }, 500);
     }
 
     return json({ ok: true, severity, counters, anomaliesCount: anomalies.length });

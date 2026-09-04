@@ -7,6 +7,7 @@
 // - Sur échec : mark_report_job_failed (backoff exponentiel)
 // - Espace les jobs de SPACING_MS pour lisser la charge IA.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,9 +106,7 @@ async function sendCandidateThankYou(
     if (typeof email === "string" && email.includes("@")) replyTo = email;
   }
 
-  await invoke("send-transactional-email", {
-    templateName: "candidate-thank-you",
-    recipientEmail: session.candidate_email,
+  await sendAppEmail("candidate-thank-you", session.candidate_email, {
     idempotencyKey: `candidate-thanks-${sessionId}`,
     replyTo,
     metadata: { session_id: sessionId },

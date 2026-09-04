@@ -150,12 +150,13 @@ export function ShareReportsDialog({
     const stamp = Date.now();
     const results = await Promise.allSettled(
       emails.map((email) =>
-        supabase.functions.invoke("send-transactional-email", {
+        supabase.functions.invoke("send-candidate-message", {
           body: {
-            templateName: "bulk-candidate-message",
             recipientEmail: email,
             idempotencyKey: `share-reports-${stamp}-${email}`,
-            templateData: { subject, body, firstName: "" },
+            subject,
+            body,
+            firstName: "",
             fromName: fromNameTrimmed,
             ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },

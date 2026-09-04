@@ -8,9 +8,7 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
-  Link,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
@@ -24,43 +22,23 @@ export const MagicLinkEmail = ({
   siteName,
   confirmationUrl,
 }: MagicLinkEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Cliquez pour vous reconnecter à {siteName} — lien valable 1 heure.</Preview>
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>Your login link for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Votre lien de connexion</Heading>
+        <Heading style={h1}>Your login link</Heading>
         <Text style={text}>
-          Bonjour,
+          Click the button below to log in to {siteName}. This link will expire
+          shortly.
         </Text>
-        <Text style={text}>
-          Vous avez demandé un lien de connexion pour accéder à votre compte {siteName}.
-          Cliquez sur le bouton ci-dessous pour vous connecter automatiquement, sans
-          avoir à saisir de mot de passe.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Me connecter à {siteName}
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Log In
         </Button>
-        <Text style={smallText}>
-          Une page de confirmation s'ouvrira ; cliquez sur « Me connecter » pour finaliser.
-        </Text>
-        <Text style={smallText}>
-          Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :
-        </Text>
-        <Text style={linkText}>
-          <Link href={confirmationUrl} style={linkStyle}>{confirmationUrl}</Link>
-        </Text>
-        <Hr style={hr} />
         <Text style={footer}>
-          Ce lien est <strong>valable 1 heure</strong> et ne peut être utilisé qu'une seule fois.
-          <br /><br />
-          Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email
-          en toute sécurité — personne ne pourra accéder à votre compte sans ce lien.
-          <br /><br />
-          Pour votre sécurité, notre équipe ne vous demandera jamais votre mot de passe
-          par email.
-          <br /><br />
-          L'équipe {siteName}
+          If you didn't request this link, you can safely ignore this email.
         </Text>
       </Container>
     </Body>
@@ -69,43 +47,35 @@ export const MagicLinkEmail = ({
 
 export default MagicLinkEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '24px 28px', maxWidth: '560px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#6366F1',
-  margin: '0 0 24px',
+  color: '#000000',
+  margin: '0 0 20px',
 }
 const text = {
-  fontSize: '15px',
-  color: '#374151',
-  lineHeight: '1.6',
-  margin: '0 0 16px',
-}
-const smallText = {
-  fontSize: '13px',
-  color: '#6b7280',
+  fontSize: '14px',
+  color: '#55575d',
   lineHeight: '1.5',
-  margin: '24px 0 8px',
+  margin: '0 0 25px',
 }
-const linkText = {
-  fontSize: '13px',
-  color: '#6366F1',
-  lineHeight: '1.4',
-  margin: '0 0 16px',
-  wordBreak: 'break-all' as const,
-}
-const linkStyle = { color: '#6366F1', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#6366F1',
+  backgroundColor: '#000000',
   color: '#ffffff',
-  fontSize: '15px',
+  fontSize: '14px',
+  border: '1px solid #000000',
   borderRadius: '8px',
-  padding: '14px 24px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  display: 'inline-block',
-  margin: '8px 0 16px',
 }
-const hr = { borderColor: '#e5e7eb', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#6b7280', margin: '0', lineHeight: '1.6' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`

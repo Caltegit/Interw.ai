@@ -2,6 +2,7 @@
 // (sessions pending ou in_progress, jamais relancées, < 24h).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireInternal } from "../_shared/auth-guard.ts";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,14 +57,15 @@ Deno.serve(async (req) => {
       const sessionName = project.title || "votre entretien";
       const sessionUrl = `${SITE_URL}/session/${project.slug}/start/${s.token}`;
 
-      const { error: invokeErr } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "candidate-abandon-reminder",
-          recipientEmail: s.candidate_email,
+      let invokeErr: Error | null = null;
+      try {
+        await sendAppEmail("candidate-abandon-reminder", s.candidate_email, {
           idempotencyKey: `abandon-reminder-${s.id}`,
           templateData: { prenom, sessionName, sessionUrl },
-        },
-      });
+        });
+      } catch (e) {
+        invokeErr = e instanceof Error ? e : new Error(String(e));
+      }
 
       if (invokeErr) {
         errors.push(`${s.id}: ${invokeErr.message}`);

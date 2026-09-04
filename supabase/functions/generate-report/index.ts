@@ -5,17 +5,13 @@ import * as React from "npm:react@18.3.1";
 import { renderAsync } from "npm:@react-email/components@0.0.22";
 import { template as interviewReportTemplate } from "../_shared/transactional-email-templates/interview-report.tsx";
 import { MODEL_FAST, MODEL_SCORING, MODEL_FALLBACK, buildChatBody } from "../_shared/ai-models.ts";
+import { EmailAPIError, sendLovableEmail } from "npm:@lovable.dev/email-js@0.1.0";
 
 const SITE_NAME = "Interw";
 const SENDER_DOMAIN = "notify.interw.com";
 const FROM_DOMAIN = "notify.interw.com";
 const FROM_LOCAL_PART = "hello";
 
-function generateToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1557,87 +1553,51 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
         if (!recruiterEmail) continue;
         const normalizedEmail = recruiterEmail.toLowerCase();
 
-        // 1. Suppression check
-        const { data: suppressed } = await supabase
-          .from("suppressed_emails")
-          .select("id")
-          .eq("email", normalizedEmail)
-          .maybeSingle();
-        if (suppressed) {
-          console.log("Recipient email suppressed, skipping", normalizedEmail);
-          continue;
-        }
-
-        // 2. Get / create unsubscribe token
-        let unsubscribeToken: string | null = null;
-        const { data: existingToken } = await supabase
-          .from("email_unsubscribe_tokens")
-          .select("token, used_at")
-          .eq("email", normalizedEmail)
-          .maybeSingle();
-        if (existingToken && !existingToken.used_at) {
-          unsubscribeToken = existingToken.token;
-        } else if (!existingToken) {
-          const newToken = generateToken();
-          await supabase.from("email_unsubscribe_tokens").upsert(
-            { token: newToken, email: normalizedEmail },
-            { onConflict: "email", ignoreDuplicates: true },
-          );
-          const { data: stored } = await supabase
-            .from("email_unsubscribe_tokens")
-            .select("token")
-            .eq("email", normalizedEmail)
-            .maybeSingle();
-          unsubscribeToken = stored?.token ?? newToken;
-        }
-
-        if (!unsubscribeToken) {
-          console.warn("Unsubscribe token unavailable, skipping for", normalizedEmail);
-          continue;
-        }
-
         const messageId = crypto.randomUUID();
         const idempotencyKey = `report-${session_id}-${profile.user_id}`;
 
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "interview-report",
-          recipient_email: recruiterEmail,
-          status: "pending",
-        });
-
-        const payload: Record<string, unknown> = {
-          message_id: messageId,
-          to: recruiterEmail,
-          from: `${SITE_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
-          sender_domain: SENDER_DOMAIN,
-          subject,
-          html,
-          text: plainText,
-          purpose: "transactional",
-          label: "interview-report",
-          idempotency_key: idempotencyKey,
-          unsubscribe_token: unsubscribeToken,
-          queued_at: new Date().toISOString(),
-        };
-        if (validReplyTo) payload.reply_to = candidateEmail;
-
-        const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload,
-        });
-
-        if (enqueueError) {
-          console.error("Failed to enqueue report email:", enqueueError);
-          await supabase.from("email_send_log").insert({
+        try {
+          await sendLovableEmail(
+            {
+              to: recruiterEmail,
+              from: `${SITE_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
+              sender_domain: SENDER_DOMAIN,
+              subject,
+              html,
+              text: plainText,
+              purpose: "transactional",
+              label: "interview-report",
+              idempotency_key: idempotencyKey,
+              ...(validReplyTo ? { reply_to: candidateEmail } : {}),
+            },
+            {
+              apiKey: Deno.env.get("LOVABLE_API_KEY")!,
+              sendUrl: Deno.env.get("LOVABLE_SEND_URL"),
+            },
+          );
+          const { error: logError } = await supabase.from("email_send_log").insert({
             message_id: messageId,
             template_name: "interview-report",
             recipient_email: recruiterEmail,
-            status: "failed",
-            error_message: enqueueError.message,
+            status: "sent",
           });
-        } else {
-          console.log("Report email enqueued for", recruiterEmail);
+          if (logError) console.error("email_send_log insert failed", logError.message);
+          console.log("Report email sent to", recruiterEmail);
+        } catch (sendError) {
+          const suppressed = sendError instanceof EmailAPIError &&
+            sendError.code === "recipient_suppressed";
+          if (suppressed) console.log("Recipient email suppressed, skipping", normalizedEmail);
+          else console.error("Failed to send report email:", sendError);
+          const { error: logError } = await supabase.from("email_send_log").insert({
+            message_id: messageId,
+            template_name: "interview-report",
+            recipient_email: recruiterEmail,
+            status: suppressed ? "suppressed" : "failed",
+            error_message: suppressed
+              ? null
+              : (sendError instanceof Error ? sendError.message : String(sendError)).slice(0, 1000),
+          });
+          if (logError) console.error("email_send_log insert failed", logError.message);
         }
       }
     } catch (e) {
