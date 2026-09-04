@@ -73,7 +73,6 @@ import InterviewPrivacy from "./pages/InterviewPrivacy";
 import SharedReport from "./pages/SharedReport";
 import HighlightsPublic from "./pages/HighlightsPublic";
 import OrgPublic from "./pages/OrgPublic";
-import Unsubscribe from "./pages/Unsubscribe";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminOrgDetail from "./pages/SuperAdminOrgDetail";
 import AdminCandidatesToRecover from "./pages/AdminCandidatesToRecover";
@@ -154,8 +153,6 @@ const App = () => (
             <Route path="/highlights/:token" element={<HighlightsPublic />} />
             <Route path="/o/:slug" element={<OrgPublic />} />
             <Route path="/p/:slugPublic" element={<ProjectPublicPage />} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
-            <Route path="/email-unsubscribe" element={<Unsubscribe />} />
 
             {/* Protected RH routes */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
