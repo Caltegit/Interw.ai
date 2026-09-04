@@ -119,6 +119,7 @@ const App = () => (
             <Route path="/auth/magic-link" element={<MagicLink />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
             <Route path="/m/:token" element={<MagicLinkRedeem />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             {/* Session candidat — routes actuelles */}
             <Route path="/session/:slug" element={<InterviewLanding />} />
