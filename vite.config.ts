@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
   preview: {
     headers: crossOriginIsolationHeaders,
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), mode === "development" && componentTagger(), mcpPlugin()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
