@@ -50,6 +50,7 @@ import SessionDetail from "./pages/SessionDetail";
 import SessionVideoExport from "./pages/SessionVideoExport";
 import SettingsProfile from "./pages/settings/SettingsProfile";
 import SettingsOrganization from "./pages/settings/SettingsOrganization";
+import SettingsMcp from "./pages/settings/SettingsMcp";
 import QuestionLibrary from "./pages/QuestionLibrary";
 import LibraryHome from "./pages/LibraryHome";
 import IntroLibrary from "./pages/IntroLibrary";
@@ -179,6 +180,7 @@ const App = () => (
               <Route path="/settings" element={<Navigate to="/settings/profil" replace />} />
               <Route path="/settings/profil" element={<SettingsProfile />} />
               <Route path="/settings/organisation" element={<SettingsOrganization />} />
+              <Route path="/settings/connecteur-ia" element={<SettingsMcp />} />
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/feedback/:threadId" element={<FeedbackThread />} />
               <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />

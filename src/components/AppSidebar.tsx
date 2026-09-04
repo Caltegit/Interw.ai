@@ -1,4 +1,4 @@
-import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2 } from "lucide-react";
+import { LayoutDashboard, FolderKanban, BookOpen, LogOut, Shield, ChevronDown, ChevronRight, MessageSquare, Mic, Mail, ListChecks, ClipboardList, PlayCircle, MessageCircle, Settings, User, Building2, Sparkles } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -251,6 +251,9 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => navigate("/settings/organisation")}>
                   <Building2 className="mr-2 h-4 w-4" /> Mon organisation
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/settings/connecteur-ia")}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Connexion IA
                 </DropdownMenuItem>
                 {isSuperAdmin && (
                   <>
