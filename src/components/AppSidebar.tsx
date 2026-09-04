@@ -252,6 +252,9 @@ export function AppSidebar() {
                 <DropdownMenuItem onSelect={() => navigate("/settings/organisation")}>
                   <Building2 className="mr-2 h-4 w-4" /> Mon organisation
                 </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => navigate("/settings/connecteur-ia")}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Connexion IA
+                </DropdownMenuItem>
                 {isSuperAdmin && (
                   <>
                     <DropdownMenuSeparator />
