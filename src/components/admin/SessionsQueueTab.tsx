@@ -168,17 +168,8 @@ export default function SessionsQueueTab() {
 
   const resendThankYou = useMutation({
     mutationFn: async (row: Row) => {
-      const { error } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "candidate-thank-you",
-          recipientEmail: row.candidate_email,
-          idempotencyKey: `candidate-thanks-${row.session_id}-manual-${Date.now()}`,
-          templateData: {
-            firstName: (row.candidate_name ?? "").trim().split(/\s+/)[0] ?? "",
-            jobTitle: row.project_title,
-            orgName: row.organization_name,
-          },
-        },
+      const { error } = await supabase.functions.invoke("resend-candidate-thank-you", {
+        body: { sessionId: row.session_id },
       });
       if (error) throw error;
     },

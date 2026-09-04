@@ -164,16 +164,13 @@ export function BulkEmailDialog({ open, onOpenChange, recipients, projectTitle, 
       validRecipients.map((r) => {
         const firstName = firstNameOf(r.candidate_name);
         const personalizedBody = body.replace(/\{firstName\}/g, firstName).replace(/Bonjour ,/g, "Bonjour,");
-        return supabase.functions.invoke("send-transactional-email", {
+        return supabase.functions.invoke("send-candidate-message", {
           body: {
-            templateName: "bulk-candidate-message",
             recipientEmail: r.candidate_email,
             idempotencyKey: `bulk-${selectedKey}-${r.id}-${Date.now()}`,
-            templateData: {
-              subject,
-              body: personalizedBody,
-              firstName,
-            },
+            subject,
+            body: personalizedBody,
+            firstName,
             fromName: fromNameTrimmed,
             ...(allowReply ? { replyTo: replyToTrimmed } : {}),
           },

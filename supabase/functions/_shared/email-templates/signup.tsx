@@ -24,40 +24,36 @@ interface SignupEmailProps {
 export const SignupEmail = ({
   siteName,
   siteUrl,
+  recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
-  <Html lang="fr" dir="ltr">
-    <Head />
-    <Preview>Encore une étape pour activer votre compte interw</Preview>
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>Confirm your email for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Bienvenue sur {siteName}</Heading>
-        <Text style={text}>Bonjour,</Text>
+        <Heading style={h1}>Confirm your email</Heading>
         <Text style={text}>
-          Merci d'avoir créé un compte. Pour finaliser votre inscription et commencer à utiliser
-          la plateforme, confirmez votre adresse email en cliquant sur le bouton ci-dessous.
+          Thanks for signing up for{' '}
+          <Link href={siteUrl} style={link}>
+            <strong>{siteName}</strong>
+          </Link>
+          !
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirmer mon adresse email
+        <Text style={text}>
+          Please confirm your email address (
+          <Link href={`mailto:${recipient}`} style={link}>
+            {recipient}
+          </Link>
+          ) by clicking the button below:
+        </Text>
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Verify Email
         </Button>
-        <Text style={smallText}>
-          Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :
-        </Text>
-        <Text style={linkText}>
-          <Link href={confirmationUrl} style={link}>
-            {confirmationUrl}
-          </Link>
-        </Text>
         <Text style={footer}>
-          Vous n'êtes pas à l'origine de cette inscription ? Ignorez simplement cet email,
-          aucun compte ne sera créé.
-        </Text>
-        <Text style={signature}>
-          L'équipe {siteName}
-          <br />
-          <Link href={siteUrl} style={footerLink}>
-            {siteUrl.replace(/^https?:\/\//, '')}
-          </Link>
+          If you didn't create an account, you can safely ignore this email.
         </Text>
       </Container>
     </Body>
@@ -66,55 +62,36 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '24px 28px', maxWidth: '560px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
   fontSize: '22px',
   fontWeight: 'bold' as const,
-  color: '#111827',
+  color: '#000000',
   margin: '0 0 20px',
 }
 const text = {
-  fontSize: '15px',
-  color: '#374151',
-  lineHeight: '1.6',
-  margin: '0 0 16px',
-}
-const smallText = {
-  fontSize: '13px',
-  color: '#6b7280',
+  fontSize: '14px',
+  color: '#55575d',
   lineHeight: '1.5',
-  margin: '24px 0 8px',
+  margin: '0 0 25px',
 }
-const linkText = {
-  fontSize: '13px',
-  margin: '0 0 24px',
-  wordBreak: 'break-all' as const,
-}
-const link = { color: '#6366F1', textDecoration: 'underline' }
+const link = { color: 'inherit', textDecoration: 'underline' }
 const button = {
-  backgroundColor: '#6366F1',
+  backgroundColor: '#000000',
   color: '#ffffff',
-  fontSize: '15px',
-  fontWeight: '600' as const,
+  fontSize: '14px',
+  border: '1px solid #000000',
   borderRadius: '8px',
-  padding: '12px 24px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  display: 'inline-block',
-  margin: '8px 0 16px',
 }
-const footer = {
-  fontSize: '13px',
-  color: '#6b7280',
-  lineHeight: '1.5',
-  margin: '24px 0 16px',
-}
-const signature = {
-  fontSize: '13px',
-  color: '#374151',
-  lineHeight: '1.6',
-  margin: '24px 0 0',
-  borderTop: '1px solid #e5e7eb',
-  paddingTop: '16px',
-}
-const footerLink = { color: '#6b7280', textDecoration: 'none' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`

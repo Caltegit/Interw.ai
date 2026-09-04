@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { sendAppEmail } from '../_shared/transactional-email-templates/send-app-email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,33 +156,21 @@ Deno.serve(async (req) => {
 
   const recipients = (profiles ?? []).filter((p) => p.email).map((p) => p.email)
 
-  // 5. Send alert via send-transactional-email
+  // 5. Send alert email
   const alertId = crypto.randomUUID()
   let notified = 0
   for (const email of recipients) {
     try {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-          'x-internal-secret': serviceKey,
+      await sendAppEmail('email-failure-alert', email, {
+        idempotencyKey: `email-alert-${alertId}-${email}`,
+        templateData: {
+          failureCount,
+          threshold,
+          windowMinutes,
+          dashboardUrl: 'https://interw.com/admin/emails',
         },
-        body: JSON.stringify({
-          templateName: 'email-failure-alert',
-          recipientEmail: email,
-          idempotencyKey: `email-alert-${alertId}-${email}`,
-          templateData: {
-            failureCount,
-            threshold,
-            windowMinutes,
-            dashboardUrl: 'https://interw.com/admin/emails',
-          },
-        }),
       })
-      if (resp.ok) notified++
-      else console.error('alert send failed', email, resp.status, await resp.text())
+      notified++
     } catch (e) {
       console.error('alert send error', email, e)
     }

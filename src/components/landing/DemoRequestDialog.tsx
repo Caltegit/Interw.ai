@@ -41,16 +41,10 @@ export default function DemoRequestDialog({ open, onOpenChange }: Props) {
 
     setSubmitting(true);
     try {
-      const idempotencyKey = `demo-request-${parsed.data.email.toLowerCase()}-${Date.now()}`;
-      const { error } = await supabase.functions.invoke("send-transactional-email", {
+      const { error } = await supabase.functions.invoke("send-demo-request", {
         body: {
-          templateName: "demo-request",
-          idempotencyKey,
-          replyTo: parsed.data.email,
-          templateData: {
-            email: parsed.data.email,
-            message: parsed.data.message ?? "",
-          },
+          email: parsed.data.email,
+          message: parsed.data.message ?? "",
         },
       });
 

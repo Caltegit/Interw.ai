@@ -1,6 +1,7 @@
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
 import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
 
 const corsHeaders = {
@@ -32,12 +33,6 @@ function generateSixDigitCode(): string {
   const bytes = new Uint32Array(1)
   crypto.getRandomValues(bytes)
   return String(bytes[0] % 1_000_000).padStart(6, '0')
-}
-
-function generateToken(): string {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function hashCode(code: string, email: string, userId: string, secret: string): Promise<string> {
@@ -131,48 +126,43 @@ Deno.serve(async (req) => {
     const text = await renderAsync(React.createElement(RecoveryEmail, templateProps), { plainText: true })
     const messageId = crypto.randomUUID()
 
-    const { data: existingToken } = await admin
-      .from('email_unsubscribe_tokens')
-      .select('token')
-      .eq('email', email)
-      .maybeSingle()
-
-    let unsubscribeToken = existingToken?.token as string | undefined
-    if (!unsubscribeToken) {
-      unsubscribeToken = generateToken()
-      await admin
-        .from('email_unsubscribe_tokens')
-        .upsert({ token: unsubscribeToken, email }, { onConflict: 'email', ignoreDuplicates: true })
-    }
-
-    await admin.from('email_send_log').insert({
-      message_id: messageId,
-      template_name: 'recovery',
-      recipient_email: email,
-      status: 'pending',
-      metadata: { source: 'password_reset_code_6_digits' },
-    })
-
-    const { error: enqueueError } = await admin.rpc('enqueue_email', {
-      queue_name: 'auth_emails',
-      payload: {
+    try {
+      await sendLovableEmail(
+        {
+          to: email,
+          from: `${FROM_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
+          reply_to: REPLY_TO_EMAIL,
+          sender_domain: SENDER_DOMAIN,
+          subject: 'Votre code de réinitialisation',
+          html,
+          text,
+          purpose: 'transactional',
+          label: 'recovery',
+          idempotency_key: `password-reset-${email}-${Date.now()}`,
+        },
+        { apiKey: Deno.env.get('LOVABLE_API_KEY')!, sendUrl: Deno.env.get('LOVABLE_SEND_URL') },
+      )
+      await admin.from('email_send_log').insert({
         message_id: messageId,
-        to: email,
-        from: `${FROM_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
-        reply_to: REPLY_TO_EMAIL,
-        sender_domain: SENDER_DOMAIN,
-        subject: 'Votre code de réinitialisation',
-        html,
-        text,
-        purpose: 'transactional',
-        label: 'recovery',
-        idempotency_key: `password-reset-${email}-${Date.now()}`,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-      },
-    })
-
-    if (enqueueError) throw enqueueError
+        template_name: 'recovery',
+        recipient_email: email,
+        status: 'sent',
+        metadata: { source: 'password_reset_code_6_digits' },
+      })
+    } catch (sendError) {
+      const suppressed = sendError instanceof EmailAPIError && sendError.code === 'recipient_suppressed'
+      await admin.from('email_send_log').insert({
+        message_id: messageId,
+        template_name: 'recovery',
+        recipient_email: email,
+        status: suppressed ? 'suppressed' : 'failed',
+        error_message: suppressed
+          ? null
+          : (sendError instanceof Error ? sendError.message : String(sendError)).slice(0, 1000),
+        metadata: { source: 'password_reset_code_6_digits' },
+      })
+      if (!suppressed) throw sendError
+    }
 
     return json({ success: true })
   } catch (error) {

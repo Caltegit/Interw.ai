@@ -105,30 +105,8 @@ export function NewFeedbackDialog() {
 
     // Copie email vers hello@interw.ai (fire-and-forget)
     try {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const authorName = prof?.full_name?.trim() || user.email || "Utilisateur";
-      const authorEmail = prof?.email || user.email || "";
-      void supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "feedback-copy",
-          recipientEmail: "hello@interw.ai",
-          idempotencyKey: `feedback-copy-${thread.id}`,
-          templateData: {
-            authorName,
-            authorEmail,
-            subject: subject.trim(),
-            message: message.trim(),
-            threadUrl: `${PUBLIC_APP_URL}/feedback/${thread.id}`,
-            submittedAt: new Date().toLocaleString("fr-FR", {
-              dateStyle: "long",
-              timeStyle: "short",
-            }),
-          },
-        },
+      void supabase.functions.invoke("send-feedback-copy", {
+        body: { threadId: thread.id, appUrl: PUBLIC_APP_URL },
       });
     } catch (e) {
       console.warn("[feedback] copie email échouée", e);

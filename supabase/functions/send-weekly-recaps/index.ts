@@ -2,6 +2,7 @@
 // Déclenché par pg_cron tous les lundis (08:00 et 09:00 UTC).
 // La fonction vérifie l'heure locale Europe/Paris et ne s'exécute qu'à 10h.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,22 +48,6 @@ function isoWeekKey(date = new Date()): string {
   return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 
-async function invokeSendEmail(body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-      apikey: SERVICE_ROLE_KEY,
-      "x-internal-secret": SERVICE_ROLE_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const t = await res.text();
-    console.error("send-transactional-email failed", res.status, t);
-  }
-}
 
 async function processProject(
   supabase: ReturnType<typeof createClient>,
@@ -155,18 +140,20 @@ async function processProject(
   for (const p of profiles) {
     if (!p.email) continue;
     const firstName = (p.full_name ?? "").trim().split(/\s+/)[0] ?? "";
-    await invokeSendEmail({
-      templateName: "weekly-project-recap",
-      recipientEmail: p.email,
-      idempotencyKey: `weekly-recap-${project.id}-${weekKey}-${p.user_id}`,
-      templateData: {
-        firstName,
-        jobTitle,
-        projectUrl,
-        candidates,
-        stats,
-      },
-    });
+    try {
+      await sendAppEmail("weekly-project-recap", p.email, {
+        idempotencyKey: `weekly-recap-${project.id}-${weekKey}-${p.user_id}`,
+        templateData: {
+          firstName,
+          jobTitle,
+          projectUrl,
+          candidates,
+          stats,
+        },
+      });
+    } catch (e) {
+      console.error("weekly-project-recap send failed", e);
+    }
   }
 }
 

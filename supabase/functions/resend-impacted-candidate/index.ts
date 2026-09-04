@@ -13,6 +13,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.102.1";
 import { requireCallerOrInternal, SHARED_CORS } from "../_shared/auth-guard.ts";
+import { sendAppEmail } from "../_shared/transactional-email-templates/send-app-email.ts";
 
 const CORS = {
   ...SHARED_CORS,
@@ -136,10 +137,10 @@ Deno.serve(async (req) => {
     .eq("template_key", "candidate-recovery-invite")
     .maybeSingle();
 
-  const { error: sendErr, data: sendData } = await admin.functions.invoke("send-transactional-email", {
-    body: {
-      templateName: "candidate-recovery-invite",
-      recipientEmail: original.candidate_email,
+  let sendErr: unknown = null;
+  let emailMessageId: string | null = null;
+  try {
+    const sendResult = await sendAppEmail("candidate-recovery-invite", original.candidate_email, {
       templateData: {
         prenom,
         poste: project.job_title || project.title || "",
@@ -149,15 +150,15 @@ Deno.serve(async (req) => {
         intro_html: override?.intro_html ?? "",
         outro_html: override?.outro_html ?? "",
       },
-    },
-    headers: {
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "x-internal-secret": serviceRoleKey,
-    },
-  });
+    });
+    emailMessageId = sendResult.messageId;
+    if (!sendResult.sent) sendErr = new Error(sendResult.reason);
+  } catch (e) {
+    sendErr = e;
+    console.error("resend-impacted-candidate: envoi échoué", e);
+  }
 
   const emailStatus = sendErr ? "failed" : "sent";
-  const emailMessageId = (sendData as any)?.messageId ?? (sendData as any)?.id ?? null;
 
   // 8. Trace dans session_reinvitations.
   const { data: trace, error: traceErr } = await admin

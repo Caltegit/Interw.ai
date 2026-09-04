@@ -4,8 +4,6 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.auth-email-hook]
     verify_jwt = false
 
-  [functions.send-transactional-email]
-    verify_jwt = false
 
   [functions.report-interview-issue]
     verify_jwt = false
@@ -13,17 +11,11 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.preview-transactional-email]
     verify_jwt = false
 
-  [functions.handle-email-unsubscribe]
-    verify_jwt = false
 
-  [functions.handle-email-suppression]
-    verify_jwt = false
 
   [functions.get-email-template-defaults]
     verify_jwt = false
 
-  [functions.process-email-queue]
-    verify_jwt = true
 
   [functions.check-email-failures]
     verify_jwt = true
@@ -80,3 +72,17 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.log-mic-events]
     verify_jwt = false
 
+  [functions.send-demo-request]
+    verify_jwt = false
+
+  [functions.send-candidate-message]
+    verify_jwt = true
+
+  [functions.resend-candidate-thank-you]
+    verify_jwt = true
+
+  [functions.send-feedback-copy]
+    verify_jwt = true
+
+  [functions.handle-email-events]
+    verify_jwt = false
