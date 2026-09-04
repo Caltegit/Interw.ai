@@ -61,6 +61,7 @@ import InviteSignup from "./pages/InviteSignup";
 import MagicLink from "./pages/MagicLink";
 import MagicLinkRedeem from "./pages/MagicLinkRedeem";
 import AuthConfirm from "./pages/AuthConfirm";
+import OAuthConsent from "./pages/OAuthConsent";
 import InterviewLanding from "./pages/InterviewLanding";
 import InterviewDeviceTest from "./pages/InterviewDeviceTest";
 import InterviewStart from "./pages/InterviewStart";
