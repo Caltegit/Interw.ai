@@ -7,7 +7,7 @@
 
 ## Correctif 1 — Enregistrer les questions posées
 
-- `src/pages/InterviewStart.tsx` : à chaque question posée (média ou texte), enregistrer le message IA avec le **texte de la question** (`nextQ.content`) et son `question_id`, même quand la question est une vidéo/audio pré-enregistrée. Les transitions gardent leur texte actuel.
+- Pendant l'entretien : chaque fois qu'une question est posée au candidat, son **texte est désormais enregistré**, même quand la question est posée par une vidéo ou un audio pré-enregistré (c'est ce cas qui n'était jamais enregistré aujourd'hui). Rien ne change pour le candidat : l'entretien se déroule exactement comme avant, on garde simplement une trace écrite de chaque question posée.
 - `src/pages/SessionDetail.tsx` (affichage) : filet de sécurité pour les anciennes sessions — avant chaque réponse candidat, afficher la question correspondante via `question_id` → `projects.questions` quand le message IA est vide ou absent.
 - `supabase/functions/generate-report/index.ts` : ne pas insérer de lignes vides (« persona : ») dans la transcription envoyée à l'IA quand un message IA a un contenu vide.
 
