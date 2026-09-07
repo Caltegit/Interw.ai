@@ -2,14 +2,14 @@ import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
-import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
+import { RecoveryCodeEmail } from '../_shared/email-templates/recovery-code.tsx'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SITE_NAME = 'interw'
+const SITE_NAME = 'Interw'
 const SENDER_DOMAIN = 'notify.interw.com'
 const FROM_DOMAIN = 'notify.interw.com'
 const FROM_NAME = 'Interw'
@@ -121,9 +121,9 @@ Deno.serve(async (req) => {
 
     if (insertError) throw insertError
 
-    const templateProps = { siteName: SITE_NAME, token: code }
-    const html = await renderAsync(React.createElement(RecoveryEmail, templateProps))
-    const text = await renderAsync(React.createElement(RecoveryEmail, templateProps), { plainText: true })
+    const templateProps = { siteName: SITE_NAME, token: code, expiresInMinutes: CODE_TTL_MINUTES }
+    const html = await renderAsync(React.createElement(RecoveryCodeEmail, templateProps))
+    const text = await renderAsync(React.createElement(RecoveryCodeEmail, templateProps), { plainText: true })
     const messageId = crypto.randomUUID()
 
     try {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
           from: `${FROM_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
           reply_to: REPLY_TO_EMAIL,
           sender_domain: SENDER_DOMAIN,
-          subject: 'Votre code de réinitialisation',
+          subject: 'Votre code de connexion Interw',
           html,
           text,
           purpose: 'transactional',

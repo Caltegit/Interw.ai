@@ -21,30 +21,35 @@ interface RecoveryEmailProps {
 export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
-}: RecoveryEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head>
-      <style>{darkModeCss}</style>
-    </Head>
-    <Preview>Reset your password for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
-        </Text>
-        <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
-          If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+}: RecoveryEmailProps) => {
+  if (!confirmationUrl) {
+    throw new Error('RecoveryEmail requires confirmationUrl')
+  }
+  return (
+    <Html lang="fr" dir="ltr">
+      <Head>
+        <style>{darkModeCss}</style>
+      </Head>
+      <Preview>Réinitialisez votre mot de passe {siteName}</Preview>
+      <Body style={main}>
+        <Container style={container}>
+          <Heading style={h1}>Réinitialisez votre mot de passe</Heading>
+          <Text style={text}>
+            Nous avons reçu une demande de réinitialisation de votre mot de passe {siteName}.
+            Cliquez sur le bouton ci-dessous pour en choisir un nouveau.
+          </Text>
+          <Button className="dm-btn" style={button} href={confirmationUrl}>
+            Choisir un nouveau mot de passe
+          </Button>
+          <Text style={footer}>
+            Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe
+            reste inchangé.
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  )
+}
 
 export default RecoveryEmail
 
