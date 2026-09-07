@@ -130,6 +130,13 @@ export type Database = {
             foreignKeyName: "copilot_threads_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copilot_threads_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -887,6 +894,13 @@ export type Database = {
             foreignKeyName: "mic_events_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mic_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -1496,6 +1510,13 @@ export type Database = {
             foreignKeyName: "report_jobs_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: true
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_jobs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -1536,6 +1557,13 @@ export type Database = {
           viewer_secret?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "report_shares_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["report_id"]
+          },
           {
             foreignKeyName: "report_shares_report_id_fkey"
             columns: ["report_id"]
@@ -1646,6 +1674,13 @@ export type Database = {
           timeline?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reports_session_id_fkey"
             columns: ["session_id"]
@@ -1794,6 +1829,13 @@ export type Database = {
             foreignKeyName: "session_messages_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -1853,7 +1895,21 @@ export type Database = {
             foreignKeyName: "session_reinvitations_new_session_id_fkey"
             columns: ["new_session_id"]
             isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_reinvitations_new_session_id_fkey"
+            columns: ["new_session_id"]
+            isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_reinvitations_original_session_id_fkey"
+            columns: ["original_session_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_candidats"
             referencedColumns: ["id"]
           },
           {
@@ -2093,6 +2149,13 @@ export type Database = {
             foreignKeyName: "transcripts_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: true
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcripts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
             referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
@@ -2121,7 +2184,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mcp_candidats: {
+        Row: {
+          candidate_email: string | null
+          candidate_name: string | null
+          completed_at: string | null
+          created_at: string | null
+          criteria_scores: Json | null
+          duration_seconds: number | null
+          id: string | null
+          organization_id: string | null
+          overall_grade: string | null
+          overall_score: number | null
+          project_id: string | null
+          recommendation:
+            | Database["public"]["Enums"]["recommendation_type"]
+            | null
+          recruiter_decision:
+            | Database["public"]["Enums"]["recruiter_decision_type"]
+            | null
+          report_id: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["session_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invitation: {
