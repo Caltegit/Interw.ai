@@ -212,6 +212,7 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
           from_library: true,
           hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
           max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
+          criteria_weights: (q as { criteria_weights?: number[] | null }).criteria_weights ?? null,
         }))
       : state.questions,
     criteria: tpl.criteria.length
@@ -566,6 +567,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
           max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
           avatar_image_url: (q as { avatar_image_url?: string | null }).avatar_image_url ?? null,
+          criteria_weights: (q as { criteria_weights?: number[] | null }).criteria_weights ?? null,
         })),
       );
     }
@@ -1127,6 +1129,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               questions={questions}
               setQuestions={setQuestions}
               projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
+              criteria={criteria.map((c) => ({ label: c.label, weight: c.weight }))}
             />
           )}
 

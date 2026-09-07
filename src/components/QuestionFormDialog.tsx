@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { MediaRecorderField } from "@/components/media/MediaRecorderField";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { QuestionCriteriaWeights, type WeightableCriterion } from "@/components/project/QuestionCriteriaWeights";
 import { Mic, Video, Type, BookmarkPlus, ChevronDown, Lightbulb, Timer, Sparkles, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ export interface QuestionFormValue {
   saveToLibrary?: boolean;
   hintText: string;
   maxResponseSeconds: number | null;
+  criteriaWeights?: number[] | null;
 }
 
 export const EMPTY_QUESTION_FORM: QuestionFormValue = {
@@ -68,6 +70,7 @@ export const EMPTY_QUESTION_FORM: QuestionFormValue = {
   saveToLibrary: false,
   hintText: "",
   maxResponseSeconds: null,
+  criteriaWeights: null,
 };
 
 interface QuestionFormDialogProps {
@@ -77,6 +80,8 @@ interface QuestionFormDialogProps {
   isEditing?: boolean;
   showSaveToLibrary?: boolean;
   saving?: boolean;
+  /** Critères du poste (étape précédente) pour la pondération par question */
+  criteria?: WeightableCriterion[];
   onSubmit: (value: QuestionFormValue) => void | Promise<void>;
 }
 
@@ -117,6 +122,7 @@ export function QuestionFormDialog({
   isEditing = false,
   showSaveToLibrary = false,
   saving = false,
+  criteria,
   onSubmit,
 }: QuestionFormDialogProps) {
   const { toast } = useToast();
@@ -378,7 +384,16 @@ export function QuestionFormDialog({
                 </div>
               )}
             </div>
+
+            {criteria && (
+              <QuestionCriteriaWeights
+                criteria={criteria}
+                value={form.criteriaWeights ?? null}
+                onChange={(weights) => setForm((f) => ({ ...f, criteriaWeights: weights }))}
+              />
+            )}
           </section>
+
 
 
           {/* Étape 5 — Sauvegarde ressources */}

@@ -69,6 +69,7 @@ export async function loadInterviewTemplate(id: string): Promise<InterviewTempla
       avatar_image_url: (q.avatar_image_url as string | null) ?? null,
       hint_text: (q.hint_text as string | null) ?? null,
       max_response_seconds: (q.max_response_seconds as number | null) ?? null,
+      criteria_weights: (q.criteria_weights as number[] | null) ?? null,
     })),
     criteria: ((cs as unknown as Array<Record<string, unknown>>) || []).map((c) => ({
       label: (c.label as string) || "",

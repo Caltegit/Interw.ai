@@ -65,6 +65,7 @@ export interface InterviewTemplatePayload {
     avatar_image_url: string | null;
     hint_text?: string | null;
     max_response_seconds?: number | null;
+    criteria_weights?: number[] | null;
   }>;
   criteria: Array<{
     label: string;

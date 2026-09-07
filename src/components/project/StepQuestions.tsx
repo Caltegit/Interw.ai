@@ -15,7 +15,9 @@ import {
   Timer,
   RotateCcw,
   ImageIcon,
+  Scale,
 } from "lucide-react";
+import type { WeightableCriterion } from "./QuestionCriteriaWeights";
 import { QuestionAvatarDialog } from "./QuestionAvatarDialog";
 import { QuestionLibraryDialog } from "./QuestionLibraryDialog";
 import { useState, useId } from "react";
@@ -68,6 +70,8 @@ export interface Question {
   max_response_seconds: number | null;
   /** Avatar spécifique à cette question (remplace l'avatar du poste pour cette question). null = avatar du poste. */
   avatar_image_url: string | null;
+  /** Pondération des critères propre à cette question (ordre des critères du poste). null = pondération du poste. */
+  criteria_weights: number[] | null;
 }
 
 export const createEmptyQuestion = (): Question => ({
@@ -88,6 +92,7 @@ export const createEmptyQuestion = (): Question => ({
   hint_text: "",
   max_response_seconds: null,
   avatar_image_url: null,
+  criteria_weights: null,
 });
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
@@ -102,6 +107,7 @@ interface SortableQuestionProps {
   q: Question;
   questionsLength: number;
   projectAvatarUrl: string | null;
+  criteria: WeightableCriterion[];
   onEdit: () => void;
   onChangeAvatar: (url: string | null) => void;
   removeQuestion: (index: number) => void;
@@ -113,6 +119,7 @@ function SortableQuestion({
   q,
   questionsLength,
   projectAvatarUrl,
+  criteria,
   onEdit,
   onChangeAvatar,
   removeQuestion,
@@ -188,6 +195,19 @@ function SortableQuestion({
               <span className="hidden sm:inline">Ressources</span>
             </span>
           )}
+          {q.criteria_weights && q.criteria_weights.some((w) => (w ?? 0) > 0) && (
+            <span
+              className="shrink-0 inline-flex items-center gap-1 text-[11px] text-primary"
+              title={criteria
+                .map((c, i) => ({ label: c.label.trim(), w: q.criteria_weights?.[i] ?? 0 }))
+                .filter((c) => c.label && c.w > 0)
+                .map((c) => `${c.label} ${c.w}%`)
+                .join(" · ") || "Pondération personnalisée"}
+            >
+              <Scale className="h-3 w-3" />
+              <span className="hidden sm:inline">Pondérée</span>
+            </span>
+          )}
         </button>
 
         {showAvatarButton && (
@@ -252,9 +272,10 @@ interface StepQuestionsProps {
   questions: Question[];
   setQuestions: (q: Question[]) => void;
   projectAvatarUrl?: string | null;
+  criteria?: WeightableCriterion[];
 }
 
-export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null }: StepQuestionsProps) {
+export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null, criteria = [] }: StepQuestionsProps) {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -320,6 +341,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
       saveToLibrary: q.save_to_library,
       hintText: q.hint_text ?? "",
       maxResponseSeconds: q.max_response_seconds ?? null,
+      criteriaWeights: q.criteria_weights ?? null,
     });
     setFormOpen(true);
   };
@@ -343,6 +365,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
       save_to_library: !!form.saveToLibrary,
       hint_text: form.hintText ?? "",
       max_response_seconds: form.maxResponseSeconds ?? null,
+      criteria_weights: form.criteriaWeights ?? null,
     };
 
     if (editingIndex === null) {
@@ -397,6 +420,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
                 q={q}
                 questionsLength={questions.length}
                 projectAvatarUrl={projectAvatarUrl}
+                criteria={criteria}
                 onEdit={() => openEdit(i)}
                 onChangeAvatar={(url) => {
                   const updated = [...questions];
@@ -422,6 +446,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
         initial={initialForm}
         isEditing={editingIndex !== null}
         showSaveToLibrary={editingIndex === null || !questions[editingIndex]?.from_library}
+        criteria={criteria}
         onSubmit={handleFormSubmit}
       />
     </div>
