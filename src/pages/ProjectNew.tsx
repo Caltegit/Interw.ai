@@ -348,6 +348,7 @@ export default function ProjectNew() {
               hint_text: q.hint_text?.trim() || null,
               max_response_seconds: q.max_response_seconds ?? null,
               avatar_image_url: q.avatar_image_url ?? null,
+              criteria_weights: q.criteria_weights ?? null,
             })),
           )
           .select();

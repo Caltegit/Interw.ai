@@ -104,6 +104,7 @@ export default function ProjectEdit() {
                 hint_text: ((q as { hint_text?: string | null }).hint_text) ?? "",
                 max_response_seconds: ((q as { max_response_seconds?: number | null }).max_response_seconds) ?? null,
                 avatar_image_url: ((q as { avatar_image_url?: string | null }).avatar_image_url) ?? null,
+                criteria_weights: ((q as { criteria_weights?: number[] | null }).criteria_weights) ?? null,
               };
             })
           : [createEmptyQuestion()];
@@ -457,6 +458,7 @@ export default function ProjectEdit() {
           hint_text: q.hint_text?.trim() || null,
           max_response_seconds: q.max_response_seconds ?? null,
           avatar_image_url: q.avatar_image_url ?? null,
+          criteria_weights: q.criteria_weights ?? null,
         };
 
         let qId: string;
