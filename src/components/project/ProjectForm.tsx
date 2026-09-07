@@ -1127,6 +1127,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
               questions={questions}
               setQuestions={setQuestions}
               projectAvatarUrl={isEdit ? avatarPreview : (presetAvatarUrl ?? avatarPreview)}
+              criteria={criteria.map((c) => ({ label: c.label, weight: c.weight }))}
             />
           )}
 
