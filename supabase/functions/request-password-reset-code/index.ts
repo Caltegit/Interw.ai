@@ -2,7 +2,7 @@ import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
-import { RecoveryEmail } from '../_shared/email-templates/recovery.tsx'
+import { RecoveryCodeEmail } from '../_shared/email-templates/recovery-code.tsx'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
