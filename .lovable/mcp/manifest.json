@@ -53,7 +53,7 @@
       {
         "name": "list_candidats",
         "title": "Lister les candidats",
-        "description": "Liste les sessions candidats, avec filtre optionnel par poste, statut ou recherche sur le nom.",
+        "description": "Liste les candidats accessibles, avec score global, recommandation et notes par critère. Filtrable par poste, statut, recherche. Supporte le tri par score/date et la pagination. Quand la liste est tronquée, le total est indiqué.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -83,12 +83,36 @@
               "minLength": 1,
               "description": "Recherche sur le nom du candidat."
             },
+            "sort_by": {
+              "type": "string",
+              "enum": [
+                "date",
+                "score"
+              ],
+              "default": "date",
+              "description": "Tri : date de création (défaut) ou score global."
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc",
+              "description": "Ordre du tri."
+            },
             "limit": {
               "type": "integer",
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "description": "Nombre maximum de candidats retournés."
+              "description": "Nombre maximum de candidats retournés (max 100)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "description": "Index de départ pour la pagination."
             }
           },
           "additionalProperties": false,
