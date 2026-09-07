@@ -277,8 +277,20 @@ Renvoie la matrice avec l'outil fit_matrix.`;
       const aiRow = aiRows.find((r: any) => Number(r?.question_index) + indexOffset === i) ?? null;
       const aiCells = Array.isArray(aiRow?.cells) ? aiRow.cells : [];
       const cells: Record<string, any> = {};
+      const rowWeights: Record<string, number> = {};
       for (let j = 0; j < criteria.length; j++) {
         const c = criteria[j];
+        const w = effectiveWeight(q, j);
+        rowWeights[c.id] = w;
+        if (w === 0) {
+          // Critère explicitement exclu de cette question (poids 0).
+          cells[c.id] = {
+            score: null,
+            not_evaluated: true,
+            justification: "Non évalué : critère sans poids pour cette question.",
+          };
+          continue;
+        }
         const aiCell =
           aiCells.find(
             (x: any) =>
@@ -320,26 +332,30 @@ Renvoie la matrice avec l'outil fit_matrix.`;
         question_index: i,
         question_title: q.title ?? null,
         question_content: q.content,
+        weights: rowWeights,
         cells,
       });
     }
 
-    // Moyenne par critère (colonne) — seules les cases réellement évaluées comptent.
-    // Les cases sans élément (score null) sont exclues du calcul.
+    // Moyenne par critère (colonne) — pondérée par le poids de chaque question.
+    // Seules les cases réellement évaluées (score non nul, poids > 0) comptent.
     const criterion_averages: Record<string, number | null> = {};
     for (const c of criteria) {
-      const vals: number[] = [];
+      let sum = 0;
+      let total = 0;
       for (const r of rows) {
         const s = r.cells[c.id]?.score;
-        if (typeof s === "number" && Number.isFinite(s)) vals.push(s);
+        const w = r.weights?.[c.id] ?? 0;
+        if (typeof s === "number" && Number.isFinite(s) && w > 0) {
+          sum += s * w;
+          total += w;
+        }
       }
-      criterion_averages[c.id] = vals.length > 0
-        ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
-        : null;
+      criterion_averages[c.id] = total > 0 ? Math.round(sum / total) : null;
     }
 
     const fit_matrix = {
-      version: 3,
+      version: 4,
       generated_at: new Date().toISOString(),
       criteria: criteria.map((c: any) => ({
         id: c.id,
