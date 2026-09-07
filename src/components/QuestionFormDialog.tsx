@@ -392,6 +392,7 @@ export function QuestionFormDialog({
                 value={form.criteriaWeights ?? null}
                 onChange={(weights) => setForm((f) => ({ ...f, criteriaWeights: weights }))}
               />
+              </div>
             )}
           </section>
 
