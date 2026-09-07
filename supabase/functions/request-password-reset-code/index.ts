@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const SITE_NAME = 'interw'
+const SITE_NAME = 'Interw'
 const SENDER_DOMAIN = 'notify.interw.com'
 const FROM_DOMAIN = 'notify.interw.com'
 const FROM_NAME = 'Interw'
@@ -121,9 +121,9 @@ Deno.serve(async (req) => {
 
     if (insertError) throw insertError
 
-    const templateProps = { siteName: SITE_NAME, token: code }
-    const html = await renderAsync(React.createElement(RecoveryEmail, templateProps))
-    const text = await renderAsync(React.createElement(RecoveryEmail, templateProps), { plainText: true })
+    const templateProps = { siteName: SITE_NAME, token: code, expiresInMinutes: CODE_TTL_MINUTES }
+    const html = await renderAsync(React.createElement(RecoveryCodeEmail, templateProps))
+    const text = await renderAsync(React.createElement(RecoveryCodeEmail, templateProps), { plainText: true })
     const messageId = crypto.randomUUID()
 
     try {
