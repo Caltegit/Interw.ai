@@ -581,6 +581,7 @@ export default function ProjectDetail() {
               relance_level: q.relance_level ?? "medium",
               max_response_seconds: q.max_response_seconds ?? null,
               avatar_image_url: q.avatar_image_url ?? null,
+              criteria_weights: q.criteria_weights ?? null,
               scoring_criteria_ids: remapped && remapped.length > 0 ? remapped : null,
             };
           }),

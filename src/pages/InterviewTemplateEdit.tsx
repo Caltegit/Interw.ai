@@ -84,6 +84,7 @@ export default function InterviewTemplateEdit() {
               hint_text: (q.hint_text as string | null) ?? "",
               max_response_seconds: (q.max_response_seconds as number | null) ?? null,
               avatar_image_url: (q.avatar_image_url as string | null) ?? null,
+              criteria_weights: ((q.criteria_weights as number[] | null) ?? null),
             };
           })
         : [createEmptyQuestion()];
@@ -274,6 +275,7 @@ export default function InterviewTemplateEdit() {
             hint_text: q.hint_text?.trim() || null,
             max_response_seconds: q.max_response_seconds ?? null,
             avatar_image_url: q.avatar_image_url ?? null,
+            criteria_weights: q.criteria_weights ?? null,
           })) as never,
         );
       }

@@ -124,6 +124,7 @@ export function SaveAsTemplateDialog({
             hint_text: (q as unknown as { hint_text?: string | null }).hint_text ?? null,
             max_response_seconds: (q as unknown as { max_response_seconds?: number | null }).max_response_seconds ?? null,
             avatar_image_url: (q as unknown as { avatar_image_url?: string | null }).avatar_image_url ?? null,
+            criteria_weights: (q as unknown as { criteria_weights?: number[] | null }).criteria_weights ?? null,
           })) as never,
         );
       }
