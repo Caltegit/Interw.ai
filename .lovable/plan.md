@@ -9,7 +9,7 @@
 
 - Pendant l'entretien : chaque fois qu'une question est posée au candidat, son **texte est désormais enregistré**, même quand la question est posée par une vidéo ou un audio pré-enregistré (c'est ce cas qui n'était jamais enregistré aujourd'hui). Rien ne change pour le candidat : l'entretien se déroule exactement comme avant, on garde simplement une trace écrite de chaque question posée.
 - `src/pages/SessionDetail.tsx` (affichage) : filet de sécurité pour les anciennes sessions — avant chaque réponse candidat, afficher la question correspondante via `question_id` → `projects.questions` quand le message IA est vide ou absent.
-- `supabase/functions/generate-report/index.ts` : ne pas insérer de lignes vides (« persona : ») dans la transcription envoyée à l'IA quand un message IA a un contenu vide.
+- `supabase/functions/generate-report/index.ts` : ne pas insérer de lignes vides (« persona : ») dans la transcription envoyée à l'IA quand une ligne de question posée par l'IA a été enregistrée sans texte.
 
 ## Correctif 2 — Détection des réponses parasites
 
