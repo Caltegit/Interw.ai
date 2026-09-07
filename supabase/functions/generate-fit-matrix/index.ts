@@ -105,6 +105,17 @@ serve(async (req) => {
       answersByQuestionId.set(m.question_id, arr);
     }
 
+    // Pondération effective par question : la question peut surcharger le poids
+    // de chaque critère (tableau aligné sur l'ordre des critères du poste).
+    // Un poids à 0 = critère non évalué par cette question.
+    const effectiveWeight = (q: any, j: number): number => {
+      const arr = q?.criteria_weights;
+      if (Array.isArray(arr) && typeof arr[j] === "number" && Number.isFinite(arr[j])) {
+        return Math.max(0, Math.round(arr[j]));
+      }
+      return Math.max(0, Number(criteria[j]?.weight) || 0);
+    };
+
     const answersBlock = questions
       .map((q: any, i: number) => {
         const answers = (answersByQuestionId.get(q.id) ?? [])
@@ -115,14 +126,22 @@ serve(async (req) => {
               }`,
           )
           .join("\n");
-        return `[question_index=${i}] Q${i + 1} : ${q.content}\n${answers || "(aucune réponse enregistrée)"}`;
+        const evaluated = criteria
+          .map((c: any, j: number) => ({ label: c.label, w: effectiveWeight(q, j) }))
+          .filter((c: { label: string; w: number }) => c.w > 0)
+          .map((c: { label: string; w: number }) => `${c.label} (poids ${c.w}%)`)
+          .join(", ");
+        const scopeLine = evaluated
+          ? `Critères à évaluer pour CETTE question : ${evaluated}. Tout critère non listé ici doit recevoir evidence="none".`
+          : `Aucun critère à évaluer pour cette question : renvoie evidence="none" pour tous les critères.`;
+        return `[question_index=${i}] Q${i + 1} : ${q.content}\n${scopeLine}\n${answers || "(aucune réponse enregistrée)"}`;
       })
       .join("\n\n");
 
     const criteriaBlock = criteria
       .map(
         (c: any) =>
-          `- ${c.label} (poids ${c.weight}%)${c.description ? ` : ${c.description}` : ""}`,
+          `- ${c.label}${c.description ? ` : ${c.description}` : ""}`,
       )
       .join("\n");
 
@@ -139,12 +158,13 @@ ${answersBlock}
 
 Règles :
 1. Pour chaque couple (question, critère), base-toi UNIQUEMENT sur la réponse à cette question, pas sur la session entière.
-2. Le champ "question_index" doit reprendre EXACTEMENT la valeur indiquée dans le préfixe [question_index=…] du bloc de la question (numérotation 0-based : la première question a question_index=0, pas 1).
-3. Choisis obligatoirement une valeur "evidence" :
+2. Chaque question précise les critères à évaluer : ne note QUE ces critères pour cette question. Tous les autres reçoivent evidence="none".
+3. Le champ "question_index" doit reprendre EXACTEMENT la valeur indiquée dans le préfixe [question_index=…] du bloc de la question (numérotation 0-based : la première question a question_index=0, pas 1).
+4. Choisis obligatoirement une valeur "evidence" :
    - "none" : la réponse ne contient aucun élément pour évaluer ce critère. Le score sera automatiquement fixé à 50 (neutre) côté serveur ; ne cherche pas à deviner.
    - "clear" : la réponse contient un élément concret pour évaluer ce critère. Donne alors un score de 0 à 100 selon ton interprétation, et cite la phrase précise du candidat dans "quote".
-4. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
-5. Avec "clear", fournis "quote" (extrait exact) et si possible "message_id" (l'id [id=…] du message cité). N'invente jamais un message_id.
+5. Justification = 1 phrase concrète (max 140 caractères), pas de jargon RH.
+6. Avec "clear", fournis "quote" (extrait exact) et si possible "message_id" (l'id [id=…] du message cité). N'invente jamais un message_id.
 
 Renvoie la matrice avec l'outil fit_matrix.`;
 
