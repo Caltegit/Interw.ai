@@ -40,6 +40,8 @@ export interface FitMatrixRow {
   question_index: number;
   question_title?: string | null;
   question_content: string;
+  /** Poids par critère propres à cette question (absent = poids du poste) */
+  weights?: Record<string, number>;
   cells: Record<string, FitMatrixCell>;
 }
 
@@ -110,18 +112,28 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
 
   const hasMatrix = !!(matrix && matrix.rows && matrix.rows.length > 0);
 
+  // Poids effectifs d'une ligne : pondération propre à la question si présente,
+  // sinon pondération du poste.
+  const rowWeight = (r: FitMatrixRow, criterionId: string, fallback: number) => {
+    const w = r.weights?.[criterionId];
+    return typeof w === "number" ? w : fallback || 0;
+  };
+
   const columnAverages = useMemo(() => {
     if (!hasMatrix || !matrix) return {} as Record<string, number | null>;
     const out: Record<string, number | null> = {};
     for (const c of matrix.criteria) {
-      const scores = matrix.rows
-        .map((r) => r.cells[c.id])
-        .filter((cell): cell is FitMatrixCell => isInformative(cell))
-        .map((cell) => cell.score)
-        .filter((v): v is number => typeof v === "number");
-      out[c.id] = scores.length > 0
-        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-        : null;
+      let sum = 0;
+      let total = 0;
+      for (const r of matrix.rows) {
+        const cell = r.cells[c.id];
+        if (!isInformative(cell) || typeof cell.score !== "number") continue;
+        const w = rowWeight(r, c.id, c.weight);
+        if (w <= 0) continue;
+        sum += cell.score * w;
+        total += w;
+      }
+      out[c.id] = total > 0 ? Math.round(sum / total) : null;
     }
     return out;
   }, [matrix, hasMatrix]);
@@ -136,8 +148,9 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
         const cell = r.cells[c.id];
         const s = isInformative(cell) ? cell?.score : null;
         if (typeof s === "number") {
-          sum += s * (c.weight || 0);
-          weight += c.weight || 0;
+          const w = rowWeight(r, c.id, c.weight);
+          sum += s * w;
+          weight += w;
         }
       }
       out[r.question_id] = weight > 0 ? Math.round(sum / weight) : null;
