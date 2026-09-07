@@ -32,6 +32,5 @@ Rien d'autre ne change : les outils restent en lecture seule et le périmètre d
 
 - Nouvelle vue `mcp_candidats` en `security_invoker = on` : `sessions` jointe à `reports` (score, recommandation, `criteria_scores`), `is_demo` exclu. Les règles d'accès des tables sous-jacentes continuent de s'appliquer telles quelles, donc aucun élargissement d'accès. Grants : `authenticated`, `service_role`.
 - `src/lib/mcp/tools/list-candidats.ts` : lecture sur `mcp_candidats`, nouveaux paramètres `sort_by` (`score` | `date`, défaut `date`), `order` (`asc` | `desc`), `offset`, `limit` (max 100). Réponse enrichie de `total`, `offset`, `next_offset` (nul si fin de liste) et texte explicite du type « 100 candidats sur 213 ». `count: "exact"` sur la requête.
-- Migration séparée pour la sécurité : suppression des règles `Authenticated can view shared reports` (`reports`) et `Authenticated can view shared session messages` (`session_messages`). Les partages nominatifs restent couverts par `has_project_access`, et l'accès public par lien passe par le chemin dédié — à revalider après migration.
 - Le connecteur `supabase/functions/mcp/index.ts` est régénéré automatiquement à partir de `src/lib/mcp/`, puis déployé.
 - Vérification finale : rejouer les comptages pour Marie (attendu 6 / 94 / 47 / 0 hors Ads up) et appeler la liste triée par score sur un poste à plus de 100 candidats.
