@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
           from: `${FROM_NAME} <${FROM_LOCAL_PART}@${FROM_DOMAIN}>`,
           reply_to: REPLY_TO_EMAIL,
           sender_domain: SENDER_DOMAIN,
-          subject: 'Votre code de réinitialisation',
+          subject: 'Votre code de connexion Interw',
           html,
           text,
           purpose: 'transactional',
