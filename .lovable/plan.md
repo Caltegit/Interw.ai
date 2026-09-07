@@ -1,35 +1,37 @@
-# Connecteur IA : ce que verrait Marie Paquer (simulation)
+# Connecteur IA : simulation Marie Paquer + amélioration des outils
 
-J'ai rejoué en base, avec l'identité exacte de Marie Paquer (Ads up), les quatre outils du connecteur. Voici le résultat réel, puis ce qu'il faut corriger avant de lui annoncer l'installation.
+## 1. Simulation corrigée — Marie Paquer (Ads up)
 
-## Résultat de la simulation
+Ma première mesure était fausse : j'avais utilisé le mauvais identifiant. Refaite avec son vrai compte, Marie est bien propriétaire d'Ads up, avec le rôle administrateur (pas super-administrateur).
 
-| Outil | Ce que Marie obtient | Sur le total |
+| Outil | Ce que Marie obtient | Hors Ads up |
 | --- | --- | --- |
-| Lister les postes | **0 poste** | 136 postes en base, dont 6 chez Ads up |
-| Lister les candidats | 94 entretiens Ads up | 1 682 en base |
-| Rapport d'entretien | 47 rapports Ads up | — |
-| Transcription | 763 échanges Ads up | 13 009 en base |
+| Lister les postes | 6 postes (soit la totalité des postes Ads up) | 0 |
+| Lister les candidats | 94 entretiens Ads up | 0 |
+| Rapport d'entretien | 47 rapports Ads up | 0 |
+| Transcription | 763 échanges Ads up | 0 |
 
-Bonne nouvelle : aucune donnée d'une autre entreprise n'apparaît sur les candidats, rapports et transcriptions. Le connecteur ne dispose d'aucun accès privilégié : il agit avec le compte de la personne connectée, exactement comme si elle naviguait dans l'application.
+Le cloisonnement est bon : le connecteur agit avec le compte de la personne connectée, sans aucun privilège supplémentaire. Le test sur Domaine Chappelle (Albo) a été fait avec un compte super-administrateur, qui voit volontairement tout : ce n'est pas une fuite.
 
-Deux problèmes ressortent quand même.
+Un point reste à corriger côté sécurité : une règle autorise **toute personne connectée** à lire un rapport dès qu'un lien de partage actif existe, sans vérifier son entreprise. Cela concerne 253 rapports d'autres entreprises aujourd'hui.
 
-## Problème 1 — Marie ne voit aucun poste
+## 2. Les deux vrais manques du connecteur
 
-Les règles d'accès aux postes n'autorisent que trois cas : la personne a créé le poste, le poste lui a été partagé nommément, ou elle est propriétaire de l'entreprise. Marie n'est dans aucun de ces cas (Ads up appartient à un autre compte, et aucun des 6 postes ne lui est attribué). Résultat : son assistant répondra « aucun poste » et elle ne pourra pas enchaîner sur ses candidats.
+Le retour est juste :
 
-À corriger : autoriser les membres d'une entreprise à voir les postes de leur entreprise, comme c'est déjà le cas pour les candidats et les rapports.
+- « Lister les candidats » ne renvoie ni score, ni recommandation, ni détail par critère. Pour répondre à « qui sont les meilleurs ? », l'assistant doit ouvrir les rapports un par un.
+- La liste plafonne à 100 résultats sans dire qu'il en reste. Sur un poste à 213 candidats, l'assistant croit avoir tout vu.
 
-## Problème 2 — les rapports partagés sont visibles par tout le monde
+### Ce que je change
 
-Une règle laisse **toute personne connectée** lire un rapport dès qu'un lien de partage actif existe pour ce rapport, sans vérifier qu'elle appartient à l'entreprise concernée. Aujourd'hui cela expose **253 rapports d'autres entreprises**. Marie pourrait les lire si elle en connaissait l'identifiant — via le connecteur ou via l'application.
+« Lister les candidats » renvoie désormais, pour chaque candidat : score global, recommandation, note par critère, en plus des informations actuelles. Deux nouveaux réglages : un tri (par score ou par date) et une pagination avec le nombre total et un curseur pour la suite. L'assistant indique alors clairement « 100 sur 213 » et peut demander la suite.
 
-À corriger : réserver cette lecture aux personnes réellement destinataires du partage (lien public non connecté ou partage nominatif), et non à tout compte connecté.
+Rien d'autre ne change : les outils restent en lecture seule et le périmètre de données est identique.
 
-## Détails techniques
+## 3. Détails techniques
 
-- Correction 1 : remplacer la règle de lecture `Project visibility v3` sur `projects` par une version qui ajoute `organization_id = get_user_organization_id(auth.uid())`, en gardant les cas existants (créateur, `visible_to_user_ids`, propriétaire, super-admin).
-- Correction 2 : supprimer la règle `Authenticated can view shared reports` sur `reports` et la règle jumelle `Authenticated can view shared session messages` sur `session_messages`; l'accès par lien de partage continue de passer par le chemin public dédié, et `has_project_access` couvre les partages nominatifs.
-- Les deux corrections passent par une migration de base de données. Aucun changement côté interface ni côté connecteur : les outils `list_postes`, `list_candidats`, `get_rapport`, `get_transcript` restent inchangés.
-- Vérification après migration : rejouer les mêmes comptages pour Marie (attendu : 6 postes, 94 candidats, 47 rapports, 0 donnée hors Ads up) et vérifier qu'un lien de partage public fonctionne toujours.
+- Nouvelle vue `mcp_candidats` en `security_invoker = on` : `sessions` jointe à `reports` (score, recommandation, `criteria_scores`), `is_demo` exclu. Les règles d'accès des tables sous-jacentes continuent de s'appliquer telles quelles, donc aucun élargissement d'accès. Grants : `authenticated`, `service_role`.
+- `src/lib/mcp/tools/list-candidats.ts` : lecture sur `mcp_candidats`, nouveaux paramètres `sort_by` (`score` | `date`, défaut `date`), `order` (`asc` | `desc`), `offset`, `limit` (max 100). Réponse enrichie de `total`, `offset`, `next_offset` (nul si fin de liste) et texte explicite du type « 100 candidats sur 213 ». `count: "exact"` sur la requête.
+- Migration séparée pour la sécurité : suppression des règles `Authenticated can view shared reports` (`reports`) et `Authenticated can view shared session messages` (`session_messages`). Les partages nominatifs restent couverts par `has_project_access`, et l'accès public par lien passe par le chemin dédié — à revalider après migration.
+- Le connecteur `supabase/functions/mcp/index.ts` est régénéré automatiquement à partir de `src/lib/mcp/`, puis déployé.
+- Vérification finale : rejouer les comptages pour Marie (attendu 6 / 94 / 47 / 0 hors Ads up) et appeler la liste triée par score sur un poste à plus de 100 candidats.
