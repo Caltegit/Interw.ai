@@ -8,8 +8,9 @@
 
 ## Correction
 
-1. **Créer un e-mail français dédié au code**
-   - Afficher clairement le code à 6 chiffres.
+1. **Réparer l’e-mail de code existant**
+   - Rétablir l’affichage du code à 6 chiffres, perdu lors de la refonte des e-mails de vendredi.
+   - Repasser le texte en français.
    - Préciser qu’il expire après 15 minutes.
    - Retirer le bouton, puisqu’aucun clic n’est nécessaire dans ce parcours.
 
