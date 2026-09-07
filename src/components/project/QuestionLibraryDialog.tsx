@@ -102,6 +102,7 @@ export function QuestionLibraryDialog({ open, onOpenChange, onSelect }: Question
         hint_text: (t as { hint_text?: string | null }).hint_text ?? "",
         max_response_seconds: (t as { max_response_seconds?: number | null }).max_response_seconds ?? null,
         avatar_image_url: t.avatar_image_url ?? null,
+        criteria_weights: null,
       }));
     onSelect(questions);
     onOpenChange(false);

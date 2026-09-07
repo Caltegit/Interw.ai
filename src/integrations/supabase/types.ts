@@ -612,6 +612,7 @@ export type Database = {
           category: string | null
           content: string
           created_at: string
+          criteria_weights: Json | null
           follow_up_enabled: boolean
           hint_text: string | null
           id: string
@@ -630,6 +631,7 @@ export type Database = {
           category?: string | null
           content: string
           created_at?: string
+          criteria_weights?: Json | null
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
@@ -648,6 +650,7 @@ export type Database = {
           category?: string | null
           content?: string
           created_at?: string
+          criteria_weights?: Json | null
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
@@ -1391,6 +1394,7 @@ export type Database = {
           avatar_image_url: string | null
           content: string
           created_at: string
+          criteria_weights: Json | null
           follow_up_enabled: boolean
           hint_text: string | null
           id: string
@@ -1410,6 +1414,7 @@ export type Database = {
           avatar_image_url?: string | null
           content: string
           created_at?: string
+          criteria_weights?: Json | null
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
@@ -1429,6 +1434,7 @@ export type Database = {
           avatar_image_url?: string | null
           content?: string
           created_at?: string
+          criteria_weights?: Json | null
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
