@@ -1,33 +1,46 @@
-# Plan — Questions passées écrasées + questions non enregistrées
+# Pondération des critères par question (étape 3)
 
-## Constat vérifié en base (session Hicham Anouar)
+## Objectif
 
-1. **Les 3 réponses « hors sujet » sont en réalité des questions passées.** Les questions 5 (Utilisation de l'IA), 6 (Veille) et 7 (Rémunération) portent toutes la trace conservée « [Question passée] » : le candidat a cliqué sur « passer la question ». Mais la caméra continuait d'enregistrer et le fichier a été envoyé ; la transcription automatique est ensuite repassée dessus, y a trouvé du son ambiant (une vidéo YouTube sur les fractions) et **a écrasé la mention « question passée » par ce texte**. L'IA a donc noté ce bruit de fond comme des réponses d'entretien — d'où le 28/100.
-   Ce n'est pas un problème de micro : le micro fonctionnait, il a simplement capté l'ambiance pendant un moment sans réponse.
-2. **Les questions posées ne sont pas enregistrées.** Sur cette session, seules 2 lignes IA existent (accueil et clôture) et elles sont vides. Le texte des questions posées n'est jamais conservé, donc la transcription affiche « en attente » et le rapport travaille sur un échange incomplet.
+Dans la création d'un poste, chaque question porte sa propre pondération des critères. Une question n'est plus notée « à plat » sur tous les critères : on dit explicitement ce qu'elle mesure, et à quel point. Plus de critères évalués par hasard, plus de cases vides dans la matrice.
 
-## Correctif 1 — Ne plus écraser une question passée
+## Ce que tu verras
 
-- Quand le candidat passe une question, le média enregistré pendant ce laps de temps **n'est plus envoyé à la transcription** : la mention « question passée » est définitive.
-- La question passée reste **non notée** dans le rapport (au lieu d'être notée sur du bruit de fond), et apparaît clairement comme « passée par le candidat ».
-- Filet de sécurité : la transcription automatique ignore toute réponse déjà marquée « question passée », y compris pour les anciennes sessions.
+1. **Étape 2 (critères)** : inchangée. C'est toujours là qu'on définit les critères du poste, leur description et leur poids global.
+2. **Étape 3 (questions)** : dans la fenêtre d'une question, juste sous le réglage du temps de réponse, un bloc dépliant **« Pondération des critères »**.
+   - Replié par défaut, avec un résumé : les 2-3 critères les plus pondérés, ou « pondération par défaut » si rien n'a été touché.
+   - Déplié : la liste de tous les critères du poste — uniquement le titre et un curseur, pas de description.
+   - Les curseurs partent des poids définis à l'étape 2.
+   - Le total reste toujours à 100 : bouger un curseur rééquilibre automatiquement les autres, exactement comme à l'étape des critères.
+   - Mettre un critère à 0 = cette question ne l'évalue pas.
+   - Un bouton « Réinitialiser » remet les poids de l'étape 2.
+3. **Sur la liste des questions** : une petite mention des critères principaux de chaque question, pour voir d'un coup d'œil la couverture.
+4. **Si aucun critère n'existe encore** (question ajoutée avant l'étape 2) : le bloc affiche simplement qu'il faut d'abord définir les critères.
 
-## Correctif 2 — Réparer la session d'Hicham
+## Effet sur la notation
 
-- Remettre les 3 questions concernées sur « question passée » et régénérer son rapport, pour qu'il ne soit plus noté sur une vidéo de maths.
-- La question 4 (« Fierté projet ») a une transcription hachée alors que sa vidéo est bien enregistrée : relancer sa transcription pour tenter de récupérer le texte complet.
-
-## Correctif 3 — Enregistrer les questions posées
-
-- Pendant l'entretien, chaque fois qu'une question est posée, son **texte est désormais conservé**, y compris quand la question est jouée en vidéo ou en audio pré-enregistré (le cas qui n'était jamais enregistré). Rien ne change pour le candidat.
-- Affichage : pour les entretiens déjà passés, la question est reconstituée à partir du poste quand son texte manque, au lieu d'afficher « en attente ».
-- Génération du rapport : ne plus insérer de lignes vides dans l'échange transmis à l'IA.
+- La matrice « Fit poste » utilise ces poids : la note d'un critère est la **moyenne pondérée** de ses cases, question par question, au lieu d'une moyenne simple. Une question dont le poids est 0 pour un critère n'est plus notée sur ce critère et n'entre plus dans sa moyenne.
+- L'IA reçoit aussi l'information : pour chaque question, on lui indique quels critères elle doit évaluer et lesquels ignorer.
+- **Postes déjà en cours** : rien ne change tant qu'on ne touche à rien. Les questions existantes gardent la pondération de l'étape 2 par défaut. Après ajustement, un clic sur « Régénérer la matrice » sur un entretien applique les nouveaux poids.
 
 ## Détails techniques
 
-- `src/pages/InterviewStart.tsx` : `handleSkipQuestion` ne transmet plus `videoSegmentUrl` / `audioSegmentUrl` (le média reste stocké, il n'alimente plus la transcription) ; ajout de la persistance du texte de la question posée avec son `question_id`, y compris sur le chemin média pré-enregistré.
-- `supabase/functions/transcribe-session/index.ts` : exclure les messages dont `content_raw = '[Question passée]'` ou `content = '[Question passée]'` de la liste des cibles.
-- `supabase/functions/generate-report/index.ts` : exclure les réponses « [Question passée] » de la notation et les signaler comme non répondues ; ignorer les lignes IA vides dans la transcription envoyée à l'IA.
-- `src/pages/SessionDetail.tsx` / `SessionReportView` : repli sur `projects.questions` via `question_id` quand la ligne de question est vide.
-- Réparation ponctuelle de la session par mise à jour ciblée des 3 messages, puis régénération du rapport via le bouton existant.
-- Validation : `bun run build` ; les fonctions modifiées partent à la prochaine publication.
+**Base de données** (migration)
+- Nouvelle colonne `questions.criteria_weights jsonb` (nullable) : `{ "<criterion_id>": 0-100 }`. `null` = pondération héritée de `evaluation_criteria.weight`.
+- Même colonne sur `interview_template_questions` pour que les modèles conservent le réglage.
+
+**Front**
+- `src/components/QuestionFormDialog.tsx` : nouveau champ `criteriaWeights` dans le formulaire ; bloc `Collapsible` sous le bloc timer, rendu par un nouveau composant `QuestionCriteriaWeights.tsx` (liste `label` + `Slider`, badge de valeur, bouton réinitialiser). Rééquilibrage via `rebalance` / `equalize` / `normalizeToTotal` de `src/lib/rebalanceWeights.ts` (déjà utilisé par `StepCriteria`), sans verrous.
+- `src/components/project/StepQuestions.tsx` : passe la liste des critères de l'étape 2 au dialogue, transporte `criteria_weights` dans son état local et l'affiche en résumé sur la carte question.
+- `src/pages/ProjectDetail.tsx` : ajouter `criteria_weights` au `select` des questions et au remapping lors de la duplication (les clés sont des ids de critères, à remapper comme `scoring_criteria_ids`).
+- `loadInterviewTemplate.ts` + enregistrement en modèle : transporter le champ.
+
+**Backend**
+- `supabase/functions/generate-fit-matrix/index.ts` :
+  - résoudre pour chaque question un poids effectif par critère (`criteria_weights` sinon `evaluation_criteria.weight`) ;
+  - injecter ces poids dans le prompt par question (« critères à évaluer », poids 0 = à ignorer, cellule `null`) ;
+  - `criterion_averages` devient une moyenne pondérée : `Σ(score × poids) / Σ(poids)` sur les cases notées avec poids > 0 ;
+  - conserver les poids dans `fit_matrix.rows[].weights` pour l'affichage.
+- Affichage matrice (`SessionReportView` / composant matrice) : griser les cases à poids 0 et afficher le poids au survol.
+
+**Validation** : `bun run build`, puis régénération de la matrice sur une session de test pour vérifier les nouvelles moyennes.
