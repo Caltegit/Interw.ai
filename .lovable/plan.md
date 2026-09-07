@@ -1,25 +1,27 @@
-# Le connecteur répond, mais Claude ne l'appelle plus
+# Plan — Transcription des questions IA + détection des réponses parasites
 
-## Diagnostic (vérifié à l'instant)
+## Constat (vérifié sur la session de Hicham Anouar)
 
-- Le connecteur en ligne est sain : fiche publique OK (« Interw »), appel sans identification rejeté proprement avec la bonne invitation d'authentification.
-- Les journaux du connecteur ne montrent **aucun appel venant de Claude** à l'heure du test : seules mes propres vérifications apparaissent. Claude se déconnecte côté client, sans jamais interroger les outils — d'où « aucun outil disponible » alors que le serveur est opérationnel.
-- La configuration d'autorisation est correcte (serveur OAuth actif, consentement sur `https://interw.com/.lovable/oauth/consent`, clés de signature asymétriques en place).
-- Conclusion : au redéploiement, Claude a invalidé sa session du connecteur (jeton rafraîchi refusé ou manifeste re-vérifié pendant l'interruption) et a masqué les outils au lieu de proposer une reconnexion.
+1. **Questions IA absentes de la transcription** : seules 2 lignes IA sont enregistrées (accueil vide + clôture). Les questions posées en vidéo/audio pré-enregistré ne sont jamais écrites en base, et les transitions ne portent pas le `question_id`. Résultat : la transcription affiche les questions « en attente » et le rapport se base sur un fil incomplet.
+2. **Réponses parasites notées comme de vraies réponses** : 3 réponses de la session sont en réalité la bande-son d'une vidéo YouTube (« Bonjour tout le monde ! On se retrouve aujourd'hui… »). L'IA les a notées comme des réponses, ce qui a plombé le score (28/100) sans signaler l'anomalie au recruteur.
 
-## Ce qu'il faut faire (côté Claude)
+## Correctif 1 — Enregistrer les questions posées
 
-1. Ouvrir les réglages du connecteur Interw dans Claude (l'écran de la capture), cliquer **Disconnect**.
-2. Reconnecter : nouvelle autorisation avec le compte Interw, approuver l'écran de consentement.
-3. Dans une conversation neuve, demander la liste des postes, puis « les meilleurs candidats » sur un poste à plus de 100 candidats : la réponse doit contenir les scores et indiquer le total (« 100 sur 213 »).
+- `src/pages/InterviewStart.tsx` : à chaque question posée (média ou texte), enregistrer le message IA avec le **texte de la question** (`nextQ.content`) et son `question_id`, même quand la question est une vidéo/audio pré-enregistrée. Les transitions gardent leur texte actuel.
+- `src/pages/SessionDetail.tsx` (affichage) : filet de sécurité pour les anciennes sessions — avant chaque réponse candidat, afficher la question correspondante via `question_id` → `projects.questions` quand le message IA est vide ou absent.
+- `supabase/functions/generate-report/index.ts` : ne pas insérer de lignes vides (« persona : ») dans la transcription envoyée à l'IA quand un message IA a un contenu vide.
 
-## Côté application (seule modification proposée)
+## Correctif 2 — Détection des réponses parasites
 
-- Page **Réglages → Connexion IA** : ajouter une ligne d'aide — après une mise à jour du connecteur, si les outils disparaissent dans Claude ou ChatGPT, déconnecter puis reconnecter le connecteur. Rien d'autre ne change.
+- Migration : ajouter la colonne `transcript_flag` (texte, valeur nulle par défaut) sur `session_messages`.
+- `supabase/functions/transcribe-session/index.ts` : le prompt de transcription demande en plus à l'IA de classer chaque segment — `external_audio` (lecture d'une vidéo/musique/voix multiples, manifestement pas le candidat qui répond) — et stocke le résultat dans `transcript_flag`.
+- `supabase/functions/generate-report/index.ts` : les réponses marquées `external_audio` sont **exclues de la notation** et signalées dans le rapport comme alerte d'intégrité (« réponse non évaluée : audio externe détecté »), au lieu d'être notées comme du contenu.
+- `src/pages/SessionDetail.tsx` : badge « Audio externe suspecté » sur la réponse concernée.
+- Pas de re-traitement automatique des anciennes sessions (coût/quota) : la détection s'applique aux nouvelles transcriptions ; la session de Hicham Anouar peut être re-transcrite manuellement via le bouton existant si tu veux la tester.
 
 ## Détails techniques
 
-- `POST /functions/v1/mcp` sans jeton → 401 + `WWW-Authenticate: Bearer realm="mcp"` ; un jeton de session applicative (HS256, sans `client_id`) est rejeté `JOSEAlgNotAllowed` : le vérificateur fonctionne et refuse à juste titre les jetons non-OAuth.
-- Journaux de la fonction `mcp` entre 13:03 et 13:08 : uniquement `auth.no_bearer_token` / `auth.token_rejected` issus de mes tests ; aucune trace des appels `initialize`/`tools/list` de Claude.
-- `supabase--debug_oauth_server` : OAuth activé, DCR activé, URL de consentement cohérente, aucune anomalie détectée. JWKS : une clé ES256 active.
-- Fichiers déployés : 4 outils présents avec tri par score et pagination ; vue `mcp_candidats` en base.
+- Colonne `transcript_flag text null` sur `session_messages` (migration unique, table existante : pas de GRANT supplémentaire).
+- Prompt Gemini de transcription étendu : retour JSON `{"segments":[...], "flag":"external_audio"|null}` ; rétrocompatible si le champ est absent.
+- `generate-report` : filtre `transcript_flag is distinct from 'external_audio'` pour les preuves de scoring, ajout d'une ligne d'alerte par réponse exclue dans le bloc `red_flags` existant.
+- Build `bun run build` pour valider ; les fonctions modifiées partent à la prochaine publication.
