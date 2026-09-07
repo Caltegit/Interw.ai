@@ -386,11 +386,13 @@ export function QuestionFormDialog({
             </div>
 
             {criteria && (
+              <div className="mt-6 border-t pt-5">
               <QuestionCriteriaWeights
                 criteria={criteria}
                 value={form.criteriaWeights ?? null}
                 onChange={(weights) => setForm((f) => ({ ...f, criteriaWeights: weights }))}
               />
+              </div>
             )}
           </section>
 
