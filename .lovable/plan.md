@@ -2,7 +2,7 @@
 
 ## Objectif
 
-Dans la création d'un poste, chaque question porte sa propre pondération des critères. Une question n'est plus notée « à plat » sur tous les critères : on dit explicitement ce qu'elle mesure, et à quel point. Plus de critères évalués par hasard, plus de cases vides dans la matrice.
+Dans la création d'un poste, chaque question peut porter sa propre pondération des critères : on dit explicitement ce qu'elle mesure, et à quel point. C'est un réglage optionnel — si le recruteur n'y touche pas, la notation reste exactement celle d'aujourd'hui. Dès qu'il ajuste une question, celle-ci n'est plus notée « à plat » : plus de critères évalués par hasard, plus de cases vides dans la matrice.
 
 ## Ce que tu verras
 
