@@ -3607,7 +3607,8 @@ export default function InterviewStart() {
             .update({
               status: "cancelled" as any,
               cancelled_at: new Date().toISOString(),
-            })
+              end_reason: "no_media",
+            } as any)
             .eq("id", sessionId);
           logger.warn("interview_finalize_no_media", { sessionId });
           return;
@@ -3618,8 +3619,9 @@ export default function InterviewStart() {
           .update({
             status: "completed" as any,
             completed_at: new Date().toISOString(),
+            end_reason: reason,
             ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-          })
+          } as any)
           .eq("id", sessionId);
 
 
