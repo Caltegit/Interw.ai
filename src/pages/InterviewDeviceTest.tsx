@@ -667,7 +667,6 @@ export default function InterviewDeviceTest() {
     cameraConfirmed &&
     soundStatus === "ok" &&
     recorderStatus === "ok" &&
-    sttStatus === "ok" &&
     !networkBlocking;
 
   // Quand toutes les vérifications sont vertes : transition automatique vers l'écran suivant
