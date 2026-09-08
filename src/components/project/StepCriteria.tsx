@@ -11,8 +11,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, BookOpen, BookmarkPlus, Lock, Unlock, Scale } from "lucide-react";
+import { Plus, Trash2, BookOpen, BookmarkPlus, BookmarkCheck, Loader2, Lock, Unlock, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { CriteriaLibraryDialog, type LibraryCriterion } from "./CriteriaLibraryDialog";
 import {
   addCriterionWeight,
@@ -228,28 +229,26 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                             "h-8 w-8 shrink-0",
                             c.save_to_library && "text-primary",
                           )}
-                          onClick={() => {
-                            if (!c.label.trim()) {
-                              toast({
-                                title: "Nom manquant",
-                                description: "Renseigne le libellé du critère avant de l'ajouter aux ressources.",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
-                            updateField(i, { save_to_library: !c.save_to_library });
-                          }}
-                          aria-label="Ajouter aux ressources"
+                          disabled={savingIndex === i || !!c.save_to_library}
+                          onClick={() => saveToResources(i)}
+                          aria-label={c.save_to_library ? "Déjà dans vos ressources" : "Ajouter aux ressources"}
                         >
-                          <BookmarkPlus className="h-4 w-4" />
+                          {savingIndex === i ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : c.save_to_library ? (
+                            <BookmarkCheck className="h-4 w-4" />
+                          ) : (
+                            <BookmarkPlus className="h-4 w-4" />
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <p>Ajouter aux ressources</p>
+                        <p>{c.save_to_library ? "Déjà dans vos ressources" : "Ajouter aux ressources"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
+
 
                 <Button
                   variant="ghost"
