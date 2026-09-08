@@ -1954,6 +1954,7 @@ export type Database = {
           consent_given_at: string | null
           created_at: string
           duration_seconds: number | null
+          end_reason: string | null
           id: string
           is_demo: boolean
           last_activity_at: string | null
@@ -1992,6 +1993,7 @@ export type Database = {
           consent_given_at?: string | null
           created_at?: string
           duration_seconds?: number | null
+          end_reason?: string | null
           id?: string
           is_demo?: boolean
           last_activity_at?: string | null
@@ -2030,6 +2032,7 @@ export type Database = {
           consent_given_at?: string | null
           created_at?: string
           duration_seconds?: number | null
+          end_reason?: string | null
           id?: string
           is_demo?: boolean
           last_activity_at?: string | null

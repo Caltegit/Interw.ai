@@ -362,6 +362,25 @@ export function SessionReportView({
 
           <div className="flex flex-col gap-4">
             <AudioHealthBanner health={audioHealth} />
+            {(() => {
+              const totalQuestions = ((project?.questions as any[]) ?? []).length;
+              const answered = candidateVideos.length;
+              if (!totalQuestions || answered >= totalQuestions) return null;
+              const reasonLabels: Record<string, string> = {
+                candidate_stop: "le candidat a choisi de terminer avant la fin",
+                skipped_last_question: "le candidat a passé la dernière question",
+                silence_timeout: "arrêt automatique après une longue absence de réponse",
+                max_duration: "durée maximale de l'entretien atteinte",
+                no_media: "aucune réponse n'a pu être enregistrée",
+              };
+              const reason = reasonLabels[(session as any).end_reason as string];
+              return (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
+                  <span className="font-medium">Entretien incomplet : {answered} réponse{answered > 1 ? "s" : ""} sur {totalQuestions} questions.</span>
+                  {reason ? <span className="text-muted-foreground"> Raison de fin : {reason}.</span> : null}
+                </div>
+              );
+            })()}
             <DecisionBanner
               readOnly={readOnly}
               candidateName={session.candidate_name}
