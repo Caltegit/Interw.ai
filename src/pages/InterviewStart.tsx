@@ -684,7 +684,7 @@ export default function InterviewStart() {
         title: "Session terminée",
         description: "Aucune reprise après 2 minutes de pause.",
       });
-      endInterviewRef.current?.();
+      endInterviewRef.current?.("silence_timeout");
     }, SILENCE_TIMEOUT_MS - SILENCE_AUTOPAUSE_MS);
   }, [toast]);
 
@@ -848,7 +848,7 @@ export default function InterviewStart() {
 
 
   // Ref to endInterview so timers can call it without stale closures
-  const endInterviewRef = useRef<(() => void) | null>(null);
+  const endInterviewRef = useRef<((reason?: EndReason) => void) | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1326,7 +1326,7 @@ export default function InterviewStart() {
       if (!autoEndTriggeredRef.current) {
         autoEndTriggeredRef.current = true;
         toast({ title: "Session terminé", description: "La durée maximale a été atteinte." });
-        endInterviewRef.current?.();
+        endInterviewRef.current?.("max_duration");
       }
     }, remaining);
 
@@ -2607,7 +2607,7 @@ export default function InterviewStart() {
         autoEndTriggeredRef.current = true;
         console.log(`Auto-ending interview: ${maxDurationMinutes}min max duration`);
         toast({ title: "Session terminé", description: `La durée maximale de ${maxDurationMinutes} minutes a été atteinte.` });
-        endInterviewRef.current?.();
+        endInterviewRef.current?.("max_duration");
       }
     }, MAX_DURATION_MS);
     resetSilenceTimer();
@@ -3136,7 +3136,7 @@ export default function InterviewStart() {
         ]);
       }
       if (token.aborted) { aborted = true; return; }
-      endInterviewRef.current?.();
+      endInterviewRef.current?.("all_questions_done");
       return;
     }
 
@@ -3356,7 +3356,7 @@ export default function InterviewStart() {
       try { featuredPlayerRef.current?.stop(); } catch {}
       featuredPlayerRef.current = null;
       stopListening();
-      await endInterview();
+      await endInterview("skipped_last_question");
       return;
     }
 
@@ -3501,7 +3501,7 @@ export default function InterviewStart() {
   };
 
   const endInterviewStartedRef = useRef(false);
-  const endInterview = async () => {
+  const endInterview = async (reason: EndReason = "candidate_stop") => {
     // Guard against double invocation
     if (endInterviewStartedRef.current) return;
     endInterviewStartedRef.current = true;
@@ -4584,7 +4584,7 @@ export default function InterviewStart() {
                 {/* CTA "Terminer la session" si fini */}
                 {interviewFinished && (
                   <div className="flex flex-col items-center gap-2">
-                    <Button className="w-full h-16 text-lg rounded-2xl" size="lg" variant="destructive" onClick={endInterview}>
+                    <Button className="w-full h-16 text-lg rounded-2xl" size="lg" variant="destructive" onClick={() => endInterview("all_questions_done")}>
                       Terminer la session
                     </Button>
                   </div>
@@ -4731,7 +4731,7 @@ export default function InterviewStart() {
               className="w-full min-h-[52px] justify-start"
               onClick={() => {
                 setShowEndDialog(false);
-                endInterview();
+                endInterview("candidate_stop");
               }}
             >
               <Send className="mr-2 h-4 w-4 shrink-0" />
