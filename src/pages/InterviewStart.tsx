@@ -2522,22 +2522,26 @@ export default function InterviewStart() {
     } catch {}
 
     // Mark session as in_progress + last_activity_at
-    supabase
+    // NB : le client PostgREST n'envoie la requête qu'à la résolution de la
+    // promesse — le .then() est indispensable, sans lui rien n'est écrit.
+    void supabase
       .from("sessions")
       .update({
         status: "in_progress" as any,
         started_at: new Date().toISOString(),
         last_activity_at: new Date().toISOString(),
       })
-      .eq("id", session.id);
+      .eq("id", session.id)
+      .then(() => {});
 
     // Heartbeat toutes les 30 s pour conserver une trace d'activité
     if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     heartbeatTimerRef.current = setInterval(() => {
-      supabase
+      void supabase
         .from("sessions")
         .update({ last_activity_at: new Date().toISOString() })
-        .eq("id", session.id);
+        .eq("id", session.id)
+        .then(() => {});
     }, 30_000);
 
     // Start camera stream
