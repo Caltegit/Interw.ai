@@ -265,9 +265,13 @@ export default function Landing() {
           <Link
             to="/"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="text-[22px] font-semibold tracking-tight"
+            className="flex items-center"
           >
-            Interw
+            <img
+              src="/logo-interw.svg"
+              alt="Interw"
+              className="h-7 w-auto"
+            />
           </Link>
           <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
             <a href="#produit" className="hover:text-foreground transition-colors">
