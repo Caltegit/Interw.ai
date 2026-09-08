@@ -209,7 +209,7 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   />
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center min-w-[44px] rounded-full px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap",
+                      "inline-flex items-center justify-center shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap",
                       (c.weight || 0) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
                     )}
                   >
