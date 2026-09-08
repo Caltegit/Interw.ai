@@ -3454,10 +3454,11 @@ export default function InterviewStart() {
 
       setCurrentQuestionIndex((prev) => prev + 1);
       if (session?.id) {
-        supabase
+        void supabase
           .from("sessions")
           .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-          .eq("id", session.id);
+          .eq("id", session.id)
+          .then(() => {});
       }
 
       // 5. Amène la barre à 100 % puis retire l'overlay AVANT toute lecture audio/vidéo.
