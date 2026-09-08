@@ -1,0 +1,47 @@
+# Pourquoi Paul a décroché — ce que disent les données
+
+## Ce qui s'est passé pour Paul Moitié (7 septembre)
+
+```text
+17:24  invitation ouverte, session créée
+17:28  consentement accepté, caméra + micro obtenus (Chrome 152, Windows, webcam Full HD)
+17:29  l'IA pose la question 1
+17:31  réponse 1 enregistrée (vidéo + transcription OK, ~2 min de parole)
+17:31  session marquée « terminée » 8 secondes plus tard
+17:32  rapport généré + e-mail de remerciement envoyé
+```
+
+Il n'y a aucune trace d'erreur technique : caméra et micro fonctionnaient, la vidéo est montée, la transcription est complète. La fin arrive 8 secondes après la validation de la réponse 1, ce qui exclut les arrêts automatiques (pause de 2 minutes sans reprise, durée maximale). Le scénario compatible avec ces données est un arrêt volontaire : le bouton « Arrêter la session » puis « Terminer et envoyer mes réponses ».
+
+Ce n'est pas certain à 100 %, et c'est justement le problème : **rien dans l'application n'enregistre pourquoi une session se termine**. On ne peut pas distinguer un abandon volontaire d'un arrêt automatique ou d'un plantage.
+
+## Une anomalie de fond découverte au passage
+
+Sur les 239 sessions des 30 derniers jours, **aucune** n'a de date de démarrage, de dernière activité, ni de progression enregistrée. Zéro sur 239. Aucune session n'est jamais passée au statut « en cours ».
+
+Cause : dans le code de l'entretien, ces enregistrements sont écrits sans être déclenchés — l'ordre est préparé mais jamais envoyé au serveur (contrairement à l'enregistrement du consentement, écrit juste à côté avec la bonne syntaxe, et qui lui est bien présent en base).
+
+Conséquences concrètes :
+- Impossible de savoir à quelle question un candidat s'est arrêté.
+- La reprise après fermeture d'onglet ne peut pas fonctionner : elle ne se déclenche que si la session est « en cours ».
+- Aucune détection d'abandon possible (le signal de vie toutes les 30 secondes n'arrive jamais).
+- Les statistiques de poste et la relance d'abandon reposent sur des données vides.
+- Durée d'entretien absente.
+
+## Ce que je propose de corriger
+
+1. **Rétablir l'enregistrement du démarrage, de l'activité et de la progression** dans le parcours candidat : passage au statut « en cours », heure de démarrage, signal de vie, numéro de question atteint. Correction ciblée, même syntaxe que l'enregistrement du consentement qui fonctionne.
+2. **Enregistrer la raison de fin de chaque session** : arrêt volontaire du candidat, dernière question atteinte, silence prolongé, durée maximale, question passée sur la dernière question. Stockée avec la session et affichée dans la fiche candidat côté recruteur.
+3. **Afficher la progression réelle dans la fiche candidat** : « arrêté à la question 1 sur 10 » plutôt qu'un rapport à 39/100 sans contexte.
+4. **Ajouter une confirmation plus explicite** avant « Terminer et envoyer mes réponses » quand il reste des questions : rappeler combien de questions restent et que l'entretien ne pourra pas être repris.
+
+## Détails techniques
+
+- Fichier principal : `src/pages/InterviewStart.tsx`. Les appels `supabase.from("sessions").update(...)` aux lignes ~2527, ~2538 (heartbeat), ~3295 et ~3452 ne sont ni `await` ni suivis de `.then()` : le client PostgREST n'envoie la requête qu'à la résolution de la promesse. Ajouter `void ...then(() => {})` (motif déjà utilisé ligne 2441).
+- Raison de fin : nouvelle colonne `sessions.end_reason` (texte, nullable) + écriture dans `endInterview` via un paramètre de raison passé par chaque appelant (`endInterviewRef` lignes 687, 1329, 2606, 3135, `handleSkipQuestion` 3354, boutons 4581 et dialogue 4728). Migration avec les GRANT nécessaires ; mise à jour depuis le client anonyme, déjà couverte par la policy « Anon can update sessions on active projects ».
+- Affichage recruteur : `useSessionDetail` + fiche session pour la progression et la raison de fin.
+- Aucune modification des seuils micro, de la logique d'enregistrement ou de la génération de rapport.
+
+## Ce que je ne peux pas affirmer
+
+La cause exacte du départ de Paul reste une déduction. Après le correctif 2, ce type de cas sera tranché sans ambiguïté. Si tu veux en avoir le cœur net pour lui, la seule option aujourd'hui est de le relancer avec une nouvelle invitation.
