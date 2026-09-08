@@ -47,6 +47,64 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
   const [locked, setLocked] = useState<Set<number>>(new Set());
   const focusIndexRef = useRef<number | null>(null);
   const labelRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+
+  const saveToResources = async (i: number) => {
+    const c = criteria[i];
+    if (!c.label.trim()) {
+      toast({
+        title: "Nom manquant",
+        description: "Renseigne le libellé du critère avant de l'ajouter aux ressources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingIndex(i);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user) throw new Error("Session expirée");
+      const { data: orgId } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+      if (!orgId) throw new Error("Organisation introuvable");
+
+      const { data: existing } = await supabase
+        .from("criteria_templates")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("label", c.label.trim())
+        .maybeSingle();
+
+      if (existing) {
+        updateField(i, { save_to_library: true });
+        toast({ title: "Déjà dans vos ressources" });
+        return;
+      }
+
+      const { error } = await supabase.from("criteria_templates").insert({
+        organization_id: orgId,
+        created_by: user.id,
+        label: c.label.trim(),
+        description: c.description,
+        weight: c.weight,
+        scoring_scale: c.scoring_scale as never,
+        applies_to: c.applies_to as never,
+        anchors: c.anchors,
+        category: c.category || null,
+      });
+      if (error) throw error;
+
+      updateField(i, { save_to_library: true });
+      toast({ title: "Critère ajouté aux ressources" });
+    } catch (e) {
+      toast({
+        title: "Ajout impossible",
+        description: e instanceof Error ? e.message : "Réessaie dans un instant.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingIndex(null);
+    }
+  };
 
   useEffect(() => {
     if (criteria.length === 0) return;
