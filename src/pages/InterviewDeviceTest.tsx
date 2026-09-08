@@ -24,7 +24,6 @@ import {
   Volume2,
   Copy,
   Check,
-  MessageSquare,
   ChevronDown,
   Settings2,
   HelpCircle,
@@ -192,9 +191,6 @@ export default function InterviewDeviceTest() {
   const [netKbps, setNetKbps] = useState<number | null>(null);
   const [netQuality, setNetQuality] = useState<SpeedQuality | null>(null);
 
-  const [sttStatus, setSttStatus] = useState<Status>("idle");
-  const [sttError, setSttError] = useState<string | null>(null);
-
   const [devices, setDevices] = useState<DeviceLists>({ audio: [], video: [] });
   const [selectedAudioId, setSelectedAudioId] = useState<string | null>(getStoredDeviceId("audio"));
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(getStoredDeviceId("video"));
@@ -208,8 +204,8 @@ export default function InterviewDeviceTest() {
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
   // Parcours guidé pas-à-pas : une étape visible à la fois.
-  // mic / sound / camera sont toujours visibles ; browser / stt / network ne s'intercalent qu'en cas d'erreur bloquante.
-  type Step = "mic" | "sound" | "camera" | "browser" | "stt" | "network" | "recap";
+  // mic / sound / camera sont toujours visibles ; browser / network ne s'intercalent qu'en cas d'erreur bloquante.
+  type Step = "mic" | "sound" | "camera" | "browser" | "network" | "recap";
   const [currentStep, setCurrentStep] = useState<Step>("mic");
   const [cameraConfirmed, setCameraConfirmed] = useState(false);
   const stepAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -362,8 +358,8 @@ export default function InterviewDeviceTest() {
             : !recorderOk
               ? "Impossible d'enregistrer depuis votre micro. Essayez-en un autre."
               : peakOk
-                ? "Votre voix est trop faible. Rapprochez-vous du micro et relancez le test."
-                : "Nous n'avons rien entendu. Vérifiez votre micro, ou choisissez-en un autre, puis relancez le test.",
+                ? "Nous vous avons entendu, mais pas assez longtemps. Relancez le test et lisez la phrase en entier, sans vous presser."
+                : "Votre voix est trop faible. Rapprochez-vous du micro, parlez plus fort, puis relancez le test.",
         );
         setMicRetries((n) => n + 1);
       }
@@ -435,41 +431,6 @@ export default function InterviewDeviceTest() {
       setSoundRetries((n) => n + 1);
     }
   };
-
-  const testStt = useCallback(async () => {
-    setSttStatus("testing");
-    setSttError(null);
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const blockMsg = "La reconnaissance vocale n'a pas démarré. Utilisez Chrome (Android, Mac, PC) ou Safari (iPhone) pour réaliser l'entretien.";
-    if (!SR) { setSttError(blockMsg); setSttStatus("error"); return; }
-    try {
-      const recognition = new SR();
-      recognition.lang = "fr-FR";
-      recognition.interimResults = true;
-      recognition.continuous = false;
-      const ok = await new Promise<boolean>((resolve) => {
-        let settled = false;
-        const finish = (v: boolean) => {
-          if (settled) return; settled = true;
-          try { recognition.onstart = null; recognition.onerror = null; recognition.onend = null; } catch { /* ignore */ }
-          try { recognition.stop(); } catch { /* ignore */ }
-          resolve(v);
-        };
-        recognition.onstart = () => finish(true);
-        recognition.onerror = (e: any) => {
-          if (e?.error === "no-speech" || e?.error === "aborted") return finish(true);
-          finish(false);
-        };
-        setTimeout(() => finish(false), 2500);
-        try { recognition.start(); } catch { finish(false); }
-      });
-      if (ok) setSttStatus("ok");
-      else { setSttError(blockMsg); setSttStatus("error"); }
-    } catch {
-      setSttError(blockMsg);
-      setSttStatus("error");
-    }
-  }, []);
 
   const finishNetwork = useCallback((kbps: number) => {
     setNetKbps(kbps);
@@ -571,7 +532,6 @@ export default function InterviewDeviceTest() {
       }
       if (cancelled) return;
       testNetwork();
-      testStt();
     })();
     return () => {
       cancelled = true;
@@ -697,7 +657,7 @@ export default function InterviewDeviceTest() {
     return "idle";
   }, [netStatus, netQuality]);
 
-  const allTests: Status[] = [browserStatus, camStatus, micStatus, soundStatus, sttStatus, networkStatusComputed];
+  const allTests: Status[] = [browserStatus, camStatus, micStatus, soundStatus, networkStatusComputed];
   const verifiedCount = allTests.filter((s) => s === "ok" || s === "warning").length;
 
   const canContinue =
@@ -724,7 +684,7 @@ export default function InterviewDeviceTest() {
   // Plus de bouton « Continuer quand même » dès lors que le micro échoue : on
   // ne propose un contournement que pour son/réseau (jamais pour le micro).
   const showSkipPrimary =
-    !canContinue && !browserBlocking && sttStatus !== "error" && micStatus === "ok" && (
+    !canContinue && !browserBlocking && micStatus === "ok" && (
       camRetries >= 2 || soundRetries >= 2
     );
 
@@ -745,11 +705,10 @@ export default function InterviewDeviceTest() {
   const stepOrder: Step[] = useMemo(() => {
     const base: Step[] = ["mic", "sound", "camera"];
     if (browserCompat.current.level === "blocked") base.push("browser");
-    if (sttStatus === "error") base.push("stt");
     if (networkBlocking) base.push("network");
     base.push("recap");
     return base;
-  }, [sttStatus, networkBlocking]);
+  }, [networkBlocking]);
 
   const stepStatus = (s: Step): Status => {
     switch (s) {
@@ -757,7 +716,6 @@ export default function InterviewDeviceTest() {
       case "mic": return micStatus;
       case "sound": return soundStatus;
       case "camera": return cameraConfirmed ? "ok" : camStatus === "ok" ? "idle" : camStatus;
-      case "stt": return sttStatus;
       case "network": return networkStatusComputed;
       case "recap": return "idle";
     }
@@ -789,7 +747,7 @@ export default function InterviewDeviceTest() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, browserStatus, micStatus, soundStatus, sttStatus, networkStatusComputed, cameraConfirmed]);
+  }, [currentStep, browserStatus, micStatus, soundStatus, networkStatusComputed, cameraConfirmed]);
 
   const stepIndex = stepOrder.indexOf(currentStep);
   const totalSteps = stepOrder.length - 1; // hors récap
@@ -799,7 +757,6 @@ export default function InterviewDeviceTest() {
     mic: "Micro",
     sound: "Son",
     camera: "Caméra",
-    stt: "Reconnaissance vocale",
     network: "Connexion",
     recap: "Récapitulatif",
   };
@@ -821,13 +778,15 @@ export default function InterviewDeviceTest() {
               <p className="text-sm text-muted-foreground">Quelques secondes pour s'assurer que tout fonctionne.</p>
             </div>
             <div className="flex flex-col items-end gap-0.5 shrink-0">
-              <button
-                type="button"
-                onClick={requestContinueWithCheck}
-                className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
-              >
-                Passer
-              </button>
+              {micStatus === "ok" && (
+                <button
+                  type="button"
+                  onClick={requestContinueWithCheck}
+                  className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                >
+                  Passer
+                </button>
+              )}
               <span className="text-xs font-medium text-muted-foreground tabular-nums">
                 {progressVerified}/{progressTests.length}
               </span>
@@ -1139,25 +1098,7 @@ export default function InterviewDeviceTest() {
 
 
 
-          {currentStep === "stt" && (
-            <TestCard
-              key="step-stt"
-              status={sttStatus}
-              title="Reconnaissance vocale"
-              icon={MessageSquare}
-              fullWidth
-              forceExpanded
-            >
-              {sttStatus === "error" && sttError && (
-                <div className="space-y-3">
-                  <p className="text-xs text-destructive">{sttError}</p>
-                  <Button onClick={copyLink} variant="outline" size="sm" className="w-full">
-                    {linkCopied ? (<><Check className="mr-2 h-4 w-4" />Lien copié</>) : (<><Copy className="mr-2 h-4 w-4" />Copier le lien de l'entretien</>)}
-                  </Button>
-                </div>
-              )}
-            </TestCard>
-          )}
+          
 
           {currentStep === "network" && (
             <TestCard
@@ -1203,7 +1144,6 @@ export default function InterviewDeviceTest() {
                   ["mic", micStatus] as const,
                   ["sound", soundStatus] as const,
                   ["camera", (cameraConfirmed ? "ok" : camStatus) as Status] as const,
-                  ["stt", sttStatus] as const,
                   ["network", networkStatusComputed] as const,
                 ]).map(([key, st]) => {
                   const Icon = stepIcons[key as Step];
