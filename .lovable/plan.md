@@ -12,6 +12,6 @@ Copier, sans aucune modification, les trois images existantes :
 - `painting-pier.jpeg`
 - `painting-shore.jpeg`
 
-vers le dossier `fonds-landing/` de vos fichiers, puis les afficher dans le chat.
+vers le dossier `fonds-landing/` de vos fichiers, puis les afficher dans le chat en pièces jointes téléchargeables.
 
 Aucun changement sur la landing ni sur aucun fichier du projet.
