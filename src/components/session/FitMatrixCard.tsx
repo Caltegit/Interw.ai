@@ -280,7 +280,6 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                     title={`${c.label} · poids ${c.weight}%`}
                   >
                     <div className="break-words">{c.label}</div>
-                    <div className="text-[10px] text-muted-foreground/70">{c.weight}%</div>
                   </th>
                 ))}
               </tr>
@@ -317,10 +316,10 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
                         <td key={c.id} className="p-0.5 align-top">
                           <div
                              className="flex w-full h-12 items-center justify-center rounded-md border border-dashed border-border/60 bg-background text-sm font-medium text-muted-foreground/70"
-                             title="Critère non évalué pour cette question"
-                             aria-label="Critère non évalué"
+                             title="Aucune preuve suffisante trouvée pour évaluer"
+                             aria-label="Aucune preuve suffisante trouvée pour évaluer"
                            >
-                             Non évalué
+                             —
                            </div>
                         </td>
                       );
@@ -404,6 +403,9 @@ export function FitMatrixCard({ matrix, sessionId, questions, readOnly, onGoToMe
 
         <p className="mt-3 text-xs text-muted-foreground">
           Cliquez sur une note pour voir la justification et sauter à l'extrait vidéo.
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          « — » : aucune preuve suffisante trouvée pour évaluer ce critère sur cette question.
         </p>
       </CardContent>
     </Card>
