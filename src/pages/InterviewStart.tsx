@@ -4738,6 +4738,14 @@ export default function InterviewStart() {
           <p className="text-sm text-muted-foreground">
             Choisissez ce que vous souhaitez faire de cette session :
           </p>
+          {questions.length - (currentQuestionIndex + 1) > 0 && (
+            <p className="text-sm font-medium text-destructive">
+              Il reste {questions.length - (currentQuestionIndex + 1)} question
+              {questions.length - (currentQuestionIndex + 1) > 1 ? "s" : ""} à répondre. Si vous
+              terminez maintenant, vous ne pourrez pas reprendre l'entretien.
+            </p>
+          )}
+
           <div className="flex flex-col gap-2 pt-2">
             <Button
               className="w-full min-h-[52px] justify-start"
