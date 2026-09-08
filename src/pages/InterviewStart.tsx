@@ -3296,10 +3296,11 @@ export default function InterviewStart() {
 
     setCurrentQuestionIndex(nextQIdx);
     if (sessionId) {
-      supabase
+      void supabase
         .from("sessions")
         .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-        .eq("id", sessionId);
+        .eq("id", sessionId)
+        .then(() => {});
     }
 
     if (nMediaType !== "written") {
