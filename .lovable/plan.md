@@ -3,10 +3,10 @@
 ## Ce qui change
 
 ### 1. Plus de pourcentages dans l'en-tête
-Sous chaque nom de critère, la ligne « 35% » disparaît. Elle變 varie selon la question et surcharge la lecture. Seul le libellé du critère reste.
+Sous chaque nom de critère, la ligne « 35% » disparaît : elle varie selon la question et surcharge la lecture. Seul le libellé du critère reste (le détail du poids s'affiche toujours au survol).
 
 ### 2. « Non évalué » devient un signe discret
-Les cases sans preuve suffisante affichent un simple tiret long « — » en gris clair, dans une case au contour pointillé, au lieu du texte « Non évalué ».
+Les cases sans preuve suffisante affichent un simple tiret « — » en gris clair, dans une case au contour pointillé, au lieu du texte « Non évalué ».
 
 ### 3. Légende sous le tableau
 Sous la matrice, à côté de la phrase existante :
@@ -15,7 +15,10 @@ Sous la matrice, à côté de la phrase existante :
 ## Ce qui ne change pas
 - Le calcul des moyennes (les cases sans preuve restent exclues).
 - Les pondérations par question, toujours utilisées pour le calcul.
-- Le bouton « Régénérer » : il relance l'analyse IA et remplace la matrice une fois le nouveau résultat obtenu. Sans régénération, la matrice existante est conservée telle quelle.
+- Le bouton « Régénérer » : il relance l'analyse et remplace la matrice une fois le nouveau résultat obtenu. Sans régénération, la matrice existante est conservée telle quelle.
+
+## Vérification
+Capture d'écran d'un rapport candidat existant pour te montrer le rendu final avant de conclure.
 
 ## Détail technique
 `src/components/session/FitMatrixCard.tsx` uniquement :
