@@ -11,8 +11,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, BookOpen, BookmarkPlus, Lock, Unlock, Scale } from "lucide-react";
+import { Plus, Trash2, BookOpen, BookmarkPlus, BookmarkCheck, Loader2, Lock, Unlock, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { CriteriaLibraryDialog, type LibraryCriterion } from "./CriteriaLibraryDialog";
 import {
   addCriterionWeight,
@@ -46,6 +47,64 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
   const [locked, setLocked] = useState<Set<number>>(new Set());
   const focusIndexRef = useRef<number | null>(null);
   const labelRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [savingIndex, setSavingIndex] = useState<number | null>(null);
+
+  const saveToResources = async (i: number) => {
+    const c = criteria[i];
+    if (!c.label.trim()) {
+      toast({
+        title: "Nom manquant",
+        description: "Renseigne le libellé du critère avant de l'ajouter aux ressources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSavingIndex(i);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user) throw new Error("Session expirée");
+      const { data: orgId } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
+      if (!orgId) throw new Error("Organisation introuvable");
+
+      const { data: existing } = await supabase
+        .from("criteria_templates")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("label", c.label.trim())
+        .maybeSingle();
+
+      if (existing) {
+        updateField(i, { save_to_library: true });
+        toast({ title: "Déjà dans vos ressources" });
+        return;
+      }
+
+      const { error } = await supabase.from("criteria_templates").insert({
+        organization_id: orgId,
+        created_by: user.id,
+        label: c.label.trim(),
+        description: c.description,
+        weight: c.weight,
+        scoring_scale: c.scoring_scale as never,
+        applies_to: c.applies_to as never,
+        anchors: c.anchors,
+        category: c.category || null,
+      });
+      if (error) throw error;
+
+      updateField(i, { save_to_library: true });
+      toast({ title: "Critère ajouté aux ressources" });
+    } catch (e) {
+      toast({
+        title: "Ajout impossible",
+        description: e instanceof Error ? e.message : "Réessaie dans un instant.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingIndex(null);
+    }
+  };
 
   useEffect(() => {
     if (criteria.length === 0) return;
@@ -228,28 +287,26 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                             "h-8 w-8 shrink-0",
                             c.save_to_library && "text-primary",
                           )}
-                          onClick={() => {
-                            if (!c.label.trim()) {
-                              toast({
-                                title: "Nom manquant",
-                                description: "Renseigne le libellé du critère avant de l'ajouter aux ressources.",
-                                variant: "destructive",
-                              });
-                              return;
-                            }
-                            updateField(i, { save_to_library: !c.save_to_library });
-                          }}
-                          aria-label="Ajouter aux ressources"
+                          disabled={savingIndex === i || !!c.save_to_library}
+                          onClick={() => saveToResources(i)}
+                          aria-label={c.save_to_library ? "Déjà dans vos ressources" : "Ajouter aux ressources"}
                         >
-                          <BookmarkPlus className="h-4 w-4" />
+                          {savingIndex === i ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : c.save_to_library ? (
+                            <BookmarkCheck className="h-4 w-4" />
+                          ) : (
+                            <BookmarkPlus className="h-4 w-4" />
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top">
-                        <p>Ajouter aux ressources</p>
+                        <p>{c.save_to_library ? "Déjà dans vos ressources" : "Ajouter aux ressources"}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
+
 
                 <Button
                   variant="ghost"

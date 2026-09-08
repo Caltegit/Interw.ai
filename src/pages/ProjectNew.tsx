@@ -439,27 +439,6 @@ export default function ProjectNew() {
             applies_to: c.applies_to as never,
           })),
         );
-
-        const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
-        if (toLibrary.length > 0) {
-          const { error: libError } = await supabase.from("criteria_templates").insert(
-            toLibrary.map((c) => ({
-              organization_id: organizationId,
-              created_by: user.id,
-              label: c.label,
-              description: c.description,
-              weight: c.weight,
-              scoring_scale: c.scoring_scale as never,
-              applies_to: c.applies_to as never,
-              anchors: c.anchors,
-              category: c.category || null,
-            })),
-          );
-          if (libError) throw libError;
-          toast({
-            title: `${toLibrary.length} critère${toLibrary.length > 1 ? "s" : ""} ajouté${toLibrary.length > 1 ? "s" : ""} aux ressources`,
-          });
-        }
       }
 
       const { data: check } = await supabase
