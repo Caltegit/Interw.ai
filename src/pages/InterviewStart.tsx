@@ -47,6 +47,16 @@ const SILENT_AUDIO_DATA_URI =
 // Mettre à false pour réactiver la voix IA de fin.
 const DISABLE_CLOSING_VOICE = true;
 
+// Raison enregistrée en base à la fin d'une session candidat.
+type EndReason =
+  | "all_questions_done"
+  | "candidate_stop"
+  | "skipped_last_question"
+  | "silence_timeout"
+  | "max_duration"
+  | "no_media";
+
+
 // (retiré) déclarations globales webkitSpeechRecognition / SpeechRecognition :
 // la reconnaissance vocale live a été désactivée côté candidat.
 
