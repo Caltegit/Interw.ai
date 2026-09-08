@@ -4,6 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, BookOpen, BookmarkPlus, Lock, Unlock, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CriteriaLibraryDialog, type LibraryCriterion } from "./CriteriaLibraryDialog";
@@ -34,6 +41,7 @@ interface StepCriteriaProps {
 }
 
 export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
+  const { toast } = useToast();
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [locked, setLocked] = useState<Set<number>>(new Set());
   const focusIndexRef = useRef<number | null>(null);
@@ -186,10 +194,10 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   value={c.label}
                   onChange={(e) => updateField(i, { label: e.target.value })}
                   placeholder={`Critère ${i + 1}`}
-                  className="flex-[0.55] min-w-0 h-9"
+                  className="flex-1 min-w-0 h-9"
                 />
 
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2 w-[240px] sm:w-[300px] shrink-0">
                   <Slider
                     value={[c.weight || 0]}
                     min={0}
@@ -201,28 +209,46 @@ export function StepCriteria({ criteria, setCriteria }: StepCriteriaProps) {
                   />
                   <span
                     className={cn(
-                      "inline-flex items-center justify-center min-w-[44px] rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
+                      "inline-flex items-center justify-center min-w-[44px] rounded-full px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap",
                       (c.weight || 0) > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
                     )}
                   >
-                    {c.weight || 0}%
+                    {c.weight || 0} % de pondération
                   </span>
                 </div>
 
                 {canSaveToLibrary && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-8 w-8 shrink-0",
-                      c.save_to_library && "text-primary",
-                    )}
-                    onClick={() => updateField(i, { save_to_library: !c.save_to_library })}
-                    aria-label="Ajouter aux ressources"
-                    title="Ajouter aux ressources"
-                  >
-                    <BookmarkPlus className="h-4 w-4" />
-                  </Button>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-8 w-8 shrink-0",
+                            c.save_to_library && "text-primary",
+                          )}
+                          onClick={() => {
+                            if (!c.label.trim()) {
+                              toast({
+                                title: "Nom manquant",
+                                description: "Renseigne le libellé du critère avant de l'ajouter aux ressources.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            updateField(i, { save_to_library: !c.save_to_library });
+                          }}
+                          aria-label="Ajouter aux ressources"
+                        >
+                          <BookmarkPlus className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Ajouter aux ressources</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
 
                 <Button

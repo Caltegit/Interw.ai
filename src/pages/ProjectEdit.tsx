@@ -599,7 +599,7 @@ export default function ProjectEdit() {
       if (toLibrary.length > 0) {
         const { data: orgData } = await supabase.rpc("get_user_organization_id", { _user_id: user.id });
         if (orgData) {
-          await supabase.from("criteria_templates").insert(
+          const { error: libError } = await supabase.from("criteria_templates").insert(
             toLibrary.map((c) => ({
               organization_id: orgData,
               created_by: user.id,
@@ -612,6 +612,10 @@ export default function ProjectEdit() {
               category: c.category || null,
             })),
           );
+          if (libError) throw libError;
+          toast({
+            title: `${toLibrary.length} critère${toLibrary.length > 1 ? "s" : ""} ajouté${toLibrary.length > 1 ? "s" : ""} aux ressources`,
+          });
         }
       }
 

@@ -442,7 +442,7 @@ export default function ProjectNew() {
 
         const toLibrary = validCriteria.filter((c) => c.save_to_library && !c.from_library);
         if (toLibrary.length > 0) {
-          await supabase.from("criteria_templates").insert(
+          const { error: libError } = await supabase.from("criteria_templates").insert(
             toLibrary.map((c) => ({
               organization_id: organizationId,
               created_by: user.id,
@@ -455,6 +455,10 @@ export default function ProjectNew() {
               category: c.category || null,
             })),
           );
+          if (libError) throw libError;
+          toast({
+            title: `${toLibrary.length} critère${toLibrary.length > 1 ? "s" : ""} ajouté${toLibrary.length > 1 ? "s" : ""} aux ressources`,
+          });
         }
       }
 
