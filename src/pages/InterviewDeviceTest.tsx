@@ -760,7 +760,7 @@ export default function InterviewDeviceTest() {
     recap: "Récapitulatif",
   };
   const stepIcons: Record<Step, React.ComponentType<{ className?: string }>> = {
-    browser: Globe, mic: Mic, sound: Volume2, camera: Video, stt: MessageSquare, network: Wifi, recap: CheckCircle,
+    browser: Globe, mic: Mic, sound: Volume2, camera: Video, network: Wifi, recap: CheckCircle,
   };
   // L'étape micro/son/réseau peut être passée (best-effort) si elle est en erreur.
   const canSkipCurrent = currentStep === "sound" || currentStep === "network";
