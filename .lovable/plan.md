@@ -19,7 +19,11 @@ Ce n'est pas certain à 100 %, et c'est justement le problème : **rien dans l'a
 
 Sur les 239 sessions des 30 derniers jours, **aucune** n'a de date de démarrage, de dernière activité, ni de progression enregistrée. Zéro sur 239. Aucune session n'est jamais passée au statut « en cours ».
 
-Cause : dans le code de l'entretien, ces enregistrements sont écrits sans être déclenchés — l'ordre est préparé mais jamais envoyé au serveur (contrairement à l'enregistrement du consentement, écrit juste à côté avec la bonne syntaxe, et qui lui est bien présent en base).
+**Ce qui a déconné, concrètement.** Quand le candidat lance l'entretien, l'application prépare quatre enregistrements : « la session démarre », l'heure de démarrage, un signal de vie toutes les 30 secondes, et le numéro de la question en cours. Ces quatre ordres sont écrits dans le code, mais aucun n'est réellement envoyé au serveur : l'outil de base de données utilisé n'expédie une demande que lorsqu'on lui dit explicitement de l'exécuter. Ici cette instruction finale manque. Le code paraît donc correct à la lecture, ne provoque aucune erreur, n'affiche rien d'anormal — et n'écrit jamais rien.
+
+La preuve est dans les données : l'acceptation du consentement, écrite quelques lignes plus haut avec la formulation complète, est bien enregistrée pour toutes les sessions. Les quatre autres, écrites sans cette instruction finale, sont vides pour 239 sessions sur 239.
+
+Ce n'est donc pas une panne récente ni une régression liée à un changement précis : ces enregistrements n'ont probablement jamais fonctionné depuis leur ajout, et rien ne pouvait le signaler puisqu'il n'y a ni erreur ni alerte.
 
 Conséquences concrètes :
 - Impossible de savoir à quelle question un candidat s'est arrêté.
