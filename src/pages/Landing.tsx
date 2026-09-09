@@ -95,140 +95,9 @@ const SECTION_KEYS = [
   { key: "s3", image: productDashboard, background: paintingBay },
 ] as const;
 
-const PLAN_KEYS = [
-  {
-    key: "free",
-    monthly: 0,
-    annual: 0,
-    quote: false,
-    monthlyUnitKey: null,
-    annualUnitKey: null,
-    monthlyNoteKey: "forever",
-    annualNoteKey: "forever",
-    featured: false,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "—" },
-      { labelKey: "specs.pricePerInterview", valueKey: "values.perInterviewFlat5" },
-    ],
-  },
-  {
-    key: "plus",
-    monthly: 199,
-    annual: 169,
-    quote: false,
-    monthlyUnitKey: "perMonth",
-    annualUnitKey: "perMonth",
-    monthlyNoteKey: "billedMonthly",
-    annualNoteKey: "billedAnnually",
-    featured: false,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "100" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview4" },
-    ],
-  },
-  {
-    key: "pro",
-    monthly: 399,
-    annual: 329,
-    quote: false,
-    monthlyUnitKey: "perMonth",
-    annualUnitKey: "perMonth",
-    monthlyNoteKey: "billedMonthly",
-    annualNoteKey: "billedAnnually",
-    featured: true,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "300" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview3" },
-    ],
-  },
-  {
-    key: "enterprise",
-    monthly: null,
-    annual: null,
-    quote: true,
-    monthlyUnitKey: null,
-    annualUnitKey: null,
-    monthlyNoteKey: "annualOnly",
-    annualNoteKey: "annualOnly",
-    featured: false,
-    external: true,
-    specs: [
-      { labelKey: "specs.interviews", valueKey: "values.byVolume" },
-      { labelKey: "specs.beyond", valueKey: "values.negotiated" },
-    ],
-  },
-] as const;
 
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
-
-const PRICE_CLASS = "text-[28px] lg:text-4xl font-semibold tracking-tight";
-const QUOTE_PRICE_CLASS = "text-[24px] lg:text-4xl font-semibold tracking-tight";
-const NUMBER_FLOW_STYLE = {
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 0.85,
-} as const;
-const STATIC_PRICE_STYLE = {
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 0.85,
-  padding: "0.25em 0",
-  display: "inline-block",
-} as const;
-
-function PlanPrice({
-  monthly,
-  annual,
-  quote,
-  billing,
-  quoteLabel,
-  locale,
-}: {
-  monthly: number | null;
-  annual: number | null;
-  quote: boolean;
-  billing: "mensuel" | "annuel";
-  quoteLabel: string;
-  locale: string;
-}) {
-  if (quote || monthly === null || annual === null) {
-    return (
-      <span className={`${QUOTE_PRICE_CLASS}`} style={STATIC_PRICE_STYLE}>
-        {quoteLabel}
-      </span>
-    );
-  }
-
-  const value = billing === "annuel" ? annual : monthly;
-
-  if (monthly === annual) {
-    return (
-      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
-        {new Intl.NumberFormat(locale, {
-          style: "currency",
-          currency: "EUR",
-          maximumFractionDigits: 0,
-        }).format(value)}
-      </span>
-    );
-  }
-
-  return (
-    <NumberFlow
-      value={value}
-      locales={locale}
-      format={{ style: "currency", currency: "EUR", maximumFractionDigits: 0 }}
-      plugins={[continuous]}
-      transformTiming={{ duration: 500, easing: "ease-out" }}
-      spinTiming={{ duration: 900, easing: "ease-out" }}
-      opacityTiming={{ duration: 350, easing: "ease-out" }}
-      className={PRICE_CLASS}
-      style={NUMBER_FLOW_STYLE}
-    />
-  );
-}
 
 
 export default function Landing() {
@@ -236,10 +105,7 @@ export default function Landing() {
   const { t: tp } = useTranslation("pricing");
   const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
-  const { language } = useLanguage();
-  const priceLocale = language === "fr" ? "fr-FR" : "en-GB";
   const [scrolled, setScrolled] = useState(false);
-  const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
