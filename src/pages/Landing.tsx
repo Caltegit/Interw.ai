@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import NumberFlow, { continuous } from "@number-flow/react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +18,7 @@ import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
 import logoGardner from "@/assets/logos/logo-gardner.png";
-import { ArrowRight, ChevronDown, Gift } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 function DemoVideo() {
   const { i18n } = useTranslation();
