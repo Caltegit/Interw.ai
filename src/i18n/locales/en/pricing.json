@@ -1,48 +1,15 @@
 {
   "title": "Pricing",
-  "monthly": "Monthly",
-  "annual": "Annual",
-  "twoMonthsFree": "2 months free",
-  "note": "Prices exclude VAT. No commitment.",
-  "recommended": "Popular",
-  "forever": "Forever",
-  "billedMonthly": "Billed every month",
-  "billedAnnually": "Billed annually",
-  "annualCommitment": "Annual contract",
-  "annualOnly": "Annual billing only",
   "onQuote": "Custom",
-  "freeOffer": "10 interviews free",
-  "specs": {
-    "interviews": "Interviews / month",
-    "beyond": "Beyond that",
-    "pricePerInterview": "Price per interview"
-  },
-  "values": {
-    "byVolume": "Custom",
-    "perInterviewFlat5": "€5",
-    "perInterview5": "€5 per interview",
-    "perInterview4": "€4 per interview",
-    "perInterview3": "€3 per interview",
-    "negotiated": "Custom"
+  "custom": {
+    "title": "Custom",
+    "subtitle": "We adapt to your needs",
+    "cta": "Book a demo"
   },
   "plans": {
-    "free": {
-      "name": "Pay as you go",
-      "cta": "Start for free"
-    },
-    "plus": {
-      "name": "Plus",
-      "cta": "Start for free"
-    },
-    "pro": {
-      "name": "Pro",
-      "cta": "Start for free"
-    },
     "enterprise": {
       "name": "Enterprise",
       "cta": "Talk to the team"
     }
-  },
-  "perMonth": "/ mo",
-  "perYear": "/ yr"
+  }
 }

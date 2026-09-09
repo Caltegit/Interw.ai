@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import NumberFlow, { continuous } from "@number-flow/react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +18,7 @@ import logoLeclerc from "@/assets/logos/logo-leclerc.svg";
 import logoCastalie from "@/assets/logos/logo-castalie.svg";
 import logoAdsup from "@/assets/logos/logo-adsup-transparent.png";
 import logoGardner from "@/assets/logos/logo-gardner.png";
-import { ArrowRight, ChevronDown, Gift } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 function DemoVideo() {
   const { i18n } = useTranslation();
@@ -96,140 +95,9 @@ const SECTION_KEYS = [
   { key: "s3", image: productDashboard, background: paintingBay },
 ] as const;
 
-const PLAN_KEYS = [
-  {
-    key: "free",
-    monthly: 0,
-    annual: 0,
-    quote: false,
-    monthlyUnitKey: null,
-    annualUnitKey: null,
-    monthlyNoteKey: "forever",
-    annualNoteKey: "forever",
-    featured: false,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "—" },
-      { labelKey: "specs.pricePerInterview", valueKey: "values.perInterviewFlat5" },
-    ],
-  },
-  {
-    key: "plus",
-    monthly: 199,
-    annual: 169,
-    quote: false,
-    monthlyUnitKey: "perMonth",
-    annualUnitKey: "perMonth",
-    monthlyNoteKey: "billedMonthly",
-    annualNoteKey: "billedAnnually",
-    featured: false,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "100" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview4" },
-    ],
-  },
-  {
-    key: "pro",
-    monthly: 399,
-    annual: 329,
-    quote: false,
-    monthlyUnitKey: "perMonth",
-    annualUnitKey: "perMonth",
-    monthlyNoteKey: "billedMonthly",
-    annualNoteKey: "billedAnnually",
-    featured: true,
-    external: false,
-    specs: [
-      { labelKey: "specs.interviews", value: "300" },
-      { labelKey: "specs.beyond", valueKey: "values.perInterview3" },
-    ],
-  },
-  {
-    key: "enterprise",
-    monthly: null,
-    annual: null,
-    quote: true,
-    monthlyUnitKey: null,
-    annualUnitKey: null,
-    monthlyNoteKey: "annualOnly",
-    annualNoteKey: "annualOnly",
-    featured: false,
-    external: true,
-    specs: [
-      { labelKey: "specs.interviews", valueKey: "values.byVolume" },
-      { labelKey: "specs.beyond", valueKey: "values.negotiated" },
-    ],
-  },
-] as const;
 
 
 const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing"] as const;
-
-const PRICE_CLASS = "text-[28px] lg:text-4xl font-semibold tracking-tight";
-const QUOTE_PRICE_CLASS = "text-[24px] lg:text-4xl font-semibold tracking-tight";
-const NUMBER_FLOW_STYLE = {
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 0.85,
-} as const;
-const STATIC_PRICE_STYLE = {
-  fontVariantNumeric: "tabular-nums",
-  lineHeight: 0.85,
-  padding: "0.25em 0",
-  display: "inline-block",
-} as const;
-
-function PlanPrice({
-  monthly,
-  annual,
-  quote,
-  billing,
-  quoteLabel,
-  locale,
-}: {
-  monthly: number | null;
-  annual: number | null;
-  quote: boolean;
-  billing: "mensuel" | "annuel";
-  quoteLabel: string;
-  locale: string;
-}) {
-  if (quote || monthly === null || annual === null) {
-    return (
-      <span className={`${QUOTE_PRICE_CLASS}`} style={STATIC_PRICE_STYLE}>
-        {quoteLabel}
-      </span>
-    );
-  }
-
-  const value = billing === "annuel" ? annual : monthly;
-
-  if (monthly === annual) {
-    return (
-      <span className={PRICE_CLASS} style={STATIC_PRICE_STYLE}>
-        {new Intl.NumberFormat(locale, {
-          style: "currency",
-          currency: "EUR",
-          maximumFractionDigits: 0,
-        }).format(value)}
-      </span>
-    );
-  }
-
-  return (
-    <NumberFlow
-      value={value}
-      locales={locale}
-      format={{ style: "currency", currency: "EUR", maximumFractionDigits: 0 }}
-      plugins={[continuous]}
-      transformTiming={{ duration: 500, easing: "ease-out" }}
-      spinTiming={{ duration: 900, easing: "ease-out" }}
-      opacityTiming={{ duration: 350, easing: "ease-out" }}
-      className={PRICE_CLASS}
-      style={NUMBER_FLOW_STYLE}
-    />
-  );
-}
 
 
 export default function Landing() {
@@ -237,10 +105,7 @@ export default function Landing() {
   const { t: tp } = useTranslation("pricing");
   const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
-  const { language } = useLanguage();
-  const priceLocale = language === "fr" ? "fr-FR" : "en-GB";
   const [scrolled, setScrolled] = useState(false);
-  const [billing, setBilling] = useState<"mensuel" | "annuel">("mensuel");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -408,141 +273,23 @@ export default function Landing() {
 
       {/* ============ TARIFS ============ */}
       <section id="tarifs" className="border-border border-t scroll-mt-20">
-        <div className="mx-auto max-w-6xl px-5 sm:px-6 py-16 md:py-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className={H2}>{tp("title")}</h2>
-          </div>
-
-          {/* Toggle mensuel / annuel */}
-          <div className="mt-8 flex flex-col items-center gap-3">
-            <div className="bg-muted inline-flex rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => setBilling("mensuel")}
-                aria-selected={billing === "mensuel"}
-                className={`inline-flex h-8 items-center rounded-md px-3.5 text-sm font-medium transition-all ${
-                  billing === "mensuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
-                {tp("monthly")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setBilling("annuel")}
-                aria-selected={billing === "annuel"}
-                className={`inline-flex h-8 items-center gap-2 rounded-md px-3.5 text-sm font-medium transition-all ${
-                  billing === "annuel" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-              >
-                {tp("annual")}
-                <span className="bg-foreground text-background rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                  {tp("twoMonthsFree")}
-                </span>
-              </button>
-            </div>
-            <p className="text-muted-foreground text-xs">{tp("note")}</p>
-          </div>
-
-          {/* Bandeau 10 entretiens offerts */}
-          <div className="mt-4 flex justify-center">
-            <div className="bg-muted text-foreground border-border inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium">
-              <Gift className="h-4 w-4" />
-              <span>{tp("freeOffer")}</span>
-            </div>
-          </div>
-
-          {/* Cartes */}
-          <div className="mx-auto mt-6 grid grid-cols-2 gap-3 gap-y-5 md:grid-cols-4 lg:gap-5">
-            {PLAN_KEYS.map((p) => {
-              const unitKey = billing === "annuel" ? p.annualUnitKey : p.monthlyUnitKey;
-              const unit = unitKey ? tp(unitKey) : "";
-              const noteKey = billing === "annuel" ? p.annualNoteKey : p.monthlyNoteKey;
-              const note = noteKey ? tp(noteKey) : "";
-              const noteChanges = p.monthlyNoteKey !== p.annualNoteKey;
-
-              const cta = tp(`plans.${p.key}.cta`);
-              const ctaClass =
-                "mt-1 inline-flex min-h-10 w-full items-center justify-center rounded-lg px-3 py-1.5 text-[12px] font-medium leading-tight text-center transition-opacity hover:opacity-90 lg:h-10 lg:py-0 lg:text-sm lg:whitespace-nowrap lg:leading-normal " +
-                (p.featured
-                  ? "bg-foreground text-background"
-                  : "border-border bg-background text-foreground border hover:bg-muted");
-              return (
-                <div
-                  key={p.key}
-                  className={`relative flex flex-col rounded-xl border p-3.5 lg:p-6 ${
-                    p.featured ? "border-foreground bg-background" : "border-border bg-background"
-                  }`}
-                >
-                  {p.featured && (
-                    <span className="bg-foreground text-background absolute -top-2.5 left-6 inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-semibold">
-                      {tp("recommended")}
-                    </span>
-                  )}
-                  {/* Nom */}
-                  <div className="h-6">
-                    <h3 className="text-base font-semibold">{tp(`plans.${p.key}.name`)}</h3>
-                  </div>
-                  {/* Prix — hauteur fixe */}
-                  <div className="mt-2 flex h-10 items-baseline gap-1.5 overflow-hidden whitespace-nowrap lg:h-12">
-                    <PlanPrice
-                      monthly={p.monthly}
-                      annual={p.annual}
-                      quote={p.quote}
-                      billing={billing}
-                      quoteLabel={tp("onQuote")}
-                      locale={priceLocale}
-                    />
-                    {unit && <span className="text-muted-foreground text-[11px] lg:text-sm">{unit}</span>}
-                  </div>
-                  {/* Note sous le prix — hauteur fixe même si vide */}
-                  {noteChanges ? (
-                    <p
-                      key={billing}
-                      className="text-muted-foreground mt-2 h-5 animate-fade-in text-[11px] lg:text-xs [animation-duration:180ms]"
-                    >
-                      {note}
-                    </p>
-                  ) : (
-                    <p className="text-muted-foreground mt-2 h-5 text-[11px] lg:text-xs">{note}</p>
-                  )}
-
-                  {/* Bouton */}
-                  {p.external ? (
-                    <a
-                      href={CAL_LINK}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={ctaClass}
-                    >
-                      {cta}
-                    </a>
-                  ) : (
-                    <Link to="/signup" className={ctaClass}>
-                      {cta}
-                    </Link>
-                  )}
-                  {/* Caractéristiques — hauteur fixe identique, séparateurs alignés */}
-                  <div className="border-border border-t mt-4">
-                    {p.specs.map((s, idx) => {
-                      const value = "valueKey" in s && s.valueKey ? tp(s.valueKey) : (s as { value: string }).value;
-                      return (
-                        <div
-                          key={s.labelKey}
-                          className="border-border flex h-auto flex-col items-start justify-center gap-0.5 py-2.5 overflow-hidden border-b last:border-0 lg:h-[62px] lg:flex-row lg:items-center lg:justify-between lg:gap-2 lg:py-0"
-                        >
-                          <span className="text-muted-foreground text-[11px] lg:text-[12px] leading-tight">
-                            {tp(s.labelKey)}
-                          </span>
-                          <span className="text-sm font-semibold leading-tight lg:text-right">
-                            {value}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
+        <div className="mx-auto max-w-3xl px-5 sm:px-6 py-16 md:py-24 text-center">
+          <h2 className={H2}>{tp("title")}</h2>
+          <div className="border-border bg-background mt-10 rounded-2xl border p-8 md:p-12">
+            <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+              {tp("custom.title")}
+            </h3>
+            <p className="text-muted-foreground mt-4 text-lg md:text-xl">
+              {tp("custom.subtitle")}
+            </p>
+            <a
+              href={CAL_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-foreground text-background mt-8 inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              {tp("custom.cta")} <ArrowRight className="h-4 w-4" />
+            </a>
           </div>
         </div>
       </section>

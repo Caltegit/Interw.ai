@@ -1,48 +1,15 @@
 {
   "title": "Nos tarifs",
-  "monthly": "Mensuel",
-  "annual": "Annuel",
-  "twoMonthsFree": "2 mois offerts",
-  "note": "Prix HT. Sans engagement.",
-  "recommended": "Populaire",
-  "forever": "Pour toujours",
-  "billedMonthly": "Facturé chaque mois",
-  "billedAnnually": "Facturé annuellement",
-  "annualCommitment": "Engagement annuel",
-  "annualOnly": "Facturation annuelle",
   "onQuote": "Sur devis",
-  "freeOffer": "10 entretiens offerts",
-  "specs": {
-    "interviews": "Entretiens / mois",
-    "beyond": "Au-delà",
-    "pricePerInterview": "Prix par entretien"
-  },
-  "values": {
-    "byVolume": "Selon volume",
-    "perInterviewFlat5": "5 €",
-    "perInterview5": "5 € / entretien",
-    "perInterview4": "4 € / entretien",
-    "perInterview3": "3 € / entretien",
-    "negotiated": "Tarif négocié"
+  "custom": {
+    "title": "Sur devis",
+    "subtitle": "On s'adapte à vos besoins",
+    "cta": "Parler à l'équipe"
   },
   "plans": {
-    "free": {
-      "name": "À la carte",
-      "cta": "Commencer gratuitement"
-    },
-    "plus": {
-      "name": "Plus",
-      "cta": "Commencer gratuitement"
-    },
-    "pro": {
-      "name": "Pro",
-      "cta": "Commencer gratuitement"
-    },
     "enterprise": {
       "name": "Entreprise",
       "cta": "Parler à l'équipe"
     }
-  },
-  "perMonth": "/ mois",
-  "perYear": "/ an"
+  }
 }
