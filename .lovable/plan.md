@@ -1,31 +1,26 @@
-# Landing : cartouche « Sur devis » enrichie avec les inclus
+# Landing : conserver uniquement l’ancienne cartouche Entreprise
 
 ## Objectif
 
-Dans le bloc unique « Sur devis » de la section tarifs, ajouter la liste des inclus (entretiens, postes, utilisateurs, etc.) pour rappeler ce que comprend l'offre.
+Reprendre la cartouche Entreprise de l’ancienne grille tarifaire, avec sa présentation en lignes, et l’afficher seule dans la section tarifs.
 
 ## Changements prévus
 
-### Fichiers i18n
-
-- `src/i18n/locales/fr/pricing.json` : ajouter `custom.features` (tableau) :
-  - « Entretiens illimités »
-  - « Postes illimités »
-  - « Utilisateurs illimités »
-  - « Rapports et transcriptions complets »
-  - « Accompagnement personnalisé »
-- `src/i18n/locales/en/pricing.json` : équivalents anglais :
-  - « Unlimited interviews »
-  - « Unlimited job positions »
-  - « Unlimited users »
-  - « Full reports and transcripts »
-  - « Dedicated support »
-
 ### `src/pages/Landing.tsx`
 
-- Sous le sous-titre `custom.subtitle`, afficher la liste `custom.features` en colonne centrée : icône `Check` (lucide, déjà disponible) + libellé, style `text-muted-foreground`, sans changer le titre, le bouton ni l'ancre `#tarifs`.
+- Remplacer le bloc simplifié actuel par une seule cartouche reprenant exactement la structure visuelle des anciennes cartes tarifaires :
+  - nom « Entreprise » ;
+  - prix « Sur devis » ;
+  - bouton « Parler à l’équipe » vers le calendrier existant ;
+  - lignes séparées « Entretiens / mois : Illimités », « Au-delà : Tarif négocié », « Postes actifs simultanés : Illimités » et « Utilisateurs : Illimités ».
+- Centrer cette cartouche seule, sans rétablir les autres offres, le basculement mensuel/annuel ni le bandeau promotionnel.
+- Conserver le titre de section, l’ancre `#tarifs` et le style actuel de la landing.
+
+### Fichiers i18n
+
+- `src/i18n/locales/fr/pricing.json` et `src/i18n/locales/en/pricing.json` : rétablir uniquement les libellés nécessaires à cette cartouche Entreprise et leurs équivalents anglais.
 
 ## Vérification
 
 - Build OK.
-- Capture de la section tarifs en FR : bloc « Sur devis » avec la liste des inclus au-dessus du bouton.
+- Capture de la section tarifs en FR et EN : une seule ancienne cartouche Entreprise détaillée et correctement centrée.
