@@ -260,46 +260,8 @@ Deno.serve(async (req) => {
         session_id: session.id,
         force: true,
       });
-      // Découpage du monologue en réponses par question, pour que la matrice
-      // note chaque question sur son propre passage.
-      if (questions.length > 1) {
-        const { data: msg } = await supabase
-          .from("session_messages")
-          .select("id, content")
-          .eq("session_id", session.id)
-          .eq("role", "candidate")
-          .order("timestamp", { ascending: true })
-          .limit(1)
-          .maybeSingle();
 
-        const transcript = (msg?.content ?? "").trim();
-        if (msg && transcript) {
-          const segments = await splitTranscript(transcript, questions);
-          result.segments = segments.size;
-          const first = questions.find((q) => segments.has(q.id));
-          if (first) {
-            await supabase
-              .from("session_messages")
-              .update({ question_id: first.id, content: segments.get(first.id)! })
-              .eq("id", msg.id);
 
-            const extra = questions
-              .filter((q) => q.id !== first.id && segments.has(q.id))
-              .map((q) => ({
-                session_id: session.id,
-                organization_id: project.organization_id,
-                role: "candidate" as const,
-                content: segments.get(q.id)!,
-                question_id: q.id,
-                is_follow_up: false,
-                timestamp: now,
-                transcription_status: "done",
-                content_raw: segments.get(q.id)!,
-              }));
-            if (extra.length > 0) await supabase.from("session_messages").insert(extra);
-          }
-        }
-      }
 
       result.report = await invoke("generate-report", {
         session_id: session.id,
