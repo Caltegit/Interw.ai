@@ -41,6 +41,8 @@ export const RecoveryEmail = ({
           <Button className="dm-btn" style={button} href={confirmationUrl}>
             Choisir un nouveau mot de passe
           </Button>
+          <Text style={fallback}>Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</Text>
+          <Text style={urlText}>{confirmationUrl}</Text>
           <Text style={footer}>
             Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe
             reste inchangé.
@@ -76,6 +78,8 @@ const button = {
   padding: '12px 20px',
   textDecoration: 'none',
 }
+const fallback = { fontSize: '12px', color: '#55575d', lineHeight: '1.5', margin: '24px 0 6px' }
+const urlText = { fontSize: '11px', color: '#55575d', lineHeight: '1.5', wordBreak: 'break-all' as const, margin: '0' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `

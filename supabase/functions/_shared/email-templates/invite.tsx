@@ -25,28 +25,28 @@ export const InviteEmail = ({
   siteUrl,
   confirmationUrl,
 }: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="fr" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>You've been invited to join {siteName}</Preview>
+    <Preview>Vous êtes invité à rejoindre {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
+        <Heading style={h1}>Bienvenue sur {siteName}</Heading>
         <Text style={text}>
-          You've been invited to join{' '}
+          Vous avez été invité à rejoindre{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          . Click the button below to accept the invitation and create your
-          account.
+          . Cliquez sur le bouton ci-dessous pour activer votre accès.
         </Text>
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Accept Invitation
+          Activer mon accès
         </Button>
+        <Text style={fallback}>Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</Text>
+        <Text style={urlText}>{confirmationUrl}</Text>
         <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
+          Si vous n’attendiez pas cette invitation, vous pouvez ignorer cet e-mail.
         </Text>
       </Container>
     </Body>
@@ -79,6 +79,8 @@ const button = {
   padding: '12px 20px',
   textDecoration: 'none',
 }
+const fallback = { fontSize: '12px', color: '#55575d', lineHeight: '1.5', margin: '24px 0 6px' }
+const urlText = { fontSize: '11px', color: '#55575d', lineHeight: '1.5', wordBreak: 'break-all' as const, margin: '0' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ export default function AuthConfirm() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { session, loading: authLoading } = useAuth();
 
   const tokenHash = params.get("token_hash");
   const type = (params.get("type") || "magiclink") as OtpType;
@@ -35,6 +37,10 @@ export default function AuthConfirm() {
     const err = p.get("error_description") || p.get("error");
     if (err) setError(decodeURIComponent(err.replace(/\+/g, " ")));
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && session) navigate(next, { replace: true });
+  }, [authLoading, navigate, next, session]);
 
   const labels = useMemo(() => TYPE_LABELS[type] || TYPE_LABELS.magiclink, [type]);
 
@@ -82,7 +88,12 @@ export default function AuthConfirm() {
             </>
           ) : (
             <>
-              <Button onClick={handleConfirm} disabled={loading || !tokenHash}>
+              {!tokenHash && (
+                <p className="text-sm text-destructive text-center">
+                  Ce lien est incomplet. Demandez un nouveau lien pour continuer.
+                </p>
+              )}
+              <Button onClick={handleConfirm} disabled={loading || !tokenHash || authLoading}>
                 {loading ? "Vérification…" : labels.cta}
               </Button>
               <p className="text-xs text-muted-foreground text-center">
