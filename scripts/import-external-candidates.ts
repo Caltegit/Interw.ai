@@ -18,6 +18,7 @@
  *                 duration, date) ; "duration" est la durée de la réponse et
  *                 sert à écarter les lignes sans réponse enregistrée
  *   --limit       nombre maximum de candidats à traiter (défaut 10)
+ *   --offset      nombre de candidats à sauter avant le lot (défaut 0)
  *   --sheet       nom de l'onglet (défaut : le premier)
  *   --order       "last" (les plus récents, défaut) ou "first"
  *                 (ignoré si la correspondance contient "date")
