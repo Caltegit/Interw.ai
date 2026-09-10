@@ -28,6 +28,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'daily-health-report': dailyHealthReport,
   'interview-report': interviewReport,
   'demo-request': demoRequest,
+  'new-signup': newSignup,
   'email-failure-alert': emailFailureAlert,
   'interview-issue-report': interviewIssueReport,
   'bulk-candidate-message': bulkCandidateMessage,
