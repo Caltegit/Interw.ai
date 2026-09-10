@@ -45,6 +45,8 @@ async function main() {
   if (!supabaseUrl || !secret) fail("SUPABASE_URL et INTERNAL_FUNCTION_SECRET doivent être définis");
 
   const supabase = createClient(supabaseUrl, secret, { auth: { autoRefreshToken: false, persistSession: false } });
+  console.log("Connexion Supabase OK", supabaseUrl.slice(0, 28));
+
 
   const { data: question, error: qErr } = await supabase
     .from("questions")
