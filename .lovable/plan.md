@@ -58,14 +58,37 @@ Tu obtiens donc exactement les mêmes fiches candidats, matrices et rapports que
 ### 7. Vérification
 Je te livre un récapitulatif : 10 fiches créées, scores obtenus, comparaison avec les notes manuelles de Célia / Justine / Alissa pour mesurer l'écart entre le chat et le moteur Interw. Et confirmation qu'aucun e-mail n'est parti.
 
+## Un script d'import réutilisable, invisible dans l'application
+
+L'import ne passe pas par un bouton dans l'interface. C'est un script d'outillage que je lance moi-même, réutilisable tel quel pour Tango aujourd'hui et pour d'autres clients demain.
+
+Ce que le script prend en entrée :
+- le fichier XLSX (ou CSV) exporté ;
+- l'identifiant du poste de destination ;
+- un tableau de correspondance entre les colonnes du fichier et les champs Interw (nom, e-mail, téléphone, lien média) ;
+- une limite du nombre de candidats à traiter (10 pour ce test).
+
+Ce qu'il fait, dans l'ordre :
+1. lit le fichier et affiche les colonnes détectées ;
+2. teste le téléchargement des liens média et écarte ceux qui échouent ;
+3. affiche la liste des candidats retenus et **s'arrête** pour attendre confirmation ;
+4. crée les fiches, dépose les vidéos, lance transcription et scoring ;
+5. affiche un récapitulatif et vérifie qu'aucun e-mail n'est parti.
+
+Deux sécurités permanentes : un mode « simulation » qui montre ce qui serait fait sans rien écrire, et l'interdiction absolue d'appeler la moindre fonction d'envoi d'e-mail.
+
+Pour un autre client, il suffira de changer le fichier, le poste et la correspondance des colonnes — aucun code à réécrire.
+
 ## Détails techniques
 
-- Traitement ponctuel, hors interface : aucun bouton d'import ajouté pour l'instant. On industrialise seulement si le test est concluant.
+- Script d'outillage sous `scripts/import-external-candidates.ts`, hors du code de l'application : rien n'est ajouté à l'interface, aucun composant, aucune route.
+- Paramètres : `--file`, `--project-id`, `--mapping`, `--limit`, `--dry-run`.
 - Écritures : `sessions` (statut `completed`, `candidate_name`, `candidate_email`, `candidate_phone`) et `session_messages` (rôle `candidate`, `video_segment_url`) pour le poste `eb7db435-1f2f-4ccf-a2ff-f49d68f851db`.
 - Attention : un déclencheur enfile automatiquement un travail de rapport quand une session passe en `completed`. C'est ce qu'on veut ici (le rapport se génère), et ce chemin n'envoie pas d'e-mail candidat — l'envoi de remerciement passe par la finalisation côté candidat, que l'import ne touche pas.
 - Stockage : bucket `media`, chemin `interviews/<session_id>/q0.mp4`.
-- Aucun appel aux fonctions d'envoi d'e-mail (`send-candidate-message`, `resend-candidate-thank-you`, `finalize-session`).
-- Rollback : les 10 sessions créées sont identifiables par leur date de création et supprimables en une opération si le test ne convient pas.
+- Aucun appel aux fonctions d'envoi d'e-mail (`send-candidate-message`, `resend-candidate-thank-you`, `finalize-session`) — le script ne les importe même pas.
+- Détection de doublons par e-mail dans le poste, pour pouvoir relancer le script sans créer de fiches en double.
+- Rollback : les sessions créées sont identifiables par leur date de création et supprimables en une opération si le test ne convient pas.
 
 ## Ce dont j'ai besoin de toi
 
