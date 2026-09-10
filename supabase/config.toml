@@ -75,6 +75,9 @@ project_id = "qxszgsxdktnwqabsdfvw"
   [functions.send-demo-request]
     verify_jwt = false
 
+  [functions.notify-new-signup]
+    verify_jwt = false
+
   [functions.send-candidate-message]
     verify_jwt = true
 
