@@ -27,33 +27,35 @@ export const SignupEmail = ({
   recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="fr" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Confirmez votre adresse pour {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Heading style={h1}>Confirmez votre adresse</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          Merci de vous être inscrit sur{' '}
           <Link href={siteUrl} style={link}>
             <strong>{siteName}</strong>
           </Link>
-          !
+          .
         </Text>
         <Text style={text}>
-          Please confirm your email address (
+          Confirmez votre adresse e-mail (
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ) en cliquant sur le bouton ci-dessous.
         </Text>
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Verify Email
+          Confirmer mon adresse
         </Button>
+        <Text style={fallback}>Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</Text>
+        <Text style={urlText}>{confirmationUrl}</Text>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          Si vous n’avez pas créé de compte, vous pouvez ignorer cet e-mail.
         </Text>
       </Container>
     </Body>
@@ -86,6 +88,8 @@ const button = {
   padding: '12px 20px',
   textDecoration: 'none',
 }
+const fallback = { fontSize: '12px', color: '#55575d', lineHeight: '1.5', margin: '24px 0 6px' }
+const urlText = { fontSize: '11px', color: '#55575d', lineHeight: '1.5', wordBreak: 'break-all' as const, margin: '0' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `

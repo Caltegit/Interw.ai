@@ -21,6 +21,36 @@ const ROOT_DOMAIN = "interw.com"
 const FROM_DOMAIN = "interw.com"
 const SITE_URL = `https://${ROOT_DOMAIN}`
 
+function buildSafeConfirmationUrl(authUrl: string, actionType: string): string {
+  try {
+    const url = new URL(authUrl)
+    const tokenHash = url.searchParams.get('token') ?? url.searchParams.get('token_hash')
+    const type = url.searchParams.get('type') ?? actionType
+    const redirectTo = url.searchParams.get('redirect_to')
+
+    if (!tokenHash) return authUrl
+
+    const confirmationUrl = new URL('/auth/confirm', SITE_URL)
+    confirmationUrl.searchParams.set('token_hash', tokenHash)
+    confirmationUrl.searchParams.set('type', type)
+
+    if (redirectTo) {
+      try {
+        const redirectUrl = new URL(redirectTo)
+        if (redirectUrl.origin === new URL(SITE_URL).origin) {
+          confirmationUrl.searchParams.set('next', `${redirectUrl.pathname}${redirectUrl.search}${redirectUrl.hash}`)
+        }
+      } catch {
+        // Une redirection invalide est ignorée : la page choisira sa destination sûre par défaut.
+      }
+    }
+
+    return confirmationUrl.toString()
+  } catch {
+    return authUrl
+  }
+}
+
 // Template mapping for preview mode
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
   signup: SignupEmail,
@@ -135,7 +165,7 @@ const handler = createAuthEmailHandler({
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
           recipient: data.email,
-          confirmationUrl: data.url,
+          confirmationUrl: buildSafeConfirmationUrl(data.url, 'signup'),
         }),
     },
     invite: {
@@ -144,7 +174,7 @@ const handler = createAuthEmailHandler({
         React.createElement(InviteEmail, {
           siteName: SITE_NAME,
           siteUrl: SITE_URL,
-          confirmationUrl: data.url,
+          confirmationUrl: buildSafeConfirmationUrl(data.url, 'invite'),
         }),
     },
     magiclink: {
@@ -152,7 +182,7 @@ const handler = createAuthEmailHandler({
       render: (data) =>
         React.createElement(MagicLinkEmail, {
           siteName: SITE_NAME,
-          confirmationUrl: data.url,
+          confirmationUrl: buildSafeConfirmationUrl(data.url, 'magiclink'),
         }),
     },
     recovery: {
@@ -160,7 +190,7 @@ const handler = createAuthEmailHandler({
       render: (data) =>
         React.createElement(RecoveryEmail, {
           siteName: SITE_NAME,
-          confirmationUrl: data.url,
+          confirmationUrl: buildSafeConfirmationUrl(data.url, 'recovery'),
         }),
     },
     email_change: {
@@ -171,7 +201,7 @@ const handler = createAuthEmailHandler({
           oldEmail: data.old_email ?? '',
           email: data.email,
           newEmail: data.new_email ?? '',
-          confirmationUrl: data.url,
+          confirmationUrl: buildSafeConfirmationUrl(data.url, 'email_change'),
         }),
     },
     reauthentication: {

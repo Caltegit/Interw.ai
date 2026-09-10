@@ -32,34 +32,35 @@ export const EmailChangeEmail = ({
   newEmail,
   confirmationUrl,
 }: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
+  <Html lang="fr" dir="ltr">
     <Head>
       <style>{darkModeCss}</style>
     </Head>
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>Confirmez votre changement d’adresse sur {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
+        <Heading style={h1}>Confirmez votre nouvelle adresse</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
+          Vous avez demandé à remplacer votre adresse e-mail {siteName} de{' '}
           <Link href={`mailto:${oldEmail}`} style={link}>
             {oldEmail}
           </Link>{' '}
-          to{' '}
+          par{' '}
           <Link href={`mailto:${newEmail}`} style={link}>
             {newEmail}
           </Link>
           .
         </Text>
         <Text style={text}>
-          Click the button below to confirm this change:
+          Cliquez sur le bouton ci-dessous pour confirmer ce changement.
         </Text>
         <Button className="dm-btn" style={button} href={confirmationUrl}>
-          Confirm Email Change
+          Confirmer le changement
         </Button>
+        <Text style={fallback}>Si le bouton ne fonctionne pas, copiez cette adresse dans votre navigateur :</Text>
+        <Text style={urlText}>{confirmationUrl}</Text>
         <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
+          Si vous n’êtes pas à l’origine de cette demande, sécurisez votre compte immédiatement.
         </Text>
       </Container>
     </Body>
@@ -92,6 +93,8 @@ const button = {
   padding: '12px 20px',
   textDecoration: 'none',
 }
+const fallback = { fontSize: '12px', color: '#55575d', lineHeight: '1.5', margin: '24px 0 6px' }
+const urlText = { fontSize: '11px', color: '#55575d', lineHeight: '1.5', wordBreak: 'break-all' as const, margin: '0' }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
 // Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
 const darkModeCss = `
