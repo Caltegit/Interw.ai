@@ -17,7 +17,7 @@ La page d’accueil devient une vitrine simple qu’on fait défiler jusqu’en 
 
 - Dans le header :
   - supprimer le bloc `<nav>` contenant les liens `#produit` et `#tarifs` ;
-  - supprimer le bloc de droite contenant le lien « Se connecter » et le CTA « Réserver une démo » ;
+  - conserver le bloc de droite avec le lien « Se connecter » et le CTA « Réserver une démo » ;
   - ne garder que le logo cliquable vers `/`.
 - Supprimer la section `{/* ============ TARIFS ============ */}` et tout son contenu.
 - Retirer l’import/useTranslation `tp` (`useTranslation("pricing")`) si la section tarifs était son seul usage.
