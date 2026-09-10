@@ -208,7 +208,9 @@ async function main() {
     candidates.push(c);
   }
 
-  const selected = candidates.slice(0, limit);
+  // --offset permet de traiter le fichier par lots successifs.
+  const offset = Number(args.offset ?? 0) || 0;
+  const selected = candidates.slice(offset, offset + limit);
 
   if (selected.length === 0) {
     fail("aucune ligne exploitable (e-mail + lien média valides) après filtrage");
