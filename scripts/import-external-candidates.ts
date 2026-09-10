@@ -14,10 +14,11 @@
  * Options :
  *   --file        chemin du fichier .xlsx ou .csv exporté
  *   --project-id  poste de destination
- *   --mapping     correspondance colonnes -> champs (name, email, phone, media)
+ *   --mapping     correspondance colonnes -> champs (name, email, phone, media, date)
  *   --limit       nombre maximum de candidats à traiter (défaut 10)
  *   --sheet       nom de l'onglet (défaut : le premier)
  *   --order       "last" (les plus récents, défaut) ou "first"
+ *                 (ignoré si la correspondance contient "date")
  *   --dry-run     n'écrit rien, affiche seulement ce qui serait fait
  *   --yes         saute la confirmation interactive
  *   --no-analysis crée les fiches sans lancer transcription ni scoring
@@ -26,7 +27,10 @@
  * GARDE-FOU : ce script n'appelle aucune fonction d'envoi d'e-mail. Aucun
  * candidat n'est contacté, aucune invitation n'est générée.
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import * as XLSX from "xlsx";
 
@@ -90,6 +94,39 @@ function cell(row: Record<string, unknown>, column?: string): string {
   return value === undefined || value === null ? "" : String(value).trim();
 }
 
+// Récupère le lien direct du média (une URL VideoAsk est une page de partage)
+// puis en extrait une piste audio légère : la vidéo d'origine est souvent trop
+// lourde pour le moteur de transcription.
+async function extractAudio(url: string): Promise<string | null> {
+  let direct = url;
+  if (/^https?:\/\/(www\.)?videoask\.com\//.test(url)) {
+    const html = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } }).then((r) => r.text());
+    const match = html.match(/https:\/\/media\.videoask\.com\/transcoded\/[^"\\]+?video\.mp4\?token=[^"\\&]+/);
+    if (match) direct = match[0];
+  }
+  const base = join(tmpdir(), `import-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const video = `${base}.src`;
+  const audio = `${base}.mp3`;
+  try {
+    const res = await fetch(direct);
+    if (!res.ok) return null;
+    const { writeFileSync } = await import("node:fs");
+    writeFileSync(video, Buffer.from(await res.arrayBuffer()));
+    execFileSync("ffmpeg", ["-y", "-i", video, "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k", audio], {
+      stdio: "ignore",
+    });
+    return readFileSync(audio).toString("base64");
+  } catch {
+    return null;
+  } finally {
+    for (const f of [video, audio]) {
+      try {
+        rmSync(f, { force: true });
+      } catch { /* ignore */ }
+    }
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
@@ -115,16 +152,35 @@ async function main() {
   const runAnalysis = args["no-analysis"] !== true;
   const order = args.order === "first" ? "first" : "last";
 
-  const candidates = rows
+  const all = rows
     .map((row) => ({
       name: cell(row, mapping.name),
       email: cell(row, mapping.email).toLowerCase(),
       phone: cell(row, mapping.phone) || null,
       media_url: cell(row, mapping.media),
+      date: cell(row, mapping.date),
     }))
     .filter((c) => c.email.includes("@") && c.media_url.startsWith("http"));
 
-  const selected = (order === "last" ? candidates.slice(-limit) : candidates.slice(0, limit));
+  // Le plus récent en premier : par date si la colonne est fournie, sinon en
+  // suivant l'ordre du fichier.
+  const ordered = mapping.date
+    ? [...all].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    : order === "last"
+      ? [...all].reverse()
+      : all;
+
+  // Un candidat peut avoir répondu plusieurs fois : on ne garde que sa réponse
+  // la plus récente.
+  const candidates: typeof ordered = [];
+  const seen = new Set<string>();
+  for (const c of ordered) {
+    if (seen.has(c.email)) continue;
+    seen.add(c.email);
+    candidates.push(c);
+  }
+
+  const selected = candidates.slice(0, limit);
 
   if (selected.length === 0) {
     fail("aucune ligne exploitable (e-mail + lien média valides) après filtrage");
@@ -159,12 +215,19 @@ async function main() {
   const summary: Array<{ email: string; status: string; detail: string }> = [];
 
   for (const candidate of selected) {
+    const audio_b64 = dryRun ? null : await extractAudio(candidate.media_url);
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-internal-secret": secret },
       body: JSON.stringify({
         project_id: projectId,
-        candidate,
+        candidate: {
+          name: candidate.name,
+          email: candidate.email,
+          phone: candidate.phone,
+          media_url: candidate.media_url,
+          audio_b64,
+        },
         dry_run: dryRun,
         run_analysis: runAnalysis,
       }),

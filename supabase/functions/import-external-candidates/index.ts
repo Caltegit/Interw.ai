@@ -24,6 +24,8 @@ type Candidate = {
   email: string;
   phone?: string | null;
   media_url: string;
+  /** Piste audio compressée (base64) fournie par le script, pour la transcription. */
+  audio_b64?: string | null;
   question_index?: number;
   external_ref?: string | null;
 };
@@ -46,6 +48,69 @@ function extFromContentType(ct: string | null, url: string): string {
 
 function randomToken(): string {
   return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
+// Une URL de partage VideoAsk (https://www.videoask.com/xxxx) n'est pas un
+// média : on récupère le lien direct du .mp4 dans la page.
+async function resolveMediaUrl(url: string): Promise<string> {
+  if (!/^https?:\/\/(www\.)?videoask\.com\//.test(url)) return url;
+  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+  if (!res.ok) return url;
+  const html = await res.text();
+  const match = html.match(
+    /https:\/\/media\.videoask\.com\/transcoded\/[^"\\]+?video\.mp4\?token=[^"\\&]+/,
+  );
+  return match ? match[0] : url;
+}
+
+// Découpe le transcript d'un monologue en passages rattachés aux questions du
+// poste. Les questions non traitées ne reçoivent aucun passage.
+async function splitTranscript(
+  transcript: string,
+  questions: Array<{ id: string; content: string }>,
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey || !transcript.trim() || questions.length < 2) return result;
+
+  const list = questions.map((q, i) => `[${i}] ${q.content}`).join("\n");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai/gpt-6-astra",
+      reasoning_effort: "low",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu répartis le transcript d'une vidéo de présentation entre les questions d'un entretien. " +
+            "Tu recopies les passages mot pour mot, sans les reformuler. " +
+            "Une question non traitée par le candidat est simplement absente du résultat. " +
+            'Réponds uniquement en JSON : {"segments":[{"index":0,"text":"..."}]}',
+        },
+        { role: "user", content: `Questions :\n${list}\n\nTranscript :\n${transcript}` },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    console.error("[import] découpage impossible", res.status, await res.text().catch(() => ""));
+    return result;
+  }
+  const payload = await res.json();
+  const raw = payload?.choices?.[0]?.message?.content ?? "";
+  const jsonText = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
+  try {
+    const parsed = JSON.parse(jsonText);
+    for (const seg of parsed?.segments ?? []) {
+      const q = questions[Number(seg.index)];
+      const text = String(seg.text ?? "").trim();
+      if (q && text) result.set(q.id, text);
+    }
+  } catch (e) {
+    console.error("[import] JSON de découpage illisible", e);
+  }
+  return result;
 }
 
 Deno.serve(async (req) => {
@@ -75,7 +140,7 @@ Deno.serve(async (req) => {
 
     const { data: project, error: projectErr } = await supabase
       .from("projects")
-      .select("id, title, organization_id, questions(id, order_index, archived_at)")
+      .select("id, title, organization_id, questions(id, order_index, content, archived_at)")
       .eq("id", projectId)
       .maybeSingle();
 
@@ -83,7 +148,7 @@ Deno.serve(async (req) => {
     if (!project) return json({ error: "poste introuvable" }, 404);
 
     const questions = ((project.questions ?? []) as Array<
-      { id: string; order_index: number; archived_at: string | null }
+      { id: string; order_index: number; content: string; archived_at: string | null }
     >)
       .filter((q) => !q.archived_at)
       .sort((a, b) => a.order_index - b.order_index);
@@ -104,7 +169,8 @@ Deno.serve(async (req) => {
     }
 
     // Vérifie que le média est réellement téléchargeable avant toute écriture.
-    const mediaRes = await fetch(candidate.media_url);
+    const directUrl = await resolveMediaUrl(candidate.media_url);
+    const mediaRes = await fetch(directUrl);
     if (!mediaRes.ok) {
       return json({
         status: "skipped",
@@ -113,7 +179,7 @@ Deno.serve(async (req) => {
     }
     const contentType = mediaRes.headers.get("content-type");
     const bytes = new Uint8Array(await mediaRes.arrayBuffer());
-    const ext = extFromContentType(contentType, candidate.media_url);
+    const ext = extFromContentType(contentType, directUrl);
 
     if (dryRun) {
       return json({
@@ -162,6 +228,20 @@ Deno.serve(async (req) => {
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
     const mediaUrl = pub.publicUrl;
 
+    // Piste audio légère : la vidéo d'origine dépasse souvent la taille que le
+    // moteur de transcription accepte.
+    let audioUrl: string | null = null;
+    if (candidate.audio_b64) {
+      const audioBytes = Uint8Array.from(atob(candidate.audio_b64), (c) => c.charCodeAt(0));
+      const audioPath = `interviews/${session.id}/q${questionIndex}.mp3`;
+      const { error: audioErr } = await supabase.storage.from(BUCKET).upload(audioPath, audioBytes, {
+        contentType: "audio/mpeg",
+        upsert: true,
+      });
+      if (audioErr) console.error("[import] audio non déposé", audioErr.message);
+      else audioUrl = supabase.storage.from(BUCKET).getPublicUrl(audioPath).data.publicUrl;
+    }
+
     const isAudio = ["mp3", "m4a", "wav", "ogg"].includes(ext);
     const { error: messageErr } = await supabase.from("session_messages").insert({
       session_id: session.id,
@@ -173,7 +253,7 @@ Deno.serve(async (req) => {
       timestamp: now,
       transcription_status: "pending",
       video_segment_url: isAudio ? null : mediaUrl,
-      audio_segment_url: isAudio ? mediaUrl : null,
+      audio_segment_url: isAudio ? mediaUrl : audioUrl,
     });
     if (messageErr) {
       return json({ error: `rattachement de la réponse impossible: ${messageErr.message}` }, 500);
@@ -209,6 +289,47 @@ Deno.serve(async (req) => {
         session_id: session.id,
         force: true,
       });
+      // Découpage du monologue en réponses par question, pour que la matrice
+      // note chaque question sur son propre passage.
+      if (questions.length > 1) {
+        const { data: msg } = await supabase
+          .from("session_messages")
+          .select("id, content")
+          .eq("session_id", session.id)
+          .eq("role", "candidate")
+          .order("timestamp", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        const transcript = (msg?.content ?? "").trim();
+        if (msg && transcript) {
+          const segments = await splitTranscript(transcript, questions);
+          result.segments = segments.size;
+          const first = questions.find((q) => segments.has(q.id));
+          if (first) {
+            await supabase
+              .from("session_messages")
+              .update({ question_id: first.id, content: segments.get(first.id)! })
+              .eq("id", msg.id);
+
+            const extra = questions
+              .filter((q) => q.id !== first.id && segments.has(q.id))
+              .map((q) => ({
+                session_id: session.id,
+                organization_id: project.organization_id,
+                role: "candidate" as const,
+                content: segments.get(q.id)!,
+                question_id: q.id,
+                is_follow_up: false,
+                timestamp: now,
+                transcription_status: "done",
+                content_raw: segments.get(q.id)!,
+              }));
+            if (extra.length > 0) await supabase.from("session_messages").insert(extra);
+          }
+        }
+      }
+
       result.report = await invoke("generate-report", {
         session_id: session.id,
         force: true,
