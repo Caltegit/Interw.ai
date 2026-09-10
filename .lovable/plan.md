@@ -1,26 +1,40 @@
-# Landing : conserver uniquement l’ancienne cartouche Entreprise
+# Landing : remplacer la section tarifs par un accès bêta sans prix
 
 ## Objectif
 
-Reprendre la cartouche Entreprise de l’ancienne grille tarifaire, avec sa présentation en lignes, et l’afficher seule dans la section tarifs.
+Interw est en phase bêta avec un embarquement gratuit. Afficher un pricing non finalisé — même sous forme « Sur devis » — peut bloquer ou détourner des prospects. La section `#tarifs` est remplacée par un simple bloc d’accès privé orienté prise de contact, sans montant.
+
+## Décisions confirmées
+
+- Pas de prix affiché (0 €, forfait, au-delà, tarif négocié, etc.).
+- Garder l’ancre `#tarifs` et le lien « Tarifs » dans la navbar pour ne pas casser les liens existants.
+- Titre de section plus adapté à la phase : « Accès privé » / « Private access ».
+- Bloc simple : titre, court sous-titre, CTA vers le calendrier existant (`CAL_LINK`).
 
 ## Changements prévus
 
 ### `src/pages/Landing.tsx`
 
-- Remplacer le bloc simplifié actuel par une seule cartouche reprenant exactement la structure visuelle des anciennes cartes tarifaires :
-  - nom « Entreprise » ;
-  - prix « Sur devis » ;
-  - bouton « Parler à l’équipe » vers le calendrier existant ;
-  - lignes séparées « Entretiens / mois : Illimités », « Au-delà : Tarif négocié », « Postes actifs simultanés : Illimités » et « Utilisateurs : Illimités ».
-- Centrer cette cartouche seule, sans rétablir les autres offres, le basculement mensuel/annuel ni le bandeau promotionnel.
-- Conserver le titre de section, l’ancre `#tarifs` et le style actuel de la landing.
+- Remplacer le bloc tarifaire actuel par un bloc centré dans la section `#tarifs` :
+  - titre via `tp("title")` (nouvelle valeur « Accès privé ») ;
+  - sous-titre via `tp("beta.subtitle")` ;
+  - CTA via `tp("beta.cta")` vers `CAL_LINK`.
+- Supprimer toutes les références à `custom.title`, `custom.subtitle`, `custom.cta` si elles ne sont plus utilisées ailleurs.
+- Conserver l’ancre `id="tarifs"` et le lien de navigation.
 
 ### Fichiers i18n
 
-- `src/i18n/locales/fr/pricing.json` et `src/i18n/locales/en/pricing.json` : rétablir uniquement les libellés nécessaires à cette cartouche Entreprise et leurs équivalents anglais.
+- `src/i18n/locales/fr/pricing.json` et `src/i18n/locales/en/pricing.json` :
+  - remplacer `title` par « Accès privé » / « Private access » ;
+  - ajouter `beta.subtitle` et `beta.cta` ;
+  - supprimer les clés `custom.*`, `onQuote` et `plans` si elles ne sont utilisées que ici.
+
+### `src/index.css`
+
+- Ne retirer aucun style utilisé ailleurs. Vérifier que les anciennes classes tarifaires n’ont pas d’impact.
 
 ## Vérification
 
 - Build OK.
-- Capture de la section tarifs en FR et EN : une seule ancienne cartouche Entreprise détaillée et correctement centrée.
+- Capture de la section `#tarifs` en FR et EN : titre « Accès privé » / « Private access », pas de prix, CTA vers le calendrier.
+- Vérifier que le lien « Tarifs » dans la navbar amène toujours à la section.
