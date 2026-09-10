@@ -96,13 +96,30 @@ function cell(row: Record<string, unknown>, column?: string): string {
 
 // Récupère le lien direct du média (une URL VideoAsk est une page de partage)
 // puis en extrait une piste audio légère : la vidéo d'origine est souvent trop
-// lourde pour le moteur de transcription.
-async function extractAudio(url: string): Promise<string | null> {
+// lourde pour le moteur de transcription. La page contient aussi les vidéos de
+// consigne du recruteur : seule celle dont la durée correspond à l'export est
+// retenue.
+async function extractAudio(url: string, expectedDuration: number | null): Promise<string | null> {
   let direct = url;
   if (/^https?:\/\/(www\.)?videoask\.com\//.test(url)) {
+    if (!expectedDuration) return null;
     const html = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } }).then((r) => r.text());
-    const match = html.match(/https:\/\/media\.videoask\.com\/transcoded\/[^"\\]+?video\.mp4\?token=[^"\\&]+/);
-    if (match) direct = match[0];
+    const durationById = new Map<string, number>();
+    for (const m of html.matchAll(/"media_duration":([0-9.]+),"media_id":"([0-9a-f-]+)"/g)) {
+      durationById.set(m[2], Number(m[1]));
+    }
+    let found: string | null = null;
+    for (const m of html.matchAll(
+      /https:\/\/media\.videoask\.com\/transcoded\/([0-9a-f-]+)\/video\.mp4\?token=[^"\\&]+/g,
+    )) {
+      const d = durationById.get(m[1]);
+      if (d !== undefined && Math.abs(d - expectedDuration) <= 1) {
+        found = m[0];
+        break;
+      }
+    }
+    if (!found) return null;
+    direct = found;
   }
   const base = join(tmpdir(), `import-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const video = `${base}.src`;
