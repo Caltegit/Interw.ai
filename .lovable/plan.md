@@ -2,39 +2,38 @@
 
 ## Ce que j'ai vérifié
 
-**1. Les candidats importés sont bien pénalisés.**
-Joséphine Fresneau : la matrice lui donne 71 en expression orale et 74 en ton et attitude — des notes comparables à Angel Dominianni (67 / 71), qui affiche pourtant 72/100 contre 62/100 pour elle. L'écart ne vient pas de la matrice mais de la note d'ensemble, produite par un second passage de l'IA qui note chaque question du poste séparément. Dans son cas, la question « Qu'est-ce qui t'a donné envie d'accompagner des personnes âgées ? » reçoit 3/10 avec le commentaire « Question non traitée en détail par la candidate » — alors qu'elle n'a jamais eu cette question posée : elle a envoyé une seule vidéo libre. La consigne actuelle impose une note à chaque question, même absente, avec la grille « 1-3 : réponse absente ».
+**1. Les candidats importés sont pénalisés par la découpe en questions.**
+Joséphine Fresneau : la matrice lui donne 71 en expression orale et 74 en ton et attitude — comparable à Angel Dominianni (67 / 71), qui affiche pourtant 72/100 contre 62/100 pour elle. L'écart vient de la note d'ensemble : l'IA note chaque question du poste séparément et attribue 3/10 à « Qu'est-ce qui t'a donné envie d'accompagner des personnes âgées ? » avec le commentaire « Question non traitée en détail » — alors que cette question n'a jamais été posée, la candidate ayant envoyé une seule vidéo libre.
 
-Effet secondaire visible : son rapport contient deux séries d'évaluations par question, l'une complète et l'autre entièrement vide, à cause d'un rattrapage qui recrée des entrées pour les questions manquantes.
+**2. Le transcript est amputé par la découpe.**
+Le découpage automatique attribue à chaque question un extrait du monologue et jette tout ce qui ne correspond à aucune question. C'est pourquoi la question 1 de Joséphine n'affiche que « Bonjour, moi c'est Joséphine. » alors qu'elle parle bien plus longtemps.
 
-**2. Aucune analyse orale : ce n'est pas un problème de piste audio.**
-L'audio est bien présent (une piste par candidat importé). L'analyse orale exige au minimum **deux** extraits audio distincts pour se déclencher ; une vidéo unique n'en fournit qu'un seul, donc l'analyse s'arrête d'elle-même. Les neuf fiches importées portent toutes la mention interne « pas assez d'audio ». L'analyse orale est bien activée sur le poste Tango.
+**3. Aucune analyse orale : ce n'est pas un problème de piste audio.**
+L'audio est bien présent. L'analyse orale exige au minimum deux extraits audio distincts ; une vidéo unique n'en fournit qu'un, donc elle s'arrête d'elle-même. Les neuf fiches importées portent la mention interne « pas assez d'audio ». L'analyse orale est bien activée sur le poste Tango.
 
-**3. Les écarts entre critères s'expliquent par deux calculs différents.**
-La matrice ne lit que le texte : « Cadre et présentation » (critère visuel) n'est évalué pour aucun candidat importé. Le bloc de synthèse du rapport, lui, attribue quand même une note à ce critère en la déduisant des mots employés — d'où des notes qui apparaissent chez certains et pas chez d'autres, sans logique lisible.
+## Ce que je vais faire
 
-## Ce que je propose de corriger
+### A. Une seule réponse, un transcript complet
+- Supprimer le découpage par question pour les entretiens importés : une seule réponse candidat, contenant l'intégralité du monologue transcrit, rattachée à aucune question.
+- Rien n'est jeté : le texte affiché sur la fiche est le transcript complet de la vidéo.
 
-### A. Ne plus pénaliser une question jamais posée
-- Dans la génération du rapport, repérer les entretiens importés (vidéo unique) et ne noter que les questions qui ont réellement un passage rattaché.
-- Les questions sans passage sortent de la notation : elles ne reçoivent plus 1-3, elles ne comptent ni dans la note d'ensemble ni dans la moyenne. Elles s'affichent avec le tiret « non évalué » déjà utilisé dans la matrice.
-- Supprimer le doublon d'évaluations vides pour ces entretiens.
+### B. Notation par critères uniquement
+- Pour ces entretiens, l'évaluation se fait critère par critère sur l'ensemble du monologue, en respectant la pondération du poste (Expression orale 35 %, Ton et attitude 35 %, Cadre et présentation 30 %).
+- Plus aucune note par question, donc plus aucune pénalité pour une question jamais posée.
+- Un critère sans preuve reste « non évalué » (tiret) et sort de la moyenne ; la note finale est la moyenne pondérée des critères réellement évalués.
+- La matrice s'affiche alors en une seule ligne « Entretien complet », avec une colonne par critère.
 
-### B. Débloquer l'analyse orale
-- Abaisser à un seul extrait le minimum requis pour lancer l'analyse orale.
-- Rattacher la piste audio de la vidéo aux passages découpés, pour que l'analyse dispose du même son que la transcription.
-
-### C. Rendre les critères cohérents
-- Le rapport ne note plus un critère que la matrice a laissé sans preuve : il reprend l'état « non évalué » au lieu d'inventer une note à partir du texte.
-- « Cadre et présentation » reste donc non évalué pour ces imports, avec la mention explicite « nécessite l'analyse de l'image ». Si tu veux qu'il soit vraiment noté, il faut ajouter une analyse d'images extraites de la vidéo — je le propose en option, hors de ce lot.
+### C. Analyse orale débloquée, uniquement pour Tango
+- Le minimum d'un seul extrait audio ne s'applique qu'au poste « Vidéo de présentation » de l'organisation Tango. Tous les autres postes gardent le comportement actuel.
 
 ### D. Recalculer les neuf fiches déjà importées
-Relancer rapport + matrice sur les neuf candidats importés une fois les corrections en place, sans toucher aux vidéos ni aux transcriptions, et sans envoyer aucun e-mail.
+Relancer transcription complète, notation par critères et matrice sur les neuf candidats importés, sans retélécharger les vidéos et sans envoyer aucun e-mail.
 
 ## Détails techniques
 
-- `supabase/functions/generate-report/index.ts` : détection `session.end_reason = 'imported_external'`, filtrage des questions sans message candidat rattaché avant construction du prompt, consigne « n'évalue que les questions listées », neutralisation du rattrapage qui recrée des entrées nulles, et alignement de `fit_breakdown` sur les critères réellement évalués.
-- `supabase/functions/analyze-paraverbal/index.ts` : seuil `uploaded < 2` ramené à `uploaded < 1`.
-- `supabase/functions/import-external-candidates/index.ts` : propagation de `audio_segment_url` sur les messages issus du découpage.
-- Redéploiement des trois fonctions, puis relance ciblée des neuf sessions `end_reason = 'imported_external'`.
-- Aucune modification de la logique de scoring des entretiens natifs : le comportement actuel reste inchangé quand toutes les questions ont été posées.
+- `supabase/functions/import-external-candidates/index.ts` : suppression de l'appel `splitTranscript` et des messages supplémentaires ; un seul `session_message` candidat, `question_id = null`, contenu = transcript intégral.
+- `supabase/functions/generate-report/index.ts` : mode « entretien libre » quand `session.end_reason = 'imported_external'` — prompt sans liste de questions, pas de `question_evaluations`, `fit_breakdown` construit uniquement sur les critères du poste avec preuve citée ; suppression du rattrapage qui recrée des entrées vides ; note globale = moyenne pondérée des critères évalués.
+- `supabase/functions/generate-fit-matrix/index.ts` : mode ligne unique quand aucun message n'est rattaché à une question, pondérations issues du poste, critères sans preuve marqués `not_evaluated`.
+- `supabase/functions/analyze-paraverbal/index.ts` : seuil abaissé à un extrait seulement si `project.id = eb7db435-1f2f-4ccf-a2ff-f49d68f851db` (Tango, « Vidéo de présentation ») ; seuil de deux inchangé partout ailleurs.
+- Script de relance sur les neuf sessions `end_reason = 'imported_external'`, sans appel aux fonctions d'envoi d'e-mail.
+- « Cadre et présentation » restera non évalué tant que l'image n'est pas analysée : le rapport ne l'inventera plus à partir du texte. L'analyse d'images extraites de la vidéo peut s'ajouter dans un second temps.
