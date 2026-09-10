@@ -14,7 +14,9 @@
  * Options :
  *   --file        chemin du fichier .xlsx ou .csv exporté
  *   --project-id  poste de destination
- *   --mapping     correspondance colonnes -> champs (name, email, phone, media, date)
+ *   --mapping     correspondance colonnes -> champs (name, email, phone, media,
+ *                 duration, date) ; "duration" est la durée de la réponse et
+ *                 sert à écarter les lignes sans réponse enregistrée
  *   --limit       nombre maximum de candidats à traiter (défaut 10)
  *   --sheet       nom de l'onglet (défaut : le premier)
  *   --order       "last" (les plus récents, défaut) ou "first"
