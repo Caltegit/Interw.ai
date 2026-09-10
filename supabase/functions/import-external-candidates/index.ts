@@ -24,6 +24,9 @@ type Candidate = {
   email: string;
   phone?: string | null;
   media_url: string;
+  /** Durée de la réponse, telle qu'indiquée dans l'export : sert à distinguer
+   *  la réponse du candidat des vidéos de consigne du recruteur. */
+  media_duration?: number | null;
   /** Piste audio compressée (base64) fournie par le script, pour la transcription. */
   audio_b64?: string | null;
   question_index?: number;
