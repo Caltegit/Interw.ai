@@ -244,7 +244,12 @@ async function main() {
   const summary: Array<{ email: string; status: string; detail: string }> = [];
 
   for (const candidate of selected) {
-    const audio_b64 = dryRun ? null : await extractAudio(candidate.media_url);
+    const audio_b64 = dryRun ? null : await extractAudio(candidate.media_url, candidate.media_duration);
+    if (!dryRun && !audio_b64) {
+      summary.push({ email: candidate.email, status: "skipped", detail: "réponse introuvable" });
+      console.log(`  ${candidate.email} → skipped (réponse introuvable)`);
+      continue;
+    }
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-internal-secret": secret },
@@ -255,6 +260,7 @@ async function main() {
           email: candidate.email,
           phone: candidate.phone,
           media_url: candidate.media_url,
+          media_duration: candidate.media_duration,
           audio_b64,
         },
         dry_run: dryRun,
