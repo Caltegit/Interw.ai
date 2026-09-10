@@ -180,7 +180,13 @@ Deno.serve(async (req) => {
     }
 
     // Vérifie que le média est réellement téléchargeable avant toute écriture.
-    const directUrl = await resolveMediaUrl(candidate.media_url);
+    const directUrl = await resolveMediaUrl(candidate.media_url, candidate.media_duration);
+    if (!directUrl) {
+      return json({
+        status: "skipped",
+        reason: "aucune réponse vidéo du candidat sur cette page",
+      });
+    }
     const mediaRes = await fetch(directUrl);
     if (!mediaRes.ok) {
       return json({
