@@ -214,7 +214,10 @@ async function main() {
 
   console.log(`Candidats retenus (${selected.length} sur ${candidates.length} exploitables) :`);
   for (const c of selected) {
-    console.log(`  - ${c.name} | ${c.email} | ${c.phone ?? "—"}`);
+    console.log(`  - ${c.name} | ${c.email} | ${c.phone ?? "—"} | ${c.media_duration}s`);
+  }
+  if (withoutAnswer > 0) {
+    console.log(`\n${withoutAnswer} ligne(s) écartée(s) : aucune réponse vidéo enregistrée.`);
   }
 
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
