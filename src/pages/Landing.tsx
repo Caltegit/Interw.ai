@@ -138,14 +138,6 @@ export default function Landing() {
               className="h-7 w-auto"
             />
           </Link>
-          <nav className="text-muted-foreground hidden items-center gap-8 text-sm md:flex">
-            <a href="#produit" className="hover:text-foreground transition-colors">
-              {t("nav.product")}
-            </a>
-            <a href="#tarifs" className="hover:text-foreground transition-colors">
-              {t("nav.pricing")}
-            </a>
-          </nav>
           <div className="flex items-center gap-2 sm:gap-4 text-sm">
             <Link to="/login" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground transition-colors">
               {t("nav.signIn")}
