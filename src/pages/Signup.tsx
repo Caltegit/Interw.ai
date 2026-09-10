@@ -59,6 +59,13 @@ export default function Signup() {
         return;
       }
       setStep("sent");
+      // Alerte interne non bloquante : prévenir l'équipe de la nouvelle inscription.
+      void supabase.functions
+        .invoke("notify-new-signup", {
+          body: { email: normalizedEmail, fullName: fullName.trim() },
+        })
+        .catch(() => {});
+
 
     } catch (error: any) {
       toast({ title: t("signup.error"), description: error.message, variant: "destructive" });
