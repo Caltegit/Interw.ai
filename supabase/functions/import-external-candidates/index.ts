@@ -24,6 +24,9 @@ type Candidate = {
   email: string;
   phone?: string | null;
   media_url: string;
+  /** Durée de la réponse, telle qu'indiquée dans l'export : sert à distinguer
+   *  la réponse du candidat des vidéos de consigne du recruteur. */
+  media_duration?: number | null;
   /** Piste audio compressée (base64) fournie par le script, pour la transcription. */
   audio_b64?: string | null;
   question_index?: number;
@@ -51,16 +54,27 @@ function randomToken(): string {
 }
 
 // Une URL de partage VideoAsk (https://www.videoask.com/xxxx) n'est pas un
-// média : on récupère le lien direct du .mp4 dans la page.
-async function resolveMediaUrl(url: string): Promise<string> {
+// média : on récupère le lien direct du .mp4 dans la page. La page contient
+// aussi les vidéos de consigne du recruteur : on ne retient que le média dont
+// la durée correspond à celle indiquée dans l'export.
+async function resolveMediaUrl(url: string, expectedDuration?: number | null): Promise<string | null> {
   if (!/^https?:\/\/(www\.)?videoask\.com\//.test(url)) return url;
+  if (!expectedDuration || !Number.isFinite(expectedDuration)) return null;
   const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-  if (!res.ok) return url;
+  if (!res.ok) return null;
   const html = await res.text();
-  const match = html.match(
-    /https:\/\/media\.videoask\.com\/transcoded\/[^"\\]+?video\.mp4\?token=[^"\\&]+/,
-  );
-  return match ? match[0] : url;
+
+  const durationById = new Map<string, number>();
+  for (const m of html.matchAll(/"media_duration":([0-9.]+),"media_id":"([0-9a-f-]+)"/g)) {
+    durationById.set(m[2], Number(m[1]));
+  }
+  for (const m of html.matchAll(
+    /https:\/\/media\.videoask\.com\/transcoded\/([0-9a-f-]+)\/video\.mp4\?token=[^"\\&]+/g,
+  )) {
+    const d = durationById.get(m[1]);
+    if (d !== undefined && Math.abs(d - expectedDuration) <= 1) return m[0];
+  }
+  return null;
 }
 
 // Découpe le transcript d'un monologue en passages rattachés aux questions du
@@ -169,7 +183,13 @@ Deno.serve(async (req) => {
     }
 
     // Vérifie que le média est réellement téléchargeable avant toute écriture.
-    const directUrl = await resolveMediaUrl(candidate.media_url);
+    const directUrl = await resolveMediaUrl(candidate.media_url, candidate.media_duration);
+    if (!directUrl) {
+      return json({
+        status: "skipped",
+        reason: "aucune réponse vidéo du candidat sur cette page",
+      });
+    }
     const mediaRes = await fetch(directUrl);
     if (!mediaRes.ok) {
       return json({
