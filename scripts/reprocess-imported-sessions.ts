@@ -41,11 +41,15 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const secret = process.env.INTERNAL_FUNCTION_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !secret) fail("SUPABASE_URL et INTERNAL_FUNCTION_SECRET doivent être définis");
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const internalSecret = process.env.INTERNAL_FUNCTION_SECRET ?? serviceRole;
+  if (!supabaseUrl || !serviceRole || !internalSecret) {
+    fail("SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY et INTERNAL_FUNCTION_SECRET doivent être définis");
+  }
 
-  const supabase = createClient(supabaseUrl, secret, { auth: { autoRefreshToken: false, persistSession: false } });
+  const supabase = createClient(supabaseUrl, serviceRole, { auth: { autoRefreshToken: false, persistSession: false } });
   console.log("Connexion Supabase OK", supabaseUrl.slice(0, 28));
+
 
 
   const { data: question, error: qErr } = await supabase
