@@ -140,9 +140,10 @@ async function main() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-internal-secret": secret,
-          Authorization: `Bearer ${secret}`,
+          "x-internal-secret": internalSecret,
+          Authorization: `Bearer ${internalSecret}`,
         },
+
         body: JSON.stringify(payload),
       });
       const text = await res.text();
