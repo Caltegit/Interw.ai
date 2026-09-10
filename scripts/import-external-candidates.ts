@@ -169,15 +169,24 @@ async function main() {
   const runAnalysis = args["no-analysis"] !== true;
   const order = args.order === "first" ? "first" : "last";
 
-  const all = rows
-    .map((row) => ({
-      name: cell(row, mapping.name),
-      email: cell(row, mapping.email).toLowerCase(),
-      phone: cell(row, mapping.phone) || null,
-      media_url: cell(row, mapping.media),
-      date: cell(row, mapping.date),
-    }))
-    .filter((c) => c.email.includes("@") && c.media_url.startsWith("http"));
+  const mapped = rows.map((row) => ({
+    name: cell(row, mapping.name),
+    email: cell(row, mapping.email).toLowerCase(),
+    phone: cell(row, mapping.phone) || null,
+    media_url: cell(row, mapping.media),
+    media_duration: Number(cell(row, mapping.duration)) || null,
+    date: cell(row, mapping.date),
+  }));
+
+  // Une ligne sans durée de média est une ligne sans réponse enregistrée : la
+  // page de partage ne contient alors que les vidéos de consigne du recruteur.
+  const withoutAnswer = mapped.filter(
+    (c) => c.email.includes("@") && c.media_url.startsWith("http") && !c.media_duration,
+  ).length;
+
+  const all = mapped.filter(
+    (c) => c.email.includes("@") && c.media_url.startsWith("http") && !!c.media_duration,
+  );
 
   // Le plus récent en premier : par date si la colonne est fournie, sinon en
   // suivant l'ordre du fichier.
