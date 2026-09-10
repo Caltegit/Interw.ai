@@ -1,40 +1,36 @@
-# Landing : remplacer la section tarifs par un accès bêta sans prix
+# Landing : suppression de la section pricing et des liens de headbar
 
 ## Objectif
 
-Interw est en phase bêta avec un embarquement gratuit. Afficher un pricing non finalisé — même sous forme « Sur devis » — peut bloquer ou détourner des prospects. La section `#tarifs` est remplacée par un simple bloc d’accès privé orienté prise de contact, sans montant.
+La page d’accueil devient une vitrine simple qu’on fait défiler jusqu’en bas. On retire tout ce qui oriente vers la section tarifs et les liens de navigation dans l’en-tête.
 
 ## Décisions confirmées
 
-- Pas de prix affiché (0 €, forfait, au-delà, tarif négocié, etc.).
-- Garder l’ancre `#tarifs` et le lien « Tarifs » dans la navbar pour ne pas casser les liens existants.
-- Titre de section plus adapté à la phase : « Accès privé » / « Private access ».
-- Bloc simple : titre, court sous-titre, CTA vers le calendrier existant (`CAL_LINK`).
+- La section `#tarifs` est supprimée entièrement.
+- Les liens « Produit » et « Tarifs » disparaissent du header.
+- Aucun autre lien de navigation n’est ajouté dans le header : il ne reste que le logo Interw.
+- Le calendrier de démo reste accessible dans le hero, la clôture et le footer.
 
 ## Changements prévus
 
 ### `src/pages/Landing.tsx`
 
-- Remplacer le bloc tarifaire actuel par un bloc centré dans la section `#tarifs` :
-  - titre via `tp("title")` (nouvelle valeur « Accès privé ») ;
-  - sous-titre via `tp("beta.subtitle")` ;
-  - CTA via `tp("beta.cta")` vers `CAL_LINK`.
-- Supprimer toutes les références à `custom.title`, `custom.subtitle`, `custom.cta` si elles ne sont plus utilisées ailleurs.
-- Conserver l’ancre `id="tarifs"` et le lien de navigation.
+- Dans le header :
+  - supprimer le bloc `<nav>` contenant les liens `#produit` et `#tarifs` ;
+  - supprimer le bloc de droite contenant le lien « Se connecter » et le CTA « Réserver une démo » ;
+  - ne garder que le logo cliquable vers `/`.
+- Supprimer la section `{/* ============ TARIFS ============ */}` et tout son contenu.
+- Retirer l’import/useTranslation `tp` (`useTranslation("pricing")`) si la section tarifs était son seul usage.
+- Conserver `#produit` section et les ancres internes existantes si elles sont utilisées ailleurs.
 
 ### Fichiers i18n
 
-- `src/i18n/locales/fr/pricing.json` et `src/i18n/locales/en/pricing.json` :
-  - remplacer `title` par « Accès privé » / « Private access » ;
-  - ajouter `beta.subtitle` et `beta.cta` ;
-  - supprimer les clés `custom.*`, `onQuote` et `plans` si elles ne sont utilisées que ici.
-
-### `src/index.css`
-
-- Ne retirer aucun style utilisé ailleurs. Vérifier que les anciennes classes tarifaires n’ont pas d’impact.
+- `src/i18n/locales/fr/pricing.json` et `src/i18n/locales/en/pricing.json` : ne pas supprimer sans vérifier, mais ils ne seront plus importés depuis `Landing.tsx`.
+- Vérifier que `t("nav.product")` et `t("nav.pricing")` ne sont plus utilisés dans cette page ; si ce sont leurs seuls usages, ils pourront être supprimés des fichiers `landing.json` dans un second temps.
 
 ## Vérification
 
 - Build OK.
-- Capture de la section `#tarifs` en FR et EN : titre « Accès privé » / « Private access », pas de prix, CTA vers le calendrier.
-- Vérifier que le lien « Tarifs » dans la navbar amène toujours à la section.
+- Capture de la landing en haut de page : header minimal avec seulement le logo, pas de liens.
+- Capture de la landing complète : aucun bloc tarifaire entre Produit et FAQ.
+- La FAQ reste bien visible en dessous de la section précédente.
