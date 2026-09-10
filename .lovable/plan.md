@@ -10,7 +10,7 @@ Avec le plan précédent, oui, il y avait des règles spécifiques à Tango écr
 - la note par question note la seule question posée — plus de 3/10 sur des questions jamais posées ;
 - la matrice affiche une ligne × trois critères, avec la pondération du poste — c'est déjà le comportement standard.
 
-Il ne reste qu'une seule règle particulière dans le code partagé : l'analyse orale exige aujourd'hui deux extraits audio. Je propose de la remplacer par une règle générique, non spécifique à Tango : « un poste à une seule question n'exige qu'un seul extrait ». C'est un comportement cohérent pour n'importe quel poste à une question, pas une exception Tango.
+Comme demandé, **aucune modification de code** n'est prévue ; l'analyse orale reste bloquée sur un extrait minimum.
 
 Les limites à connaître, pour que tu décides en connaissance de cause :
 - les cinq questions actuelles du poste sont remplacées par la question unique — l'historique des neuf fiches est recalculé sur cette base ;
@@ -25,21 +25,18 @@ Les limites à connaître, pour que tu décides en connaissance de cause :
 
 ### B. Import simplifié
 - L'import rattache le transcript complet à cette question unique, sans découpe ni segmentation.
-- Une seule réponse par candidat : vidéo + piste audio + transcript intégral.
+- Une seule réponse par candidat : vidéo + transcript intégral.
 
-### C. Analyse orale
-- Règle générique : pour un poste à une seule question, un extrait audio suffit à lancer l'analyse orale. Tous les autres postes gardent le seuil de deux extraits.
-
-### D. Recalculer les neuf fiches déjà importées
+### C. Recalculer les neuf fiches déjà importées
 - Relancer transcription complète, notation et matrice sur les neuf candidats, sans retélécharger les vidéos et sans envoyer aucun e-mail.
 
 ### Détails techniques
 - `supabase/functions/import-external-candidates/index.ts` : suppression de `splitTranscript`, rattachement à la question unique du poste.
 - `supabase/functions/generate-report/index.ts` : aucune modification — le parcours standard note la seule question posée, le rattrapage d'entrées vides ne se déclenche plus.
 - `supabase/functions/generate-fit-matrix/index.ts` : aucune modification — une ligne, trois critères, pondération du poste.
-- `supabase/functions/analyze-paraverbal/index.ts` : seuil ramené à un extrait lorsque le poste n'a qu'une question.
 - Données : archivage des cinq questions actuelles, création de la question unique, relance des neuf sessions `end_reason = 'imported_external'`.
 - Vérification : un entretien d'un autre projet garde ses données telles quelles ; aucun e-mail envoyé.
 
 ## Question ouverte
-Le libellé exact de la question unique (proposition ci-dessus), ainsi que son titre court affiché dans la fiche (proposition : « Présentation »).
+
+Le libellé exact de la question unique, ainsi que son titre court affiché dans la fiche (propositions : « Présentation » pour le titre, et le libellé ci-dessus pour le corps).
