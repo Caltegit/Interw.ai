@@ -77,55 +77,6 @@ async function resolveMediaUrl(url: string, expectedDuration?: number | null): P
   return null;
 }
 
-// Découpe le transcript d'un monologue en passages rattachés aux questions du
-// poste. Les questions non traitées ne reçoivent aucun passage.
-async function splitTranscript(
-  transcript: string,
-  questions: Array<{ id: string; content: string }>,
-): Promise<Map<string, string>> {
-  const result = new Map<string, string>();
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey || !transcript.trim() || questions.length < 2) return result;
-
-  const list = questions.map((q, i) => `[${i}] ${q.content}`).join("\n");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "openai/gpt-6-astra",
-      reasoning_effort: "low",
-      messages: [
-        {
-          role: "system",
-          content:
-            "Tu répartis le transcript d'une vidéo de présentation entre les questions d'un entretien. " +
-            "Tu recopies les passages mot pour mot, sans les reformuler. " +
-            "Une question non traitée par le candidat est simplement absente du résultat. " +
-            'Réponds uniquement en JSON : {"segments":[{"index":0,"text":"..."}]}',
-        },
-        { role: "user", content: `Questions :\n${list}\n\nTranscript :\n${transcript}` },
-      ],
-    }),
-  });
-  if (!res.ok) {
-    console.error("[import] découpage impossible", res.status, await res.text().catch(() => ""));
-    return result;
-  }
-  const payload = await res.json();
-  const raw = payload?.choices?.[0]?.message?.content ?? "";
-  const jsonText = raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1);
-  try {
-    const parsed = JSON.parse(jsonText);
-    for (const seg of parsed?.segments ?? []) {
-      const q = questions[Number(seg.index)];
-      const text = String(seg.text ?? "").trim();
-      if (q && text) result.set(q.id, text);
-    }
-  } catch (e) {
-    console.error("[import] JSON de découpage illisible", e);
-  }
-  return result;
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
