@@ -102,7 +102,7 @@ const FAQ_KEYS = ["decision", "hosting", "interview", "quota", "trial", "billing
 
 export default function Landing() {
   const { t } = useTranslation("landing");
-  const { t: tp } = useTranslation("pricing");
+  
   const { t: tf } = useTranslation("faq");
   const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
