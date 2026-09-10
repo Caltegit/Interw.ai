@@ -82,7 +82,7 @@ function parseMapping(raw: string | undefined): Record<string, string> {
     if (!field || rest.length === 0) fail(`correspondance invalide : "${pair}"`);
     mapping[field.trim()] = rest.join("=").trim();
   }
-  for (const required of ["name", "email", "media"]) {
+  for (const required of ["name", "email", "media", "duration"]) {
     if (!mapping[required]) fail(`la correspondance doit contenir "${required}"`);
   }
   return mapping;
