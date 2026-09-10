@@ -1,0 +1,224 @@
+// Import de candidats externes (VideoAsk, etc.) dans un poste Interw.
+//
+// Fonction d'outillage : appelée uniquement par le script
+// `scripts/import-external-candidates.ts`. Elle n'est branchée sur aucune page
+// de l'application et n'est jamais appelée depuis le front.
+//
+// GARDE-FOU ABSOLU : aucun e-mail candidat n'est envoyé.
+//  - la session est créée directement en statut `completed` via INSERT ;
+//    les déclencheurs `sessions_finalize_on_completed` et
+//    `sessions_enqueue_report` sont des AFTER UPDATE OF status, donc ils ne se
+//    déclenchent pas sur un INSERT ;
+//  - on n'enfile jamais de report_job (le worker enverrait le thank-you) ;
+//  - on appelle `generate-report` directement, qui n'écrit qu'aux destinataires
+//    configurés sur le poste (aucun envoi si la liste est vide).
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { requireInternal, SHARED_CORS } from "../_shared/auth-guard.ts";
+
+const cors = { ...SHARED_CORS, "Access-Control-Allow-Methods": "POST, OPTIONS" };
+
+const BUCKET = "media";
+
+type Candidate = {
+  name: string;
+  email: string;
+  phone?: string | null;
+  media_url: string;
+  question_index?: number;
+  external_ref?: string | null;
+};
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+function extFromContentType(ct: string | null, url: string): string {
+  const fromUrl = url.split("?")[0].split(".").pop()?.toLowerCase();
+  if (fromUrl && fromUrl.length <= 4 && /^[a-z0-9]+$/.test(fromUrl)) return fromUrl;
+  if (ct?.includes("webm")) return "webm";
+  if (ct?.includes("mpeg") || ct?.includes("mp3")) return "mp3";
+  if (ct?.includes("audio")) return "m4a";
+  return "mp4";
+}
+
+function randomToken(): string {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+
+  const denied = requireInternal(req, cors);
+  if (denied) return denied;
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const projectId: string | undefined = body.project_id;
+    const candidate: Candidate | undefined = body.candidate;
+    const dryRun: boolean = body.dry_run !== false;
+    const runAnalysis: boolean = body.run_analysis !== false;
+
+    if (!projectId || typeof projectId !== "string") {
+      return json({ error: "project_id requis" }, 400);
+    }
+    if (!candidate?.name || !candidate?.email || !candidate?.media_url) {
+      return json({ error: "candidate.name, candidate.email et candidate.media_url requis" }, 400);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const { data: project, error: projectErr } = await supabase
+      .from("projects")
+      .select("id, title, organization_id, questions(id, order_index, archived_at)")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    if (projectErr) return json({ error: `poste illisible: ${projectErr.message}` }, 500);
+    if (!project) return json({ error: "poste introuvable" }, 404);
+
+    const questions = ((project.questions ?? []) as Array<
+      { id: string; order_index: number; archived_at: string | null }
+    >)
+      .filter((q) => !q.archived_at)
+      .sort((a, b) => a.order_index - b.order_index);
+
+    const questionIndex = Number.isInteger(candidate.question_index) ? candidate.question_index! : 0;
+    const question = questions[questionIndex] ?? null;
+
+    // Doublon : même e-mail déjà importé sur ce poste.
+    const { data: existing } = await supabase
+      .from("sessions")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("candidate_email", candidate.email.toLowerCase())
+      .maybeSingle();
+
+    if (existing) {
+      return json({ status: "skipped", reason: "doublon", session_id: existing.id });
+    }
+
+    // Vérifie que le média est réellement téléchargeable avant toute écriture.
+    const mediaRes = await fetch(candidate.media_url);
+    if (!mediaRes.ok) {
+      return json({
+        status: "skipped",
+        reason: `média inaccessible (HTTP ${mediaRes.status})`,
+      });
+    }
+    const contentType = mediaRes.headers.get("content-type");
+    const bytes = new Uint8Array(await mediaRes.arrayBuffer());
+    const ext = extFromContentType(contentType, candidate.media_url);
+
+    if (dryRun) {
+      return json({
+        status: "dry_run",
+        candidate: candidate.email,
+        media_bytes: bytes.byteLength,
+        media_ext: ext,
+        question_id: question?.id ?? null,
+      });
+    }
+
+    const now = new Date().toISOString();
+    const { data: session, error: sessionErr } = await supabase
+      .from("sessions")
+      .insert({
+        project_id: projectId,
+        organization_id: project.organization_id,
+        candidate_name: candidate.name,
+        candidate_email: candidate.email.toLowerCase(),
+        candidate_phone: candidate.phone ?? null,
+        token: randomToken(),
+        status: "completed",
+        consent_given_at: now,
+        consent_accepted_at: now,
+        started_at: now,
+        completed_at: now,
+        last_question_index: questionIndex,
+        end_reason: "imported_external",
+      })
+      .select("id")
+      .single();
+
+    if (sessionErr || !session) {
+      return json({ error: `création de la fiche impossible: ${sessionErr?.message}` }, 500);
+    }
+
+    const path = `interviews/${session.id}/q${questionIndex}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from(BUCKET).upload(path, bytes, {
+      contentType: contentType ?? "video/mp4",
+      upsert: true,
+    });
+    if (uploadErr) {
+      await supabase.from("sessions").delete().eq("id", session.id);
+      return json({ error: `dépôt de la vidéo impossible: ${uploadErr.message}` }, 500);
+    }
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    const mediaUrl = pub.publicUrl;
+
+    const isAudio = ["mp3", "m4a", "wav", "ogg"].includes(ext);
+    const { error: messageErr } = await supabase.from("session_messages").insert({
+      session_id: session.id,
+      organization_id: project.organization_id,
+      role: "candidate",
+      content: "",
+      question_id: question?.id ?? null,
+      is_follow_up: false,
+      timestamp: now,
+      transcription_status: "pending",
+      video_segment_url: isAudio ? null : mediaUrl,
+      audio_segment_url: isAudio ? mediaUrl : null,
+    });
+    if (messageErr) {
+      return json({ error: `rattachement de la réponse impossible: ${messageErr.message}` }, 500);
+    }
+
+    await supabase
+      .from("sessions")
+      .update(isAudio ? { audio_recording_url: mediaUrl } : { video_recording_url: mediaUrl })
+      .eq("id", session.id);
+
+    const result: Record<string, unknown> = {
+      status: "created",
+      session_id: session.id,
+      media_url: mediaUrl,
+      media_bytes: bytes.byteLength,
+    };
+
+    if (runAnalysis) {
+      const invoke = async (fn: string, payload: Record<string, unknown>) => {
+        const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/${fn}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-secret": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify(payload),
+        });
+        return { ok: res.ok, status: res.status };
+      };
+
+      result.transcription = await invoke("transcribe-session", {
+        session_id: session.id,
+        force: true,
+      });
+      result.report = await invoke("generate-report", {
+        session_id: session.id,
+        force: true,
+        generate_fit_matrix: true,
+      });
+    }
+
+    return json(result);
+  } catch (e) {
+    console.error("[import-external-candidates]", e);
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+  }
+});
