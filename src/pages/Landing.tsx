@@ -263,28 +263,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ============ TARIFS ============ */}
-      <section id="tarifs" className="border-border border-t scroll-mt-20">
-        <div className="mx-auto max-w-3xl px-5 sm:px-6 py-16 md:py-24 text-center">
-          <h2 className={H2}>{tp("title")}</h2>
-          <div className="border-border bg-background mt-10 rounded-2xl border p-8 md:p-12">
-            <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              {tp("custom.title")}
-            </h3>
-            <p className="text-muted-foreground mt-4 text-lg md:text-xl">
-              {tp("custom.subtitle")}
-            </p>
-            <a
-              href={CAL_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-foreground text-background mt-8 inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
-            >
-              {tp("custom.cta")} <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
-      </section>
 
       {/* ============ FAQ ============ */}
       <section className="border-border border-t">
