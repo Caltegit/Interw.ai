@@ -14,26 +14,43 @@ Le score est calculé **uniquement à partir du texte transcrit**, jamais à par
 Deux effets se cumulent :
 
 1. **La transcription nettoie le discours.** Le moteur de transcription restitue un français corrigé : il rétablit la grammaire, supprime les hésitations, les répétitions et les mots mal prononcés. Un candidat difficilement compréhensible à l'oral ressort donc en texte parfaitement propre.
-2. **L'IA de notation ne voit que ce texte propre.** Sur un critère comme « Expression orale », elle juge donc la syntaxe écrite, pas la prononciation, l'accent, le débit ou la fluidité. D'où le commentaire « compréhensible sans effort », qui est vrai du texte et faux de la vidéo.
+2. **L'IA de notation ne voit que ce texte propre.** Sur un critère comme « Expression orale », elle juge donc la syntaxe écrite, pas la prononciation, le débit, l'accent ou la fluidité. D'où le commentaire « compréhensible sans effort », qui est vrai du texte et faux de la vidéo.
 
 Le contenu très court (une dizaine de secondes exploitables) n'a pas non plus fait baisser la note, alors qu'il apporte peu d'éléments.
 
 ## Ce que je peux corriger
 
-Trois pistes, de la plus légère à la plus profonde. Dis-moi laquelle tu veux.
+**Option A — Transcription verbatim (modifie le prompt de transcription uniquement).**
+Demander au moteur de transcrire mot à mot, en conservant hésitations, répétitions, mots inachevés et passages inaudibles. L'IA de notation verrait alors un texte qui reflète mieux la difficulté réelle. Limite : l'accent reste invisible.
 
-**A. Transcription fidèle (rapide).** Demander au moteur de transcrire mot à mot, en conservant hésitations, répétitions, mots inachevés et en signalant les passages inaudibles. L'IA de notation verrait alors un texte qui reflète la difficulté réelle. Effet partiel : l'accent reste invisible.
+**Option B — Indicateurs de fluidité orale (mesure sur l'audio déjà stocké).**
+Mesurer des signaux objectifs à partir de la piste audio : débit moyart, durée et nombre de pauses, proportion de silences longs, mots incompréhensibles, faux départs. Ces indicateurs nourriraient le critère « Expression orale » sans identifier la personne ni prétendre analyser ses émotions.
 
-**B. Note d'intelligibilité issue de l'audio (recommandé).** Ajouter, à partir de la piste audio déjà stockée, une mesure d'élocution : clarté, débit, hésitations, proportion de passages incompréhensibles. Cette mesure alimente le critère d'expression orale plutôt que le seul texte. C'est ce qui corrige vraiment le cas présent.
+**Option C — Notation directement sur la vidéo/audio par le modèle.**
+Faire écouter l'enregistrement au modèle de notation en même temps que le texte. Le plus fidèle, mais le plus coûteux, le plus lent et le plus exposé du point de vue réglementaire (car le modèle peut interpréter l'accent).
 
-**C. Notation directement sur la vidéo.** Faire écouter l'enregistrement au modèle de notation en même temps que le texte. Le plus fidèle, mais aussi le plus coûteux et le plus lent sur chaque entretien.
+## Point de vigilance réglementaire
 
-## Points à trancher avant de coder
+L'évaluation de la prononciation ou de l'accent peut devenir un critère indirect de discrimination à l'embauche (origine, lieu de résidence, handicap). Ce n'est pas, en soi, de la biométrie au sens AI Act (on n'identifie pas la personne), mais c'est une zone sensible.
 
-- Périmètre : uniquement le poste Tango « Vidéo de présentation », ou toutes les organisations ?
-- Faut-il recalculer les 41 candidats déjà importés, ou n'appliquer la règle qu'aux nouveaux ?
-- En cas de doute sur l'intelligibilité, préfères-tu une note basse ou un critère marqué « à vérifier en entretien » ?
+La voie la plus sûre reste l'**option B restreinte à des indicateurs de fluidité professionnelle** :
+- pas de reconnaissance du locuteur,
+- pas d'inférence sur les émotions,
+- pas de note sur l'accent,
+- descriptifs factuels plutôt qu'une note automatique,
+- mention transparente pour le candidat.
 
-## Détails techniques
+## Périmètre proposé
 
-Le scoring repose sur `generate-report` et `generate-fit-matrix`, qui envoient uniquement `session_messages.content` au modèle. `analyze-paraverbal` existe mais se limite aujourd'hui à un contrôle de silence et n'écrit rien dans les critères. L'option B consisterait à étendre cette fonction (mesures d'élocution à partir de `audio_segment_url`) et à injecter son verdict comme contrainte dans le prompt du critère « Expression orale ».
+- Activer ce complément audio **uniquement** pour le poste Tango « Vidéo de présentation ».
+- Ne pas toucher aux autres organisations ni aux autres projets.
+- Ajouter une option en paramètre du projet : « Inclure une évaluation de la fluidité orale ».
+- Recalculer les 41 candidats Tango déjà importés uniquement si tu confirmes.
+
+## Questions avant d'implémenter
+
+1. Quelle option tu préfères : A, B ou C ?
+2. Veux-tu limiter cela au seul projet Tango « Vidéo de présentation », ou l'ouvrir à tous les projets avec un interrupteur ?
+3. Faut-il recalculer les candidats déjà importés, ou appliquer la règle uniquement aux nouveaux ?
+4. Veux-tu ajouter une mention visible pour le candidat dans l'e-mail d'invitation et/ou l'écran d'accueil ?
+5. As-tu consulté ton conseil juridique interne ? Je peux documenter le raisonnement technique, mais je ne peux pas valider la conformité.
