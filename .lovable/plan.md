@@ -1,23 +1,39 @@
-# Corriger les dernières sessions candidates du tableau de bord
+# Pourquoi A Perry obtient 75/100 malgré un français difficile
 
-## Diagnostic confirmé
+## Ce que j'ai vérifié sur cette session
 
-- **« RDV » ne désigne pas un rendez-vous ici.** Le statut technique `in_progress` est traduit par erreur par « RDV » dans le badge partagé.
-- **Alix Pougte-Abadie est réellement en cours** : entretien commencé, 4 réponses enregistrées sur 6, aucun rapport pour l’instant.
-- **Clémence Moreau a terminé ses 6 questions** et son rapport est en cours de génération. La capture montre encore « RDV » parce que le tableau de bord ne se rafraîchit pas automatiquement après la fin de l’entretien.
-- Les deux lignes ne sont pas cliquables car le tableau de bord ajoute volontairement un lien **uniquement** lorsque le statut affiché est `completed`.
-- Le bouton **« Passer »** enregistre déjà un marqueur « Question passée » et, lorsque le candidat atteint la fin, le parcours classe déjà la session comme terminée et lance le rapport. En revanche, le décompte affiché se base actuellement sur les vidéos enregistrées : une question passée peut donc être comptée à tort comme une réponse si son enregistrement contient un média.
+- La note vient de **trois critères notés « solides »** : Expression orale 80, Ton et attitude 78, Cadre et présentation 75. Moyenne pondérée = 75/100, grade B, « recommandé ».
+- La justification retenue pour l'expression orale est : *« Français soigné, phrases bien construites et compréhensibles sans effort. »*
+- Le texte sur lequel l'IA a travaillé tient en trois phrases : *« Bonjour, je m'appelle Thierry. J'aime beaucoup la lecture, la cuisine et me promener en plein air. Je suis ravi de vous rencontrer et de vous accompagner au quotidien. À bientôt ! »*
+- Aucune analyse de la voix n'a alimenté la note : le seul contrôle audio effectué est un test technique (« la piste n'est pas silencieuse »), sans mesure de débit, d'hésitations ni d'intelligibilité.
 
-## Correction proposée
+## L'explication
 
-1. Remplacer le libellé de statut candidat **« RDV »** par **« En cours »**, sans modifier la décision recruteur « RDV » utilisée ailleurs.
-2. Rendre les sessions commencées et terminées cliquables depuis **Dernières sessions candidats**.
-3. Rafraîchir automatiquement les données du tableau de bord pendant qu’une session récente est en cours, afin que son statut et son score apparaissent sans recharger la page.
-4. Conserver les invitations encore en attente hors de cette liste et sans accès à une fiche vide.
-5. Compter comme réponse uniquement une réponse réellement donnée, en excluant explicitement les marqueurs **« Question passée »**. La fiche affichera ainsi, par exemple, **« 3 réponses sur 6 questions »**.
-6. Confirmer que le rapport analyse seulement les réponses disponibles, sans pénaliser les questions passées, tout en conservant les pondérations prévues sur les éléments effectivement évaluables.
-7. Vérifier les trois cas : fiche en cours accessible, fin avec toutes les réponses, et fin avec plusieurs questions passées ; dans les deux derniers cas, statut **« Complété »**, rapport généré et décompte exact.
+Le score est calculé **uniquement à partir du texte transcrit**, jamais à partir de la voix.
 
-## Périmètre technique
+Deux effets se cumulent :
 
-Changements limités au badge de statut candidat, au bloc **Dernières sessions candidats**, au décompte des réponses et aux consignes de génération du rapport. Aucun changement de données ni de structure de la base.
+1. **La transcription nettoie le discours.** Le moteur de transcription restitue un français corrigé : il rétablit la grammaire, supprime les hésitations, les répétitions et les mots mal prononcés. Un candidat difficilement compréhensible à l'oral ressort donc en texte parfaitement propre.
+2. **L'IA de notation ne voit que ce texte propre.** Sur un critère comme « Expression orale », elle juge donc la syntaxe écrite, pas la prononciation, l'accent, le débit ou la fluidité. D'où le commentaire « compréhensible sans effort », qui est vrai du texte et faux de la vidéo.
+
+Le contenu très court (une dizaine de secondes exploitables) n'a pas non plus fait baisser la note, alors qu'il apporte peu d'éléments.
+
+## Ce que je peux corriger
+
+Trois pistes, de la plus légère à la plus profonde. Dis-moi laquelle tu veux.
+
+**A. Transcription fidèle (rapide).** Demander au moteur de transcrire mot à mot, en conservant hésitations, répétitions, mots inachevés et en signalant les passages inaudibles. L'IA de notation verrait alors un texte qui reflète la difficulté réelle. Effet partiel : l'accent reste invisible.
+
+**B. Note d'intelligibilité issue de l'audio (recommandé).** Ajouter, à partir de la piste audio déjà stockée, une mesure d'élocution : clarté, débit, hésitations, proportion de passages incompréhensibles. Cette mesure alimente le critère d'expression orale plutôt que le seul texte. C'est ce qui corrige vraiment le cas présent.
+
+**C. Notation directement sur la vidéo.** Faire écouter l'enregistrement au modèle de notation en même temps que le texte. Le plus fidèle, mais aussi le plus coûteux et le plus lent sur chaque entretien.
+
+## Points à trancher avant de coder
+
+- Périmètre : uniquement le poste Tango « Vidéo de présentation », ou toutes les organisations ?
+- Faut-il recalculer les 41 candidats déjà importés, ou n'appliquer la règle qu'aux nouveaux ?
+- En cas de doute sur l'intelligibilité, préfères-tu une note basse ou un critère marqué « à vérifier en entretien » ?
+
+## Détails techniques
+
+Le scoring repose sur `generate-report` et `generate-fit-matrix`, qui envoient uniquement `session_messages.content` au modèle. `analyze-paraverbal` existe mais se limite aujourd'hui à un contrôle de silence et n'écrit rien dans les critères. L'option B consisterait à étendre cette fonction (mesures d'élocution à partir de `audio_segment_url`) et à injecter son verdict comme contrainte dans le prompt du critère « Expression orale ».
