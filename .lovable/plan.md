@@ -30,6 +30,11 @@
 - Typecheck TypeScript.
 - Capture de la vue tableau de bord confirmant « En cours » à la place de « RDV ».
 
-## Décision demandée
+## Décision retenue
 
-Afficher simplement « En cours » partout (recommandé, minimal), ou distinguer « Analyse en cours » pour les sessions terminées en attente de rapport ?
+Afficher simplement « En cours » partout (option minimaliste approuvée).
+
+## Non inclus
+
+- Aucun changement technique supplémentaire (pas de migration, pas de modification du backend).
+
