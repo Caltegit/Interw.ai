@@ -26,7 +26,7 @@ interface SessionLite {
   candidate_name: string;
   candidate_email: string;
   status: string;
-  created_at: string;
+  created_at?: string;
   recruiter_decision: string | null;
   recruiter_decision_at?: string | null;
   recruiter_decision_by?: string | null;
