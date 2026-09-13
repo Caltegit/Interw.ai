@@ -140,22 +140,24 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {/* En-tête : nom puis note + recommandation + décision */}
         <div className="flex flex-col items-center gap-2">
-          <Link
-            to={`/sessions/${session.id}`}
-            className="block max-w-full truncate text-base font-semibold hover:underline"
-          >
-            {session.candidate_name}
-          </Link>
-          {session.created_at && (
-            <span className="text-xs text-muted-foreground">
-              {(() => {
-                const days = Math.floor((Date.now() - new Date(session.created_at).getTime()) / 86400000);
-                if (days === 0) return "Aujourd'hui";
-                if (days === 1) return "Hier";
-                return `Il y a ${days} jours`;
-              })()}
-            </span>
-          )}
+          <div className="flex flex-col items-center gap-0.5">
+            <Link
+              to={`/sessions/${session.id}`}
+              className="block max-w-full truncate text-base font-semibold hover:underline"
+            >
+              {session.candidate_name}
+            </Link>
+            {session.created_at && (
+              <span className="text-xs text-muted-foreground">
+                {(() => {
+                  const days = Math.floor((Date.now() - new Date(session.created_at).getTime()) / 86400000);
+                  if (days === 0) return "Aujourd'hui";
+                  if (days === 1) return "Hier";
+                  return `Il y a ${days} jours`;
+                })()}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span
               className={cn(
