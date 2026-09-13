@@ -146,6 +146,16 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           >
             {session.candidate_name}
           </Link>
+          {session.created_at && (
+            <span className="text-xs text-muted-foreground">
+              {(() => {
+                const days = Math.floor((Date.now() - new Date(session.created_at).getTime()) / 86400000);
+                if (days === 0) return "Aujourd'hui";
+                if (days === 1) return "Hier";
+                return `Il y a ${days} jours`;
+              })()}
+            </span>
+          )}
           <div className="flex items-center gap-2">
             <span
               className={cn(
