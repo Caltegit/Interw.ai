@@ -7,6 +7,27 @@ Dans la vue « cartes » d’un poste (`/projects/:id`), afficher la date à laq
 - Chaque carte candidat affiche un libellé relatif (`Aujourd’hui`, `Hier`, `Il y a X jours`) issu du même champ que la vue liste (`sessions.created_at`).
 - Le format visuel reste cohérent avec la vue liste : petit texte `text-muted-foreground`, sans surcharger l’en-tête de la carte.
 
+## Aperçu attendu (carte)
+
+```text
+┌──────────────────────────────────────┐
+│                                      │
+│            Jeebs Amrane              │   ← nom (lien)
+│        Il y a 2 jours                │   ← NOUVEAU : date discrète
+│                                      │
+│     [ 91 FIT POSTE ]  Très favorable │
+│     [ Aucune décision        ▾ ]     │
+│                                      │
+│   ┌──────────────────────────────┐   │
+│   │          vidéo  ▶            │   │
+│   └──────────────────────────────┘   │
+│   ◀ Pré    Question 4 ▾     Suiv ▶   │
+│   [ Ajouter une note…            ]   │
+└──────────────────────────────────────┘
+```
+
+La date s’affiche juste sous le nom, en petit texte gris, avec les mêmes libellés que la vue liste (`Aujourd’hui`, `Hier`, `Il y a X jours`).
+
 ## Périmètre
 - Vue cartes uniquement (`SessionCard` et son appel dans `ProjectDetail`).
 - Pas de changement de données ni d’API : `created_at` est déjà récupéré par la requête `loadSessionsAndReports`.
