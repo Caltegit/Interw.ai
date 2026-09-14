@@ -1433,34 +1433,26 @@ export default function InterviewStart() {
   useEffect(() => {
     if (!token) return;
     const load = async () => {
-      const { data: sessions } = await supabase.from("sessions").select("*").eq("token", token).limit(1);
-      const sess = sessions?.[0];
+      const { data: sessData } = await supabase.rpc("candidate_get_session", { _token: token });
+      const sess = sessData as any;
       if (!sess) {
         navigate(`/session/${slug}`);
         return;
       }
 
       setSession(sess);
-      const { data: proj } = await supabase.from("projects").select("*").eq("id", sess.project_id).single();
-      setProject(proj);
-      const { data: qs } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("project_id", sess.project_id)
-        .is("archived_at", null)
-        .order("order_index");
-      const activeQuestions = qs ?? [];
+      const { data: proj } = await supabase.rpc("candidate_get_project", { _token: token });
+      setProject(proj as any);
+      const { data: qsData } = await supabase.rpc("candidate_get_questions", { _token: token });
+      const activeQuestions = (qsData as any[]) ?? [];
       setQuestions(activeQuestions);
 
       // Détection d'une reprise possible : session déjà démarrée + au moins un message
       if (sess.status === "in_progress") {
-        const { data: msgs } = await supabase
-          .from("session_messages")
-          .select("question_id")
-          .eq("session_id", sess.id)
-          .not("question_id", "is", null);
-        const answeredIds = new Set((msgs ?? []).map((m) => m.question_id).filter(Boolean));
-        if ((msgs?.length ?? 0) > 0) {
+        const { data: msgData } = await supabase.rpc("candidate_list_messages", { _token: token });
+        const msgs = ((msgData as any[]) ?? []).filter((m) => m.question_id);
+        const answeredIds = new Set(msgs.map((m) => m.question_id).filter(Boolean));
+        if (msgs.length > 0) {
           // Recalcule l'index sur la liste actuelle des questions actives
           // (au cas où le RH a supprimé/réordonné des questions entre-temps).
           const firstUnansweredIdx = activeQuestions.findIndex((q) => !answeredIds.has(q.id));
