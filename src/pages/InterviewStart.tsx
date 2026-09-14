@@ -288,7 +288,7 @@ export default function InterviewStart() {
   const updateSessionByToken = useCallback(
     async (patch: Record<string, unknown>) => {
       const t = tokenRef.current;
-      if (!t || isDemoRef.current) return;
+      if (!t) return;
       const { error } = await supabase.rpc("candidate_update_session", {
         _token: t,
         _patch: patch as never,
