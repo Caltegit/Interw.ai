@@ -22,6 +22,7 @@ const ALLOWED_PREFIXES = [
   "public-pages/",
   "enigmas/",
   "defaults/",
+  "templates/",
 ];
 
 const BUCKET = "media";
