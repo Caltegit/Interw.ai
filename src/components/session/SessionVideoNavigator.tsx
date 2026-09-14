@@ -579,10 +579,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setHasVideoTrack(null);
       const v = videoRef.current;
       if (v) {
-        const u = new URL(finalUrl, window.location.href);
-        u.searchParams.set("v", String(Date.now()));
-        swapClipUrl(u.toString());
-        v.src = u.toString();
+        swapClipUrl(finalPath ?? currentRawUrl);
+        v.src = finalUrl;
         try { v.load(); } catch { /* noop */ }
       }
     } catch (e: unknown) {
