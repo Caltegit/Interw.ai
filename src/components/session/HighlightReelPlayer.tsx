@@ -47,6 +47,8 @@ export function HighlightReelPlayer({ clips }: { clips: HighlightClip[] }) {
   const [playing, setPlaying] = useState(false);
 
   const current = clips[index];
+  // Les enregistrements sont privés : on résout un lien temporaire.
+  const playableUrl = useMediaUrl(current?.video_url);
   const { start, end } = current ? getClipBounds(current) : { start: 0, end: 20 };
 
   useEffect(() => {
