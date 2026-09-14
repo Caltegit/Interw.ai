@@ -208,7 +208,10 @@ export default function InterviewLanding() {
         patch.candidate_cover_letter_filename = filename;
       }
       if (Object.keys(patch).length > 0) {
-        await supabase.from("sessions").update(patch as never).eq("id", session.id);
+        await supabase.rpc("candidate_update_session", {
+          _token: session.token,
+          _patch: patch as never,
+        });
       }
     } catch (uploadErr) {
       console.error("[InterviewLanding] file upload failed", uploadErr);
