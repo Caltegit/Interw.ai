@@ -711,9 +711,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           {mediaError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center text-white">
               <p className="text-sm font-medium">
-                {current.audioUrl
-                  ? "Vidéo indisponible — lecture audio uniquement"
-                  : mediaError.message}
+                {recovering
+                  ? (recoverLabel || "Réparation de la vidéo…")
+                  : current.audioUrl
+                    ? "Vidéo indisponible — lecture audio uniquement"
+                    : mediaError.message}
               </p>
               <p className="text-xs text-white/70">
                 {current.questionLabel}
