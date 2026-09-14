@@ -77,11 +77,23 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
   const [hasVideoTrack, setHasVideoTrack] = useState<boolean | null>(null);
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
-  const getClipUrl = (clip: SessionVideoClip | undefined) => {
+  // Les enregistrements sont stockés en privé : on résout des liens temporaires.
+  const altExtension = (u?: string | null) => {
+    if (!u) return null;
+    if (/\.webm(\?.*)?$/i.test(u)) return u.replace(/\.webm(\?.*)?$/i, ".mp4$1");
+    if (/\.mp4(\?.*)?$/i.test(u)) return u.replace(/\.mp4(\?.*)?$/i, ".webm$1");
+    return null;
+  };
+  const resolveUrl = useMediaUrls([
+    ...clips.flatMap((c) => [c.url, c.audioUrl, altExtension(c.url)]),
+    ...Object.values(clipUrlOverrides),
+  ]);
+  const getRawClipUrl = (clip: SessionVideoClip | undefined) => {
     if (!clip) return null;
     const key = clip.messageId ?? clip.url;
     return clipUrlOverrides[key] ?? clip.url;
   };
+  const getClipUrl = (clip: SessionVideoClip | undefined) => resolveUrl(getRawClipUrl(clip));
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
