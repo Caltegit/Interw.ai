@@ -451,12 +451,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   const current = clips[index];
   const clipKey = current.messageId ?? current.url;
-  const currentUrl = clipUrlOverrides[clipKey] ?? current.url;
-  const buildAltUrl = (url: string) => {
-    if (/\.webm(\?.*)?$/i.test(url)) return url.replace(/\.webm(\?.*)?$/i, ".mp4$1");
-    if (/\.mp4(\?.*)?$/i.test(url)) return url.replace(/\.mp4(\?.*)?$/i, ".webm$1");
-    return null;
-  };
+  const currentRawUrl = clipUrlOverrides[clipKey] ?? current.url;
+  const currentUrl = resolveUrl(currentRawUrl) ?? "";
+  const buildAltUrl = (url: string) => altExtension(url);
   const swapClipUrl = (nextUrl: string) => {
     setClipUrlOverrides((prev) => (prev[clipKey] === nextUrl ? prev : { ...prev, [clipKey]: nextUrl }));
   };
