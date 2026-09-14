@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +26,6 @@ import {
   type IntroFormat,
 } from "@/components/library/IntroFormatPicker";
 import {
-import { publicAssetUrl } from "@/lib/mediaUrl";
   VoiceSelectorDialog,
   FEMALE_VOICE_DEFAULT_ID,
   FEMALE_VOICES,

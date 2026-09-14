@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,6 @@ import {
 } from "@/components/project/ProjectForm";
 import { mergeCandidateFields, DEFAULT_CANDIDATE_FIELDS } from "@/lib/candidateFields";
 import {
-import { publicAssetUrl } from "@/lib/mediaUrl";
   DEFAULT_CANDIDATE_EMAIL_BODY,
   DEFAULT_CANDIDATE_EMAIL_SUBJECT,
 } from "@/lib/candidateEmailDefaults";
