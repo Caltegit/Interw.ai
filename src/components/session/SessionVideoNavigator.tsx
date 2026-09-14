@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveMediaUrl, useMediaUrls } from "@/lib/mediaUrl";
 
 export interface SessionVideoClip {
   url: string;
@@ -77,11 +78,25 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
   const [hasVideoTrack, setHasVideoTrack] = useState<boolean | null>(null);
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
-  const getClipUrl = (clip: SessionVideoClip | undefined) => {
+  // Les enregistrements sont stockés en privé : on résout des liens temporaires.
+  const altExtension = (u?: string | null) => {
+    if (!u) return null;
+    if (/\.webm(\?.*)?$/i.test(u)) return u.replace(/\.webm(\?.*)?$/i, ".mp4$1");
+    if (/\.mp4(\?.*)?$/i.test(u)) return u.replace(/\.mp4(\?.*)?$/i, ".webm$1");
+    return null;
+  };
+  const resolveUrl = useMediaUrls([
+    ...clips.flatMap((c) => [c.url, c.audioUrl, altExtension(c.url)]),
+    ...Object.values(clipUrlOverrides),
+  ]);
+  const getRawClipUrl = (clip: SessionVideoClip | undefined) => {
     if (!clip) return null;
     const key = clip.messageId ?? clip.url;
     return clipUrlOverrides[key] ?? clip.url;
   };
+  const getClipUrl = (clip: SessionVideoClip | undefined) => resolveUrl(getRawClipUrl(clip));
+  // Adresse lisible du clip courant (null tant que le lien n'est pas délivré).
+  const currentResolvedUrl = resolveUrl(getRawClipUrl(clips[index]));
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -284,7 +299,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (safety !== null) window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
+  }, [index, shouldAutoPlay, clips, clipUrlOverrides, currentResolvedUrl]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
@@ -438,12 +453,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
 
   const current = clips[index];
   const clipKey = current.messageId ?? current.url;
-  const currentUrl = clipUrlOverrides[clipKey] ?? current.url;
-  const buildAltUrl = (url: string) => {
-    if (/\.webm(\?.*)?$/i.test(url)) return url.replace(/\.webm(\?.*)?$/i, ".mp4$1");
-    if (/\.mp4(\?.*)?$/i.test(url)) return url.replace(/\.mp4(\?.*)?$/i, ".webm$1");
-    return null;
-  };
+  const currentRawUrl = clipUrlOverrides[clipKey] ?? current.url;
+  const currentUrl = currentResolvedUrl ?? "";
+  const buildAltUrl = (url: string) => altExtension(url);
   const swapClipUrl = (nextUrl: string) => {
     setClipUrlOverrides((prev) => (prev[clipKey] === nextUrl ? prev : { ...prev, [clipKey]: nextUrl }));
   };
@@ -451,8 +463,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
-    if (!currentUrl) return null;
-    const m = currentUrl.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
+    if (!currentRawUrl) return null;
+    const m = currentRawUrl.match(/\/?interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
@@ -524,7 +536,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (error) throw new Error(await explainFunctionError(error, "Reconstruction serveur impossible."));
       const rebuiltPath = (data as { path?: string } | null)?.path ?? null;
       const rebuiltUrl = rebuiltPath
-        ? supabase.storage.from("media").getPublicUrl(rebuiltPath).data.publicUrl
+        ? await resolveMediaUrl(rebuiltPath)
         : currentUrl;
       if (!rebuiltUrl) throw new Error("Aucune vidéo source à réparer.");
 
@@ -555,7 +567,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (uploadError) throw new Error(await explainFunctionError(uploadError, "Enregistrement de la vidéo réparée impossible."));
       const finalPath = (uploadData as { path?: string } | null)?.path ?? rebuiltPath;
       const finalUrl = finalPath
-        ? supabase.storage.from("media").getPublicUrl(finalPath).data.publicUrl
+        ? await resolveMediaUrl(finalPath)
         : rebuiltUrl;
       if (!finalUrl) throw new Error("Vidéo réparée enregistrée, mais URL introuvable.");
 
@@ -569,10 +581,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setHasVideoTrack(null);
       const v = videoRef.current;
       if (v) {
-        const u = new URL(finalUrl, window.location.href);
-        u.searchParams.set("v", String(Date.now()));
-        swapClipUrl(u.toString());
-        v.src = u.toString();
+        swapClipUrl(finalPath ?? currentRawUrl);
+        v.src = finalUrl;
         try { v.load(); } catch { /* noop */ }
       }
     } catch (e: unknown) {
@@ -677,24 +687,24 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                           "Vidéo présente mais non décodable par ce navigateur. Essayez Chrome ou Firefox, ou téléchargez en MP4.",
                       });
                     } else if (res.status === 404) {
-                      const altUrl = buildAltUrl(currentUrl);
-                      if (!altUrl) {
+                      const altRaw = buildAltUrl(currentRawUrl);
+                      if (!altRaw) {
                         setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
                         return;
                       }
-                      fetch(altUrl, { method: "HEAD" })
-                        .then((altRes) => {
+                      resolveMediaUrl(altRaw)
+                        .then(async (altUrl) => {
+                          if (!altUrl) throw new Error("no url");
+                          const altRes = await fetch(altUrl, { method: "HEAD" });
                           if (!altRes.ok) {
                             setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
                             return;
                           }
-                          const withBust = new URL(altUrl, window.location.href);
-                          withBust.searchParams.set("v", String(Date.now()));
-                          swapClipUrl(withBust.toString());
+                          swapClipUrl(altRaw);
                           setMediaError(null);
                           const video = videoRef.current;
                           if (!video) return;
-                          video.src = withBust.toString();
+                          video.src = altUrl;
                           try { video.load(); } catch { /* noop */ }
                         })
                         .catch(() => {
@@ -726,7 +736,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </p>
               {current.audioUrl && (
                 <audio
-                  src={current.audioUrl}
+                  src={resolveUrl(current.audioUrl) ?? undefined}
                   controls
                   autoPlay
                   className="mt-1 w-full max-w-md"

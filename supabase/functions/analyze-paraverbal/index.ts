@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import { MODEL_FAST } from "../_shared/ai-models.ts";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -220,7 +221,8 @@ serve(async (req) => {
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
-        const res = await fetch(seg.audio_url);
+        const signedAudioUrl = (await signMedia(supabase, seg.audio_url)) ?? seg.audio_url;
+        const res = await fetch(signedAudioUrl);
         if (!res.ok) {
           skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });
           continue;

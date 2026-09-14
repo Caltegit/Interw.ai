@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import { MODEL_FAST } from "../_shared/ai-models.ts";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -287,7 +288,8 @@ serve(async (req) => {
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
-        const res = await fetch(seg.video_url);
+        const signedVideoUrl = (await signMedia(supabase, seg.video_url)) ?? seg.video_url;
+        const res = await fetch(signedVideoUrl);
         if (!res.ok) {
           console.warn("[nonverbal] fetch segment failed", res.status, seg.message_id);
           skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });

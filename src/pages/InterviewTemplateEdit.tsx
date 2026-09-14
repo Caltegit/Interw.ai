@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -179,7 +180,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(path, s.avatarFile, { upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        const urlData = { publicUrl: publicAssetUrl(path) };
         avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -192,7 +193,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(introPath);
+        const urlData = { publicUrl: publicAssetUrl(introPath) };
         introAudioUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -205,7 +206,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(videoPath);
+        const urlData = { publicUrl: publicAssetUrl(videoPath) };
         presentationVideoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 

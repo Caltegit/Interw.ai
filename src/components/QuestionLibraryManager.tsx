@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ export function QuestionLibraryManager({ orgId }: QuestionLibraryManagerProps) {
       toast({ title: "Erreur upload", description: error.message, variant: "destructive" });
       return null;
     }
-    const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+    const urlData = { publicUrl: publicAssetUrl(path) };
     return urlData.publicUrl;
   };
 

@@ -18,6 +18,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -107,8 +108,11 @@ Deno.serve(async (req) => {
       const path = pathFromPublicUrl(url);
       if (!path) return { newUrl: null, report: null };
 
+      // Stockage privé : accès temporaire signé.
+      const signedUrl = (await signMedia(supabase, url)) ?? url;
+
       // Sniff
-      const headResp = await fetch(url, { headers: { Range: "bytes=0-15" } });
+      const headResp = await fetch(signedUrl, { headers: { Range: "bytes=0-15" } });
       if (!headResp.ok) {
         const r: SegmentReport = { url, path, kind: "unknown", action: "missing" };
         reports.push(r);
@@ -139,7 +143,7 @@ Deno.serve(async (req) => {
       const contentType = isAudio ? "audio/mp4" : "video/mp4";
 
       try {
-        const fullResp = await fetch(url);
+        const fullResp = await fetch(signedUrl);
         if (!fullResp.ok) throw new Error(`download ${fullResp.status}`);
         const buf = new Uint8Array(await fullResp.arrayBuffer());
 

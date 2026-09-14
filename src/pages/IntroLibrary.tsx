@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -286,14 +287,14 @@ export default function IntroLibrary() {
           .from("media")
           .upload(path, audioBlob, { contentType: "audio/webm", upsert: true });
         if (error) throw error;
-        audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        audioUrl = publicAssetUrl(path);
       } else if (format === "video" && videoFile) {
         const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, videoFile, { contentType: videoFile.type || "video/webm", upsert: true });
         if (error) throw error;
-        videoUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        videoUrl = publicAssetUrl(path);
       }
 
       const payload = {

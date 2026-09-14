@@ -8,6 +8,7 @@ import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Image as ImageIcon
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { publicAssetUrl } from "@/lib/mediaUrl";
 
 interface Props {
   value: any;
@@ -52,8 +53,7 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
       const path = `public-pages/${projectId}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
       if (error) throw error;
-      const { data } = supabase.storage.from("media").getPublicUrl(path);
-      editor.chain().focus().setImage({ src: data.publicUrl }).run();
+      editor.chain().focus().setImage({ src: publicAssetUrl(path) }).run();
     } catch (e) {
       toast({ title: "Échec du téléversement", description: e instanceof Error ? e.message : "", variant: "destructive" });
     }

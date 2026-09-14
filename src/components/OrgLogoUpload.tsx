@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { publicAssetUrl } from "@/lib/mediaUrl";
 
 interface Props {
   orgId: string;
@@ -63,7 +64,7 @@ export function OrgLogoUpload({ orgId, currentLogoUrl, canEdit, onUploaded }: Pr
         upsert: true,
       });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+      const pub = { publicUrl: publicAssetUrl(path) };
       const { error: updErr } = await supabase
         .from("organizations")
         .update({ logo_url: pub.publicUrl })

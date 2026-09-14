@@ -1,3 +1,4 @@
+import { publicAssetUrl } from "@/lib/mediaUrl";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -251,7 +252,7 @@ export default function ProjectEdit() {
           .from("media")
           .upload(path, s.avatarFile, { upsert: true });
         if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        const urlData = { publicUrl: publicAssetUrl(path) };
         avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -263,7 +264,7 @@ export default function ProjectEdit() {
           .from("media")
           .upload(introPath, s.introAudioBlob, { contentType: contentTypeOf(s.introAudioBlob, "audio"), upsert: true });
         if (introUploadError) throw introUploadError;
-        const { data: introUrlData } = supabase.storage.from("media").getPublicUrl(introPath);
+        const introUrlData = { publicUrl: publicAssetUrl(introPath) };
         introAudioUrl = `${introUrlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -275,7 +276,7 @@ export default function ProjectEdit() {
           .from("media")
           .upload(videoPath, s.introVideoFile, { contentType: contentTypeOf(s.introVideoFile, "video"), upsert: true });
         if (videoUploadError) throw videoUploadError;
-        const { data: videoUrlData } = supabase.storage.from("media").getPublicUrl(videoPath);
+        const videoUrlData = { publicUrl: publicAssetUrl(videoPath) };
         presentationVideoUrl = `${videoUrlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -489,7 +490,7 @@ export default function ProjectEdit() {
             .from("media")
             .upload(audioPath, q.audioBlob, { contentType: contentTypeOf(q.audioBlob, "audio"), upsert: true });
           if (!aErr) {
-            const { data: aUrl } = supabase.storage.from("media").getPublicUrl(audioPath);
+            const aUrl = { publicUrl: publicAssetUrl(audioPath) };
             mediaUpdates.audio_url = `${aUrl.publicUrl}?t=${Date.now()}`;
           }
         } else if (q.audioPreviewUrl && !q.audioPreviewUrl.startsWith("blob:")) {
@@ -504,7 +505,7 @@ export default function ProjectEdit() {
             .from("media")
             .upload(videoPath, q.videoBlob, { contentType: contentTypeOf(q.videoBlob, "video"), upsert: true });
           if (!vErr) {
-            const { data: vUrl } = supabase.storage.from("media").getPublicUrl(videoPath);
+            const vUrl = { publicUrl: publicAssetUrl(videoPath) };
             mediaUpdates.video_url = `${vUrl.publicUrl}?t=${Date.now()}`;
           }
         } else if (q.videoPreviewUrl && !q.videoPreviewUrl.startsWith("blob:")) {

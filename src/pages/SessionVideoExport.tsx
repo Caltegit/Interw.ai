@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveMediaUrls, toStoragePath } from "@/lib/mediaUrl";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,6 +170,13 @@ export default function SessionVideoExport() {
 
         if (segments.length === 0) {
           throw new Error("Aucun enregistrement vidéo trouvé pour cette session.");
+        }
+
+        // Les enregistrements sont privés : on obtient des liens temporaires.
+        const signed = await resolveMediaUrls(segments.map((s) => s.url));
+        for (const seg of segments) {
+          const path = toStoragePath(seg.url);
+          if (path && signed[path]) seg.url = signed[path];
         }
 
         // Demande la permission de notification (sans bloquer)

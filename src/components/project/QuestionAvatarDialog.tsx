@@ -12,6 +12,7 @@ import { RotateCcw } from "lucide-react";
 import { AvatarPicker } from "./AvatarPicker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { publicAssetUrl } from "@/lib/mediaUrl";
 
 interface QuestionAvatarDialogProps {
   open: boolean;
@@ -48,7 +49,7 @@ export function QuestionAvatarDialog({
         .from("media")
         .upload(path, file, { contentType: file.type, upsert: false });
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+      const urlData = { publicUrl: publicAssetUrl(path) };
       setValue(urlData.publicUrl);
     } catch (err) {
       toast({

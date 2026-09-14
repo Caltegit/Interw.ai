@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { MODEL_FAST } from "../_shared/ai-models.ts";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -218,7 +219,9 @@ Deno.serve(async (req) => {
 
     for (const m of targets) {
       // Préférer l'audio s'il existe (plus léger, plus rapide)
-      const mediaUrl = (m as any).audio_segment_url || (m as any).video_segment_url;
+      const rawMediaUrl = (m as any).audio_segment_url || (m as any).video_segment_url;
+      // Le stockage est privé : on signe un accès temporaire.
+      const mediaUrl = (await signMedia(admin, rawMediaUrl)) ?? rawMediaUrl;
 
       // HEAD pour vérifier la taille avant téléchargement
       let contentLength = 0;
@@ -259,7 +262,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const raw = await callGeminiInline(LOVABLE_API_KEY, mediaUrl, buf);
+        const raw = await callGeminiInline(LOVABLE_API_KEY, rawMediaUrl, buf);
         const { text: cleaned, segments } = parseSegments(raw);
         const rawBackup = (m as any).content_raw ?? (m as any).content ?? null;
         await admin

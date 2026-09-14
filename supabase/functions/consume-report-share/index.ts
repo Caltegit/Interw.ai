@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -104,10 +105,22 @@ Deno.serve(async (req) => {
       .eq("session_id", report.session_id)
       .order("timestamp");
 
+    // Les enregistrements sont privés : on délivre des liens temporaires.
+    const signedSession = session
+      ? { ...session, video_recording_url: await signMedia(admin, session.video_recording_url) }
+      : session;
+    const signedMessages = await Promise.all(
+      (messages ?? []).map(async (m) => ({
+        ...m,
+        video_segment_url: await signMedia(admin, m.video_segment_url),
+        audio_segment_url: await signMedia(admin, m.audio_segment_url),
+      })),
+    );
+
     return json({
       report,
-      session,
-      messages: messages ?? [],
+      session: signedSession,
+      messages: signedMessages,
       viewerSecret: issuedSecret,
     });
   } catch (e) {
