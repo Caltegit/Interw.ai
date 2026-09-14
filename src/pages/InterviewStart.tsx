@@ -3582,35 +3582,26 @@ export default function InterviewStart() {
         // enregistré. Sinon la session apparaît "complétée" dans le dashboard
         // alors qu'aucun rapport ne pourra être généré. On bascule en cancelled,
         // ce qui empêche aussi le trigger d'enqueue un job de rapport orphelin.
-        const { count: mediaCount } = await supabase
-          .from("session_messages")
-          .select("id", { count: "exact", head: true })
-          .eq("session_id", sessionId)
-          .eq("role", "candidate")
-          .or("video_segment_url.not.is.null,audio_segment_url.not.is.null");
+        const { data: mediaCount } = await supabase.rpc("candidate_count_media_messages", {
+          _token: tokenRef.current ?? "",
+        });
 
-        if (!mediaCount || mediaCount === 0) {
-          await supabase
-            .from("sessions")
-            .update({
-              status: "cancelled" as any,
-              cancelled_at: new Date().toISOString(),
-              end_reason: "no_media",
-            } as any)
-            .eq("id", sessionId);
+        if (!mediaCount || (mediaCount as number) === 0) {
+          await updateSessionByToken({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            end_reason: "no_media",
+          });
           logger.warn("interview_finalize_no_media", { sessionId });
           return;
         }
 
-        await supabase
-          .from("sessions")
-          .update({
-            status: "completed" as any,
-            completed_at: new Date().toISOString(),
-            end_reason: reason,
-            ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-          } as any)
-          .eq("id", sessionId);
+        await updateSessionByToken({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          end_reason: reason,
+          ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
+        });
 
 
         // Re-transcribe candidate videos with Gemini (cleans STT artifacts)
