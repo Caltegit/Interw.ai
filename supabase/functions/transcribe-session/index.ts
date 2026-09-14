@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { MODEL_FAST } from "../_shared/ai-models.ts";
+import { signMedia } from "../_shared/interview-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
