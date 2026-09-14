@@ -574,11 +574,8 @@ export default function InterviewDeviceTest() {
     let cancelled = false;
     (async () => {
       try {
-        const { data: sess } = await supabase
-          .from("sessions")
-          .select("id")
-          .eq("token", token)
-          .maybeSingle();
+        const { data: sessId } = await supabase.rpc("candidate_session_id", { _token: token });
+        const sess = sessId ? { id: sessId as string } : null;
         if (cancelled || !sess?.id) return;
         const c = browserCompat.current;
         const { data: inserted } = await supabase

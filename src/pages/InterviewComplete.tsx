@@ -36,12 +36,9 @@ export default function InterviewComplete() {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const checkStatus = async () => {
-      const { data } = await supabase
-        .from("sessions")
-        .select("status")
-        .eq("token", token)
-        .maybeSingle();
+      const { data: sess } = await supabase.rpc("candidate_get_session", { _token: token });
       if (cancelledRef.current) return;
+      const data = sess as { status?: string } | null;
       if (data?.status === "completed") {
         setProcessing(false);
         if (intervalId) clearInterval(intervalId);
