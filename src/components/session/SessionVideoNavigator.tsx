@@ -734,7 +734,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </p>
               {current.audioUrl && (
                 <audio
-                  src={current.audioUrl}
+                  src={resolveUrl(current.audioUrl) ?? undefined}
                   controls
                   autoPlay
                   className="mt-1 w-full max-w-md"
