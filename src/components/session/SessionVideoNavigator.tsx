@@ -299,7 +299,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (safety !== null) window.clearTimeout(safety);
       v.removeEventListener("loadedmetadata", apply);
     };
-  }, [index, shouldAutoPlay, clips, clipUrlOverrides]);
+  }, [index, shouldAutoPlay, clips, clipUrlOverrides, currentResolvedUrl]);
 
   // Vitesse appliquée à chaud sans toucher à currentTime
   useEffect(() => {
@@ -454,7 +454,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const current = clips[index];
   const clipKey = current.messageId ?? current.url;
   const currentRawUrl = clipUrlOverrides[clipKey] ?? current.url;
-  const currentUrl = resolveUrl(currentRawUrl) ?? "";
+  const currentUrl = currentResolvedUrl ?? "";
   const buildAltUrl = (url: string) => altExtension(url);
   const swapClipUrl = (nextUrl: string) => {
     setClipUrlOverrides((prev) => (prev[clipKey] === nextUrl ? prev : { ...prev, [clipKey]: nextUrl }));
