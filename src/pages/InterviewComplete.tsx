@@ -19,17 +19,7 @@ export default function InterviewComplete() {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data: session } = await supabase
-        .from("sessions")
-        .select("project_id")
-        .eq("token", token)
-        .maybeSingle();
-      if (!session?.project_id) return;
-      const { data: project } = await supabase
-        .from("projects")
-        .select("completion_message")
-        .eq("id", session.project_id)
-        .maybeSingle();
+      const { data: project } = await supabase.rpc("candidate_get_project", { _token: token });
       const cm = (project as { completion_message?: string | null } | null)?.completion_message;
       if (cm && cm.trim()) setMessage(cm);
     })();
@@ -46,12 +36,9 @@ export default function InterviewComplete() {
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const checkStatus = async () => {
-      const { data } = await supabase
-        .from("sessions")
-        .select("status")
-        .eq("token", token)
-        .maybeSingle();
+      const { data: sess } = await supabase.rpc("candidate_get_session", { _token: token });
       if (cancelledRef.current) return;
+      const data = sess as { status?: string } | null;
       if (data?.status === "completed") {
         setProcessing(false);
         if (intervalId) clearInterval(intervalId);

@@ -281,6 +281,24 @@ export default function InterviewStart() {
   const isDemo = !!session?.is_demo;
   const isDemoRef = useRef(false);
   useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
+  // Jeton candidat : toutes les lectures/écritures passent par des fonctions
+  // serveur qui le vérifient en base (jamais d'accès direct aux tables).
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => { tokenRef.current = token ?? null; }, [token]);
+  const updateSessionByToken = useCallback(
+    async (patch: Record<string, unknown>) => {
+      const t = tokenRef.current;
+      if (!t) return;
+      const { error } = await supabase.rpc("candidate_update_session", {
+        _token: t,
+        _patch: patch as never,
+      });
+      if (error) {
+        logger.error("interview_session_update_failed", { error: error.message });
+      }
+    },
+    [],
+  );
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
@@ -498,15 +516,15 @@ export default function InterviewStart() {
     ) => {
       // Mode démo : on n'écrit aucun message en base.
       if (isDemoRef.current) return;
-      const { error } = await supabase.from("session_messages").insert({
-        session_id: sessionId,
-        role,
-        content,
-        question_id: options?.questionId ?? null,
-        is_follow_up: options?.isFollowUp ?? false,
-        video_segment_url: options?.videoSegmentUrl ?? null,
-        audio_segment_url: options?.audioSegmentUrl ?? null,
-      } as never);
+      const { error } = await supabase.rpc("candidate_insert_message", {
+        _token: tokenRef.current ?? "",
+        _role: role,
+        _content: content,
+        _question_id: options?.questionId ?? null,
+        _is_follow_up: options?.isFollowUp ?? false,
+        _video_segment_url: options?.videoSegmentUrl ?? null,
+        _audio_segment_url: options?.audioSegmentUrl ?? null,
+      });
 
       if (error) {
         logger.error("interview_message_persist_failed", {
@@ -1415,34 +1433,26 @@ export default function InterviewStart() {
   useEffect(() => {
     if (!token) return;
     const load = async () => {
-      const { data: sessions } = await supabase.from("sessions").select("*").eq("token", token).limit(1);
-      const sess = sessions?.[0];
+      const { data: sessData } = await supabase.rpc("candidate_get_session", { _token: token });
+      const sess = sessData as any;
       if (!sess) {
         navigate(`/session/${slug}`);
         return;
       }
 
       setSession(sess);
-      const { data: proj } = await supabase.from("projects").select("*").eq("id", sess.project_id).single();
-      setProject(proj);
-      const { data: qs } = await supabase
-        .from("questions")
-        .select("*")
-        .eq("project_id", sess.project_id)
-        .is("archived_at", null)
-        .order("order_index");
-      const activeQuestions = qs ?? [];
+      const { data: proj } = await supabase.rpc("candidate_get_project", { _token: token });
+      setProject(proj as any);
+      const { data: qsData } = await supabase.rpc("candidate_get_questions", { _token: token });
+      const activeQuestions = (qsData as any[]) ?? [];
       setQuestions(activeQuestions);
 
       // Détection d'une reprise possible : session déjà démarrée + au moins un message
       if (sess.status === "in_progress") {
-        const { data: msgs } = await supabase
-          .from("session_messages")
-          .select("question_id")
-          .eq("session_id", sess.id)
-          .not("question_id", "is", null);
-        const answeredIds = new Set((msgs ?? []).map((m) => m.question_id).filter(Boolean));
-        if ((msgs?.length ?? 0) > 0) {
+        const { data: msgData } = await supabase.rpc("candidate_list_messages", { _token: token });
+        const msgs = ((msgData as any[]) ?? []).filter((m) => m.question_id);
+        const answeredIds = new Set(msgs.map((m) => m.question_id).filter(Boolean));
+        if (msgs.length > 0) {
           // Recalcule l'index sur la liste actuelle des questions actives
           // (au cas où le RH a supprimé/réordonné des questions entre-temps).
           const firstUnansweredIdx = activeQuestions.findIndex((q) => !answeredIds.has(q.id));
@@ -1488,11 +1498,10 @@ export default function InterviewStart() {
     if (!resumePrompt || !session?.id) return;
     setRestoringMessages(true);
     try {
-      const { data: rows } = await supabase
-        .from("session_messages")
-        .select("*")
-        .eq("session_id", session.id)
-        .order("timestamp", { ascending: true });
+      const { data: rowsData } = await supabase.rpc("candidate_list_messages", {
+        _token: tokenRef.current ?? "",
+      });
+      const rows = (rowsData as any[]) ?? [];
       const restored: ChatMessage[] = (rows ?? []).map((r: any) => ({
         role: r.role,
         content: r.content,
@@ -1530,12 +1539,8 @@ export default function InterviewStart() {
         console.warn("Échec purge media lors du restart:", e);
       }
 
-      // 2. Purge BDD
-      await supabase.from("session_messages").delete().eq("session_id", session.id);
-      await supabase
-        .from("sessions")
-        .update({ last_question_index: 0, started_at: null, status: "pending" as any })
-        .eq("id", session.id);
+      // 2. Purge BDD (le jeton est vérifié côté serveur)
+      await supabase.rpc("candidate_reset_messages", { _token: tokenRef.current ?? "" });
     } finally {
       setRestoringMessages(false);
       setResumePrompt(null);
@@ -2444,11 +2449,7 @@ export default function InterviewStart() {
 
     // Traçabilité légale du consentement (best-effort, non bloquant)
     if (token && !session.consent_accepted_at && !isDemoRef.current) {
-      supabase
-        .from("sessions")
-        .update({ consent_accepted_at: new Date().toISOString() })
-        .eq("token", token)
-        .then(() => {});
+      void updateSessionByToken({ consent_accepted_at: new Date().toISOString() });
     }
 
     // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
@@ -2532,26 +2533,16 @@ export default function InterviewStart() {
     } catch {}
 
     // Mark session as in_progress + last_activity_at
-    // NB : le client PostgREST n'envoie la requête qu'à la résolution de la
-    // promesse — le .then() est indispensable, sans lui rien n'est écrit.
-    void supabase
-      .from("sessions")
-      .update({
-        status: "in_progress" as any,
-        started_at: new Date().toISOString(),
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("id", session.id)
-      .then(() => {});
+    void updateSessionByToken({
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString(),
+    });
 
     // Heartbeat toutes les 30 s pour conserver une trace d'activité
     if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     heartbeatTimerRef.current = setInterval(() => {
-      void supabase
-        .from("sessions")
-        .update({ last_activity_at: new Date().toISOString() })
-        .eq("id", session.id)
-        .then(() => {});
+      void updateSessionByToken({ last_activity_at: new Date().toISOString() });
     }, 30_000);
 
     // Start camera stream
@@ -2915,17 +2906,16 @@ export default function InterviewStart() {
         }
         if (videoUrl || thumbnailUrl) {
           try {
-            const { data: sessRow } = await supabase
-              .from("sessions")
-              .select("video_recording_url, thumbnail_url")
-              .eq("id", sessionId)
-              .maybeSingle();
+            const { data: sessData } = await supabase.rpc("candidate_get_session", {
+              _token: tokenRef.current ?? "",
+            });
+            const sessRow = sessData as any;
             if (sessRow) {
               const patch: { video_recording_url?: string; thumbnail_url?: string } = {};
               if (videoUrl && !sessRow.video_recording_url) patch.video_recording_url = videoUrl;
-              if (thumbnailUrl && !(sessRow as any).thumbnail_url) patch.thumbnail_url = thumbnailUrl;
+              if (thumbnailUrl && !sessRow.thumbnail_url) patch.thumbnail_url = thumbnailUrl;
               if (Object.keys(patch).length > 0) {
-                await supabase.from("sessions").update(patch).eq("id", sessionId);
+                await updateSessionByToken(patch);
                 setSession((prev: any) => (prev ? { ...prev, ...patch } : prev));
               }
             }
@@ -3306,11 +3296,10 @@ export default function InterviewStart() {
 
     setCurrentQuestionIndex(nextQIdx);
     if (sessionId) {
-      void supabase
-        .from("sessions")
-        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-        .eq("id", sessionId)
-        .then(() => {});
+      void updateSessionByToken({
+        last_question_index: nextQIdx,
+        last_activity_at: new Date().toISOString(),
+      });
     }
 
     if (nMediaType !== "written") {
@@ -3464,11 +3453,10 @@ export default function InterviewStart() {
 
       setCurrentQuestionIndex((prev) => prev + 1);
       if (session?.id) {
-        void supabase
-          .from("sessions")
-          .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-          .eq("id", session.id)
-          .then(() => {});
+        void updateSessionByToken({
+          last_question_index: nextQIdx,
+          last_activity_at: new Date().toISOString(),
+        });
       }
 
       // 5. Amène la barre à 100 % puis retire l'overlay AVANT toute lecture audio/vidéo.
@@ -3594,35 +3582,26 @@ export default function InterviewStart() {
         // enregistré. Sinon la session apparaît "complétée" dans le dashboard
         // alors qu'aucun rapport ne pourra être généré. On bascule en cancelled,
         // ce qui empêche aussi le trigger d'enqueue un job de rapport orphelin.
-        const { count: mediaCount } = await supabase
-          .from("session_messages")
-          .select("id", { count: "exact", head: true })
-          .eq("session_id", sessionId)
-          .eq("role", "candidate")
-          .or("video_segment_url.not.is.null,audio_segment_url.not.is.null");
+        const { data: mediaCount } = await supabase.rpc("candidate_count_media_messages", {
+          _token: tokenRef.current ?? "",
+        });
 
-        if (!mediaCount || mediaCount === 0) {
-          await supabase
-            .from("sessions")
-            .update({
-              status: "cancelled" as any,
-              cancelled_at: new Date().toISOString(),
-              end_reason: "no_media",
-            } as any)
-            .eq("id", sessionId);
+        if (!mediaCount || (mediaCount as number) === 0) {
+          await updateSessionByToken({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            end_reason: "no_media",
+          });
           logger.warn("interview_finalize_no_media", { sessionId });
           return;
         }
 
-        await supabase
-          .from("sessions")
-          .update({
-            status: "completed" as any,
-            completed_at: new Date().toISOString(),
-            end_reason: reason,
-            ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
-          } as any)
-          .eq("id", sessionId);
+        await updateSessionByToken({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          end_reason: reason,
+          ...(durationSeconds != null ? { duration_seconds: durationSeconds } : {}),
+        });
 
 
         // Re-transcribe candidate videos with Gemini (cleans STT artifacts)
@@ -4061,11 +4040,7 @@ export default function InterviewStart() {
                   const next = v === true;
                   setConsentChecked(next);
                   if (next && token && !session?.consent_accepted_at) {
-                    supabase
-                      .from("sessions")
-                      .update({ consent_accepted_at: new Date().toISOString() })
-                      .eq("token", token)
-                      .then(() => {});
+                    void updateSessionByToken({ consent_accepted_at: new Date().toISOString() });
                   }
                 }}
                 data-testid="interview-consent-checkbox"

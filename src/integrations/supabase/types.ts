@@ -2306,6 +2306,33 @@ export type Database = {
         }[]
       }
       admin_sessions_queue_stats: { Args: { p_window?: string }; Returns: Json }
+      candidate_count_media_messages: {
+        Args: { _token: string }
+        Returns: number
+      }
+      candidate_get_project: { Args: { _token: string }; Returns: Json }
+      candidate_get_questions: { Args: { _token: string }; Returns: Json }
+      candidate_get_session: { Args: { _token: string }; Returns: Json }
+      candidate_insert_message: {
+        Args: {
+          _audio_segment_url?: string
+          _content: string
+          _is_follow_up?: boolean
+          _question_id?: string
+          _role: string
+          _token: string
+          _video_segment_url?: string
+        }
+        Returns: string
+      }
+      candidate_list_messages: { Args: { _token: string }; Returns: Json }
+      candidate_reset_messages: { Args: { _token: string }; Returns: undefined }
+      candidate_session_id: { Args: { _token: string }; Returns: string }
+      candidate_session_public_info: { Args: { _token: string }; Returns: Json }
+      candidate_update_session: {
+        Args: { _patch: Json; _token: string }
+        Returns: Json
+      }
       claim_report_jobs: {
         Args: { p_limit: number; p_lock_ms: number }
         Returns: {
@@ -2395,6 +2422,18 @@ export type Database = {
           organization_name: string
           token: string
         }[]
+      }
+      public_start_demo_session: { Args: { _slug: string }; Returns: Json }
+      public_start_session: {
+        Args: {
+          _email: string
+          _job_title?: string
+          _linkedin?: string
+          _name: string
+          _phone?: string
+          _slug: string
+        }
+        Returns: Json
       }
       requeue_stuck_report_jobs: { Args: never; Returns: number }
       seed_default_criteria_templates: {

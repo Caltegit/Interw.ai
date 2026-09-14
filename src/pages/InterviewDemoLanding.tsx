@@ -80,18 +80,9 @@ export default function InterviewDemoLanding() {
     }
 
     // 2) Création de la session démo
-    const { data: session, error: err } = await supabase
-      .from("sessions")
-      .insert({
-        project_id: project.id,
-        organization_id: project.organization_id,
-        candidate_name: "Démo",
-        candidate_email: "demo@interw.local",
-        is_demo: true,
-        consent_accepted_at: new Date().toISOString(),
-      } as never)
-      .select()
-      .single();
+    const { data: session, error: err } = await supabase.rpc("public_start_demo_session", {
+      _slug: project.slug,
+    });
 
     if (err || !session) {
       setError("Impossible de démarrer la démo. Réessayez.");

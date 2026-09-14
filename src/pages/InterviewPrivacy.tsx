@@ -36,19 +36,15 @@ export default function InterviewPrivacy() {
         setLoading(false);
         return;
       }
-      const { data } = await supabase
-        .from("sessions")
-        .select("id, projects:projects!inner(title, job_title, organizations:organizations(name))")
-        .eq("token", token)
-        .maybeSingle();
+      const { data } = await supabase.rpc("candidate_session_public_info", { _token: token });
       if (cancelled) return;
-      if (!data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const info = data as any;
+      if (!info) {
         setNotFound(true);
       } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const p = (data as any).projects;
-        setProject({ job_title: p?.job_title, title: p?.title });
-        setOrgName(p?.organizations?.name || "");
+        setProject({ job_title: info.job_title, title: info.title });
+        setOrgName(info.organization_name || "");
       }
       setLoading(false);
     })();

@@ -178,20 +178,15 @@ export default function InterviewLanding() {
     setStarting(true);
 
     const jobTitleValue = candidateFields.job_title.enabled && trimmedJobTitle ? trimmedJobTitle : null;
-    const { data: session, error: err } = await supabase
-      .from("sessions")
-      .insert({
-        project_id: project.id,
-        organization_id: project.organization_id,
-        candidate_name: trimmedName,
-        candidate_email: trimmedEmail,
-        candidate_job_title: jobTitleValue,
-        candidate_linkedin_url: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
-        candidate_phone: candidateFields.phone.enabled && trimmedPhone ? trimmedPhone : null,
-        recruiter_note: jobTitleValue ? `Poste : ${jobTitleValue}` : null,
-      })
-      .select()
-      .single();
+    const { data: created, error: err } = await supabase.rpc("public_start_session", {
+      _slug: project.slug,
+      _name: trimmedName,
+      _email: trimmedEmail,
+      _job_title: jobTitleValue,
+      _phone: candidateFields.phone.enabled && trimmedPhone ? trimmedPhone : null,
+      _linkedin: candidateFields.linkedin.enabled && trimmedLinkedin ? trimmedLinkedin : null,
+    });
+    const session = created as { id: string; token: string } | null;
 
     if (err || !session) {
       setError("Impossible de démarrer la session. Réessayez.");
@@ -213,7 +208,10 @@ export default function InterviewLanding() {
         patch.candidate_cover_letter_filename = filename;
       }
       if (Object.keys(patch).length > 0) {
-        await supabase.from("sessions").update(patch as never).eq("id", session.id);
+        await supabase.rpc("candidate_update_session", {
+          _token: session.token,
+          _patch: patch as never,
+        });
       }
     } catch (uploadErr) {
       console.error("[InterviewLanding] file upload failed", uploadErr);
