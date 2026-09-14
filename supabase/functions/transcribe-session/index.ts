@@ -218,7 +218,9 @@ Deno.serve(async (req) => {
 
     for (const m of targets) {
       // Préférer l'audio s'il existe (plus léger, plus rapide)
-      const mediaUrl = (m as any).audio_segment_url || (m as any).video_segment_url;
+      const rawMediaUrl = (m as any).audio_segment_url || (m as any).video_segment_url;
+      // Le stockage est privé : on signe un accès temporaire.
+      const mediaUrl = (await signMedia(admin, rawMediaUrl)) ?? rawMediaUrl;
 
       // HEAD pour vérifier la taille avant téléchargement
       let contentLength = 0;

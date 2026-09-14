@@ -220,7 +220,8 @@ serve(async (req) => {
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
-        const res = await fetch(seg.audio_url);
+        const signedAudioUrl = (await signMedia(admin, seg.audio_url)) ?? seg.audio_url;
+        const res = await fetch(signedAudioUrl);
         if (!res.ok) {
           skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });
           continue;

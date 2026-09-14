@@ -287,7 +287,8 @@ serve(async (req) => {
     const skippedSegments: Array<{ message_id: string; reason: string; details?: string }> = [];
     for (const seg of segments) {
       try {
-        const res = await fetch(seg.video_url);
+        const signedVideoUrl = (await signMedia(admin, seg.video_url)) ?? seg.video_url;
+        const res = await fetch(signedVideoUrl);
         if (!res.ok) {
           console.warn("[nonverbal] fetch segment failed", res.status, seg.message_id);
           skippedSegments.push({ message_id: seg.message_id, reason: "fetch_failed", details: `HTTP ${res.status}` });
