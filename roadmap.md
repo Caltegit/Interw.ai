@@ -2,3 +2,4 @@
 - [x] Vérifier et corriger les styles spécifiques des écrans candidat
 - [x] Valider le rendu et les tests
 - [ ] Produire le classeur Excel de documentation du scoring
+- [x] Bascule du stockage « media » en privé + vérifications finales (lot 2 terminé)
