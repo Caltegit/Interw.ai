@@ -53,8 +53,7 @@ export function RichTextEditor({ value, onChange, projectId }: Props) {
       const path = `public-pages/${projectId}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type });
       if (error) throw error;
-      { publicUrl: publicAssetUrl(path) };
-      editor.chain().focus().setImage({ src: data.publicUrl }).run();
+      editor.chain().focus().setImage({ src: publicAssetUrl(path) }).run();
     } catch (e) {
       toast({ title: "Échec du téléversement", description: e instanceof Error ? e.message : "", variant: "destructive" });
     }
