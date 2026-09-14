@@ -95,6 +95,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     return clipUrlOverrides[key] ?? clip.url;
   };
   const getClipUrl = (clip: SessionVideoClip | undefined) => resolveUrl(getRawClipUrl(clip));
+  // Adresse lisible du clip courant (null tant que le lien n'est pas délivré).
+  const currentResolvedUrl = resolveUrl(getRawClipUrl(clips[index]));
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
