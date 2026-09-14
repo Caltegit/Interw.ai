@@ -2449,11 +2449,7 @@ export default function InterviewStart() {
 
     // Traçabilité légale du consentement (best-effort, non bloquant)
     if (token && !session.consent_accepted_at && !isDemoRef.current) {
-      supabase
-        .from("sessions")
-        .update({ consent_accepted_at: new Date().toISOString() })
-        .eq("token", token)
-        .then(() => {});
+      void updateSessionByToken({ consent_accepted_at: new Date().toISOString() });
     }
 
     // ── PHASE 0 : déblocage audio mobile (doit s'exécuter dans le geste utilisateur) ──
@@ -2537,26 +2533,16 @@ export default function InterviewStart() {
     } catch {}
 
     // Mark session as in_progress + last_activity_at
-    // NB : le client PostgREST n'envoie la requête qu'à la résolution de la
-    // promesse — le .then() est indispensable, sans lui rien n'est écrit.
-    void supabase
-      .from("sessions")
-      .update({
-        status: "in_progress" as any,
-        started_at: new Date().toISOString(),
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("id", session.id)
-      .then(() => {});
+    void updateSessionByToken({
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString(),
+    });
 
     // Heartbeat toutes les 30 s pour conserver une trace d'activité
     if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
     heartbeatTimerRef.current = setInterval(() => {
-      void supabase
-        .from("sessions")
-        .update({ last_activity_at: new Date().toISOString() })
-        .eq("id", session.id)
-        .then(() => {});
+      void updateSessionByToken({ last_activity_at: new Date().toISOString() });
     }, 30_000);
 
     // Start camera stream
