@@ -534,7 +534,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (error) throw new Error(await explainFunctionError(error, "Reconstruction serveur impossible."));
       const rebuiltPath = (data as { path?: string } | null)?.path ?? null;
       const rebuiltUrl = rebuiltPath
-        ? supabase.storage.from("media").getPublicUrl(rebuiltPath).data.publicUrl
+        ? await resolveMediaUrl(rebuiltPath)
         : currentUrl;
       if (!rebuiltUrl) throw new Error("Aucune vidéo source à réparer.");
 
@@ -565,7 +565,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (uploadError) throw new Error(await explainFunctionError(uploadError, "Enregistrement de la vidéo réparée impossible."));
       const finalPath = (uploadData as { path?: string } | null)?.path ?? rebuiltPath;
       const finalUrl = finalPath
-        ? supabase.storage.from("media").getPublicUrl(finalPath).data.publicUrl
+        ? await resolveMediaUrl(finalPath)
         : rebuiltUrl;
       if (!finalUrl) throw new Error("Vidéo réparée enregistrée, mais URL introuvable.");
 
