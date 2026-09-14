@@ -281,6 +281,24 @@ export default function InterviewStart() {
   const isDemo = !!session?.is_demo;
   const isDemoRef = useRef(false);
   useEffect(() => { isDemoRef.current = isDemo; }, [isDemo]);
+  // Jeton candidat : toutes les lectures/écritures passent par des fonctions
+  // serveur qui le vérifient en base (jamais d'accès direct aux tables).
+  const tokenRef = useRef<string | null>(null);
+  useEffect(() => { tokenRef.current = token ?? null; }, [token]);
+  const updateSessionByToken = useCallback(
+    async (patch: Record<string, unknown>) => {
+      const t = tokenRef.current;
+      if (!t || isDemoRef.current) return;
+      const { error } = await supabase.rpc("candidate_update_session", {
+        _token: t,
+        _patch: patch as never,
+      });
+      if (error) {
+        logger.error("interview_session_update_failed", { error: error.message });
+      }
+    },
+    [],
+  );
   const [project, setProject] = useState<any>(null);
   const [questions, setQuestions] = useState<any[]>([]);
   const [consentDialogOpen, setConsentDialogOpen] = useState(false);
