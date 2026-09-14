@@ -15,6 +15,7 @@ import {
 } from "@/components/project/ProjectForm";
 import { mergeCandidateFields, DEFAULT_CANDIDATE_FIELDS } from "@/lib/candidateFields";
 import {
+import { publicAssetUrl } from "@/lib/mediaUrl";
   DEFAULT_CANDIDATE_EMAIL_BODY,
   DEFAULT_CANDIDATE_EMAIL_SUBJECT,
 } from "@/lib/candidateEmailDefaults";
@@ -179,7 +180,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(path, s.avatarFile, { upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        const urlData = { publicUrl: publicAssetUrl(path) };
         avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -192,7 +193,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(introPath, s.introAudioBlob, { contentType: "audio/webm", upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(introPath);
+        const urlData = { publicUrl: publicAssetUrl(introPath) };
         introAudioUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 
@@ -205,7 +206,7 @@ export default function InterviewTemplateEdit() {
           .from("media")
           .upload(videoPath, s.introVideoFile, { contentType: s.introVideoFile.type, upsert: true });
         if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from("media").getPublicUrl(videoPath);
+        const urlData = { publicUrl: publicAssetUrl(videoPath) };
         presentationVideoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       }
 

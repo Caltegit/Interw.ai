@@ -25,6 +25,7 @@ import {
   type IntroFormat,
 } from "@/components/library/IntroFormatPicker";
 import {
+import { publicAssetUrl } from "@/lib/mediaUrl";
   VoiceSelectorDialog,
   FEMALE_VOICE_DEFAULT_ID,
   FEMALE_VOICES,
@@ -286,14 +287,14 @@ export default function IntroLibrary() {
           .from("media")
           .upload(path, audioBlob, { contentType: "audio/webm", upsert: true });
         if (error) throw error;
-        audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        audioUrl = publicAssetUrl(path);
       } else if (format === "video" && videoFile) {
         const path = `intro-library/${recordId}.webm`;
         const { error } = await supabase.storage
           .from("media")
           .upload(path, videoFile, { contentType: videoFile.type || "video/webm", upsert: true });
         if (error) throw error;
-        videoUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        videoUrl = publicAssetUrl(path);
       }
 
       const payload = {
