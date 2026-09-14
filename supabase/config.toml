@@ -89,3 +89,9 @@ project_id = "qxszgsxdktnwqabsdfvw"
 
   [functions.handle-email-events]
     verify_jwt = false
+
+  [functions.public-asset]
+    verify_jwt = false
+
+  [functions.get-interview-media-url]
+    verify_jwt = false
