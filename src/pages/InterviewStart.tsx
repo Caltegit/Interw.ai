@@ -2906,17 +2906,16 @@ export default function InterviewStart() {
         }
         if (videoUrl || thumbnailUrl) {
           try {
-            const { data: sessRow } = await supabase
-              .from("sessions")
-              .select("video_recording_url, thumbnail_url")
-              .eq("id", sessionId)
-              .maybeSingle();
+            const { data: sessData } = await supabase.rpc("candidate_get_session", {
+              _token: tokenRef.current ?? "",
+            });
+            const sessRow = sessData as any;
             if (sessRow) {
               const patch: { video_recording_url?: string; thumbnail_url?: string } = {};
               if (videoUrl && !sessRow.video_recording_url) patch.video_recording_url = videoUrl;
-              if (thumbnailUrl && !(sessRow as any).thumbnail_url) patch.thumbnail_url = thumbnailUrl;
+              if (thumbnailUrl && !sessRow.thumbnail_url) patch.thumbnail_url = thumbnailUrl;
               if (Object.keys(patch).length > 0) {
-                await supabase.from("sessions").update(patch).eq("id", sessionId);
+                await updateSessionByToken(patch);
                 setSession((prev: any) => (prev ? { ...prev, ...patch } : prev));
               }
             }
@@ -3297,11 +3296,10 @@ export default function InterviewStart() {
 
     setCurrentQuestionIndex(nextQIdx);
     if (sessionId) {
-      void supabase
-        .from("sessions")
-        .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-        .eq("id", sessionId)
-        .then(() => {});
+      void updateSessionByToken({
+        last_question_index: nextQIdx,
+        last_activity_at: new Date().toISOString(),
+      });
     }
 
     if (nMediaType !== "written") {
@@ -3455,11 +3453,10 @@ export default function InterviewStart() {
 
       setCurrentQuestionIndex((prev) => prev + 1);
       if (session?.id) {
-        void supabase
-          .from("sessions")
-          .update({ last_question_index: nextQIdx, last_activity_at: new Date().toISOString() })
-          .eq("id", session.id)
-          .then(() => {});
+        void updateSessionByToken({
+          last_question_index: nextQIdx,
+          last_activity_at: new Date().toISOString(),
+        });
       }
 
       // 5. Amène la barre à 100 % puis retire l'overlay AVANT toute lecture audio/vidéo.
@@ -4052,11 +4049,7 @@ export default function InterviewStart() {
                   const next = v === true;
                   setConsentChecked(next);
                   if (next && token && !session?.consent_accepted_at) {
-                    supabase
-                      .from("sessions")
-                      .update({ consent_accepted_at: new Date().toISOString() })
-                      .eq("token", token)
-                      .then(() => {});
+                    void updateSessionByToken({ consent_accepted_at: new Date().toISOString() });
                   }
                 }}
                 data-testid="interview-consent-checkbox"
