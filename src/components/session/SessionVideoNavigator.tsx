@@ -588,6 +588,21 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
+  // Réparation automatique : certains enregistrements (navigateurs/machines
+  // anciens produisant du VP8 + Opus mal muxé) refusent de démarrer dans
+  // Chrome. Plutôt que d'attendre un clic sur « Réparer la vidéo », on lance
+  // la réparation une seule fois par clip dès la première erreur de décodage.
+  const autoRecoveredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!mediaError || recovering || !canRecover) return;
+    // Code 3 = non décodable, code 4 requalifié en 3 après vérification HEAD.
+    if (mediaError.code !== 3) return;
+    if (autoRecoveredRef.current.has(clipKey)) return;
+    autoRecoveredRef.current.add(clipKey);
+    void handleRecover();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaError, recovering, canRecover, clipKey]);
+
   const goTo = async (newIndex: number, autoplay: boolean) => {
     if (newIndex === index) return;
     await stopCurrent();
@@ -696,9 +711,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           {mediaError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center text-white">
               <p className="text-sm font-medium">
-                {current.audioUrl
-                  ? "Vidéo indisponible — lecture audio uniquement"
-                  : mediaError.message}
+                {recovering
+                  ? (recoverLabel || "Réparation de la vidéo…")
+                  : current.audioUrl
+                    ? "Vidéo indisponible — lecture audio uniquement"
+                    : mediaError.message}
               </p>
               <p className="text-xs text-white/70">
                 {current.questionLabel}
