@@ -3,6 +3,7 @@ import { Download, Loader2, Pause, Play, RotateCcw, RotateCw } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
+import { useMediaUrl } from "@/lib/mediaUrl";
 
 interface Props {
   url: string;
@@ -54,6 +55,8 @@ export function SessionClipPlayer({
   onEnded,
   autoPlayOnLoad,
 }: Props) {
+  // Les enregistrements sont privés : on résout un lien temporaire.
+  const playableUrl = useMediaUrl(url);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const autoPlayRef = useRef(!!autoPlayOnLoad);
@@ -148,7 +151,7 @@ export function SessionClipPlayer({
       try { v.pause(); } catch { /* noop */ }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [url]);
+  }, [playableUrl]);
 
   // Vitesse appliquée à chaud.
   useEffect(() => {
@@ -185,7 +188,7 @@ export function SessionClipPlayer({
       v.removeEventListener("pause", onPause);
       v.removeEventListener("ended", onEndedEvt);
     };
-  }, [url]);
+  }, [playableUrl]);
 
   const showOverlayTemporarily = () => {
     setOverlayVisible(true);
@@ -212,7 +215,7 @@ export function SessionClipPlayer({
       return;
     }
     try {
-      await downloadMp4(url, filename);
+      await downloadMp4(playableUrl ?? url, filename);
     } catch (err) {
       toast({
         title: "Téléchargement impossible",
@@ -236,7 +239,7 @@ export function SessionClipPlayer({
     >
       <video
         ref={videoRef}
-        src={url}
+        src={playableUrl ?? undefined}
         controls
         controlsList="nodownload"
         playsInline

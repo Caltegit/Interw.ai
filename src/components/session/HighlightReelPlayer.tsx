@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, SkipForward, Trophy, Sparkles, AlertTriangle } from "lucide-react";
+import { useMediaUrl } from "@/lib/mediaUrl";
 
 export interface HighlightClip {
   video_url: string;
@@ -116,7 +117,7 @@ export function HighlightReelPlayer({ clips }: { clips: HighlightClip[] }) {
         <div className="relative overflow-hidden rounded-lg bg-black aspect-video">
           <video
             ref={videoRef}
-            src={current.video_url}
+            src={playableUrl ?? undefined}
             playsInline
             controls={false}
             className="h-full w-full object-contain"
