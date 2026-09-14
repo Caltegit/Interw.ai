@@ -19,17 +19,7 @@ export default function InterviewComplete() {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data: session } = await supabase
-        .from("sessions")
-        .select("project_id")
-        .eq("token", token)
-        .maybeSingle();
-      if (!session?.project_id) return;
-      const { data: project } = await supabase
-        .from("projects")
-        .select("completion_message")
-        .eq("id", session.project_id)
-        .maybeSingle();
+      const { data: project } = await supabase.rpc("candidate_get_project", { _token: token });
       const cm = (project as { completion_message?: string | null } | null)?.completion_message;
       if (cm && cm.trim()) setMessage(cm);
     })();
