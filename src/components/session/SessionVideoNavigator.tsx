@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveMediaUrl, useMediaUrls } from "@/lib/mediaUrl";
 
 export interface SessionVideoClip {
   url: string;
