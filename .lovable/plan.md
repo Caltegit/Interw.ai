@@ -1,20 +1,21 @@
 # Fiabiliser durablement la lecture des vidéos privées
 
-## Pourquoi cela arrive depuis la correction de sécurité
+## Ce qui est vérifié, et ce qui ne l'est pas
 
-La mise en privé était nécessaire : avant, une adresse directe suffisait pour ouvrir un enregistrement. Depuis, le lecteur doit d'abord obtenir une adresse temporaire autorisée, puis le navigateur télécharge la vidéo avec cette adresse.
+Vérifié dans l'historique du projet :
 
-Le problème vient de l'adaptation incomplète du lecteur à ce nouveau fonctionnement :
+- Le message « Réseau indisponible pour charger la vidéo » et le bouton de réparation existent depuis le 1er juin. Des vidéos noires se produisaient donc déjà avant la correction de sécurité, à cause de fichiers mal enregistrés par certains navigateurs.
+- La correction de sécurité du 14 septembre a ajouté une étape nouvelle : un enregistrement n'est plus lisible directement, le lecteur doit obtenir une adresse temporaire valable une heure.
+- Sur le cas testé pendant cette analyse, l'autorisation a été accordée et le stockage a répondu correctement. Le passage en privé ne bloque donc pas les vidéos par lui-même.
 
-1. **Toutes les adresses temporaires d'une session sont demandées dès l'ouverture de la fiche**, même pour les vidéos qui seront regardées plus tard.
-2. Elles sont valables une heure, mais le lecteur conserve ensuite sa première copie sans la renouveler automatiquement.
-3. Quand une adresse devient inutilisable, **« Réessayer la vidéo » recharge exactement la même adresse**. Le bouton ne redemande pas une adresse valide.
-4. Le lecteur traduit plusieurs situations différentes par « Réseau indisponible » : adresse expirée, autorisation refusée, fichier absent, téléchargement interrompu ou véritable coupure réseau.
-5. « Réparer la vidéo » peut alors être proposé alors que le fichier n'est pas endommagé : une réparation ne doit servir qu'aux anciens fichiers réellement illisibles.
+Non vérifié à ce stade : la part exacte des écrans noirs actuels imputable à la sécurité plutôt qu'aux anciens fichiers défectueux. Les traces disponibles ne distinguent pas encore une adresse expirée d'un fichier illisible. C'est la première étape du plan, avant toute correction.
 
-Sur l'incident vérifié pendant cette analyse, l'autorisation a bien été accordée et le stockage a répondu **200** pour le fichier demandé. Cela exclut un blocage général dû au passage en privé. L'échec se produit ensuite dans la chaîne de lecture du navigateur. Les journaux actuels ne permettent pas encore de séparer précisément une adresse périmée, un transfert interrompu et un problème de décodage : c'est aussi ce que le correctif doit résoudre.
+## Deux défauts réellement nés avec la correction de sécurité
 
-La sécurité n'a donc pas « supprimé » les vidéos. Elle a ajouté une étape obligatoire de délivrance d'adresse, mais le lecteur n'a pas encore la gestion complète du renouvellement, des reprises et du diagnostic.
+1. **« Réessayer la vidéo » recharge exactement la même adresse**, sans en redemander une valide. Un incident passager devient donc définitif à l'écran.
+2. **Aucune adresse n'est renouvelée** quand une fiche reste ouverte, alors que la validité est d'une heure. Toutes les adresses d'une session sont d'ailleurs demandées dès l'ouverture, même pour les vidéos regardées bien plus tard.
+
+S'y ajoute un défaut de lisibilité antérieur : le lecteur affiche « Réseau indisponible » pour des situations différentes (adresse expirée, autorisation refusée, fichier absent, transfert interrompu, coupure réelle), et propose parfois une réparation alors que le fichier est intact.
 
 ## Objectif
 
