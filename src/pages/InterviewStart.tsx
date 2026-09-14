@@ -1539,12 +1539,8 @@ export default function InterviewStart() {
         console.warn("Échec purge media lors du restart:", e);
       }
 
-      // 2. Purge BDD
-      await supabase.from("session_messages").delete().eq("session_id", session.id);
-      await supabase
-        .from("sessions")
-        .update({ last_question_index: 0, started_at: null, status: "pending" as any })
-        .eq("id", session.id);
+      // 2. Purge BDD (le jeton est vérifié côté serveur)
+      await supabase.rpc("candidate_reset_messages", { _token: tokenRef.current ?? "" });
     } finally {
       setRestoringMessages(false);
       setResumePrompt(null);
