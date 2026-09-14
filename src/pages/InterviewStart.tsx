@@ -516,15 +516,15 @@ export default function InterviewStart() {
     ) => {
       // Mode démo : on n'écrit aucun message en base.
       if (isDemoRef.current) return;
-      const { error } = await supabase.from("session_messages").insert({
-        session_id: sessionId,
-        role,
-        content,
-        question_id: options?.questionId ?? null,
-        is_follow_up: options?.isFollowUp ?? false,
-        video_segment_url: options?.videoSegmentUrl ?? null,
-        audio_segment_url: options?.audioSegmentUrl ?? null,
-      } as never);
+      const { error } = await supabase.rpc("candidate_insert_message", {
+        _token: tokenRef.current ?? "",
+        _role: role,
+        _content: content,
+        _question_id: options?.questionId ?? null,
+        _is_follow_up: options?.isFollowUp ?? false,
+        _video_segment_url: options?.videoSegmentUrl ?? null,
+        _audio_segment_url: options?.audioSegmentUrl ?? null,
+      });
 
       if (error) {
         logger.error("interview_message_persist_failed", {
