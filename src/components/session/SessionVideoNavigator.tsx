@@ -461,8 +461,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Parse `interviews/{sessionId}/q{N}.webm` pour pouvoir relancer la
   // récupération côté serveur sur ce clip précis.
   const parsedRecover = (() => {
-    if (!currentUrl) return null;
-    const m = currentUrl.match(/\/interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
+    if (!currentRawUrl) return null;
+    const m = currentRawUrl.match(/\/?interviews\/([0-9a-f-]+)\/q(\d+)\.(?:webm|mp4)(?:\?.*)?$/i);
     if (!m) return null;
     return { sessionId: m[1], questionIndex: parseInt(m[2], 10) };
   })();
@@ -687,24 +687,24 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                           "Vidéo présente mais non décodable par ce navigateur. Essayez Chrome ou Firefox, ou téléchargez en MP4.",
                       });
                     } else if (res.status === 404) {
-                      const altUrl = buildAltUrl(currentUrl);
-                      if (!altUrl) {
+                      const altRaw = buildAltUrl(currentRawUrl);
+                      if (!altRaw) {
                         setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
                         return;
                       }
-                      fetch(altUrl, { method: "HEAD" })
-                        .then((altRes) => {
+                      resolveMediaUrl(altRaw)
+                        .then(async (altUrl) => {
+                          if (!altUrl) throw new Error("no url");
+                          const altRes = await fetch(altUrl, { method: "HEAD" });
                           if (!altRes.ok) {
                             setMediaError({ code: 4, message: "Fichier vidéo introuvable sur le serveur." });
                             return;
                           }
-                          const withBust = new URL(altUrl, window.location.href);
-                          withBust.searchParams.set("v", String(Date.now()));
-                          swapClipUrl(withBust.toString());
+                          swapClipUrl(altRaw);
                           setMediaError(null);
                           const video = videoRef.current;
                           if (!video) return;
-                          video.src = withBust.toString();
+                          video.src = altUrl;
                           try { video.load(); } catch { /* noop */ }
                         })
                         .catch(() => {
