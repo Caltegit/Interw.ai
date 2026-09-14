@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const raw = await callGeminiInline(LOVABLE_API_KEY, mediaUrl, buf);
+        const raw = await callGeminiInline(LOVABLE_API_KEY, rawMediaUrl, buf);
         const { text: cleaned, segments } = parseSegments(raw);
         const rawBackup = (m as any).content_raw ?? (m as any).content ?? null;
         await admin
