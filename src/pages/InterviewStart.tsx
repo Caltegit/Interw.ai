@@ -1498,11 +1498,10 @@ export default function InterviewStart() {
     if (!resumePrompt || !session?.id) return;
     setRestoringMessages(true);
     try {
-      const { data: rows } = await supabase
-        .from("session_messages")
-        .select("*")
-        .eq("session_id", session.id)
-        .order("timestamp", { ascending: true });
+      const { data: rowsData } = await supabase.rpc("candidate_list_messages", {
+        _token: tokenRef.current ?? "",
+      });
+      const rows = (rowsData as any[]) ?? [];
       const restored: ChatMessage[] = (rows ?? []).map((r: any) => ({
         role: r.role,
         content: r.content,
