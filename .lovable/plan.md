@@ -28,21 +28,9 @@ Avant le correctif général, je répare uniquement les 15 vidéos de cette sess
 
 **Impact immédiat** : aucun changement de code et aucun effet sur les autres sessions. Le risque est limité aux 15 copies de lecture de cet entretien ; les originaux permettent un retour arrière. La fiche pourra être utilisée dès cette phase terminée, sans attendre le correctif général.
 
-## Phase 2 — Correctif général
+## Hors périmètre pour l'instant
 
-1. **Casser la boucle (priorité)** : trois tentatives maximum par vidéo, comptées de façon définitive, jamais remises à zéro par un début de lecture. Au-delà, message clair et bouton « Réessayer », plus de rechargement automatique.
-2. **Ne renouveler le lien que quand c'est le sujet** : renouvellement réservé aux erreurs réseau ou d'autorisation. Une erreur de décodage ou de saut ne redemande plus de lien.
-3. **Rendre la durée non bloquante** : la mesure de durée se tente une seule fois, avec un délai maximal de 3 secondes. Si elle échoue, la vidéo se lit quand même du début ; seuls la barre de durée et les boutons ±10 s restent indisponibles, au lieu d'un écran noir qui tourne.
-4. **Inscrire la durée à l'enregistrement** : pour les futurs entretiens, la durée réelle est écrite à l'envoi du fichier, ce qui supprime la cause à la racine. Sans effet sur les entretiens déjà passés.
-5. **Même traitement pour l'autre lecteur** (`SessionClipPlayer`, utilisé en vue liste et rapport partagé), qui contient la même ruse de durée et la même relance sur erreur.
-
-## Impact
-
-- **Risque de casse du build** : nul attendu. Modifications limitées à deux composants d'affichage et à une écriture de métadonnée à l'envoi ; aucune migration, aucun changement de sécurité, de scoring, de transcription ou de rapport.
-- **Côté recruteur** : la lecture démarre au lieu de tourner en boucle. Effet de bord accepté : sur les anciens enregistrements dont la durée reste introuvable, la barre de progression peut afficher une durée inconnue et les boutons ±10 s être grisés — la lecture, le son et le transcript restent normaux.
-- **Côté candidat** : aucun changement visible dans le parcours d'entretien. Le seul ajout est l'écriture de la durée au moment de l'envoi, non bloquante : si elle échoue, l'envoi se fait comme aujourd'hui.
-- **Charge serveur** : forte baisse des demandes de liens sécurisés (de plusieurs centaines à quelques unités par fiche).
-- **Garde-fou** : je revérifie cette session précise avant/après, et je contrôle dans le journal que le nombre de demandes de lien est retombé à la normale.
+Le correctif général du lecteur (limitation des tentatives, durée non bloquante, écriture de la durée à l'enregistrement) est décrit et reste en attente. Il ne sera pas lancé maintenant.
 
 ## Tests après approbation
 
