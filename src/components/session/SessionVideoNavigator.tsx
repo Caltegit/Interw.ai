@@ -114,10 +114,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   }, [clips.length, index]);
 
   // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
+  // Le compteur de tentatives (accessRetryRef) n'est PAS remis à zéro : il doit
+  // rester valable pendant toute l'ouverture de la fiche, sinon un aller-retour
+  // entre deux clips relance une boucle de renouvellement d'adresse.
   useEffect(() => {
     setMediaError(null);
     setHasVideoTrack(null);
-    accessRetryRef.current.delete(currentClipKey);
   }, [index, currentClipKey]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
@@ -199,45 +201,22 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     pendingSeekRef.current = 0;
   };
 
-  // Répare la durée pour les WebM MediaRecorder (duration = Infinity).
-  // Protégé contre les doubles invocations dans le même cycle de chargement.
+  // Durée des WebM MediaRecorder : elle vaut souvent Infinity. On ne force
+  // plus la détection par un saut à 1e9 (ce saut faisait échouer le décodage
+  // de certains fichiers et relançait un cycle de rechargement sans fin).
+  // La lecture reste prioritaire : seule la barre de durée est indisponible.
   const fixDuration = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.duration === Infinity) {
-      if (fixingDurationRef.current) return;
-      fixingDurationRef.current = true;
-      const onTime = () => {
-        v.removeEventListener("timeupdate", onTime);
-        fixingDurationRef.current = false;
-        const real = v.duration;
-        const safeDur = Number.isFinite(real) ? real : 0;
-        // Après le scrub à 1e9 pour forcer la détection de la durée, la tête
-        // de lecture est collée à la fin. On la repositionne explicitement
-        // avant tout play(), sinon la vidéo se termine immédiatement et
-        // `onEnded` enchaîne au clip suivant (effet « ça saute »).
-        const pending = pendingSeekRef.current;
-        const target = pending > 0
-          ? Math.max(0, Math.min(pending, Math.max(0, safeDur - 0.1)))
-          : 0;
-        try {
-          v.currentTime = target;
-        } catch {
-          /* noop */
-        }
-        pendingSeekRef.current = 0;
-        if (Number.isFinite(real)) setDurationSec(real);
-        if (shouldAutoPlay && !userPausedRef.current) safePlay();
-      };
-      v.addEventListener("timeupdate", onTime);
-      try {
-        v.currentTime = 1e9;
-      } catch {
-        /* noop */
-      }
-    } else if (Number.isFinite(v.duration)) {
+    fixingDurationRef.current = false;
+    if (Number.isFinite(v.duration)) {
       setDurationSec(v.duration);
+      applyPendingSeek(v, v.duration);
+    } else {
+      setDurationSec(null);
+      pendingSeekRef.current = 0;
     }
+    if (shouldAutoPlay && !userPausedRef.current) safePlay();
   };
 
   // Charge la source du clip courant et applique seek/autoplay.
@@ -715,13 +694,16 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             onLoadedMetadata={(e) => {
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
-              else if (d === Infinity) fixDuration();
+              else setDurationSec(null);
               // videoWidth === 0 → fichier lisible en audio uniquement
               // (WebM reconstruit sans piste vidéo décodable). On masque les
               // contrôles vidéo (play central, ±10s, vitesses, MP4).
               setHasVideoTrack(e.currentTarget.videoWidth > 0);
               setMediaError(null);
-              accessRetryRef.current.delete(clipKey);
+              // Volontairement : on ne remet PAS accessRetryRef à zéro ici.
+              // Le chargement des métadonnées réussit presque toujours avant
+              // l'échec de décodage ; remettre le compteur à zéro rendait le
+              // nombre de tentatives infini.
             }}
             onError={(e) => {
               const err = e.currentTarget.error;
@@ -738,10 +720,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               setIsPlaying(false);
               setOverlayVisible(true);
 
-              // Première réponse à toute erreur : renouveler l'autorisation une
-              // seule fois. Une adresse expirée ne doit jamais déclencher une
-              // reconstruction destructive du fichier.
-              if (!accessRetryRef.current.has(clipKey)) {
+              // Renouvellement de l'autorisation : uniquement pour une erreur
+              // réseau (2) ou une source refusée/introuvable (4), et une seule
+              // fois par clip pendant toute l'ouverture de la fiche. Une erreur
+              // de décodage (3) ne vient jamais d'une adresse expirée : la
+              // renouveler créait une boucle de rechargement sans fin.
+              const isAccessError = code === 2 || code === 4;
+              if (isAccessError && !accessRetryRef.current.has(clipKey)) {
                 accessRetryRef.current.add(clipKey);
                 setMediaError(null);
                 const position = e.currentTarget.currentTime || 0;
@@ -757,6 +742,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                 });
                 return;
               }
+
 
               // Si code = 4 (source not supported / introuvable), on vérifie
               // réellement l'existence du fichier via HEAD. Ça évite le message

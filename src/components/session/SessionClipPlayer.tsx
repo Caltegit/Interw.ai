@@ -108,24 +108,16 @@ export function SessionClipPlayer({
     } catch { /* noop */ }
   };
 
-  // Répare la durée des WebM MediaRecorder (duration = Infinity).
+  // Durée des WebM MediaRecorder : souvent Infinity. On ne force plus la
+  // détection par un saut à 1e9, qui faisait échouer le décodage de certains
+  // fichiers. La lecture reste prioritaire ; seule la durée est indisponible.
   const fixDuration = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.duration === Infinity) {
-      const onTime = () => {
-        v.removeEventListener("timeupdate", onTime);
-        const real = v.duration;
-        try { v.currentTime = 0; } catch { /* noop */ }
-        try { v.playbackRate = rateRef.current; } catch { /* noop */ }
-        if (Number.isFinite(real)) setDurationSec(real);
-        if (autoPlayRef.current) safePlay();
-      };
-      v.addEventListener("timeupdate", onTime);
-      try { v.currentTime = 1e9; } catch { /* noop */ }
-    } else if (Number.isFinite(v.duration)) {
-      setDurationSec(v.duration);
-    }
+    try { v.playbackRate = rateRef.current; } catch { /* noop */ }
+    if (Number.isFinite(v.duration)) setDurationSec(v.duration);
+    else setDurationSec(null);
+    if (autoPlayRef.current) safePlay();
   };
 
   // Réinitialise le player quand l'URL change.
@@ -245,7 +237,11 @@ export function SessionClipPlayer({
         controlsList="nodownload"
         playsInline
         preload="metadata"
-        onError={() => {
+        onError={(e) => {
+          // Renouvellement d'adresse uniquement pour une erreur réseau (2) ou
+          // une source refusée/introuvable (4), et une seule fois.
+          const code = e.currentTarget.error?.code ?? null;
+          if (code !== 2 && code !== 4) return;
           if (retriedRef.current) return;
           retriedRef.current = true;
           const position = videoRef.current?.currentTime ?? 0;
@@ -260,10 +256,12 @@ export function SessionClipPlayer({
           });
         }}
         onLoadedMetadata={(e) => {
-          retriedRef.current = false;
+          // Pas de remise à zéro de retriedRef ici : les métadonnées se
+          // chargent avant l'échec de décodage, ce qui rendait les tentatives
+          // illimitées.
           const d = e.currentTarget.duration;
           if (Number.isFinite(d)) setDurationSec(d);
-          else if (d === Infinity) fixDuration();
+          else fixDuration();
         }}
         onEnded={() => {
           setIsPlaying(false);
