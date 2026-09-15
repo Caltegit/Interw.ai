@@ -695,10 +695,6 @@ export default function ProjectDetail() {
     return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
   };
 
-  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
-  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
-  // Résolution groupée : un seul appel pour toutes les vignettes de la page.
-  const resolveThumb = useMediaUrls(pagedSessions.map((s: any) => s.thumbnail_url));
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
