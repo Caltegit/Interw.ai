@@ -74,26 +74,44 @@ export function SessionClipPlayer({
   const { download: downloadMp4, status: dlStatus, progress: dlProgress } = useMp4Download();
   const { toast } = useToast();
 
+  // Intention sonore du recruteur : vraie par défaut, modifiée uniquement par
+  // ses propres actions (contrôles natifs). Une coupure temporaire ne doit pas
+  // devenir définitive.
+  const soundWantedRef = useRef(true);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onVolumeChange = () => {
+      soundWantedRef.current = !v.muted;
+    };
+    v.addEventListener("volumechange", onVolumeChange);
+    return () => v.removeEventListener("volumechange", onVolumeChange);
+  }, []);
+
   const safePlay = () => {
     const v = videoRef.current;
     if (!v) return;
-    const wasMuted = v.muted;
+    // Coupure momentanée le temps du démarrage, puis rétablissement de
+    // l'intention du recruteur dans tous les cas (succès comme échec).
     v.muted = true;
+    const restoreSound = () => {
+      try { v.muted = !soundWantedRef.current; } catch { /* noop */ }
+    };
     try {
       const p = v.play();
       if (p && typeof p.then === "function") {
         playPromiseRef.current = p;
-        p.then(() => {
-          if (!wasMuted) {
-            try { v.muted = false; } catch { /* noop */ }
-          }
-        })
-          .catch(() => { /* swallow */ })
-          .finally(() => { playPromiseRef.current = null; });
-      } else if (!wasMuted) {
-        v.muted = false;
+        p.catch(() => {})
+          .finally(() => {
+            playPromiseRef.current = null;
+            restoreSound();
+          });
+      } else {
+        restoreSound();
       }
-    } catch { /* noop */ }
+    } catch {
+      restoreSound();
+    }
   };
 
   const pauseOnly = async () => {

@@ -150,38 +150,49 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
+  // Intention sonore du recruteur : vraie par défaut, modifiée uniquement par
+  // ses propres actions sur le son (contrôles natifs de la vidéo). On ne lit
+  // jamais v.muted comme source de vérité : une coupure temporaire ne doit pas
+  // devenir définitive.
+  const soundWantedRef = useRef(true);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onVolumeChange = () => {
+      soundWantedRef.current = !v.muted;
+    };
+    v.addEventListener("volumechange", onVolumeChange);
+    return () => v.removeEventListener("volumechange", onVolumeChange);
+  }, []);
+
   const safePlay = () => {
     const v = videoRef.current;
     if (!v) return;
     // Chrome bloque l'autoplay non-mute après un délai depuis le geste utilisateur.
-    // On force mute avant play() puis on restaure le son une fois lecture lancée.
-    const wasMuted = v.muted;
+    // On coupe momentanément le son puis on rétablit l'intention du recruteur
+    // dans TOUS les cas (succès comme échec), sinon une lecture interrompue
+    // laisserait le son coupé pour toute la suite de la fiche.
     v.muted = true;
+    const restoreSound = () => {
+      try {
+        v.muted = !soundWantedRef.current;
+      } catch {
+        /* noop */
+      }
+    };
     try {
       const p = v.play();
       if (p && typeof p.then === "function") {
         playPromiseRef.current = p;
-        p.then(() => {
-          if (!wasMuted) {
-            // Restaure le son après démarrage effectif.
-            try {
-              v.muted = false;
-            } catch {
-              /* noop */
-            }
-          }
-        })
-          .catch(() => {
-            // Si play() échoue, on laisse mute pour éviter un état incohérent.
-          })
-          .finally(() => {
-            playPromiseRef.current = null;
-          });
-      } else if (!wasMuted) {
-        v.muted = false;
+        p.catch(() => {}).finally(() => {
+          playPromiseRef.current = null;
+          restoreSound();
+        });
+      } else {
+        restoreSound();
       }
     } catch {
-      /* noop */
+      restoreSound();
     }
   };
 
