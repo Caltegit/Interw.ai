@@ -6,7 +6,7 @@ Dans le lecteur de la fiche candidat (`SessionVideoNavigator.tsx`), la fonction 
 
 1. elle coupe le son (`muted = true`) pour contourner le blocage de lecture automatique des navigateurs ;
 2. elle lance la lecture ;
-3. elle ne remet le son **que si** la lecture a démarré sans erreur, et **que si** le son n'était pas déjà coupé avant.
+3. elle ne remet le son **que si** la lecture a démarré sans être interrompue. À l'ouverture de la fiche, la lecture démarre proprement : le son revient, c'est bien ce que tu constates sur la première question.
 
 Au passage à la question suivante, la source vidéo est remplacée puis rechargée juste après le lancement de lecture. Le navigateur annule alors la demande de lecture en cours (erreur classique « play() interrompu par un nouveau chargement »). Ce cas tombe dans la branche d'échec : le son n'est jamais rétabli.
 
