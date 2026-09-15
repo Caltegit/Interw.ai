@@ -1,0 +1,46 @@
+# Corriger l’écran noir et supprimer la fausse notification
+
+## Diagnostic vérifié
+
+- Lors des clics récents sur « Réparer cette vidéo », le service a répondu pour les fichiers testés : **« fichier déjà valide, rien à faire »**. Il n’a donc pas modifié ces vidéos.
+- Malgré cela, le lecteur a affiché **« Vidéo réparée »** parce que son contrôle actuel s’arrête au chargement des métadonnées et à la présence d’une piste vidéo. Il ne vérifie pas qu’une image peut réellement être décodée et affichée.
+- C’est une erreur certaine dans le code : une absence de réparation peut aujourd’hui produire une notification de réussite.
+- Les 15 vidéos ont été lancées dans Chromium pendant ce diagnostic : les 15 ont avancé, avec une image 480 × 640 et sans erreur. Cela prouve que les fichiers ne sont pas universellement illisibles.
+- Ton navigateur renvoie toutefois une erreur de décodage et affiche un écran noir. La cause exacte de cette différence entre navigateurs n’est **pas encore démontrée**. Je ne la présenterai pas comme certaine avant le test dans un moteur reproduisant ton cas.
+
+## Correction proposée
+
+1. **Supprimer immédiatement la fausse réussite**
+   - Ne jamais annoncer « Vidéo réparée » lorsque le serveur répond qu’il n’a rien modifié.
+   - Remplacer le contrôle des seules métadonnées par un contrôle réel : démarrage de la lecture, attente d’une image décodée, puis validation.
+   - Si aucune image n’est décodée, conserver l’état d’erreur et afficher une explication exacte, sans notification de réussite.
+
+2. **Réparer réellement les formats refusés par le navigateur**
+   - Quand le navigateur signale une erreur de décodage, ne pas considérer un simple réassemblage WebM comme une réparation suffisante.
+   - Convertir la vidéo concernée en MP4 H.264/AAC, format plus largement compatible, puis enregistrer cette version sans supprimer l’original.
+   - Ne remplacer la référence utilisée par la fiche qu’après une vérification réelle d’image et de son sur le fichier converti.
+
+3. **Éviter toute réparation automatique trompeuse**
+   - Une erreur ne déclenchera plus silencieusement une opération pouvant conclure à tort au succès.
+   - Le bouton restera manuel et son résultat sera limité à trois états vérifiables : réparée et relue, échec de réparation, ou fichier déjà lisible dans ce navigateur.
+   - Chaque vidéo sera traitée séparément ; l’état d’une réponse ne recouvrira plus les autres.
+
+4. **Vérifier les 15 réponses de cette session**
+   - Tester réellement la lecture de chaque réponse, pas seulement son chargement.
+   - Identifier précisément celles qui nécessitent une conversion et ne modifier que celles-là.
+   - Contrôler après conversion l’image, le son, la durée, le passage entre les questions et l’absence de boucle.
+
+## Impact et risques
+
+- **Construction de l’application : risque faible à modéré.** Le lecteur et son contrôle de réparation changent ; aucune migration, aucun changement de sécurité, de scoring, de transcription ou de rapport.
+- **Recruteur :** plus aucune notification de réussite sans image effectivement décodée. Une conversion peut prendre jusqu’à deux minutes pour une vidéo ; l’état restera attaché uniquement à cette vidéo.
+- **Candidat :** aucun changement dans le parcours d’entretien ni dans l’enregistrement.
+- **Données :** les fichiers sources restent conservés. Une version MP4 n’est utilisée qu’après contrôle concluant.
+- **Sécurité :** le stockage reste privé et les adresses temporaires restent obligatoires.
+- **Limite honnête :** Chromium lit actuellement les 15 fichiers. La compatibilité avec ton navigateur ne sera déclarée corrigée qu’après un test dans un second moteur de navigateur reproduisant le cas, puis un contrôle visuel d’une image réellement affichée.
+
+## Tests E2E après approbation
+
+1. **Côté candidat d’abord :** réaliser un entretien de démonstration avec caméra et micro, enregistrer puis envoyer une réponse, et vérifier que le parcours reste intact.
+2. **Côté recruteur ensuite :** ouvrir cette session dans Chromium puis WebKit, lancer les 15 vidéos, vérifier une image visible et un son actif, naviguer entre toutes les questions, puis confirmer qu’aucune notification « réparée » n’apparaît sans lecture effective.
+3. Tester volontairement un échec de décodage : aucune boucle, aucune fausse réussite, et un état stable avec une action manuelle claire.
