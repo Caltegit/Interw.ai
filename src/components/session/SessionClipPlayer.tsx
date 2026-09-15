@@ -98,10 +98,20 @@ export function SessionClipPlayer({
     if (!v) return;
     // Coupure momentanée le temps du démarrage, puis rétablissement de
     // l'intention du recruteur dans tous les cas (succès comme échec).
-    codeMuteRef.current++;
-    v.muted = true;
+    // (compteur incrémenté seulement si la valeur change réellement : sinon
+    // volumechange ne se déclenche pas et le compteur se décalerait)
+    if (!v.muted) {
+      codeMuteRef.current++;
+      v.muted = true;
+    }
     const restoreSound = () => {
-      try { codeMuteRef.current++; v.muted = !soundWantedRef.current; } catch { /* noop */ }
+      const target = !soundWantedRef.current;
+      try {
+        if (v.muted !== target) {
+          codeMuteRef.current++;
+          v.muted = target;
+        }
+      } catch { /* noop */ }
     };
     try {
       const p = v.play();
