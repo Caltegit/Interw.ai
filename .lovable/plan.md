@@ -5,14 +5,16 @@
 - Lors des clics récents sur « Réparer cette vidéo », le service a répondu pour les fichiers testés : **« fichier déjà valide, rien à faire »**. Il n’a donc pas modifié ces vidéos.
 - Malgré cela, le lecteur a affiché **« Vidéo réparée »** parce que son contrôle actuel s’arrête au chargement des métadonnées et à la présence d’une piste vidéo. Il ne vérifie pas qu’une image peut réellement être décodée et affichée.
 - C’est une erreur certaine dans le code : une absence de réparation peut aujourd’hui produire une notification de réussite.
-- Les 15 vidéos ont été lancées dans Chromium pendant ce diagnostic : les 15 ont avancé, avec une image 480 × 640 et sans erreur. Cela prouve que les fichiers ne sont pas universellement illisibles.
-- Ton navigateur renvoie toutefois une erreur de décodage et affiche un écran noir. La cause exacte de cette différence entre navigateurs n’est **pas encore démontrée**. Je ne la présenterai pas comme certaine avant le test dans un moteur reproduisant ton cas.
+- Les 15 vidéos ont été lancées dans Chromium pendant ce diagnostic : les 15 ont avancé, avec une piste vidéo 480 × 640 et sans erreur. Cela prouve que les fichiers ne sont pas universellement illisibles.
+- Après le prétendu succès, le code recharge le lecteur visible mais ne relance pas la lecture. Avec son réglage actuel, ce lecteur peut rester noir tant qu’aucune image n’est effectivement jouée.
+- Ton navigateur renvoie toutefois une erreur de décodage et affiche un écran noir. La part exacte entre ce défaut de relance et une incompatibilité propre à ton navigateur n’est **pas encore démontrée**. Je ne la présenterai pas comme certaine avant le test dans un moteur reproduisant ton cas.
 
 ## Correction proposée
 
 1. **Supprimer immédiatement la fausse réussite**
    - Ne jamais annoncer « Vidéo réparée » lorsque le serveur répond qu’il n’a rien modifié.
-   - Remplacer le contrôle des seules métadonnées par un contrôle réel : démarrage de la lecture, attente d’une image décodée, puis validation.
+   - Remplacer le contrôle des seules métadonnées par un contrôle réel sur le lecteur visible : démarrage de la lecture, attente d’une image décodée, puis validation.
+   - Ne plus recharger une seconde fois la vidéo après ce contrôle sans relancer sa lecture.
    - Si aucune image n’est décodée, conserver l’état d’erreur et afficher une explication exacte, sans notification de réussite.
 
 2. **Réparer réellement les formats refusés par le navigateur**
