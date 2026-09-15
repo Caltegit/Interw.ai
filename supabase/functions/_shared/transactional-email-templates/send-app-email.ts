@@ -20,7 +20,7 @@ const FROM_DOMAIN = 'notify.interw.com'
 // `hello@` scores better than `noreply@` with Gmail/Outlook.
 const FROM_LOCAL_PART = 'hello'
 // Monitored inbox used when the caller provides no explicit Reply-To.
-const DEFAULT_REPLY_TO = 'contact@interw.com'
+const DEFAULT_REPLY_TO = 'hello@interw.com'
 
 export type SendAppEmailResult =
   | { sent: true; messageId: string }
