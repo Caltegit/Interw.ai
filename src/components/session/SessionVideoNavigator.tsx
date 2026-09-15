@@ -114,10 +114,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   }, [clips.length, index]);
 
   // Reset l'erreur quand on change de clip (l'erreur précédente ne s'applique plus).
+  // Le compteur de tentatives (accessRetryRef) n'est PAS remis à zéro : il doit
+  // rester valable pendant toute l'ouverture de la fiche, sinon un aller-retour
+  // entre deux clips relance une boucle de renouvellement d'adresse.
   useEffect(() => {
     setMediaError(null);
     setHasVideoTrack(null);
-    accessRetryRef.current.delete(currentClipKey);
   }, [index, currentClipKey]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
