@@ -98,9 +98,10 @@ export function SessionClipPlayer({
     if (!v) return;
     // Coupure momentanée le temps du démarrage, puis rétablissement de
     // l'intention du recruteur dans tous les cas (succès comme échec).
+    codeMuteRef.current++;
     v.muted = true;
     const restoreSound = () => {
-      try { v.muted = !soundWantedRef.current; } catch { /* noop */ }
+      try { codeMuteRef.current++; v.muted = !soundWantedRef.current; } catch { /* noop */ }
     };
     try {
       const p = v.play();

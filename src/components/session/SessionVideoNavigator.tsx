@@ -176,9 +176,11 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     // On coupe momentanément le son puis on rétablit l'intention du recruteur
     // dans TOUS les cas (succès comme échec), sinon une lecture interrompue
     // laisserait le son coupé pour toute la suite de la fiche.
+    codeMuteRef.current++;
     v.muted = true;
     const restoreSound = () => {
       try {
+        codeMuteRef.current++;
         v.muted = !soundWantedRef.current;
       } catch {
         /* noop */
@@ -226,6 +228,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     fixingDurationRef.current = false;
     // Rétablit l'intention sonore du recruteur à chaque chargement de clip.
     try {
+      codeMuteRef.current++;
       v.muted = !soundWantedRef.current;
     } catch {
       /* noop */
