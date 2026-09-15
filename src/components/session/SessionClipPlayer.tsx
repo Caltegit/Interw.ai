@@ -75,13 +75,18 @@ export function SessionClipPlayer({
   const { toast } = useToast();
 
   // Intention sonore du recruteur : vraie par défaut, modifiée uniquement par
-  // ses propres actions (contrôles natifs). Une coupure temporaire ne doit pas
-  // devenir définitive.
+  // ses propres actions (contrôles natifs). Les coupures faites par le code
+  // (ci-dessous) ne comptent pas.
   const soundWantedRef = useRef(true);
+  const codeMuteRef = useRef(0);
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const onVolumeChange = () => {
+      if (codeMuteRef.current > 0) {
+        codeMuteRef.current--;
+        return;
+      }
       soundWantedRef.current = !v.muted;
     };
     v.addEventListener("volumechange", onVolumeChange);

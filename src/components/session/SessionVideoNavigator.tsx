@@ -151,14 +151,18 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   };
 
   // Intention sonore du recruteur : vraie par défaut, modifiée uniquement par
-  // ses propres actions sur le son (contrôles natifs de la vidéo). On ne lit
-  // jamais v.muted comme source de vérité : une coupure temporaire ne doit pas
-  // devenir définitive.
+  // ses propres actions sur le son (contrôles natifs de la vidéo). Les
+  // coupures faites par le code (ci-dessous) ne comptent pas.
   const soundWantedRef = useRef(true);
+  const codeMuteRef = useRef(0);
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     const onVolumeChange = () => {
+      if (codeMuteRef.current > 0) {
+        codeMuteRef.current--;
+        return;
+      }
       soundWantedRef.current = !v.muted;
     };
     v.addEventListener("volumechange", onVolumeChange);
