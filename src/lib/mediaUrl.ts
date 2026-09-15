@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const BUCKET = "media";
@@ -54,6 +54,10 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+interface ResolveOptions {
+  forceRefresh?: boolean;
+}
+
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<string | null>>();
 
@@ -64,12 +68,18 @@ const inflight = new Map<string, Promise<string | null>>();
 export async function resolveMediaUrl(
   input?: string | null,
   candidateToken?: string | null,
+  options: ResolveOptions = {},
 ): Promise<string | null> {
   if (!input) return null;
   if (!isInterviewMedia(input)) return input;
-  const path = toStoragePath(input)!;
+  // Les rapports partagés reçoivent déjà une adresse signée de leur fonction
+  // d'autorisation. Ne pas tenter de la signer à nouveau sans session utilisateur.
+  if (input.includes(`/object/sign/${BUCKET}/`) && !options.forceRefresh) return input;
+  const path = toStoragePath(input);
+  if (!path) return null;
   const key = `${path}|${candidateToken ?? ""}`;
 
+  if (options.forceRefresh) cache.delete(key);
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) return hit.url;
 
@@ -81,12 +91,18 @@ export async function resolveMediaUrl(
       body: { path, token: candidateToken ?? undefined },
     });
     if (error || !data?.url) return null;
-    cache.set(key, { url: data.url as string, expiresAt: Date.now() + 50 * 60 * 1000 });
+    const expiresIn = typeof data.expiresIn === "number" ? data.expiresIn : 3600;
+    cache.set(key, { url: data.url as string, expiresAt: Date.now() + Math.max(60, expiresIn - 300) * 1000 });
     return data.url as string;
   })().finally(() => inflight.delete(key));
 
   inflight.set(key, promise);
   return promise;
+}
+
+export function invalidateMediaUrl(input?: string | null, candidateToken?: string | null) {
+  const path = toStoragePath(input);
+  if (path) cache.delete(`${path}|${candidateToken ?? ""}`);
 }
 
 /** Résout plusieurs adresses d'une même session en un seul appel. */
@@ -153,6 +169,49 @@ export function useMediaUrl(input?: string | null, candidateToken?: string | nul
     };
   }, [input, candidateToken]);
   return url;
+}
+
+/** Adresse temporaire renouvelable à la demande, pour les lecteurs interactifs. */
+export function useRefreshableMediaUrl(input?: string | null, candidateToken?: string | null) {
+  const [url, setUrl] = useState<string | null>(() =>
+    input && !isInterviewMedia(input) ? input : null,
+  );
+  const [loading, setLoading] = useState(!!input && isInterviewMedia(input));
+
+  const refresh = useCallback(async () => {
+    if (!input) {
+      setUrl(null);
+      setLoading(false);
+      return null;
+    }
+    setLoading(true);
+    invalidateMediaUrl(input, candidateToken);
+    const next = await resolveMediaUrl(input, candidateToken, { forceRefresh: true });
+    setUrl(next);
+    setLoading(false);
+    return next;
+  }, [input, candidateToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(!!input && isInterviewMedia(input));
+    resolveMediaUrl(input, candidateToken).then((next) => {
+      if (!cancelled) {
+        setUrl(next);
+        setLoading(false);
+      }
+    });
+    // Renouvellement avant l'expiration serveur d'une heure.
+    const timer = input && isInterviewMedia(input) && !input.includes(`/object/sign/${BUCKET}/`)
+      ? window.setInterval(() => { void refresh(); }, 50 * 60 * 1000)
+      : null;
+    return () => {
+      cancelled = true;
+      if (timer !== null) window.clearInterval(timer);
+    };
+  }, [input, candidateToken, refresh]);
+
+  return { url, loading, refresh };
 }
 
 /** Hook : résout une liste d'adresses, renvoie une fonction de résolution synchrone. */

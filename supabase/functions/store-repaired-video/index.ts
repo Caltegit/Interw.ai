@@ -113,10 +113,9 @@ Deno.serve(async (req) => {
       .upload(targetPath, buffer, { contentType, upsert: true });
     if (upErr) throw upErr;
 
-    const publicUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/media/${targetPath}`;
     const { error: msgErr } = await sb
       .from("session_messages")
-      .update({ video_segment_url: publicUrl })
+      .update({ video_segment_url: targetPath })
       .eq("session_id", sessionId)
       .like("video_segment_url", `%/interviews/${sessionId}/q${questionIndex}.%`);
     if (msgErr) throw msgErr;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, SkipForward, Trophy, Sparkles, AlertTriangle } from "lucide-react";
-import { useMediaUrl } from "@/lib/mediaUrl";
+import { useRefreshableMediaUrl } from "@/lib/mediaUrl";
 
 export interface HighlightClip {
   video_url: string;
@@ -48,7 +48,8 @@ export function HighlightReelPlayer({ clips }: { clips: HighlightClip[] }) {
 
   const current = clips[index];
   // Les enregistrements sont privés : on résout un lien temporaire.
-  const playableUrl = useMediaUrl(current?.video_url);
+  const { url: playableUrl, refresh } = useRefreshableMediaUrl(current?.video_url);
+  const retriedRef = useRef(false);
   const { start, end } = current ? getClipBounds(current) : { start: 0, end: 20 };
 
   useEffect(() => {
@@ -124,6 +125,17 @@ export function HighlightReelPlayer({ clips }: { clips: HighlightClip[] }) {
             controls={false}
             className="h-full w-full object-contain"
             preload="metadata"
+            onLoadedMetadata={() => { retriedRef.current = false; }}
+            onError={() => {
+              if (retriedRef.current) return;
+              retriedRef.current = true;
+              void refresh().then((nextUrl) => {
+                const video = videoRef.current;
+                if (!video || !nextUrl) return;
+                video.src = nextUrl;
+                video.load();
+              });
+            }}
           />
           <div className="absolute left-3 top-3 flex max-w-[70%] items-center gap-2 rounded-full bg-background/80 px-3 py-1 text-xs font-medium backdrop-blur">
             <KindIcon className={`h-3.5 w-3.5 ${kindMeta.className}`} />
