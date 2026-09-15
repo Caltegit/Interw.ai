@@ -535,6 +535,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const probeVideo = (url: string) => new Promise<boolean>((resolve) => {
     const probe = document.createElement("video");
     let settled = false;
+    let timeout = 0;
     const finish = (ok: boolean) => {
       if (settled) return;
       settled = true;
@@ -543,7 +544,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       try { probe.load(); } catch { /* noop */ }
       resolve(ok);
     };
-    const timeout = window.setTimeout(() => finish(false), 10000);
+    timeout = window.setTimeout(() => finish(false), 10000);
     probe.preload = "metadata";
     probe.muted = true;
     probe.onloadedmetadata = () => finish(probe.videoWidth > 0);

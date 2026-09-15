@@ -88,6 +88,8 @@ Deno.serve(async (req) => {
       });
     } catch { /* le diagnostic ne doit jamais bloquer la lecture */ }
   };
+  // Purge opportuniste : aucune donnée technique n'est conservée au-delà de 7 jours.
+  void sb.from("media_access_logs").delete().lt("expires_at", new Date().toISOString());
 
   const { data: session } = await sb
     .from("sessions")
