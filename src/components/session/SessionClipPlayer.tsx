@@ -237,7 +237,11 @@ export function SessionClipPlayer({
         controlsList="nodownload"
         playsInline
         preload="metadata"
-        onError={() => {
+        onError={(e) => {
+          // Renouvellement d'adresse uniquement pour une erreur réseau (2) ou
+          // une source refusée/introuvable (4), et une seule fois.
+          const code = e.currentTarget.error?.code ?? null;
+          if (code !== 2 && code !== 4) return;
           if (retriedRef.current) return;
           retriedRef.current = true;
           const position = videoRef.current?.currentTime ?? 0;
@@ -252,10 +256,12 @@ export function SessionClipPlayer({
           });
         }}
         onLoadedMetadata={(e) => {
-          retriedRef.current = false;
+          // Pas de remise à zéro de retriedRef ici : les métadonnées se
+          // chargent avant l'échec de décodage, ce qui rendait les tentatives
+          // illimitées.
           const d = e.currentTarget.duration;
           if (Number.isFinite(d)) setDurationSec(d);
-          else if (d === Infinity) fixDuration();
+          else fixDuration();
         }}
         onEnded={() => {
           setIsPlaying(false);
