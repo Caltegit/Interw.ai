@@ -17,7 +17,18 @@ Fichier `src/components/session/SessionVideoNavigator.tsx`. Trois mécanismes co
 
 Donc : ce n'est ni le stockage sécurisé, ni les fichiers du candidat. C'est la combinaison « durée absente + nouvelle tentative illimitée ».
 
-## Ce que je corrige
+## Phase 1 — Réparer cette session maintenant
+
+Avant le correctif général, je répare uniquement les 15 vidéos de cette session :
+
+1. Conserver chaque fichier original intact comme sauvegarde.
+2. Réemballer chaque WebM pour y inscrire sa durée réelle, sans modifier l'image ni le son.
+3. Remplacer uniquement le fichier de lecture de chaque réponse ; aucun changement sur les transcriptions, le rapport ou le score.
+4. Tester les 15 vidéos une par une dans le navigateur, puis vérifier que la fiche ne redemande plus de liens en boucle.
+
+**Impact immédiat** : aucun changement de code et aucun effet sur les autres sessions. Le risque est limité aux 15 copies de lecture de cet entretien ; les originaux permettent un retour arrière. La fiche pourra être utilisée dès cette phase terminée, sans attendre le correctif général.
+
+## Phase 2 — Correctif général
 
 1. **Casser la boucle (priorité)** : trois tentatives maximum par vidéo, comptées de façon définitive, jamais remises à zéro par un début de lecture. Au-delà, message clair et bouton « Réessayer », plus de rechargement automatique.
 2. **Ne renouveler le lien que quand c'est le sujet** : renouvellement réservé aux erreurs réseau ou d'autorisation. Une erreur de décodage ou de saut ne redemande plus de lien.
