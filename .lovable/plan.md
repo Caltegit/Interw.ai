@@ -2,7 +2,7 @@
 
 ## Diagnostic confirmé
 
-La réparation des 15 fichiers n’a pas suffi. Sur la session `65e1c792-0b11-456d-995e-a7bdd71aad78`, la vidéo 4 (`q3.webm`) renvoie actuellement une erreur de décodage, puis le lecteur recommence chaque seconde avec une nouvelle adresse temporaire.
+La réparation des 15 fichiers n’a pas suffi. Sur la session `65e1c792-0b11-456d-995e-a7bdd71aad78`, toutes les vidéos renvoient actuellement une erreur de décodage, puis le lecteur recommence chaque seconde avec une nouvelle adresse temporaire.
 
 Le cycle est visible dans le code actuel :
 
