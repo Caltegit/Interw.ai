@@ -78,6 +78,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // `true` = piste vidéo décodable ; `false` = fichier lisible en audio
   // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
   const [hasVideoTrack, setHasVideoTrack] = useState<boolean | null>(null);
+  const accessRetryRef = useRef<Set<string>>(new Set());
   const [clipUrlOverrides, setClipUrlOverrides] = useState<Record<string, string>>({});
   // Les enregistrements sont stockés en privé : on résout des liens temporaires.
   const altExtension = (u?: string | null) => {
@@ -101,7 +102,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     getRawClipUrl(nextClip),
   ]);
   const { url: refreshedCurrentUrl, refresh: refreshCurrentUrl } = useRefreshableMediaUrl(currentRawMediaUrl);
-  const getClipUrl = (clip: SessionVideoClip | undefined) => resolveUrl(getRawClipUrl(clip));
+  const getClipUrl = (clip: SessionVideoClip | undefined) => {
+    if (clip === currentClip) return refreshedCurrentUrl;
+    return resolveUrl(getRawClipUrl(clip));
+  };
   // Adresse lisible du clip courant (null tant que le lien n'est pas délivré).
   const currentResolvedUrl = refreshedCurrentUrl;
 
@@ -113,7 +117,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   useEffect(() => {
     setMediaError(null);
     setHasVideoTrack(null);
-  }, [index]);
+    accessRetryRef.current.delete(currentClipKey);
+  }, [index, currentClipKey]);
 
   // Annule un play() en attente puis pause, sans toucher à currentTime.
   const pauseOnly = async () => {
@@ -674,6 +679,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // contrôles vidéo (play central, ±10s, vitesses, MP4).
               setHasVideoTrack(e.currentTarget.videoWidth > 0);
               setMediaError(null);
+              accessRetryRef.current.delete(clipKey);
             }}
             onError={(e) => {
               const err = e.currentTarget.error;
@@ -689,6 +695,22 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               setMediaError({ code, message: fallback });
               setIsPlaying(false);
               setOverlayVisible(true);
+
+              // Première réponse à toute erreur : renouveler l'autorisation une
+              // seule fois. Une adresse expirée ne doit jamais déclencher une
+              // reconstruction destructive du fichier.
+              if (!accessRetryRef.current.has(clipKey)) {
+                accessRetryRef.current.add(clipKey);
+                const position = e.currentTarget.currentTime || 0;
+                void refreshCurrentUrl().then((freshUrl) => {
+                  const video = videoRef.current;
+                  if (!video || !freshUrl) return;
+                  pendingSeekRef.current = position;
+                  video.src = freshUrl;
+                  try { video.load(); } catch { /* noop */ }
+                });
+                return;
+              }
 
               // Si code = 4 (source not supported / introuvable), on vérifie
               // réellement l'existence du fichier via HEAD. Ça évite le message
@@ -764,9 +786,15 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                   type="button"
                   onClick={() => {
                     setMediaError(null);
-                    const v = videoRef.current;
-                    if (!v) return;
-                    try { v.load(); } catch { /* noop */ }
+                    accessRetryRef.current.delete(clipKey);
+                    const position = videoRef.current?.currentTime ?? 0;
+                    void refreshCurrentUrl().then((freshUrl) => {
+                      const video = videoRef.current;
+                      if (!video || !freshUrl) return;
+                      pendingSeekRef.current = position;
+                      video.src = freshUrl;
+                      try { video.load(); } catch { /* noop */ }
+                    });
                   }}
                   className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
                 >

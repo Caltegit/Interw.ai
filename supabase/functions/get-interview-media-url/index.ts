@@ -5,6 +5,7 @@
 //   - OU super administrateur
 //   - OU appel interne (service_role)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,13 @@ function json(body: unknown, status = 200) {
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 }
+
+const BodySchema = z.object({
+  path: z.string().min(1).max(2048).optional(),
+  url: z.string().min(1).max(2048).optional(),
+  token: z.string().min(1).max(256).optional(),
+  paths: z.array(z.string().min(1).max(2048)).min(1).max(50).optional(),
+});
 
 /** Accepte un chemin (`interviews/…`) ou une adresse absolue héritée. */
 function toStoragePath(input: string): string | null {
@@ -45,14 +53,18 @@ function sessionIdFromPath(path: string): string | null {
 }
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  const diagnosticId = crypto.randomUUID();
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  let body: { path?: string; url?: string; token?: string; paths?: string[] };
+  let body: z.infer<typeof BodySchema>;
   try {
-    body = await req.json();
+    const parsed = BodySchema.safeParse(await req.json());
+    if (!parsed.success) return json({ error: "Invalid body", diagnosticId }, 400);
+    body = parsed.data;
   } catch {
-    return json({ error: "Invalid body" }, 400);
+    return json({ error: "Invalid body", diagnosticId }, 400);
   }
 
   const rawList = Array.isArray(body.paths) && body.paths.length
@@ -75,18 +87,39 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+  const record = async (
+    actorType: "candidate" | "member" | "super_admin" | "internal" | "anonymous",
+    outcome: "allowed" | "forbidden" | "not_found" | "signing_failed" | "invalid_request",
+    reason: string,
+  ) => {
+    try {
+      await sb.from("media_access_logs").insert({
+        diagnostic_id: diagnosticId,
+        session_id: sessionId,
+        storage_path: paths[0].slice(0, 500),
+        actor_type: actorType,
+        outcome,
+        reason,
+        duration_ms: Date.now() - startedAt,
+      });
+    } catch { /* le diagnostic ne doit jamais bloquer la lecture */ }
+  };
 
   const { data: session } = await sb
     .from("sessions")
     .select("id, token, organization_id")
     .eq("id", sessionId)
     .maybeSingle();
-  if (!session) return json({ error: "Not found" }, 404);
+  if (!session) return json({ error: "Not found", diagnosticId }, 404);
 
   let allowed = false;
+  let actorType: "candidate" | "member" | "super_admin" | "internal" | "anonymous" = "anonymous";
 
   // 1) Jeton candidat
-  if (body.token && session.token && body.token === session.token) allowed = true;
+  if (body.token && session.token && body.token === session.token) {
+    allowed = true;
+    actorType = "candidate";
+  }
 
   // 2) Appel interne ou utilisateur authentifié
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -94,6 +127,7 @@ Deno.serve(async (req) => {
   if (!allowed && bearer) {
     if (bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
       allowed = true;
+      actorType = "internal";
     } else {
       const { data: userData } = await sb.auth.getUser(bearer);
       const userId = userData?.user?.id;
@@ -102,26 +136,39 @@ Deno.serve(async (req) => {
           _user_id: userId,
           _org_id: session.organization_id,
         });
-        if (isMember) allowed = true;
+        if (isMember) {
+          allowed = true;
+          actorType = "member";
+        }
         if (!allowed) {
           const { data: isSuper } = await sb.rpc("is_super_admin", { _user_id: userId });
-          if (isSuper) allowed = true;
+          if (isSuper) {
+            allowed = true;
+            actorType = "super_admin";
+          }
         }
       }
     }
   }
 
-  if (!allowed) return json({ error: "Forbidden" }, 403);
+  if (!allowed) {
+    await record(actorType, "forbidden", "authorization_failed");
+    return json({ error: "Forbidden", diagnosticId }, 403);
+  }
 
   const { data, error } = await sb.storage
     .from(BUCKET)
     .createSignedUrls(paths, EXPIRES_SECONDS);
-  if (error || !data) return json({ error: "Signing failed" }, 500);
+  if (error || !data) {
+    await record(actorType, "signing_failed", "storage_signing_failed");
+    return json({ error: "Signing failed", diagnosticId }, 500);
+  }
 
   const urls: Record<string, string> = {};
   data.forEach((item, i) => {
     if (item.signedUrl) urls[paths[i]] = item.signedUrl;
   });
 
-  return json({ url: urls[paths[0]] ?? null, urls, expiresIn: EXPIRES_SECONDS });
+  await record(actorType, "allowed", "signed");
+  return json({ url: urls[paths[0]] ?? null, urls, expiresIn: EXPIRES_SECONDS, diagnosticId });
 });
