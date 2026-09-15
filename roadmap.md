@@ -1,6 +1,3 @@
-- [x] Passer la palette globale des écrans candidat au blanc
-- [x] Vérifier et corriger les styles spécifiques des écrans candidat
-- [x] Valider le rendu et les tests
-- [ ] Produire le classeur Excel de documentation du scoring
-- [x] Bascule du stockage « media » en privé + vérifications finales (lot 2 terminé)
-- [x] Fiabiliser durablement la lecture et la réparation des vidéos privées
+# Feuille de route
+
+- [ ] Réparer les vignettes rondes de la liste candidats (plan approuvé 2026-09-15) : lot multi-sessions dans get-interview-media-url, résolution groupée dans ProjectDetail, données (106 adresses + 18 orphelines), génération paresseuse de vignette, tests E2E recruteur + candidat.

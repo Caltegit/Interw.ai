@@ -47,6 +47,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
+import { useMediaUrls } from "@/lib/mediaUrl";
 
 function BulkActionsButton({
   count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports, members, onAssign,
@@ -608,16 +609,6 @@ export default function ProjectDetail() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  if (!project) return <p>Poste introuvable</p>;
-
-  const statusLabel =
-    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
@@ -678,6 +669,67 @@ export default function ProjectDetail() {
     return list;
   })();
 
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
+  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
+  // Résolution groupée : un seul appel pour toutes les vignettes de la page.
+  const resolveThumb = useMediaUrls(pagedSessions.map((s: any) => s.thumbnail_url));
+
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  if (!project) return <p>Poste introuvable</p>;
+
+  const statusLabel =
+    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+
+  const effectiveSort = { key: sortKey, dir: sortDir };
+
+  // Apply filters + sort to sessions (uniquement les sessions prêtes)
+  const filteredSessions = (() => {
+    let list = readySessions.slice();
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (s) =>
+          (s.candidate_name || "").toLowerCase().includes(q) ||
+          (s.candidate_email || "").toLowerCase().includes(q) ||
+          ((s as any).candidate_job_title || "").toLowerCase().includes(q) ||
+          ((s as any).recruiter_note || "").toLowerCase().includes(q) ||
+          (noteDrafts[s.id] || "").toLowerCase().includes(q),
+      );
+
+    }
+    if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
+    else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
+    const searchActive = search.trim().length > 0;
+    if (!searchActive && decisionFilter !== "all")
+      list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
+    if (!searchActive) {
+      list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
+    }
+    if (recoFilter !== "all")
+      list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
+    if (scoreMin !== "")
+      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? -1) >= Number(scoreMin));
+    if (scoreMax !== "")
+      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? 999) <= Number(scoreMax));
+    if (dateFrom) list = list.filter((s) => new Date(s.created_at) >= new Date(dateFrom));
+    if (dateTo) list = list.filter((s) => new Date(s.created_at) <= new Date(dateTo + "T23:59:59"));
+
+    list.sort((a, b) => {
+      let cmp = 0;
+      if (effectiveSort.key === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      else if (effectiveSort.key === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
+      else if (effectiveSort.key === "score")
+        cmp = (reportsBySession[a.id]?.overall_score ?? -1) - (reportsBySession[b.id]?.overall_score ?? -1);
+      return effectiveSort.dir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  })();
+
   // Badge d'ancienneté pour les sessions en attente
   const getPendingAge = (createdAt: string) => {
     const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -689,6 +741,8 @@ export default function ProjectDetail() {
 
   const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
   const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
+  // Résolution groupée : un seul appel pour toutes les vignettes de la page.
+  const resolveThumb = useMediaUrls(pagedSessions.map((s: any) => s.thumbnail_url));
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
@@ -1083,7 +1137,7 @@ export default function ProjectDetail() {
                             </td>
                             <td className="py-3 max-w-[14rem]">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <SessionVideoThumb thumbnailUrl={(s as any).thumbnail_url} videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
+                                <SessionVideoThumb thumbnailUrl={(s as any).thumbnail_url} resolvedUrl={resolveThumb((s as any).thumbnail_url)} videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
                                 <div className="min-w-0">
                                   <p className="font-medium truncate">{s.candidate_name}</p>
                                   <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>

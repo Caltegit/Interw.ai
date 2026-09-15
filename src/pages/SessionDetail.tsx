@@ -33,6 +33,7 @@ import { ShareReportDialog } from "@/components/session/ShareReportDialog";
 import { BulkEmailDialog } from "@/components/project/BulkEmailDialog";
 import { SessionReportView } from "@/components/session/SessionReportView";
 import { RegenerateReportDialog } from "@/components/session/RegenerateReportDialog";
+import { useSessionThumbnail } from "@/hooks/useSessionThumbnail";
 
 import { useCopilot } from "@/contexts/CopilotContext";
 
@@ -133,6 +134,13 @@ export default function SessionDetail() {
   };
 
   const candidateVideos = messages.filter((m: any) => m.role === "candidate" && m.video_segment_url);
+
+  // Vignette paresseuse : créée une fois à la première ouverture de la fiche.
+  useSessionThumbnail(
+    session?.id,
+    (session as any)?.thumbnail_url,
+    candidateVideos[0]?.video_segment_url ?? (session as any)?.video_recording_url ?? null,
+  );
 
   const handleDecision = (d: RecruiterDecision) => {
     if (!user) return;
