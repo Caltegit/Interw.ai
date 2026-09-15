@@ -34,7 +34,7 @@
 
 ## Impact et risques
 
-- **Construction de l’application : risque faible à modéré.** Le lecteur et son contrôle de réparation changent ; aucune migration, aucun changement de sécurité, de scoring, de transcription ou de rapport.
+- **Construction de l’application : risque faible.** Les changements ne touchent que deux lecteurs vidéo et le bouton « Réparer cette vidéo ». Ce qu’on modifie : le moment où la notification s’affiche (après une vraie image affichée, plus jamais avant), la relance de la lecture après réparation (aujourd’hui absente, d’où l’écran noir après « réparée »), et la conversion en MP4 des seules vidéos que le navigateur refuse. Ce qu’on ne touche pas : base de données, sécurité, scoring, transcription, rapport, parcours candidat, envoi des réponses. Le risque concret restant : le contrôle d’image réel (play court + attente d’une image) peut prendre 1 à 3 secondes avant de valider — c’est un délai, pas une casse.
 - **Recruteur :** plus aucune notification de réussite sans image effectivement décodée. Une conversion peut prendre jusqu’à deux minutes pour une vidéo ; l’état restera attaché uniquement à cette vidéo.
 - **Candidat :** aucun changement dans le parcours d’entretien ni dans l’enregistrement.
 - **Données :** les fichiers sources restent conservés. Une version MP4 n’est utilisée qu’après contrôle concluant.
