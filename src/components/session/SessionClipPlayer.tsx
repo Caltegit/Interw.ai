@@ -108,24 +108,16 @@ export function SessionClipPlayer({
     } catch { /* noop */ }
   };
 
-  // Répare la durée des WebM MediaRecorder (duration = Infinity).
+  // Durée des WebM MediaRecorder : souvent Infinity. On ne force plus la
+  // détection par un saut à 1e9, qui faisait échouer le décodage de certains
+  // fichiers. La lecture reste prioritaire ; seule la durée est indisponible.
   const fixDuration = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.duration === Infinity) {
-      const onTime = () => {
-        v.removeEventListener("timeupdate", onTime);
-        const real = v.duration;
-        try { v.currentTime = 0; } catch { /* noop */ }
-        try { v.playbackRate = rateRef.current; } catch { /* noop */ }
-        if (Number.isFinite(real)) setDurationSec(real);
-        if (autoPlayRef.current) safePlay();
-      };
-      v.addEventListener("timeupdate", onTime);
-      try { v.currentTime = 1e9; } catch { /* noop */ }
-    } else if (Number.isFinite(v.duration)) {
-      setDurationSec(v.duration);
-    }
+    try { v.playbackRate = rateRef.current; } catch { /* noop */ }
+    if (Number.isFinite(v.duration)) setDurationSec(v.duration);
+    else setDurationSec(null);
+    if (autoPlayRef.current) safePlay();
   };
 
   // Réinitialise le player quand l'URL change.
