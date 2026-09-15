@@ -46,3 +46,16 @@
 1. **Côté candidat d’abord :** réaliser un entretien de démonstration avec caméra et micro, enregistrer puis envoyer une réponse, et vérifier que le parcours reste intact.
 2. **Côté recruteur ensuite :** ouvrir cette session dans Chromium puis WebKit, lancer les 15 vidéos, vérifier une image visible et un son actif, naviguer entre toutes les questions, puis confirmer qu’aucune notification « réparée » n’apparaît sans lecture effective.
 3. Tester volontairement un échec de décodage : aucune boucle, aucune fausse réussite, et un état stable avec une action manuelle claire.
+
+## Ajout : rétablir les renvois vers l’instant cité par l’IA
+
+Vérifié dans le code : lorsque la durée d’une vidéo reste inconnue, la demande de déplacement vers l’instant cité est annulée et la lecture repart au début. Les renvois de la matrice ouvrent donc la bonne réponse, mais pas le passage exact, et les sauts de dix secondes sont désactivés.
+
+Correction prévue :
+
+- Conserver la position demandée même sans durée connue, et tenter le déplacement.
+- Limiter la position à la durée uniquement lorsque celle-ci est connue.
+- Réactiver les sauts de dix secondes dès qu’un déplacement est possible.
+- Ne laisser la barre de progression incomplète que si la durée reste réellement introuvable.
+
+Vérification associée : depuis la matrice d’un ancien entretien, un renvoi doit ouvrir la bonne réponse **et** démarrer au passage cité.
