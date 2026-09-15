@@ -4,11 +4,13 @@
 
 Dans le lecteur de la fiche candidat (`SessionVideoNavigator.tsx`), la fonction `safePlay()` fait ceci à chaque démarrage de lecture :
 
-1. elle coupe le son (`muted = true`) pour contourner le blocage de lecture automatique des navigateurs ;
+1. elle coupe le son (`muted = true`) ;
 2. elle lance la lecture ;
-3. je n'ai pas encore vérifié à quel moment précis le rétablissement du son échoue — sinon le son reste coupé et n'est jamais rétabli, ni sur cette question ni sur les suivantes.
+3. elle remet le son une fois la lecture démarrée — mais uniquement si le navigateur confirme le démarrage.
 
-Au passage à la question suivante, la source vidéo est remplacée puis rechargée juste après le lancement de lecture. Le navigateur annule alors la demande de lecture en cours (erreur classique « play() interrompu par un nouveau chargement »). Ce cas tombe dans la branche d'échec : le son n'est jamais rétabli.
+Ce n'était pas le comportement d'origine. Cette coupure a été ajoutée le 12 mai 2026, pour éviter que la lecture soit refusée par le navigateur quand elle démarre sans clic direct.
+
+Reproduit et mesuré ce soir sur une fiche candidat, question par question : question 1 son actif, question 2 son coupé, questions 3 et 4 son coupé. À chaque passage de question, le navigateur renvoie une interruption de la demande de lecture (la source est remplacée juste après le lancement). Le code ne remet alors jamais le son.
 
 À partir de là, la vidéo reste coupée. Pire : à la question d'après, le code lit l'état actuel (« déjà coupé ») et en déduit qu'il faut rester coupé. Le son est donc perdu pour toute la suite de la fiche — exactement ce que tu observes.
 
