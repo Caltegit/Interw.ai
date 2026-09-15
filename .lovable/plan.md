@@ -51,3 +51,11 @@ Rendre lisibles les 15 vidéos de la session `65e1c792-0b11-456d-995e-a7bdd71aad
 ## Après cette réparation
 
 Une fois cette session réellement validée dans les deux navigateurs, nous ferons séparément l’audit de fond du cycle complet : enregistrement candidat, format produit, durée, stockage, lecture et citations horodatées. Aucun changement général n’est inclus ici.
+
+## Durée et matrice : ce qui est garanti
+
+- L’ancienne astuce du saut forcé n’est pas rétablie. Elle servait uniquement à compenser une durée absente et provoquait la boucle.
+- La conversion inscrit la durée réelle dans chaque fichier. Le lecteur la connaît donc dès l’ouverture, sans aucune manipulation.
+- Comme la durée est connue, le déplacement vers un instant précis redevient possible sur ces vidéos : les renvois de la matrice ouvrent la bonne réponse au bon moment, et les sauts de dix secondes sont de nouveau actifs.
+- La chronologie reste identique à l’originale, donc les instants cités par l’analyse restent valables sans recalcul.
+- Si une vidéo ne peut pas recevoir de durée fiable, elle n’est pas remplacée et elle est signalée nommément plutôt que laissée dans un état approximatif.
