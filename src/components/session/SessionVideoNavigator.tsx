@@ -578,7 +578,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (error) throw new Error(await explainFunctionError(error, "Reconstruction serveur impossible."));
       const rebuiltPath = (data as { path?: string } | null)?.path ?? null;
       const rebuiltUrl = rebuiltPath
-        ? await resolveMediaUrl(rebuiltPath)
+        ? await resolveMediaUrl(rebuiltPath, null, { forceRefresh: true })
         : currentUrl;
       if (!rebuiltUrl) throw new Error("Aucune vidéo source à réparer.");
 
@@ -626,7 +626,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       if (uploadError) throw new Error(await explainFunctionError(uploadError, "Enregistrement de la vidéo réparée impossible."));
       const finalPath = (uploadData as { path?: string } | null)?.path ?? rebuiltPath;
       const finalUrl = finalPath
-        ? await resolveMediaUrl(finalPath)
+        ? await resolveMediaUrl(finalPath, null, { forceRefresh: true })
         : rebuiltUrl;
       if (!finalUrl) throw new Error("Vidéo réparée enregistrée, mais URL introuvable.");
 
@@ -739,10 +739,14 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // reconstruction destructive du fichier.
               if (!accessRetryRef.current.has(clipKey)) {
                 accessRetryRef.current.add(clipKey);
+                setMediaError(null);
                 const position = e.currentTarget.currentTime || 0;
                 void refreshCurrentUrl().then((freshUrl) => {
                   const video = videoRef.current;
-                  if (!video || !freshUrl) return;
+                  if (!video || !freshUrl) {
+                    setMediaError({ code, message: fallback });
+                    return;
+                  }
                   pendingSeekRef.current = position;
                   video.src = freshUrl;
                   try { video.load(); } catch { /* noop */ }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveMediaUrl } from "@/lib/mediaUrl";
+import { resolveMediaUrl, resolveMediaUrls, toStoragePath } from "@/lib/mediaUrl";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -269,6 +269,16 @@ export default function SessionVideoExport() {
         }
 
         // -------- Mode groupé (ZIP) --------
+        // Signature au dernier moment : le worker ne reçoit jamais les anciennes
+        // adresses publiques stockées dans les données historiques.
+        const signed = await resolveMediaUrls(segments.map((segment) => segment.url));
+        for (const segment of segments) {
+          const path = toStoragePath(segment.url);
+          if (!path || !signed[path]) {
+            throw new Error("Impossible d'autoriser toutes les vidéos de cet export.");
+          }
+          segment.url = signed[path];
+        }
         worker = new Worker(
           new URL("../workers/videoExport.worker.ts", import.meta.url),
           { type: "module" },

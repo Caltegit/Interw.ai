@@ -194,6 +194,7 @@ export function useRefreshableMediaUrl(input?: string | null, candidateToken?: s
 
   useEffect(() => {
     let cancelled = false;
+    setUrl(input && !isInterviewMedia(input) ? input : null);
     setLoading(!!input && isInterviewMedia(input));
     resolveMediaUrl(input, candidateToken).then((next) => {
       if (!cancelled) {
