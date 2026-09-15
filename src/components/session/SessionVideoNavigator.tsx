@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveMediaUrl, useMediaUrls } from "@/lib/mediaUrl";
+import { resolveMediaUrl, useMediaUrls, useRefreshableMediaUrl } from "@/lib/mediaUrl";
 
 export interface SessionVideoClip {
   url: string;
@@ -73,6 +73,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   // Diagnostic d'erreur média ; reset à chaque changement de clip.
   const [mediaError, setMediaError] = useState<null | { code: number | null; message: string }>(null);
   const [recovering, setRecovering] = useState(false);
+  const [recoveringClipKey, setRecoveringClipKey] = useState<string | null>(null);
   const [recoverLabel, setRecoverLabel] = useState<string>("");
   // `true` = piste vidéo décodable ; `false` = fichier lisible en audio
   // uniquement (videoWidth === 0 après loadedmetadata) ; `null` = inconnu.
@@ -85,18 +86,24 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (/\.mp4(\?.*)?$/i.test(u)) return u.replace(/\.mp4(\?.*)?$/i, ".webm$1");
     return null;
   };
-  const resolveUrl = useMediaUrls([
-    ...clips.flatMap((c) => [c.url, c.audioUrl, altExtension(c.url)]),
-    ...Object.values(clipUrlOverrides),
-  ]);
   const getRawClipUrl = (clip: SessionVideoClip | undefined) => {
     if (!clip) return null;
     const key = clip.messageId ?? clip.url;
     return clipUrlOverrides[key] ?? clip.url;
   };
+  const currentClip = clips[index];
+  const currentClipKey = currentClip?.messageId ?? currentClip?.url ?? "";
+  const currentRawMediaUrl = getRawClipUrl(currentClip);
+  const nextClip = clips[index + 1];
+  const resolveUrl = useMediaUrls([
+    currentClip?.audioUrl,
+    altExtension(currentRawMediaUrl),
+    getRawClipUrl(nextClip),
+  ]);
+  const { url: refreshedCurrentUrl, refresh: refreshCurrentUrl } = useRefreshableMediaUrl(currentRawMediaUrl);
   const getClipUrl = (clip: SessionVideoClip | undefined) => resolveUrl(getRawClipUrl(clip));
   // Adresse lisible du clip courant (null tant que le lien n'est pas délivré).
-  const currentResolvedUrl = resolveUrl(getRawClipUrl(clips[index]));
+  const currentResolvedUrl = refreshedCurrentUrl;
 
   useEffect(() => {
     if (index > clips.length - 1) setIndex(0);
@@ -480,23 +487,31 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         new URL("@/workers/videoRepair.worker.ts", import.meta.url),
         { type: "module" },
       );
+      const timeout = window.setTimeout(() => {
+        worker.terminate();
+        reject(new Error("Le ré-encodage a dépassé deux minutes et a été arrêté. Le fichier source est conservé."));
+      }, 120000);
       worker.onmessage = (e: MessageEvent) => {
         const msg = e.data;
         if (msg?.type === "progress") {
           onProgress(msg.label || "");
         } else if (msg?.type === "done") {
+          window.clearTimeout(timeout);
           worker.terminate();
           resolve({ data: msg.data as Uint8Array, extension: msg.extension, contentType: msg.contentType });
         } else if (msg?.type === "error") {
+          window.clearTimeout(timeout);
           worker.terminate();
           reject(new Error(msg.message || "Réparation impossible"));
         }
       };
       worker.onerror = (err) => {
+        window.clearTimeout(timeout);
         worker.terminate();
         reject(err);
       };
       worker.onmessageerror = () => {
+        window.clearTimeout(timeout);
         worker.terminate();
         reject(new Error("Réponse du réparateur vidéo illisible."));
       };
@@ -515,6 +530,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
   const handleRecover = async () => {
     if (!parsedRecover || recovering) return;
     setRecovering(true);
+    setRecoveringClipKey(clipKey);
     setRecoverLabel("Reconstruction serveur…");
     toast({
       title: "Réparation en cours…",
@@ -594,6 +610,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       });
     } finally {
       setRecovering(false);
+      setRecoveringClipKey(null);
       setRecoverLabel("");
     }
   };
@@ -721,7 +738,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           {mediaError && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/85 px-4 text-center text-white">
               <p className="text-sm font-medium">
-                {recovering
+                  {recovering && recoveringClipKey === clipKey
                   ? (recoverLabel || "Réparation de la vidéo…")
                   : current.audioUrl
                     ? "Vidéo indisponible — lecture audio uniquement"
@@ -762,12 +779,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                     disabled={recovering}
                     className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20 disabled:opacity-60"
                   >
-                    {recovering ? (
+                    {recovering && recoveringClipKey === clipKey ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <Wrench className="h-3 w-3" />
                     )}
-                    {recovering ? (recoverLabel || "Réparation…") : "Réparer la vidéo"}
+                    {recovering && recoveringClipKey === clipKey ? (recoverLabel || "Réparation…") : "Réparer cette vidéo"}
                   </button>
                 )}
               </div>
