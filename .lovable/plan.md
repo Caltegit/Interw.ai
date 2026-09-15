@@ -48,4 +48,4 @@ Points de vigilance, avec leur garde-fou :
 
 ## Nouvelle règle retenue
 
-Chaque plan comportera désormais cette section « Impact » : ce qui peut casser, ce que voient le recruteur et le candidat.
+Chaque plan comportera désormais cette section « Impact » : ce qui peut casser, ce que voient le recruteur et le candidat. Et après approbation du plan, je lancerai systématiquement deux tests E2E : un côté candidat, un côté recruteur.
