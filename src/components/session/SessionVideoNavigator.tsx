@@ -220,6 +220,12 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const v = videoRef.current;
     if (!v) return;
     fixingDurationRef.current = false;
+    // Rétablit l'intention sonore du recruteur à chaque chargement de clip.
+    try {
+      v.muted = !soundWantedRef.current;
+    } catch {
+      /* noop */
+    }
     if (Number.isFinite(v.duration)) {
       setDurationSec(v.duration);
       applyPendingSeek(v, v.duration);
