@@ -199,45 +199,22 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     pendingSeekRef.current = 0;
   };
 
-  // Répare la durée pour les WebM MediaRecorder (duration = Infinity).
-  // Protégé contre les doubles invocations dans le même cycle de chargement.
+  // Durée des WebM MediaRecorder : elle vaut souvent Infinity. On ne force
+  // plus la détection par un saut à 1e9 (ce saut faisait échouer le décodage
+  // de certains fichiers et relançait un cycle de rechargement sans fin).
+  // La lecture reste prioritaire : seule la barre de durée est indisponible.
   const fixDuration = () => {
     const v = videoRef.current;
     if (!v) return;
-    if (v.duration === Infinity) {
-      if (fixingDurationRef.current) return;
-      fixingDurationRef.current = true;
-      const onTime = () => {
-        v.removeEventListener("timeupdate", onTime);
-        fixingDurationRef.current = false;
-        const real = v.duration;
-        const safeDur = Number.isFinite(real) ? real : 0;
-        // Après le scrub à 1e9 pour forcer la détection de la durée, la tête
-        // de lecture est collée à la fin. On la repositionne explicitement
-        // avant tout play(), sinon la vidéo se termine immédiatement et
-        // `onEnded` enchaîne au clip suivant (effet « ça saute »).
-        const pending = pendingSeekRef.current;
-        const target = pending > 0
-          ? Math.max(0, Math.min(pending, Math.max(0, safeDur - 0.1)))
-          : 0;
-        try {
-          v.currentTime = target;
-        } catch {
-          /* noop */
-        }
-        pendingSeekRef.current = 0;
-        if (Number.isFinite(real)) setDurationSec(real);
-        if (shouldAutoPlay && !userPausedRef.current) safePlay();
-      };
-      v.addEventListener("timeupdate", onTime);
-      try {
-        v.currentTime = 1e9;
-      } catch {
-        /* noop */
-      }
-    } else if (Number.isFinite(v.duration)) {
+    fixingDurationRef.current = false;
+    if (Number.isFinite(v.duration)) {
       setDurationSec(v.duration);
+      applyPendingSeek(v, v.duration);
+    } else {
+      setDurationSec(null);
+      pendingSeekRef.current = 0;
     }
+    if (shouldAutoPlay && !userPausedRef.current) safePlay();
   };
 
   // Charge la source du clip courant et applique seek/autoplay.
