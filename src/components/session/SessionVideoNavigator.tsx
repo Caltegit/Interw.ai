@@ -694,13 +694,16 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
             onLoadedMetadata={(e) => {
               const d = e.currentTarget.duration;
               if (Number.isFinite(d)) setDurationSec(d);
-              else if (d === Infinity) fixDuration();
+              else setDurationSec(null);
               // videoWidth === 0 → fichier lisible en audio uniquement
               // (WebM reconstruit sans piste vidéo décodable). On masque les
               // contrôles vidéo (play central, ±10s, vitesses, MP4).
               setHasVideoTrack(e.currentTarget.videoWidth > 0);
               setMediaError(null);
-              accessRetryRef.current.delete(clipKey);
+              // Volontairement : on ne remet PAS accessRetryRef à zéro ici.
+              // Le chargement des métadonnées réussit presque toujours avant
+              // l'échec de décodage ; remettre le compteur à zéro rendait le
+              // nombre de tentatives infini.
             }}
             onError={(e) => {
               const err = e.currentTarget.error;
@@ -717,10 +720,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               setIsPlaying(false);
               setOverlayVisible(true);
 
-              // Première réponse à toute erreur : renouveler l'autorisation une
-              // seule fois. Une adresse expirée ne doit jamais déclencher une
-              // reconstruction destructive du fichier.
-              if (!accessRetryRef.current.has(clipKey)) {
+              // Renouvellement de l'autorisation : uniquement pour une erreur
+              // réseau (2) ou une source refusée/introuvable (4), et une seule
+              // fois par clip pendant toute l'ouverture de la fiche. Une erreur
+              // de décodage (3) ne vient jamais d'une adresse expirée : la
+              // renouveler créait une boucle de rechargement sans fin.
+              const isAccessError = code === 2 || code === 4;
+              if (isAccessError && !accessRetryRef.current.has(clipKey)) {
                 accessRetryRef.current.add(clipKey);
                 setMediaError(null);
                 const position = e.currentTarget.currentTime || 0;
@@ -736,6 +742,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                 });
                 return;
               }
+
 
               // Si code = 4 (source not supported / introuvable), on vérifie
               // réellement l'existence du fichier via HEAD. Ça évite le message
