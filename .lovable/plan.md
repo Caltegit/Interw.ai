@@ -6,7 +6,7 @@ Dans le lecteur de la fiche candidat (`SessionVideoNavigator.tsx`), la fonction 
 
 1. elle coupe le son (`muted = true`) ;
 2. elle lance la lecture ;
-3. elle remet le son une fois la lecture démarrée — mais uniquement si le navigateur confirme le démarrage.
+3. elle tente de remettre le son après le démarrage — et lors de mes mesures, à chaque changement de question, ce rétablissement n'a jamais eu lieu.
 
 Ce n'était pas le comportement d'origine. Cette coupure a été ajoutée le 12 mai 2026, pour éviter que la lecture soit refusée par le navigateur quand elle démarre sans clic direct.
 
