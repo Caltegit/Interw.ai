@@ -2,11 +2,11 @@
 
 ## Cause confirmée
 
-Dans le lecteur de la fiche candidat (`SessionVideoNavigator.tsx`), la fonction `safePlay()` fait ceci à chaque démarrage de lecture :
+Constat observé sur le lecteur de la fiche candidat (`SessionVideoNavigator.tsx`) :
 
-1. elle coupe le son (`muted = true`) ;
-2. elle lance la lecture ;
-3. ce qui se passe ensuite, je ne l'affirme pas : le seul fait mesuré est que la question 1 démarre avec le son et que, dès la question 2, le son reste coupé.
+1. la première question se lance avec le son ;
+2. au passage à la question suivante, le son est coupé ;
+3. le son reste coupé pour toutes les questions qui suivent.
 
 Ce n'était pas le comportement d'origine. Cette coupure a été ajoutée le 12 mai 2026, pour éviter que la lecture soit refusée par le navigateur quand elle démarre sans clic direct.
 
