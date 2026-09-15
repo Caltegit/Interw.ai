@@ -113,17 +113,30 @@ Deno.serve(async (req) => {
       .upload(targetPath, buffer, { contentType, upsert: true });
     if (upErr) throw upErr;
 
-    const publicUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/media/${targetPath}`;
+    const { data: linkedMessages, error: linkedErr } = await sb
+      .from("session_messages")
+      .select("id, video_segment_url")
+      .eq("session_id", sessionId);
+    if (linkedErr) throw linkedErr;
+    const linkedIds = (linkedMessages ?? [])
+      .filter((message) => {
+        const value = String(message.video_segment_url ?? "").split("?")[0];
+        return value.endsWith(`/interviews/${sessionId}/q${questionIndex}.webm`)
+          || value.endsWith(`/interviews/${sessionId}/q${questionIndex}.mp4`)
+          || value === `interviews/${sessionId}/q${questionIndex}.webm`
+          || value === `interviews/${sessionId}/q${questionIndex}.mp4`;
+      })
+      .map((message) => message.id);
+    if (linkedIds.length === 0) throw new Error("message vidéo lié introuvable");
+
     const { error: msgErr } = await sb
       .from("session_messages")
-      .update({ video_segment_url: publicUrl })
-      .eq("session_id", sessionId)
-      .like("video_segment_url", `%/interviews/${sessionId}/q${questionIndex}.%`);
+      .update({ video_segment_url: targetPath })
+      .in("id", linkedIds);
     if (msgErr) throw msgErr;
 
-    // Si on a changé d'extension (WebM cassé → MP4), on efface l'ancien
-    // pour que l'URL publique de la nouvelle extension soit la seule référence.
-    try { await sb.storage.from("media").remove([siblingPath]); } catch { /* noop */ }
+    // Le fichier source d'origine est conservé : la base pointe uniquement vers
+    // la version réparée, mais une restauration reste possible côté support.
 
     console.log("stored repaired video", targetPath, buffer.length, "bytes");
 

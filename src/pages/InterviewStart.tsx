@@ -2215,8 +2215,7 @@ export default function InterviewStart() {
               .from("media")
               .upload(audioFileName, audioBlob, { contentType: audioMime, upsert: true });
             if (!error) {
-              const { data } = supabase.storage.from("media").getPublicUrl(audioFileName);
-              return data.publicUrl;
+              return audioFileName;
             }
           } catch { /* retry */ }
           if (attempt < backoffs.length - 1) {
@@ -2245,8 +2244,7 @@ export default function InterviewStart() {
             .from("media")
             .upload(thumbnailPath, thumbnailBlob, { contentType: "image/jpeg", upsert: true });
           if (!thumbError) {
-            const { data: thumbUrlData } = supabase.storage.from("media").getPublicUrl(thumbnailPath);
-            thumbnailUrl = thumbUrlData.publicUrl;
+            thumbnailUrl = thumbnailPath;
           }
         } catch (error) {
           console.warn("[thumbnail] upload impossible", error);
@@ -2262,8 +2260,7 @@ export default function InterviewStart() {
             .from("media")
             .upload(fileName, blob, { contentType: realMime, upsert: true });
           if (!uploadError) {
-            const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
-            videoUrl = urlData.publicUrl;
+            videoUrl = fileName;
             break;
           }
           console.warn(

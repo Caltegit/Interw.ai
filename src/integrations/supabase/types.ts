@@ -855,6 +855,60 @@ export type Database = {
         }
         Relationships: []
       }
+      media_access_logs: {
+        Row: {
+          actor_type: string
+          created_at: string
+          diagnostic_id: string
+          duration_ms: number
+          expires_at: string
+          id: string
+          outcome: string
+          reason: string
+          session_id: string
+          storage_path: string
+        }
+        Insert: {
+          actor_type: string
+          created_at?: string
+          diagnostic_id?: string
+          duration_ms?: number
+          expires_at?: string
+          id?: string
+          outcome: string
+          reason: string
+          session_id: string
+          storage_path: string
+        }
+        Update: {
+          actor_type?: string
+          created_at?: string
+          diagnostic_id?: string
+          duration_ms?: number
+          expires_at?: string
+          id?: string
+          outcome?: string
+          reason?: string
+          session_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_access_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_candidats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_access_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mic_events: {
         Row: {
           browser: string | null

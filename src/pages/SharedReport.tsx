@@ -42,7 +42,11 @@ export default function SharedReport() {
       setLoading(false);
     };
 
-    loadReport();
+    void loadReport();
+    // Les adresses des vidéos privées expirent. Tant que ce rapport reste
+    // ouvert, le secret de consultation renouvelle silencieusement les liens.
+    const renewal = window.setInterval(() => { void loadReport(); }, 50 * 60 * 1000);
+    return () => window.clearInterval(renewal);
   }, [token]);
 
   const { data: projectAverages } = useProjectAverages(session?.project_id);

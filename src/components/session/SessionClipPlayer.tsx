@@ -3,7 +3,7 @@ import { Download, Loader2, Pause, Play, RotateCcw, RotateCw } from "lucide-reac
 import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
-import { useMediaUrl } from "@/lib/mediaUrl";
+import { useRefreshableMediaUrl } from "@/lib/mediaUrl";
 
 interface Props {
   url: string;
@@ -56,7 +56,8 @@ export function SessionClipPlayer({
   autoPlayOnLoad,
 }: Props) {
   // Les enregistrements sont privés : on résout un lien temporaire.
-  const playableUrl = useMediaUrl(url);
+  const { url: playableUrl, refresh } = useRefreshableMediaUrl(url);
+  const retriedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const playPromiseRef = useRef<Promise<void> | null>(null);
   const autoPlayRef = useRef(!!autoPlayOnLoad);
@@ -244,7 +245,22 @@ export function SessionClipPlayer({
         controlsList="nodownload"
         playsInline
         preload="metadata"
+        onError={() => {
+          if (retriedRef.current) return;
+          retriedRef.current = true;
+          const position = videoRef.current?.currentTime ?? 0;
+          void refresh().then((next) => {
+            const video = videoRef.current;
+            if (!video || !next) return;
+            video.src = next;
+            video.addEventListener("loadedmetadata", () => {
+              try { video.currentTime = position; } catch { /* noop */ }
+            }, { once: true });
+            video.load();
+          });
+        }}
         onLoadedMetadata={(e) => {
+          retriedRef.current = false;
           const d = e.currentTarget.duration;
           if (Number.isFinite(d)) setDurationSec(d);
           else if (d === Infinity) fixDuration();

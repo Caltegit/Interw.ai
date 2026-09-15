@@ -196,8 +196,7 @@ Deno.serve(async (req) => {
       await supabase.from("sessions").delete().eq("id", session.id);
       return json({ error: `dépôt de la vidéo impossible: ${uploadErr.message}` }, 500);
     }
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    const mediaUrl = pub.publicUrl;
+    const mediaUrl = path;
 
     // Piste audio légère : la vidéo d'origine dépasse souvent la taille que le
     // moteur de transcription accepte.
@@ -210,7 +209,7 @@ Deno.serve(async (req) => {
         upsert: true,
       });
       if (audioErr) console.error("[import] audio non déposé", audioErr.message);
-      else audioUrl = supabase.storage.from(BUCKET).getPublicUrl(audioPath).data.publicUrl;
+      else audioUrl = audioPath;
     }
 
     const isAudio = ["mp3", "m4a", "wav", "ogg"].includes(ext);

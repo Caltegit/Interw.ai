@@ -152,16 +152,15 @@ Deno.serve(async (req) => {
           .upload(newPath, buf, { contentType, upsert: true });
         if (upErr) throw upErr;
 
-        const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(newPath);
         const r: SegmentReport = {
           url,
           path,
           kind,
           action: "renamed",
-          newUrl: pub.publicUrl,
+          newUrl: newPath,
         };
         reports.push(r);
-        return { newUrl: pub.publicUrl, report: r };
+        return { newUrl: newPath, report: r };
       } catch (e) {
         const r: SegmentReport = {
           url,
