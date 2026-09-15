@@ -150,38 +150,62 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     }
   };
 
+  // Intention sonore du recruteur : vraie par défaut, modifiée uniquement par
+  // ses propres actions sur le son (contrôles natifs de la vidéo). Les
+  // coupures faites par le code (ci-dessous) ne comptent pas.
+  const soundWantedRef = useRef(true);
+  const codeMuteRef = useRef(0);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onVolumeChange = () => {
+      if (codeMuteRef.current > 0) {
+        codeMuteRef.current--;
+        return;
+      }
+      soundWantedRef.current = !v.muted;
+    };
+    v.addEventListener("volumechange", onVolumeChange);
+    return () => v.removeEventListener("volumechange", onVolumeChange);
+  }, []);
+
   const safePlay = () => {
     const v = videoRef.current;
     if (!v) return;
     // Chrome bloque l'autoplay non-mute après un délai depuis le geste utilisateur.
-    // On force mute avant play() puis on restaure le son une fois lecture lancée.
-    const wasMuted = v.muted;
-    v.muted = true;
+    // On coupe momentanément le son puis on rétablit l'intention du recruteur
+    // dans TOUS les cas (succès comme échec), sinon une lecture interrompue
+    // laisserait le son coupé pour toute la suite de la fiche.
+    // (compteur incrémenté seulement si la valeur change réellement : sinon
+    // volumechange ne se déclenche pas et le compteur se décalerait)
+    if (!v.muted) {
+      codeMuteRef.current++;
+      v.muted = true;
+    }
+    const restoreSound = () => {
+      const target = !soundWantedRef.current;
+      try {
+        if (v.muted !== target) {
+          codeMuteRef.current++;
+          v.muted = target;
+        }
+      } catch {
+        /* noop */
+      }
+    };
     try {
       const p = v.play();
       if (p && typeof p.then === "function") {
         playPromiseRef.current = p;
-        p.then(() => {
-          if (!wasMuted) {
-            // Restaure le son après démarrage effectif.
-            try {
-              v.muted = false;
-            } catch {
-              /* noop */
-            }
-          }
-        })
-          .catch(() => {
-            // Si play() échoue, on laisse mute pour éviter un état incohérent.
-          })
-          .finally(() => {
-            playPromiseRef.current = null;
-          });
-      } else if (!wasMuted) {
-        v.muted = false;
+        p.catch(() => {}).finally(() => {
+          playPromiseRef.current = null;
+          restoreSound();
+        });
+      } else {
+        restoreSound();
       }
     } catch {
-      /* noop */
+      restoreSound();
     }
   };
 
@@ -209,6 +233,16 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     const v = videoRef.current;
     if (!v) return;
     fixingDurationRef.current = false;
+    // Rétablit l'intention sonore du recruteur à chaque chargement de clip.
+    try {
+      const target = !soundWantedRef.current;
+      if (v.muted !== target) {
+        codeMuteRef.current++;
+        v.muted = target;
+      }
+    } catch {
+      /* noop */
+    }
     if (Number.isFinite(v.duration)) {
       setDurationSec(v.duration);
       applyPendingSeek(v, v.duration);
