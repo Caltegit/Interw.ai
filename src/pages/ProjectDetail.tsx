@@ -685,50 +685,6 @@ export default function ProjectDetail() {
   const statusLabel =
     { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
 
-  const effectiveSort = { key: sortKey, dir: sortDir };
-
-  // Apply filters + sort to sessions (uniquement les sessions prêtes)
-  const filteredSessions = (() => {
-    let list = readySessions.slice();
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (s) =>
-          (s.candidate_name || "").toLowerCase().includes(q) ||
-          (s.candidate_email || "").toLowerCase().includes(q) ||
-          ((s as any).candidate_job_title || "").toLowerCase().includes(q) ||
-          ((s as any).recruiter_note || "").toLowerCase().includes(q) ||
-          (noteDrafts[s.id] || "").toLowerCase().includes(q),
-      );
-
-    }
-    if (assigneeFilter === "me") list = list.filter((s) => s.assigned_to === user?.id);
-    else if (assigneeFilter !== "all") list = list.filter((s) => s.assigned_to === assigneeFilter);
-    const searchActive = search.trim().length > 0;
-    if (!searchActive && decisionFilter !== "all")
-      list = list.filter((s) => (s.recruiter_decision ?? "none") === decisionFilter);
-    if (!searchActive) {
-      list = list.filter((s) => visibleDecisions.has(s.recruiter_decision ?? "none"));
-    }
-    if (recoFilter !== "all")
-      list = list.filter((s) => reportsBySession[s.id]?.recommendation === recoFilter);
-    if (scoreMin !== "")
-      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? -1) >= Number(scoreMin));
-    if (scoreMax !== "")
-      list = list.filter((s) => (reportsBySession[s.id]?.overall_score ?? 999) <= Number(scoreMax));
-    if (dateFrom) list = list.filter((s) => new Date(s.created_at) >= new Date(dateFrom));
-    if (dateTo) list = list.filter((s) => new Date(s.created_at) <= new Date(dateTo + "T23:59:59"));
-
-    list.sort((a, b) => {
-      let cmp = 0;
-      if (effectiveSort.key === "date") cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      else if (effectiveSort.key === "name") cmp = (a.candidate_name || "").localeCompare(b.candidate_name || "");
-      else if (effectiveSort.key === "score")
-        cmp = (reportsBySession[a.id]?.overall_score ?? -1) - (reportsBySession[b.id]?.overall_score ?? -1);
-      return effectiveSort.dir === "asc" ? cmp : -cmp;
-    });
-    return list;
-  })();
 
   // Badge d'ancienneté pour les sessions en attente
   const getPendingAge = (createdAt: string) => {
