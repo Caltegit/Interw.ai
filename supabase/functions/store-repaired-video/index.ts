@@ -117,12 +117,11 @@ Deno.serve(async (req) => {
       .from("session_messages")
       .update({ video_segment_url: targetPath })
       .eq("session_id", sessionId)
-      .like("video_segment_url", `%/interviews/${sessionId}/q${questionIndex}.%`);
+      .or(`video_segment_url.eq.${targetPath},video_segment_url.eq.${siblingPath},video_segment_url.like.%2Finterviews%2F${sessionId}%2Fq${questionIndex}.%`);
     if (msgErr) throw msgErr;
 
-    // Si on a changé d'extension (WebM cassé → MP4), on efface l'ancien
-    // pour que l'URL publique de la nouvelle extension soit la seule référence.
-    try { await sb.storage.from("media").remove([siblingPath]); } catch { /* noop */ }
+    // Le fichier source d'origine est conservé : la base pointe uniquement vers
+    // la version réparée, mais une restauration reste possible côté support.
 
     console.log("stored repaired video", targetPath, buffer.length, "bytes");
 

@@ -3,4 +3,4 @@
 - [x] Valider le rendu et les tests
 - [ ] Produire le classeur Excel de documentation du scoring
 - [x] Bascule du stockage « media » en privé + vérifications finales (lot 2 terminé)
-- [ ] Fiabiliser durablement la lecture et la réparation des vidéos privées
+- [x] Fiabiliser durablement la lecture et la réparation des vidéos privées

@@ -629,6 +629,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         ? await resolveMediaUrl(finalPath, null, { forceRefresh: true })
         : rebuiltUrl;
       if (!finalUrl) throw new Error("Vidéo réparée enregistrée, mais URL introuvable.");
+      setRecoverLabel("Contrôle de la vidéo réparée…");
+      if (!(await probeVideo(`${finalUrl}${finalUrl.includes("?") ? "&" : "?"}v=${Date.now()}`))) {
+        throw new Error("La vidéo a été enregistrée, mais sa relecture de contrôle a échoué. Le fichier source a été conservé.");
+      }
 
       toast({
         title: "Vidéo réparée",
