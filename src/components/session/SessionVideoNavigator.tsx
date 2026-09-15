@@ -532,6 +532,26 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     return error instanceof Error ? error.message || fallback : fallback;
   };
 
+  const probeVideo = (url: string) => new Promise<boolean>((resolve) => {
+    const probe = document.createElement("video");
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      probe.removeAttribute("src");
+      try { probe.load(); } catch { /* noop */ }
+      resolve(ok);
+    };
+    const timeout = window.setTimeout(() => finish(false), 10000);
+    probe.preload = "metadata";
+    probe.muted = true;
+    probe.onloadedmetadata = () => finish(probe.videoWidth > 0);
+    probe.onerror = () => finish(false);
+    probe.src = url;
+    probe.load();
+  });
+
   const handleRecover = async () => {
     if (!parsedRecover || recovering) return;
     setRecovering(true);
@@ -550,7 +570,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
           session_id: parsedRecover.sessionId,
           question_index: parsedRecover.questionIndex,
           sync: true,
-          force: true,
+          force: false,
         },
         timeout: 120000,
       });
@@ -560,6 +580,23 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
         ? await resolveMediaUrl(rebuiltPath)
         : currentUrl;
       if (!rebuiltUrl) throw new Error("Aucune vidéo source à réparer.");
+
+      // La reconstruction serveur suffit souvent. Dans ce cas, ne pas charger
+      // FFmpeg dans le navigateur et ne pas ré-encoder inutilement le fichier.
+      setRecoverLabel("Vérification de la vidéo…");
+      const rebuiltPlayable = await probeVideo(`${rebuiltUrl}${rebuiltUrl.includes("?") ? "&" : "?"}v=${Date.now()}`);
+      if (rebuiltPlayable) {
+        setMediaError(null);
+        setHasVideoTrack(true);
+        const video = videoRef.current;
+        if (video) {
+          swapClipUrl(rebuiltPath ?? currentRawUrl);
+          video.src = rebuiltUrl;
+          video.load();
+        }
+        toast({ title: "Vidéo réparée", description: "La vidéo a été reconstruite et peut maintenant être lue." });
+        return;
+      }
 
       // 2) Remux/transcode côté client via ffmpeg.wasm pour réparer un
       //    header EBML incomplet + une durée `Infinity`.
@@ -782,8 +819,10 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                 />
               )}
               <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     setMediaError(null);
                     accessRetryRef.current.delete(clipKey);
@@ -796,16 +835,18 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                       try { video.load(); } catch { /* noop */ }
                     });
                   }}
-                  className="rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+                  className="h-8 text-xs"
                 >
                   Réessayer la vidéo
-                </button>
+                </Button>
                 {canRecover && (
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={handleRecover}
                     disabled={recovering}
-                    className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs hover:bg-white/20 disabled:opacity-60"
+                    className="h-8 gap-1 text-xs"
                   >
                     {recovering && recoveringClipKey === clipKey ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -813,7 +854,7 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
                       <Wrench className="h-3 w-3" />
                     )}
                     {recovering && recoveringClipKey === clipKey ? (recoverLabel || "Réparation…") : "Réparer cette vidéo"}
-                  </button>
+                  </Button>
                 )}
               </div>
               {current.messageId && transcripts?.[current.messageId] && (

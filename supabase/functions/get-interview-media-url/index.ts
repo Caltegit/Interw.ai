@@ -6,6 +6,7 @@
 //   - OU appel interne (service_role)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { toStoragePath } from "../_shared/interview-media.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -28,23 +29,6 @@ const BodySchema = z.object({
   token: z.string().min(1).max(256).optional(),
   paths: z.array(z.string().min(1).max(2048)).min(1).max(50).optional(),
 });
-
-/** Accepte un chemin (`interviews/…`) ou une adresse absolue héritée. */
-function toStoragePath(input: string): string | null {
-  if (!input) return null;
-  let path = input.trim();
-  const marker = `/object/public/${BUCKET}/`;
-  const idx = path.indexOf(marker);
-  if (idx !== -1) path = path.slice(idx + marker.length);
-  const signMarker = `/object/sign/${BUCKET}/`;
-  const sIdx = path.indexOf(signMarker);
-  if (sIdx !== -1) path = path.slice(sIdx + signMarker.length);
-  path = path.split("?")[0];
-  path = decodeURIComponent(path.replace(/^\/+/, ""));
-  if (path.includes("..")) return null;
-  if (!path.startsWith("interviews/")) return null;
-  return path;
-}
 
 function sessionIdFromPath(path: string): string | null {
   const parts = path.split("/");
@@ -75,7 +59,7 @@ Deno.serve(async (req) => {
   const paths: string[] = [];
   for (const raw of rawList) {
     const p = toStoragePath(String(raw ?? ""));
-    if (!p) return json({ error: "Invalid path" }, 400);
+    if (!p || !p.startsWith("interviews/")) return json({ error: "Invalid path", diagnosticId }, 400);
     paths.push(p);
   }
 
