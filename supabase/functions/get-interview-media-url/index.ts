@@ -4,6 +4,9 @@
 //   - OU utilisateur authentifié membre de l'organisation de la session
 //   - OU super administrateur
 //   - OU appel interne (service_role)
+// Un lot peut couvrir plusieurs sessions : seules les sessions autorisées
+// sont signées (les autres sont ignorées). Pour une seule session, le
+// comportement historique est conservé : refus explicite si non autorisé.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { toStoragePath } from "../_shared/interview-media.ts";
@@ -63,9 +66,9 @@ Deno.serve(async (req) => {
     paths.push(p);
   }
 
-  const sessionIds = new Set(paths.map(sessionIdFromPath).filter(Boolean) as string[]);
-  if (sessionIds.size !== 1) return json({ error: "Invalid path" }, 400);
-  const sessionId = [...sessionIds][0];
+  const sessionIds = [...new Set(paths.map(sessionIdFromPath).filter(Boolean) as string[])];
+  if (sessionIds.length === 0) return json({ error: "Invalid path" }, 400);
+  const singleSession = sessionIds.length === 1;
 
   const sb = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -79,7 +82,7 @@ Deno.serve(async (req) => {
     try {
       await sb.from("media_access_logs").insert({
         diagnostic_id: diagnosticId,
-        session_id: sessionId,
+        session_id: sessionIds[0],
         storage_path: paths[0].slice(0, 500),
         actor_type: actorType,
         outcome,
@@ -91,60 +94,63 @@ Deno.serve(async (req) => {
   // Purge opportuniste : aucune donnée technique n'est conservée au-delà de 7 jours.
   void sb.from("media_access_logs").delete().lt("expires_at", new Date().toISOString());
 
-  const { data: session } = await sb
+  const { data: sessions } = await sb
     .from("sessions")
     .select("id, token, organization_id")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (!session) return json({ error: "Not found", diagnosticId }, 404);
+    .in("id", sessionIds);
+  const found = new Map((sessions ?? []).map((s) => [s.id as string, s]));
+  if (singleSession && found.size === 0) return json({ error: "Not found", diagnosticId }, 404);
 
-  let allowed = false;
+  const allowedSessions = new Set<string>();
   let actorType: "candidate" | "member" | "super_admin" | "internal" | "anonymous" = "anonymous";
 
-  // 1) Jeton candidat
-  if (body.token && session.token && body.token === session.token) {
-    allowed = true;
-    actorType = "candidate";
+  // 1) Jeton candidat : n'ouvre que sa propre session
+  if (body.token) {
+    for (const [id, s] of found) {
+      if (s.token && body.token === s.token) allowedSessions.add(id);
+    }
+    if (allowedSessions.size > 0) actorType = "candidate";
   }
 
   // 2) Appel interne ou utilisateur authentifié
   const authHeader = req.headers.get("Authorization") ?? "";
   const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-  if (!allowed && bearer) {
-    if (bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-      allowed = true;
-      actorType = "internal";
-    } else {
-      const { data: userData } = await sb.auth.getUser(bearer);
-      const userId = userData?.user?.id;
-      if (userId) {
-        const { data: isMember } = await sb.rpc("is_org_member", {
-          _user_id: userId,
-          _org_id: session.organization_id,
-        });
-        if (isMember) {
-          allowed = true;
-          actorType = "member";
+  if (bearer && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    for (const id of found.keys()) allowedSessions.add(id);
+    if (actorType === "anonymous") actorType = "internal";
+  } else if (bearer) {
+    const { data: userData } = await sb.auth.getUser(bearer);
+    const userId = userData?.user?.id;
+    if (userId) {
+      const { data: isSuper } = await sb.rpc("is_super_admin", { _user_id: userId });
+      if (isSuper) {
+        for (const id of found.keys()) allowedSessions.add(id);
+        if (actorType === "anonymous") actorType = "super_admin";
+      } else {
+        const orgIds = [...new Set([...found.values()].map((s) => s.organization_id as string))];
+        const { data: memberships } = await sb
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", userId)
+          .in("organization_id", orgIds);
+        const myOrgs = new Set((memberships ?? []).map((m) => m.organization_id as string));
+        for (const [id, s] of found) {
+          if (myOrgs.has(s.organization_id)) allowedSessions.add(id);
         }
-        if (!allowed) {
-          const { data: isSuper } = await sb.rpc("is_super_admin", { _user_id: userId });
-          if (isSuper) {
-            allowed = true;
-            actorType = "super_admin";
-          }
-        }
+        if (allowedSessions.size > 0 && actorType === "anonymous") actorType = "member";
       }
     }
   }
 
-  if (!allowed) {
+  const allowedPaths = paths.filter((p) => allowedSessions.has(sessionIdFromPath(p) ?? ""));
+  if (allowedPaths.length === 0) {
     await record(actorType, "forbidden", "authorization_failed");
     return json({ error: "Forbidden", diagnosticId }, 403);
   }
 
   const { data, error } = await sb.storage
     .from(BUCKET)
-    .createSignedUrls(paths, EXPIRES_SECONDS);
+    .createSignedUrls(allowedPaths, EXPIRES_SECONDS);
   if (error || !data) {
     await record(actorType, "signing_failed", "storage_signing_failed");
     return json({ error: "Signing failed", diagnosticId }, 500);
@@ -152,9 +158,9 @@ Deno.serve(async (req) => {
 
   const urls: Record<string, string> = {};
   data.forEach((item, i) => {
-    if (item.signedUrl) urls[paths[i]] = item.signedUrl;
+    if (item.signedUrl) urls[allowedPaths[i]] = item.signedUrl;
   });
 
   await record(actorType, "allowed", "signed");
-  return json({ url: urls[paths[0]] ?? null, urls, expiresIn: EXPIRES_SECONDS, diagnosticId });
+  return json({ url: urls[allowedPaths[0]] ?? null, urls, expiresIn: EXPIRES_SECONDS, diagnosticId });
 });

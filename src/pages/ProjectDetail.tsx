@@ -47,6 +47,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { SessionVideoThumb } from "@/components/session/SessionVideoThumb";
+import { useMediaUrls } from "@/lib/mediaUrl";
 
 function BulkActionsButton({
   count, onClear, onEmail, onDelete, onCompare, onShareReports, canShareReports, members, onAssign,
@@ -608,16 +609,6 @@ export default function ProjectDetail() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  if (!project) return <p>Poste introuvable</p>;
-
-  const statusLabel =
-    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
   const isReady = (s: any) =>
     s.status === "completed" && !!reportsBySession[s.id];
   const readySessions = sessions.filter(isReady);
@@ -678,6 +669,23 @@ export default function ProjectDetail() {
     return list;
   })();
 
+  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
+  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
+  // Résolution groupée : un seul appel pour toutes les vignettes de la page.
+  const resolveThumb = useMediaUrls(pagedSessions.map((s: any) => s.thumbnail_url));
+
+  if (loading)
+    return (
+      <div className="flex justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  if (!project) return <p>Poste introuvable</p>;
+
+  const statusLabel =
+    { active: "Actif", archived: "Archivé" }[project.status as string] ?? project.status;
+
+
   // Badge d'ancienneté pour les sessions en attente
   const getPendingAge = (createdAt: string) => {
     const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -687,8 +695,6 @@ export default function ProjectDetail() {
     return { label: `${days}j`, className: "bg-destructive/10 text-destructive border-destructive/30" };
   };
 
-  const totalSessionsPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
-  const pagedSessions = filteredSessions.slice(page * pageSize, (page + 1) * pageSize);
 
   const recoLabel: Record<string, string> = {
     strong_yes: "Très favorable",
@@ -1083,7 +1089,7 @@ export default function ProjectDetail() {
                             </td>
                             <td className="py-3 max-w-[14rem]">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <SessionVideoThumb thumbnailUrl={(s as any).thumbnail_url} videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
+                                <SessionVideoThumb thumbnailUrl={(s as any).thumbnail_url} resolvedUrl={resolveThumb((s as any).thumbnail_url)} videoUrl={(s as any).video_recording_url} name={s.candidate_name} />
                                 <div className="min-w-0">
                                   <p className="font-medium truncate">{s.candidate_name}</p>
                                   <p className="text-xs text-muted-foreground truncate">{s.candidate_email}</p>
