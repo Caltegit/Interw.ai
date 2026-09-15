@@ -28,7 +28,7 @@ Côté recruteur :
 
 Points de vigilance, avec leur garde-fou :
 
-- Le service de liens sécurisés est partagé avec la lecture des vidéos : je modifie uniquement le cas « plusieurs entretiens », en laissant le cas actuel (un seul entretien) strictement identique, et je teste la lecture d'une vidéo avant et après.
+- Le service `get-interview-media-url`, qui délivre les liens temporaires des vidéos d'entretien, est aussi utilisé pour les photos de la liste. Je vais l'étendre pour accepter un lot de plusieurs entretiens (au lieu d'un seul) : cela permet de demander toutes les miniatures d'une page en un seul appel. Le fonctionnement actuel pour les vidéos (un seul entretien à la fois) restera strictement identique, et je vérifierai qu'une vidéo se lit toujours après la modification.
 - Correction des adresses en base : seules les lignes de photo (`thumbnail_url`) sont concernées, les vidéos ne sont pas touchées ; opération réversible, chaque valeur d'origine étant reconstructible.
 - Aucune migration de structure : pas de changement de table, donc pas de risque sur les autres pages.
 
