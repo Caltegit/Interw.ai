@@ -271,7 +271,7 @@ export default function SessionVideoExport() {
         // -------- Mode groupé (ZIP) --------
         // Signature au dernier moment : le worker ne reçoit jamais les anciennes
         // adresses publiques stockées dans les données historiques.
-        const signed = await resolveMediaUrls(segments.map((segment) => segment.url));
+        const signed = await resolveMediaUrls(segments.map((segment) => segment.url), null, { forceRefresh: true });
         for (const segment of segments) {
           const path = toStoragePath(segment.url);
           if (!path || !signed[path]) {

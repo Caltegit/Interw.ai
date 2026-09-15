@@ -109,6 +109,7 @@ export function invalidateMediaUrl(input?: string | null, candidateToken?: strin
 export async function resolveMediaUrls(
   inputs: Array<string | null | undefined>,
   candidateToken?: string | null,
+  options: ResolveOptions = {},
 ): Promise<Record<string, string>> {
   const paths = Array.from(
     new Set(
@@ -123,7 +124,9 @@ export async function resolveMediaUrls(
   const result: Record<string, string> = {};
   const missing: string[] = [];
   for (const p of paths) {
-    const hit = cache.get(`${p}|${candidateToken ?? ""}`);
+    const key = `${p}|${candidateToken ?? ""}`;
+    if (options.forceRefresh) cache.delete(key);
+    const hit = cache.get(key);
     if (hit && hit.expiresAt > Date.now()) result[p] = hit.url;
     else missing.push(p);
   }
@@ -135,10 +138,11 @@ export async function resolveMediaUrls(
       body: { paths: chunk, token: candidateToken ?? undefined },
     });
     if (error || !data?.urls) continue;
+    const expiresIn = typeof data.expiresIn === "number" ? data.expiresIn : 3600;
     for (const [path, url] of Object.entries(data.urls as Record<string, string>)) {
       cache.set(`${path}|${candidateToken ?? ""}`, {
         url,
-        expiresAt: Date.now() + 50 * 60 * 1000,
+        expiresAt: Date.now() + Math.max(60, expiresIn - 300) * 1000,
       });
       result[path] = url;
     }

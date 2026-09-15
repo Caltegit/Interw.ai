@@ -113,11 +113,26 @@ Deno.serve(async (req) => {
       .upload(targetPath, buffer, { contentType, upsert: true });
     if (upErr) throw upErr;
 
+    const { data: linkedMessages, error: linkedErr } = await sb
+      .from("session_messages")
+      .select("id, video_segment_url")
+      .eq("session_id", sessionId);
+    if (linkedErr) throw linkedErr;
+    const linkedIds = (linkedMessages ?? [])
+      .filter((message) => {
+        const value = String(message.video_segment_url ?? "").split("?")[0];
+        return value.endsWith(`/interviews/${sessionId}/q${questionIndex}.webm`)
+          || value.endsWith(`/interviews/${sessionId}/q${questionIndex}.mp4`)
+          || value === `interviews/${sessionId}/q${questionIndex}.webm`
+          || value === `interviews/${sessionId}/q${questionIndex}.mp4`;
+      })
+      .map((message) => message.id);
+    if (linkedIds.length === 0) throw new Error("message vidéo lié introuvable");
+
     const { error: msgErr } = await sb
       .from("session_messages")
       .update({ video_segment_url: targetPath })
-      .eq("session_id", sessionId)
-      .or(`video_segment_url.eq.${targetPath},video_segment_url.eq.${siblingPath},video_segment_url.like.%2Finterviews%2F${sessionId}%2Fq${questionIndex}.%`);
+      .in("id", linkedIds);
     if (msgErr) throw msgErr;
 
     // Le fichier source d'origine est conservé : la base pointe uniquement vers
