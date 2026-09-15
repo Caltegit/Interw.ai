@@ -46,6 +46,11 @@ Points de vigilance, avec leur garde-fou :
 - Lecture d'une vidéo d'entretien vérifiée après modification du service de liens.
 - Un entretien sans image garde ses initiales, sans erreur.
 
+## Tests E2E après approbation
+
+1. **Recruteur** : ouverture d'un projet avec au moins 25 candidats — tous les ronds d'image s'affichent, une vidéo se lit depuis la fiche.
+2. **Candidat** : parcours d'entretien inchangé, enregistrement vidéo fonctionnel.
+
 ## Nouvelle règle retenue
 
-Chaque plan comportera désormais cette section « Impact » : ce qui peut casser, ce que voient le recruteur et le candidat.
+Chaque plan comportera désormais cette section « Impact » : ce qui peut casser, ce que voient le recruteur et le candidat. Et après approbation du plan, je lancerai systématiquement deux tests E2E : un côté candidat, un côté recruteur.
