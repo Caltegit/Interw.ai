@@ -5,7 +5,7 @@
 - Les 15 réponses vidéo de la session existent bien dans le stockage, complètes (de 0,7 à 4,6 Mo) et toutes transcrites.
 - J'ai testé les 15 fichiers un par un, dans un vrai navigateur, avec un lien sécurisé valide : **les 15 se téléchargent (réponse 200) et s'ouvrent, image comprise (480 px de large)**. Aucun fichier n'est corrompu, aucun n'est manquant.
 - Point commun des 15 : **aucune durée n'est inscrite dans le fichier**. C'est normal pour un enregistrement fait depuis le navigateur du candidat : la durée n'est écrite nulle part, le lecteur doit la deviner.
-- Côté journal d'accès : entre 16 h 30 et 16 h 35, **423 demandes de lien sécurisé** ont été enregistrées pour cette seule session, dont 180 sur la vidéo 4 et 106 sur la vidéo 2. Une ouverture normale en demande 2 ou 3. C'est la boucle que tu vois.
+- Côté journal d'accès : entre 16 h 30 et 16 h 35, **423 demandes de liens temporaires** ont été enregistrées pour cette seule session. Chaque lien est une autorisation d'une heure, délivrée par le serveur pour lire une vidéo. En temps normal, une fiche en demande 2 ou 3. Ici, le lecteur a redemandé le lien 180 fois pour la vidéo 4 et 106 fois pour la vidéo 2 : c'est la boucle que tu vois.
 
 ## Où ça casse exactement dans le code
 
