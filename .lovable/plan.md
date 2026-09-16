@@ -1,90 +1,60 @@
-# Lenteur de chargement + libellé « Complété » sans rapport
+# Faire calculer le score par la pondération des critères par question
 
-## 1. Le libellé d'Olivier Valentin : ce que disent les données (vérifié)
+## Réponse à ta question, d'abord
 
-Session `5ad9a4b5-47b8-4630-9dc4-d701fb4850a4` (Olivier Valentin) :
+Tu as raison, et voici ce qui est vérifié dans le code :
 
-```text
-entretien terminé      16/09 08:03:37 UTC  (10:03 Paris)
-travail d'analyse créé 16/09 08:03:37 UTC
-rapport enregistré     16/09 08:05:47 UTC  (10:05 Paris)
-travail terminé        16/09 08:06:16 UTC   attempts = 1, aucune erreur
-```
+- Quand on a mis en place la pondération des critères par question, elle a été branchée **uniquement** dans la matrice (`generate-fit-matrix`, ligne 111 : `effectiveWeight`). C'est bien plus que du front — la matrice s'en sert réellement pour ses moyennes par critère — mais le **score final du candidat** n'y touche jamais.
+- Le score final est calculé dans `generate-report` : la note par critère y est pondérée par le poids **global** du critère sur le poste (ligne 928 : `criteria.map(c => c.weight)`), puis moyennée avec la note d'impression globale du modèle (ligne 1289, méthode `hybrid_v1`).
+- Donc aujourd'hui : « Question 1 = Rigueur 80 %, Fit 20 % » n'a aucun effet sur le score affiché.
 
-Ta capture est datée de 10:04 Paris : à cet instant le rapport n'existait pas encore, il est arrivé 1 min 45 plus tard. Le rapport est aujourd'hui bien présent.
+C'est un manque de ma part : la pondération par question a été livrée sans être reliée au calcul du score.
 
-Pourquoi « Complété » quand même : le badge lit uniquement `sessions.status`.
-`src/components/SessionStatusBadge.tsx` ne regarde jamais la table `reports`.
-Le statut passe à `completed` dès la dernière question, donc il y a toujours une
-fenêtre de 1,5 à 5 minutes où le libellé dit « Complété » sans rapport.
+## Ce que je change
 
-## 2. Les modèles IA : aucun problème constaté (vérifié)
+Nouveau calcul, exactement celui que tu décris :
 
-Journal de la passerelle IA sur les 7 derniers jours : 1054 appels, ceux de cette
-session en `status: success (http 200)`, modèle `google/gemini-3.7-flash`,
-durées 3,5 s à 33,5 s. Aucun 429, aucun 402, aucune erreur.
+1. Chaque question est notée séparément : pour la question 1, on applique ses poids (ex. 17 / 35 / 48), pour la question 2 les siens (ex. 50 / 50 / 0), etc.
+2. Score de la question = moyenne des notes de ses critères, pondérée par ces poids. Un critère à 0 % ne compte pas dans cette question.
+3. Score final du candidat = moyenne des scores de toutes les questions (pondérée par le poids total de chaque question, pour qu'une question sans critère actif ne fausse rien).
+4. Une question sans aucun élément exploitable est exclue de la moyenne au lieu d'être notée 50.
 
-Le délai vient de la chaîne, pas du modèle : la file est traitée par une tâche
-planifiée **toutes les minutes** (`process-report-queue-every-minute`), qui prend
-3 entretiens à la fois **espacés de 10 s** (`BATCH_SIZE = 3`, `SPACING_MS = 10_000`
-dans `supabase/functions/process-report-queue/index.ts`), et chaque entretien
-enchaîne transcription + rapport + matrice. Sur les 15 derniers travaux, le délai
-total va de **85 s à 309 s** (médiane ≈ 128 s).
+Le score n'est plus la moyenne « impression globale du modèle + critères globaux ». Il devient traçable : chaque point vient d'une case de la matrice, avec sa citation et son horodatage.
 
-## 3. La lenteur des sessions candidats : cause mesurée
+## Transcript complet
 
-Relevé Postgres (`pg_stat_statements`), requête la plus coûteuse de la base :
+Aujourd'hui, pour noter une case, le modèle ne reçoit que la réponse à la question concernée. Je change ça en :
 
-```text
-10 766 appels — moyenne 781 ms — pic 4 653 ms — total 8 412 s
-reports INNER JOIN sessions WHERE sessions.project_id = ...
-```
+- lui donner **la transcription complète de l'entretien** en contexte dans le même appel,
+- garder la règle : la note d'une case s'appuie d'abord sur la réponse à cette question, mais le modèle peut s'appuyer sur le reste de l'entretien quand le candidat y revient plus tard.
 
-C'est exactement la requête de `src/pages/ProjectDetail.tsx` ligne 261-264. Juste
-au-dessus (ligne 243-248), la page demande à la base : « donne-moi toutes les
-sessions de ce poste, sans limite ». Pour « Première étape Castalie », cela fait
-167 lignes d'un coup, plus leurs rapports joints. Ensuite seulement, dans le
-navigateur, elle affiche les 25 premières et met le reste en cache. La base et
-le réseau transportent donc 167 candidats à chaque ouverture, même quand on ne
-veut en voir que 25. L'index existe (voir `idx_sessions_project_created`), donc
-ce n'est pas un problème de recherche : c'est un problème de volume — comme si
-on chargeait tout un dossier pour n'en lire que la première page.
+Aucune troncature des réponses : elles sont déjà envoyées entières.
 
-Deuxième poste de coût, même écran :
+## Ordre d'exécution
 
-```text
-21 078 appels — moyenne 119 ms — total 2 510 s
-session_messages WHERE session_id = ANY(...) AND role = candidate AND video_segment_url NOT NULL
-```
+Aujourd'hui l'ordre est transcription → rapport → matrice. La matrice arrive donc après le score. Je la passe **avant** le rapport, pour que le score du rapport soit calculé à partir d'elle. Le rapport garde tout son contenu rédigé (verdict, points forts, signaux) ; seul le nombre change de source.
 
-## Corrections proposées
+La recommandation (fortement recommandé / recommandé / à discuter / non recommandé) est recalculée à partir du nouveau score, avec les mêmes seuils qu'aujourd'hui.
 
-1. **Libellé honnête** : quand une session est `completed` mais sans rapport et
-   que le travail d'analyse n'a pas échoué, afficher « Analyse en cours » au lieu
-   de « Complété », sur le tableau de bord et dans la liste d'un poste. Aucune
-   donnée modifiée, seulement l'affichage.
-2. **Liste d'un poste plus rapide** : ne charger que la page affichée (25
-   candidats) côté serveur, et les rapports de ces 25 seulement, avec le compte
-   total pour la pagination. Les filtres et le tri restent identiques.
-3. Ne rien changer à la file d'analyse, au scoring, à la matrice ni aux modèles.
+## Rapports existants
 
-## Impact sur la construction de l'application
+Rien n'est retouché. Aucun score déjà généré ne bouge. Le nouveau calcul ne s'applique qu'aux entretiens analysés après la mise en ligne.
 
-Risque faible à ciblé : deux fichiers d'affichage (`SessionStatusBadge.tsx`,
-`ProjectDetail.tsx`) plus le calcul du badge dans le tableau de bord. Aucune
-migration, aucun changement de stockage, de sécurité, de transcription, de
-scoring ni de rapport. Côté recruteur : la liste d'un poste s'ouvre plus vite et
-le statut devient exact. Côté candidat : aucun changement, ces écrans ne sont pas
-utilisés dans le parcours d'entretien. Risque résiduel : le passage à une
-pagination serveur change la façon dont les filtres comptent les résultats ; je
-conserve le compte total par requête `count` pour que les chiffres affichés
-restent les mêmes, et je vérifie sur « Première étape Castalie » (167 candidats).
+## Détails techniques
+
+- `supabase/functions/generate-fit-matrix/index.ts` : ajout de `question_scores` (score pondéré par question) et `overall_from_matrix` dans `fit_matrix` ; ajout du bloc transcription complète dans le prompt ; cases non évaluées toujours exclues.
+- `supabase/functions/generate-report/index.ts` : le score final lit `fit_matrix.overall_from_matrix` quand il existe ; sinon on garde le calcul actuel en repli (aucun entretien ne se retrouve sans score). `score_breakdown.method` passe à `question_weighted_v1` avec le détail par question.
+- `supabase/functions/process-report-queue/index.ts` : inversion de l'ordre matrice / rapport.
+- Aucune migration, aucun changement de stockage, de sécurité ou de transcription.
+
+## Impact
+
+- Construction de l'application : risque faible. Trois fonctions serveur modifiées, aucun fichier d'interface, aucune migration.
+- Recruteur : les nouveaux scores peuvent différer des anciens sur un même profil, puisqu'ils suivent enfin les pondérations saisies. La matrice et les renvois vidéo horodatés restent identiques.
+- Candidat : aucun changement, le parcours d'entretien n'est pas touché.
+- Risque résiduel : l'analyse d'un entretien peut prendre quelques secondes de plus (transcription complète envoyée dans l'appel matrice). Repli prévu si la matrice échoue : ancien calcul, donc jamais de rapport sans score.
 
 ## Tests E2E après approbation
 
-1. Candidat : parcours d'entretien de démonstration, enregistrement vidéo, aucune
-   erreur console.
-2. Recruteur : ouverture de « Première étape Castalie » (167 candidats), mesure du
-   temps d'affichage avant/après, navigation entre pages, vérification qu'une
-   session terminée sans rapport affiche « Analyse en cours » puis « Complété »
-   une fois le rapport généré.
+1. Candidat : parcours d'entretien de démonstration, enregistrement des réponses, aucune erreur.
+2. Recruteur : régénération d'un rapport sur un poste avec pondérations par question, vérification à la main que le score affiché correspond bien à la moyenne des scores par question, et que les renvois horodatés de la matrice fonctionnent toujours.
