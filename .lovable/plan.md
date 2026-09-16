@@ -41,12 +41,14 @@ reports INNER JOIN sessions WHERE sessions.project_id = ...
 ```
 
 C'est exactement la requête de `src/pages/ProjectDetail.tsx` ligne 261-264. Juste
-au-dessus (ligne 243-248), la page charge **toutes** les sessions du poste d'un
-coup, sans limite : 167 candidats sur « Première étape Castalie », 108 sur
-« Morning ». La pagination (25/page, ligne 207) est appliquée après coup, côté
-navigateur. Les index existent déjà (`idx_reports_session_id`,
-`idx_sessions_project_created`) : le coût vient du volume ramené, pas d'un index
-manquant.
+au-dessus (ligne 243-248), la page demande à la base : « donne-moi toutes les
+sessions de ce poste, sans limite ». Pour « Première étape Castalie », cela fait
+167 lignes d'un coup, plus leurs rapports joints. Ensuite seulement, dans le
+navigateur, elle affiche les 25 premières et met le reste en cache. La base et
+le réseau transportent donc 167 candidats à chaque ouverture, même quand on ne
+veut en voir que 25. L'index existe (voir `idx_sessions_project_created`), donc
+ce n'est pas un problème de recherche : c'est un problème de volume — comme si
+on chargeait tout un dossier pour n'en lire que la première page.
 
 Deuxième poste de coût, même écran :
 
