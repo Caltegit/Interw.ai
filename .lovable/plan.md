@@ -7,8 +7,8 @@ Un graphique à télécharger (image), pas de changement dans l'application.
 Trois courbes hebdomadaires depuis la création d'Interw :
 
 1. Organisations créées (bêta-testeurs) — cumul
-2. Entretiens terminés et analysés (rapport généré) — par semaine et cumul
-3. Candidats recrutés (décision « Accepté ») — cumul
+2. Entretiens terminés et analysés (rapport généré) — détail hebdomadaire par organisation, en barres jaunes
+3. Candidats recrutés (décision « Accepté ») — détail hebdomadaire par organisation, en barres vertes. Les trois indicateurs seront représentés en barres verticales (« poteaux »), avec les semaines en abscisse et les chiffres en ordonnée ; les organisations créées seront en bleu. Le niveau de détail maximal permettra d'identifier chaque organisation.
 
 Chiffres actuels déjà vérifiés en base : 43 organisations, 846 entretiens analysés, 20 candidats acceptés.
 
