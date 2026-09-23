@@ -1,61 +1,39 @@
-# Sessions terminées sans rapport — incident `no_recordings`
+# Réparer les vidéos de la session Hugo Voyenet
 
-## Diagnostic (données vérifiées)
+## Session concernée
 
-- **49 sessions** sont actuellement `completed` sans rapport.
-- **73 jobs** `report_jobs` sont en `failed` avec l'erreur `generate-report 400: no_recordings`.
-- Parmi les sessions récentes (7 derniers jours), **12 sessions** ont un fichier vidéo/audio dans le stockage mais **aucune ligne `session_messages` avec `role = 'candidate'`**.
-- Exemples : Amani Sayah, Hugo Voyenet, Margaux Brisset, Lucy Lemaitre, Yiming Wang — toutes ont un `q0.webm`/`q0.mp4` et un dossier `q0/` dans `media/interviews/<session>/`, mais la table ne contient que les messages IA.
+- **Session** : `8ac84e73-94c2-4c4b-a4fc-bb89ef7c599e`
+- **Candidat** : Hugo Voyenet
+- **Poste** : Première étape Castalie
+- **État** : `completed`, `end_reason = all_questions_done`
+- **Réponses** : 6 messages candidat avec médias (`q0` à `q5`)
+- **Fichiers** : `q0.webm` à `q5.webm` + `q0.audio.webm` à `q5.audio.webm` + `thumbnail.jpg`
 
-## Cause racine
+## Cause probable de l'écran noir
 
-Quand un candidat ferme l'onglet avant la fin normale de l'entretien, le front appelle la fonction `finalize-abandoned-session`. Cette fonction :
+Les fichiers sont des **WebM VP9/Opus** générés par le navigateur du candidat. Safari et certains Chrome refusent de décoder ces flux quand la durée n'est pas inscrite ou que le conteneur est incomplet. Le navigateur tourne alors en boucle ou affiche un fond noir.
 
-1. assemble les morceaux (`chunk-*.webm`) en `q0.webm` ;
-2. essaie de rattacher ce fichier à la ligne `session_messages` correspondante (`video_segment_url`) ;
-3. si au moins une question a été récupérée, elle passe la session en `completed`.
+## Plan de réparation
 
-**Le défaut :** si l'insertion du message candidat a échoué en amont (par exemple perte réseau au moment de l'appel RPC), il n'existe aucune ligne `session_messages` à rattacher. La fonction récupère le fichier, n'enregistre **rien**, mais marque quand même la session `completed`. Le worker de rapport arrive ensuite, ne trouve aucun enregistrement et renvoie `no_recordings`.
-
-## Deuxième problème lié : vidéos en écran noir
-
-Les fichiers récupérés sont souvent au format WebM VP9/Opus produit par certains navigateurs. Safari/Chrome ne les lit pas toujours, d'où l'écran noir observé sur les fiches. Ce n'est pas la cause du `no_recordings`, mais c'est le même lot de sessions.
-
-## Plan de correction
-
-### 1. Corriger `finalize-abandoned-session`
-
-- Si la fonction assemble un fichier mais ne trouve pas de ligne candidat existante, elle **crée** la ligne `session_messages` (`role = 'candidate'`, `question_id` correspondant, `video_segment_url` / `audio_segment_url` renseignés).
-- Ne passer la session en `completed` que si au moins une ligne candidat a été créée ou mise à jour. Sinon, laisser la session en `cancelled` ou `in_progress` selon le cas.
-- Conserver le comportement actuel quand les lignes existent déjà (idempotence).
-
-### 2. Rattraper les sessions déjà touchées
-
-- Lister toutes les sessions `completed` sans rapport qui ont des fichiers dans `media/interviews/<session>/` mais pas de message candidat.
-- Pour chacune : créer les lignes `session_messages` manquantes à partir des fichiers présents (`q0.webm`, `q0.mp4`, `q0.audio.m4a`, etc.).
-- Enqueue un nouveau job de rapport (`enqueue_report_job`) pour que `process-report-queue` transcrite et note ces sessions.
-- Les vidéos WebM problématiques seront converties en MP4 H.264/AAC lors de ce rattrapage si le navigateur ne les lit pas.
-
-### 3. Renforcer le front pour éviter les futures insertions manquantes
-
-- Dans `InterviewStart.tsx`, après un échec persistant de `candidate_insert_message`, stocker localement (IndexedDB) les informations nécessaires et les renvoyer à la prochaine occasion (beforeunload déjà couvert, mais ajouter un retry en arrière-plan sur `visibilitychange`).
-- Avant de marquer `completed`, vérifier qu'il existe au moins un message candidat **ou** des fichiers orphelins récupérables ; sinon basculer en `cancelled` avec `end_reason = 'no_media'`.
-
-### 4. Surveillance
-
-- Ajouter un log côté serveur dans `finalize-abandoned-session` quand une session est fermée sans ligne candidat (nombre de questions récupérées vs nombre de lignes mises à jour/créées).
-- Vérifier quotidiennement le ratio sessions `completed` sans rapport.
+1. **Télécharger** les 6 paires (`qN.webm` + `qN.audio.webm`) dans un dossier temporaire.
+2. **Convertir** chaque vidéo en **MP4 H.264/AAC** (`libx264`, `preset veryfast`, `crf 24`, `yuv420p`, `aac 128k`, `+faststart`).
+3. **Vérifier** fichier par fichier :
+   - image présente au début / milieu / fin ;
+   - piste audio présente ;
+   - durée identique à l'originale (écart ≤ 0,25 s pour ne pas casser les renvois horodatés).
+4. **Sauvegarder les originaux** dans `media/interviews/8ac84e73-…/originals/` avant remplacement.
+5. **Uploader** les 6 nouveaux `qN.mp4` dans le stockage privé.
+6. **Mettre à jour** `session_messages.video_segment_url` (et `audio_segment_url` si nécessaire) pour pointer vers les `.mp4`.
+7. **Contrôler** que la fiche recruteur charge les 6 vidéos sans écran noir et que le lecteur avance correctement.
 
 ## Impact
 
-- **Risque** : modéré et concentré. Seule `finalize-abandoned-session` et le front `InterviewStart.tsx` sont modifiés ; le worker de rapport et la file d'attente ne changent pas.
-- **Recruteur** : les sessions récupérées apparaîtront avec un rapport après rattrapage ; les sessions sans aucun média seront correctement marquées annulées.
-- **Candidat** : aucun changement visible.
-- **Données** : pas de suppression ; les fichiers orphelins sont simplement reliés à la base.
-- **Vidéos** : les WebM illisibles seront convertis en MP4 H.264/AAC, ce qui résout l'écran noir pour les sessions rattrapées.
+- **Risque** : faible et isolé. Seules les vidéos de cette session sont converties ; la base n'est modifiée que pour les 6 lignes de cette session.
+- **Recruteur** : la fiche redevient lisible.
+- **Candidat** : aucun impact (l'entretien est déjà terminé).
+- **Données** : aucune suppression ; les originaux sont conservés dans `originals/`.
+- **Scoring / rapport** : inchangé ; les transcriptions et notes existantes ne sont pas relancées.
 
-## Tests E2E après approbation
+## Test E2E après exécution
 
-1. **Candidat** : lancer un entretien, fermer brutalement l'onglet après une réponse, vérifier que la session finit bien `completed` avec un rapport généré.
-2. **Candidat** : lancer un entretien et fermer l'onglet **avant** toute réponse, vérifier que la session est `cancelled` et qu'aucun job `no_recordings` n'est créé.
-3. **Recruteur** : ouvrir une des sessions rattrapées, vérifier que la vidéo se lit et que le rapport s'affiche.
+- **Recruteur** : ouvrir la fiche, lire les 6 vidéos, vérifier que le son est actif et que le déplacement dans la timeline fonctionne.
