@@ -1,63 +1,61 @@
-# Pondération des questions dans le scoring
+# Sessions terminées sans rapport — incident `no_recordings`
 
-## Objectif
+## Diagnostic (données vérifiées)
 
-Deux corrections liées, pour un scoring fiable :
+- **49 sessions** sont actuellement `completed` sans rapport.
+- **73 jobs** `report_jobs` sont en `failed` avec l'erreur `generate-report 400: no_recordings`.
+- Parmi les sessions récentes (7 derniers jours), **12 sessions** ont un fichier vidéo/audio dans le stockage mais **aucune ligne `session_messages` avec `role = 'candidate'`**.
+- Exemples : Amani Sayah, Hugo Voyenet, Margaux Brisset, Lucy Lemaitre, Yiming Wang — toutes ont un `q0.webm`/`q0.mp4` et un dossier `q0/` dans `media/interviews/<session>/`, mais la table ne contient que les messages IA.
 
-1. **Branchement des critères pondérés par question** : le réglage existe dans l'interface (bloc « Pondération des critères par question ») mais n'est pas utilisé dans le calcul du score. Il ne sert que dans la matrice détaillée. Il sera désormais pris en compte dans le score final.
-2. **Importance de chaque question** : une question d'échauffement (« Ça va ? ») ne peut pas peser autant qu'une question technique. Chaque question reçoit un niveau d'importance.
+## Cause racine
 
-## Calcul retenu
+Quand un candidat ferme l'onglet avant la fin normale de l'entretien, le front appelle la fonction `finalize-abandoned-session`. Cette fonction :
 
-Deux étages de poids, multiplicatifs :
+1. assemble les morceaux (`chunk-*.webm`) en `q0.webm` ;
+2. essaie de rattacher ce fichier à la ligne `session_messages` correspondante (`video_segment_url`) ;
+3. si au moins une question a été récupérée, elle passe la session en `completed`.
 
-- **Importance de la question** : trois niveaux au choix dans la fenêtre de la question —
-  - **Faible** (×0,5)
-  - **Standard** (×1) — valeur par défaut, rien à régler
-  - **Déterminante** (×2)
-- **Poids effectif d'une case** (question × critère) = importance de la question × poids du critère pour cette question (réglage du bloc existant, sinon poids global du critère de l'étape 2).
-- **Note d'un critère** = moyenne pondérée de ses cases avec ces poids effectifs. Les cases « non évaluées » restent exclues des moyennes.
-- **Score final (fit)** = moyenne pondérée des critères par leurs poids globaux — mécanisme identique à aujourd'hui, seuls les poids effectifs changent.
+**Le défaut :** si l'insertion du message candidat a échoué en amont (par exemple perte réseau au moment de l'appel RPC), il n'existe aucune ligne `session_messages` à rattacher. La fonction récupère le fichier, n'enregistre **rien**, mais marque quand même la session `completed`. Le worker de rapport arrive ensuite, ne trouve aucun enregistrement et renvoie `no_recordings`.
 
-Exemple : une question « Déterminante » (×2) réglée avec Rigueur à 80 % pèse 2 × 0,8 = 1,6 fois une case standard à 100 %.
+## Deuxième problème lié : vidéos en écran noir
 
-## Ce qui change à l'écran
+Les fichiers récupérés sont souvent au format WebM VP9/Opus produit par certains navigateurs. Safari/Chrome ne les lit pas toujours, d'où l'écran noir observé sur les fiches. Ce n'est pas la cause du `no_recordings`, mais c'est le même lot de sessions.
 
-1. **Fenêtre d'une question (étape 3)** : au-dessus du bloc « Pondération des critères par question », un réglage « Importance de la question » avec trois boutons (Faible / Standard / Déterminante). Standard présélectionné.
-2. **Liste des questions** : mention discrète du niveau d'importance sur la carte question, uniquement si différent de Standard.
-3. **Matrice fiche candidat** : les poids affichés au survol tiennent compte de l'importance de la question.
+## Plan de correction
 
-## Effet sur les données existantes
+### 1. Corriger `finalize-abandoned-session`
 
-- Rien ne change pour les postes et entretiens existants : sans réglage, toutes les questions sont « Standard » et les critères héritent des poids globaux — le calcul retombe exactement sur le résultat actuel.
-- Aucune régénération automatique. Comme aujourd'hui, un clic sur « Régénérer la matrice » applique les nouveaux poids à un entretien.
+- Si la fonction assemble un fichier mais ne trouve pas de ligne candidat existante, elle **crée** la ligne `session_messages` (`role = 'candidate'`, `question_id` correspondant, `video_segment_url` / `audio_segment_url` renseignés).
+- Ne passer la session en `completed` que si au moins une ligne candidat a été créée ou mise à jour. Sinon, laisser la session en `cancelled` ou `in_progress` selon le cas.
+- Conserver le comportement actuel quand les lignes existent déjà (idempotence).
 
-## Détails techniques
+### 2. Rattraper les sessions déjà touchées
 
-**Base de données** (migration)
-- Nouvelle colonne `questions.importance smallint` (valeurs 1, 2, 3 — défaut 2 = Standard). Même colonne sur `interview_template_questions` pour conserver le réglage dans les modèles.
-- GRANT inclus dans la migration ; aucune nouvelle politique (colonnes sur tables existantes).
+- Lister toutes les sessions `completed` sans rapport qui ont des fichiers dans `media/interviews/<session>/` mais pas de message candidat.
+- Pour chacune : créer les lignes `session_messages` manquantes à partir des fichiers présents (`q0.webm`, `q0.mp4`, `q0.audio.m4a`, etc.).
+- Enqueue un nouveau job de rapport (`enqueue_report_job`) pour que `process-report-queue` transcrite et note ces sessions.
+- Les vidéos WebM problématiques seront converties en MP4 H.264/AAC lors de ce rattrapage si le navigateur ne les lit pas.
 
-**Front**
-- `src/components/QuestionFormDialog.tsx` : champ `importance` dans le formulaire, trois boutons au-dessus du bloc de pondération.
-- `src/components/project/StepQuestions.tsx` : transport du champ et mention sur la carte question.
-- `src/pages/ProjectDetail.tsx` : ajout d'`importance` au `select` et au remapping lors de la duplication.
-- Modèles d'entretien (`loadInterviewTemplate.ts` + enregistrement) : transport du champ.
+### 3. Renforcer le front pour éviter les futures insertions manquantes
 
-**Backend**
-- `supabase/functions/generate-fit-matrix/index.ts` : poids effectif = importance × poids du critère pour la question ; moyennes pondérées mises à jour ; poids conservés dans `fit_matrix.rows[].weights`.
-- `supabase/functions/generate-report/index.ts` : la note par critères (`fit_breakdown`) utilise les mêmes poids effectifs, afin que le score final (`hybrid_v1` : moyenne de la note globale et de la note par critères) tienne compte des deux réglages. Les questions à importance Faible contribuent moins, Déterminante davantage.
-- Ni la transcription, ni le prompt de citation, ni les horodatages ne sont modifiés.
+- Dans `InterviewStart.tsx`, après un échec persistant de `candidate_insert_message`, stocker localement (IndexedDB) les informations nécessaires et les renvoyer à la prochaine occasion (beforeunload déjà couvert, mais ajouter un retry en arrière-plan sur `visibilitychange`).
+- Avant de marquer `completed`, vérifier qu'il existe au moins un message candidat **ou** des fichiers orphelins récupérables ; sinon basculer en `cancelled` avec `end_reason = 'no_media'`.
+
+### 4. Surveillance
+
+- Ajouter un log côté serveur dans `finalize-abandoned-session` quand une session est fermée sans ligne candidat (nombre de questions récupérées vs nombre de lignes mises à jour/créées).
+- Vérifier quotidiennement le ratio sessions `completed` sans rapport.
 
 ## Impact
 
-- **Risque** : modéré et cerné. Deux fonctions d'analyse et trois écrans de création de poste changent ; le parcours candidat (enregistrement, envoi des vidéos) n'est pas touché.
-- **Recruteur** : nouveau réglage optionnel ; tant qu'il n'y touche pas, les scores restent calculés comme aujourd'hui.
-- **Candidat** : aucun changement visible ni dans le déroulé de l'entretien.
-- **Base** : une migration, réversible (colonnes avec valeur par défaut).
-- **Sécurité** : aucune modification (bucket privé, liens signés, politiques inchangés).
+- **Risque** : modéré et concentré. Seule `finalize-abandoned-session` et le front `InterviewStart.tsx` sont modifiés ; le worker de rapport et la file d'attente ne changent pas.
+- **Recruteur** : les sessions récupérées apparaîtront avec un rapport après rattrapage ; les sessions sans aucun média seront correctement marquées annulées.
+- **Candidat** : aucun changement visible.
+- **Données** : pas de suppression ; les fichiers orphelins sont simplement reliés à la base.
+- **Vidéos** : les WebM illisibles seront convertis en MP4 H.264/AAC, ce qui résout l'écran noir pour les sessions rattrapées.
 
 ## Tests E2E après approbation
 
-1. **Candidat** : parcours d'entretien de démonstration complet, enregistrement de réponses, aucune erreur.
-2. **Recruteur** : création d'un poste avec une question Déterminante et une question Faible, vérification que le réglage est conservé après enregistrement ; régénération de la matrice sur une session de test et contrôle que la note du critère change dans le sens attendu ; vérification qu'une session existante non régénérée garde des scores identiques.
+1. **Candidat** : lancer un entretien, fermer brutalement l'onglet après une réponse, vérifier que la session finit bien `completed` avec un rapport généré.
+2. **Candidat** : lancer un entretien et fermer l'onglet **avant** toute réponse, vérifier que la session est `cancelled` et qu'aucun job `no_recordings` n'est créé.
+3. **Recruteur** : ouvrir une des sessions rattrapées, vérifier que la vidéo se lit et que le rapport s'affiche.
