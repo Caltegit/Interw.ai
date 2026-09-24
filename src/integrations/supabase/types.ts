@@ -1647,6 +1647,7 @@ export type Database = {
           highlight_clips: Json
           highlights: Json | null
           id: string
+          interw_profiles: Json | null
           motivation_scores: Json | null
           nonverbal_analysis: Json | null
           overall_grade: string | null
@@ -1680,6 +1681,7 @@ export type Database = {
           highlight_clips?: Json
           highlights?: Json | null
           id?: string
+          interw_profiles?: Json | null
           motivation_scores?: Json | null
           nonverbal_analysis?: Json | null
           overall_grade?: string | null
@@ -1713,6 +1715,7 @@ export type Database = {
           highlight_clips?: Json
           highlights?: Json | null
           id?: string
+          interw_profiles?: Json | null
           motivation_scores?: Json | null
           nonverbal_analysis?: Json | null
           overall_grade?: string | null
