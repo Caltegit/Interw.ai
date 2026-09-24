@@ -456,7 +456,7 @@ export function SessionReportView({
                     averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
                     sessionId={sessionId}
                     readOnly={readOnly}
-                    size={300}
+                    size={250}
                     onInfo={() => setActiveTab("bigfive")}
                   />
                   <ScoresOverviewCard
