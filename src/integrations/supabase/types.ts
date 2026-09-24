@@ -616,6 +616,8 @@ export type Database = {
           follow_up_enabled: boolean
           hint_text: string | null
           id: string
+          interw_profile_question_key: string | null
+          is_interw_profile: boolean
           max_follow_ups: number
           max_response_seconds: number | null
           order_index: number
@@ -635,6 +637,8 @@ export type Database = {
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
+          interw_profile_question_key?: string | null
+          is_interw_profile?: boolean
           max_follow_ups?: number
           max_response_seconds?: number | null
           order_index?: number
@@ -654,6 +658,8 @@ export type Database = {
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
+          interw_profile_question_key?: string | null
+          is_interw_profile?: boolean
           max_follow_ups?: number
           max_response_seconds?: number | null
           order_index?: number
@@ -1452,6 +1458,8 @@ export type Database = {
           follow_up_enabled: boolean
           hint_text: string | null
           id: string
+          interw_profile_question_key: string | null
+          is_interw_profile: boolean
           max_follow_ups: number
           max_response_seconds: number | null
           order_index: number
@@ -1472,6 +1480,8 @@ export type Database = {
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
+          interw_profile_question_key?: string | null
+          is_interw_profile?: boolean
           max_follow_ups?: number
           max_response_seconds?: number | null
           order_index?: number
@@ -1492,6 +1502,8 @@ export type Database = {
           follow_up_enabled?: boolean
           hint_text?: string | null
           id?: string
+          interw_profile_question_key?: string | null
+          is_interw_profile?: boolean
           max_follow_ups?: number
           max_response_seconds?: number | null
           order_index?: number
