@@ -586,3 +586,15 @@ video::-webkit-media-controls-overlay-play-button:hover,
 video::-webkit-media-controls-start-playback-button:hover {
   opacity: 0.25 !important;
 }
+
+/* Couleurs des 8 profils Interw (roue de la fiche candidat) */
+:root {
+  --profile-leader: 0 72% 56%;
+  --profile-fighter: 24 90% 55%;
+  --profile-creative: 44 95% 50%;
+  --profile-adaptable: 80 60% 45%;
+  --profile-team-player: 140 50% 42%;
+  --profile-empathetic: 176 60% 40%;
+  --profile-analytical: 212 70% 50%;
+  --profile-reliable-executor: 270 50% 55%;
+}
