@@ -1,64 +1,119 @@
-# Accélérer le tableau de bord et les données candidats
+# Fiabiliser le Profil Interw avec trois questions recommandées
 
-## Diagnostic vérifié
+## Les trois questions proposées
 
-Le service de données et la connexion sont disponibles. Il n’y a pas de panne générale constatée.
+Ces questions sont conçues pour faire raconter des comportements passés plutôt que demander au candidat de se décrire. Elles sont assez ouvertes pour éviter de révéler les huit profils attendus.
 
-Les lenteurs viennent principalement de la manière dont les données sont demandées :
+### 1. Agir et entraîner
 
-- la requête la plus lente utilisée par les listes candidats prend **0,85 seconde en moyenne** et a déjà atteint **7,8 secondes** ;
-- la page d’un poste recharge actuellement **toutes ses sessions et tous ses rapports toutes les 15 secondes**, même si seulement 25 candidats sont affichés ;
-- le tableau de bord attend plusieurs vagues successives de demandes avant d’afficher ses données ;
-- il télécharge notamment les **1 078 sessions en attente** pour calculer seulement deux compteurs ;
-- il peut parcourir jusqu’à **200 postes, leurs sessions et leurs rapports** pour n’en afficher que cinq ;
-- les moyennes d’un poste téléchargent les rapports complets puis font les calculs dans le navigateur ;
-- le volume actuel est de **2 262 sessions candidat**, **15 543 messages** et **447 rapports sur 60 jours** : ces lectures intégrales deviennent désormais visibles pour l’utilisateur.
+> Racontez une situation où vous deviez atteindre un objectif difficile avec d’autres personnes. Quel était le contexte, quel rôle avez-vous réellement pris, qu’avez-vous fait concrètement et quel résultat avez-vous obtenu ?
 
-La nouvelle roue ajoute une petite donnée aux rapports, mais rien ne prouve qu’elle soit la cause de la dégradation. Le problème mesuré est surtout l’accumulation de lectures trop larges et répétées.
+**Profils principalement observés :** Leader, Team player, Battant, Empathique.
 
-## Correction proposée
+**Ce que la réponse permet de distinguer :** prise de décision ou coopération, recherche de résultat, place donnée aux autres, gestion des désaccords et résultat concret.
 
-### 1. Tableau de bord
+### 2. Résoudre autrement et décider
 
-- Remplacer les gros téléchargements par une synthèse calculée directement dans la base : compteurs, moyenne, évolution, recommandations et cinq meilleurs candidats.
-- Retourner directement les cinq postes récents avec leur nombre d’entretiens analysés, sans charger toutes leurs sessions.
-- Exécuter en parallèle les demandes qui ne dépendent pas les unes des autres.
-- Afficher chaque zone dès que ses données sont prêtes, au lieu de garder tout le tableau de bord vide jusqu’à la fin.
+> Parlez-nous d’un problème complexe ou inhabituel que vous avez dû résoudre. Comment avez-vous analysé la situation, quelles options avez-vous envisagées, qu’avez-vous choisi et pourquoi ?
 
-### 2. Listes candidats dans un poste
+**Profils principalement observés :** Analytique, Créatif, Exécutant fiable, Leader.
 
-- Mettre en place une vraie pagination de **25 candidats côté données**, au lieu de télécharger toute la liste puis de la découper dans l’écran.
-- Charger uniquement les rapports des 25 candidats affichés.
-- Appliquer recherche, filtres et tri directement lors de la demande afin qu’ils continuent à porter sur tous les candidats du poste.
-- Remplacer le rechargement intégral toutes les 15 secondes par une actualisation légère et ciblée ; conserver une mise à jour automatique des nouveaux rapports.
-- Garder les sélections, décisions, notes, vues cartes/tableau et actions groupées existantes.
+**Ce que la réponse permet de distinguer :** raisonnement fondé sur des faits, génération d’idées, méthode d’exécution et capacité à trancher.
 
-### 3. Moyennes et fiches candidat
+### 3. Faire face au changement
 
-- Calculer les moyennes du poste dans la base et ne renvoyer que les résultats utiles à la fiche candidat.
-- Éviter de télécharger tous les rapports complets pour afficher les moyennes Fit, Orale, Attitude, Profil et la roue Interw.
-- Conserver strictement les formules et valeurs actuellement affichées : il s’agit d’un déplacement du calcul, pas d’un changement de scoring.
+> Décrivez un changement important, un imprévu ou un échec qui a bouleversé votre manière de travailler. Comment avez-vous réagi, qu’avez-vous adapté, comment avez-vous impliqué les autres et qu’en avez-vous appris ?
 
-### 4. Base de données
+**Profils principalement observés :** Adaptable, Battant, Empathique, Team player, Exécutant fiable.
 
-- Vérifier le plan réel des requêtes lentes avant toute modification d’index.
-- Ajouter uniquement les index confirmés utiles pour les filtres par poste, statut, date et décision recruteur.
-- Mesurer à nouveau les mêmes demandes après correction afin de confirmer le gain.
+**Ce que la réponse permet de distinguer :** vitesse d’adaptation, persévérance, attention aux personnes, coopération et remise en ordre de l’action.
 
-## Impact et risques
+Les trois questions se recouvrent volontairement : aucun profil ne dépend d’une seule réponse et les incohérences peuvent être repérées.
 
-- **Recruteur :** le tableau de bord doit afficher ses blocs progressivement ; les listes candidats doivent charger seulement la page visible et répondre plus vite aux filtres.
-- **Candidat :** aucun changement prévu dans le passage d’entretien, l’enregistrement, la fin de session ou les messages.
-- **Scoring et rapports :** aucune formule, note, matrice, transcription ou analyse ne sera modifiée.
-- **Sécurité :** les restrictions par organisation restent appliquées ; les nouvelles synthèses seront limitées à l’organisation connectée.
-- **Risque principal :** une pagination mal raccordée pourrait donner un nombre de pages ou un résultat de filtre incorrect. Les totaux seront comparés avant/après sur plusieurs postes volumineux.
-- **Capacité du service :** aucune augmentation n’est proposée à ce stade. Les mesures détaillées de capacité n’ont pas pu être obtenues ; il serait incorrect d’affirmer que la taille du service est en cause sans cette preuve.
+## Création d’un nouveau poste
 
-## Vérifications après correction
+- Ajouter sous les questions habituelles un bloc séparé nommé **« Questions Profil Interw — recommandées »**.
+- Y placer automatiquement ces trois questions pour chaque nouveau poste.
+- Permettre au recruteur de modifier leur formulation, leur ordre ou de les supprimer.
+- Expliquer sobrement qu’elles servent à rendre le diagramme plus fiable.
+- Ne rien ajouter aux postes déjà créés.
+- Lorsqu’une session type est appliquée pendant la création, conserver ce bloc séparé au lieu de confondre ces questions avec celles du poste.
 
-- Comparer les totaux, scores, décisions et résultats de recherche avant/après sur plusieurs postes.
-- Mesurer le temps du tableau de bord, d’une liste candidat et d’une fiche candidat, ainsi que le nombre de demandes envoyées.
-- Vérifier qu’aucun chargement intégral ne se répète toutes les 15 secondes.
-- Exécuter un test de bout en bout côté candidat : accès, test du matériel, démarrage et continuité du parcours.
-- Exécuter un test de bout en bout côté recruteur : tableau de bord, ouverture d’un poste, pagination, filtres, ouverture d’une fiche et retour à la liste.
-- Ne déclarer la correction terminée qu’après ces mesures et ces deux tests ; signaler explicitement tout test bloqué.
+## Identification fiable des réponses
+
+- Marquer ces questions dans les données comme questions Profil Interw, au lieu de les reconnaître à partir de leur texte ou de leur position.
+- Conserver ce marquage lorsque la question est modifiée, réordonnée ou enregistrée dans une session type.
+- Rattacher chaque réponse à sa question grâce à son identifiant existant.
+- Les suppressions restent autorisées : le calcul sait fonctionner avec deux, une ou aucune question dédiée.
+
+## Nouveau calcul
+
+### Priorité des sources
+
+1. Les réponses aux trois questions Profil Interw constituent les preuves principales.
+2. Le reste de l’entretien peut confirmer ou nuancer un profil, mais ne peut pas compenser seul une absence totale de preuve dans les questions prioritaires.
+3. Le CV, le visage, la voix, l’accent, le débit, le Fit Poste, la matrice et les critères métier restent exclus.
+
+### Règles mesurables
+
+Pour chaque profil, le modèle devra produire séparément :
+
+- les indices favorables observés ;
+- les indices contraires observés ;
+- les questions dédiées réellement exploitables ;
+- une ou deux citations exactes ;
+- un niveau de confiance ;
+- une note de 0 à 100, ou **« Non évalué »**.
+
+Le serveur vérifiera ensuite :
+
+- que chaque citation existe réellement, mot pour mot, dans la réponse indiquée ;
+- qu’elle provient du candidat et de la bonne session ;
+- qu’une preuve principale vient bien d’une question Profil Interw ;
+- que les huit profils sont présents dans la réponse structurée ;
+- que les notes sont comprises entre 0 et 100.
+
+Sans preuve principale suffisante, le profil sera **Non évalué**, et non ramené artificiellement à 0 ou 50.
+
+### Stabilisation
+
+- Utiliser une seule consigne versionnée, avec des repères explicites pour les niveaux faible, moyen et fort de chaque profil.
+- Demander au modèle une sortie strictement structurée, puis refuser toute sortie incomplète ou incohérente.
+- Effectuer une seconde vérification indépendante des notes et des citations avant enregistrement.
+- Si la vérification échoue, afficher le profil comme indisponible plutôt que sauvegarder un résultat douteux.
+- Enregistrer la version de la méthode et les contrôles passés avec le diagramme, afin de savoir exactement comment chaque résultat a été produit.
+
+## Affichage du diagramme
+
+- Afficher les secteurs sans preuve suffisante en gris avec le libellé **« Non évalué »**.
+- Exclure ces secteurs du classement dominant/secondaire et de la moyenne du poste.
+- Ne déclarer un profil dominant et secondaire que si suffisamment de profils sont réellement évalués.
+- Conserver la règle actuelle : profil net seulement si l’écart est strictement supérieur à 15 points ; sinon profil hybride.
+- Dans le détail, montrer pour chaque note les citations validées, la question source et le niveau de confiance.
+- Conserver les couleurs, la disposition et la place actuelle de la roue.
+
+## Périmètre historique
+
+- Appliquer la nouvelle méthode uniquement aux rapports générés après sa mise en ligne.
+- Ne recalculer aucun diagramme existant.
+- Afficher la version de calcul dans le détail pour distinguer clairement ancienne et nouvelle méthode.
+
+## Impact
+
+- **Création de poste :** trois questions supplémentaires sont proposées automatiquement ; le recruteur garde la main pour les modifier ou les supprimer.
+- **Durée candidat :** si les trois questions sont conservées, l’entretien sera plus long de trois réponses. C’est le principal impact candidat.
+- **Rapport :** le diagramme pourra comporter des secteurs « Non évalué », ce qui est volontaire et plus honnête qu’une estimation sans preuve.
+- **Délai et coût :** la double vérification ajoute un appel d’analyse et peut retarder légèrement l’apparition du diagramme, sans bloquer le rapport principal.
+- **Scoring existant :** aucun changement du Fit Poste, de la matrice, des critères pondérés, de la transcription, de la recommandation ou des autres analyses.
+- **Anciens postes et rapports :** aucun changement automatique.
+- **Risque de casse : faible à modéré**, car la création et les modèles de poste sont concernés. Les garde-fous portent surtout sur la conservation des questions lors d’une modification, duplication ou application de modèle.
+
+## Vérifications après réalisation
+
+- Tests unitaires : citations exactes, profil non évalué, classement, seuil de 15 points, version du calcul et exclusion des valeurs absentes.
+- Vérifier la création, la modification, la suppression, le déplacement et l’enregistrement des trois questions.
+- Vérifier qu’un nouveau poste les reçoit et qu’un poste existant ne change pas.
+- Vérifier un rapport avec réponses solides, un avec réponse vague et un avec question passée.
+- Exécuter le test de bout en bout candidat : accéder au poste, répondre aux trois questions et terminer la session.
+- Exécuter ensuite le test de bout en bout recruteur : créer le poste, modifier une question, ouvrir le rapport, contrôler la roue, les mentions « Non évalué » et les citations.
+- Signaler explicitement si le test candidat reste bloqué par la configuration automatisée actuellement manquante ; ne pas annoncer la validation sans preuve.
