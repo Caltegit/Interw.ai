@@ -5,8 +5,10 @@ Ajouter dans chaque fiche candidat un radar (style de ta 3e capture) notant ind�
 
 ## Ce que verra le recruteur
 Une carte « Profils Interw » dans la fiche candidat, près du profil de personnalité actuel :
-- radar à 8 branches, tracé violet plein pour le candidat ;
-- ligne pointillée grise = moyenne des candidats du même poste (comme ta capture) ;
+- roue colorée à 8 secteurs inspirée de ta première capture : chaque profil a sa propre couleur (ex. Leader rouge, Battant orange, Créatif jaune, Adaptable vert clair, Team player vert, Empathique turquoise, Analytique bleu, Exécutant fiable violet), en dégradé pastel du centre vers l'extérieur ;
+- chaque secteur se remplit de sa couleur, plus intense selon le score (plus le score est haut, plus le secteur est plein et vif) ; le profil dominant est mis en avant par un arc épais coloré sur le bord extérieur, le secondaire par un arc plus fin ;
+- noms des profils écrits en couleur autour de la roue, le logo Interw au centre ;
+- moyenne du poste affichée en fin trait pointillé gris sur la roue ;
 - en tête : **Dominant** (score le plus haut), **Secondaire** (2e), et la mention **Profil net** si l'écart dépasse 15 points, sinon **Profil hybride** ;
 - au survol d'un axe : score, forces, points de vigilance, postes cibles ;
 - sous le radar, pour le dominant et le secondaire : 1 à 2 citations cliquables qui renvoient au moment précis de la vidéo (même mécanisme que le Big Five).
