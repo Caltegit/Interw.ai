@@ -339,6 +339,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
     const oldIndex = ids.findIndex((id) => id === activeId);
     const newIndex = ids.findIndex((id) => id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
+    if (Boolean(questions[oldIndex]?.is_interw_profile) !== Boolean(questions[newIndex]?.is_interw_profile)) return;
     const reorderedIds = arrayMove([...ids], oldIndex, newIndex);
     itemIds.splice(0, itemIds.length, ...reorderedIds);
     setQuestions(arrayMove([...questions], oldIndex, newIndex));
@@ -347,8 +348,10 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
   const handleLibrarySelect = (selected: Question[]) => {
     const remaining = 25 - questions.length;
     const toAdd = selected.slice(0, remaining).map((q) => ({ ...q, from_library: true, save_to_library: false }));
-    toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
-    setQuestions([...questions, ...toAdd]);
+    const firstProfileIndex = questions.findIndex((q) => q.is_interw_profile);
+    const insertAt = firstProfileIndex === -1 ? questions.length : firstProfileIndex;
+    itemIds.splice(insertAt, 0, ...toAdd.map(() => crypto.randomUUID()));
+    setQuestions([...questions.slice(0, insertAt), ...toAdd, ...questions.slice(insertAt)]);
   };
 
   const openNew = () => {
@@ -406,8 +409,10 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
 
     if (editingIndex === null) {
       const newQ: Question = { ...createEmptyQuestion(), ...baseFromForm } as Question;
-      itemIds.push(crypto.randomUUID());
-      setQuestions([...questions, newQ]);
+      const firstProfileIndex = questions.findIndex((q) => q.is_interw_profile);
+      const insertAt = firstProfileIndex === -1 ? questions.length : firstProfileIndex;
+      itemIds.splice(insertAt, 0, crypto.randomUUID());
+      setQuestions([...questions.slice(0, insertAt), newQ, ...questions.slice(insertAt)]);
     } else {
       const updated = [...questions];
       updated[editingIndex] = { ...updated[editingIndex], ...baseFromForm } as Question;

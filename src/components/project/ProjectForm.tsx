@@ -198,7 +198,8 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
     candidateEmailSubject: t.candidate_email_subject ?? state.candidateEmailSubject,
     candidateEmailBody: t.candidate_email_body ?? state.candidateEmailBody,
     questions: tpl.questions.length
-      ? tpl.questions.map((q) => ({
+      ? (() => {
+          const imported = tpl.questions.map((q) => ({
           ...createEmptyQuestion(),
           title: q.title,
           content: q.content,
@@ -215,7 +216,10 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
           criteria_weights: (q as { criteria_weights?: number[] | null }).criteria_weights ?? null,
           is_interw_profile: q.is_interw_profile ?? false,
           interw_profile_question_key: q.interw_profile_question_key ?? null,
-        }))
+          }));
+          const recommended = state.questions.filter((q) => q.is_interw_profile);
+          return imported.some((q) => q.is_interw_profile) ? imported : [...imported, ...recommended];
+        })()
       : state.questions,
     criteria: tpl.criteria.length
       ? tpl.criteria.map((c) => ({
