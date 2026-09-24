@@ -4,7 +4,12 @@
 Ajouter dans chaque fiche candidat un radar (style de ta 3e capture) notant indépendamment 8 profils de 0 à 100 % : Leader, Team player, Créatif, Exécutant fiable, Battant, Empathique, Adaptable, Analytique. C'est un éclairage supplémentaire : **il ne modifie pas le fit score**.
 
 ## Ce que verra le recruteur
-Une carte « Profils Interw » dans la fiche candidat, près du profil de personnalité actuel :
+**Emplacement (visible sans défiler) :**
+- Onglet **Résumé** : la roue remplace les deux cartes Fit Poste et Orale (à gauche). Ces deux cartes passent à droite, empilées au-dessus d'Attitude et Perso (4 petites cartes en colonne à droite).
+- Un bouton « i » sur la roue ouvre l'onglet **Profil**.
+- L'onglet **Perso** est renommé **Profil** : il affiche la roue en grand, puis les explications détaillées des 8 profils (définition, ce qu'il dit à l'oral, forces, vigilance, postes cibles) et la règle de lecture (dominant, secondaire, net/hybride). Le Big Five actuel reste dans cet onglet, en dessous.
+
+Contenu de la roue :
 - roue colorée à 8 secteurs inspirée de ta première capture : chaque profil a sa propre couleur (ex. Leader rouge, Battant orange, Créatif jaune, Adaptable vert clair, Team player vert, Empathique turquoise, Analytique bleu, Exécutant fiable violet), en dégradé pastel du centre vers l'extérieur ;
 - chaque secteur se remplit de sa couleur, plus intense selon le score (plus le score est haut, plus le secteur est plein et vif) ; le profil dominant est mis en avant par un arc épais coloré sur le bord extérieur, le secondaire par un arc plus fin ;
 - noms des profils écrits en couleur autour de la roue, le logo Interw au centre ;
