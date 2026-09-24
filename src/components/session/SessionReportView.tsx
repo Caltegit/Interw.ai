@@ -24,6 +24,7 @@ import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { NonverbalTabContent } from "@/components/session/NonverbalTabContent";
 import { NonverbalBadge } from "@/components/session/NonverbalBadge";
 import { PersonalityRadar } from "@/components/session/PersonalityRadar";
+import { InterwProfilesWheel, InterwProfilesGuide } from "@/components/session/InterwProfilesWheel";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
 import { AudioHealthBanner, isAudioFailed, type AudioHealth } from "@/components/session/AudioHealthBanner";
@@ -323,7 +324,7 @@ export function SessionReportView({
       </TabsTrigger>
       <TabsTrigger value="bigfive" className={triggerClass}>
         <BigFiveBadge profile={report?.personality_profile} size={48} audioFailed={audioFailed} />
-        <span className={labelClass}>Perso</span>
+        <span className={labelClass}>Profil</span>
       </TabsTrigger>
       <TabsTrigger value="transcription" className={triggerClass}>
         <ScrollText className="h-12 w-12" strokeWidth={1.5} />
@@ -449,15 +450,26 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <ScoresOverviewCard
-                  fitScore={fitScore}
-                  personalityProfile={report.personality_profile}
-                  paraverbalAnalysis={report.paraverbal_analysis}
-                  nonverbalAnalysis={(report as any).nonverbal_analysis}
-                  audioFailed={audioFailed}
-                  projectAverages={projectAverages}
-                  onSelectTab={setActiveTab}
-                />
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                  <InterwProfilesWheel
+                    data={(report as any).interw_profiles}
+                    averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
+                    sessionId={sessionId}
+                    readOnly={readOnly}
+                    size={300}
+                    onInfo={() => setActiveTab("bigfive")}
+                  />
+                  <ScoresOverviewCard
+                    fitScore={fitScore}
+                    personalityProfile={report.personality_profile}
+                    paraverbalAnalysis={report.paraverbal_analysis}
+                    nonverbalAnalysis={(report as any).nonverbal_analysis}
+                    audioFailed={audioFailed}
+                    projectAverages={projectAverages}
+                    onSelectTab={setActiveTab}
+                    vertical
+                  />
+                </div>
                 {report.executive_summary && (
                   <Card>
                     <CardHeader className="pb-2">
@@ -537,6 +549,19 @@ export function SessionReportView({
           </TabsContent>
 
           <TabsContent value="bigfive" className="mt-4 space-y-4">
+            {report && (
+              <InterwProfilesWheel
+                data={(report as any).interw_profiles}
+                averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
+                sessionId={sessionId}
+                readOnly={readOnly}
+                size={420}
+                showEvidences
+                onGoToMessage={goToMessage}
+                questionNumberByMessageId={questionNumberByMessageId}
+              />
+            )}
+            <InterwProfilesGuide />
             {report && report.personality_profile ? (
               <PersonalityRadar
                 profile={report.personality_profile}

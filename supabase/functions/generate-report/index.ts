@@ -1447,6 +1447,20 @@ Note selon ton impression globale (clarté + pertinence + profondeur). Ne saute 
       });
     }
 
+    // Profils Interw (8 axes) : calcul en arrière-plan, n'impacte pas le rapport.
+    try {
+      fetch(`${SUPABASE_URL}/functions/v1/compute-interw-profiles`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({ session_id, force: true }),
+      }).catch((e) => console.error("[generate-report] interw-profiles bg call failed", e));
+    } catch (e) {
+      console.error("[generate-report] interw-profiles bg dispatch error", e);
+    }
+
     // Si la matrice n'a pas pu être générée de manière synchrone, on tente
     // une mise à jour en arrière-plan pour que le détail soit ajouté plus tard.
     if (generate_fit_matrix !== false && (!matrixResult?.ok || !matrixResult?.fit_matrix)) try {
