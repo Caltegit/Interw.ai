@@ -12,12 +12,19 @@ const FORMATS: { mode: IntroFormat; icon: typeof FileText; title: string; desc: 
 interface Props {
   value: IntroFormat;
   onChange: (mode: IntroFormat) => void;
+  videoFirst?: boolean;
 }
 
-export function IntroFormatPicker({ value, onChange }: Props) {
+export function IntroFormatPicker({ value, onChange, videoFirst = false }: Props) {
+  const formats = videoFirst
+    ? [FORMATS.find((format) => format.mode === "video"), ...FORMATS.filter((format) => format.mode !== "video")].filter(
+        (format): format is (typeof FORMATS)[number] => Boolean(format),
+      )
+    : FORMATS;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {FORMATS.map((f) => {
+      {formats.map((f) => {
         const Icon = f.icon;
         const selected = value === f.mode;
         return (

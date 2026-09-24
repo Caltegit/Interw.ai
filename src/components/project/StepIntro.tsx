@@ -149,7 +149,7 @@ export function StepIntro({
                 }}
               />
             </div>
-            <IntroFormatPicker value={introMode} onChange={setIntroMode} />
+            <IntroFormatPicker value={introMode} onChange={setIntroMode} videoFirst />
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5 space-y-4">
