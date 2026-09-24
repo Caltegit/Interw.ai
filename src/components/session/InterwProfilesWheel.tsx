@@ -183,30 +183,41 @@ export function InterwProfilesWheel({
               <p className="mt-1 text-center text-[11px] text-muted-foreground">Pointillés : moyenne du poste</p>
             )}
 
-            {showEvidences && rank && (
+            {showEvidences && (
               <div className="mt-4 space-y-3">
-                {[rank.dominant, rank.secondary].map((p) => {
+                {INTERW_PROFILES.map((p) => {
+                  const trait = data[p.key];
                   const ev = data[p.key]?.evidences ?? [];
-                  if (!ev.length) return null;
                   return (
                     <div key={p.key}>
-                      <p className="mb-1 text-xs font-semibold" style={{ color: col(p.color) }}>{p.label}</p>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold" style={{ color: typeof trait?.score === "number" ? col(p.color) : undefined }}>{p.label}</p>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {typeof trait?.score === "number" ? `${Math.round(trait.score)} %` : "Non évalué"}
+                        </span>
+                      </div>
+                      {!ev.length && <p className="text-xs text-muted-foreground">Aucune preuve prioritaire suffisante.</p>}
                       <div className="space-y-1">
                         {ev.slice(0, 2).map((e, i) => (
-                          <EvidenceLink
-                            key={i}
-                            quote={e.quote}
-                            messageId={e.message_id}
-                            startSeconds={e.start_seconds}
-                            questionNumber={e.message_id ? questionNumberByMessageId?.[e.message_id] : undefined}
-                            onGoToMessage={onGoToMessage}
-                            compact
-                          />
+                          <div key={i}>
+                            {e.question_title && <p className="mb-1 text-[11px] text-muted-foreground">Question : {e.question_title}</p>}
+                            <EvidenceLink
+                              quote={e.quote}
+                              messageId={e.message_id}
+                              startSeconds={e.start_seconds}
+                              questionNumber={e.message_id ? questionNumberByMessageId?.[e.message_id] : undefined}
+                              onGoToMessage={onGoToMessage}
+                              compact
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>
                   );
                 })}
+                {data.methodology_version && (
+                  <p className="border-t pt-2 text-[11px] text-muted-foreground">Méthode : {data.methodology_version}</p>
+                )}
               </div>
             )}
           </div>
