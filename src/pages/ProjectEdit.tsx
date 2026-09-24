@@ -106,6 +106,8 @@ export default function ProjectEdit() {
                 max_response_seconds: ((q as { max_response_seconds?: number | null }).max_response_seconds) ?? null,
                 avatar_image_url: ((q as { avatar_image_url?: string | null }).avatar_image_url) ?? null,
                 criteria_weights: ((q as { criteria_weights?: number[] | null }).criteria_weights) ?? null,
+                is_interw_profile: (q as { is_interw_profile?: boolean }).is_interw_profile ?? false,
+                interw_profile_question_key: (q as { interw_profile_question_key?: "act_and_lead" | "solve_and_decide" | "adapt_and_learn" | null }).interw_profile_question_key ?? null,
               };
             })
           : [createEmptyQuestion()];
@@ -460,6 +462,8 @@ export default function ProjectEdit() {
           max_response_seconds: q.max_response_seconds ?? null,
           avatar_image_url: q.avatar_image_url ?? null,
           criteria_weights: q.criteria_weights ?? null,
+          is_interw_profile: q.is_interw_profile ?? false,
+          interw_profile_question_key: q.interw_profile_question_key ?? null,
         };
 
         let qId: string;

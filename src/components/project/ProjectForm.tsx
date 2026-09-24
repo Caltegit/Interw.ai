@@ -213,6 +213,8 @@ export function mergeTemplateIntoState(state: ProjectFormState, tpl: InterviewTe
           hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
           max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
           criteria_weights: (q as { criteria_weights?: number[] | null }).criteria_weights ?? null,
+          is_interw_profile: q.is_interw_profile ?? false,
+          interw_profile_question_key: q.interw_profile_question_key ?? null,
         }))
       : state.questions,
     criteria: tpl.criteria.length
@@ -551,24 +553,28 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
     if (typeof t.candidate_email_body === "string") setCandidateEmailBody(t.candidate_email_body);
 
     if (tpl.questions.length) {
+      const recommended = questions.filter((q) => q.is_interw_profile);
+      const imported = tpl.questions.map((q) => ({
+        ...createEmptyQuestion(),
+        title: q.title,
+        content: q.content,
+        category: q.category || "",
+        mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
+        follow_up_enabled: q.follow_up_enabled,
+        max_follow_ups: q.max_follow_ups,
+        relance_level: q.relance_level,
+        audioPreviewUrl: q.audio_url,
+        videoPreviewUrl: q.video_url,
+        from_library: true,
+        hint_text: q.hint_text ?? "",
+        max_response_seconds: q.max_response_seconds ?? null,
+        avatar_image_url: q.avatar_image_url ?? null,
+        criteria_weights: q.criteria_weights ?? null,
+        is_interw_profile: q.is_interw_profile ?? false,
+        interw_profile_question_key: q.interw_profile_question_key ?? null,
+      }));
       setQuestions(
-        tpl.questions.map((q) => ({
-          ...createEmptyQuestion(),
-          title: q.title,
-          content: q.content,
-          category: q.category || "",
-          mediaType: (q.type === "audio" || q.type === "video" ? q.type : "written") as "written" | "audio" | "video",
-          follow_up_enabled: q.follow_up_enabled,
-          max_follow_ups: q.max_follow_ups,
-          relance_level: q.relance_level,
-          audioPreviewUrl: q.audio_url,
-          videoPreviewUrl: q.video_url,
-          from_library: true,
-          hint_text: (q as { hint_text?: string | null }).hint_text ?? "",
-          max_response_seconds: (q as { max_response_seconds?: number | null }).max_response_seconds ?? null,
-          avatar_image_url: (q as { avatar_image_url?: string | null }).avatar_image_url ?? null,
-          criteria_weights: (q as { criteria_weights?: number[] | null }).criteria_weights ?? null,
-        })),
+        imported.some((q) => q.is_interw_profile) ? imported : [...imported, ...recommended],
       );
     }
     if (tpl.criteria.length) {
@@ -593,13 +599,14 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
 
     // Questions personnalisées générées par l'IA
     if (payload.questions.length) {
+      const recommended = questions.filter((q) => q.is_interw_profile);
       setQuestions(
-        payload.questions.map((q) => ({
+        [...payload.questions.map((q) => ({
           ...createEmptyQuestion(),
           title: q.title,
           content: q.content,
           mediaType: "written",
-        })),
+        })), ...recommended],
       );
     }
 

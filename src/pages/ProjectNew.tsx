@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { createEmptyQuestion } from "@/components/project/StepQuestions";
+import { createEmptyQuestion, createInterwProfileQuestions } from "@/components/project/StepQuestions";
 import defaultCamilleAvatar from "@/assets/avatars/woman-1.jpg";
 import { getDefaultVoiceForGender } from "@/components/project/VoiceSelectorDialog";
 import {
@@ -45,6 +45,7 @@ const initialState: ProjectFormState = {
   questions: [
     { ...createEmptyQuestion(), title: "Bien-être", content: "Comment ça va aujourd'hui ?" },
     { ...createEmptyQuestion(), title: "Culture", content: "Tu penses quoi de Morning ?" },
+    ...createInterwProfileQuestions(),
   ],
   criteria: [
     {
@@ -350,6 +351,8 @@ export default function ProjectNew() {
               max_response_seconds: q.max_response_seconds ?? null,
               avatar_image_url: q.avatar_image_url ?? null,
               criteria_weights: q.criteria_weights ?? null,
+              is_interw_profile: q.is_interw_profile ?? false,
+              interw_profile_question_key: q.interw_profile_question_key ?? null,
             })),
           )
           .select();
