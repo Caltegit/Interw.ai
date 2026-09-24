@@ -12,6 +12,7 @@ interface Props {
   audioFailed?: boolean;
   projectAverages?: ProjectAverages | null;
   onSelectTab?: (tab: string) => void;
+  vertical?: boolean;
 }
 
 type Tone = "success" | "warning" | "danger" | "muted";
@@ -38,6 +39,7 @@ export function ScoresOverviewCard({
   audioFailed,
   projectAverages,
   onSelectTab,
+  vertical,
 }: Props) {
   const bigFive = computeBigFiveAverage(personalityProfile);
   const paraverbal = audioFailed ? null : computeParaverbalAverage(paraverbalAnalysis);
@@ -79,7 +81,7 @@ export function ScoresOverviewCard({
       tab: "attitude",
     },
     {
-      label: "Perso",
+      label: "Profil",
       score: bigFive,
       avg: bigFiveProjectAvg,
       unavailable: false,
@@ -88,9 +90,9 @@ export function ScoresOverviewCard({
   ];
 
   return (
-    <Card>
+    <Card className={vertical ? "h-full" : undefined}>
       <CardContent className="pt-6">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className={vertical ? "grid grid-cols-2 gap-3 lg:grid-cols-1" : "grid grid-cols-2 gap-4 lg:grid-cols-4"}>
           {items.map((it) => (
             <ScoreGauge
               key={it.label}

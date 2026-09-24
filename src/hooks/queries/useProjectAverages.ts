@@ -17,6 +17,7 @@ export interface ProjectAverages {
     number
   >>;
   criteriaByLabel: Record<string, { avgPercent: number }>;
+  interw: Partial<Record<string, number>>;
 }
 
 const BIG_FIVE = [
@@ -27,6 +28,8 @@ const BIG_FIVE = [
   "emotional_stability",
 ] as const;
 
+import { INTERW_PROFILES } from "@/lib/interwProfiles";
+const INTERW_KEYS = INTERW_PROFILES.map((p) => p.key);
 const MOTIV_KEYS = ["company_knowledge", "role_fit", "enthusiasm", "long_term_intent"] as const;
 
 async function fetchProjectAverages(projectId: string): Promise<ProjectAverages> {
@@ -38,17 +41,17 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
 
   const sessionIds = (sessions ?? []).map((s) => s.id);
   if (sessionIds.length === 0) {
-    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
+    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {}, interw: {} };
   }
 
   const { data: reports } = await supabase
     .from("reports")
-    .select("overall_score, personality_profile, motivation_scores, criteria_scores, paraverbal_analysis, nonverbal_analysis")
+    .select("overall_score, personality_profile, motivation_scores, criteria_scores, paraverbal_analysis, nonverbal_analysis, interw_profiles")
     .in("session_id", sessionIds);
 
   const list = reports ?? [];
   if (list.length === 0) {
-    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {} };
+    return { count: 0, overallScore: null, paraverbalScore: null, nonverbalScore: null, bigFive: {}, motivation: {}, criteriaByLabel: {}, interw: {} };
   }
 
   const avg = (nums: number[]) =>
@@ -101,7 +104,14 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
     if (a !== null) criteriaByLabel[label] = { avgPercent: a };
   }
 
+  const interw: Record<string, number> = {};
+  for (const k of INTERW_KEYS) {
+    const a = avg(list.map((r: any) => r.interw_profiles?.[k]?.score).filter((n: any): n is number => typeof n === "number"));
+    if (a !== null) interw[k] = a;
+  }
+
   return {
+    interw,
     count: list.length,
     overallScore: overallScore !== null ? Math.round(overallScore) : null,
     paraverbalScore: paraverbalScore !== null ? Math.round(paraverbalScore) : null,
