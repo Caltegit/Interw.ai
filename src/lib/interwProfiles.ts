@@ -14,17 +14,18 @@ export const INTERW_PROFILES = [
 export type InterwProfileKey = typeof INTERW_PROFILES[number]["key"];
 
 export interface InterwTrait {
-  score: number;
+  score: number | null;
+  status?: "evaluated" | "not_evaluated";
   confidence?: "low" | "medium" | "high";
-  evidences?: { quote?: string; message_id?: string; start_seconds?: number }[];
+  evidences?: { quote?: string; message_id?: string; question_id?: string; question_title?: string; start_seconds?: number }[];
 }
-export type InterwProfilesData = Partial<Record<InterwProfileKey, InterwTrait>> & { computed_at?: string };
+export type InterwProfilesData = Partial<Record<InterwProfileKey, InterwTrait>> & { computed_at?: string; methodology_version?: string };
 
 export function rankProfiles(data: InterwProfilesData | null | undefined) {
   if (!data) return null;
   const list = INTERW_PROFILES
     .map((p) => ({ ...p, score: data[p.key]?.score }))
-    .filter((p): p is typeof p & { score: number } => typeof p.score === "number")
+    .filter((p): p is typeof p & { score: number } => typeof p.score === "number" && Number.isFinite(p.score))
     .sort((a, b) => b.score - a.score);
   if (list.length < 2) return null;
   const [dominant, secondary] = list;

@@ -605,7 +605,7 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
           ...createEmptyQuestion(),
           title: q.title,
           content: q.content,
-          mediaType: "written",
+          mediaType: "written" as const,
         })), ...recommended],
       );
     }
