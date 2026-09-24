@@ -133,27 +133,28 @@ export function InterwProfilesWheel({
               {INTERW_PROFILES.map((p, i) => {
                 const a0 = i * STEP - STEP / 2;
                 const a1 = a0 + STEP;
-                const score = data[p.key]?.score ?? 0;
+                const score = data[p.key]?.score;
+                const evaluated = typeof score === "number";
                 const isDom = rank?.dominant.key === p.key;
                 const isSec = rank?.secondary.key === p.key;
                 const [lx, ly] = polar(cx, cy, R + 34, i * STEP);
                 return (
                   <g key={p.key} onMouseEnter={() => setHover(i)} className="cursor-pointer">
-                    <path d={wedge(cx, cy, r0, R, a0, a1)} fill={col(p.color, hover === i ? 0.22 : 0.12)} stroke="hsl(var(--background))" strokeWidth={2} />
+                    <path d={wedge(cx, cy, r0, R, a0, a1)} fill={evaluated ? col(p.color, hover === i ? 0.22 : 0.12) : "hsl(var(--muted))"} stroke="hsl(var(--background))" strokeWidth={2} />
                     {[0.25, 0.5, 0.75].map((f) => (
                       <path key={f} d={arc(cx, cy, r0 + (R - r0) * f, a0, a1)} fill="none" stroke="hsl(var(--background))" strokeWidth={1.5} />
                     ))}
-                    <path
+                    {evaluated && <path
                       d={wedge(cx, cy, r0, radiusFor(score), a0 + 0.02, a1 - 0.02)}
                       fill={`url(#ip-${p.key})`}
                       opacity={0.55 + (score / 100) * 0.45}
                       className="transition-all duration-700"
-                    />
+                    />}
                     {(isDom || isSec) && (
                       <path d={arc(cx, cy, R + 6, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
-                    <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={col(p.color)}>
-                      {p.label}
+                    <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
+                      {evaluated ? p.label : `${p.label} —`}
                     </text>
                   </g>
                 );
@@ -169,7 +170,7 @@ export function InterwProfilesWheel({
               <div className="pointer-events-none absolute left-1/2 top-2 w-64 -translate-x-1/2 rounded-lg border bg-popover p-3 text-xs shadow-lg">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="font-semibold" style={{ color: col(hovered.color) }}>{hovered.label}</span>
-                  <span className="font-bold tabular-nums">{Math.round(hoveredTrait.score)}%</span>
+                  <span className="font-bold tabular-nums">{typeof hoveredTrait.score === "number" ? `${Math.round(hoveredTrait.score)}%` : "Non évalué"}</span>
                 </div>
                 <p><span className="font-medium">Forces :</span> {hovered.forces}</p>
                 <p><span className="font-medium">Vigilance :</span> {hovered.vigilance}</p>
@@ -182,30 +183,41 @@ export function InterwProfilesWheel({
               <p className="mt-1 text-center text-[11px] text-muted-foreground">Pointillés : moyenne du poste</p>
             )}
 
-            {showEvidences && rank && (
+            {showEvidences && (
               <div className="mt-4 space-y-3">
-                {[rank.dominant, rank.secondary].map((p) => {
+                {INTERW_PROFILES.map((p) => {
+                  const trait = data[p.key];
                   const ev = data[p.key]?.evidences ?? [];
-                  if (!ev.length) return null;
                   return (
                     <div key={p.key}>
-                      <p className="mb-1 text-xs font-semibold" style={{ color: col(p.color) }}>{p.label}</p>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold" style={{ color: typeof trait?.score === "number" ? col(p.color) : undefined }}>{p.label}</p>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {typeof trait?.score === "number" ? `${Math.round(trait.score)} %` : "Non évalué"}
+                        </span>
+                      </div>
+                      {!ev.length && <p className="text-xs text-muted-foreground">Aucune preuve prioritaire suffisante.</p>}
                       <div className="space-y-1">
                         {ev.slice(0, 2).map((e, i) => (
-                          <EvidenceLink
-                            key={i}
-                            quote={e.quote}
-                            messageId={e.message_id}
-                            startSeconds={e.start_seconds}
-                            questionNumber={e.message_id ? questionNumberByMessageId?.[e.message_id] : undefined}
-                            onGoToMessage={onGoToMessage}
-                            compact
-                          />
+                          <div key={i}>
+                            {e.question_title && <p className="mb-1 text-[11px] text-muted-foreground">Question : {e.question_title}</p>}
+                            <EvidenceLink
+                              quote={e.quote}
+                              messageId={e.message_id}
+                              startSeconds={e.start_seconds}
+                              questionNumber={e.message_id ? questionNumberByMessageId?.[e.message_id] : undefined}
+                              onGoToMessage={onGoToMessage}
+                              compact
+                            />
+                          </div>
                         ))}
                       </div>
                     </div>
                   );
                 })}
+                {data.methodology_version && (
+                  <p className="border-t pt-2 text-[11px] text-muted-foreground">Méthode : {data.methodology_version}</p>
+                )}
               </div>
             )}
           </div>
@@ -221,7 +233,7 @@ export function InterwProfilesGuide() {
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Les 8 profils Interw</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Chaque profil est noté indépendamment de 0 à 100 % (pas un total de 100 %). Dominant = score le plus haut, secondaire = 2e score. Profil net si l'écart dépasse 15 points, profil hybride sinon.
+          Chaque profil est noté indépendamment de 0 à 100 % (pas un total de 100 %). Sans preuve suffisante, il reste non évalué. Dominant = score le plus haut, secondaire = 2e score. Profil net si l'écart dépasse 15 points, profil hybride sinon.
         </p>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-2">

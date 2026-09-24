@@ -106,7 +106,7 @@ async function fetchProjectAverages(projectId: string): Promise<ProjectAverages>
 
   const interw: Record<string, number> = {};
   for (const k of INTERW_KEYS) {
-    const a = avg(list.map((r: any) => r.interw_profiles?.[k]?.score).filter((n: any): n is number => typeof n === "number"));
+    const a = avg(list.map((r: any) => r.interw_profiles?.[k]?.score).filter((n: any): n is number => typeof n === "number" && Number.isFinite(n)));
     if (a !== null) interw[k] = a;
   }
 

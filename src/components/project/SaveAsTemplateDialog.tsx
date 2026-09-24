@@ -125,6 +125,8 @@ export function SaveAsTemplateDialog({
             max_response_seconds: (q as unknown as { max_response_seconds?: number | null }).max_response_seconds ?? null,
             avatar_image_url: (q as unknown as { avatar_image_url?: string | null }).avatar_image_url ?? null,
             criteria_weights: (q as unknown as { criteria_weights?: number[] | null }).criteria_weights ?? null,
+            is_interw_profile: (q as unknown as { is_interw_profile?: boolean }).is_interw_profile ?? false,
+            interw_profile_question_key: (q as unknown as { interw_profile_question_key?: string | null }).interw_profile_question_key ?? null,
           })) as never,
         );
       }

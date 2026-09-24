@@ -70,6 +70,8 @@ export async function loadInterviewTemplate(id: string): Promise<InterviewTempla
       hint_text: (q.hint_text as string | null) ?? null,
       max_response_seconds: (q.max_response_seconds as number | null) ?? null,
       criteria_weights: (q.criteria_weights as number[] | null) ?? null,
+      is_interw_profile: (q.is_interw_profile as boolean | null) ?? false,
+      interw_profile_question_key: (q.interw_profile_question_key as "act_and_lead" | "solve_and_decide" | "adapt_and_learn" | null) ?? null,
     })),
     criteria: ((cs as unknown as Array<Record<string, unknown>>) || []).map((c) => ({
       label: (c.label as string) || "",

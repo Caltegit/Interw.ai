@@ -6,4 +6,4 @@
 - [ ] **Incident ouvert — sessions complétées sans rapport (`no_recordings`)** : 49 sessions `completed` sans rapport ; 12 récentes ont des fichiers en stockage mais aucune ligne `session_messages` candidat ; cause racine = `finalize-abandoned-session` marque `completed` sans créer/rattacher de ligne candidat. Plan rédigé le 2026-09-23, non approuvé (interrompu par la demande Hugo Voyenet).
 - [ ] Pondération des questions dans le scoring : plan précédemment rédigé, non validé, en attente.
 - [x] Profils Interw : roue colorée à 8 profils dans le Résumé + onglet « Profil » détaillé (plan approuvé 2026-09-24).
-- [ ] Profils Interw — étape suivante : 3 questions orales discriminantes (à planifier).
+- [x] Profils Interw : ajouter trois questions comportementales recommandées aux nouveaux postes, les préserver dans les sessions types et prioriser leurs réponses dans le calcul vérifié.

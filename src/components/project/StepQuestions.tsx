@@ -72,6 +72,10 @@ export interface Question {
   avatar_image_url: string | null;
   /** Pondération des critères propre à cette question (ordre des critères du poste). null = pondération du poste. */
   criteria_weights: number[] | null;
+  /** Question recommandée servant de preuve principale au Profil Interw. */
+  is_interw_profile?: boolean;
+  /** Clé stable, conservée même si le recruteur reformule la question. */
+  interw_profile_question_key?: "act_and_lead" | "solve_and_decide" | "adapt_and_learn" | null;
 }
 
 export const createEmptyQuestion = (): Question => ({
@@ -93,7 +97,33 @@ export const createEmptyQuestion = (): Question => ({
   max_response_seconds: null,
   avatar_image_url: null,
   criteria_weights: null,
+  is_interw_profile: false,
+  interw_profile_question_key: null,
 });
+
+export const createInterwProfileQuestions = (): Question[] => [
+  {
+    ...createEmptyQuestion(),
+    title: "Agir et entraîner",
+    content: "Racontez une situation où vous deviez atteindre un objectif difficile avec d’autres personnes. Quel était le contexte, quel rôle avez-vous réellement pris, qu’avez-vous fait concrètement et quel résultat avez-vous obtenu ?",
+    is_interw_profile: true,
+    interw_profile_question_key: "act_and_lead",
+  },
+  {
+    ...createEmptyQuestion(),
+    title: "Résoudre autrement et décider",
+    content: "Parlez-nous d’un problème complexe ou inhabituel que vous avez dû résoudre. Comment avez-vous analysé la situation, quelles options avez-vous envisagées, qu’avez-vous choisi et pourquoi ?",
+    is_interw_profile: true,
+    interw_profile_question_key: "solve_and_decide",
+  },
+  {
+    ...createEmptyQuestion(),
+    title: "Faire face au changement",
+    content: "Décrivez un changement important, un imprévu ou un échec qui a bouleversé votre manière de travailler. Comment avez-vous réagi, qu’avez-vous adapté, comment avez-vous impliqué les autres et qu’en avez-vous appris ?",
+    is_interw_profile: true,
+    interw_profile_question_key: "adapt_and_learn",
+  },
+];
 
 const TYPE_META: Record<Question["mediaType"], { label: string; Icon: typeof Type; className: string }> = {
   written: { label: "Lu par l'IA", Icon: Type, className: "bg-muted text-muted-foreground" },
@@ -208,6 +238,12 @@ function SortableQuestion({
               <span className="hidden sm:inline">Pondérée</span>
             </span>
           )}
+          {q.is_interw_profile && (
+            <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-medium text-primary">
+              <Sparkles className="h-3 w-3" />
+              <span className="hidden sm:inline">Profil Interw</span>
+            </span>
+          )}
         </button>
 
         {showAvatarButton && (
@@ -303,6 +339,7 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
     const oldIndex = ids.findIndex((id) => id === activeId);
     const newIndex = ids.findIndex((id) => id === overId);
     if (oldIndex === -1 || newIndex === -1) return;
+    if (Boolean(questions[oldIndex]?.is_interw_profile) !== Boolean(questions[newIndex]?.is_interw_profile)) return;
     const reorderedIds = arrayMove([...ids], oldIndex, newIndex);
     itemIds.splice(0, itemIds.length, ...reorderedIds);
     setQuestions(arrayMove([...questions], oldIndex, newIndex));
@@ -311,8 +348,10 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
   const handleLibrarySelect = (selected: Question[]) => {
     const remaining = 25 - questions.length;
     const toAdd = selected.slice(0, remaining).map((q) => ({ ...q, from_library: true, save_to_library: false }));
-    toAdd.forEach(() => itemIds.push(crypto.randomUUID()));
-    setQuestions([...questions, ...toAdd]);
+    const firstProfileIndex = questions.findIndex((q) => q.is_interw_profile);
+    const insertAt = firstProfileIndex === -1 ? questions.length : firstProfileIndex;
+    itemIds.splice(insertAt, 0, ...toAdd.map(() => crypto.randomUUID()));
+    setQuestions([...questions.slice(0, insertAt), ...toAdd, ...questions.slice(insertAt)]);
   };
 
   const openNew = () => {
@@ -370,8 +409,10 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
 
     if (editingIndex === null) {
       const newQ: Question = { ...createEmptyQuestion(), ...baseFromForm } as Question;
-      itemIds.push(crypto.randomUUID());
-      setQuestions([...questions, newQ]);
+      const firstProfileIndex = questions.findIndex((q) => q.is_interw_profile);
+      const insertAt = firstProfileIndex === -1 ? questions.length : firstProfileIndex;
+      itemIds.splice(insertAt, 0, crypto.randomUUID());
+      setQuestions([...questions.slice(0, insertAt), newQ, ...questions.slice(insertAt)]);
     } else {
       const updated = [...questions];
       updated[editingIndex] = { ...updated[editingIndex], ...baseFromForm } as Question;
@@ -413,7 +454,17 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <div className="space-y-2">
             {questions.map((q, i) => (
-              <SortableQuestion
+              <div key={ids[i]} className="space-y-2">
+                {q.is_interw_profile && !questions[i - 1]?.is_interw_profile && (
+                  <div className="pt-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <Label className="text-sm font-semibold">Questions Profil Interw — recommandées</Label>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Ces questions rendent le diagramme comportemental plus fiable.</p>
+                  </div>
+                )}
+                <SortableQuestion
                 key={ids[i]}
                 id={ids[i]}
                 index={i}
@@ -428,7 +479,8 @@ export function StepQuestions({ questions, setQuestions, projectAvatarUrl = null
                   setQuestions(updated);
                 }}
                 removeQuestion={removeQuestion}
-              />
+                />
+              </div>
             ))}
           </div>
         </SortableContext>

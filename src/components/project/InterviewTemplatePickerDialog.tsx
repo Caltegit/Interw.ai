@@ -66,6 +66,8 @@ export interface InterviewTemplatePayload {
     hint_text?: string | null;
     max_response_seconds?: number | null;
     criteria_weights?: number[] | null;
+    is_interw_profile?: boolean;
+    interw_profile_question_key?: "act_and_lead" | "solve_and_decide" | "adapt_and_learn" | null;
   }>;
   criteria: Array<{
     label: string;
