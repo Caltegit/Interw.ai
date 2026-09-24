@@ -23,7 +23,6 @@ import { FitScoreBadge } from "@/components/session/FitScoreBadge";
 import { ParaverbalBadge } from "@/components/session/ParaverbalBadge";
 import { NonverbalTabContent } from "@/components/session/NonverbalTabContent";
 import { NonverbalBadge } from "@/components/session/NonverbalBadge";
-import { PersonalityRadar } from "@/components/session/PersonalityRadar";
 import { InterwProfilesWheel, InterwProfilesGuide } from "@/components/session/InterwProfilesWheel";
 import { SoftSkillsCard } from "@/components/session/SoftSkillsCard";
 import { ProjectComparisonCard } from "@/components/session/ProjectComparisonCard";
@@ -562,20 +561,6 @@ export function SessionReportView({
               />
             )}
             <InterwProfilesGuide />
-            {report && report.personality_profile ? (
-              <PersonalityRadar
-                profile={report.personality_profile}
-                onGoToMessage={goToMessage}
-                projectAverages={projectAverages?.bigFive}
-                questionNumberByMessageId={questionNumberByMessageId}
-              />
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                  Analyse Perso non disponible.
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
 
           <TabsContent value="voice" className="mt-4 space-y-4">
