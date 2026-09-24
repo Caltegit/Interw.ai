@@ -61,7 +61,7 @@ export function InterwProfilesWheel({
     qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
   };
 
-  const pad = 44;
+  const pad = 90;
   const W = size + pad * 2;
   const cx = W / 2, cy = W / 2;
   const R = size / 2;
@@ -136,7 +136,7 @@ export function InterwProfilesWheel({
                 const score = data[p.key]?.score ?? 0;
                 const isDom = rank?.dominant.key === p.key;
                 const isSec = rank?.secondary.key === p.key;
-                const [lx, ly] = polar(cx, cy, R + 22, i * STEP);
+                const [lx, ly] = polar(cx, cy, R + 34, i * STEP);
                 return (
                   <g key={p.key} onMouseEnter={() => setHover(i)} className="cursor-pointer">
                     <path d={wedge(cx, cy, r0, R, a0, a1)} fill={col(p.color, hover === i ? 0.22 : 0.12)} stroke="hsl(var(--background))" strokeWidth={2} />
