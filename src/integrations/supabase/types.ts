@@ -2431,6 +2431,17 @@ export type Database = {
         Returns: string
       }
       create_own_organization: { Args: { _name: string }; Returns: string }
+      dashboard_recent_projects: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          job_title: string
+          last_completed_at: string
+          session_count: number
+          title: string
+        }[]
+      }
       delete_project: { Args: { _project_id: string }; Returns: undefined }
       enqueue_report_job: {
         Args: { p_force?: boolean; p_session_id: string }
