@@ -8,3 +8,4 @@
 - [x] Profils Interw : roue colorée à 8 profils dans le Résumé + onglet « Profil » détaillé (plan approuvé 2026-09-24).
 - [x] Profils Interw : ajouter trois questions comportementales recommandées aux nouveaux postes, les préserver dans les sessions types et prioriser leurs réponses dans le calcul vérifié.
 - [x] Création de poste : placer Vidéo en premier dans l’étape Intro et le sélectionner par défaut pour les nouveaux postes.
+- [ ] Bug : matrice Fit grise sur fiches candidats (25/09)
