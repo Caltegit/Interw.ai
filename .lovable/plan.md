@@ -12,7 +12,7 @@
 1. **Afficher le vrai motif** dans la notification d'erreur du bouton « Inviter » (et des autres actions de la même carte : retirer, changer de rôle, annuler).
 2. **Reproduire le refus** en simulant l'invitation en tant qu'Eva dans une opération annulée aussitôt (rien n'est enregistré, aucun e-mail envoyé), pour lire le motif exact.
 3. **Corriger au plus petit** selon ce motif, puis inviter marie@morning.fr pour de bon.
-4. **Point à trancher avec toi ensuite** : Marie a déjà un compte Morning. Aujourd'hui, un compte n'a qu'une organisation active ; accepter l'invitation peut la faire basculer sur Interw. Je te dirai précisément ce qui se passe avant de l'inviter.
+4. **Plusieurs organisations par compte** : Marie garde Morning et reçoit Interw en plus. Vérifié : accepter une invitation ajoute l'organisation sans changer celle qui est ouverte, et le sélecteur en haut à gauche de la barre latérale apparaît dès qu'un compte a au moins 2 organisations. Je contrôlerai dans l'aperçu que Marie passe bien de Morning à Interw depuis ce sélecteur, et je corrigerai si ce n'est pas le cas.
 
 ## Impact
 - Candidat : aucun effet.
