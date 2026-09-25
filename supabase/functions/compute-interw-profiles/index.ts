@@ -157,7 +157,10 @@ serve(async (req) => {
 
     const questionById = new Map((questions ?? []).map((question) => [question.id, question]));
     const dedicatedQuestionIds = new Set((questions ?? []).filter((question) => question.is_interw_profile).map((question) => question.id));
-    const dedicatedMessages = candidateMessages.filter((message) => message.question_id && dedicatedQuestionIds.has(message.question_id));
+    const hasDedicated = dedicatedQuestionIds.size > 0;
+    const dedicatedMessages = hasDedicated
+      ? candidateMessages.filter((message) => message.question_id && dedicatedQuestionIds.has(message.question_id))
+      : candidateMessages;
 
     const formatMessage = (message: MessageRow) => {
       const question = message.question_id ? questionById.get(message.question_id) : null;
@@ -182,7 +185,8 @@ serve(async (req) => {
       const primaryEvidence = (Array.isArray(proposed.primary_evidences) ? proposed.primary_evidences : [])
         .filter((e: { quote?: string; message_id?: string }) => {
           const message = e.message_id ? byId.get(e.message_id) : null;
-          return Boolean(message && message.question_id && dedicatedQuestionIds.has(message.question_id) && e.quote && hasExactQuote(message, e.quote));
+          const eligible = hasDedicated ? Boolean(message?.question_id && dedicatedQuestionIds.has(message.question_id)) : Boolean(message);
+          return Boolean(message && eligible && e.quote && hasExactQuote(message, e.quote));
         })
         .slice(0, 2);
       const evaluated = proposed.status === "evaluated" && typeof proposed.score === "number" && primaryEvidence.length > 0;
@@ -200,7 +204,9 @@ serve(async (req) => {
       out[profile.key] = {
         status: evaluated ? "evaluated" : "not_evaluated",
         score: evaluated ? Math.max(0, Math.min(100, Math.round(proposed.score))) : null,
-        confidence: evaluated && ["low", "medium", "high"].includes(proposed.confidence) ? proposed.confidence : "low",
+        confidence: evaluated && ["low", "medium", "high"].includes(proposed.confidence)
+          ? (!hasDedicated && proposed.confidence === "high" ? "medium" : proposed.confidence)
+          : "low",
         evidences,
         favorable_signals: evaluated && Array.isArray(proposed.favorable_signals) ? proposed.favorable_signals.slice(0, 4) : [],
         contrary_signals: evaluated && Array.isArray(proposed.contrary_signals) ? proposed.contrary_signals.slice(0, 4) : [],
