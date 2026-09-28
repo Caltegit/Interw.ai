@@ -123,7 +123,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       setInviteEmail("");
       loadData();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = (e as { message?: string; details?: string })?.message || (e as { details?: string })?.details || "Erreur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     } finally {
       setSending(false);
@@ -146,7 +146,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       toast({ title: `${member.full_name || member.email} a été retiré.` });
       loadData();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = (e as { message?: string; details?: string })?.message || (e as { details?: string })?.details || "Erreur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
@@ -178,7 +178,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       }
       loadData();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = (e as { message?: string; details?: string })?.message || (e as { details?: string })?.details || "Erreur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
@@ -190,7 +190,7 @@ export function OrgMembers({ orgId }: { orgId: string }) {
       toast({ title: "Invitation annulée." });
       loadData();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
+      const msg = (e as { message?: string; details?: string })?.message || (e as { details?: string })?.details || "Erreur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
