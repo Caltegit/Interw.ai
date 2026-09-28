@@ -177,7 +177,7 @@ function ScoreGauge({
       variant="outline"
       onClick={onClick}
       disabled={!onClick}
-      className={`relative flex h-auto flex-row items-center justify-center whitespace-normal ${box} w-full border-border bg-card hover:border-primary/50 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring text-left disabled:cursor-default`}
+      className={`relative flex h-auto flex-row items-center justify-center whitespace-normal [&_svg]:!size-full ${box} w-full border-border bg-card hover:border-primary/50 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring text-left disabled:cursor-default`}
     >
       <div className={`relative ${circle} shrink-0 flex items-center justify-center`}>
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">

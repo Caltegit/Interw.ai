@@ -62,7 +62,7 @@ export function InterwProfilesWheel({
     qc.invalidateQueries({ queryKey: queryKeys.session(sessionId) });
   };
 
-  const pad = compactLayout ? 72 : 90;
+  const pad = 90;
   const W = size + pad * 2;
   const cx = W / 2, cy = W / 2;
   const R = size / 2;
