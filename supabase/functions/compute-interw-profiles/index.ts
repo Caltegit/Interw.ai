@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import { resolveStartFactory } from "../_shared/resolve-start-seconds.ts";
 import { INTERW_PROFILES } from "../_shared/interw-profiles.ts";
+import { MODEL_SCORING, buildChatBody } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,8 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const MODEL = "openai/gpt-6-astra";
+// Modèle standard du projet (comme le scoring et les rapports).
+const MODEL = MODEL_SCORING;
 const METHODOLOGY_VERSION = "interw_profiles_v2_dedicated_questions";
 const PROFILE_KEYS = INTERW_PROFILES.map((profile) => profile.key);
 
@@ -28,9 +30,9 @@ type MessageRow = {
   timestamp: string;
 };
 
+// Schéma compatible avec l'appel d'outil (pas d'union de types ni additionalProperties).
 const evidenceSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
     quote: { type: "string" },
     message_id: { type: "string" },
@@ -42,74 +44,57 @@ const profileProperties: Record<string, unknown> = {};
 for (const profile of INTERW_PROFILES) {
   profileProperties[profile.key] = {
     type: "object",
-    additionalProperties: false,
     properties: {
       status: { type: "string", enum: ["evaluated", "not_evaluated"] },
-      score: { type: ["number", "null"] },
+      score: { type: "number", description: "Note 0-100 ; 0 si status = not_evaluated" },
       confidence: { type: "string", enum: ["low", "medium", "high"] },
       favorable_signals: { type: "array", items: { type: "string" } },
       contrary_signals: { type: "array", items: { type: "string" } },
       primary_evidences: { type: "array", items: evidenceSchema },
       complementary_evidences: { type: "array", items: evidenceSchema },
     },
-    required: ["status", "score", "confidence", "favorable_signals", "contrary_signals", "primary_evidences", "complementary_evidences"],
+    required: ["status", "confidence", "favorable_signals", "contrary_signals", "primary_evidences", "complementary_evidences"],
   };
 }
 
 const outputSchema = {
   type: "object",
-  additionalProperties: false,
   properties: profileProperties,
   required: PROFILE_KEYS,
 };
 
 async function streamStructured(key: string, instructions: string, input: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-      "X-Lovable-AIG-SDK": "fetch",
     },
-    body: JSON.stringify({
-      model: MODEL,
-      instructions,
-      input,
-      stream: true,
-      reasoning: { effort: "medium", summary: "auto" },
-      include: ["reasoning.encrypted_content"],
-      text: { format: { type: "json_schema", name: "interw_profiles", strict: true, schema: outputSchema } },
-    }),
+    body: JSON.stringify(buildChatBody(MODEL, {
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: input },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "interw_profiles",
+            description: "Évaluation indépendante des huit profils Interw",
+            parameters: outputSchema,
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "interw_profiles" } },
+    })),
   });
-  if (!response.ok) return { ok: false as const, status: response.status, error: await response.text() };
-  if (!response.body) return { ok: false as const, status: 502, error: "Réponse vide" };
+  if (!response.ok) return { ok: false as const, status: response.status, error: (await response.text()).slice(0, 500) };
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let output = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split("\n\n");
-    buffer = events.pop() ?? "";
-    for (const event of events) {
-      for (const line of event.split("\n")) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6);
-        if (payload === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.type === "response.output_text.delta" && typeof parsed.delta === "string") output += parsed.delta;
-        } catch {
-          // Les événements non JSON ne contiennent pas le résultat structuré.
-        }
-      }
-    }
-  }
+  const data = await response.json();
+  const argsStr = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+  if (!argsStr) return { ok: false as const, status: 502, error: "Sortie structurée absente" };
   try {
-    return { ok: true as const, data: JSON.parse(output) };
+    return { ok: true as const, data: typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr };
   } catch {
     return { ok: false as const, status: 502, error: "Sortie structurée invalide" };
   }
