@@ -418,8 +418,8 @@ export function SessionClipPlayer({
           </span>
         </div>
       )}
-    </div>
-    <VideoTimeline videoRef={videoRef} duration={durationSec} clipKey={url} />
+
+      <VideoSeekGrab videoRef={videoRef} duration={durationSec} />
     </div>
   );
 }
