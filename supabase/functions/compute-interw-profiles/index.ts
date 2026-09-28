@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { requireCallerOrInternal } from "../_shared/auth-guard.ts";
 import { resolveStartFactory } from "../_shared/resolve-start-seconds.ts";
 import { INTERW_PROFILES } from "../_shared/interw-profiles.ts";
+import { MODEL_SCORING, buildChatBody } from "../_shared/ai-models.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
