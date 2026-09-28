@@ -66,52 +66,37 @@ const outputSchema = {
 };
 
 async function streamStructured(key: string, instructions: string, input: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-      "X-Lovable-AIG-SDK": "fetch",
     },
-    body: JSON.stringify({
-      model: MODEL,
-      instructions,
-      input,
-      stream: true,
-      reasoning: { effort: "medium", summary: "auto" },
-      include: ["reasoning.encrypted_content"],
-      text: { format: { type: "json_schema", name: "interw_profiles", strict: true, schema: outputSchema } },
-    }),
+    body: JSON.stringify(buildChatBody(MODEL, {
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: input },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "interw_profiles",
+            description: "Évaluation indépendante des huit profils Interw",
+            parameters: outputSchema,
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "interw_profiles" } },
+    })),
   });
-  if (!response.ok) return { ok: false as const, status: response.status, error: await response.text() };
-  if (!response.body) return { ok: false as const, status: 502, error: "Réponse vide" };
+  if (!response.ok) return { ok: false as const, status: response.status, error: (await response.text()).slice(0, 500) };
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let output = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split("\n\n");
-    buffer = events.pop() ?? "";
-    for (const event of events) {
-      for (const line of event.split("\n")) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6);
-        if (payload === "[DONE]") continue;
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.type === "response.output_text.delta" && typeof parsed.delta === "string") output += parsed.delta;
-        } catch {
-          // Les événements non JSON ne contiennent pas le résultat structuré.
-        }
-      }
-    }
-  }
+  const data = await response.json();
+  const argsStr = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+  if (!argsStr) return { ok: false as const, status: 502, error: "Sortie structurée absente" };
   try {
-    return { ok: true as const, data: JSON.parse(output) };
+    return { ok: true as const, data: typeof argsStr === "string" ? JSON.parse(argsStr) : argsStr };
   } catch {
     return { ok: false as const, status: 502, error: "Sortie structurée invalide" };
   }
