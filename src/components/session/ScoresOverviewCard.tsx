@@ -106,7 +106,7 @@ export function ScoresOverviewCard({
     return (
       <Card className="h-full">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">{gauges}</div>
+          <div className="grid grid-cols-1 gap-3">{gauges}</div>
         </CardContent>
       </Card>
     );
