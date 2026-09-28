@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { computeBigFiveAverage } from "./BigFiveBadge";
 import { computeParaverbalAverage } from "./ParaverbalBadge";
 import { computeNonverbalAverage } from "./NonverbalBadge";
@@ -90,9 +90,15 @@ export function ScoresOverviewCard({
   ];
 
   return (
-    <Card className={vertical ? "h-full" : undefined}>
-      <CardContent className="pt-6">
-        <div className={vertical ? "grid grid-cols-2 gap-3 lg:grid-cols-1" : "grid grid-cols-2 gap-4 lg:grid-cols-4"}>
+    <Card className={vertical ? "flex h-full flex-col" : undefined}>
+      <CardContent className={vertical ? "flex-1 pt-6" : "pt-6"}>
+        <div
+          className={
+            vertical
+              ? "grid h-full grid-cols-2 gap-3 content-center"
+              : "grid grid-cols-2 gap-4 lg:grid-cols-4"
+          }
+        >
           {items.map((it) => (
             <ScoreGauge
               key={it.label}
@@ -100,6 +106,7 @@ export function ScoresOverviewCard({
               score={it.score}
               avg={it.avg}
               unavailable={it.unavailable}
+              compact={vertical}
               onClick={onSelectTab ? () => onSelectTab(it.tab) : undefined}
             />
           ))}
@@ -114,12 +121,14 @@ function ScoreGauge({
   score,
   avg,
   unavailable,
+  compact = false,
   onClick,
 }: {
   label: string;
   score: number | null;
   avg: number | null;
   unavailable: boolean;
+  compact?: boolean;
   onClick?: () => void;
 }) {
   const R = 42;
@@ -134,10 +143,15 @@ function ScoreGauge({
       ? Math.round(score - avg)
       : null;
 
+  const box = compact ? "p-3 gap-2" : "p-4 gap-3";
+  const circle = compact ? "w-16 h-16" : "w-20 h-20";
+
   if (unavailable) {
     return (
-      <div className="relative flex flex-row items-center justify-center gap-3 p-4 bg-muted/30 border border-dashed border-border rounded-xl opacity-80">
-        <div className="relative w-20 h-20 shrink-0 flex items-center justify-center opacity-50">
+      <div
+        className={`relative flex flex-row items-center justify-center ${box} w-full bg-muted/30 border border-dashed border-border rounded-xl opacity-80`}
+      >
+        <div className={`relative ${circle} shrink-0 flex items-center justify-center opacity-50`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
             <circle
               cx="48"
@@ -151,11 +165,11 @@ function ScoreGauge({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-sm font-bold text-muted-foreground">N/A</span>
+            <span className={`font-bold text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>N/A</span>
           </div>
         </div>
         <div className="flex flex-col min-w-0">
-          <h3 className="text-sm font-semibold text-muted-foreground">{label}</h3>
+          <h3 className={`font-semibold text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>{label}</h3>
           <p className="mt-1 text-[10px] text-muted-foreground/80 uppercase tracking-tight">
             Audio non détecté
           </p>
@@ -169,9 +183,9 @@ function ScoreGauge({
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className="relative flex flex-row items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer"
+      className={`relative flex flex-row items-center justify-center ${box} w-full bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer`}
     >
-      <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+      <div className={`relative ${circle} shrink-0 flex items-center justify-center`}>
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
           <circle
             cx="48"
@@ -196,19 +210,29 @@ function ScoreGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold text-foreground leading-tight text-center">
+          <span
+            className={`font-bold text-foreground leading-tight text-center ${
+              compact ? "text-base" : "text-xl"
+            }`}
+          >
             {score !== null ? Math.round(score) : "--"}
             <br />
-            <span className="text-[9px] font-semibold text-muted-foreground -mt-1 block">/100</span>
+            <span
+              className={`font-semibold text-muted-foreground -mt-1 block ${
+                compact ? "text-[8px]" : "text-[9px]"
+              }`}
+            >
+              /100
+            </span>
           </span>
         </div>
       </div>
       <div className="flex flex-col min-w-0">
-        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <h3 className={`font-semibold text-foreground ${compact ? "text-xs" : "text-sm"}`}>{label}</h3>
         <div className="mt-1 flex items-center">
           {delta !== null ? (
             <span
-              className={`text-sm font-bold tabular-nums ${
+              className={`font-bold tabular-nums ${compact ? "text-xs" : "text-sm"} ${
                 delta > 0
                   ? "text-emerald-600"
                   : delta < 0
@@ -219,7 +243,9 @@ function ScoreGauge({
             >
               {delta > 0 ? "+" : ""}
               {delta}{" "}
-              <span className="text-[11px] font-medium text-muted-foreground">/moy.</span>
+              <span className={`font-medium text-muted-foreground ${compact ? "text-[10px]" : "text-[11px]"}`}>
+                /moy.
+              </span>
             </span>
           ) : (
             <span className="text-[11px] text-muted-foreground/60">—</span>
