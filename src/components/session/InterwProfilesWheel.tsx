@@ -15,6 +15,7 @@ interface Props {
   sessionId?: string;
   readOnly?: boolean;
   size?: number;
+  compactLayout?: boolean;
   onInfo?: () => void;
   showEvidences?: boolean;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
@@ -42,7 +43,7 @@ function arc(cx: number, cy: number, r: number, a0: number, a1: number) {
 }
 
 export function InterwProfilesWheel({
-  data, averages, sessionId, readOnly, size = 340, onInfo, showEvidences, onGoToMessage, questionNumberByMessageId,
+  data, averages, sessionId, readOnly, size = 340, compactLayout = false, onInfo, showEvidences, onGoToMessage, questionNumberByMessageId,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [computing, setComputing] = useState(false);
@@ -82,7 +83,7 @@ export function InterwProfilesWheel({
     : null;
 
   return (
-    <Card className="h-full">
+    <Card className={compactLayout ? "w-full" : "h-full"}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div>

@@ -11,4 +11,5 @@
 - [ ] Bug : matrice Fit grise sur fiches candidats (25/09)
 - [x] Fiches candidats : curseur vidéo plus facile à déplacer — bande de préhension invisible sur la barre native (`VideoSeekGrab`), curseur en doublon supprimé, contrôles natifs inchangés.
 - [x] Résumé candidat : roue « Profil Interw » réduite (200) et collée à gauche, les quatre encadrés Fit Poste / Orale / Attitude / Profil disposés en 2×2 à droite (plan approuvé 2026-09-28).
+- [x] Résumé candidat : rééquilibrer la roue à 320 et condenser les quatre notes en 2×2 sans grand cadre vide (plan approuvé 2026-09-28).
 - [ ] Tests automatiques (E2E) : bloqués — `playwright.config.ts` attend le module `lovable-agent-playwright-config`, absent des registres publics (le paquet public du même nom est un espace réservé sans le sous-module `./config`). À rétablir côté Lovable.
