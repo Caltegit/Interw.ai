@@ -457,14 +457,13 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <InterwProfilesWheel
                     data={(report as any).interw_profiles}
                     averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
                     sessionId={sessionId}
                     readOnly={readOnly}
-                    size={320}
-                    compactLayout
+                    size={250}
                     onInfo={() => setActiveTab("bigfive")}
                   />
                   <ScoresOverviewCard
