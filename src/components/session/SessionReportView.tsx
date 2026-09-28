@@ -206,7 +206,7 @@ export function SessionReportView({
       }
     }
     return map;
-  }, [messages, project]);
+  }, [messages, visibleQuestions]);
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
