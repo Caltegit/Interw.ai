@@ -154,8 +154,16 @@ export function SessionReportView({
     [videoMessageIdByMessageId],
   );
 
+  // Questions retirées du poste : ignorées, sauf si le candidat y a répondu.
+  const visibleQuestions = useMemo<any[]>(() => {
+    const answered = new Set(
+      (messages as any[]).filter((m) => m?.role === "candidate" && m?.question_id).map((m) => m.question_id),
+    );
+    return ((project?.questions as any[]) ?? []).filter((q) => !q?.archived_at || answered.has(q.id));
+  }, [project, messages]);
+
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
-    const projectQuestions = ((project?.questions as any[]) ?? [])
+    const projectQuestions = visibleQuestions
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const orderById = new Map<string, number>();
@@ -180,10 +188,10 @@ export function SessionReportView({
           messageId: m.id as string,
         };
       });
-  }, [candidateVideos, project]);
+  }, [candidateVideos, visibleQuestions]);
 
   const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
-    const projectQuestions = ((project?.questions as any[]) ?? [])
+    const projectQuestions = visibleQuestions
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const orderById = new Map<string, number>();
@@ -198,7 +206,7 @@ export function SessionReportView({
       }
     }
     return map;
-  }, [messages, project]);
+  }, [messages, visibleQuestions]);
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
@@ -363,7 +371,7 @@ export function SessionReportView({
           <div className="flex flex-col gap-4">
             <AudioHealthBanner health={audioHealth} />
             {(() => {
-              const totalQuestions = ((project?.questions as any[]) ?? []).length;
+              const totalQuestions = visibleQuestions.length;
               const answered = candidateVideos.length;
               if (!totalQuestions || answered >= totalQuestions) return null;
               const reasonLabels: Record<string, string> = {
@@ -533,7 +541,7 @@ export function SessionReportView({
                 <FitMatrixCard
                   matrix={stats.fit_matrix}
                   sessionId={sessionId}
-                  questions={project?.questions}
+                  questions={visibleQuestions}
                   readOnly={readOnly}
                   onGoToMessage={goToMessage}
                 />
