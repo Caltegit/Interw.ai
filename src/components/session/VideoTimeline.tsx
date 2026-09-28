@@ -1,5 +1,5 @@
 import { useEffect, useState, type RefObject } from "react";
-import { Slider } from "@/components/ui/slider";
+import * as SliderPrimitive from "@radix-ui/react-slider";
 
 function formatTime(seconds: number): string {
   const total = Math.floor(Math.max(0, seconds));
@@ -40,7 +40,7 @@ export function VideoTimeline({ videoRef, duration, clipKey, compact = false }: 
     };
   }, [clipKey, videoRef]);
 
-  const displayed = Math.min(draft ?? position, validDuration ?? 0);
+  const displayed = validDuration === null ? position : Math.min(draft ?? position, validDuration);
   const seek = (value: number[]) => {
     const video = videoRef.current;
     if (video && validDuration !== null && Number.isFinite(value[0])) {
@@ -55,18 +55,25 @@ export function VideoTimeline({ videoRef, duration, clipKey, compact = false }: 
 
   return (
     <div className={compact ? "flex min-w-0 items-center gap-2 px-1" : "flex min-w-0 items-center gap-3 px-1 py-1"}>
-      <Slider
-        aria-label="Position dans la vidéo"
-        aria-valuetext={`${formatTime(displayed)} sur ${validDuration === null ? "durée inconnue" : formatTime(validDuration)}`}
+      <SliderPrimitive.Root
         min={0}
         max={validDuration ?? 1}
         step={0.1}
-        value={[displayed]}
+        value={[validDuration === null ? 0 : displayed]}
         onValueChange={(value) => setDraft(value[0] ?? 0)}
         onValueCommit={seek}
         disabled={validDuration === null}
-        className="min-w-0 flex-1 py-2.5"
-      />
+        className="relative flex min-w-0 flex-1 touch-none select-none items-center py-3"
+      >
+        <SliderPrimitive.Track className="relative h-2.5 w-full grow overflow-hidden rounded-full bg-secondary">
+          <SliderPrimitive.Range className="absolute h-full bg-primary" />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb
+          aria-label="Position dans la vidéo"
+          aria-valuetext={`${formatTime(displayed)} sur ${validDuration === null ? "durée inconnue" : formatTime(validDuration)}`}
+          className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
+        />
+      </SliderPrimitive.Root>
       <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-muted-foreground" aria-live="off">
         {formatTime(position)} / {validDuration === null ? "—" : formatTime(validDuration)}
       </span>
