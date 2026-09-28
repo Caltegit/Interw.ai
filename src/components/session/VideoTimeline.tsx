@@ -58,7 +58,7 @@ export function VideoTimeline({ videoRef, duration, clipKey, compact = false }: 
       <SliderPrimitive.Root
         min={0}
         max={validDuration ?? 1}
-        step={0.1}
+        step={1}
         value={[validDuration === null ? 0 : displayed]}
         onValueChange={(value) => setDraft(value[0] ?? 0)}
         onValueCommit={seek}

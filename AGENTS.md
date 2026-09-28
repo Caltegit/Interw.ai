@@ -1,0 +1,1 @@
+Use `VideoTimeline` for the time display and seek control in both candidate-session video players, so their playback controls stay consistent.
