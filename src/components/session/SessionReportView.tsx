@@ -154,6 +154,14 @@ export function SessionReportView({
     [videoMessageIdByMessageId],
   );
 
+  // Questions retirées du poste : ignorées, sauf si le candidat y a répondu.
+  const visibleQuestions = useMemo<any[]>(() => {
+    const answered = new Set(
+      (messages as any[]).filter((m) => m?.role === "candidate" && m?.question_id).map((m) => m.question_id),
+    );
+    return ((project?.questions as any[]) ?? []).filter((q) => !q?.archived_at || answered.has(q.id));
+  }, [project, messages]);
+
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
     const projectQuestions = visibleQuestions
       .slice()
