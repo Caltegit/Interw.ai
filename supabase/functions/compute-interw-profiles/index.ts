@@ -30,9 +30,9 @@ type MessageRow = {
   timestamp: string;
 };
 
+// Schéma compatible avec l'appel d'outil (pas d'union de types ni additionalProperties).
 const evidenceSchema = {
   type: "object",
-  additionalProperties: false,
   properties: {
     quote: { type: "string" },
     message_id: { type: "string" },
@@ -44,23 +44,21 @@ const profileProperties: Record<string, unknown> = {};
 for (const profile of INTERW_PROFILES) {
   profileProperties[profile.key] = {
     type: "object",
-    additionalProperties: false,
     properties: {
       status: { type: "string", enum: ["evaluated", "not_evaluated"] },
-      score: { type: ["number", "null"] },
+      score: { type: "number", description: "Note 0-100 ; 0 si status = not_evaluated" },
       confidence: { type: "string", enum: ["low", "medium", "high"] },
       favorable_signals: { type: "array", items: { type: "string" } },
       contrary_signals: { type: "array", items: { type: "string" } },
       primary_evidences: { type: "array", items: evidenceSchema },
       complementary_evidences: { type: "array", items: evidenceSchema },
     },
-    required: ["status", "score", "confidence", "favorable_signals", "contrary_signals", "primary_evidences", "complementary_evidences"],
+    required: ["status", "confidence", "favorable_signals", "contrary_signals", "primary_evidences", "complementary_evidences"],
   };
 }
 
 const outputSchema = {
   type: "object",
-  additionalProperties: false,
   properties: profileProperties,
   required: PROFILE_KEYS,
 };
