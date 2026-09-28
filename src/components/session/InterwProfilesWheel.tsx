@@ -120,7 +120,7 @@ export function InterwProfilesWheel({
             )}
           </div>
         ) : (
-          <div className="relative mx-auto" style={{ maxWidth: W }}>
+          <div className="relative" style={{ maxWidth: W }}>
             <svg viewBox={`0 0 ${W} ${W}`} className="h-auto w-full" onMouseLeave={() => setHover(null)}>
               <defs>
                 {INTERW_PROFILES.map((p) => (
@@ -153,7 +153,7 @@ export function InterwProfilesWheel({
                     {(isDom || isSec) && (
                       <path d={arc(cx, cy, R + 6, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
-                    <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
+                    <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
                       {evaluated ? p.label : `${p.label} —`}
                     </text>
                   </g>
