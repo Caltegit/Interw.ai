@@ -10,7 +10,7 @@ import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveMediaUrl, useMediaUrls, useRefreshableMediaUrl } from "@/lib/mediaUrl";
-import { VideoTimeline } from "@/components/session/VideoTimeline";
+import { VideoSeekGrab } from "@/components/session/VideoSeekGrab";
 
 export interface SessionVideoClip {
   url: string;
@@ -1017,9 +1017,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </div>
             );
           })()}
-        </div>
 
-        <VideoTimeline videoRef={videoRef} duration={durationSec} clipKey={clipKey} compact={compact} />
+          <VideoSeekGrab videoRef={videoRef} duration={durationSec} compact={compact} />
+        </div>
 
         {!compact && current.isFollowUp && (
           <div className="flex items-center justify-center gap-2">

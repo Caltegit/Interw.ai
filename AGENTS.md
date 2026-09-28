@@ -1,1 +1,1 @@
-Use `VideoTimeline` for the time display and seek control in both candidate-session video players, so their playback controls stay consistent.
+Candidate-session video players keep the native browser controls untouched; seek usability comes from the invisible grab strip over the native progress bar (`VideoSeekGrab`), never from a second visible slider and never from forced seeks in the file.

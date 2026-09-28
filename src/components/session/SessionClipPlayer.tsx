@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useMp4Download } from "@/hooks/useMp4Download";
 import { useToast } from "@/hooks/use-toast";
 import { useRefreshableMediaUrl } from "@/lib/mediaUrl";
-import { VideoTimeline } from "@/components/session/VideoTimeline";
+import { VideoSeekGrab } from "@/components/session/VideoSeekGrab";
 
 interface Props {
   url: string;
@@ -256,7 +256,6 @@ export function SessionClipPlayer({
   const titleDisplay = truncate(questionTitle ?? "", 30);
 
   return (
-    <div className="min-w-0">
     <div
       className="group relative overflow-hidden rounded-lg bg-black aspect-video"
       onMouseEnter={() => setHovered(true)}
@@ -419,8 +418,8 @@ export function SessionClipPlayer({
           </span>
         </div>
       )}
-    </div>
-    <VideoTimeline videoRef={videoRef} duration={durationSec} clipKey={url} />
+
+      <VideoSeekGrab videoRef={videoRef} duration={durationSec} />
     </div>
   );
 }
