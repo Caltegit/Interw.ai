@@ -155,7 +155,7 @@ export function SessionReportView({
   );
 
   const sessionClips = useMemo<SessionVideoClip[]>(() => {
-    const projectQuestions = ((project?.questions as any[]) ?? [])
+    const projectQuestions = visibleQuestions
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const orderById = new Map<string, number>();
@@ -183,7 +183,7 @@ export function SessionReportView({
   }, [candidateVideos, project]);
 
   const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
-    const projectQuestions = ((project?.questions as any[]) ?? [])
+    const projectQuestions = visibleQuestions
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const orderById = new Map<string, number>();
@@ -363,7 +363,7 @@ export function SessionReportView({
           <div className="flex flex-col gap-4">
             <AudioHealthBanner health={audioHealth} />
             {(() => {
-              const totalQuestions = ((project?.questions as any[]) ?? []).length;
+              const totalQuestions = visibleQuestions.length;
               const answered = candidateVideos.length;
               if (!totalQuestions || answered >= totalQuestions) return null;
               const reasonLabels: Record<string, string> = {
@@ -533,7 +533,7 @@ export function SessionReportView({
                 <FitMatrixCard
                   matrix={stats.fit_matrix}
                   sessionId={sessionId}
-                  questions={project?.questions}
+                  questions={visibleQuestions}
                   readOnly={readOnly}
                   onGoToMessage={goToMessage}
                 />
