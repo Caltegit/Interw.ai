@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { computeBigFiveAverage } from "./BigFiveBadge";
 import { computeParaverbalAverage } from "./ParaverbalBadge";
 import { computeNonverbalAverage } from "./NonverbalBadge";
@@ -89,31 +90,23 @@ export function ScoresOverviewCard({
     },
   ];
 
-  return (
-    <Card className={vertical ? "flex h-full flex-col" : undefined}>
-      <CardContent className={vertical ? "flex-1 pt-6" : "pt-6"}>
-        <div
-          className={
-            vertical
-              ? "grid h-full grid-cols-2 gap-3 content-center"
-              : "grid grid-cols-2 gap-4 lg:grid-cols-4"
-          }
-        >
-          {items.map((it) => (
-            <ScoreGauge
-              key={it.label}
-              label={it.label}
-              score={it.score}
-              avg={it.avg}
-              unavailable={it.unavailable}
-              compact={vertical}
-              onClick={onSelectTab ? () => onSelectTab(it.tab) : undefined}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const gauges = items.map((it) => (
+    <ScoreGauge
+      key={it.label}
+      label={it.label}
+      score={it.score}
+      avg={it.avg}
+      unavailable={it.unavailable}
+      compact={vertical}
+      onClick={onSelectTab ? () => onSelectTab(it.tab) : undefined}
+    />
+  ));
+
+  if (vertical) {
+    return <div className="grid w-full grid-cols-2 gap-2 self-center">{gauges}</div>;
+  }
+
+  return <Card><CardContent className="grid grid-cols-2 gap-4 pt-6 lg:grid-cols-4">{gauges}</CardContent></Card>;
 }
 
 function ScoreGauge({
@@ -143,13 +136,13 @@ function ScoreGauge({
       ? Math.round(score - avg)
       : null;
 
-  const box = compact ? "p-3 gap-2" : "p-4 gap-3";
-  const circle = compact ? "w-16 h-16" : "w-20 h-20";
+  const box = compact ? "p-2 gap-2 min-h-[64px]" : "p-4 gap-3";
+  const circle = compact ? "w-12 h-12" : "w-20 h-20";
 
   if (unavailable) {
     return (
       <div
-        className={`relative flex flex-row items-center justify-center ${box} w-full bg-muted/30 border border-dashed border-border rounded-xl opacity-80`}
+        className={`relative flex flex-row items-center justify-center ${box} w-full bg-muted/30 border border-dashed border-border rounded-md opacity-80`}
       >
         <div className={`relative ${circle} shrink-0 flex items-center justify-center opacity-50`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
@@ -179,11 +172,12 @@ function ScoreGauge({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={onClick}
       disabled={!onClick}
-      className={`relative flex flex-row items-center justify-center ${box} w-full bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer`}
+      className={`relative flex h-auto flex-row items-center justify-center whitespace-normal ${box} w-full border-border bg-card hover:border-primary/50 hover:bg-card focus-visible:ring-2 focus-visible:ring-ring text-left disabled:cursor-default`}
     >
       <div className={`relative ${circle} shrink-0 flex items-center justify-center`}>
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
@@ -212,14 +206,14 @@ function ScoreGauge({
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span
             className={`font-bold text-foreground leading-tight text-center ${
-              compact ? "text-base" : "text-xl"
+              compact ? "text-sm" : "text-xl"
             }`}
           >
             {score !== null ? Math.round(score) : "--"}
             <br />
             <span
               className={`font-semibold text-muted-foreground -mt-1 block ${
-                compact ? "text-[8px]" : "text-[9px]"
+                 compact ? "text-[8px]" : "text-[9px]"
               }`}
             >
               /100
@@ -252,6 +246,6 @@ function ScoreGauge({
           )}
         </div>
       </div>
-    </button>
+    </Button>
   );
 }
