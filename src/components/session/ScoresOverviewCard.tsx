@@ -103,7 +103,13 @@ export function ScoresOverviewCard({
   ));
 
   if (vertical) {
-    return <div className="grid w-full grid-cols-2 gap-2 self-center">{gauges}</div>;
+    return (
+      <Card className="h-full">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">{gauges}</div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return <Card><CardContent className="grid grid-cols-2 gap-4 pt-6 lg:grid-cols-4">{gauges}</CardContent></Card>;
@@ -136,8 +142,8 @@ function ScoreGauge({
       ? Math.round(score - avg)
       : null;
 
-  const box = compact ? "p-2 gap-2 min-h-[64px]" : "p-4 gap-3";
-  const circle = compact ? "w-12 h-12" : "w-20 h-20";
+  const box = "p-4 gap-3";
+  const circle = "w-20 h-20";
 
   if (unavailable) {
     return (

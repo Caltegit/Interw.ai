@@ -15,7 +15,6 @@ interface Props {
   sessionId?: string;
   readOnly?: boolean;
   size?: number;
-  compactLayout?: boolean;
   onInfo?: () => void;
   showEvidences?: boolean;
   onGoToMessage?: (messageId: string, startSeconds?: number) => void;
@@ -43,7 +42,7 @@ function arc(cx: number, cy: number, r: number, a0: number, a1: number) {
 }
 
 export function InterwProfilesWheel({
-  data, averages, sessionId, readOnly, size = 340, compactLayout = false, onInfo, showEvidences, onGoToMessage, questionNumberByMessageId,
+  data, averages, sessionId, readOnly, size = 340, onInfo, showEvidences, onGoToMessage, questionNumberByMessageId,
 }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const [computing, setComputing] = useState(false);
@@ -83,7 +82,7 @@ export function InterwProfilesWheel({
     : null;
 
   return (
-    <Card className={compactLayout ? "w-full" : "h-full"}>
+    <Card className="h-full">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -121,7 +120,7 @@ export function InterwProfilesWheel({
             )}
           </div>
         ) : (
-          <div className="relative" style={{ maxWidth: W }}>
+           <div className="relative mx-auto" style={{ maxWidth: W }}>
             <svg viewBox={`0 0 ${W} ${W}`} className="h-auto w-full" onMouseLeave={() => setHover(null)}>
               <defs>
                 {INTERW_PROFILES.map((p) => (
@@ -154,7 +153,7 @@ export function InterwProfilesWheel({
                     {(isDom || isSec) && (
                       <path d={arc(cx, cy, R + 6, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
-                    <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={15} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
+                     <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
                       {evaluated ? p.label : `${p.label} —`}
                     </text>
                   </g>
