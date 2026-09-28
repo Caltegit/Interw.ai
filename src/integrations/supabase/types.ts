@@ -2483,6 +2483,15 @@ export type Database = {
         Args: { _email: string; _user_id: string }
         Returns: undefined
       }
+      list_org_members: {
+        Args: { _org_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          user_id: string
+        }[]
+      }
       mark_attempt_proceeded: {
         Args: { _attempt_id: string }
         Returns: undefined
