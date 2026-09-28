@@ -188,7 +188,7 @@ export function SessionReportView({
           messageId: m.id as string,
         };
       });
-  }, [candidateVideos, project]);
+  }, [candidateVideos, visibleQuestions]);
 
   const questionNumberByMessageId = useMemo<Record<string, number>>(() => {
     const projectQuestions = visibleQuestions
