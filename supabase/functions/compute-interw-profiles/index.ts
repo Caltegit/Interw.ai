@@ -15,7 +15,8 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   headers: { ...corsHeaders, "Content-Type": "application/json" },
 });
 const UUID_RE = /^[0-9a-f-]{36}$/i;
-const MODEL = "openai/gpt-6-astra";
+// Modèle standard du projet (comme le scoring et les rapports).
+const MODEL = MODEL_SCORING;
 const METHODOLOGY_VERSION = "interw_profiles_v2_dedicated_questions";
 const PROFILE_KEYS = INTERW_PROFILES.map((profile) => profile.key);
 
