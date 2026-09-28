@@ -1,27 +1,23 @@
-# Réparer la durée des vidéos WebM en masse
+# Écran noir intermittent — session de Claire Nghiêm
 
-## Constat (vérifié en base)
+## Ce qui a été vérifié
+- Entretien passé ce matin (09:52–09:59), poste Castalie. Trois réponses filmées : q0 (9 Mo), q1 (5 Mo), q2 (0,7 Mo). Les fichiers sont bien présents et complets.
+- Les trois sont des WebM enregistrés par le navigateur, **sans durée inscrite** (analyse : « durée inconnue »), avec des défauts de paquets audio en tête de fichier.
+- Seules q0 et q1 sont rattachées à une réponse dans la fiche ; q2 existe mais n'est reliée à aucune réponse (non affichée).
 
-- 8 687 réponses vidéo au total : **7 553 WebM** (87 %) et 1 134 MP4.
-- Les WebM enregistrés par le navigateur (MediaRecorder) **n'inscrivent pas la durée** dans le fichier. Sans durée, le lecteur ne peut ni afficher « 0:20 / 1:30 » ni permettre un déplacement fiable — c'est pourquoi si peu de vidéos montrent le temps total.
-- La réparation unitaire déjà faite (session Hugo Voyenet) prouve la méthode : réencapsulage ffmpeg rapide, sans réencodage, qui inscrit la durée exacte.
+## Pourquoi « parfois ça marche, parfois écran noir »
+Sans durée ni index, le navigateur doit deviner la structure du fichier en le lisant. Selon le moment (fichier déjà en mémoire ou non, ordre des chargements quand on change de question, nouveau lien sécurisé), il réussit à afficher la première image… ou reste bloqué sur noir. Ce n'est pas la fiche qui est en cause : c'est le format du fichier. C'est le même problème que les autres sessions déjà réparées (ex. Hugo Voyenet).
 
-## Plan
-
-1. **Réparation par lots des WebM existants** (tâche de fond, hors de l'app) :
-   - Pour chaque fichier WebM du stockage : téléchargement, réencapsulage ffmpeg (`-c copy`, sans réencodage → rapide, qualité identique), vérification de la durée lue, renvoi du fichier réparé à la même place, original conservé dans `originals/`.
-   - Traitement par lots (ex. 200 fichiers), en commençant par les organisations actives et les sessions récentes (30 derniers jours), puis le reste.
-   - Journal d'avancement : nombre traités, réussis, échecs (fichiers illisibles laissés tels quels, originaux intacts).
-2. **Empêcher le problème à la source** : à la fin de chaque enregistrement candidat, le fichier est déjà converti/réparé côté serveur quand c'est possible — vérifier que ce chemin inscrit bien la durée pour les nouvelles vidéos, et le corriger sinon.
-3. **Vérification** : après le premier lot, contrôle à l'écran sur plusieurs fiches candidats (temps total affiché, déplacement dans la barre, lecture intacte), puis E2E recruteur après approbation.
+## Correction proposée
+1. **Réparer cette session** : convertir q0, q1, q2 en MP4 standard (durée inscrite, lecture fiable partout, Safari compris), garder les originaux de côté, rebrancher les réponses sur les MP4.
+2. **Vérifier q2** : si c'est une vraie réponse (environ 13 s), la rattacher à la bonne question pour qu'elle apparaisse dans la fiche.
+3. **Éviter que ça revienne pour les nouveaux entretiens** : à la fin de chaque entretien, convertir automatiquement les réponses en MP4 avant de générer le rapport (les anciennes vidéos ne sont pas touchées, conformément à votre refus de la réparation en masse).
 
 ## Impact
+- Étapes 1–2 : uniquement la session de Claire ; transcription, note et rapport inchangés.
+- Étape 3 : les nouveaux entretiens se lisent de façon fiable avec temps total et déplacement ; léger délai (quelques dizaines de secondes) avant disponibilité de la vidéo. Parcours candidat inchangé.
+- Après approbation : test à l'écran de la fiche de Claire, puis E2E candidat puis recruteur.
 
-- Aucun changement visuel ni de parcours : les vidéos affichent simplement leur durée et deviennent navigables.
-- Qualité vidéo inchangée (réencapsulage sans réencodage) ; originaux conservés.
-- Les 1 134 MP4 ne sont pas touchés.
-- Seule limite : les fichiers WebM corrompus ou illisibles resteront sans durée (ils seront listés).
-
-## Point d'attention
-
-Le volume (7 553 fichiers) impose un traitement par lots étalé ; les premiers résultats visibles dès le premier lot, sans attendre la fin.
+## Détails techniques
+- Conversion ffmpeg VP8/Opus → H.264/AAC `+faststart`, originaux dans `originals/`, mise à jour de `session_messages.video_segment_url`.
+- Étape 3 : conversion côté serveur déclenchée à la complétion de session (file existante `report_jobs`), bascule de l'URL seulement après réussite ; en cas d'échec, on garde le WebM.
