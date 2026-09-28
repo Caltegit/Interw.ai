@@ -95,7 +95,7 @@ export function ScoresOverviewCard({
         <div
           className={
             vertical
-              ? "grid h-full grid-cols-2 gap-3 auto-rows-fr"
+              ? "grid h-full grid-cols-2 gap-3 content-center"
               : "grid grid-cols-2 gap-4 lg:grid-cols-4"
           }
         >
@@ -149,7 +149,7 @@ function ScoreGauge({
   if (unavailable) {
     return (
       <div
-        className={`relative flex flex-row items-center justify-center ${box} h-full w-full bg-muted/30 border border-dashed border-border rounded-xl opacity-80`}
+        className={`relative flex flex-row items-center justify-center ${box} w-full bg-muted/30 border border-dashed border-border rounded-xl opacity-80`}
       >
         <div className={`relative ${circle} shrink-0 flex items-center justify-center opacity-50`}>
           <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
@@ -183,7 +183,7 @@ function ScoreGauge({
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={`relative flex flex-row items-center justify-center ${box} h-full w-full bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer`}
+      className={`relative flex flex-row items-center justify-center ${box} w-full bg-card border border-border rounded-xl hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all text-left disabled:cursor-default cursor-pointer`}
     >
       <div className={`relative ${circle} shrink-0 flex items-center justify-center`}>
         <svg className="w-full h-full -rotate-90" viewBox="0 0 96 96">
