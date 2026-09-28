@@ -48,15 +48,9 @@ export function OrgMembers({ orgId }: { orgId: string }) {
 
   const loadData = async () => {
     setLoading(true);
-    const { data: memberRows } = await supabase
-      .from("organization_members")
-      .select("user_id")
-      .eq("organization_id", orgId);
-    const memberIds = (memberRows || []).map((r: { user_id: string }) => r.user_id);
     const [membersRes, invitationsRes, orgRes, rolesRes] = await Promise.all([
-      memberIds.length
-        ? supabase.from("profiles").select("id, user_id, full_name, email").in("user_id", memberIds)
-        : supabase.from("profiles").select("id, user_id, full_name, email").eq("organization_id", orgId),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.rpc as any)("list_org_members", { _org_id: orgId }),
       supabase
         .from("organization_invitations")
         .select("id, email, status, created_at, token")
