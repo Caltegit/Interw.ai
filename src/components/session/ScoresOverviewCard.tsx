@@ -54,7 +54,7 @@ export function ScoresOverviewCard({
       (v): v is number => typeof v === "number",
     );
     if (vals.length > 0) {
-      bigFiveProjectAvg = vals.reduce((a, b, 0) => a + b, 0) / vals.length;
+      bigFiveProjectAvg = vals.reduce((a, b) => a + b, 0) / vals.length;
     }
   }
 
