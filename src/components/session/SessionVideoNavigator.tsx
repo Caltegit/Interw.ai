@@ -1017,9 +1017,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               </div>
             );
           })()}
-        </div>
 
-        <VideoTimeline videoRef={videoRef} duration={durationSec} clipKey={clipKey} compact={compact} />
+          <VideoSeekGrab videoRef={videoRef} duration={durationSec} compact={compact} />
+        </div>
 
         {!compact && current.isFollowUp && (
           <div className="flex items-center justify-center gap-2">
