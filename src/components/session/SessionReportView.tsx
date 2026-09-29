@@ -209,9 +209,6 @@ export function SessionReportView({
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const hasSignals = (Array.isArray(stats.signals) && stats.signals.length > 0)
-    || (Array.isArray(report?.red_flags) && report.red_flags.length > 0)
-    || (Array.isArray(report?.followup_questions) && report.followup_questions.length > 0);
   const verdictHeadline = stats.verdict_headline || report?.executive_summary_short || null;
   // La comparaison utilise la note finale hybride du rapport, jamais l'ancien
   // score calculé par la matrice détaillée.
