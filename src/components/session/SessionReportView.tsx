@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Loader2, Brain, Mic, User, ScrollText, LayoutDashboard, Target } from "lucide-react";
-import { ScoresOverviewCard } from "@/components/session/ScoresOverviewCard";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryClient";
@@ -210,6 +209,9 @@ export function SessionReportView({
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
+  const hasSignals = (Array.isArray(stats.signals) && stats.signals.length > 0)
+    || (Array.isArray(report?.red_flags) && report.red_flags.length > 0)
+    || (Array.isArray(report?.followup_questions) && report.followup_questions.length > 0);
   const verdictHeadline = stats.verdict_headline || report?.executive_summary_short || null;
   // La comparaison utilise la note finale hybride du rapport, jamais l'ancien
   // score calculé par la matrice détaillée.
@@ -457,45 +459,37 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className={hasSignals && report.executive_summary ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
+                  {report.executive_summary && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Bilan global</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm leading-relaxed text-muted-foreground">
+                          {report.executive_summary}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                  <SignalsCard
+                    signals={stats.signals}
+                    legacyRedFlags={report.red_flags as any}
+                    legacyFollowups={report.followup_questions as any}
+                    onGoToMessage={goToMessage}
+                    questionNumberByMessageId={questionNumberByMessageId}
+                  />
+                </div>
+                <div className="mx-auto w-full max-w-[608px]">
                   <InterwProfilesWheel
                     data={(report as any).interw_profiles}
                     averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
                     sessionId={sessionId}
                     readOnly={readOnly}
-                    size={250}
+                    size={380}
                     onInfo={() => setActiveTab("bigfive")}
                   />
-                  <ScoresOverviewCard
-                    fitScore={fitScore}
-                    personalityProfile={report.personality_profile}
-                    paraverbalAnalysis={report.paraverbal_analysis}
-                    nonverbalAnalysis={(report as any).nonverbal_analysis}
-                    audioFailed={audioFailed}
-                    projectAverages={projectAverages}
-                    onSelectTab={setActiveTab}
-                    vertical
-                  />
                 </div>
-                {report.executive_summary && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Bilan global</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {report.executive_summary}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-                <SignalsCard
-                  signals={stats.signals}
-                  legacyRedFlags={report.red_flags as any}
-                  legacyFollowups={report.followup_questions as any}
-                  onGoToMessage={goToMessage}
-                  questionNumberByMessageId={questionNumberByMessageId}
-                />
                 <CommunicationProfileCard
                   profile={stats.communication_profile}
                   onGoToMessage={goToMessage}
