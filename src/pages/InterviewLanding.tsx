@@ -23,7 +23,8 @@ export default function InterviewLanding() {
   const [project, setProject] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [candidateName, setCandidateName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [candidateEmail, setCandidateEmail] = useState("");
   const [starting, setStarting] = useState(false);
 
@@ -115,7 +116,8 @@ export default function InterviewLanding() {
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmedEmail = candidateEmail.trim();
-  const trimmedName = candidateName.trim();
+  const trimmedName =
+    firstName.trim() && lastName.trim() ? `${firstName.trim()} ${lastName.trim()}` : "";
   const trimmedJobTitle = candidateJobTitle.trim();
   const trimmedLinkedin = candidateLinkedin.trim();
   const trimmedPhone = candidatePhone.trim();
@@ -589,15 +591,29 @@ export default function InterviewLanding() {
         <Card className="overflow-hidden">
           <div className="h-1 w-full bg-primary" />
           <CardContent className="pt-8 pb-8 space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">Votre prénom/nom *</Label>
-              <Input
-                id="name"
-                placeholder="Prénom Nom"
-                value={candidateName}
-                onChange={(e) => setCandidateName(e.target.value)}
-                className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
-              />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-sm font-medium">Prénom *</Label>
+                <Input
+                  id="firstName"
+                  placeholder="Prénom"
+                  autoComplete="given-name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-sm font-medium">Nom *</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Nom"
+                  autoComplete="family-name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="h-12 rounded-lg transition-all duration-200 focus:ring-2 focus:ring-ring"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">Votre email *</Label>

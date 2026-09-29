@@ -21,7 +21,7 @@ export const DEFAULT_CANDIDATE_FIELDS: CandidateFieldsConfig = {
   phone: { enabled: false, required: false },
   job_title: { enabled: false, required: false },
   cv: { enabled: false, required: false },
-  linkedin: { enabled: false, required: false },
+  linkedin: { enabled: true, required: false },
   cover_letter: { enabled: false, required: false },
 };
 
@@ -30,7 +30,8 @@ export function mergeCandidateFields(raw: unknown): CandidateFieldsConfig {
     phone: { ...DEFAULT_CANDIDATE_FIELDS.phone },
     job_title: { ...DEFAULT_CANDIDATE_FIELDS.job_title },
     cv: { ...DEFAULT_CANDIDATE_FIELDS.cv },
-    linkedin: { ...DEFAULT_CANDIDATE_FIELDS.linkedin },
+    // Postes existants sans réglage : LinkedIn reste désactivé (le défaut ne vaut qu'à la création).
+    linkedin: { enabled: false, required: false },
     cover_letter: { ...DEFAULT_CANDIDATE_FIELDS.cover_letter },
   };
   if (raw && typeof raw === "object") {
