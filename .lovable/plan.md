@@ -1,35 +1,29 @@
-# Résumé candidat : bilan en haut, roue resserrée, encarts redondants supprimés
+# Résumé candidat — appliquer la maquette D affinée
 
-## Objectif
+## Résultat attendu
 
-Sur l'onglet Résumé d'une fiche candidat : le « Bilan global » doit être visible dès l'ouverture de la page, à la place des 4 encarts (Fit Poste / Orale / Attitude / Profil) supprimés car déjà affichés dans la barre d'onglets au-dessus. La roue « Profil Interw » est resserrée, sans grand espace vide autour.
+Sur l'onglet « Résumé » de la fiche candidat, afficher d'abord le Bilan global et les Signaux à creuser côte à côte sur ordinateur, puis la roue Profil Interw en dessous. Supprimer les quatre encarts Fit Poste / Orale / Attitude / Profil qui répètent les notes de la barre d'onglets. Sur écran étroit, Bilan, Signaux et roue se suivent verticalement.
 
-Direction choisie par l'utilisateur (prototype v1 « Bilan à droite de la roue ») : deux cartes côte à côte — roue compacte à gauche, Bilan global en grande carte à droite.
+## Réalisation
 
-## Ce qui change
-
-1. **Suppression des 4 encarts de notes** (colonne de droite actuelle). Les 4 notes restent visibles dans la barre d'onglets, inchangée.
-2. **Nouvelle disposition en deux cartes** :
-   - À gauche : carte « Profil Interw » avec la roue (composant existant, taille ~280 px), badges Dominant/Secondaire et mention « profil net / hybride » conservés ; marges internes réduites pour supprimer le blanc autour du dessin.
-   - À droite : carte « Bilan global » avec le texte de synthèse existant, hauteur alignée sur la roue.
-3. **Ce qui suit ne bouge pas** : Signaux à creuser, Communication & posture, Soft skills, vidéos, et la grande roue de l'onglet Profil.
-4. En dessous de l'écran large, les deux cartes s'empilent (roue puis bilan).
+1. Réorganiser uniquement l'onglet Résumé : Bilan global et Signaux dans une grille à deux colonnes sur grand écran, puis Profil Interw en dessous, sur toute la largeur disponible.
+2. Garder la roue et ses huit noms lisibles, ses couleurs, ses badges et son bouton d'information ; limiter la largeur du dessin à environ 560 px et le centrer dans son espace sans grand blanc autour. Ne pas modifier la grande roue de l'onglet Profil.
+3. Retirer les quatre encarts redondants du résumé ; garder les notes et leurs liens dans la barre d'onglets. Conserver le reste du résumé, la fiche, le lecteur vidéo et les autres onglets.
+4. Si aucun signal n'est disponible, afficher le bilan seul sans colonne vide.
 
 ## Impact
 
-- Affichage uniquement : aucun changement de données, calculs, scoring, rapports ni parcours candidat.
-- Les 4 notes deviennent cliquables uniquement via la barre d'onglets (les encarts supprimés étaient aussi cliquables) — rien n'est perdu.
-- Risque de casse faible ; points à surveiller : lisibilité des 8 noms autour de la roue resserrée, et l'empilement sur fenêtre étroite.
-- Publication nécessaire pour interw.com ; d'ici là, visible dans l'aperçu.
+- **Application :** modification d'affichage limitée à la fiche candidat ; risque de compilation faible. Aucun changement de données, de calcul, de scoring ou de parcours candidat.
+- **Lisibilité :** vérifier la longueur variable du bilan et des signaux, les huit libellés de la roue et la disposition sur petit écran.
+- **Publication :** les changements seront d'abord visibles dans l'aperçu ; après les vérifications, publier la mise à jour pour la rendre visible sur interw.com.
+
+## Vérifications après approbation
+
+- Contrôler visuellement une fiche avec rapport sur ordinateur et sur fenêtre étroite : Bilan et Signaux en premier, roue en dessous, aucune note en double, aucune coupure ni chevauchement.
+- Effectuer les tests de bout en bout candidat puis recruteur. Si l'outil de tests reste indisponible, le signaler et effectuer les contrôles manuels possibles avant publication.
+- Vérifier l'absence d'erreur de compilation et publier la mise à jour demandée.
 
 ## Détails techniques
 
-- `src/components/session/SessionReportView.tsx` : onglet résumé — grille passe de `lg:grid-cols-[minmax(0,1fr)_280px]` (roue + colonne de 4 notes) à `lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]` (roue + Bilan global) ; la carte Bilan global remonte dans cette grille ; suppression du rendu vertical de `ScoresOverviewCard` dans cet onglet.
-- `src/components/session/InterwProfilesWheel.tsx` : réduction des marges internes de la carte (le dessin occupe la place), taille du libellé ajustée si besoin pour rester lisible à 280 px.
-- `src/components/session/ScoresOverviewCard.tsx` : le mode vertical n'est plus utilisé par le résumé ; conserver le mode horizontal utilisé ailleurs.
-
-## Vérifications après modification
-
-- Contrôle à l'écran sur une fiche récente (Diane de La Rivière, /sessions/950c016e) : Bilan global visible sans défiler dès l'ouverture, roue complète avec ses 8 noms, aucune erreur console.
-- Contrôle sur une fenêtre plus étroite : empilement propre, pas de débordement.
-- Test E2E candidat puis recruteur, conformément à la règle en vigueur (le problème de configuration des tests automatiques reste bloquant ; contrôle manuel à l'écran en attendant).
+- `SessionReportView.tsx` : réordonner les éléments de l'onglet `summary`, retirer `ScoresOverviewCard` de cet onglet, et conserver `SignalsCard` ainsi que ses liens vers les vidéos.
+- `InterwProfilesWheel.tsx` : n'ajuster l'espacement ou le dimensionnement que pour l'affichage du résumé, sans changer celui de l'onglet Profil.
