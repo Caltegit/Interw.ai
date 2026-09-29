@@ -459,36 +459,36 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <div className={hasSignals && report.executive_summary ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
-                  {report.executive_summary && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Bilan global</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {report.executive_summary}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                  <SignalsCard
-                    signals={stats.signals}
-                    legacyRedFlags={report.red_flags as any}
-                    legacyFollowups={report.followup_questions as any}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-                </div>
-                <div className="mx-auto w-full max-w-[608px]">
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
                   <InterwProfilesWheel
                     data={(report as any).interw_profiles}
                     averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
                     sessionId={sessionId}
                     readOnly={readOnly}
-                    size={380}
+                    size={340}
                     onInfo={() => setActiveTab("bigfive")}
                   />
+                  <div className="space-y-4">
+                    {report.executive_summary && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">Bilan global</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            {report.executive_summary}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    <SignalsCard
+                      signals={stats.signals}
+                      legacyRedFlags={report.red_flags as any}
+                      legacyFollowups={report.followup_questions as any}
+                      onGoToMessage={goToMessage}
+                      questionNumberByMessageId={questionNumberByMessageId}
+                    />
+                  </div>
                 </div>
                 <CommunicationProfileCard
                   profile={stats.communication_profile}
