@@ -209,9 +209,6 @@ export function SessionReportView({
 
   const stats = (report?.stats as Record<string, any>) ?? {};
   const criteriaScores = (report?.criteria_scores as Record<string, any>) ?? {};
-  const hasSignals = (Array.isArray(stats.signals) && stats.signals.length > 0)
-    || (Array.isArray(report?.red_flags) && report.red_flags.length > 0)
-    || (Array.isArray(report?.followup_questions) && report.followup_questions.length > 0);
   const verdictHeadline = stats.verdict_headline || report?.executive_summary_short || null;
   // La comparaison utilise la note finale hybride du rapport, jamais l'ancien
   // score calculé par la matrice détaillée.
@@ -459,36 +456,36 @@ export function SessionReportView({
             )}
             {report ? (
               <>
-                <div className={hasSignals && report.executive_summary ? "grid gap-4 lg:grid-cols-2" : "space-y-4"}>
-                  {report.executive_summary && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">Bilan global</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm leading-relaxed text-muted-foreground">
-                          {report.executive_summary}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                  <SignalsCard
-                    signals={stats.signals}
-                    legacyRedFlags={report.red_flags as any}
-                    legacyFollowups={report.followup_questions as any}
-                    onGoToMessage={goToMessage}
-                    questionNumberByMessageId={questionNumberByMessageId}
-                  />
-                </div>
-                <div className="mx-auto w-full max-w-[608px]">
+                <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
                   <InterwProfilesWheel
                     data={(report as any).interw_profiles}
                     averages={projectAverages && projectAverages.count >= 3 ? projectAverages.interw : undefined}
                     sessionId={sessionId}
                     readOnly={readOnly}
-                    size={380}
+                    size={340}
                     onInfo={() => setActiveTab("bigfive")}
                   />
+                  <div className="space-y-4">
+                    {report.executive_summary && (
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">Bilan global</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm leading-relaxed text-muted-foreground">
+                            {report.executive_summary}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    <SignalsCard
+                      signals={stats.signals}
+                      legacyRedFlags={report.red_flags as any}
+                      legacyFollowups={report.followup_questions as any}
+                      onGoToMessage={goToMessage}
+                      questionNumberByMessageId={questionNumberByMessageId}
+                    />
+                  </div>
                 </div>
                 <CommunicationProfileCard
                   profile={stats.communication_profile}
