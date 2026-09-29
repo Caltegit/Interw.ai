@@ -24,7 +24,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Link2, Volume2, Loader2, Settings2, Mic, User, UserRound, ChevronDown, Mail, Star } from "lucide-react";
 import {
   CANDIDATE_FIELD_KEYS,
   CANDIDATE_FIELD_LABELS,
@@ -917,6 +917,18 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                         </p>
                       </div>
                       <div className="space-y-2">
+                        {["Prénom", "Nom", "E-mail"].map((label) => (
+                          <div
+                            key={label}
+                            className="flex items-center justify-between gap-4 rounded-md border border-border/60 px-3 py-2"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Switch checked disabled aria-label={label} />
+                              <Label className="text-sm font-normal cursor-default">{label}</Label>
+                            </div>
+                            <Star className="h-4 w-4 fill-primary text-primary opacity-60" aria-label="Obligatoire" />
+                          </div>
+                        ))}
                         {CANDIDATE_FIELD_KEYS.map((key) => {
                           const cfg = candidateFields[key];
                           return (
@@ -937,13 +949,18 @@ export function ProjectForm({ mode, initial, onSubmit, saving, header, submitLab
                                 </Label>
                               </div>
                               {cfg.enabled && (
-                                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                                  <Checkbox
-                                    checked={cfg.required}
-                                    onCheckedChange={(v) => setCandidateField(key, { required: !!v })}
+                                <button
+                                  type="button"
+                                  onClick={() => setCandidateField(key, { required: !cfg.required })}
+                                  aria-pressed={cfg.required}
+                                  aria-label={cfg.required ? "Obligatoire" : "Facultatif"}
+                                  title={cfg.required ? "Obligatoire" : "Facultatif"}
+                                  className="rounded p-1 hover:bg-muted"
+                                >
+                                  <Star
+                                    className={cfg.required ? "h-4 w-4 fill-primary text-primary" : "h-4 w-4 text-muted-foreground"}
                                   />
-                                  Champ obligatoire
-                                </label>
+                                </button>
                               )}
                             </div>
                           );
