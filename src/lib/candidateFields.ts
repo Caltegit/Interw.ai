@@ -21,7 +21,7 @@ export const DEFAULT_CANDIDATE_FIELDS: CandidateFieldsConfig = {
   phone: { enabled: false, required: false },
   job_title: { enabled: false, required: false },
   cv: { enabled: false, required: false },
-  linkedin: { enabled: false, required: false },
+  linkedin: { enabled: true, required: false },
   cover_letter: { enabled: false, required: false },
 };
 
