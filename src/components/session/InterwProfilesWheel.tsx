@@ -153,8 +153,11 @@ export function InterwProfilesWheel({
                     {(isDom || isSec) && (
                       <path d={arc(cx, cy, R + 6, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
-                     <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
-                      {evaluated ? p.label : `${p.label} —`}
+                    <text x={lx} y={ly - 10} textAnchor="middle" dominantBaseline="middle" fontSize={18} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
+                      {p.label}
+                    </text>
+                    <text x={lx} y={ly + 12} textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight={700} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"} style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {evaluated ? `${Math.round(score)} %` : "—"}
                     </text>
                   </g>
                 );
