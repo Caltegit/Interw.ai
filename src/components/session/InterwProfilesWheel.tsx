@@ -137,7 +137,7 @@ export function InterwProfilesWheel({
                 const evaluated = typeof score === "number";
                 const isDom = rank?.dominant.key === p.key;
                 const isSec = rank?.secondary.key === p.key;
-                const [lx, ly] = polar(cx, cy, R + 34, i * STEP);
+                const [lx, ly] = polar(cx, cy, R + 38, i * STEP);
                 return (
                   <g key={p.key} onMouseEnter={() => setHover(i)} className="cursor-pointer">
                     <path d={wedge(cx, cy, r0, R, a0, a1)} fill={evaluated ? col(p.color, hover === i ? 0.22 : 0.12) : "hsl(var(--muted))"} stroke="hsl(var(--background))" strokeWidth={2} />
