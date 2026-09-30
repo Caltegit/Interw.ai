@@ -137,7 +137,7 @@ export function InterwProfilesWheel({
                 const evaluated = typeof score === "number";
                 const isDom = rank?.dominant.key === p.key;
                 const isSec = rank?.secondary.key === p.key;
-                const [lx, ly] = polar(cx, cy, R + 34, i * STEP);
+                const [lx, ly] = polar(cx, cy, R + 38, i * STEP);
                 return (
                   <g key={p.key} onMouseEnter={() => setHover(i)} className="cursor-pointer">
                     <path d={wedge(cx, cy, r0, R, a0, a1)} fill={evaluated ? col(p.color, hover === i ? 0.22 : 0.12) : "hsl(var(--muted))"} stroke="hsl(var(--background))" strokeWidth={2} />
@@ -151,10 +151,13 @@ export function InterwProfilesWheel({
                       className="transition-all duration-700"
                     />}
                     {(isDom || isSec) && (
-                      <path d={arc(cx, cy, R + 6, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
+                      <path d={arc(cx, cy, R - 16, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
-                     <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize={13} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"}>
-                      {evaluated ? p.label : `${p.label} —`}
+                    <text x={lx} y={ly - 10} textAnchor="middle" dominantBaseline="middle" fontSize={18} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"} paintOrder="stroke" stroke="hsl(var(--background))" strokeWidth={4} strokeLinejoin="round">
+                      {p.label}
+                    </text>
+                    <text x={lx} y={ly + 12} textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight={700} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"} paintOrder="stroke" stroke="hsl(var(--background))" strokeWidth={4} strokeLinejoin="round" style={{ fontVariantNumeric: "tabular-nums" }}>
+                      {evaluated ? `${Math.round(score)} %` : "—"}
                     </text>
                   </g>
                 );
