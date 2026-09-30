@@ -151,7 +151,7 @@ export function InterwProfilesWheel({
                       className="transition-all duration-700"
                     />}
                     {(isDom || isSec) && (
-                      <path d={arc(cx, cy, R - 5, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
+                      <path d={arc(cx, cy, R - 16, a0 + 0.03, a1 - 0.03)} fill="none" stroke={col(p.color)} strokeWidth={isDom ? 7 : 3} strokeLinecap="round" />
                     )}
                     <text x={lx} y={ly - 10} textAnchor="middle" dominantBaseline="middle" fontSize={18} fontWeight={isDom ? 700 : 600} fill={evaluated ? col(p.color) : "hsl(var(--muted-foreground))"} paintOrder="stroke" stroke="hsl(var(--background))" strokeWidth={4} strokeLinejoin="round">
                       {p.label}
