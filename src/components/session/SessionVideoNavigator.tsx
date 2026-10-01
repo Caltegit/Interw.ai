@@ -21,6 +21,8 @@ export interface SessionVideoClip {
   questionHint?: string | null;
   isFollowUp: boolean;
   messageId?: string;
+  /** Durée mesurée côté candidat (les WebM ne la déclarent pas toujours). */
+  durationSeconds?: number | null;
 }
 
 export interface SessionVideoNavigatorHandle {
