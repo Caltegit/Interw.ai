@@ -250,7 +250,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setDurationSec(v.duration);
       applyPendingSeek(v, v.duration);
     } else {
-      setDurationSec(null);
+      // WebM sans durée déclarée : on utilise la durée mesurée côté candidat.
+      setDurationSec(clips[index]?.durationSeconds ?? null);
       pendingSeekRef.current = 0;
     }
     if (shouldAutoPlay && !userPausedRef.current) safePlay();
@@ -265,7 +266,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     const targetUrl = getClipUrl(clips[index]);
     if (!targetUrl) return;
-    setDurationSec(null);
+    // Durée connue dès l'ouverture grâce à la mesure faite côté candidat ;
+    // le navigateur la remplacera par la valeur exacte s'il la connaît.
+    setDurationSec(clips[index]?.durationSeconds ?? null);
     fixingDurationRef.current = false;
     userPausedRef.current = false;
     setMediaError(null);
