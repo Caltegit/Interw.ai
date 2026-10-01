@@ -2111,12 +2111,12 @@ export default function InterviewStart() {
         questionRecorderRef.current = null;
         questionAudioRecorderRef.current = null;
         setIsRecordingActive(false);
-        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null, durationSeconds: null };
       }
       if (!recorder || recorder.state === "inactive") {
         activeRecorderMetaRef.current = null;
         setIsRecordingActive(false);
-        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null, durationSeconds: null };
       }
 
       // Arrêt simultané vidéo + audio.
@@ -2152,7 +2152,7 @@ export default function InterviewStart() {
       const chunkPathsLocal = [...(activeRecording?.uploadedChunkPaths ?? [])].sort((a, b) => a.localeCompare(b));
 
       if (videoBufferLocal.length === 0) {
-        return { videoUrl: null, audioUrl: null, thumbnailUrl: null };
+        return { videoUrl: null, audioUrl: null, thumbnailUrl: null, durationSeconds: null };
       }
 
       // IMPORTANT : utiliser le MIME RÉEL produit par MediaRecorder. Sur
@@ -2292,7 +2292,7 @@ export default function InterviewStart() {
         });
       }
       const audioUrl = await audioUploadPromise;
-      return { videoUrl, audioUrl, thumbnailUrl };
+      return { videoUrl, audioUrl, thumbnailUrl, durationSeconds };
     },
     [trackBackground],
   );
