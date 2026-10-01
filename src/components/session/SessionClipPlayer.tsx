@@ -8,6 +8,8 @@ import { VideoSeekGrab } from "@/components/session/VideoSeekGrab";
 
 interface Props {
   url: string;
+  /** Durée mesurée côté candidat, affichée dès l'ouverture (les WebM ne la déclarent pas toujours). */
+  initialDuration?: number | null;
   /** Titre court affiché en overlay bas (tronqué à 30 caractères). */
   questionTitle?: string | null;
   /** Texte long de la question — utilisé uniquement pour générer le nom de fichier MP4. */
@@ -48,6 +50,7 @@ function slugForFilename(text: string, fallback: string): string {
  */
 export function SessionClipPlayer({
   url,
+  initialDuration,
   questionTitle,
   questionText,
   questionIndex,
@@ -66,7 +69,7 @@ export function SessionClipPlayer({
   const [rate, setRate] = useState(1);
   const rateRef = useRef(rate);
   rateRef.current = rate;
-  const [durationSec, setDurationSec] = useState<number | null>(null);
+  const [durationSec, setDurationSec] = useState<number | null>(initialDuration ?? null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const hideOverlayTimerRef = useRef<number | null>(null);
@@ -159,7 +162,7 @@ export function SessionClipPlayer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    setDurationSec(null);
+    setDurationSec(initialDuration ?? null);
     setIsPlaying(false);
     setOverlayVisible(true);
     const apply = () => {
