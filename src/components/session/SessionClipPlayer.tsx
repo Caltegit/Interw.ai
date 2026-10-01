@@ -154,7 +154,7 @@ export function SessionClipPlayer({
     if (!v) return;
     try { v.playbackRate = rateRef.current; } catch { /* noop */ }
     if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-    else setDurationSec(null);
+    else setDurationSec(initialDuration ?? null);
     if (autoPlayRef.current) safePlay();
   };
 
