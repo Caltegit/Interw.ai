@@ -67,7 +67,7 @@ function scoreColor(score: number | null | undefined) {
 
 export function SessionCard({ session, report, questions, onDecisionChange, decisionByName, selected, onToggleSelect, noteValue, noteSaving, onNoteChange, hasReport }: Props) {
   const [clips, setClips] = useState<
-    { url: string; questionId: string | null; isFollowUp: boolean }[]
+    { url: string; questionId: string | null; isFollowUp: boolean; durationSeconds: number | null }[]
   >([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -82,7 +82,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
     (async () => {
       const { data } = await supabase
         .from("session_messages")
-        .select("video_segment_url, question_id, is_follow_up, timestamp, role")
+        .select("video_segment_url, question_id, is_follow_up, timestamp, role, video_duration_seconds")
         .eq("session_id", session.id)
         .eq("role", "candidate")
         .not("video_segment_url", "is", null)
@@ -94,6 +94,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
           url: m.video_segment_url as string,
           questionId: m.question_id as string | null,
           isFollowUp: !!m.is_follow_up,
+          durationSeconds: (m.video_duration_seconds as number | null) ?? null,
         }));
       setClips(list);
       setLoading(false);
@@ -212,6 +213,7 @@ export function SessionCard({ session, report, questions, onDecisionChange, deci
             <SessionClipPlayer
               key={current.url}
               url={current.url}
+              initialDuration={current.durationSeconds}
               questionTitle={currentQ?.title ?? null}
               questionText={currentQ?.content ?? ""}
               questionIndex={index + 1}

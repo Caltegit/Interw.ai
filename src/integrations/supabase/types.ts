@@ -1854,6 +1854,7 @@ export type Database = {
           transcript_segments: Json | null
           transcription_status: string
           video_chunks_manifest_url: string | null
+          video_duration_seconds: number | null
           video_segment_url: string | null
         }
         Insert: {
@@ -1872,6 +1873,7 @@ export type Database = {
           transcript_segments?: Json | null
           transcription_status?: string
           video_chunks_manifest_url?: string | null
+          video_duration_seconds?: number | null
           video_segment_url?: string | null
         }
         Update: {
@@ -1890,6 +1892,7 @@ export type Database = {
           transcript_segments?: Json | null
           transcription_status?: string
           video_chunks_manifest_url?: string | null
+          video_duration_seconds?: number | null
           video_segment_url?: string | null
         }
         Relationships: [
@@ -2390,6 +2393,7 @@ export type Database = {
           _question_id?: string
           _role: string
           _token: string
+          _video_duration_seconds?: number
           _video_segment_url?: string
         }
         Returns: string

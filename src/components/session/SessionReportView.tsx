@@ -185,6 +185,7 @@ export function SessionReportView({
           questionHint: (projectQ?.hint_text as string) ?? null,
           isFollowUp: !!m.is_follow_up,
           messageId: m.id as string,
+          durationSeconds: (m.video_duration_seconds as number | null) ?? null,
         };
       });
   }, [candidateVideos, visibleQuestions]);

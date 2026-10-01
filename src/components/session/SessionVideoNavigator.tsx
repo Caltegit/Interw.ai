@@ -21,6 +21,8 @@ export interface SessionVideoClip {
   questionHint?: string | null;
   isFollowUp: boolean;
   messageId?: string;
+  /** Durée mesurée côté candidat (les WebM ne la déclarent pas toujours). */
+  durationSeconds?: number | null;
 }
 
 export interface SessionVideoNavigatorHandle {
@@ -248,7 +250,8 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
       setDurationSec(v.duration);
       applyPendingSeek(v, v.duration);
     } else {
-      setDurationSec(null);
+      // WebM sans durée déclarée : on utilise la durée mesurée côté candidat.
+      setDurationSec(clips[index]?.durationSeconds ?? null);
       pendingSeekRef.current = 0;
     }
     if (shouldAutoPlay && !userPausedRef.current) safePlay();
@@ -263,7 +266,9 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
     if (!v) return;
     const targetUrl = getClipUrl(clips[index]);
     if (!targetUrl) return;
-    setDurationSec(null);
+    // Durée connue dès l'ouverture grâce à la mesure faite côté candidat ;
+    // le navigateur la remplacera par la valeur exacte s'il la connaît.
+    setDurationSec(clips[index]?.durationSeconds ?? null);
     fixingDurationRef.current = false;
     userPausedRef.current = false;
     setMediaError(null);
@@ -739,6 +744,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // Le chargement des métadonnées réussit presque toujours avant
               // l'échec de décodage ; remettre le compteur à zéro rendait le
               // nombre de tentatives infini.
+            }}
+            onDurationChange={(e) => {
+              // Les WebM MediaRecorder déclarent souvent une durée infinie au
+              // chargement ; le navigateur annonce la durée réelle plus tard
+              // via cet événement. On la capte dès qu'elle existe.
+              const d = e.currentTarget.duration;
+              if (Number.isFinite(d) && d > 0) setDurationSec(d);
             }}
             onError={(e) => {
               const err = e.currentTarget.error;

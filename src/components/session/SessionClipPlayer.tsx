@@ -8,6 +8,8 @@ import { VideoSeekGrab } from "@/components/session/VideoSeekGrab";
 
 interface Props {
   url: string;
+  /** Durée mesurée côté candidat, affichée dès l'ouverture (les WebM ne la déclarent pas toujours). */
+  initialDuration?: number | null;
   /** Titre court affiché en overlay bas (tronqué à 30 caractères). */
   questionTitle?: string | null;
   /** Texte long de la question — utilisé uniquement pour générer le nom de fichier MP4. */
@@ -48,6 +50,7 @@ function slugForFilename(text: string, fallback: string): string {
  */
 export function SessionClipPlayer({
   url,
+  initialDuration,
   questionTitle,
   questionText,
   questionIndex,
@@ -66,7 +69,7 @@ export function SessionClipPlayer({
   const [rate, setRate] = useState(1);
   const rateRef = useRef(rate);
   rateRef.current = rate;
-  const [durationSec, setDurationSec] = useState<number | null>(null);
+  const [durationSec, setDurationSec] = useState<number | null>(initialDuration ?? null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [overlayVisible, setOverlayVisible] = useState(true);
   const hideOverlayTimerRef = useRef<number | null>(null);
@@ -151,7 +154,7 @@ export function SessionClipPlayer({
     if (!v) return;
     try { v.playbackRate = rateRef.current; } catch { /* noop */ }
     if (Number.isFinite(v.duration)) setDurationSec(v.duration);
-    else setDurationSec(null);
+    else setDurationSec(initialDuration ?? null);
     if (autoPlayRef.current) safePlay();
   };
 
@@ -159,7 +162,7 @@ export function SessionClipPlayer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    setDurationSec(null);
+    setDurationSec(initialDuration ?? null);
     setIsPlaying(false);
     setOverlayVisible(true);
     const apply = () => {
@@ -297,6 +300,13 @@ export function SessionClipPlayer({
           const d = e.currentTarget.duration;
           if (Number.isFinite(d)) setDurationSec(d);
           else fixDuration();
+        }}
+        onDurationChange={(e) => {
+          // Les WebM MediaRecorder déclarent souvent une durée infinie au
+          // chargement ; le navigateur annonce la durée réelle plus tard via
+          // cet événement. On la capte dès qu'elle existe.
+          const d = e.currentTarget.duration;
+          if (Number.isFinite(d) && d > 0) setDurationSec(d);
         }}
         onEnded={() => {
           setIsPlaying(false);
