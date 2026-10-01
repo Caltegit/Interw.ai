@@ -740,6 +740,13 @@ export const SessionVideoNavigator = forwardRef<SessionVideoNavigatorHandle, Pro
               // l'échec de décodage ; remettre le compteur à zéro rendait le
               // nombre de tentatives infini.
             }}
+            onDurationChange={(e) => {
+              // Les WebM MediaRecorder déclarent souvent une durée infinie au
+              // chargement ; le navigateur annonce la durée réelle plus tard
+              // via cet événement. On la capte dès qu'elle existe.
+              const d = e.currentTarget.duration;
+              if (Number.isFinite(d) && d > 0) setDurationSec(d);
+            }}
             onError={(e) => {
               const err = e.currentTarget.error;
               const codeMap: Record<number, string> = {
