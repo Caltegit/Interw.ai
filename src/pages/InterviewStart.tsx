@@ -2872,11 +2872,13 @@ export default function InterviewStart() {
         let videoUrl: string | null = null;
         let audioUrl: string | null = null;
         let thumbnailUrl: string | null = null;
+        let videoDurationSeconds: number | null = null;
         try {
           const urls = await stopAndUploadQuestionVideo(sessionId, questionIdx);
           videoUrl = urls.videoUrl;
           audioUrl = urls.audioUrl;
           thumbnailUrl = urls.thumbnailUrl;
+          videoDurationSeconds = urls.durationSeconds;
         } catch (e) {
           logger.error("interview_upload_failed", {
             sessionId,
@@ -2891,6 +2893,7 @@ export default function InterviewStart() {
             questionId: questionIdSnapshot,
             videoSegmentUrl: videoUrl,
             audioSegmentUrl: audioUrl,
+            videoDurationSeconds,
           });
         try {
           await insertOnce();
@@ -3379,10 +3382,12 @@ export default function InterviewStart() {
       const questionIdx = currentQuestionIndex;
       let questionVideoUrl: string | null = null;
       let questionAudioUrl: string | null = null;
+      let questionVideoDuration: number | null = null;
       if (session?.id) {
         const urls = await stopAndUploadQuestionVideo(session.id, questionIdx);
         questionVideoUrl = urls.videoUrl;
         questionAudioUrl = urls.audioUrl;
+        questionVideoDuration = urls.durationSeconds;
       }
 
       // 3. Persist a marker message so the report knows the question was skipped
@@ -3398,6 +3403,7 @@ export default function InterviewStart() {
             questionId: questions[questionIdx]?.id || null,
             videoSegmentUrl: questionVideoUrl,
             audioSegmentUrl: questionAudioUrl,
+            videoDurationSeconds: questionVideoDuration,
           });
         } catch {
           // non-bloquant
