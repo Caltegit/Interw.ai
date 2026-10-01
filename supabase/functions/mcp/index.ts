@@ -176,7 +176,7 @@ var get_transcript_default = defineTool4({
       return { content: [{ type: "text", text: "Non authentifi\xE9" }], isError: true };
     }
     const supabase = supabaseForUser(ctx);
-    const { data, error } = await supabase.from("session_messages").select("*").eq("session_id", session_id).order("created_at", { ascending: true }).limit(200);
+    const { data, error } = await supabase.from("session_messages").select("id, role, content, timestamp, question_id, is_follow_up, transcription_status, transcribed_at").eq("session_id", session_id).order("timestamp", { ascending: true }).limit(200);
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     return {
       content: [{ type: "text", text: JSON.stringify(data ?? []) }],

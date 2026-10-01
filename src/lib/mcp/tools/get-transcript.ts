@@ -17,9 +17,9 @@ export default defineTool({
     const supabase = supabaseForUser(ctx);
     const { data, error } = await supabase
       .from("session_messages")
-      .select("*")
+      .select("id, role, content, timestamp, question_id, is_follow_up, transcription_status, transcribed_at")
       .eq("session_id", session_id)
-      .order("created_at", { ascending: true })
+      .order("timestamp", { ascending: true })
       .limit(200);
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     return {
