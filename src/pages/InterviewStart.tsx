@@ -512,7 +512,7 @@ export default function InterviewStart() {
       sessionId: string,
       role: "ai" | "candidate",
       content: string,
-      options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean },
+      options?: { questionId?: string | null; videoSegmentUrl?: string | null; audioSegmentUrl?: string | null; isFollowUp?: boolean; videoDurationSeconds?: number | null },
     ) => {
       // Mode démo : on n'écrit aucun message en base.
       if (isDemoRef.current) return;
@@ -524,6 +524,7 @@ export default function InterviewStart() {
         _is_follow_up: options?.isFollowUp ?? false,
         _video_segment_url: options?.videoSegmentUrl ?? null,
         _audio_segment_url: options?.audioSegmentUrl ?? null,
+        _video_duration_seconds: options?.videoDurationSeconds ?? null,
       });
 
       if (error) {
@@ -2092,10 +2093,16 @@ export default function InterviewStart() {
     async (
       sessionId: string,
       questionIndex: number,
-    ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null }> => {
+    ): Promise<{ videoUrl: string | null; audioUrl: string | null; thumbnailUrl: string | null; durationSeconds: number | null }> => {
       const activeRecording = activeQuestionRecordingRef.current;
       const recorder = activeRecording?.recorder ?? questionRecorderRef.current;
       const audioRecorder = activeRecording?.audioRecorder ?? questionAudioRecorderRef.current;
+      // Durée mesurée côté candidat : les WebM MediaRecorder ne déclarent pas
+      // leur durée, on la calcule donc au moment de l'arrêt.
+      const recordingStartedAt = activeRecorderMetaRef.current?.startedAt ?? null;
+      const durationSeconds = recordingStartedAt
+        ? Math.max(1, Math.round((Date.now() - recordingStartedAt) / 1000))
+        : null;
 
       // Mode démo : on stoppe les recorders proprement mais aucun upload.
       if (isDemoRef.current) {
