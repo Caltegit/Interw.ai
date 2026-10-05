@@ -1,0 +1,17 @@
+# Interw
+
+> Interw est une plateforme d'entretiens vidéo menés par une IA pour le recrutement. Une API d'export en lecture seule donne accès aux postes, questions, critères, entretiens, transcriptions, rapports et vidéos.
+
+## API
+
+- [API d'export (Markdown)](https://interw.ai/docs/export-api.md): référence complète — authentification par entête `x-api-key`, actions `stats`, `postes`, `sessions`, `session`, pagination, erreurs, exemple Convex.
+
+## Résumé rapide
+
+- Adresse : `https://qxszgsxdktnwqabsdfvw.supabase.co/functions/v1/export-api`
+- `GET ?action=stats` — chiffres globaux
+- `GET ?action=postes[&project_id=&organization_id=&limit=&offset=]` — postes avec `questions` et `evaluation_criteria` (trier les questions par `order_index`)
+- `GET ?action=sessions[&status=&since=&project_id=&organization_id=&limit=&offset=]` — entretiens + synthèse du rapport
+- `GET ?action=session&id=<uuid>` — échanges triés, rapport, transcription, liens vidéo signés valables 6 h
+- Entête obligatoire : `x-api-key: $INTERW_API_KEY`
+- `limit` maximum 500 ; boucler sur `offset` jusqu'à recevoir moins de `limit` éléments
