@@ -14,3 +14,5 @@
 - [x] Résumé candidat : maquette D affinée — Bilan global et Signaux en premier, roue dessous, notes redondantes supprimées (plan approuvé 2026-09-29).
 - [ ] Tests automatiques (E2E) : bloqués — `playwright.config.ts` attend le module `lovable-agent-playwright-config`, absent des registres publics (le paquet public du même nom est un espace réservé sans le sous-module `./config`). À rétablir côté Lovable.
 - [x] Durée totale des vidéos affichée dès l'ouverture de la fiche : durée mesurée côté candidat et stockée (`session_messages.video_duration_seconds` via `candidate_insert_message`), utilisée par les deux lecteurs ; écouteur `durationchange` en secours. Reste à faire à la prochaine publication : déployer puis exécuter une fois `backfill-video-durations` (durées des 9 334 vidéos existantes via les manifests de chunks), ce qui déploiera aussi le correctif du connecteur MCP.
+
+- [x] Documentation API d export (humain + llms.txt)
