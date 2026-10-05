@@ -100,6 +100,73 @@ Deno.serve(async (req) => {
       return json({ data, limit, offset });
     }
 
+    if (action === "orgs") {
+      let q = db.from("organizations").select("*")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+      if (orgId) q = q.eq("id", orgId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return json({ data, limit, offset });
+    }
+
+    if (action === "members") {
+      let mq = db.from("organization_members").select("organization_id, user_id, created_at")
+        .order("created_at", { ascending: true })
+        .range(offset, offset + limit - 1);
+      if (orgId) mq = mq.eq("organization_id", orgId);
+      const { data: mem, error } = await mq;
+      if (error) throw error;
+      const ids = [...new Set((mem ?? []).map((m) => m.user_id))];
+      const [profs, roles, owners] = await Promise.all([
+        ids.length ? db.from("profiles").select("user_id, email, full_name").in("user_id", ids) : { data: [] },
+        ids.length ? db.from("user_roles").select("user_id, role, organization_id").in("user_id", ids) : { data: [] },
+        db.from("organizations").select("id, owner_id"),
+      ]);
+      const prof = new Map((profs.data ?? []).map((p: any) => [p.user_id, p]));
+      const ownerOf = new Map((owners.data ?? []).map((o: any) => [o.id, o.owner_id]));
+      const lastSignIn = new Map<string, string | null>();
+      await Promise.all(ids.map(async (uid) => {
+        const { data } = await db.auth.admin.getUserById(uid);
+        lastSignIn.set(uid, data?.user?.last_sign_in_at ?? null);
+      }));
+      const rows: unknown[] = (mem ?? []).map((m) => {
+        const r = (roles.data ?? []).find((x: any) => x.user_id === m.user_id && x.organization_id === m.organization_id);
+        const role = ownerOf.get(m.organization_id) === m.user_id ? "owner" : (r as any)?.role ?? "member";
+        const p: any = prof.get(m.user_id);
+        return {
+          status: "active", organization_id: m.organization_id, user_id: m.user_id,
+          email: p?.email ?? null, full_name: p?.full_name ?? null, role, language: null,
+          created_at: m.created_at, last_sign_in_at: lastSignIn.get(m.user_id) ?? null,
+        };
+      });
+      // Invitations en attente : ajoutées sur la première page uniquement.
+      if (offset === 0) {
+        let iq = db.from("organization_invitations")
+          .select("organization_id, email, invited_by, created_at")
+          .eq("status", "pending");
+        if (orgId) iq = iq.eq("organization_id", orgId);
+        const { data: inv } = await iq;
+        for (const i of inv ?? []) {
+          rows.push({
+            status: "invited", organization_id: i.organization_id, email: i.email,
+            role: "member", invited_at: i.created_at, invited_by: i.invited_by,
+          });
+        }
+      }
+      return json({ data: rows, limit, offset });
+    }
+
+    if (action === "users") {
+      const ids = (p.get("ids") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+      if (!ids.length) return json({ error: "ids requis" }, 400);
+      if (ids.length > 100) return json({ error: "100 ids maximum" }, 400);
+      if (ids.some((i) => !UUID.test(i))) return json({ error: "ids invalides" }, 400);
+      const { data, error } = await db.from("profiles").select("user_id, email, full_name").in("user_id", ids);
+      if (error) throw error;
+      return json({ data: (data ?? []).map((u) => ({ id: u.user_id, email: u.email, full_name: u.full_name })) });
+    }
+
     if (action === "session") {
       const id = p.get("id");
       if (!id || !UUID.test(id)) return json({ error: "id requis" }, 400);
@@ -112,8 +179,30 @@ Deno.serve(async (req) => {
         db.from("transcripts").select("full_text, word_count, duration_seconds, language").eq("session_id", id).maybeSingle(),
       ]);
       if (!s.data) return json({ error: "Session introuvable" }, 404);
-      const { token: _t, ...session } = s.data as Record<string, unknown>;
+      const { token: _t, ...session } = s.data as Record<string, any>;
       const ttl = 6 * 3600;
+      const signDoc = async (path: string | null, filename: string | null) => {
+        if (!path) return { url: null, mime: null };
+        const clean = path.includes("/candidate-cvs/") ? path.split("/candidate-cvs/")[1].split("?")[0] : path;
+        const { data } = await db.storage.from("candidate-cvs").createSignedUrl(clean, ttl);
+        const ext = (filename ?? clean).split(".").pop()?.toLowerCase() ?? "";
+        const mime = ({ pdf: "application/pdf", doc: "application/msword",
+          docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          txt: "text/plain", rtf: "application/rtf", odt: "application/vnd.oasis.opendocument.text",
+          png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg" } as Record<string, string>)[ext] ?? null;
+        return { url: data?.signedUrl ?? null, mime };
+      };
+      const [cv, cl] = await Promise.all([
+        signDoc(session.candidate_cv_url, session.candidate_cv_filename),
+        signDoc(session.candidate_cover_letter_url, session.candidate_cover_letter_filename),
+      ]);
+      session.candidate_cv_url = cv.url;
+      session.candidate_cv_mime_type = cv.mime;
+      session.candidate_cover_letter_url = cl.url;
+      session.candidate_cover_letter_mime_type = cl.mime;
+      // L'origine de l'entretien n'est pas enregistrée en base.
+      session.source = null;
+      session.invited_by = null;
       const messages = await Promise.all((m.data ?? []).map(async (msg) => ({
         ...msg,
         video_url: await signMedia(db, msg.video_segment_url, ttl),
@@ -122,7 +211,7 @@ Deno.serve(async (req) => {
       return json({ session, messages, report: r.data, transcript: t.data });
     }
 
-    return json({ error: "Action inconnue (stats, postes, sessions, session)" }, 400);
+    return json({ error: "Action inconnue (stats, postes, sessions, session, orgs, members, users)" }, 400);
   } catch (e) {
     console.error("[export-api]", e);
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);

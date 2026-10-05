@@ -4,7 +4,7 @@
 
 ## API
 
-- [API d'export (Markdown)](https://interw.ai/docs/export-api.md): référence complète — authentification par entête `x-api-key`, actions `stats`, `postes`, `sessions`, `session`, pagination, erreurs, exemple Convex.
+- [API d'export (Markdown)](https://interw.ai/docs/export-api.md): référence complète — authentification par entête `x-api-key`, actions `stats`, `postes`, `sessions`, `session`, `orgs`, `members`, `users`, pagination, erreurs, exemple Convex.
 
 ## Résumé rapide
 
@@ -12,6 +12,9 @@
 - `GET ?action=stats` — chiffres globaux
 - `GET ?action=postes[&project_id=&organization_id=&limit=&offset=]` — postes avec `questions` et `evaluation_criteria` (trier les questions par `order_index`)
 - `GET ?action=sessions[&status=&since=&project_id=&organization_id=&limit=&offset=]` — entretiens + synthèse du rapport
-- `GET ?action=session&id=<uuid>` — échanges triés, rapport, transcription, liens vidéo signés valables 6 h
+- `GET ?action=session&id=<uuid>` — échanges triés, rapport, transcription, liens vidéo et CV signés valables 6 h
+- `GET ?action=orgs` — organisations
+- `GET ?action=members[&organization_id=]` — membres et invitations en attente
+- `GET ?action=users&ids=<uuid,…>` — nom et e-mail (100 max)
 - Entête obligatoire : `x-api-key: $INTERW_API_KEY`
 - `limit` maximum 500 ; boucler sur `offset` jusqu'à recevoir moins de `limit` éléments
