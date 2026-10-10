@@ -678,7 +678,7 @@ export function MediaRecorderField({
               controls
               onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
               onEnded={() => setPlaying(false)}
-              className="w-full max-w-md rounded-md border aspect-video bg-black"
+              className="w-full max-w-md max-h-[320px] rounded-md border aspect-video bg-black object-contain"
             />
           )}
 
