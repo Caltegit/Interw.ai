@@ -49,6 +49,7 @@ const SILENT_CONFIRM_TICKS = 3;
 // (pas du bruit ambiant). Adapté runtime via calibration.peakUser × 0.4.
 const VOICE_RMS_THRESHOLD_DEFAULT = 0.03;
 const VOICE_RMS_THRESHOLD_MIN = 0.015;
+const VOICE_RMS_THRESHOLD_MAX = 0.04;
 const VOICE_CONFIRM_TICKS = 3;
 const VOICE_CALLBACK_THROTTLE_MS = 500;
 // Durée (ms) où le RMS reste entre silence et voix sans dépasser le seuil voix
@@ -96,7 +97,9 @@ export function useMicHealthWatcher({
       : VOICE_RMS_THRESHOLD_DEFAULT;
     // Voix doit toujours être strictement au-dessus du seuil silence,
     // sinon les deux zones (silence / trop-faible) deviennent incohérentes.
-    const finalVoice = Math.max(adaptedVoice, adaptedSilence * 1.5);
+    // Plafond : un pic de calibration (toux, choc) ne doit jamais rendre
+    // une voix normale « inaudible ».
+    const finalVoice = Math.min(VOICE_RMS_THRESHOLD_MAX, Math.max(adaptedVoice, adaptedSilence * 1.5));
     return { effectiveSilenceMax: adaptedSilence, effectiveVoiceThreshold: finalVoice };
   }, [calibration, rmsSilenceMax]);
 
