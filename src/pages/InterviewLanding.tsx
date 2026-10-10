@@ -490,7 +490,7 @@ export default function InterviewLanding() {
                   onError={() => setMediaError(true)}
                   controls={mediaPlaying}
                   playsInline
-                  className="block mx-auto w-auto max-w-full max-h-[52vh] object-contain rounded-xl border border-border bg-black transition-all duration-300"
+                  className="block w-full max-h-[52vh] object-contain rounded-xl border border-border bg-black transition-all duration-300"
                 />
               )}
 
