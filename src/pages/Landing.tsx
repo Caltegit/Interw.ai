@@ -147,9 +147,15 @@ export default function Landing() {
               href={CAL_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-foreground text-background inline-flex h-9 items-center rounded-lg px-3 sm:px-3.5 font-medium transition-opacity hover:opacity-90"
+              className="text-muted-foreground hover:text-foreground hidden items-center transition-colors sm:inline-flex"
             >
               {t("nav.demo")}
+            </a>
+            <a
+              href={V2_LOGIN_URL}
+              className="bg-foreground text-background inline-flex h-9 items-center rounded-lg px-3 sm:px-3.5 font-medium transition-opacity hover:opacity-90"
+            >
+              {t("hero.createAccount")}
             </a>
           </div>
         </div>
@@ -165,18 +171,18 @@ export default function Landing() {
         </p>
         <div className="landing-fade-up landing-delay-2 mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
           <a
+            href={V2_LOGIN_URL}
+            className="bg-foreground text-background inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90 sm:w-auto"
+          >
+            {t("hero.createAccount")} <ArrowRight className="h-4 w-4" />
+          </a>
+          <a
             href={CAL_LINK}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-foreground text-background inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90 sm:w-auto"
-          >
-            {t("hero.cta")} <ArrowRight className="h-4 w-4" />
-          </a>
-          <a
-            href={V2_LOGIN_URL}
             className="bg-background text-foreground inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5 sm:w-auto"
           >
-            {t("hero.createAccount")}
+            {t("hero.cta")}
           </a>
         </div>
       </section>
@@ -294,18 +300,18 @@ export default function Landing() {
           <h2 className={H2}>{t("closing.title")}</h2>
           <div className="mt-9 flex flex-col items-center">
             <a
+              href={V2_LOGIN_URL}
+              className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              {t("hero.createAccount")} <ArrowRight className="h-4 w-4" />
+            </a>
+            <a
               href={CAL_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-foreground text-background inline-flex h-11 items-center gap-2 rounded-lg px-6 text-sm font-medium transition-opacity hover:opacity-90"
-            >
-              {t("hero.cta")} <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href={V2_LOGIN_URL}
               className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
-              {t("hero.createAccount")}
+              {t("hero.cta")}
             </a>
           </div>
 
