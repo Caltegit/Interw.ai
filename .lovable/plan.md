@@ -37,7 +37,8 @@ Impact build : page d'accueil, liste des postes et mise en page recruteur modifi
 ## Étape 2 : synchronisation des données vers la V2
 
 - La V2 récupère les données via l'API d'export déjà en place (lecture seule, clé secrète) : organisations, membres, postes, questions, critères, sessions, transcriptions, rapports, liens vidéos signés 6 h.
-- Ordre conseillé : Tango (test) puis Morning, Ads up, Castalie.
+- Toutes les organisations sont migrées (56 au total, dont 25 avec au moins un entretien), pas seulement les 4 actives sur 30 jours.
+- Ordre conseillé : les organisations sans activité récente et les comptes de test d'abord (import en bloc), puis Tango, ALBO, Morning, Ads up et Castalie (actives, migration accompagnée).
 - Points à trancher avec la V2 : comptes utilisateurs (pas d'export des mots de passe : réinvitation ou lien magique), conversion des vidéos `.mov` d'iPhone en MP4, copie des vidéos chez la V2 avant toute coupure.
 
 ## Étape 3 : bascule progressive par organisation
