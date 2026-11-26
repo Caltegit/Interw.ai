@@ -8,6 +8,13 @@
       "when": 1795691216858,
       "tag": "0000_export_api_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795692270135,
+      "tag": "0001_scope_media_storage_policies",
+      "breakpoints": true
     }
   ]
 }
