@@ -25,7 +25,7 @@ function safeEqual(a: string, b: string) {
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
-Deno.serve(async (req) => {
+async function handle(req: Request): Promise<Response> {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   const expected = Deno.env.get("EXPORT_API_KEY") ?? "";
@@ -157,6 +157,13 @@ Deno.serve(async (req) => {
       return json({ data: rows, limit, offset });
     }
 
+    if (action === "logs") {
+      const { data, error } = await db.from("export_api_logs").select("*")
+        .order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+      if (error) throw error;
+      return json({ logs: data });
+    }
+
     if (action === "users") {
       const ids = (p.get("ids") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
       if (!ids.length) return json({ error: "ids requis" }, 400);
@@ -211,9 +218,40 @@ Deno.serve(async (req) => {
       return json({ session, messages, report: r.data, transcript: t.data });
     }
 
-    return json({ error: "Action inconnue (stats, postes, sessions, session, orgs, members, users)" }, 400);
+    return json({ error: "Action inconnue (stats, postes, sessions, session, orgs, members, users, logs)" }, 400);
   } catch (e) {
     console.error("[export-api]", e);
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
+}
+
+Deno.serve(async (req) => {
+  const start = Date.now();
+  const res = await handle(req);
+  if (req.method !== "OPTIONS") {
+    try {
+      const body = await res.clone().text();
+      let count: number | null = null;
+      try {
+        const j = JSON.parse(body);
+        const arr = Array.isArray(j) ? j : Object.values(j ?? {}).find(Array.isArray);
+        count = Array.isArray(arr) ? arr.length : null;
+      } catch { /* non JSON */ }
+      const params = Object.fromEntries(new URL(req.url).searchParams);
+      const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      await db.from("export_api_logs").insert({
+        action: params.action ?? "stats",
+        params,
+        status: res.status,
+        duration_ms: Date.now() - start,
+        response_bytes: body.length,
+        item_count: count,
+        ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        user_agent: req.headers.get("user-agent"),
+      });
+    } catch (e) {
+      console.error("[export-api] log", e);
+    }
+  }
+  return res;
 });

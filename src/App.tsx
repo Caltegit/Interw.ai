@@ -159,7 +159,7 @@ const App = () => (
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/new" element={<ProjectNew />} />
+              <Route path="/projects/new" element={<Navigate to="/projects" replace />} />
               <Route path="/projects/archives" element={<ProjectsArchives />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route path="/projects/:id/edit" element={<ProjectEdit />} />

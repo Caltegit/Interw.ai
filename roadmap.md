@@ -1,18 +1,5 @@
-# Feuille de route
-
-- [x] Réparer les vignettes rondes de la liste candidats (plan approuvé 2026-09-15).
-- [x] Générer le graphique téléchargeable de l'évolution hebdomadaire, avec détail par organisation.
-- [x] Réparer les 6 vidéos de la session Hugo Voyenet `8ac84e73-94c2-4c4b-a4fc-bb89ef7c599e` (WebM VP9/Opus → MP4 H.264/AAC, originaux dans `originals/`, références basculées, test recruteur : liens signés 206/200, fichiers valides).
-- [ ] **Incident ouvert — sessions complétées sans rapport (`no_recordings`)** : 49 sessions `completed` sans rapport ; 12 récentes ont des fichiers en stockage mais aucune ligne `session_messages` candidat ; cause racine = `finalize-abandoned-session` marque `completed` sans créer/rattacher de ligne candidat. Plan rédigé le 2026-09-23, non approuvé (interrompu par la demande Hugo Voyenet).
-- [ ] Pondération des questions dans le scoring : plan précédemment rédigé, non validé, en attente.
-- [x] Profils Interw : roue colorée à 8 profils dans le Résumé + onglet « Profil » détaillé (plan approuvé 2026-09-24).
-- [x] Profils Interw : ajouter trois questions comportementales recommandées aux nouveaux postes, les préserver dans les sessions types et prioriser leurs réponses dans le calcul vérifié.
-- [x] Création de poste : placer Vidéo en premier dans l’étape Intro et le sélectionner par défaut pour les nouveaux postes.
-- [ ] Bug : matrice Fit grise sur fiches candidats (25/09)
-- [x] Fiches candidats : curseur vidéo plus facile à déplacer — bande de préhension invisible sur la barre native (`VideoSeekGrab`), curseur en doublon supprimé, contrôles natifs inchangés.
-- [x] Résumé candidat : revenir à la disposition initiale validée en aperçu — roue « Profil Interw » à 250, centrée, et quatre notes lisibles superposées à droite (plan approuvé 2026-09-28).
-- [x] Résumé candidat : maquette D affinée — Bilan global et Signaux en premier, roue dessous, notes redondantes supprimées (plan approuvé 2026-09-29).
-- [ ] Tests automatiques (E2E) : bloqués — `playwright.config.ts` attend le module `lovable-agent-playwright-config`, absent des registres publics (le paquet public du même nom est un espace réservé sans le sous-module `./config`). À rétablir côté Lovable.
-- [x] Durée totale des vidéos affichée dès l'ouverture de la fiche : durée mesurée côté candidat et stockée (`session_messages.video_duration_seconds` via `candidate_insert_message`), utilisée par les deux lecteurs ; écouteur `durationchange` en secours. Reste à faire à la prochaine publication : déployer puis exécuter une fois `backfill-video-durations` (durées des 9 334 vidéos existantes via les manifests de chunks), ce qui déploiera aussi le correctif du connecteur MCP.
-
-- [x] Documentation API d export (humain + llms.txt)
+# Roadmap migration V2
+- [x] Page d'accueil vers app.interw.com/login
+- [x] Gel création de postes + bandeau recruteur
+- [x] Journal des appels export-api
+- [x] Guide de migration pour le Claude V2 (vidéos, postes, membres…)

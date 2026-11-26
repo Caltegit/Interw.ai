@@ -1,3 +1,4 @@
+import { V2_LOGIN_URL } from "@/lib/migration";
 import { useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -138,10 +139,10 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center gap-2">
           <GlobalSearch />
           <Button asChild size="sm">
-            <Link to="/projects/new">
+            <a href={V2_LOGIN_URL}>
               <Plus className="h-4 w-4" />
-              Nouveau poste
-            </Link>
+              Nouveau poste sur app.interw.com
+            </a>
           </Button>
         </div>
       </div>

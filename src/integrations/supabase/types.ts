@@ -457,6 +457,45 @@ export type Database = {
           },
         ]
       }
+      export_api_logs: {
+        Row: {
+          action: string | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          ip: string | null
+          item_count: number | null
+          params: Json | null
+          response_bytes: number | null
+          status: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          ip?: string | null
+          item_count?: number | null
+          params?: Json | null
+          response_bytes?: number | null
+          status?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          ip?: string | null
+          item_count?: number | null
+          params?: Json | null
+          response_bytes?: number | null
+          status?: number | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       feedback_messages: {
         Row: {
           author_id: string

@@ -18,3 +18,4 @@
 - `GET ?action=users&ids=<uuid,…>` — nom et e-mail (100 max)
 - Entête obligatoire : `x-api-key: $INTERW_API_KEY`
 - `limit` maximum 500 ; boucler sur `offset` jusqu'à recevoir moins de `limit` éléments
+- [Guide de migration V1 vers V2](https://interw.com/docs/migration-v2.md) : ordre d'import, volumes, conversion vidéo, comptes, liens candidats.

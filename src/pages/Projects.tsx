@@ -1,3 +1,4 @@
+import { V2_LOGIN_URL } from "@/lib/migration";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -96,10 +97,10 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild>
-          <Link to="/projects/new">
+          <a href={V2_LOGIN_URL}>
             <Plus className="mr-2 h-4 w-4" />
-            Nouveau poste
-          </Link>
+            Nouveau poste sur app.interw.com
+          </a>
         </Button>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <GlobalSearch />
@@ -117,7 +118,7 @@ export default function Projects() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-muted-foreground mb-4">Aucun poste</p>
             <Button asChild>
-              <Link to="/projects/new">Créer votre premier poste</Link>
+              <a href={V2_LOGIN_URL}>Créer votre poste sur app.interw.com</a>
             </Button>
           </CardContent>
         </Card>

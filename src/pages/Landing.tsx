@@ -1,3 +1,4 @@
+import { V2_LOGIN_URL } from "@/lib/migration";
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -139,9 +140,9 @@ export default function Landing() {
             />
           </Link>
           <div className="flex items-center gap-2 sm:gap-4 text-sm">
-            <Link to="/login" className="hidden sm:inline-flex text-muted-foreground hover:text-foreground transition-colors">
+            <a href={V2_LOGIN_URL} className="hidden sm:inline-flex text-muted-foreground hover:text-foreground transition-colors">
               {t("nav.signIn")}
-            </Link>
+            </a>
             <a
               href={CAL_LINK}
               target="_blank"
@@ -171,12 +172,12 @@ export default function Landing() {
           >
             {t("hero.cta")} <ArrowRight className="h-4 w-4" />
           </a>
-          <Link
-            to="/signup"
+          <a
+            href={V2_LOGIN_URL}
             className="bg-background text-foreground inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-foreground px-6 text-sm font-medium transition-colors hover:bg-foreground/5 sm:w-auto"
           >
             {t("hero.createAccount")}
-          </Link>
+          </a>
         </div>
       </section>
 
@@ -300,12 +301,12 @@ export default function Landing() {
             >
               {t("hero.cta")} <ArrowRight className="h-4 w-4" />
             </a>
-            <Link
-              to="/signup"
+            <a
+              href={V2_LOGIN_URL}
               className="text-foreground mt-4 text-sm font-medium underline underline-offset-4 hover:opacity-70"
             >
               {t("hero.createAccount")}
-            </Link>
+            </a>
           </div>
 
         </div>

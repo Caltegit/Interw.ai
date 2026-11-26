@@ -349,6 +349,11 @@ curl -s "$INTERW_API_URL?action=users&ids=uuid1,uuid2" -H "x-api-key: $INTERW_AP
 
 ---
 
+## `action=logs`
+
+Journal des appels à l'API (le plus récent d'abord), paginé avec `limit` / `offset`.
+Champs : `created_at`, `action`, `params`, `status`, `duration_ms`, `response_bytes`, `item_count`, `ip`, `user_agent`.
+
 ## Pagination
 
 Boucler en augmentant `offset` de `limit` jusqu'à recevoir moins de `limit` éléments.

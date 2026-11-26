@@ -780,8 +780,8 @@ export default function ProjectDetail() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDuplicate} disabled={duplicating}>
-                <CopyPlus className="mr-2 h-4 w-4" /> {duplicating ? "Duplication…" : "Dupliquer"}
+              <DropdownMenuItem disabled title="La création de postes se fait désormais sur app.interw.com">
+                <CopyPlus className="mr-2 h-4 w-4" /> Dupliquer (sur app.interw.com)
               </DropdownMenuItem>
               <SaveAsTemplateDialog
                 projectId={project.id}

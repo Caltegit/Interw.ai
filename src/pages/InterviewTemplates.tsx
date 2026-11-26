@@ -1,3 +1,4 @@
+import { V2_LOGIN_URL } from "@/lib/migration";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -324,9 +325,9 @@ export default function InterviewTemplates() {
                 </div>
                 <div className="flex gap-1 pt-2 mt-auto">
                   <Button asChild size="sm" className="flex-1">
-                    <Link to={`/projects/new?template=${tpl.id}`}>
+                    <a href={V2_LOGIN_URL}>
                       <Sparkles className="mr-1 h-3 w-3" /> Utiliser
-                    </Link>
+                    </a>
                   </Button>
                   <Button asChild variant="outline" size="sm" aria-label="Modifier">
                     <Link to={`/library/sessions/${tpl.id}`}>
