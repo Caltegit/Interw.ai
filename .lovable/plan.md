@@ -34,6 +34,11 @@
 
 Impact build : page d'accueil, liste des postes et mise en page recruteur modifiées (page d'accueil), aucun changement de données ni de fonctions serveur. Visible en ligne uniquement après publication.
 
+### Journal des appels de l'API d'export
+- Aujourd'hui, l'API n'enregistre que ses erreurs ; aucun appel reçu ces 7 derniers jours.
+- Ajout d'un journal : chaque appel enregistre la date, l'action demandée, les filtres, le nombre d'éléments renvoyés, le code de réponse, la durée et l'origine (jamais la clé ni les données renvoyées).
+- Consultable par vous ici (je vous fais le récapitulatif à la demande) et via une action `logs` de l'API.
+
 ## Étape 2 : synchronisation des données vers la V2
 
 - La V2 récupère les données via l'API d'export déjà en place (lecture seule, clé secrète) : organisations, membres, postes, questions, critères, sessions, transcriptions, rapports, liens vidéos signés 6 h.
@@ -80,4 +85,5 @@ Impact build : page d'accueil, liste des postes et mise en page recruteur modifi
 - `src/pages/Landing.tsx` lignes 142, 175, 304 : remplacer les `<Link to=...>` par des `<a href="https://app.interw.com/login">`.
 - Gel : désactiver la création/duplication dans la page Postes et bloquer `/projects/new`.
 - Bandeau : ajouté dans la mise en page recruteur protégée.
+- Journal : nouvelle table `export_api_logs` (accès réservé au serveur), écrite par `export-api` sans bloquer la réponse.
 - Aucune redirection automatique, aucune modification des routes candidats.
